@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, Context, Error, Result},
     async_std::{
         io::{stdout, Write},
         prelude::*,
@@ -13,11 +13,13 @@ use {
     async_trait::async_trait,
     chrono::{DateTime, Local, TimeZone, Utc},
     diagnostics_data::{LogsData, Severity, Timestamp},
-    ffx_config::get,
+    ffx_config::{get, get_sdk},
     ffx_core::{ffx_bail, ffx_error, ffx_plugin},
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
-    ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
+    ffx_log_utils::{
+        run_logging_pipeline, symbolizer::is_current_sdk_root_registered, OrderedBatchPipeline,
+    },
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_developer_bridge::{
         DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, StreamMode,
@@ -37,6 +39,7 @@ use {
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
 const PIPELINE_SIZE: usize = 20;
 const COLOR_CONFIG_NAME: &str = "target_log.color";
+const SYMBOLIZE_ENABLED_CONFIG: &str = "proactive_log.symbolize.enabled";
 const NO_STREAM_ERROR: &str = "\
 The proactive logger isn't connected to this target.
 
@@ -197,7 +200,14 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
 
                 match log_entry {
                     LogEntry { data: LogData::TargetLog(data), .. } => {
-                        self.format_target_log_data(data)
+                        self.format_target_log_data(data, None)
+                    }
+                    LogEntry { data: LogData::SymbolizedTargetLog(data, symbolized), .. } => {
+                        if symbolized.is_empty() {
+                            return Ok(());
+                        }
+
+                        self.format_target_log_data(data, Some(symbolized))
                     }
                     LogEntry { data: LogData::MalformedTargetLog(raw), .. } => {
                         format!("malformed target log: {}", raw)
@@ -206,7 +216,7 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
                         EventType::LoggingStarted => {
                             let mut s = String::from("logger started.");
                             if self.has_previous_log {
-                                s.push_str(" Logs before this may have been dropped if they were not cached on the target.");
+                                s.push_str(" Logs before this may have been dropped if they were not cached on the target. There may be a brief delay while we catch up...");
                             }
                             format_ffx_event(&s, Some(timestamp))
                         }
@@ -270,27 +280,32 @@ impl<'a> DefaultLogFormatter<'a> {
         }
     }
 
-    fn format_target_log_data(&self, data: LogsData) -> String {
+    fn format_target_log_data(&self, data: LogsData, symbolized_msg: Option<String>) -> String {
         let ts = self.format_target_timestamp(data.metadata.timestamp);
         let color_str = if self.color {
             severity_to_color_str(data.metadata.severity)
         } else {
             String::default()
         };
-        let msg = data.msg().unwrap_or("<missing message>").to_string();
+        let msg = symbolized_msg.unwrap_or(data.msg().unwrap_or("<missing message>").to_string());
 
         let severity_str = &format!("{}", data.metadata.severity)[..1];
-        format!(
-            "[{}][{}][{}{}{}] {}{}{}",
-            ts,
-            data.moniker,
-            color_str,
-            severity_str,
-            style::Reset,
-            color_str,
-            msg,
-            style::Reset
-        )
+        msg.lines()
+            .map(|l| {
+                format!(
+                    "[{}][{}][{}{}{}] {}{}{}",
+                    ts,
+                    data.moniker,
+                    color_str,
+                    severity_str,
+                    style::Reset,
+                    color_str,
+                    l,
+                    style::Reset
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 
@@ -308,10 +323,33 @@ fn calculate_monotonic_time(
     monotonic: Option<Duration>,
 ) -> Option<Duration> {
     match (dt, monotonic) {
-        (Some(dt), None) => Some(Duration::from_secs(dt.timestamp() as u64) - boot_ts),
+        (Some(dt), None) => Duration::from_secs(dt.timestamp() as u64).checked_sub(boot_ts),
         (None, Some(m)) => Some(m),
         (None, None) => None,
         _ => panic!("can only accept either a datetime bound or a monotonic one."),
+    }
+}
+
+async fn print_symbolizer_warning(err: Error, should_sleep: bool) {
+    println!(
+        "Warning: attempting to get the symbolizer binary failed. This likely \
+                            means that your logs will not be symbolized."
+    );
+    println!("The failure was: {}", err);
+
+    let sdk_type: Result<String, _> = get("sdk.type").await;
+    if sdk_type.is_err() || sdk_type.unwrap() == "" {
+        println!("If you are working in-tree, ensure that the sdk.type config setting is set accordingly:");
+        println!("  ffx config set sdk.type in-tree");
+    }
+
+    println!(
+        "\nYou can silence this message by passing the --ignore-symbolizer-failure flag: \
+                            \n  `ffx target log --ignore-symbolizer-failure <subcommand>`",
+    );
+
+    if should_sleep {
+        sleep(Duration::from_secs(10)).await;
     }
 }
 
@@ -322,12 +360,62 @@ pub async fn log(
     cmd: LogCommand,
 ) -> Result<()> {
     let config_color: bool = get(COLOR_CONFIG_NAME).await?;
+
+    let mut stdout = stdout();
     let mut formatter = DefaultLogFormatter::new(
         LogFilterCriteria::from(&cmd),
         should_color(config_color, cmd.color),
         cmd.time.clone(),
-        stdout(),
+        &mut stdout,
     );
+
+    if get(SYMBOLIZE_ENABLED_CONFIG).await.unwrap_or(true) {
+        match get_sdk().await {
+            Ok(s) => match s.get_host_tool("symbolizer") {
+                Ok(_) => {
+                    let registered_result = is_current_sdk_root_registered().await;
+                    if let Ok(false) = registered_result {
+                        let sdk_type: Result<String, _> = get("sdk.type").await;
+                        println!(
+                            "It looks like there is no symbol index for your sdk root registered."
+                        );
+                        println!("If you want symbolization to work correctly, run the following from your checkout:");
+
+                        if sdk_type.is_ok() && sdk_type.unwrap() == "in-tree".to_string() {
+                            println!("  fx symbol-index register");
+                        } else {
+                            let symbol_index = s.get_host_tool("symbol-index");
+                            match symbol_index {
+                                Ok(path) => {
+                                    println!("  {} register", path.to_string_lossy().to_string());
+                                }
+                                Err(e) => {
+                                    println!("We could not find the path to the symbol-index host-tool: {}", e);
+                                }
+                            }
+                        }
+
+                        println!("\nSilence this message in the future by disabling the `proactive_log.symbolize.enabled` config setting, \
+                                    or passing the '--ignore-symbolizer-failure' flag to this command.");
+                    } else if registered_result.is_err() {
+                        log::warn!(
+                            "checking the registration of the SDK root failed: {}",
+                            registered_result.as_ref().unwrap_err()
+                        )
+                    }
+
+                    if !registered_result.unwrap_or(false) && !cmd.ignore_symbolizer_failure {
+                        sleep(Duration::from_secs(10)).await;
+                    }
+                }
+                Err(e) => {
+                    print_symbolizer_warning(e, !cmd.ignore_symbolizer_failure).await;
+                }
+            },
+            Err(e) => print_symbolizer_warning(e, !cmd.ignore_symbolizer_failure).await,
+        };
+    }
+
     log_cmd(daemon_proxy, rcs_proxy, &mut formatter, cmd).await
 }
 
@@ -337,13 +425,16 @@ async fn setup_daemon_stream(
     server: ServerEnd<ArchiveIteratorMarker>,
     stream_mode: StreamMode,
     from_bound: Option<Duration>,
-) -> Result<(), DiagnosticsStreamError> {
+) -> Result<Result<(), DiagnosticsStreamError>> {
     let params = DaemonDiagnosticsStreamParameters {
         stream_mode: Some(stream_mode),
         min_target_timestamp_nanos: from_bound.map(|f| f.as_nanos() as u64),
         ..DaemonDiagnosticsStreamParameters::EMPTY
     };
-    daemon_proxy.stream_diagnostics(Some(&target_str), params, server).await.unwrap()
+    daemon_proxy
+        .stream_diagnostics(Some(&target_str), params, server)
+        .await
+        .context("connecting to daemon")
 }
 
 pub async fn log_cmd(
@@ -365,17 +456,15 @@ pub async fn log_cmd(
     let target_info_result = rcs.identify_host().await?;
     let target_info =
         target_info_result.map_err(|e| anyhow!("failed to get target info: {:?}", e))?;
-    let boot_ts_opt = target_info.boot_timestamp_nanos;
-    if let Some(ref ts) = boot_ts_opt {
-        log_formatter.set_boot_timestamp(*ts as i64);
-    }
-
-    let target_info = rcs.identify_host().await.unwrap().unwrap();
-    let nodename = target_info.nodename.context("missing nodename")?;
     let target_boot_time_nanos = match target_info.boot_timestamp_nanos {
-        Some(t) => Duration::from_nanos(t),
+        Some(t) => {
+            log_formatter.set_boot_timestamp(t as i64);
+            Duration::from_nanos(t)
+        }
         None => Duration::new(0, 0),
     };
+
+    let nodename = target_info.nodename.context("missing nodename")?;
     let (from_bound, to_bound) = match cmd.cmd {
         LogSubCommand::Dump(DumpCommand { from, from_monotonic, to, to_monotonic }) => {
             if !(from.is_none() || from_monotonic.is_none()) {
@@ -404,7 +493,7 @@ pub async fn log_cmd(
 
     let (mut proxy, server) =
         create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
-    setup_daemon_stream(&daemon_proxy, &nodename, server, stream_mode, from_bound).await.map_err(
+    setup_daemon_stream(&daemon_proxy, &nodename, server, stream_mode, from_bound).await?.map_err(
         |e| match e {
             DiagnosticsStreamError::NoStreamForTarget => {
                 anyhow!(ffx_error!("{}", NO_STREAM_ERROR))
@@ -448,7 +537,7 @@ pub async fn log_cmd(
                                 stream_mode,
                                 from_bound,
                             )
-                            .await
+                            .await?
                             {
                                 Ok(()) => {
                                     proxy = new_proxy;
@@ -610,6 +699,7 @@ mod test {
     fn empty_log_command(sub_cmd: LogSubCommand) -> LogCommand {
         LogCommand {
             cmd: sub_cmd,
+            ignore_symbolizer_failure: false,
             filter: vec![],
             exclude: vec![],
             time: TimeFormat::Monotonic,

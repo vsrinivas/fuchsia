@@ -86,6 +86,10 @@ pub struct LogCommand {
     #[argh(option)]
     pub color: Option<bool>,
 
+    /// ignore any failure to find the symbolizer binary.
+    #[argh(switch)]
+    pub ignore_symbolizer_failure: bool,
+
     /// how to display log timestamps
     #[argh(option, default = "TimeFormat::Monotonic")]
     pub time: TimeFormat,

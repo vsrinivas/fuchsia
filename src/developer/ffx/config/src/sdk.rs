@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use log::warn;
 use serde::Deserialize;
 use serde_json::Value;
@@ -93,9 +93,10 @@ impl Sdk {
     pub fn from_build_dir(mut path: std::path::PathBuf) -> Result<Self> {
         path.push("sdk/manifest/core");
 
-        let sdk =
-            Self::atoms_from_core_manifest(std::io::BufReader::new(std::fs::File::open(path)?))?
-                .try_into();
+        let sdk = Self::atoms_from_core_manifest(std::io::BufReader::new(
+            std::fs::File::open(path.clone()).context(format!("opening sdk path: {:?}", path))?,
+        ))?
+        .try_into();
 
         sdk.map(|mut x: Sdk| {
             x.version = SdkVersion::InTree;
@@ -117,9 +118,18 @@ impl Sdk {
         let mut version = SdkVersion::Unknown;
 
         Self::metas_from_sdk_manifest(
-            std::io::BufReader::new(std::fs::File::open(manifest_path)?),
+            std::io::BufReader::new(
+                std::fs::File::open(manifest_path.clone())
+                    .context(format!("opening sdk manifest path: {:?}", manifest_path))?,
+            ),
             &mut version,
-            |meta| Ok(std::io::BufReader::new(std::fs::File::open(path.join(meta))?)),
+            |meta| {
+                let meta_path = path.join(meta);
+
+                std::fs::File::open(meta_path.clone())
+                    .context(format!("opening sdk path: {:?}", meta_path))
+                    .map(std::io::BufReader::new)
+            },
         )
         .map(|metas| Sdk { metas, real_paths: RealPaths::Prefix(path), version })
     }

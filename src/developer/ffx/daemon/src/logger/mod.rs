@@ -4,20 +4,24 @@
 use {
     crate::target::WeakTarget,
     anyhow::{anyhow, bail, Context, Result},
+    async_std::sync::Arc,
     diagnostics_data::{LogsData, Timestamp},
     ffx_config::get,
     ffx_log_data::{EventType, LogData, LogEntry},
-    ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
+    ffx_log_utils::{
+        run_logging_pipeline,
+        symbolizer::{is_symbolizer_context_marker, LogSymbolizer, Symbolizer},
+        OrderedBatchPipeline,
+    },
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorMarker, BridgeStreamParameters, RemoteDiagnosticsBridgeMarker,
     },
-    futures::TryFutureExt,
+    futures::{channel::mpsc::channel, SinkExt, StreamExt, TryFutureExt},
     selectors::parse_selector,
     std::convert::TryInto,
     std::future::Future,
-    std::sync::Arc,
     std::time::SystemTime,
     streamer::GenericDiagnosticsStreamer,
 };
@@ -27,6 +31,8 @@ pub mod streamer;
 const BRIDGE_SELECTOR: &str =
     "core/remote-diagnostics-bridge:out:fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge";
 const ENABLED_CONFIG: &str = "proactive_log.enabled";
+const SYMBOLIZE_ENABLED_CONFIG: &str = "proactive_log.symbolize.enabled";
+const SYMBOLIZE_ARGS_CONFIG: &str = "proactive_log.symbolize.extra_args";
 const PIPELINE_SIZE: usize = 20;
 
 fn get_timestamp() -> Result<Timestamp> {
@@ -40,7 +46,8 @@ fn get_timestamp() -> Result<Timestamp> {
 
 fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
     streamer: Arc<T>,
-) -> Result<(ServerEnd<ArchiveIteratorMarker>, impl Future<Output = Result<()>>)> {
+    symbolizer_config: Option<&SymbolizerConfig>,
+) -> Result<(ServerEnd<ArchiveIteratorMarker>, impl Future<Output = Result<()>> + '_)> {
     let (proxy, server) =
         create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
 
@@ -55,6 +62,61 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
             .await?;
 
         let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
+        let config;
+        let symbolizer_config = match symbolizer_config {
+            Some(config) => Some(config),
+            None => match SymbolizerConfig::new().await {
+                Ok(c) => {
+                    config = c;
+                    Some(&config)
+                }
+                Err(e) => {
+                    log::warn!(
+                        "constructing symbolizer config failed. \
+                                Proactive logs will not be symbolized. Error was: {}",
+                        e
+                    );
+                    None
+                }
+            },
+        };
+
+        let (mut sender_tx, sender_rx) = channel(1);
+        let (reader_tx, mut reader_rx) = channel(1);
+        let symbolizer = if let Some(config) = symbolizer_config {
+            if config.enabled {
+                match config
+                    .symbolizer
+                    .as_ref()
+                    .context("missing symbolizer")?
+                    .clone()
+                    .start(sender_rx, reader_tx, config.symbolizer_args.clone())
+                    .await
+                {
+                    Ok(()) => Some(config.symbolizer.clone()),
+                    Err(e) => {
+                        log::warn!(
+                            "symbolizer failed to start. \
+                                    Proactive logs will not be symbolized. Error was: {}",
+                            e
+                        );
+                        None
+                    }
+                }
+            } else {
+                log::info!(
+                    "proactive log symbolization disabled. \
+                            proactive logs will not be symbolized"
+                );
+                None
+            }
+        } else {
+            log::info!(
+                "no symbolizer config. \
+                        proactive logs will not be symbolized"
+            );
+            None
+        };
         loop {
             let (get_next_results, terminal_err) =
                 run_logging_pipeline(&mut requests, &proxy).await;
@@ -72,7 +134,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
             }
 
             let ts = Timestamp::from(get_timestamp()?);
-            let log_data = get_next_results
+            let log_data: Vec<LogEntry> = get_next_results
                 .into_iter()
                 .filter_map(|r| {
                     if let Err(e) = r {
@@ -113,7 +175,62 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
                 })
                 .collect();
 
-            streamer.append_logs(log_data).await?;
+            let mut new_entries = vec![];
+            if symbolizer.is_some() {
+                for log in log_data.into_iter() {
+                    match &log.data {
+                        LogData::TargetLog(data) => {
+                            let msg = data.msg();
+                            if let Some(msg) = msg {
+                                if !is_symbolizer_context_marker(msg) {
+                                    new_entries.push(log);
+                                    continue;
+                                }
+
+                                let mut with_newline = String::from(msg);
+                                with_newline.push('\n');
+                                match sender_tx.send(with_newline).await {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        log::info!("writing to symbolizer channel failed: {}", e);
+                                        new_entries.push(log);
+                                        continue;
+                                    }
+                                }
+
+                                let out = match reader_rx.next().await {
+                                    Some(s) => s,
+                                    None => {
+                                        log::info!("symbolizer stream is empty");
+                                        new_entries.push(log);
+                                        continue;
+                                    }
+                                };
+
+                                let mut new_log = log.clone();
+                                let new_data = data.clone();
+
+                                // Reconstruct the message by dropping the \n we added above.
+                                let mut split: Vec<&str> = out.split('\n').collect();
+                                if split.len() > 1 {
+                                    split.remove(split.len() - 1);
+                                }
+
+                                new_log.data =
+                                    LogData::SymbolizedTargetLog(new_data, split.join("\n"));
+                                new_entries.push(new_log);
+                            } else {
+                                new_entries.push(log);
+                            }
+                        }
+                        _ => new_entries.push(log),
+                    }
+                }
+            } else {
+                new_entries = log_data;
+            }
+
+            streamer.append_logs(new_entries).await?;
             if let Some(err) = terminal_err {
                 streamer
                     .append_logs(vec![LogEntry::new(LogData::FfxEvent(
@@ -128,15 +245,46 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
     return Ok((server, listener_fut));
 }
 
+#[derive(Default)]
+pub struct SymbolizerConfig {
+    pub symbolizer: Option<Arc<dyn Symbolizer + 'static + Send + Sync>>,
+    pub enabled: bool,
+    pub symbolizer_args: Vec<String>,
+}
+
+impl SymbolizerConfig {
+    async fn new() -> Result<Self> {
+        if get(SYMBOLIZE_ENABLED_CONFIG).await? {
+            Ok(Self {
+                symbolizer: Some(Arc::new(LogSymbolizer::new())),
+                enabled: true,
+                symbolizer_args: get(SYMBOLIZE_ARGS_CONFIG).await.unwrap_or_default(),
+            })
+        } else {
+            Ok(Self::default())
+        }
+    }
+
+    #[cfg(test)]
+    fn new_with_config(
+        symbolizer: Arc<impl Symbolizer + 'static + Send + Sync>,
+        enabled: bool,
+        symbolizer_args: Vec<String>,
+    ) -> Self {
+        Self { symbolizer: Some(symbolizer), enabled, symbolizer_args }
+    }
+}
+
 pub struct Logger {
     target: WeakTarget,
     enabled: Option<bool>,
     streamer: Option<Arc<dyn GenericDiagnosticsStreamer + Send + Sync>>,
+    symbolizer: Option<SymbolizerConfig>,
 }
 
 impl Logger {
     pub fn new(target: WeakTarget) -> Self {
-        return Self { target: target, enabled: None, streamer: None };
+        return Self { target: target, enabled: None, streamer: None, symbolizer: None };
     }
 
     #[cfg(test)]
@@ -144,8 +292,14 @@ impl Logger {
         target: WeakTarget,
         streamer: impl GenericDiagnosticsStreamer + 'static + Send + Sync,
         enabled: bool,
+        symbolizer: SymbolizerConfig,
     ) -> Self {
-        return Self { target, enabled: Some(enabled), streamer: Some(Arc::new(streamer)) };
+        return Self {
+            target,
+            enabled: Some(enabled),
+            streamer: Some(Arc::new(streamer)),
+            symbolizer: Some(symbolizer),
+        };
     }
 
     pub fn start(self) -> impl Future<Output = Result<(), String>> + Send {
@@ -210,7 +364,8 @@ impl Logger {
             }
         }
 
-        let (listener_client, listener_fut) = write_logs_to_file(streamer.clone())?;
+        let (listener_client, listener_fut) =
+            write_logs_to_file(streamer.clone(), self.symbolizer.as_ref())?;
         let params = BridgeStreamParameters {
             stream_mode: Some(fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe),
             data_type: Some(fidl_fuchsia_diagnostics::DataType::Logs),
@@ -237,6 +392,7 @@ mod test {
         ffx_log_test_utils::{
             setup_fake_archive_iterator, FakeArchiveIteratorResponse, LogsDataBuilder,
         },
+        ffx_log_utils::symbolizer::FakeSymbolizerForTest,
         fidl::endpoints::RequestStream,
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
@@ -244,12 +400,16 @@ mod test {
             RemoteDiagnosticsBridgeRequestStream, ServiceMatch,
         },
         fidl_fuchsia_diagnostics::DataType,
-        futures::TryStreamExt,
+        futures::{
+            channel::mpsc::{Receiver, Sender},
+            TryStreamExt,
+        },
         streamer::SessionStream,
     };
 
     const NODENAME: &str = "nodename-foo";
     const BOOT_TIME: i64 = 98765432123;
+    const SYMBOLIZER_PREFIX: &str = "prefix: ";
 
     #[derive(Default)]
     struct FakeDiagnosticsStreamerInner {
@@ -339,6 +499,32 @@ mod test {
         }
     }
 
+    struct DisabledSymbolizer {}
+
+    impl DisabledSymbolizer {
+        fn new() -> Self {
+            Self {}
+        }
+    }
+
+    #[async_trait]
+    impl Symbolizer for DisabledSymbolizer {
+        async fn start(
+            &self,
+            _rx: Receiver<String>,
+            _tx: Sender<String>,
+            _extra_args: Vec<String>,
+        ) -> Result<()> {
+            panic!("called start on a disabled symbolizer");
+        }
+    }
+
+    impl DisabledSymbolizer {
+        fn config() -> SymbolizerConfig {
+            SymbolizerConfig::new_with_config(Arc::new(DisabledSymbolizer::new()), false, vec![])
+        }
+    }
+
     async fn verify_logged(got: Arc<Mutex<Vec<LogEntry>>>, expected: Vec<LogEntry>) {
         let logs = got.lock().await;
 
@@ -353,12 +539,12 @@ mod test {
         for (got, expected) in logs.iter().zip(expected.iter()) {
             assert_eq!(
                 got.data, expected.data,
-                "mismatched data. got: {:?}\nexpected: {:?}",
+                "mismatched data. \ngot: {:?}\n\nexpected: {:?}",
                 got.data, expected.data
             );
             assert_eq!(
                 got.version, expected.version,
-                "mismatched version. got: {:?}\nexpected: {:?}",
+                "mismatched version. got: {:?}\n\nexpected: {:?}",
                 got.version, expected.version
             );
         }
@@ -462,6 +648,14 @@ mod test {
         LogEntry { data: LogData::TargetLog(data), timestamp: Timestamp::from(0), version: 1 }
     }
 
+    fn symbolized_log(data: LogsData, msg: &str) -> LogEntry {
+        LogEntry {
+            data: LogData::SymbolizedTargetLog(data, msg.to_string()),
+            timestamp: Timestamp::from(0),
+            version: 1,
+        }
+    }
+
     fn target_log(timestamp: i64, msg: &str) -> LogsData {
         LogsDataBuilder::new().timestamp(Timestamp::from(timestamp)).message(msg).build()
     }
@@ -480,13 +674,23 @@ mod test {
             _ => panic!("should have exited with PEER_CLOSED, got ok"),
         };
     }
+
+    async fn fake_symbolizer(extra_args: Vec<String>) -> SymbolizerConfig {
+        SymbolizerConfig {
+            symbolizer_args: extra_args.clone(),
+            enabled: true,
+            symbolizer: Some(Arc::new(FakeSymbolizerForTest::new(SYMBOLIZER_PREFIX, extra_args))),
+        }
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_disabled() -> Result<()> {
         let target = make_default_target(vec![]).await;
         let t = target.downgrade();
 
         let streamer = FakeDiagnosticsStreamer::new(1, Arc::new(Mutex::new(vec![])));
-        let logger = Logger::new_with_streamer_and_config(t, streamer, false);
+        let logger =
+            Logger::new_with_streamer_and_config(t, streamer, false, DisabledSymbolizer::config());
         logger.start().await.unwrap();
         Ok(())
     }
@@ -509,7 +713,8 @@ mod test {
         let log_buf = Arc::new(Mutex::new(vec![]));
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
-        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        let fs = fake_symbolizer(vec![]).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true, fs);
         run_logger_to_completion(logger).await;
 
         verify_logged(
@@ -550,7 +755,8 @@ mod test {
 
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
-        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        let fs = fake_symbolizer(vec![]).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true, fs);
         run_logger_to_completion(logger).await;
 
         verify_logged(
@@ -565,6 +771,7 @@ mod test {
             ],
         )
         .await;
+
         Ok(())
     }
 
@@ -583,7 +790,8 @@ mod test {
 
         let streamer = FakeDiagnosticsStreamer::new(1, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
-        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        let fs = fake_symbolizer(vec![]).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true, fs);
         run_logger_to_completion(logger).await;
 
         verify_logged(
@@ -610,7 +818,8 @@ mod test {
 
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
-        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        let fs = fake_symbolizer(vec![]).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true, fs);
         run_logger_to_completion(logger).await;
 
         verify_logged(
@@ -642,7 +851,8 @@ mod test {
 
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
-        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        let fs = fake_symbolizer(vec![]).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true, fs);
         run_logger_to_completion(logger).await;
 
         verify_logged(
@@ -668,11 +878,83 @@ mod test {
 
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
-        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        let fs = fake_symbolizer(vec![]).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true, fs);
         run_logger_to_completion(logger).await;
 
         verify_logged(log_buf.clone(), vec![logging_started_entry(), target_disconnected_entry()])
             .await;
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_symbolizable_log_disabled_symbolizer() -> Result<()> {
+        let log1 = target_log(1, "{{{reset}}}");
+        let target = make_default_target(vec![FakeArchiveIteratorResponse::new_with_values(vec![
+            serde_json::to_string(&log1)?,
+        ])])
+        .await;
+        let t = target.downgrade();
+
+        let log_buf = Arc::new(Mutex::new(vec![]));
+
+        let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
+        streamer.expect_setup(NODENAME, BOOT_TIME).await;
+        let logger =
+            Logger::new_with_streamer_and_config(t, streamer, true, DisabledSymbolizer::config());
+        run_logger_to_completion(logger).await;
+
+        verify_logged(
+            log_buf.clone(),
+            vec![logging_started_entry(), valid_log(log1), target_disconnected_entry()],
+        )
+        .await;
+        Ok(())
+    }
+
+    // NOTE: this test has strings that look like symbolizer data! If you use `fx test` to run this and it fails,
+    // your output will be incredibly confusing and mostly useless. In that case, run the test binary directly
+    // to see the real output.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_symbolized_logs() -> Result<()> {
+        let log1 = target_log(1, "{{{reset}}}");
+        let log2 = target_log(2, "{{{mmap:something}}}");
+        let log3 = target_log(3, "don't symbolize this");
+        let log4 = target_log(4, "{{{bt:file}}}");
+        let target = make_default_target(vec![
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log1)?,
+                serde_json::to_string(&log2)?,
+            ]),
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log3)?,
+                serde_json::to_string(&log4)?,
+            ]),
+        ])
+        .await;
+        let t = target.downgrade();
+
+        let log_buf = Arc::new(Mutex::new(vec![]));
+
+        let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
+        streamer.expect_setup(NODENAME, BOOT_TIME).await;
+        let fs = fake_symbolizer(vec!["--some-arg".to_string(), "some-value".to_string()]).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true, fs);
+        run_logger_to_completion(logger).await;
+
+        verify_logged(
+            log_buf.clone(),
+            vec![
+                logging_started_entry(),
+                symbolized_log(log1, "prefix: {{{reset}}}"),
+                symbolized_log(log2, "prefix: {{{mmap:something}}}"),
+                valid_log(log3),
+                symbolized_log(log4, "prefix: {{{bt:file}}}"),
+                target_disconnected_entry(),
+            ],
+        )
+        .await;
+
         Ok(())
     }
 }

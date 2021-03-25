@@ -10,6 +10,8 @@ use {
     std::pin::Pin,
 };
 
+pub mod symbolizer;
+
 pub struct OrderedBatchPipeline<'a, T> {
     max_size: usize,
     pipeline: ReadyChunks<FuturesOrdered<Box<dyn Future<Output = T> + Send + Unpin + 'a>>>,

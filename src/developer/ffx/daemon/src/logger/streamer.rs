@@ -1453,6 +1453,24 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_read_message_contains_newline() -> Result<()> {
+        let (_temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
+
+        let log = make_valid_log(TIMESTAMP, String::from("hello\nworld!"));
+
+        streamer.append_logs(vec![log.clone()]).await?;
+
+        let mut iterator = streamer.stream_entries(StreamMode::SnapshotAll, None).await?;
+        verify_log(&mut iterator, log.clone()).await.context(format!("{:?}", log)).unwrap();
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_timestamp_returns_none_if_no_logs() -> Result<()> {
         let (_temp, streamer) = setup_default_streamer(
             SMALL_MAX_LOG_SIZE,

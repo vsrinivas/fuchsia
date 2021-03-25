@@ -18,6 +18,7 @@ pub enum EventType {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum LogData {
     TargetLog(LogsData),
+    SymbolizedTargetLog(LogsData, String),
     MalformedTargetLog(String),
     FfxEvent(EventType),
 }

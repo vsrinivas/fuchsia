@@ -12,12 +12,29 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//src/developer/ffx/config:lib",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-std",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:smol",
   ]
 
-  sources = [ "src/lib.rs" ]
+  non_rust_deps = [
+    "//tools/symbol-index:symbol-index($host_toolchain)",
+    "//tools/symbolizer:symbolizer($host_toolchain)",
+  ]
+
+  sources = [
+    "src/lib.rs",
+    "src/symbolizer.rs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":lib_test" ]
 }
