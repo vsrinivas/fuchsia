@@ -119,12 +119,15 @@ DisplaySwapchain::~DisplaySwapchain() {
 
   display_->Unclaim();
 
-  if ((*display_controller_)->SetDisplayLayers(display_->display_id(), {}) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to configure display layers";
-  } else {
-    if ((*display_controller_)->DestroyLayer(primary_layer_id_) != ZX_OK) {
-      FX_DLOGS(ERROR) << "Failed to destroy layer";
-    }
+  // Stop displaying the layer, then destroy it.  Note that these are all feedforward operations, so
+  // the error handling just verifies that we have a valid FIDL channel etc., it doesn't verify that
+  // the display controller is happy with the messages that we sent it.
+  if (ZX_OK != (*display_controller_)->SetDisplayLayers(display_->display_id(), {})) {
+    FX_LOGS(ERROR) << "~DisplaySwapchain(): Failed to configure display layers";
+  } else if (ZX_OK != (*display_controller_)->ApplyConfig()) {
+    FX_LOGS(ERROR) << "~DisplaySwapchain(): Failed to apply config";
+  } else if (ZX_OK != (*display_controller_)->DestroyLayer(primary_layer_id_)) {
+    FX_DLOGS(ERROR) << "~DisplaySwapchain(): Failed to destroy layer";
   }
 
   swapchain_buffers_.Clear(display_controller_);
@@ -276,7 +279,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  Flip(display_->display_id(), frame_record->buffer->id, frame_record->render_finished_event_id,
+  Flip(primary_layer_id_, frame_record->buffer->id, frame_record->render_finished_event_id,
        frame_record->retired_event_id);
 
   return true;
