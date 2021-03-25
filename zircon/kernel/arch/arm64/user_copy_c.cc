@@ -5,14 +5,36 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/user_copy/internal.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
+#include <arch/arch_thread.h>
 #include <arch/user_copy.h>
 #include <kernel/thread.h>
 #include <vm/vm.h>
 
-#include "arch/arm64/user_copy.h"
-
+#define ARM64_USER_COPY_CAPTURE_FAULTS (~(1ull << ARM64_DFR_RUN_FAULT_HANDLER_BIT))
+#define ARM64_USER_COPY_DO_FAULTS (~0ull)
 static constexpr size_t kUserAspaceTop = (USER_ASPACE_BASE + USER_ASPACE_SIZE);
+
+// Typically we would not use structs as function return values, but in this case it enables us to
+// very efficiently use the 2 registers for return values to encode the optional flags and va
+// page fault values.
+struct Arm64UserCopyRet {
+  zx_status_t status;
+  uint pf_flags;
+  vaddr_t pf_va;
+};
+static_assert(sizeof(Arm64UserCopyRet) == 16, "Arm64UserCopyRet has unexpected size");
+
+// This is the same as memcpy, except that it takes the additional argument of
+// &current_thread()->arch.data_fault_resume, where it temporarily stores the fault recovery PC for
+// bad page faults to user addresses during the call, and a fault_return_mask. If
+// ARM64_USER_COPY_CAPTURE_FAULTS is passed as fault_return_mask then the returned struct will have
+// pf_flags and pf_va filled out on pagefault, otherwise they should be ignored. arch_copy_from_user
+// and arch_copy_to_user should be the only callers of this.
+extern "C" Arm64UserCopyRet _arm64_user_copy(void* dst, const void* src, size_t len,
+                                             uint64_t* fault_return, uint64_t fault_return_mask);
 
 zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
   // The assembly code just does memcpy with fault handling.  This is
