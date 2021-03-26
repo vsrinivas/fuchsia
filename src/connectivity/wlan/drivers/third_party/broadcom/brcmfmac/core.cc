@@ -793,7 +793,7 @@ void brcmf_write_net_device_name(struct net_device* dev, const char* name) {
 }
 
 struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name) {
-  struct net_device* dev = static_cast<decltype(dev)>(calloc(1, sizeof(*dev)));
+  struct net_device* dev = new (std::nothrow) net_device();
   if (dev == NULL) {
     return NULL;
   }
@@ -809,7 +809,7 @@ struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name)
 void brcmf_free_net_device(struct net_device* dev) {
   if (dev != NULL) {
     free(dev->priv);
-    free(dev);
+    delete dev;
   }
 }
 
