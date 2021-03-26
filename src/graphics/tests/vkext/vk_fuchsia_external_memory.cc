@@ -4,6 +4,7 @@
 
 #include <lib/zx/vmo.h>
 
+#include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
 #include "src/graphics/tests/vkreadback/vkreadback.h"
 

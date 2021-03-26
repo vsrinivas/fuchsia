@@ -17,15 +17,6 @@
 
 #include "src/graphics/tests/common/vulkan_context.h"
 
-// TODO(fxbug.dev/73025): remove this condition block when it's time.
-#if VK_HEADER_VERSION < 173
-constexpr VkExternalMemoryHandleTypeFlagBits VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA =
-    static_cast<VkExternalMemoryHandleTypeFlagBits>(0x00000800);
-constexpr uint32_t VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA = 1000364000;
-constexpr uint32_t VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA = 1000364001;
-constexpr uint32_t VK_STRUCTURE_TYPE_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA = 1000364002;
-#endif
-
 // Supports Fuchsia external memory extension.
 class VkReadbackTest {
  public:
