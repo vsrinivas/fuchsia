@@ -206,7 +206,7 @@ class GnTester(object):
         (stdout, stderr) = self._invoke_ninja(arch)
         # Verify that the second test project build is a noop for ninja
         ninja_no_work_string = 'ninja: no work to do.'
-        if not ninja_no_work_string in stdout:
+        if not (ninja_no_work_string in stdout or ninja_no_work_string in stderr):
             msg = 'Rebuild of test project did not result in noop.\n'
             msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_no_work_string
             msg += '"%s"' % stdout
