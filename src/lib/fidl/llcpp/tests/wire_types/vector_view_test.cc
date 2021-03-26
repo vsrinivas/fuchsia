@@ -29,7 +29,7 @@ TEST(VectorView, PointerConstructor) {
   DestructionState ds[3] = {};
   DestructableObject arr[3] = {&ds[0], &ds[1], &ds[2]};
   {
-    fidl::VectorView<DestructableObject> vv(fidl::unowned_ptr_t<DestructableObject>(arr), 2);
+    auto vv = fidl::VectorView<DestructableObject>::FromExternal(arr, 2);
     EXPECT_EQ(vv.count(), 2ULL);
     EXPECT_FALSE(vv.empty());
     EXPECT_EQ(vv.data(), arr);
@@ -41,7 +41,7 @@ TEST(VectorView, PointerConstructor) {
 
 TEST(VectorView, MoveConstructorUnowned) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(fidl::unowned_ptr_t<int32_t>(vec.data()), vec.size());
+  auto vv = fidl::VectorView<int32_t>::FromExternal(vec);
   fidl::VectorView<int32_t> moved_vv(std::move(vv));
   EXPECT_EQ(vv.count(), 3ULL);
   EXPECT_EQ(vv.data(), vec.data());
@@ -51,7 +51,7 @@ TEST(VectorView, MoveConstructorUnowned) {
 
 TEST(VectorView, MoveAssigmentUnowned) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(fidl::unowned_ptr_t<int32_t>(vec.data()), vec.size());
+  auto vv = fidl::VectorView<int32_t>::FromExternal(vec);
   fidl::VectorView<int32_t> moved_vv;
   moved_vv = std::move(vv);
   EXPECT_EQ(vv.count(), 3ULL);
@@ -62,7 +62,7 @@ TEST(VectorView, MoveAssigmentUnowned) {
 
 TEST(VectorView, Iteration) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(fidl::unowned_ptr_t<int32_t>(vec.data()), vec.size());
+  auto vv = fidl::VectorView<int32_t>::FromExternal(vec);
   int32_t i = 1;
   for (auto& val : vv) {
     EXPECT_EQ(&val, &vec.at(i - 1));
@@ -73,7 +73,7 @@ TEST(VectorView, Iteration) {
 
 TEST(VectorView, Indexing) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(fidl::unowned_ptr_t<int32_t>(vec.data()), vec.size());
+  auto vv = fidl::VectorView<int32_t>::FromExternal(vec);
   for (uint64_t i = 0; i < vv.count(); i++) {
     EXPECT_EQ(&vv[i], &vec.at(i));
   }
@@ -81,7 +81,7 @@ TEST(VectorView, Indexing) {
 
 TEST(VectorView, Mutations) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(fidl::unowned_ptr_t<int32_t>(vec.data()), vec.size());
+  auto vv = fidl::VectorView<int32_t>::FromExternal(vec);
   vv.set_count(2);
   *vv.mutable_data() = 4;
   vv[1] = 5;

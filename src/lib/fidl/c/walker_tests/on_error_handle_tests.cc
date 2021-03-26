@@ -137,9 +137,8 @@ TEST(OnErrorCloseHandle, DecodeErrorTest) {
   constexpr uint32_t buf_size = 512;
   uint8_t buffer[buf_size] = {};
   TableOfStructLayout* msg = reinterpret_cast<TableOfStructLayout*>(&buffer[0]);
-  msg->envelope_vector.set_data(
-      fidl::unowned_ptr(reinterpret_cast<fidl_envelope_t*>(FIDL_ALLOC_PRESENT)));
-  msg->envelope_vector.set_count(2);
+  msg->envelope_vector = fidl::VectorView<fidl_envelope_t>::FromExternal(
+      reinterpret_cast<fidl_envelope_t*>(FIDL_ALLOC_PRESENT), 2);
   msg->envelopes.a = fidl_envelope_t{.num_bytes = sizeof(OrdinalOneStructWithHandle),
                                      .num_handles = 1,
                                      .presence = FIDL_ALLOC_PRESENT};

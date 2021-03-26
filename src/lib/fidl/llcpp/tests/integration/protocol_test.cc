@@ -134,7 +134,7 @@ TEST(MagicNumberTest, RequestWrite) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [local, remote] = std::move(*endpoints);
   std::string s = "hi";
-  test::Frobinator::Call::Frob(local, fidl::unowned_str(s));
+  test::Frobinator::Call::Frob(local, fidl::StringView::FromExternal(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -159,7 +159,7 @@ TEST(MagicNumberTest, EventWrite) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   std::string s = "hi";
   test::Frobinator::EventSender event_sender(std::move(endpoints->server));
-  event_sender.Hrob(fidl::unowned_str(s));
+  event_sender.Hrob(fidl::StringView::FromExternal(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -193,7 +193,7 @@ TEST(MagicNumberTest, ResponseWrite) {
   fidl::Buffer<test::Frobinator::GrobRequest> request;
   fidl::Buffer<test::Frobinator::GrobResponse> response;
   auto result = test::Frobinator::Call::Grob(endpoints->client, request.view(),
-                                             fidl::unowned_str(s), response.view());
+                                             fidl::StringView::FromExternal(s), response.view());
   ASSERT_TRUE(result.ok());
   auto hdr = reinterpret_cast<fidl_message_header_t*>(response.data());
   ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial);
@@ -206,7 +206,7 @@ TEST(MagicNumberTest, EventRead) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [local, remote] = std::move(*endpoints);
   std::string s = "foo";
-  test::Frobinator::HrobResponse _response(fidl::unowned_str(s));
+  test::Frobinator::HrobResponse _response(fidl::StringView::FromExternal(s));
   // Set an incompatible magic number
   _response._hdr.magic_number = 0;
   fidl::OwnedEncodedMessage<test::Frobinator::HrobResponse> encoded(&_response);
@@ -283,13 +283,14 @@ class HandleProviderServer : public test::HandleProvider::Interface {
     for (auto& s : v) {
       zx::event::create(0, &s.h);
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(fidl::VectorView<test::wire::HandleStruct>::FromExternal(v));
   }
 
   void GetHandleUnion(GetHandleUnionCompleter::Sync& completer) override {
     zx::event h;
     zx::event::create(0, &h);
-    test::wire::HandleUnionStruct s = {.u = test::wire::HandleUnion::WithH(fidl::unowned_ptr(&h))};
+    test::wire::HandleUnionStruct s = {
+        .u = test::wire::HandleUnion::WithH(fidl::ObjectView<zx::event>::FromExternal(&h))};
     completer.Reply(std::move(s));
   }
 };
@@ -352,8 +353,6 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
       ASSERT_TRUE(result->value[i].h.is_valid());
       ASSERT_EQ(result->value[i].h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupes[i]), ZX_OK);
     }
-
-    { auto release = std::move(result->value); }  // ~VectorView<HandleStruct>
 
     // std::move of VectorView only moves pointers, not handles.
     // 1 handle in ResultOf + 1 handle in dupe = 2.

@@ -193,15 +193,17 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
  public:
   void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
-    fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
-    xunion.set_want_more_than_30_bytes(fidl::unowned_ptr(&array));
+    fidl::Array<uint8_t, 30> array = {};
+    xunion.set_want_more_than_30_bytes(
+        fidl::ObjectView<fidl::Array<uint8_t, 30>>::FromExternal(&array));
     completer.Reply(std::move(xunion));
   }
 
   void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
     fidl::Array<zx::handle, 4> array = {};
-    xunion.set_want_more_than_4_handles(fidl::unowned_ptr(&array));
+    xunion.set_want_more_than_4_handles(
+        fidl::ObjectView<fidl::Array<zx::handle, 4>>::FromExternal(&array));
     completer.Reply(std::move(xunion));
   }
 

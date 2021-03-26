@@ -1929,7 +1929,7 @@ void encode_nested_nullable_structs() {
 TEST(TrackingPtr, encode_union_tracking_ptr_unowned) {
   int32_t int_val = 0x12345678;
   LLCPPStyleUnionStruct str;
-  str.u.set_Primitive(fidl::unowned_ptr(&int_val));
+  str.u.set_Primitive(fidl::ObjectView<int32_t>::FromExternal(&int_val));
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
@@ -1959,7 +1959,7 @@ TEST(TrackingPtr, encode_union_tracking_ptr_unowned) {
 TEST(TrackingPtr, encode_union_tracking_ptr_heap_allocate) {
   int32_t int_val = 0x12345678;
   LLCPPStyleUnionStruct str;
-  str.u.set_Primitive(fidl::unowned_ptr(&int_val));
+  str.u.set_Primitive(fidl::ObjectView<int32_t>::FromExternal(&int_val));
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
@@ -1991,8 +1991,7 @@ TEST(TrackingPtr, encode_vector_view_tracking_ptr_unowned) {
     arr[i] = i;
 
   Uint32VectorStruct str;
-  str.vec.set_data(fidl::unowned_ptr(arr));
-  str.vec.set_count(kSize);
+  str.vec = fidl::VectorView<uint32_t>::FromExternal(arr);
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
@@ -2023,8 +2022,7 @@ TEST(TrackingPtr, encode_vector_view_tracking_ptr_heap_allocate) {
     uptr[i] = i;
 
   Uint32VectorStruct str;
-  str.vec.set_data(fidl::unowned_ptr(uptr));
-  str.vec.set_count(kSize);
+  str.vec = fidl::VectorView<uint32_t>::FromExternal(uptr);
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
@@ -2049,7 +2047,7 @@ TEST(TrackingPtr, encode_vector_view_tracking_ptr_heap_allocate) {
 
 TEST(TrackingPtr, encode_string_view_tracking_ptr_unowned) {
   const char input[] = "abcd";
-  StringStruct str = {.str = fidl::unowned_str(input, strlen(input))};
+  StringStruct str = {.str = fidl::StringView(input)};
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];

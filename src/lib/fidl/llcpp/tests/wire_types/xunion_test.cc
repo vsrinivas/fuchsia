@@ -22,13 +22,14 @@ TEST(XUnionPayload, Primitive) {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
     int32_t primitive = 5;
-    test_union.set_primitive(fidl::unowned_ptr(&primitive));
+    test_union.set_primitive(fidl::ObjectView<int32_t>::FromExternal(&primitive));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.which());
     EXPECT_EQ(5, test_union.primitive());
   }
   {
     int32_t primitive = 5;
-    auto test_union = llcpp_test::wire::TestUnion::WithPrimitive(fidl::unowned_ptr(&primitive));
+    auto test_union = llcpp_test::wire::TestUnion::WithPrimitive(
+        fidl::ObjectView<int32_t>::FromExternal(&primitive));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.which());
     EXPECT_EQ(5, test_union.primitive());
   }
@@ -41,7 +42,8 @@ TEST(XUnionPayload, WhichDisallowedWhenUninitialized) {
 
 TEST(XUnionPayload, Struct) {
   llcpp_test::wire::CopyableStruct copyable{.x = 5};
-  auto test_xunion = llcpp_test::wire::TestXUnion::WithCopyable(fidl::unowned_ptr(&copyable));
+  auto test_xunion = llcpp_test::wire::TestXUnion::WithCopyable(
+      fidl::ObjectView<llcpp_test::wire::CopyableStruct>::FromExternal(&copyable));
   EXPECT_EQ(llcpp_test::wire::TestXUnion::Tag::kCopyable, test_xunion.which());
 }
 
@@ -50,13 +52,14 @@ TEST(XUnionPayload, CopyableStruct) {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
     llcpp_test::wire::CopyableStruct copyable_struct{.x = 5};
-    test_union.set_copyable(fidl::unowned_ptr(&copyable_struct));
+    test_union.set_copyable(
+        fidl::ObjectView<llcpp_test::wire::CopyableStruct>::FromExternal(&copyable_struct));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.which());
   }
   {
     llcpp_test::wire::CopyableStruct copyable_struct{.x = 5};
-    auto test_union =
-        llcpp_test::wire::TestUnion::WithCopyable(fidl::unowned_ptr(&copyable_struct));
+    auto test_union = llcpp_test::wire::TestUnion::WithCopyable(
+        fidl::ObjectView<llcpp_test::wire::CopyableStruct>::FromExternal(&copyable_struct));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.which());
   }
 }
@@ -66,7 +69,8 @@ TEST(XUnionPayload, MoveOnlyStruct) {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = zx::handle()};
-    test_union.set_move_only(fidl::unowned_ptr(&move_only_struct));
+    test_union.set_move_only(
+        fidl::ObjectView<llcpp_test::wire::MoveOnlyStruct>::FromExternal(&move_only_struct));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.which());
   }
   {
@@ -76,14 +80,15 @@ TEST(XUnionPayload, MoveOnlyStruct) {
     ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = std::move(event)};
     EXPECT_NE(ZX_HANDLE_INVALID, move_only_struct.h.get());
-    test_union.set_move_only(fidl::unowned_ptr(&move_only_struct));
+    test_union.set_move_only(
+        fidl::ObjectView<llcpp_test::wire::MoveOnlyStruct>::FromExternal(&move_only_struct));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.which());
     EXPECT_NE(ZX_HANDLE_INVALID, move_only_struct.h.get());
   }
   {
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = zx::handle()};
-    auto test_union =
-        llcpp_test::wire::TestUnion::WithMoveOnly(fidl::unowned_ptr(&move_only_struct));
+    auto test_union = llcpp_test::wire::TestUnion::WithMoveOnly(
+        fidl::ObjectView<llcpp_test::wire::MoveOnlyStruct>::FromExternal(&move_only_struct));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.which());
   }
 }
@@ -117,7 +122,8 @@ TEST(MoveUnion, NoDoubleDestructPayload) {
         reinterpret_cast<llcpp_test::wire::TestUnion*>(dangerous_buffer);
     llcpp_test::wire::TestUnion union_with_absent_handle;
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = zx::handle()};
-    union_with_absent_handle.set_move_only(fidl::unowned_ptr(&move_only_struct));
+    union_with_absent_handle.set_move_only(
+        fidl::ObjectView<llcpp_test::wire::MoveOnlyStruct>::FromExternal(&move_only_struct));
     // Manually running the move constructor.
     new (test_union) llcpp_test::wire::TestUnion(std::move(union_with_absent_handle));
   }

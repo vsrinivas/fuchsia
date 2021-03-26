@@ -12,7 +12,8 @@ namespace fidl_linearized = ::fidl_llcpp_linearized_test;
 
 TEST(LinearizedAndEncoded, FullyLinearizedAndEncoded) {
   fidl_linearized::wire::InnerStruct inner = {.x = 1};
-  fidl_linearized::wire::FullyLinearizedStruct input{.ptr = fidl::unowned_ptr(&inner)};
+  fidl_linearized::wire::FullyLinearizedStruct input{
+      .ptr = fidl::ObjectView<fidl_linearized::wire::InnerStruct>::FromExternal(&inner)};
   fidl::OwnedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(&input);
   EXPECT_TRUE(encoded.ok());
 

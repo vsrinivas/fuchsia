@@ -79,7 +79,7 @@ class LLCPPStyleUnion {
 
   void set_Primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kPrimitive;
-    reset_ptr(::fidl::unowned_ptr(static_cast<void*>(elem.get())));
+    reset_ptr(fidl::ObjectView<void>::FromExternal(reinterpret_cast<void*>(elem.get())));
   }
 
  private:

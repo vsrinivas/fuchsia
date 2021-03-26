@@ -54,7 +54,9 @@ gen::wire::DirEnt golden_dirents_array[gen::wire::SMALL_DIR_VECTOR_SIZE] = {
     },
 };
 
-auto golden_dirents() { return fidl::VectorView{fidl::unowned_ptr(golden_dirents_array), 3}; }
+auto golden_dirents() {
+  return fidl::VectorView<gen::wire::DirEnt>::FromExternal(golden_dirents_array);
+}
 
 }  // namespace
 
@@ -373,16 +375,17 @@ class Random {
 };
 
 template <size_t kNumDirents>
-fidl::Array<gen::wire::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
+std::array<gen::wire::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
   Random random;
-  fidl::Array<gen::wire::DirEnt, kNumDirents> dirents;
+  std::array<gen::wire::DirEnt, kNumDirents> dirents;
   for (size_t i = 0; i < kNumDirents; i++) {
     int str_len = random.UpTo(gen::wire::TEST_MAX_PATH) + 1;
     bool is_dir = random.UpTo(2) == 0;
     int32_t flags = static_cast<int32_t>(random.UpTo(1000));
-    dirents[i] = gen::wire::DirEnt{.is_dir = is_dir,
-                                   .name = fidl::unowned_str(name, static_cast<uint64_t>(str_len)),
-                                   .some_flags = flags};
+    dirents[i] = gen::wire::DirEnt{
+        .is_dir = is_dir,
+        .name = fidl::StringView::FromExternal(name, static_cast<uint64_t>(str_len)),
+        .some_flags = flags};
   }
   return dirents;
 }
@@ -405,7 +408,8 @@ void SimpleCountNumDirectories() {
   // Stress test linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-    auto result = client.CountNumDirectories(fidl::unowned_vec(dirents));
+    auto result =
+        client.CountNumDirectories(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
@@ -439,8 +443,9 @@ void CallerAllocateCountNumDirectories() {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
     fidl::Buffer<gen::DirEntTestInterface::CountNumDirectoriesRequest> request_buffer;
     fidl::Buffer<gen::DirEntTestInterface::CountNumDirectoriesResponse> response_buffer;
-    auto result = client.CountNumDirectories(request_buffer.view(), fidl::unowned_vec(dirents),
-                                             response_buffer.view());
+    auto result = client.CountNumDirectories(
+        request_buffer.view(), fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents),
+        response_buffer.view());
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
@@ -608,7 +613,7 @@ TEST(DirentServerTest, CFlavorSendOnDirents) {
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   gen::DirEntTestInterface::EventSender event_sender(std::move(server_chan));
-  auto status = event_sender.OnDirents(fidl::unowned_vec(dirents));
+  auto status = event_sender.OnDirents(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
@@ -625,7 +630,8 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto buffer = std::make_unique<fidl::Buffer<gen::DirEntTestInterface::OnDirentsResponse>>();
   gen::DirEntTestInterface::EventSender event_sender(std::move(server_chan));
-  auto status = event_sender.OnDirents(buffer->view(), fidl::unowned_vec(dirents));
+  auto status = event_sender.OnDirents(buffer->view(),
+                                       fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }

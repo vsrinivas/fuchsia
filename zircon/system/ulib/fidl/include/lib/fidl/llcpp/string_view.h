@@ -24,6 +24,7 @@ namespace fidl {
 class StringView final : private VectorView<const char> {
  public:
   StringView() : VectorView() {}
+  StringView(const char data[], uint64_t size) : VectorView(data, size) {}
   StringView(unowned_ptr_t<const char[]>&& data, uint64_t size)
       : VectorView(std::move(data), size) {}
   explicit StringView(VectorView<char>&& vv) : VectorView(std::move(vv)) {}
@@ -46,6 +47,9 @@ class StringView final : private VectorView<const char> {
     static_assert(N > 0, "String should not be empty");
   }
 
+  static StringView FromExternal(cpp17::string_view from) { return StringView(from); }
+  static StringView FromExternal(const char* data, size_t size) { return StringView(data, size); }
+
   void Set(AnyAllocator& allocator, cpp17::string_view from) {
     Allocate(allocator, from.size());
     memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
@@ -57,7 +61,6 @@ class StringView final : private VectorView<const char> {
   void set_size(uint64_t size) { set_count(size); }
 
   const char* data() const { return VectorView::data(); }
-  void set_data(unowned_ptr_t<const char[]> data) { VectorView::set_data(data); }
 
   bool is_null() const { return data() == nullptr; }
   bool empty() const { return size() == 0; }
@@ -71,6 +74,9 @@ class StringView final : private VectorView<const char> {
 
   const char* end() const { return data() + size(); }
   const char* cend() const { return data() + size(); }
+
+ private:
+  explicit StringView(cpp17::string_view from) : VectorView(from.data(), from.size()) {}
 };
 
 }  // namespace fidl

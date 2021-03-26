@@ -23,7 +23,16 @@ class ObjectView final {
   ObjectView(unowned_ptr_t<T> other) { object_ = other.get(); }  // NOLINT
   // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
   ObjectView(unowned_ptr_t<aligned<T>> other) { object_ = &other.get()->value; }  // NOLINT
-  ObjectView(std::nullptr_t) {}  // NOLINT
+  ObjectView(std::nullptr_t) {}                                                   // NOLINT
+
+  // These methods are the only way to reference data which is not managed by a FidlAllocator.
+  // Their usage is dicouraged. The lifetime of the referenced string must be longer than the
+  // lifetime of the created StringView.
+  //
+  // For example:
+  //   std::string my_string = "Hello";
+  //   auto my_view = fidl::StringView::FromExternal>(my_string);
+  static ObjectView<T> FromExternal(T* from) { return ObjectView<T>(from); }
 
   template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
   U& operator*() const {
@@ -37,11 +46,15 @@ class ObjectView final {
 
   bool operator==(std::nullptr_t) const noexcept { return object_ == nullptr; }
   template <typename T2>
-  bool operator==(ObjectView<T2> other) const noexcept { return object_ == other.object_; }
+  bool operator==(ObjectView<T2> other) const noexcept {
+    return object_ == other.object_;
+  }
 
   bool operator!=(std::nullptr_t) const noexcept { return object_ != nullptr; }
   template <typename T2>
-  bool operator!=(ObjectView<T2> other) const noexcept { return object_ != other.object_; }
+  bool operator!=(ObjectView<T2> other) const noexcept {
+    return object_ != other.object_;
+  }
 
   T* get() const noexcept { return object_; }
 
@@ -54,6 +67,8 @@ class ObjectView final {
   }
 
  private:
+  explicit ObjectView(T* from) : object_(from) {}
+
   T* object_ = nullptr;
 };
 

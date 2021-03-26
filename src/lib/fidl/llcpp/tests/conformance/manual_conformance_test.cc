@@ -44,10 +44,10 @@ TEST(InlineXUnionInStruct, Success) {
     llcpp_misc::wire::InlineXUnionInStruct input;
     llcpp_misc::wire::SimpleUnion simple_union;
     int64_t i64 = 0xdeadbeef;
-    simple_union.set_i64(fidl::unowned_ptr(&i64));
-    input.before = fidl::unowned_str(before);
-    input.xu.set_su(fidl::unowned_ptr(&simple_union));
-    input.after = fidl::unowned_str(after);
+    simple_union.set_i64(fidl::ObjectView<int64_t>::FromExternal(&i64));
+    input.before = fidl::StringView::FromExternal(before);
+    input.xu.set_su(fidl::ObjectView<llcpp_misc::wire::SimpleUnion>::FromExternal(&simple_union));
+    input.after = fidl::StringView::FromExternal(after);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
@@ -96,9 +96,9 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   // encode
   {
     llcpp_misc::wire::InlineXUnionInStruct input;
-    input.before = fidl::unowned_str(before);
-    input.xu.set_i(fidl::unowned_ptr(&integer));
-    input.after = fidl::unowned_str(after);
+    input.before = fidl::StringView::FromExternal(before);
+    input.xu.set_i(fidl::ObjectView<int32_t>::FromExternal(&integer));
+    input.after = fidl::StringView::FromExternal(after);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
@@ -126,8 +126,8 @@ TEST(PrimitiveInXUnionInStruct, Success) {
 TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   llcpp_misc::wire::InlineXUnionInStruct input = {};
   std::string empty_str = "";
-  input.before = fidl::unowned_str(empty_str);
-  input.after = fidl::unowned_str(empty_str);
+  input.before = fidl::StringView::FromExternal(empty_str);
+  input.after = fidl::StringView::FromExternal(empty_str);
   fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
   EXPECT_STREQ(encoded.error(), "non-nullable xunion is absent");
   EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
@@ -298,12 +298,12 @@ TEST(ComplexTable, Success) {
     llcpp_misc::wire::SimpleTable simple_table(allocator);
     simple_table.set_x(allocator, table_x).set_y(allocator, table_y);
     llcpp_misc::wire::SampleXUnion xu;
-    xu.set_i(fidl::unowned_ptr(&xunion_i));
+    xu.set_i(fidl::ObjectView<int32_t>::FromExternal(&xunion_i));
     fidl::StringView strings_vector[]{
-        fidl::unowned_str(before),
-        fidl::unowned_str(after),
+        fidl::StringView::FromExternal(before),
+        fidl::StringView::FromExternal(after),
     };
-    fidl::VectorView<fidl::StringView> strings = fidl::unowned_vec(strings_vector);
+    auto strings = fidl::VectorView<fidl::StringView>::FromExternal(strings_vector);
     llcpp_misc::wire::ComplexTable input(allocator);
     input.set_simple(allocator, std::move(simple_table))
         .set_u(allocator, std::move(xu))

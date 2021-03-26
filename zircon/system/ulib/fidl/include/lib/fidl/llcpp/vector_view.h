@@ -42,7 +42,7 @@ class VectorView {
 
   VectorView() {}
 
-  VectorView(unowned_ptr_t<T[]>&& data, uint64_t count) : count_(count), data_(data.get()) {}
+  VectorView(unowned_ptr_t<T[]>&& data, size_t count) : count_(count), data_(data.get()) {}
 
   // Allocates a vector using the allocator.
   VectorView(AnyAllocator& allocator, size_t count)
@@ -53,14 +53,11 @@ class VectorView {
   }
   // Ideally these constructors wouldn't be needed, but automatic deduction into the unowned_ptr
   // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
-  VectorView(unowned_ptr_t<T> data, uint64_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
+  VectorView(unowned_ptr_t<T> data, size_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  VectorView(unowned_ptr_t<std::remove_const_t<U>> data, uint64_t count)
+  VectorView(unowned_ptr_t<std::remove_const_t<U>> data, size_t count)
       : VectorView(unowned_ptr_t<T[]>(data), count) {}
-  VectorView(std::nullptr_t data, uint64_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
-  // This constructor triggers a static assertion in unowned_ptr.
-  template <typename U, typename = std::enable_if_t<!std::is_array<U>::value>>
-  VectorView(U* data, uint64_t count) : VectorView(unowned_ptr_t<U[]>(data), count) {}
+  VectorView(std::nullptr_t data, size_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
 
   template <typename U>
   VectorView(VectorView<U>&& other) {
@@ -71,6 +68,24 @@ class VectorView {
     data_ = other.data_;
   }
 
+  // These methods are the only way to reference data which is not managed by a FidlAllocator.
+  // Their usage is dicouraged. The lifetime of the referenced vector must be longer than the
+  // lifetime of the created VectorView.
+  //
+  // For example:
+  //   std::vector<int32_t> my_vector = { 1, 2, 3 };
+  //   auto my_view = fidl::VectorView<int32_t>::FromExternal>(my_vector);
+  static VectorView<T> FromExternal(std::vector<T>& from) { return VectorView<T>(from); }
+  template <size_t size>
+  static VectorView<T> FromExternal(std::array<T, size>& from) {
+    return VectorView<T>(from.data(), size);
+  }
+  template <size_t size>
+  static VectorView<T> FromExternal(T (&data)[size]) {
+    return VectorView<T>(data, size);
+  }
+  static VectorView<T> FromExternal(T* data, size_t count) { return VectorView<T>(data, count); }
+
   template <typename U>
   VectorView& operator=(VectorView<U>&& other) {
     static_assert(std::is_same<T, U>::value || std::is_same<T, std::add_const_t<U>>::value,
@@ -80,11 +95,8 @@ class VectorView {
     return *this;
   }
 
-  VectorView(const VectorView&) = delete;
-  VectorView& operator=(const VectorView&) = delete;
-
-  uint64_t count() const { return count_; }
-  void set_count(uint64_t count) { count_ = count; }
+  size_t count() const { return count_; }
+  void set_count(size_t count) { count_ = count; }
 
   const T* data() const { return data_; }
   void set_data(unowned_ptr_t<T[]> data) { data_ = data.get(); }
@@ -114,10 +126,13 @@ class VectorView {
     data_ = allocator.AllocateVector<T>(count);
   }
 
+ protected:
+  explicit VectorView(std::vector<T>& from) : count_(from.size()), data_(from.data()) {}
+  VectorView(T* data, size_t count) : count_(count), data_(data) {}
+
  private:
   friend ::LayoutChecker;
-
-  uint64_t count_ = 0;
+  size_t count_ = 0;
   T* data_ = nullptr;
 };
 
