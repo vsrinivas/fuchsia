@@ -12,7 +12,7 @@ use {
             component::BindReason,
             component_id_index::ComponentInstanceId,
             error::ModelError,
-            events::{event::EventMode, registry::EventSubscription},
+            events::registry::EventSubscription,
             hooks::HooksRegistration,
             model::Model,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},

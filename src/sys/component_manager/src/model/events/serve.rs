@@ -9,10 +9,7 @@ use {
         model::{
             error::ModelError,
             events::{
-                event::{Event, EventMode},
-                registry::EventSubscription,
-                source::EventSource,
-                stream::EventStream,
+                event::Event, registry::EventSubscription, source::EventSource, stream::EventStream,
             },
             hooks::{
                 EventError, EventErrorPayload, EventPayload, EventResult, EventType, HasEventType,
@@ -20,7 +17,7 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_rust::CapabilityName,
+    cm_rust::{CapabilityName, EventMode},
     fidl::endpoints::{create_request_stream, ClientEnd, Proxy},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{self as fio, NodeProxy},

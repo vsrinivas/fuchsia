@@ -382,15 +382,12 @@ mod tests {
             model::{
                 binding::Binder,
                 component::{BindReason, ComponentInstance},
-                events::{
-                    event::EventMode, registry::EventSubscription, source::EventSource,
-                    stream::EventStream,
-                },
+                events::{registry::EventSubscription, source::EventSource, stream::EventStream},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl,
+            self, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl, EventMode, ExposeDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
         },
         fidl::endpoints::{self, Proxy},

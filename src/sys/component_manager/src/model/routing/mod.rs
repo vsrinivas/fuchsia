@@ -476,12 +476,12 @@ pub async fn route_protocol(
         )?;
         return Ok(source);
     } else {
-        RoutingStrategy::new()
+        Ok(RoutingStrategy::new()
             .use_::<UseProtocolDecl>()
             .offer::<OfferProtocolDecl>()
             .expose::<ExposeProtocolDecl>()
             .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
-            .await
+            .await?)
     }
 }
 
@@ -489,7 +489,7 @@ pub async fn route_protocol(
 pub async fn route_protocol_from_expose(
     expose_decl: ExposeProtocolDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, ModelError> {
+) -> Result<CapabilitySource, RoutingError> {
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Protocol)
         .builtin(InternalCapability::Protocol)
@@ -528,7 +528,7 @@ impl DirectoryState {
         &mut self,
         rights: Option<fio2::Operations>,
         subdir: Option<PathBuf>,
-    ) -> Result<(), ModelError> {
+    ) -> Result<(), RoutingError> {
         self.rights = self.rights.advance(rights.map(Rights::from))?;
         let subdir = subdir.clone().unwrap_or_else(PathBuf::new);
         self.subdir = subdir.attach(&self.subdir);
@@ -539,7 +539,7 @@ impl DirectoryState {
         &mut self,
         rights: fio2::Operations,
         subdir: Option<PathBuf>,
-    ) -> Result<(), ModelError> {
+    ) -> Result<(), RoutingError> {
         self.rights = self.rights.finalize(Some(rights.into()))?;
         let subdir = subdir.clone().unwrap_or_else(PathBuf::new);
         self.subdir = subdir.attach(&self.subdir);
@@ -550,7 +550,7 @@ impl DirectoryState {
 impl OfferVisitor for DirectoryState {
     type OfferDecl = OfferDirectoryDecl;
 
-    fn visit(&mut self, offer: &OfferDirectoryDecl) -> Result<(), ModelError> {
+    fn visit(&mut self, offer: &OfferDirectoryDecl) -> Result<(), RoutingError> {
         match offer.source {
             OfferSource::Framework => self.finalize(*READ_RIGHTS, offer.subdir.clone()),
             _ => self.advance(offer.rights.clone(), offer.subdir.clone()),
@@ -561,7 +561,7 @@ impl OfferVisitor for DirectoryState {
 impl ExposeVisitor for DirectoryState {
     type ExposeDecl = ExposeDirectoryDecl;
 
-    fn visit(&mut self, expose: &ExposeDirectoryDecl) -> Result<(), ModelError> {
+    fn visit(&mut self, expose: &ExposeDirectoryDecl) -> Result<(), RoutingError> {
         match expose.source {
             ExposeSource::Framework => self.finalize(*READ_RIGHTS, expose.subdir.clone()),
             _ => self.advance(expose.rights.clone(), expose.subdir.clone()),
@@ -572,7 +572,7 @@ impl ExposeVisitor for DirectoryState {
 impl CapabilityVisitor for DirectoryState {
     type CapabilityDecl = DirectoryDecl;
 
-    fn visit(&mut self, capability_decl: &DirectoryDecl) -> Result<(), ModelError> {
+    fn visit(&mut self, capability_decl: &DirectoryDecl) -> Result<(), RoutingError> {
         self.finalize(capability_decl.rights.clone(), None)
     }
 }
@@ -583,7 +583,7 @@ impl CapabilityVisitor for DirectoryState {
 pub async fn route_directory(
     use_decl: UseDirectoryDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<(CapabilitySource, DirectoryState), ModelError> {
+) -> Result<(CapabilitySource, DirectoryState), RoutingError> {
     let mut state = DirectoryState::new(use_decl.rights.clone(), use_decl.subdir.clone());
     if let UseSource::Framework = &use_decl.source {
         state.finalize(*READ_RIGHTS, None)?;
@@ -608,7 +608,7 @@ pub async fn route_directory(
 pub async fn route_directory_from_expose(
     expose_decl: ExposeDirectoryDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<(CapabilitySource, DirectoryState), ModelError> {
+) -> Result<(CapabilitySource, DirectoryState), RoutingError> {
     let mut state = DirectoryState { rights: WalkState::new(), subdir: PathBuf::new() };
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Directory)
@@ -765,7 +765,7 @@ impl RegistrationDeclCommon for StorageDeclAsRegistration {
 pub async fn route_storage_backing_directory(
     storage_decl: StorageDecl,
     target: Arc<ComponentInstance>,
-) -> Result<storage::StorageCapabilitySource, ModelError> {
+) -> Result<storage::StorageCapabilitySource, RoutingError> {
     // Storage rights are always READ+WRITE.
     let mut state = DirectoryState::new(*READ_RIGHTS | *WRITE_RIGHTS, None);
     let allowed_sources = AllowedSourcesBuilder::new().component().namespace();
@@ -808,7 +808,7 @@ make_noop_visitor!(RunnerVisitor, {
 pub async fn route_runner(
     runner: &CapabilityName,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, ModelError> {
+) -> Result<CapabilitySource, RoutingError> {
     // Find the component instance in which the runner was registered with the environment.
     let (env_component_instance, registration_decl) =
         match target.environment.get_registered_runner(&runner)? {
@@ -852,7 +852,7 @@ make_noop_visitor!(ResolverVisitor, {
 pub async fn route_resolver(
     registration: ResolverRegistration,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, ModelError> {
+) -> Result<CapabilitySource, RoutingError> {
     let allowed_sources =
         AllowedSourcesBuilder::new().builtin(InternalCapability::Resolver).component();
     RoutingStrategy::new()
@@ -872,7 +872,7 @@ struct EventState {
 impl OfferVisitor for EventState {
     type OfferDecl = OfferEventDecl;
 
-    fn visit(&mut self, offer: &OfferEventDecl) -> Result<(), ModelError> {
+    fn visit(&mut self, offer: &OfferEventDecl) -> Result<(), RoutingError> {
         let event_filter = Some(EventFilter::new(offer.filter.clone()));
         let modes = Some(EventModeSet::new(offer.mode.clone()));
         match &offer.source {

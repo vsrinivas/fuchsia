@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::model::error::ModelError, std::fmt::Debug};
+use {::routing::error::RoutingError, std::fmt::Debug};
 
 /// The payload of a walk state.
 pub trait WalkStateUnit<Rhs = Self> {
-    type Error: Into<ModelError>;
+    type Error: Into<RoutingError>;
 
     /// Validates whether the next state in a walk state is valid or not when advancing or
     /// finalizing.
@@ -41,7 +41,7 @@ impl<T: WalkStateUnit + Debug + Clone> WalkState<T> {
     }
 
     /// Advances the WalkState if and only if the state passed satisfies the validation.
-    pub fn advance(&self, next_state: Option<T>) -> Result<Self, ModelError> {
+    pub fn advance(&self, next_state: Option<T>) -> Result<Self, RoutingError> {
         match (&self, &next_state) {
             (WalkState::Finished(_), _) => {
                 panic!("Attempting to advance a finished WalkState");
@@ -68,7 +68,7 @@ impl<T: WalkStateUnit + Debug + Clone> WalkState<T> {
     /// Finalizes the state preventing future modification, this is called when the walker arrives
     /// at a node with a source of Framework, Builtin, Namespace or Self. The provided |state|
     /// should always be the state at the CapabilitySource.
-    pub fn finalize(&self, state: Option<T>) -> Result<Self, ModelError> {
+    pub fn finalize(&self, state: Option<T>) -> Result<Self, RoutingError> {
         if self.is_finished() {
             panic!("Attempted to finalized a finished walk state.");
         }

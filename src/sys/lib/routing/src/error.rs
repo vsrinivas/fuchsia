@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    cm_rust::CapabilityName,
+    clonable_error::ClonableError,
+    cm_rust::{CapabilityName, EventMode},
     fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, PartialMoniker},
     thiserror::Error,
@@ -40,8 +41,6 @@ pub enum RoutingError {
     )]
     SourceInstanceNotExecutable { moniker: AbsoluteMoniker },
 
-    #[error("Source for storage capability must be a component, but was `{}`", source_type)]
-    StorageSourceIsNotComponent { source_type: &'static str },
     #[error(
         "Source for directory backing storage from `{}` must be a component or component manager's namespace, but was {}",
         storage_moniker,
@@ -286,6 +285,25 @@ pub enum RoutingError {
         capability_id
     )]
     ExposeFromFrameworkNotFound { moniker: AbsoluteMoniker, capability_id: String },
+
+    #[error("Routing a capability from an unsupported source type: {}", source_type)]
+    UnsupportedRouteSource { source_type: String },
+
+    #[error(transparent)]
+    ComponentInstanceError(#[from] ComponentInstanceError),
+
+    #[error(transparent)]
+    EventsRoutingError(#[from] EventsRoutingError),
+
+    #[error(transparent)]
+    RightsRoutingError(#[from] RightsRoutingError),
+
+    #[error("Failed to resolve `{}`: {}", moniker, err)]
+    ResolveFailed {
+        moniker: AbsoluteMoniker,
+        #[source]
+        err: ClonableError,
+    },
 }
 
 impl RoutingError {
@@ -305,10 +323,6 @@ impl RoutingError {
 
     pub fn source_instance_not_executable(moniker: &AbsoluteMoniker) -> Self {
         Self::SourceInstanceNotExecutable { moniker: moniker.clone() }
-    }
-
-    pub fn storage_source_is_not_component(source_type: &'static str) -> Self {
-        Self::StorageSourceIsNotComponent { source_type }
     }
 
     pub fn storage_directory_source_invalid(
@@ -482,5 +496,45 @@ impl RoutingError {
             moniker: moniker.clone(),
             capability_id: capability_id.into(),
         }
+    }
+
+    pub fn unsupported_route_source(source: impl Into<String>) -> Self {
+        Self::UnsupportedRouteSource { source_type: source.into() }
+    }
+
+    pub fn resolve_failed(moniker: &AbsoluteMoniker, err: impl Into<anyhow::Error>) -> Self {
+        Self::ResolveFailed { moniker: moniker.clone(), err: err.into().into() }
+    }
+}
+
+/// Errors produced during routing specific to events.
+#[derive(Error, Debug, Clone)]
+pub enum EventsRoutingError {
+    #[error("Filter is not a subset")]
+    InvalidFilter,
+
+    #[error("Event routes must end at source with a filter declaration")]
+    MissingFilter,
+
+    #[error("Event mode, `{:?}`, cannot be propagated", event_mode)]
+    CannotPropagateEventMode { event_mode: EventMode },
+
+    #[error("Event routes must end at source with a modes declaration")]
+    MissingModes,
+}
+
+#[derive(Debug, Error, Clone)]
+pub enum RightsRoutingError {
+    #[error("Requested rights greater than provided rights")]
+    Invalid,
+
+    #[error("Directory routes must end at source with a rights declaration")]
+    MissingRightsSource,
+}
+
+impl RightsRoutingError {
+    /// Convert this error into its approximate `zx::Status` equivalent.
+    pub fn as_zx_status(&self) -> zx::Status {
+        zx::Status::UNAVAILABLE
     }
 }

@@ -6,11 +6,12 @@ use {
     crate::model::{
         events::{
             dispatcher::{EventDispatcher, EventDispatcherScope},
-            event::{Event, EventMode},
+            event::Event,
             registry::SubscriptionOptions,
         },
         hooks::{EventType, HasEventType},
     },
+    cm_rust::EventMode,
     fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
     moniker::{AbsoluteMoniker, ExtendedMoniker},

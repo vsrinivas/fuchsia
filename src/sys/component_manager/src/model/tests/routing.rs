@@ -14,7 +14,7 @@ use {
         model::{
             actions::{ActionSet, DeleteChildAction, DestroyAction, ShutdownAction},
             error::ModelError,
-            events::{event::EventMode, registry::EventSubscription},
+            events::registry::EventSubscription,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             resolver::ResolverError,
             rights,
@@ -22,6 +22,7 @@ use {
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
+    ::routing::error::ComponentInstanceError,
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::*,
@@ -2621,9 +2622,13 @@ async fn use_with_destroyed_parent() {
     let err = routing::route_protocol(use_protocol_decl, &realm_c)
         .await
         .expect_err("routing unexpectedly succeeded");
-    assert_eq!(
-        format!("{:?}", err),
-        format!("{:?}", ModelError::instance_not_found(vec!["coll:b:1"].into()))
+    assert_matches!(
+        err,
+        ModelError::RoutingError {
+            err: RoutingError::ComponentInstanceError(
+                ComponentInstanceError::InstanceNotFound { moniker }
+            )
+        } if moniker == vec!["coll:b:1"].into()
     );
 }
 

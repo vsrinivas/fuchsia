@@ -5,7 +5,7 @@
 use {
     crate::model::{
         events::{
-            event::{Event, EventMode},
+            event::Event,
             filter::EventFilter,
             mode_set::EventModeSet,
             registry::{ExecutionMode, SubscriptionOptions, SubscriptionType},
@@ -16,7 +16,7 @@ use {
         },
     },
     anyhow::Error,
-    cm_rust::DictionaryValue,
+    cm_rust::{DictionaryValue, EventMode},
     fuchsia_trace as trace,
     futures::{
         channel::{mpsc, oneshot},

@@ -10,7 +10,6 @@ use {
             error::ModelError,
             events::{
                 error::EventsError,
-                event::EventMode,
                 registry::{
                     EventRegistry, EventSubscription, ExecutionMode, SubscriptionOptions,
                     SubscriptionType,
@@ -23,6 +22,7 @@ use {
         },
     },
     async_trait::async_trait,
+    cm_rust::EventMode,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,

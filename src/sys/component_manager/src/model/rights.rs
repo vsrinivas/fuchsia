@@ -4,12 +4,11 @@
 
 use {
     crate::model::walk_state::WalkStateUnit,
+    ::routing::error::RightsRoutingError,
     fidl_fuchsia_io::{self as fio},
     fidl_fuchsia_io2::{self as fio2},
-    fuchsia_zircon as zx,
     lazy_static::lazy_static,
     std::convert::From,
-    thiserror::Error,
 };
 
 lazy_static! {
@@ -89,24 +88,8 @@ impl From<fio2::Operations> for Rights {
     }
 }
 
-#[derive(Debug, Error, Clone)]
-pub enum RightsError {
-    #[error("Requested rights greater than provided rights")]
-    Invalid,
-
-    #[error("Directory routes must end at source with a rights declaration")]
-    InvalidFinalize,
-}
-
-impl RightsError {
-    /// Convert this error into its approximate `zx::Status` equivalent.
-    pub fn as_zx_status(&self) -> zx::Status {
-        zx::Status::UNAVAILABLE
-    }
-}
-
 impl WalkStateUnit for Rights {
-    type Error = RightsError;
+    type Error = RightsRoutingError;
 
     /// Ensures the next walk state of rights satisfies a monotonic increasing sequence. Used to
     /// verify the expectation that no right requested from a use, offer, or expose is missing as
@@ -115,12 +98,12 @@ impl WalkStateUnit for Rights {
         if next_rights.0.contains(self.0) {
             Ok(())
         } else {
-            Err(RightsError::Invalid)
+            Err(RightsRoutingError::Invalid)
         }
     }
 
     fn finalize_error() -> Self::Error {
-        RightsError::InvalidFinalize
+        RightsRoutingError::MissingRightsSource
     }
 }
 
@@ -145,13 +128,13 @@ mod tests {
             Rights::from(Rights::from(*LEGACY_READABLE_RIGHTS)).validate_next(&Rights::from(
                 fio2::Operations::ReadBytes | fio2::Operations::GetAttributes
             )),
-            Err(RightsError::Invalid)
+            Err(RightsRoutingError::Invalid)
         );
         assert_matches!(
             Rights::from(fio2::Operations::WriteBytes).validate_next(&Rights::from(
                 fio2::Operations::ReadBytes | fio2::Operations::GetAttributes
             )),
-            Err(RightsError::Invalid)
+            Err(RightsRoutingError::Invalid)
         );
     }
 

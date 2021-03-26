@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{events::error::EventsError, walk_state::WalkStateUnit},
-    cm_rust::DictionaryValue,
-    maplit::hashmap,
-    std::collections::HashMap,
+    crate::model::walk_state::WalkStateUnit, ::routing::error::EventsRoutingError,
+    cm_rust::DictionaryValue, maplit::hashmap, std::collections::HashMap,
 };
 
 type OptionFilterMap = Option<HashMap<String, DictionaryValue>>;
@@ -42,7 +40,7 @@ impl EventFilter {
     fn validate_subset(
         self_filter: &OptionFilterMap,
         next_filter: &OptionFilterMap,
-    ) -> Result<(), EventsError> {
+    ) -> Result<(), EventsRoutingError> {
         match (self_filter, next_filter) {
             (None, None) => {}
             (None, Some(_)) => {}
@@ -51,12 +49,12 @@ impl EventFilter {
                     if !(next_filter.contains_key(key)
                         && is_subset(value, next_filter.get(key).as_ref().unwrap()))
                     {
-                        return Err(EventsError::InvalidFilter);
+                        return Err(EventsRoutingError::InvalidFilter);
                     }
                 }
             }
             (Some(_), None) => {
-                return Err(EventsError::InvalidFilter);
+                return Err(EventsRoutingError::InvalidFilter);
             }
         }
         Ok(())
@@ -64,7 +62,7 @@ impl EventFilter {
 }
 
 impl WalkStateUnit for EventFilter {
-    type Error = EventsError;
+    type Error = EventsRoutingError;
 
     /// Ensures the next walk state of filters is a superset of the current state.
     ///
@@ -78,7 +76,7 @@ impl WalkStateUnit for EventFilter {
     }
 
     fn finalize_error() -> Self::Error {
-        EventsError::MissingFilter
+        EventsRoutingError::MissingFilter
     }
 }
 
@@ -138,47 +136,50 @@ mod tests {
 
         assert_matches!(
             single_field_filter.validate_next(&none_filter),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(
             single_field_filter.validate_next(&empty_filter),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(single_field_filter.validate_next(&single_field_filter), Ok(()));
         assert_matches!(
             single_field_filter.validate_next(&single_field_filter_2),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(
             single_field_filter.validate_next(&multi_field_filter),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(single_field_filter.validate_next(&multi_field_filter_2), Ok(()));
 
         assert_matches!(
             multi_field_filter.validate_next(&none_filter),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(
             multi_field_filter_2.validate_next(&multi_field_filter),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(
             multi_field_filter.validate_next(&single_field_filter),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(
             multi_field_filter.validate_next(&single_field_filter_2),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
         assert_matches!(multi_field_filter.validate_next(&multi_field_filter), Ok(()));
         assert_matches!(multi_field_filter.validate_next(&multi_field_filter_2), Ok(()));
         assert_matches!(
             multi_field_filter.validate_next(&empty_filter),
-            Err(EventsError::InvalidFilter)
+            Err(EventsRoutingError::InvalidFilter)
         );
 
-        assert_matches!(empty_filter.validate_next(&none_filter), Err(EventsError::InvalidFilter));
+        assert_matches!(
+            empty_filter.validate_next(&none_filter),
+            Err(EventsRoutingError::InvalidFilter)
+        );
         assert_matches!(empty_filter.validate_next(&empty_filter), Ok(()));
         assert_matches!(empty_filter.validate_next(&single_field_filter), Ok(()));
         assert_matches!(empty_filter.validate_next(&multi_field_filter), Ok(()));

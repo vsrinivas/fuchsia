@@ -17,6 +17,7 @@ rustc_library("clonable_error") {
     "//src/fonts:*",
     "//src/fonts/manifest:*",
     "//src/sys/component_manager:*",
+    "//src/sys/lib/routing:*",
   ]
 
   edition = "2018"

@@ -3,15 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::hooks::Event as ComponentEvent, fuchsia_trace as trace,
+    crate::model::hooks::Event as ComponentEvent, cm_rust::EventMode, fuchsia_trace as trace,
     futures::channel::oneshot, moniker::ExtendedMoniker,
 };
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum EventMode {
-    Sync,
-    Async,
-}
 
 /// Created for a particular component event.
 /// Contains the Event that occurred along with a means to resume/unblock the component manager.

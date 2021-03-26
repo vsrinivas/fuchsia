@@ -114,7 +114,7 @@ pub mod tests {
             },
             binding::Binder,
             component::BindReason,
-            events::{event::EventMode, registry::EventSubscription, stream::EventStream},
+            events::{registry::EventSubscription, stream::EventStream},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             testing::{
                 test_helpers::{
@@ -124,6 +124,7 @@ pub mod tests {
                 test_hook::Lifecycle,
             },
         },
+        cm_rust::EventMode,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
         moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},

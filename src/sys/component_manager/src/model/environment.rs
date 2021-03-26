@@ -7,9 +7,9 @@ use {
         component::{
             ComponentInstance, ComponentManagerInstance, ExtendedInstance, WeakExtendedInstance,
         },
-        error::ModelError,
         resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
     },
+    ::routing::error::ComponentInstanceError,
     async_trait::async_trait,
     cm_rust::{CapabilityName, EnvironmentDecl, RegistrationSource, RunnerRegistration},
     fidl_fuchsia_sys2 as fsys,
@@ -138,7 +138,7 @@ impl Environment {
     pub fn get_registered_runner(
         &self,
         name: &CapabilityName,
-    ) -> Result<Option<(ExtendedInstance, RunnerRegistration)>, ModelError> {
+    ) -> Result<Option<(ExtendedInstance, RunnerRegistration)>, ComponentInstanceError> {
         let parent = self.parent.upgrade()?;
         match self.runner_registry.get_runner(name) {
             Some(reg) => Ok(Some((parent, reg.clone()))),
@@ -164,7 +164,8 @@ impl Environment {
     pub fn get_debug_capability(
         &self,
         name: &CapabilityName,
-    ) -> Result<Option<(ExtendedInstance, Option<String>, DebugRegistration)>, ModelError> {
+    ) -> Result<Option<(ExtendedInstance, Option<String>, DebugRegistration)>, ComponentInstanceError>
+    {
         let parent = self.parent.upgrade()?;
         match self.debug_registry.get_capability(name) {
             Some(reg) => Ok(Some((parent, self.name.clone(), reg.clone()))),

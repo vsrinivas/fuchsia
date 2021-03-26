@@ -7,7 +7,6 @@ use {
         capability::{CapabilitySource, ComponentCapability, InternalCapability},
         model::{
             component::{ComponentInstance, ExtendedInstance},
-            error::ModelError,
             routing::error::RoutingError,
         },
     },
@@ -99,7 +98,7 @@ where
         use_target: Arc<ComponentInstance>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, ModelError>
+    ) -> Result<CapabilitySource, RoutingError>
     where
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
@@ -125,7 +124,7 @@ where
         offer_target: Arc<ComponentInstance>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, ModelError>
+    ) -> Result<CapabilitySource, RoutingError>
     where
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
@@ -134,7 +133,9 @@ where
         match Offer::route(offer_decl, offer_target, &sources, visitor).await? {
             OfferResult::Source(source) => Ok(source),
             OfferResult::OfferFromChild(_, _) => {
-                Err(ModelError::unsupported("failed to find source"))
+                // This condition should not happen since cm_fidl_validator ensures
+                // that this kind of declaration cannot exist.
+                unreachable!("found offer from child but capability cannot be exposed")
             }
         }
     }
@@ -165,7 +166,7 @@ where
         use_target: Arc<ComponentInstance>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, ModelError>
+    ) -> Result<CapabilitySource, RoutingError>
     where
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
@@ -206,7 +207,7 @@ where
         registration_target: Arc<ComponentInstance>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, ModelError>
+    ) -> Result<CapabilitySource, RoutingError>
     where
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
@@ -249,7 +250,7 @@ where
         offer_target: Arc<ComponentInstance>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, ModelError>
+    ) -> Result<CapabilitySource, RoutingError>
     where
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
@@ -277,7 +278,7 @@ where
         expose_target: Arc<ComponentInstance>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, ModelError>
+    ) -> Result<CapabilitySource, RoutingError>
     where
         S: Sources,
         V: ExposeVisitor<ExposeDecl = E>,
@@ -296,16 +297,16 @@ pub trait Sources {
     type CapabilityDecl;
 
     /// Return the [`InternalCapability`] representing this framework capability source, or
-    /// [`ModelError::Unsupported`] if unsupported.
-    fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, ModelError>;
+    /// [`RoutingError::UnsupportedRouteSource`] if unsupported.
+    fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError>;
 
     /// Return the [`InternalCapability`] representing this built-in capability source, or
-    /// [`ModelError::Unsupported`] if unsupported.
-    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, ModelError>;
+    /// [`RoutingError::UnsupportedRouteSource`] if unsupported.
+    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError>;
 
-    /// Checks whether capability sources are supported, returning [`ModelError::Unsupported`]
+    /// Checks whether capability sources are supported, returning [`RoutingError::UnsupportedRouteSource`]
     /// if they are not.
-    fn capability_source(&self) -> Result<(), ModelError>;
+    fn capability_source(&self) -> Result<(), RoutingError>;
 
     /// Checks whether namespace capability sources are supported.
     fn is_namespace_supported(&self) -> bool;
@@ -313,26 +314,26 @@ pub trait Sources {
     /// Looks for a namespace capability in the list of capability sources.
     /// If found, the declaration is visited by `visitor` and the declaration is wrapped
     /// in a [`ComponentCapability`].
-    /// Returns [`ModelError::Unsupported`] if namespace capabilities are unsupported.
+    /// Returns [`RoutingError::UnsupportedRouteSource`] if namespace capabilities are unsupported.
     fn find_namespace_source<V>(
         &self,
         name: &CapabilityName,
         capabilities: &[CapabilityDecl],
         visitor: &mut V,
-    ) -> Result<Option<ComponentCapability>, ModelError>
+    ) -> Result<Option<ComponentCapability>, RoutingError>
     where
         V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>;
 
     /// Looks for a component capability in the list of capability sources.
     /// If found, the declaration is visited by `visitor` and the declaration is wrapped
     /// in a [`ComponentCapability`].
-    /// Returns [`ModelError::Unsupported`] if component capabilities are unsupported.
+    /// Returns [`RoutingError::UnsupportedRouteSource`] if component capabilities are unsupported.
     fn find_component_source<V>(
         &self,
         name: &CapabilityName,
         capabilities: &[CapabilityDecl],
         visitor: &mut V,
-    ) -> Result<ComponentCapability, ModelError>
+    ) -> Result<ComponentCapability, RoutingError>
     where
         V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>;
 }
@@ -403,25 +404,25 @@ pub struct Allow<C>(PhantomData<C>);
 impl Sources for AllowedSourcesBuilder<()> {
     type CapabilityDecl = ();
 
-    fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, ModelError> {
+    fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError> {
         self.framework
             .as_ref()
             .map(|b| b(name))
-            .ok_or_else(|| ModelError::unsupported("routing from framework"))
+            .ok_or_else(|| RoutingError::unsupported_route_source("framework"))
     }
 
-    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, ModelError> {
+    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError> {
         self.builtin
             .as_ref()
             .map(|b| b(name))
-            .ok_or_else(|| ModelError::unsupported("routing from built-in capability"))
+            .ok_or_else(|| RoutingError::unsupported_route_source("built-in"))
     }
 
-    fn capability_source(&self) -> Result<(), ModelError> {
+    fn capability_source(&self) -> Result<(), RoutingError> {
         if self.capability {
             Ok(())
         } else {
-            Err(ModelError::unsupported("routing from other capability"))
+            Err(RoutingError::unsupported_route_source("capability"))
         }
     }
 
@@ -434,11 +435,11 @@ impl Sources for AllowedSourcesBuilder<()> {
         _: &CapabilityName,
         _: &[CapabilityDecl],
         _: &mut V,
-    ) -> Result<Option<ComponentCapability>, ModelError>
+    ) -> Result<Option<ComponentCapability>, RoutingError>
     where
         V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>,
     {
-        Err(ModelError::unsupported("routing from namespace"))
+        Err(RoutingError::unsupported_route_source("namespace"))
     }
 
     fn find_component_source<V>(
@@ -446,11 +447,11 @@ impl Sources for AllowedSourcesBuilder<()> {
         _: &CapabilityName,
         _: &[CapabilityDecl],
         _: &mut V,
-    ) -> Result<ComponentCapability, ModelError>
+    ) -> Result<ComponentCapability, RoutingError>
     where
         V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>,
     {
-        Err(ModelError::unsupported("routing from component"))
+        Err(RoutingError::unsupported_route_source("component"))
     }
 }
 
@@ -462,25 +463,25 @@ where
 {
     type CapabilityDecl = C;
 
-    fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, ModelError> {
+    fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError> {
         self.framework
             .as_ref()
             .map(|b| b(name))
-            .ok_or_else(|| ModelError::unsupported("routing from framework"))
+            .ok_or_else(|| RoutingError::unsupported_route_source("framework"))
     }
 
-    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, ModelError> {
+    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError> {
         self.builtin
             .as_ref()
             .map(|b| b(name))
-            .ok_or_else(|| ModelError::unsupported("routing from built-in capability"))
+            .ok_or_else(|| RoutingError::unsupported_route_source("built-in"))
     }
 
-    fn capability_source(&self) -> Result<(), ModelError> {
+    fn capability_source(&self) -> Result<(), RoutingError> {
         if self.capability {
             Ok(())
         } else {
-            Err(ModelError::unsupported("routing from other capability"))
+            Err(RoutingError::unsupported_route_source("capability"))
         }
     }
 
@@ -493,7 +494,7 @@ where
         name: &CapabilityName,
         capabilities: &[CapabilityDecl],
         visitor: &mut V,
-    ) -> Result<Option<ComponentCapability>, ModelError>
+    ) -> Result<Option<ComponentCapability>, RoutingError>
     where
         V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>,
     {
@@ -510,7 +511,7 @@ where
                 Ok(None)
             }
         } else {
-            Err(ModelError::unsupported("routing from namespace"))
+            Err(RoutingError::unsupported_route_source("namespace"))
         }
     }
 
@@ -519,7 +520,7 @@ where
         name: &CapabilityName,
         capabilities: &[CapabilityDecl],
         visitor: &mut V,
-    ) -> Result<ComponentCapability, ModelError>
+    ) -> Result<ComponentCapability, RoutingError>
     where
         V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>,
     {
@@ -533,7 +534,7 @@ where
             visitor.visit(&decl)?;
             Ok(decl.into())
         } else {
-            Err(ModelError::unsupported("routing from component"))
+            Err(RoutingError::unsupported_route_source("component"))
         }
     }
 }
@@ -560,7 +561,7 @@ where
         target: Arc<ComponentInstance>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<UseResult<O>, ModelError>
+    ) -> Result<UseResult<O>, RoutingError>
     where
         S: Sources,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
@@ -599,7 +600,10 @@ where
                 }
                 ExtendedInstance::Component(parent_component) => {
                     let parent_offer: O = {
-                        let parent_state = parent_component.lock_resolved_state().await?;
+                        let parent_state =
+                            parent_component.lock_resolved_state().await.map_err(|err| {
+                                RoutingError::resolve_failed(&parent_component.abs_moniker, err)
+                            })?;
                         let child_moniker =
                             target.child_moniker().cloned().expect("ChildMoniker should exist");
                         find_matching_offer(use_.source_name(), &child_moniker, parent_state.decl())
@@ -617,7 +621,7 @@ where
             UseSource::Debug => {
                 // This is not supported today. It might be worthwhile to support this if
                 // more than just protocol has a debug capability.
-                return Err(ModelError::unsupported("debug capability"));
+                return Err(RoutingError::unsupported_route_source("debug capability"));
             }
         }
     }
@@ -648,7 +652,7 @@ where
         target: Arc<ComponentInstance>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<RegistrationResult<O, E>, ModelError>
+    ) -> Result<RegistrationResult<O, E>, RoutingError>
     where
         S: Sources,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
@@ -657,7 +661,10 @@ where
     {
         match registration.source() {
             RegistrationSource::Self_ => {
-                let state = target.lock_resolved_state().await?;
+                let state = target
+                    .lock_resolved_state()
+                    .await
+                    .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
                 Ok(RegistrationResult::Source(CapabilitySource::Component {
                     capability: sources.find_component_source(
                         registration.source_name(),
@@ -688,7 +695,10 @@ where
                 }
                 ExtendedInstance::Component(parent_component) => {
                     let parent_offer: O = {
-                        let parent_state = parent_component.lock_resolved_state().await?;
+                        let parent_state =
+                            parent_component.lock_resolved_state().await.map_err(|err| {
+                                RoutingError::resolve_failed(&parent_component.abs_moniker, err)
+                            })?;
                         let child_moniker =
                             target.child_moniker().cloned().expect("ChildMoniker should exist");
                         find_matching_offer(
@@ -709,7 +719,10 @@ where
             },
             RegistrationSource::Child(child) => {
                 let child_component = {
-                    let state = target.lock_resolved_state().await?;
+                    let state = target
+                        .lock_resolved_state()
+                        .await
+                        .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
                     let partial = PartialMoniker::new(child.clone(), None);
                     state.get_live_child(&partial).ok_or_else(|| {
                         RoutingError::EnvironmentFromChildInstanceNotFound {
@@ -721,7 +734,10 @@ where
                     })?
                 };
                 let child_expose: E = {
-                    let child_state = child_component.lock_resolved_state().await?;
+                    let child_state =
+                        child_component.lock_resolved_state().await.map_err(|err| {
+                            RoutingError::resolve_failed(&child_component.abs_moniker, err)
+                        })?;
                     find_matching_expose(registration.source_name(), child_state.decl())
                         .cloned()
                         .ok_or_else(|| {
@@ -765,7 +781,7 @@ where
         mut target: Arc<ComponentInstance>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<OfferResult<O>, ModelError>
+    ) -> Result<OfferResult<O>, RoutingError>
     where
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
@@ -776,7 +792,10 @@ where
 
             match offer.source() {
                 OfferSource::Self_ => {
-                    let state = target.lock_resolved_state().await?;
+                    let state = target
+                        .lock_resolved_state()
+                        .await
+                        .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
                     return Ok(OfferResult::Source(CapabilitySource::Component {
                         capability: sources.find_component_source(
                             offer.source_name(),
@@ -824,7 +843,10 @@ where
                     let child_moniker =
                         target.child_moniker().cloned().expect("ChildMoniker should exist");
                     let parent_offer = {
-                        let parent_state = parent_component.lock_resolved_state().await?;
+                        let parent_state =
+                            parent_component.lock_resolved_state().await.map_err(|err| {
+                                RoutingError::resolve_failed(&parent_component.abs_moniker, err)
+                            })?;
                         find_matching_offer(
                             offer.source_name(),
                             &child_moniker,
@@ -854,7 +876,7 @@ where
 async fn change_directions<O, E>(
     offer: O,
     component: Arc<ComponentInstance>,
-) -> Result<(E, Arc<ComponentInstance>), ModelError>
+) -> Result<(E, Arc<ComponentInstance>), RoutingError>
 where
     O: OfferDeclCommon + ErrorNotFoundInChild,
     E: ExposeDeclCommon + FromEnum<ExposeDecl> + Clone,
@@ -862,7 +884,10 @@ where
     match offer.source() {
         OfferSource::Child(child) => {
             let child_component = {
-                let state = component.lock_resolved_state().await?;
+                let state = component
+                    .lock_resolved_state()
+                    .await
+                    .map_err(|err| RoutingError::resolve_failed(&component.abs_moniker, err))?;
                 let partial = PartialMoniker::new(child.clone(), None);
                 state.get_live_child(&partial).ok_or_else(|| {
                     RoutingError::OfferFromChildInstanceNotFound {
@@ -873,7 +898,9 @@ where
                 })?
             };
             let expose = {
-                let child_state = child_component.lock_resolved_state().await?;
+                let child_state = child_component.lock_resolved_state().await.map_err(|err| {
+                    RoutingError::resolve_failed(&child_component.abs_moniker, err)
+                })?;
                 find_matching_expose(offer.source_name(), child_state.decl()).cloned().ok_or_else(
                     || {
                         let child_moniker = child_component
@@ -915,7 +942,7 @@ where
         mut target: Arc<ComponentInstance>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<ExposeResult, ModelError>
+    ) -> Result<ExposeResult, RoutingError>
     where
         S: Sources,
         V: ExposeVisitor<ExposeDecl = E>,
@@ -926,7 +953,10 @@ where
 
             match expose.source() {
                 ExposeSource::Self_ => {
-                    let state = target.lock_resolved_state().await?;
+                    let state = target
+                        .lock_resolved_state()
+                        .await
+                        .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
                     return Ok(ExposeResult::Source(CapabilitySource::Component {
                         capability: sources.find_component_source(
                             expose.source_name(),
@@ -951,7 +981,9 @@ where
                 }
                 ExposeSource::Child(child) => {
                     let child_component = {
-                        let state = target.lock_resolved_state().await?;
+                        let state = target.lock_resolved_state().await.map_err(|err| {
+                            RoutingError::resolve_failed(&target.abs_moniker, err)
+                        })?;
                         let child_moniker = PartialMoniker::new(child.clone(), None);
                         state.get_live_child(&child_moniker).ok_or_else(|| {
                             RoutingError::ExposeFromChildInstanceNotFound {
@@ -962,7 +994,10 @@ where
                         })?
                     };
                     let child_expose = {
-                        let child_state = child_component.lock_resolved_state().await?;
+                        let child_state =
+                            child_component.lock_resolved_state().await.map_err(|err| {
+                                RoutingError::resolve_failed(&child_component.abs_moniker, err)
+                            })?;
                         find_matching_expose(expose.source_name(), child_state.decl())
                             .cloned()
                             .ok_or_else(|| {
@@ -1002,7 +1037,7 @@ pub trait OfferVisitor {
 
     /// Visit a variant of [`OfferDecl`] specific to the capability.
     /// Returning an `Err` cancels visitation.
-    fn visit(&mut self, offer: &Self::OfferDecl) -> Result<(), ModelError>;
+    fn visit(&mut self, offer: &Self::OfferDecl) -> Result<(), RoutingError>;
 }
 
 /// Visitor pattern trait for visiting a variant of [`ExposeDecl`] specific to a capability type.
@@ -1012,7 +1047,7 @@ pub trait ExposeVisitor {
 
     /// Visit a variant of [`ExposeDecl`] specific to the capability.
     /// Returning an `Err` cancels visitation.
-    fn visit(&mut self, expose: &Self::ExposeDecl) -> Result<(), ModelError>;
+    fn visit(&mut self, expose: &Self::ExposeDecl) -> Result<(), RoutingError>;
 }
 
 /// Visitor pattern trait for visiting a variant of [`CapabilityDecl`] specific to a capability
@@ -1024,7 +1059,7 @@ pub trait CapabilityVisitor {
 
     /// Visit a variant of [`CapabilityDecl`] specific to the capability.
     /// Returning an `Err` cancels visitation.
-    fn visit(&mut self, _capability_decl: &Self::CapabilityDecl) -> Result<(), ModelError> {
+    fn visit(&mut self, _capability_decl: &Self::CapabilityDecl) -> Result<(), RoutingError> {
         Ok(())
     }
 }
@@ -1085,7 +1120,7 @@ macro_rules! make_noop_visitor {
             impl crate::model::routing::router::OfferVisitor for $name {
                 type OfferDecl = $offer_decl;
 
-                fn visit(&mut self, _decl: &Self::OfferDecl) -> Result<(), crate::model::error::ModelError> {
+                fn visit(&mut self, _decl: &Self::OfferDecl) -> Result<(), ::routing::error::RoutingError> {
                     Ok(())
                 }
             }
@@ -1095,7 +1130,7 @@ macro_rules! make_noop_visitor {
             impl crate::model::routing::router::ExposeVisitor for $name {
                 type ExposeDecl = $expose_decl;
 
-                fn visit(&mut self, _decl: &Self::ExposeDecl) -> Result<(), crate::model::error::ModelError> {
+                fn visit(&mut self, _decl: &Self::ExposeDecl) -> Result<(), ::routing::error::RoutingError> {
                     Ok(())
                 }
             }
@@ -1105,7 +1140,7 @@ macro_rules! make_noop_visitor {
             impl crate::model::routing::router::CapabilityVisitor for $name {
                 type CapabilityDecl = $cap_decl;
 
-                fn visit(&mut self, _decl: &Self::CapabilityDecl) -> Result<(), crate::model::error::ModelError> {
+                fn visit(&mut self, _decl: &Self::CapabilityDecl) -> Result<(), ::routing::error::RoutingError> {
                     Ok(())
                 }
             }

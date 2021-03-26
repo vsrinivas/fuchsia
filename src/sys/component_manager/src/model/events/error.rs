@@ -3,11 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{events::event::EventMode, hooks::EventType},
-    anyhow::Error,
-    clonable_error::ClonableError,
-    cm_rust::CapabilityName,
-    thiserror::Error,
+    crate::model::hooks::EventType, anyhow::Error, clonable_error::ClonableError,
+    cm_rust::CapabilityName, thiserror::Error,
 };
 
 #[derive(Debug, Error, Clone)]
@@ -24,12 +21,6 @@ pub enum EventsError {
     #[error("Events not allowed for subscription {:?}", names)]
     NotAvailable { names: Vec<CapabilityName> },
 
-    #[error("Filter is not a subset")]
-    InvalidFilter,
-
-    #[error("Event routes must end at source with a filter declaration")]
-    MissingFilter,
-
     #[error("Subscribe failed: {}", err)]
     SynthesisFailed {
         #[source]
@@ -38,12 +29,6 @@ pub enum EventsError {
 
     #[error("Cannot transfer event: {}", event_type)]
     CannotTransfer { event_type: EventType },
-
-    #[error("Event mode, `{:?}`, cannot be propagated", event_mode)]
-    CannotPropagateEventMode { event_mode: EventMode },
-
-    #[error("Event routes must end at source with a modes declaration")]
-    MissingModes,
 }
 
 impl EventsError {

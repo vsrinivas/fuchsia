@@ -7,7 +7,6 @@ use {
         error::ModelError,
         events::{
             error::EventsError,
-            event::EventMode,
             registry::{
                 EventRegistry, EventSubscription, ExecutionMode, SubscriptionOptions,
                 SubscriptionType,
@@ -17,7 +16,7 @@ use {
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityName, ComponentDecl, UseDecl, UseEventStreamDecl},
+    cm_rust::{CapabilityName, ComponentDecl, EventMode, UseDecl, UseEventStreamDecl},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,

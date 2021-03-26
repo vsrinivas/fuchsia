@@ -11,7 +11,6 @@ use {
             events::{
                 dispatcher::{EventDispatcher, EventDispatcherScope},
                 error::EventsError,
-                event::EventMode,
                 filter::EventFilter,
                 mode_set::EventModeSet,
                 stream::EventStream,
@@ -26,7 +25,7 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityName, UseDecl, UseEventDecl},
+    cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
     moniker::{AbsoluteMoniker, ExtendedMoniker},

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::model::{
-    events::{error::EventsError, event::EventMode},
-    walk_state::WalkStateUnit,
+use {
+    crate::model::walk_state::WalkStateUnit, ::routing::error::EventsRoutingError,
+    cm_rust::EventMode,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -29,7 +29,7 @@ impl EventModeSet {
 }
 
 impl WalkStateUnit for EventModeSet {
-    type Error = EventsError;
+    type Error = EventsRoutingError;
 
     /// Ensures the next walk state of filters is a superset of the current state.
     ///
@@ -43,30 +43,30 @@ impl WalkStateUnit for EventModeSet {
             (_, true) => Ok(()),
             (false, false) => Ok(()),
             (true, false) => {
-                Err(EventsError::CannotPropagateEventMode { event_mode: EventMode::Sync })
+                Err(EventsRoutingError::CannotPropagateEventMode { event_mode: EventMode::Sync })
             }
         }
     }
 
     fn finalize_error() -> Self::Error {
-        EventsError::MissingModes
+        EventsRoutingError::MissingModes
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::events::event::EventMode, matches::assert_matches};
+    use {super::*, cm_rust::EventMode, matches::assert_matches};
 
     #[test]
     fn test_walk_state() {
-        let async_filter = EventModeSet::new(cm_rust::EventMode::Async);
-        let sync_filter = EventModeSet::new(cm_rust::EventMode::Sync);
+        let async_filter = EventModeSet::new(EventMode::Async);
+        let sync_filter = EventModeSet::new(EventMode::Sync);
 
         assert_matches!(async_filter.validate_next(&async_filter), Ok(()));
 
         assert_matches!(
             sync_filter.validate_next(&async_filter),
-            Err(EventsError::CannotPropagateEventMode { event_mode: EventMode::Sync })
+            Err(EventsRoutingError::CannotPropagateEventMode { event_mode: EventMode::Sync })
         );
         assert_matches!(async_filter.validate_next(&sync_filter), Ok(()));
         assert_matches!(async_filter.validate_next(&async_filter), Ok(()));
@@ -74,8 +74,8 @@ mod tests {
 
     #[test]
     fn contains() {
-        let async_filter = EventModeSet::new(cm_rust::EventMode::Async);
-        let sync_filter = EventModeSet::new(cm_rust::EventMode::Sync);
+        let async_filter = EventModeSet::new(EventMode::Async);
+        let sync_filter = EventModeSet::new(EventMode::Sync);
         assert!(async_filter.supports_mode(&EventMode::Async));
         assert!(sync_filter.supports_mode(&EventMode::Sync));
         assert!(!async_filter.supports_mode(&EventMode::Sync));

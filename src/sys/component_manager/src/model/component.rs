@@ -24,9 +24,12 @@ use {
             runner::{NullRunner, RemoteRunner, Runner},
         },
     },
-    ::routing::component_instance::{
-        ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
-        WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
+    ::routing::{
+        component_instance::{
+            ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
+            WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
+        },
+        error::ComponentInstanceError,
     },
     clonable_error::ClonableError,
     cm_rust::{
@@ -275,8 +278,8 @@ impl ComponentInstance {
     }
 
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
-    pub fn try_get_parent(&self) -> Result<ExtendedInstance, ModelError> {
-        self.parent.upgrade().map_err(|e| e.into())
+    pub fn try_get_parent(&self) -> Result<ExtendedInstance, ComponentInstanceError> {
+        self.parent.upgrade()
     }
 
     /// Gets the context, if it exists, or returns a '`ContextNotFound` error.
@@ -1193,7 +1196,7 @@ pub mod tests {
         crate::model::{
             actions::ShutdownAction,
             binding::Binder,
-            events::{event::EventMode, registry::EventSubscription, stream::EventStream},
+            events::{registry::EventSubscription, stream::EventStream},
             hooks::{EventError, EventErrorPayload, EventType},
             rights,
             testing::{
@@ -1205,6 +1208,7 @@ pub mod tests {
                 },
             },
         },
+        cm_rust::EventMode,
         component_id_index::gen_instance_id,
         fidl::endpoints,
         fuchsia_async as fasync,

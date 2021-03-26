@@ -257,7 +257,6 @@ mod tests {
         super::*,
         crate::model::{
             events::{
-                event::EventMode,
                 mode_set::EventModeSet,
                 registry::{EventRegistry, RoutedEvent, SubscriptionOptions},
                 stream::EventStream,
@@ -265,7 +264,9 @@ mod tests {
             hooks::{EventError, EventErrorPayload, EventPayload},
             testing::{routing_test_helpers::*, test_helpers::*},
         },
-        cm_rust::{DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget},
+        cm_rust::{
+            DirectoryDecl, EventMode, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
+        },
         fidl_fuchsia_io2 as fio,
         fuchsia_component::server::ServiceFs,
         std::iter::FromIterator,

@@ -8,7 +8,6 @@ use {
         events::error::EventsError,
         policy::PolicyError,
         resolver::ResolverError,
-        rights::RightsError,
         routing::{OpenResourceError, RoutingError},
         runner::RunnerError,
         storage::StorageError,
@@ -118,11 +117,6 @@ pub enum ModelError {
         #[source]
         err: ClonableError,
     },
-    #[error("rights error: {}", err)]
-    RightsError {
-        #[from]
-        err: RightsError,
-    },
     #[error("events error: {}", err)]
     EventsError {
         #[from]
@@ -225,7 +219,6 @@ impl ModelError {
     pub fn as_zx_status(&self) -> zx::Status {
         match self {
             ModelError::RoutingError { err } => err.as_zx_status(),
-            ModelError::RightsError { err } => err.as_zx_status(),
             ModelError::PolicyError { err } => err.as_zx_status(),
             ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::InstanceNotFound { .. },

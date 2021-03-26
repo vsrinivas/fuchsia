@@ -146,13 +146,14 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 actions::{ActionKey, ActionSet},
-                events::{event::EventMode, registry::EventSubscription},
+                events::registry::EventSubscription,
                 hooks::{EventPayload, EventType, HooksRegistration},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
             },
         },
         cm_rust::{
-            CapabilityPath, ComponentDecl, RegistrationSource, RunnerDecl, RunnerRegistration,
+            CapabilityPath, ComponentDecl, EventMode, RegistrationSource, RunnerDecl,
+            RunnerRegistration,
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::{join, lock::Mutex, prelude::*},
