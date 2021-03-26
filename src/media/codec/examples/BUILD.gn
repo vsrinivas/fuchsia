@@ -77,8 +77,9 @@ fuchsia_unittest_package("use_h264_decoder_test") {
   test_specs = {
     environments = [
       astro_env,
-      sherlock_env,
       emu_env,
+      nelson_env,
+      sherlock_env,
 
       # Fails on Vim3 due to fxb/70799
       vim3_env,
@@ -110,6 +111,7 @@ fuchsia_unittest_package("use-h264-multi-decoder-test") {
     # Only works on amlogic hardware.
     environments = [
       astro_env,
+      nelson_env,
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799
@@ -130,6 +132,7 @@ fuchsia_unittest_package("use-h264-multi-decoder-flake-repro-test") {
     # Only works on amlogic hardware.
     environments = [
       astro_env,
+      nelson_env,
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799
@@ -150,18 +153,16 @@ fuchsia_unittest_package("use_h264_decoder_stream_switching_test") {
   test_specs = {
     # Should pass when run on VIM2, sherlock, or QEMU.
 
-    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
-    # astro_env.
-    #
     # Disable on qemu because the test flakes so far. TODO(fxbug.dev/49932) Re-enable in emu_env.
     environments = [
+      astro_env,
+      nelson_env,
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799
       vim3_env,
 
       # emu_env,
-      # astro_env,
     ]
   }
 }
@@ -178,9 +179,9 @@ fuchsia_unittest_package("use-h264-multi-decoder-stream-switching-test") {
   test_specs = {
     # Should pass when run on VIM2, sherlock, or QEMU.
 
-    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
-    # astro_env.
     environments = [
+      astro_env,
+      nelson_env,
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799
@@ -203,6 +204,7 @@ fuchsia_unittest_package(
 
     environments = [
       astro_env,
+      nelson_env,
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799
@@ -234,6 +236,7 @@ fuchsia_test_package("use_h264_decoder_secure_output_tests") {
     # Should pass when run on astro.
     environments = [
       astro_env,
+      nelson_env,
       sherlock_env,
     ]
   }
@@ -349,6 +352,7 @@ fuchsia_test_package("use_vp9_decoder_tests") {
     # Astro has enough contiguous memory for this.
     environments = [
       astro_env,
+      nelson_env,
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799 and fxb/43496
@@ -429,8 +433,9 @@ fuchsia_unittest_package("use_vp9_decoder_secure_output_test") {
 
   test_specs = {
     environments = [
-      sherlock_env,
       astro_env,
+      nelson_env,
+      sherlock_env,
     ]
   }
 }

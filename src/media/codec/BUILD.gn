@@ -38,7 +38,7 @@ group("tests") {
     "//src/media/codec/examples:use_vp9_decoder_secure_output_test",
     "//src/media/codec/examples:use_vp9_decoder_skip_first_frame_test",
     "//src/media/codec/examples:use_vp9_decoder_skip_first_frame_test",
-    "//src/media/codec/examples:use_vp9_decoder_test",
+    "//src/media/codec/examples:use_vp9_decoder_tests",
     "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
     "//src/media/codec/examples:vp9_decoder_fuzzer_test",
     "//src/media/codec/examples:vp9_decoder_fuzzer_test",
