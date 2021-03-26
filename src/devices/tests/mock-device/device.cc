@@ -243,9 +243,11 @@ void MockDevice::DdkRelease() {
       &thrd,
       [](void* arg) {
         auto me = static_cast<MockDevice*>(arg);
-        fbl::AutoLock guard(&me->lock_);
-        for (auto& t : me->threads_) {
-          thrd_join(t, nullptr);
+        {
+          fbl::AutoLock guard(&me->lock_);
+          for (auto& t : me->threads_) {
+            thrd_join(t, nullptr);
+          }
         }
         delete me;
         return 0;
