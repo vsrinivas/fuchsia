@@ -15,6 +15,7 @@ breakpad file. Finally, it prints runtimes.json consumed by the build.
 # in //tools/debug to populate .build-id directory and generate breakpad.
 
 import argparse
+import errno
 import json
 import os
 import re
