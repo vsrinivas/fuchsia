@@ -35,6 +35,7 @@ source_set("device") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+    "//third_party/mesa/include:drm-uapi",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/virtio",
   ]
@@ -402,7 +403,12 @@ executable("virtio_wl_bin") {
     "virtio_wl.h",
   ]
 
-  deps = [ ":virtio" ]
+  deps = [
+    ":virtio",
+    "//sdk/fidl/fuchsia.scenic.allocation",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//zircon/system/ulib/fbl",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

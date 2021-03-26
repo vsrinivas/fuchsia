@@ -306,9 +306,24 @@ int main(int argc, char** argv) {
       FX_LOGS(INFO) << "Could not connect wayland device";
       return status;
     }
-    status = wl.Start(guest.object(), std::move(wl_vmar),
-                      std::move(cfg.mutable_wayland_device()->dispatcher), launcher.get(),
-                      device_loop.dispatcher());
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator = nullptr;
+    status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                  sysmem_allocator.NewRequest().TakeChannel().release());
+    if (status != ZX_OK) {
+      FX_LOGS(INFO) << "Could not connect to sysmem allocator service";
+      return status;
+    }
+    fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> scenic_allocator = nullptr;
+    status = fdio_service_connect("/svc/fuchsia.scenic.allocation.Allocator",
+                                  scenic_allocator.NewRequest().TakeChannel().release());
+    if (status != ZX_OK) {
+      FX_LOGS(INFO) << "Could not connect to scenic allocator service";
+      return status;
+    }
+    status =
+        wl.Start(guest.object(), std::move(wl_vmar),
+                 std::move(cfg.mutable_wayland_device()->dispatcher), std::move(sysmem_allocator),
+                 std::move(scenic_allocator), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not start wayland device";
       return status;

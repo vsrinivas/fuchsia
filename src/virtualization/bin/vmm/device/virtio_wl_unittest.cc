@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <drm_fourcc.h>
+#include <fuchsia/scenic/allocation/cpp/fidl_test_base.h>
+#include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/socket.h>
@@ -27,6 +30,11 @@ static constexpr uint16_t kQueueSize = 32;
 static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
 static constexpr uint32_t kAllocateFlags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
 static constexpr uint32_t kImportVmoSize = 4096;
+static constexpr uint32_t kDmabufWidth = 64;
+static constexpr uint32_t kDmabufHeight = 64;
+static constexpr uint32_t kDmabufDrmFormat = DRM_FORMAT_ARGB8888;
+static constexpr fuchsia::sysmem::PixelFormatType kDmabufSysmemFormat =
+    fuchsia::sysmem::PixelFormatType::BGRA32;
 
 class TestWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher {
  public:
@@ -44,12 +52,120 @@ class TestWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher 
   fidl::Binding<fuchsia::virtualization::WaylandDispatcher> binding_{this};
 };
 
+class TestBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollectionToken_TestBase {
+ public:
+  TestBufferCollectionToken(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request)
+      : binding_{this, std::move(request)} {}
+
+ private:
+  // |fuchsia::sysmem::BufferCollection|
+  void Duplicate(uint32_t rights_attenuation_mask,
+                 fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) override {
+    duplicates_.emplace_back(std::make_unique<TestBufferCollectionToken>(std::move(request)));
+  }
+  void Sync(SyncCallback callback) override { callback(); }
+
+  void NotImplemented_(const std::string& name) override {
+    FAIL() << "Not Implemented BufferCollection." << name;
+  }
+
+  std::vector<std::unique_ptr<TestBufferCollectionToken>> duplicates_;
+  fidl::Binding<fuchsia::sysmem::BufferCollectionToken> binding_;
+};
+
+class TestBufferCollection : public fuchsia::sysmem::testing::BufferCollection_TestBase {
+ public:
+  TestBufferCollection(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request)
+      : binding_{this, std::move(request)} {}
+
+ private:
+  // |fuchsia::sysmem::BufferCollection|
+  void Close() override { binding_.Close(ZX_OK); }
+  void SetName(uint32_t priority, std::string name) override {}
+  void SetConstraints(bool has_constraints,
+                      fuchsia::sysmem::BufferCollectionConstraints constraints) override {}
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCallback callback) override {
+    fuchsia::sysmem::BufferCollectionInfo_2 info{};
+    info.buffer_count = 1;
+    info.settings.has_image_format_constraints = true;
+    info.settings.image_format_constraints.pixel_format.type = kDmabufSysmemFormat;
+    info.settings.image_format_constraints.pixel_format.has_format_modifier = true;
+    info.settings.image_format_constraints.pixel_format.format_modifier.value =
+        fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+    info.settings.image_format_constraints.min_coded_width = kDmabufWidth;
+    info.settings.image_format_constraints.min_coded_height = kDmabufHeight;
+    info.settings.image_format_constraints.max_coded_width = kDmabufWidth;
+    info.settings.image_format_constraints.max_coded_height = kDmabufHeight;
+    info.settings.image_format_constraints.min_bytes_per_row = kDmabufWidth * 4;
+    info.settings.image_format_constraints.bytes_per_row_divisor = 1;
+    zx::vmo::create(kDmabufWidth * kDmabufHeight * 4, 0, &info.buffers[0].vmo);
+    callback(ZX_OK, std::move(info));
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    FAIL() << "Not Implemented BufferCollection." << name;
+  }
+
+  fidl::Binding<fuchsia::sysmem::BufferCollection> binding_;
+};
+
+class TestSysmemAllocator : public fuchsia::sysmem::testing::Allocator_TestBase {
+ public:
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> Bind(async_dispatcher_t* dispatcher) {
+    return binding_.NewBinding(dispatcher);
+  }
+
+ private:
+  // |fuchsia::sysmem::Allocator|
+  void AllocateSharedCollection(
+      fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) override {
+    tokens_.emplace_back(std::make_unique<TestBufferCollectionToken>(std::move(request)));
+  }
+  void BindSharedCollection(
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+      fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request) override {
+    collections_.emplace_back(std::make_unique<TestBufferCollection>(std::move(request)));
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    FAIL() << "Not Implemented Allocator." << name;
+  }
+
+  std::vector<std::unique_ptr<TestBufferCollectionToken>> tokens_;
+  std::vector<std::unique_ptr<TestBufferCollection>> collections_;
+  fidl::Binding<fuchsia::sysmem::Allocator> binding_{this};
+};
+
+class TestAllocator : public fuchsia::scenic::allocation::testing::Allocator_TestBase {
+ public:
+  fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> Bind(
+      async_dispatcher_t* dispatcher) {
+    return binding_.NewBinding(dispatcher);
+  }
+
+ private:
+  void RegisterBufferCollection(
+      fuchsia::scenic::allocation::BufferCollectionExportToken export_token,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> scenic_token,
+      RegisterBufferCollectionCallback callback) override {
+    callback(fit::ok());
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    FAIL() << "Not Implemented Allocator." << name;
+  }
+
+  fidl::Binding<fuchsia::scenic::allocation::Allocator> binding_{this};
+};
+
 class VirtioWlTest : public TestWithDevice {
  public:
   VirtioWlTest()
       : wl_dispatcher_([this](zx::channel channel) { channels_.emplace_back(std::move(channel)); }),
         in_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
-        out_queue_(phys_mem_, in_queue_.end(), kQueueSize) {}
+        out_queue_(phys_mem_, in_queue_.end(), kQueueSize),
+        sysmem_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        scenic_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
     uintptr_t vmar_addr;
@@ -65,7 +181,12 @@ class VirtioWlTest : public TestWithDevice {
     services_->Connect(wl_.NewRequest());
     RunLoopUntilIdle();
 
-    wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind());
+    ASSERT_EQ(sysmem_loop_.StartThread(), ZX_OK);
+    ASSERT_EQ(scenic_loop_.StartThread(), ZX_OK);
+
+    wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind(),
+               sysmem_allocator_.Bind(sysmem_loop_.dispatcher()),
+               scenic_allocator_.Bind(scenic_loop_.dispatcher()));
     ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
@@ -181,10 +302,14 @@ class VirtioWlTest : public TestWithDevice {
 
  protected:
   TestWaylandDispatcher wl_dispatcher_;
+  TestSysmemAllocator sysmem_allocator_;
+  TestAllocator scenic_allocator_;
   fuchsia::virtualization::hardware::VirtioWaylandSyncPtr wl_;
   VirtioQueueFake in_queue_;
   VirtioQueueFake out_queue_;
   std::vector<zx::channel> channels_;
+  async::Loop sysmem_loop_;
+  async::Loop scenic_loop_;
 };
 
 TEST_F(VirtioWlTest, HandleNew) {
@@ -292,9 +417,9 @@ TEST_F(VirtioWlTest, HandleDmabuf) {
   virtio_wl_ctrl_vfd_new_t request = {};
   request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_DMABUF;
   request.vfd_id = 1u;
-  request.dmabuf.format = 0x34325241;  // DRM_FORMAT_ARGB8888
-  request.dmabuf.width = 64;
-  request.dmabuf.height = 64;
+  request.dmabuf.format = kDmabufDrmFormat;
+  request.dmabuf.width = kDmabufWidth;
+  request.dmabuf.height = kDmabufHeight;
   virtio_wl_ctrl_vfd_new_t* response;
   uint16_t descriptor_id;
   ASSERT_EQ(DescriptorChainBuilder(out_queue_)

@@ -26,6 +26,8 @@ class VirtioWl
   zx_status_t Start(
       const zx::guest& guest, zx::vmar vmar,
       fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatch_handle,
+      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> scenic_allocator,
       fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
   zx_status_t GetImporter(
       fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter> request);
