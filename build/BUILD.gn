@@ -106,6 +106,8 @@ group("deprecated_package") {
     "//src/lib/ui/carnelian/*",
     "//src/lib/vulkan/tests/*",
     "//src/lib/zircon/rust/*",
+    "//src/recovery/factory_reset/*",
+    "//src/recovery/integration/*",
     "//src/sys/pkg/bin/pkgctl/*",
     "//src/sys/pkg/bin/update/*",
     "//src/sys/pkg/tests/pkg-resolver/*",
