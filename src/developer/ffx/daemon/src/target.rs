@@ -17,10 +17,10 @@ use {
         sync::RwLock,
     },
     async_trait::async_trait,
-    bridge::DaemonError,
+    bridge::{DaemonError, TargetAddrInfo, TargetIp, TargetIpPort},
     chrono::{DateTime, Utc},
     ffx_daemon_core::events::{self, EventSynthesizer},
-    ffx_daemon_core::net::IsLocalAddr,
+    ffx_daemon_core::net::{scope_id_to_name, IsLocalAddr},
     ffx_daemon_core::task::{SingleFlight, TaskSnapshot},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
@@ -42,8 +42,7 @@ use {
     std::fmt::{Debug, Display},
     std::hash::{Hash, Hasher},
     std::io::Write,
-    std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6},
-    std::net::{Ipv4Addr, Ipv6Addr},
+    std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     std::sync::{Arc, Weak},
     std::time::Duration,
     usb_bulk::AsyncInterface as Interface,
@@ -450,8 +449,9 @@ impl TargetInner {
         false
     }
 
-    pub async fn ssh_address(&self) -> Option<SocketAddr> {
-        ssh_address_from(self.addrs.read().await.iter()).map(Into::into)
+    /// ssh_address returns the TargetAddr of the next SSH address to connect to for this target.
+    pub async fn ssh_address(&self) -> Option<TargetAddr> {
+        ssh_address_from(self.addrs.read().await.iter())
     }
 
     /// Dependency injection constructor so we can insert a fake time for
@@ -689,8 +689,25 @@ impl Target {
         }
     }
 
-    pub async fn ssh_address(&self) -> Option<SocketAddr> {
+    pub async fn ssh_address(&self) -> Option<TargetAddr> {
         self.inner.ssh_address().await
+    }
+
+    pub async fn ssh_address_info(&self) -> Option<bridge::TargetAddrInfo> {
+        if let Some(addr) = self.ssh_address().await {
+            let ip = match addr.ip() {
+                IpAddr::V6(i) => IpAddress::Ipv6(Ipv6Address { addr: i.octets().into() }),
+                IpAddr::V4(i) => IpAddress::Ipv4(Ipv4Address { addr: i.octets().into() }),
+            };
+            let scope_id = addr.scope_id();
+
+            Some(match self.ssh_port().await {
+                Some(port) => TargetAddrInfo::IpPort(TargetIpPort { ip, port, scope_id }),
+                None => TargetAddrInfo::Ip(TargetIp { ip, scope_id }),
+            })
+        } else {
+            None
+        }
     }
 
     /// Dependency injection constructor so we can insert a fake time for
@@ -1056,6 +1073,7 @@ impl ToFidlTarget for Target {
             // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
+            ssh_address: self.ssh_address_info().await,
             ..bridge::Target::EMPTY
         }
     }
@@ -1189,29 +1207,7 @@ impl Display for TargetAddr {
         write!(f, "{}", self.ip())?;
 
         if self.ip.is_link_local_addr() && self.scope_id() > 0 {
-            let mut buf = vec![0; libc::IF_NAMESIZE];
-            let res = unsafe {
-                libc::if_indextoname(self.scope_id(), buf.as_mut_ptr() as *mut libc::c_char)
-            };
-            if res.is_null() {
-                // TODO(awdavies): This will likely happen if the interface
-                // is unplugged before being removed from the target cache.
-                // There should be a clear error for the user indicating why
-                // the interface name wasn't shown as a string.
-                log::warn!(
-                    "error getting interface name: {}",
-                    nix::Error::from_errno(nix::errno::Errno::from_i32(nix::errno::errno())),
-                );
-                write!(f, "%{}", self.scope_id())?;
-            } else {
-                let string =
-                    String::from_utf8_lossy(&buf.split(|&c| c == 0u8).next().unwrap_or(&[0u8]));
-                if !string.is_empty() {
-                    write!(f, "%{}", string)?;
-                } else {
-                    log::warn!("empty string for iface idx: {}", self.scope_id());
-                }
-            }
+            write!(f, "%{}", scope_id_to_name(self.scope_id()))?;
         }
 
         Ok(())
@@ -2820,5 +2816,53 @@ mod test {
                 .into(),
         ]);
         assert_eq!(ssh_address_from(addrs.iter()), Some(("2000::2".parse().unwrap(), 0).into()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_ssh_address_info_no_port() {
+        let target = Target::new_with_addr_entries(
+            Some("foo"),
+            vec![TargetAddrEntry::from((
+                TargetAddr::from(("::1".parse::<IpAddr>().unwrap().into(), 0)),
+                Utc::now(),
+                true,
+            ))]
+            .into_iter(),
+        );
+
+        let ip = match target.ssh_address_info().await.unwrap() {
+            TargetAddrInfo::Ip(ip) => match ip.ip {
+                IpAddress::Ipv4(i) => IpAddr::from(i.addr),
+                IpAddress::Ipv6(i) => IpAddr::from(i.addr),
+            },
+            _ => panic!("unexpected type"),
+        };
+
+        assert_eq!(ip, "::1".parse::<IpAddr>().unwrap());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_ssh_address_info_with_port() {
+        let target = Target::new_with_addr_entries(
+            Some("foo"),
+            vec![TargetAddrEntry::from((
+                TargetAddr::from(("::1".parse::<IpAddr>().unwrap().into(), 0)),
+                Utc::now(),
+                true,
+            ))]
+            .into_iter(),
+        );
+        target.set_ssh_port(Some(8022)).await;
+
+        let (ip, port) = match target.ssh_address_info().await.unwrap() {
+            TargetAddrInfo::IpPort(TargetIpPort { ip, port, .. }) => match ip {
+                IpAddress::Ipv4(i) => (IpAddr::from(i.addr), port),
+                IpAddress::Ipv6(i) => (IpAddr::from(i.addr), port),
+            },
+            _ => panic!("unexpected type"),
+        };
+
+        assert_eq!(ip, "::1".parse::<IpAddr>().unwrap());
+        assert_eq!(port, 8022);
     }
 }

@@ -11,8 +11,8 @@ use {
     crate::mdns::MdnsTargetFinder,
     crate::onet::create_ascendd,
     crate::target::{
-        ConnectionState, RcsConnection, SshAddrFetcher, Target, TargetAddrEntry, TargetCollection,
-        TargetEvent, ToFidlTarget,
+        ConnectionState, RcsConnection, Target, TargetAddrEntry, TargetCollection, TargetEvent,
+        ToFidlTarget,
     },
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
@@ -464,10 +464,8 @@ impl Daemon {
                     let target = self.get_target(target).await?;
                     let poll_duration = std::time::Duration::from_millis(15);
                     loop {
-                        let addrs = target.addrs().await;
-                        if let Some(addr) = (&addrs).to_ssh_addr() {
-                            let res: TargetAddrInfo = addr.into();
-                            return Ok(res);
+                        if let Some(addr_info) = target.ssh_address_info().await {
+                            return Ok(addr_info);
                         }
                         Timer::new(poll_duration).await;
                     }
@@ -978,7 +976,7 @@ mod test {
         let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
 
         // This is from the `spawn_daemon_server_with_fake_target` impl.
-        let want = Ok(bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+        let want = Ok(TargetAddrInfo::Ip(bridge::TargetIp {
             ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
                 addr: [254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             }),
@@ -1077,7 +1075,7 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
 
-        let mut info = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+        let mut info = TargetAddrInfo::Ip(bridge::TargetIp {
             ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
                 addr: [254, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             }),

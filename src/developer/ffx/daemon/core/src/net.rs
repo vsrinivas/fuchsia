@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
+use libc;
 use nix::{
     ifaddrs::{getifaddrs, InterfaceAddress},
     net::if_::InterfaceFlags,
@@ -146,6 +147,18 @@ fn ifaddr_to_socketaddr(ifaddr: InterfaceAddress) -> Option<std::net::SocketAddr
     }
 }
 
+/// scope_id_to_name attempts to convert a scope_id to an interface name, otherwise it returns the
+/// scopeid formatted as a string.
+pub fn scope_id_to_name(scope_id: u32) -> String {
+    let mut buf = vec![0; libc::IF_NAMESIZE];
+    let res = unsafe { libc::if_indextoname(scope_id, buf.as_mut_ptr() as *mut libc::c_char) };
+    if res.is_null() {
+        format!("{}", scope_id)
+    } else {
+        String::from_utf8_lossy(&buf.split(|&c| c == 0u8).next().unwrap_or(&[0u8])).to_string()
+    }
+}
+
 // select_mcast_interfaces iterates over a set of IterfaceAddresses,
 // selecting only those that meet the McastInterface criteria (see
 // McastInterface), and returns them in a McastInterface representation.
@@ -179,6 +192,25 @@ mod tests {
 
     fn sockaddr(s: &str) -> SockAddr {
         SockAddr::new_inet(InetAddr::from_std(&SocketAddr::from_str(s).unwrap()))
+    }
+
+    #[test]
+    fn test_scope_id_to_name_known_interface() {
+        let mut ifaddrs = getifaddrs().unwrap();
+        let addr = ifaddrs.next().unwrap();
+        let index = nix::net::if_::if_nametoindex(addr.interface_name.as_str()).unwrap();
+        assert_eq!(scope_id_to_name(index), addr.interface_name.to_string());
+    }
+
+    #[test]
+    fn test_scope_id_to_name_unknown_interface() {
+        let ifaddrs = getifaddrs().unwrap();
+        let mut used_indices = ifaddrs
+            .map(|addr| nix::net::if_::if_nametoindex(addr.interface_name.as_str()).unwrap_or(0))
+            .collect::<Vec<u32>>();
+        used_indices.sort();
+        let unused_index = used_indices[used_indices.len() - 1] + 1;
+        assert_eq!(scope_id_to_name(unused_index), format!("{}", unused_index));
     }
 
     #[test]

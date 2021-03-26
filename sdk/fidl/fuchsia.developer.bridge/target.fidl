@@ -55,4 +55,8 @@ table Target {
     // `fx set core.x64` would make this value "x64".
     8: string:fuchsia.buildinfo.MAX_STRING_LENGTH board_config;
     9: string:256 serial_number;
+    /// ssh_address is the preferred address to use to connect to the
+    /// device over SSH, and will include a port number if a custom SSH
+    /// port number has been set.
+    10: TargetAddrInfo ssh_address;
 };
