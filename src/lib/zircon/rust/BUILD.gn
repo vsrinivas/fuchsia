@@ -6,7 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 common_sources = [
   "src/channel.rs",
@@ -132,8 +132,9 @@ rustc_test("fuchsia-zircon-status-tests") {
 # to the main library's without causing circular dependencies. Only the test
 # artifact is used, not the main artifact.
 # TODO: If we add test-only deps to rustc_artifact, this can merge back in.
-rustc_test("fuchsia-zircon-unittest") {
+rustc_test("fuchsia-zircon-unittests") {
   edition = "2018"
+  output_name = "fuchsia_zircon_tests"
   deps = [
     ":fuchsia-zircon-status",
     ":fuchsia-zircon-sys",
@@ -168,40 +169,37 @@ rustc_binary("sleep_forever_util") {
   sources = [ "test_util/sleep_forever_util.rs" ]
 }
 
-test_package("fuchsia-zircon-tests") {
+fuchsia_unittest_component("fuchsia-cprng_test-component") {
+  component_name = "fuchsia-cprng"
+  deps = [ ":fuchsia-cprng_test" ]
+}
+
+fuchsia_unittest_component("fuchsia-zircon-status-component") {
+  component_name = "fuchsia-zircon-status"
+  deps = [ ":fuchsia-zircon-status-tests" ]
+}
+
+fuchsia_unittest_component("fuchsia-zircon-tests-component") {
+  component_name = "fuchsia-zircon-tests"
+  manifest = "meta/fuchsia_zircon_tests.cmx"
+  deps = [ ":fuchsia-zircon-unittests" ]
+}
+
+fuchsia_unittest_component("fuchsia-zircon-types-tests-component") {
+  component_name = "fuchsia-zircon-types-tests"
+  deps = [ ":fuchsia-zircon-types-tests" ]
+}
+
+fuchsia_test_package("fuchsia-zircon-tests") {
+  test_components = [
+    ":fuchsia-cprng_test-component",
+    ":fuchsia-zircon-status-component",
+    ":fuchsia-zircon-tests-component",
+    ":fuchsia-zircon-types-tests-component",
+  ]
   deps = [
     ":exit_with_code_util",
-    ":fuchsia-cprng_test",
-    ":fuchsia-zircon-status-tests",
-    ":fuchsia-zircon-types-tests",
-    ":fuchsia-zircon-unittest",
     ":sleep_forever_util",
-  ]
-
-  tests = [
-    {
-      name = "fuchsia_cprng_lib_test"
-    },
-    {
-      name = "fuchsia_zircon_unittest"
-      dest = "fuchsia_zircon_tests"
-    },
-    {
-      name = "fuchsia_zircon_status_tests"
-      dest = "fuchsia_zircon_status_tests"
-    },
-    {
-      name = "fuchsia_zircon_types_tests"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "exit_with_code_util"
-    },
-    {
-      name = "sleep_forever_util"
-    },
   ]
 }
 
