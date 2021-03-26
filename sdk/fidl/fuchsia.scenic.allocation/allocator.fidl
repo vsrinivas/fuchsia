@@ -9,7 +9,7 @@ using zx;
 
 // The set of error codes returned by Allocator::RegisterBufferCollection().
 enum RegisterBufferCollectionError {
-    BAD_OPERATION = 0;
+    BAD_OPERATION = 1;
 };
 
 /// A typed wrapper for an eventpair, representing the registry endpoint of a buffer collection.
@@ -34,7 +34,7 @@ protocol Allocator {
     /// example, by passing a [`BufferCollectionImportToken`] containing the matching peer of
     /// [`BufferCollectionExportToken`], they can create image resources via
     /// [`fuchsia.ui.scenic.internal/Flatland.CreateImage`]. Clients should wait for the response
-    /// before using `export_token`.
+    /// before using `import_token`.
     ///
     /// Flatland participates in the allocation of buffers by setting constraints on the
     /// BufferCollection referenced by `buffer_collection_token`. It will not block on buffers

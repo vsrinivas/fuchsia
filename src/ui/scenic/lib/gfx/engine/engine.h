@@ -24,6 +24,7 @@
 #include "src/ui/scenic/lib/gfx/engine/annotation_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/buffer_collection.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
+#include "src/ui/scenic/lib/gfx/engine/gfx_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
@@ -96,7 +97,9 @@ class Engine : public scheduling::FrameRenderer {
  public:
   Engine(sys::ComponentContext* app_context,
          const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-         escher::EscherWeakPtr escher, inspect::Node inspect_node);
+         escher::EscherWeakPtr escher,
+         std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
+         inspect::Node inspect_node);
 
   // Only used for testing.
   Engine(sys::ComponentContext* app_context,
@@ -131,7 +134,8 @@ class Engine : public scheduling::FrameRenderer {
                           escher_image_factory(),
                           delegating_frame_scheduler_,
                           scene_graph(),
-                          &view_linker_};
+                          &view_linker_,
+                          buffer_collection_importer_};
   }
 
   // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
@@ -187,6 +191,8 @@ class Engine : public scheduling::FrameRenderer {
   ViewLinker view_linker_;
 
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
+
+  std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer_;
 
   // TODO(fxbug.dev/24686): This is a temporary solution until we can remove frame_scheduler from
   // ResourceContext. Do not add any additional dependencies on this object/pointer.

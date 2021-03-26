@@ -110,7 +110,6 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
   fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
   context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
-  RunLoopUntilIdle();
 
   bool processed_callback = false;
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
@@ -123,6 +122,12 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
         EXPECT_FALSE(result.is_err());
         processed_callback = true;
       });
+
+  // Channel isn't bound until SetInitialized().
+  RunLoopUntilIdle();
+  EXPECT_FALSE(processed_callback);
+
+  allocator->SetInitialized({});
   RunLoopUntilIdle();
   EXPECT_TRUE(processed_callback);
 
@@ -136,6 +141,35 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
   {
     EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(1);
     allocator.reset();
+  }
+}
+
+TEST_F(AllocatorTest, RegisterBufferCollectionThroughMultipleAllocatorChannels) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  allocator->SetInitialized({});
+
+  const int kNumAllocators = 3;
+  std::vector<fuchsia::scenic::allocation::AllocatorPtr> allocator_ptrs;
+  for (int i = 0; i < kNumAllocators; ++i) {
+    fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
+    context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
+    allocator_ptrs.push_back(std::move(allocator_ptr));
+  }
+
+  for (auto& allocator_ptr : allocator_ptrs) {
+    bool processed_callback = false;
+    BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+    const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _))
+        .WillOnce(Return(true));
+    allocator_ptr->RegisterBufferCollection(
+        std::move(ref_pair.export_token), CreateToken(),
+        [&processed_callback](Allocator_RegisterBufferCollection_Result result) {
+          EXPECT_FALSE(result.is_err());
+          processed_callback = true;
+        });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(processed_callback);
   }
 }
 

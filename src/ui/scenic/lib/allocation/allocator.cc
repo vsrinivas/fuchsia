@@ -22,27 +22,43 @@ Allocator::Allocator(
     sys::ComponentContext* app_context,
     const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-    : buffer_collection_importers_(buffer_collection_importers),
+    : dispatcher_(async_get_default_dispatcher()),
+      buffer_collection_importers_(buffer_collection_importers),
       sysmem_allocator_(std::move(sysmem_allocator)),
       weak_factory_(this) {
   FX_DCHECK(app_context);
-  app_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
-  FX_DCHECK(async_get_default_dispatcher());
+  fit::function<void(fidl::InterfaceRequest<fuchsia::scenic::allocation::Allocator>)>
+      allocator_handler = fit::bind_member(this, &Allocator::CreateAllocator);
+  app_context->outgoing()->AddPublicService(std::move(allocator_handler));
 }
 
 Allocator::~Allocator() {
-  // Allocator outlives |buffer_collection_importers_| instances, because Scenic app guarantees that
-  // in dtor sequence. It is safe to release all remaining buffer collections because there should
-  // be no more usage.
+  FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+
+  // Allocator outlives |buffer_collection_importers_| instances, because we hold shared_ptrs. It is
+  // safe to release all remaining buffer collections because there should be no more usage.
   while (!buffer_collections_.empty()) {
     ReleaseBufferCollection(*buffer_collections_.begin());
   }
+}
+
+void Allocator::SetInitialized(
+    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+        buffer_collection_importers) {
+  FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+
+  buffer_collection_importers_.insert(buffer_collection_importers_.end(),
+                                      buffer_collection_importers.begin(),
+                                      buffer_collection_importers.end());
+  post_initialization_runner_.SetInitialized();
 }
 
 void Allocator::RegisterBufferCollection(
     BufferCollectionExportToken export_token,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token,
     RegisterBufferCollectionCallback callback) {
+  FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+
   if (!buffer_collection_token.is_valid()) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with invalid buffer collection token";
     callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
@@ -165,7 +181,18 @@ void Allocator::RegisterBufferCollection(
   callback(fit::ok());
 }
 
+void Allocator::CreateAllocator(
+    fidl::InterfaceRequest<fuchsia::scenic::allocation::Allocator> request) {
+  FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+
+  post_initialization_runner_.RunAfterInitialized([this, request = std::move(request)]() mutable {
+    bindings_.AddBinding(this, std::move(request));
+  });
+}
+
 void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {
+  FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+
   buffer_collections_.erase(collection_id);
   // Remove buffer collections from all importers.
   for (auto& importer : buffer_collection_importers_) {

@@ -35,6 +35,7 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::s
 // that the |sys::testing::TestWithEnvironment| method is more verbose.
 const std::map<std::string, std::string> kServices = {
     {"fuchsia.hardware.display.Provider", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+    {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
     {"fuchsia.tracing.provider.Registry",
      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
     {"fuchsia.ui.policy.Presenter",

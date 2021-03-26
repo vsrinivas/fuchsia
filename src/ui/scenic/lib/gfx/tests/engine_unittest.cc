@@ -118,7 +118,8 @@ class EngineTest : public escher::test::TestWithVkValidationLayer {
     escher_ =
         std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem(), nullptr);
     engine_ = std::make_shared<Engine>(/*app_context=*/nullptr, /*frame_scheduler=*/nullptr,
-                                       escher_->GetWeakPtr(), inspect::Node());
+                                       escher_->GetWeakPtr(),
+                                       /*buffer_collection_importer=*/nullptr, inspect::Node());
   }
 
   void TearDown() override {

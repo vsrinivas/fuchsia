@@ -6,6 +6,7 @@
 #define LIB_UI_SCENIC_CPP_COMMANDS_H_
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -35,6 +36,10 @@ fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uin
 fuchsia::ui::gfx::Command NewCreateImage2Cmd(uint32_t id, uint32_t width, uint32_t height,
                                              uint32_t buffer_collection_id,
                                              uint32_t buffer_collection_index);
+fuchsia::ui::gfx::Command NewCreateImage3Cmd(
+    uint32_t id, uint32_t width, uint32_t height,
+    fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
+    uint32_t buffer_collection_index);
 fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uint32_t memory_offset,
                                             fuchsia::images::PixelFormat format,
                                             fuchsia::images::ColorSpace color_space,

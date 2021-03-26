@@ -13,14 +13,15 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_images::{
     ImageInfo, ImagePipe2Marker, MemoryType, PixelFormat, PresentationInfo, Tiling,
 };
+use fidl_fuchsia_scenic_allocation::BufferCollectionImportToken;
 use fidl_fuchsia_scenic_scheduling::FuturePresentationTimes;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fidl_fuchsia_ui_gfx::{
     AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
-    DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImageArgs2, ImagePipe2Args, LayerArgs,
-    LayerStackArgs, MaterialArgs, MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs,
-    ResourceArgs, RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewArgs3,
-    ViewHolderArgs, ViewProperties,
+    DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImageArgs2, ImageArgs3, ImagePipe2Args,
+    LayerArgs, LayerStackArgs, MaterialArgs, MemoryArgs, PointLightArgs, RectangleArgs,
+    RendererArgs, ResourceArgs, RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs,
+    ViewArgs3, ViewHolderArgs, ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, Present2Args, SessionEventStream, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewRef, ViewRefControl, ViewToken};
@@ -237,6 +238,35 @@ impl Image2 {
 }
 
 impl Deref for Image2 {
+    type Target = Resource;
+
+    fn deref(&self) -> &Resource {
+        &self.resource
+    }
+}
+
+pub struct Image3 {
+    resource: Resource,
+}
+
+impl Image3 {
+    pub fn new(
+        session: &SessionPtr,
+        width: u32,
+        height: u32,
+        import_token: BufferCollectionImportToken,
+        buffer_collection_index: u32,
+    ) -> Image3 {
+        let args = ImageArgs3 { width, height, import_token, buffer_collection_index };
+        Image3 { resource: Resource::new(session.clone(), ResourceArgs::Image3(args)) }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+}
+
+impl Deref for Image3 {
     type Target = Resource;
 
     fn deref(&self) -> &Resource {

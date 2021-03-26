@@ -9,6 +9,7 @@
 #include <lib/ui/scenic/cpp/commands_sizing.h>
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -29,6 +30,15 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::images::ImageInfo& value) {
     num_bytes_ += FIDL_ALIGN(32);
+  }
+
+  void Measure(const ::fuchsia::scenic::allocation::BufferCollectionImportToken& value) {
+    num_bytes_ += FIDL_ALIGN(4);
+    MeasureHandles(value);
+  }
+
+  void MeasureHandles(const ::fuchsia::scenic::allocation::BufferCollectionImportToken& value) {
+    num_handles_ += 1;
   }
 
   void Measure(const ::fuchsia::ui::gfx::AddChildCmd& value) {
@@ -466,6 +476,15 @@ class MeasuringTape {
     num_bytes_ += FIDL_ALIGN(16);
   }
 
+  void Measure(const ::fuchsia::ui::gfx::ImageArgs3& value) {
+    num_bytes_ += FIDL_ALIGN(16);
+    MeasureHandles(value);
+  }
+
+  void MeasureHandles(const ::fuchsia::ui::gfx::ImageArgs3& value) {
+    MeasureHandles(value.import_token);
+  }
+
   void Measure(const ::fuchsia::ui::gfx::ImagePipe2Args& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
@@ -666,6 +685,11 @@ class MeasuringTape {
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImage2: {
         __attribute__((unused)) auto const& _image2 = value.image2();
         Measure(_image2);
+        break;
+      }
+      case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImage3: {
+        __attribute__((unused)) auto const& _image3 = value.image3();
+        Measure(_image3);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe: {

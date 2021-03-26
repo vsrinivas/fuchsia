@@ -70,6 +70,8 @@ class App {
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<Watchdog> watchdog_;
 
+  zx::duration min_predicted_frame_duration_;
+
   std::shared_ptr<allocation::Allocator> allocator_;
 
   std::shared_ptr<flatland::UberStructSystem> uber_struct_system_;

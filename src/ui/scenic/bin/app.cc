@@ -39,14 +39,16 @@ static const std::string kDependencyDir = "/dev/class/display-controller";
 static const std::string kDependencyDir = "/dev/class/gpu";
 #endif
 
-zx::duration GetMinimumPredictedFrameDuration() {
-  std::string frame_scheduler_min_predicted_frame_duration;
-  int frame_scheduler_min_predicted_frame_duration_in_us = 0;
-  if (files::ReadFileToString("/config/data/scenic_config",
-                              &frame_scheduler_min_predicted_frame_duration)) {
-    rapidjson::Document document;
-    document.Parse(frame_scheduler_min_predicted_frame_duration);
+void ReadConfig(zx::duration* min_predicted_frame_duration, bool* enable_allocator_for_flatland) {
+  *min_predicted_frame_duration = scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
+  *enable_allocator_for_flatland = false;
 
+  std::string config_string;
+  if (files::ReadFileToString("/config/data/scenic_config", &config_string)) {
+    rapidjson::Document document;
+    document.Parse(config_string);
+
+    int frame_scheduler_min_predicted_frame_duration_in_us = 0;
     if (document.HasMember("frame_scheduler_min_predicted_frame_duration_in_us")) {
       auto& val = document["frame_scheduler_min_predicted_frame_duration_in_us"];
       FX_CHECK(val.IsInt()) << "min_preducted_frame_duration must be an integer";
@@ -56,10 +58,17 @@ zx::duration GetMinimumPredictedFrameDuration() {
 
     FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
                   << frame_scheduler_min_predicted_frame_duration_in_us;
+    *min_predicted_frame_duration =
+        frame_scheduler_min_predicted_frame_duration_in_us > 0
+            ? zx::usec(frame_scheduler_min_predicted_frame_duration_in_us)
+            : scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
+
+    if (document.HasMember("enable_allocator_for_flatland")) {
+      auto& val = document["enable_allocator_for_flatland"];
+      FX_CHECK(val.IsBool()) << "enable_allocator_for_flatland must be a boolean";
+      *enable_allocator_for_flatland = val.GetBool();
+    }
   }
-  return frame_scheduler_min_predicted_frame_duration_in_us > 0
-             ? zx::usec(frame_scheduler_min_predicted_frame_duration_in_us)
-             : scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
 }
 
 bool GetPointerAutoFocusBehavior() {
@@ -78,14 +87,6 @@ bool GetPointerAutoFocusBehavior() {
 
   FX_LOGS(INFO) << "Scenic pointer auto focus: " << pointer_auto_focus;
   return pointer_auto_focus;
-}
-
-bool IsIncludedIn(
-    const std::shared_ptr<allocation::BufferCollectionImporter>&& element,
-    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>& importers) {
-  return std::find_if(importers.begin(), importers.end(), [&element](auto importer) {
-           return importer.get() == element.get();
-         }) != importers.end();
 }
 
 }  // namespace
@@ -149,6 +150,17 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
   FX_DCHECK(!device_watcher_);
+
+  // Read config for the adjustable params.
+  bool enable_allocator_for_flatland;
+  ReadConfig(&min_predicted_frame_duration_, &enable_allocator_for_flatland);
+
+  // Create Allocator with the available importers.
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
+  if (enable_allocator_for_flatland && flatland_compositor_)
+    importers.push_back(flatland_compositor_);
+  allocator_ = std::make_shared<allocation::Allocator>(
+      app_context_.get(), importers, utils::CreateSysmemAllocatorSyncPtr("Allocator"));
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
   fit::bridge<std::shared_ptr<display::Display>> display_bridge;
@@ -269,17 +281,22 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
     frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
         display->vsync_timing(),
         std::make_unique<scheduling::WindowedFramePredictor>(
-            GetMinimumPredictedFrameDuration(),
+            min_predicted_frame_duration_,
             scheduling::DefaultFrameScheduler::kInitialRenderDuration,
             scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
         scenic_->inspect_node()->CreateChild("FrameScheduler"), cobalt_logger);
   }
 
+  // Send the newly initialized importer to Allocator.
+  auto gfx_buffer_collection_importer =
+      std::make_shared<gfx::GfxBufferCollectionImporter>(escher_->GetWeakPtr());
+  allocator_->SetInitialized({gfx_buffer_collection_importer});
+
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
-    engine_ =
-        std::make_shared<gfx::Engine>(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
-                                      scenic_->inspect_node()->CreateChild("Engine"));
+    engine_ = std::make_shared<gfx::Engine>(app_context_.get(), frame_scheduler_,
+                                            escher_->GetWeakPtr(), gfx_buffer_collection_importer,
+                                            scenic_->inspect_node()->CreateChild("Engine"));
   }
   frame_scheduler_->SetFrameRenderer(engine_);
   scenic_->SetFrameScheduler(frame_scheduler_);
@@ -312,16 +329,6 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
   scenic_->SetInitialized(engine_->scene_graph());
 
-  // TODO(fxbug.dev/71955): Add a Vulkan buffer collection importer that is used by Scenic::Session
-  // instances.
-  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
-      allocator_buffer_collection_importers;
-  allocator_buffer_collection_importers.push_back(flatland_compositor_);
-  allocator_ = std::make_shared<allocation::Allocator>(
-      app_context_.get(), allocator_buffer_collection_importers,
-      utils::CreateSysmemAllocatorSyncPtr("Allocator"));
-
-  FX_DCHECK(IsIncludedIn(flatland_compositor_, allocator_buffer_collection_importers));
   flatland_manager_->Initialize(display, {flatland_compositor_});
 }
 

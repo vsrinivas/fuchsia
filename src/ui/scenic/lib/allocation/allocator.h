@@ -16,6 +16,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/allocation/id.h"
+#include "src/ui/scenic/lib/utils/post_initialization_runner.h"
 
 namespace allocation {
 
@@ -29,19 +30,25 @@ class Allocator : public fuchsia::scenic::allocation::Allocator {
       fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
   ~Allocator() override;
 
+  void SetInitialized(const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+                          buffer_collection_importers);
+
   // |fuchsia::scenic::allocation::Allocator|
   void RegisterBufferCollection(
       fuchsia::scenic::allocation::BufferCollectionExportToken export_token,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token,
       RegisterBufferCollectionCallback callback) override;
 
-  const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers()
-      const {
-    return buffer_collection_importers_;
-  }
-
  private:
+  void CreateAllocator(fidl::InterfaceRequest<fuchsia::scenic::allocation::Allocator> request);
+
   void ReleaseBufferCollection(GlobalBufferCollectionId collection_id);
+
+  // Dispatcher where this class runs on. Currently points to scenic main thread's dispatcher.
+  async_dispatcher_t* dispatcher_;
+
+  // Used for queuing tasks until Initialize() is called.
+  utils::PostInitializationRunner post_initialization_runner_;
 
   // The FIDL bindings for this Allocator instance, which reference |this| as the implementation and
   // run on |dispatcher_|.

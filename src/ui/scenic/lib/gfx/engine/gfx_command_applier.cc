@@ -15,6 +15,7 @@
 
 #include "rapidjson/document.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/shape/mesh.h"
@@ -24,6 +25,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/display_compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
+#include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
@@ -249,6 +251,8 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
       return ApplyCreateImage(session, id, std::move(command.resource.image()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImage2:
       return ApplyCreateImage2(session, id, std::move(command.resource.image2()));
+    case fuchsia::ui::gfx::ResourceArgs::Tag::kImage3:
+      return ApplyCreateImage3(session, id, std::move(command.resource.image3()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe: {
       return ApplyCreateImagePipe(session, id, std::move(command.resource.image_pipe()));
     }
@@ -1064,6 +1068,15 @@ bool GfxCommandApplier::ApplyCreateImage2(Session* session, ResourceId id,
   return false;
 }
 
+bool GfxCommandApplier::ApplyCreateImage3(Session* session, ResourceId id,
+                                          fuchsia::ui::gfx::ImageArgs3 args) {
+  if (auto image = CreateImage3(session, id, std::move(args))) {
+    return session->resources()->AddResource(id, std::move(image));
+  }
+
+  return false;
+}
+
 bool GfxCommandApplier::ApplyCreateImagePipe(Session* session, ResourceId id,
                                              fuchsia::ui::gfx::ImagePipeArgs args) {
   auto image_pipe_updater =
@@ -1394,6 +1407,16 @@ ResourcePtr GfxCommandApplier::CreateImage2(Session* session, ResourceId id,
                                             fuchsia::ui::gfx::ImageArgs2 args) {
   return Image::New(session, id, args.width, args.height, args.buffer_collection_id,
                     args.buffer_collection_index, session->error_reporter());
+}
+
+ResourcePtr GfxCommandApplier::CreateImage3(Session* session, ResourceId id,
+                                            fuchsia::ui::gfx::ImageArgs3 args) {
+  allocation::ImageMetadata metadata;
+  metadata.width = args.width;
+  metadata.height = args.height;
+  metadata.vmo_index = args.buffer_collection_index;
+  metadata.collection_id = fsl::GetRelatedKoid(args.import_token.value.get());
+  return session->session_context().buffer_collection_importer->ExtractImage(session, metadata, id);
 }
 
 ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, MemoryPtr memory,

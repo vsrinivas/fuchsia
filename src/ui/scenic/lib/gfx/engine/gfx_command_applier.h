@@ -161,6 +161,7 @@ class GfxCommandApplier {
   static bool ApplyCreateMemory(Session* session, ResourceId id, fuchsia::ui::gfx::MemoryArgs args);
   static bool ApplyCreateImage(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs args);
   static bool ApplyCreateImage2(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs2 args);
+  static bool ApplyCreateImage3(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs3 args);
   static bool ApplyCreateImagePipe(Session* session, ResourceId id,
                                    fuchsia::ui::gfx::ImagePipeArgs args);
   static bool ApplyCreateImagePipe2(Session* session, ResourceId id,
@@ -239,6 +240,8 @@ class GfxCommandApplier {
                                  fuchsia::ui::gfx::ImageArgs args);
   static ResourcePtr CreateImage2(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::ImageArgs2 args);
+  static ResourcePtr CreateImage3(Session* session, ResourceId id,
+                                  fuchsia::ui::gfx::ImageArgs3 args);
   static ResourcePtr CreateBuffer(Session* session, ResourceId id, MemoryPtr memory,
                                   uint32_t memory_offset, uint32_t num_bytes);
 

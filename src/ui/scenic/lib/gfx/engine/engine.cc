@@ -33,7 +33,9 @@ namespace gfx {
 
 Engine::Engine(sys::ComponentContext* app_context,
                const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-               escher::EscherWeakPtr weak_escher, inspect::Node inspect_node)
+               escher::EscherWeakPtr weak_escher,
+               std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
+               inspect::Node inspect_node)
     : escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
           escher_,
@@ -41,6 +43,7 @@ Engine::Engine(sys::ComponentContext* app_context,
               {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint})))),
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                                    escher()->resource_recycler())),
+      buffer_collection_importer_(buffer_collection_importer),
       delegating_frame_scheduler_(
           std::make_shared<scheduling::DelegatingFrameScheduler>(frame_scheduler)),
       scene_graph_(app_context),

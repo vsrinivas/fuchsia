@@ -7,6 +7,7 @@
 // clang-format on
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/images/cpp/images.h>
@@ -33,6 +34,7 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/yuv/yuv.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
 #include "src/ui/scenic/lib/gfx/engine/buffer_collection.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
@@ -2347,6 +2349,394 @@ TEST_F(ScenicPixelTest, InsetNotEnforced) {
   EXPECT_EQ(screenshot2.ColorAt(.75f, .5f), scenic::Color(255, 0, 255, 255));  // Magenta
   EXPECT_EQ(screenshot2.ColorAt(.5f, .25f), scenic::Color(255, 0, 255, 255));  // Magenta
   EXPECT_EQ(screenshot2.ColorAt(.5f, .75f), scenic::Color(255, 0, 255, 255));  // Magenta
+}
+
+class ParameterizedImage3PixelTest
+    : public ScenicPixelTest,
+      public ::testing::WithParamInterface<fuchsia::sysmem::PixelFormatType> {};
+
+TEST_P(ParameterizedImage3PixelTest, Image3PixelTest) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera().SetProjection(0);
+
+  // Create Sysmem Allocator channel.
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
+
+  // Create Sysmem tokens.
+  auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
+
+  // Create Scenic Allocator channel.
+  fuchsia::scenic::allocation::AllocatorPtr scenic_allocator;
+  environment_->ConnectToService(scenic_allocator.NewRequest());
+  EXPECT_TRUE(scenic_allocator.is_bound());
+  scenic_allocator.set_error_handler(
+      [](zx_status_t status) { FAIL() << "Lost connection to Scenic Allocator"; });
+
+  // Register BufferCollection with Scenic Allocator using |dup_token|.
+  auto ref_pair = allocation::BufferCollectionImportExportTokens::New();
+  scenic_allocator->RegisterBufferCollection(std::move(ref_pair.export_token), std::move(dup_token),
+                                             [this](auto result) {
+                                               EXPECT_FALSE(result.is_err());
+                                               QuitLoop();
+                                             });
+
+  // Make sure that Scenic is initalized and Allocator is done with RegisterBufferCollection().
+  ASSERT_FALSE(RunLoopWithTimeout(zx::sec(15)));
+
+  // Set constraints using |local_token|.
+  const uint32_t kShapeWidth = 32;
+  const uint32_t kShapeHeight = 32;
+  fuchsia::sysmem::BufferCollectionPtr buffer_collection;
+  zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                              buffer_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  buffer_collection.set_error_handler([](zx_status_t status) { EXPECT_NE(status, ZX_OK); });
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = GetParam();
+  image_constraints.color_spaces_count = 1;
+  switch (GetParam()) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
+      image_constraints.color_space[0] =
+          fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+      break;
+    case fuchsia::sysmem::PixelFormatType::NV12:
+    case fuchsia::sysmem::PixelFormatType::I420:
+      image_constraints.color_space[0] =
+          fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::REC709};
+      break;
+    default:
+      FX_NOTREACHED();
+  }
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+  image_constraints.min_coded_width = kShapeWidth;
+  image_constraints.max_coded_width = kShapeWidth;
+  image_constraints.min_coded_height = kShapeHeight;
+  image_constraints.max_coded_height = kShapeHeight;
+
+  // Wait for allocation.
+  // TODO(fxbug.dev/60837): Currently in order to make WaitForBuffersAllocated() see a response
+  // before the BufferCollections channel is closed, we have to call WaitForBuffersAllocated()
+  // asynchronously before SetConstraints(). We should change it back to sync pointers after this
+  // bug is fixed.
+  bool allocation_processed = false;
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  buffer_collection->WaitForBuffersAllocated(
+      [&allocation_processed, &allocation_status, &buffer_collection_info](
+          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
+        allocation_processed = true;
+        allocation_status = status;
+        buffer_collection_info = std::move(info);
+      });
+  RunLoopUntilIdle();
+  buffer_collection->SetConstraints(true, constraints);
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&allocation_processed]() { return allocation_processed; },
+                                        zx::sec(1)));
+  // TODO(fxbug.dev/59804): This test is skipped on FEMU until we support YUV formats for external
+  // visible image allocation on FEMU.
+  if (allocation_status == ZX_ERR_NOT_SUPPORTED &&
+      (GetParam() == fuchsia::sysmem::PixelFormatType::NV12 ||
+       GetParam() == fuchsia::sysmem::PixelFormatType::I420)) {
+    FX_LOGS(WARNING) << "Buffer constraints not supported. Test skipped.";
+    GTEST_SKIP();
+  }
+  EXPECT_EQ(allocation_status, ZX_OK);
+  buffer_collection->Close();
+
+  // Paint the allocated buffer.
+  uint8_t* vmo_base;
+  const zx::vmo& image_vmo = buffer_collection_info.buffers[0].vmo;
+  auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
+  EXPECT_GT(image_vmo_bytes, 0u);
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                      image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
+  EXPECT_EQ(status, ZX_OK);
+  vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
+  const uint32_t num_pixels = kShapeWidth * kShapeHeight;
+  scenic::Color kTargetColor(0, 0, 0, 0);
+  switch (GetParam()) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32: {
+      kTargetColor = scenic::Color(0xFA, 0x87, 0xF1, 0xFF);
+      for (uint32_t i = 0; i < num_pixels * 4; i += 4) {
+        vmo_base[i] = kTargetColor.b;
+        vmo_base[i + 1] = kTargetColor.g;
+        vmo_base[i + 2] = kTargetColor.r;
+        vmo_base[i + 3] = kTargetColor.a;
+      }
+      break;
+    }
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8: {
+      kTargetColor = scenic::Color(0xF1, 0x87, 0xFA, 0xFF);
+      for (uint32_t i = 0; i < num_pixels * 4; i += 4) {
+        vmo_base[i] = kTargetColor.r;
+        vmo_base[i + 1] = kTargetColor.g;
+        vmo_base[i + 2] = kTargetColor.b;
+        vmo_base[i + 3] = kTargetColor.a;
+      }
+      break;
+    }
+    case fuchsia::sysmem::PixelFormatType::I420: {
+      kTargetColor = scenic::Color(0xE4, 0x44, 0xF6, 0xFF);
+      const uint8_t kYuvValues[] = {110U, 192U, 192U};
+      for (uint32_t i = 0; i < num_pixels; ++i) {
+        vmo_base[i] = kYuvValues[0];
+      }
+      for (uint32_t i = num_pixels; i < num_pixels + num_pixels / 4; ++i) {
+        vmo_base[i] = kYuvValues[1];
+      }
+      for (uint32_t i = num_pixels + num_pixels / 4; i < num_pixels + num_pixels / 2; ++i) {
+        vmo_base[i] = kYuvValues[2];
+      }
+      break;
+    }
+    case fuchsia::sysmem::PixelFormatType::NV12: {
+      kTargetColor = scenic::Color(0xE4, 0x44, 0xF6, 0xFF);
+      const uint8_t kYuvValues[] = {110U, 192U, 192U};
+      for (uint32_t i = 0; i < num_pixels; ++i) {
+        vmo_base[i] = kYuvValues[0];
+      }
+      for (uint32_t i = num_pixels; i < num_pixels + num_pixels / 2; i += 2) {
+        vmo_base[i] = kYuvValues[1];
+        vmo_base[i + 1] = kYuvValues[2];
+      }
+      break;
+    }
+    default:
+      FX_NOTREACHED();
+  }
+  if (buffer_collection_info.settings.buffer_settings.coherency_domain ==
+      fuchsia::sysmem::CoherencyDomain::RAM) {
+    status = buffer_collection_info.buffers[0].vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0,
+                                                            image_vmo_bytes, nullptr, 0);
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  // Create Image3 resource.
+  const uint32_t kImageId = session->next_resource_id();
+  session->Enqueue(scenic::NewCreateImage3Cmd(kImageId, kShapeWidth, kShapeHeight,
+                                              std::move(ref_pair.import_token), 0));
+
+  // Create Material, ShapeNode and Shape to present the image.
+  const uint32_t kMaterialId = kImageId + 1;
+  session->Enqueue(scenic::NewCreateMaterialCmd(kMaterialId));
+  session->Enqueue(scenic::NewSetTextureCmd(kMaterialId, kImageId));
+  session->Enqueue(scenic::NewSetColorCmd(kMaterialId, 255, 255, 255, 255));
+  const uint32_t kShapeNodeId = kMaterialId + 1;
+  session->Enqueue(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
+  session->Enqueue(scenic::NewSetMaterialCmd(kShapeNodeId, kMaterialId));
+  const uint32_t kShapeId = kShapeNodeId + 1;
+  session->Enqueue(scenic::NewCreateRectangleCmd(kShapeId, display_width, display_height));
+  session->Enqueue(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
+  session->Enqueue(
+      scenic::NewSetTranslationCmd(kShapeNodeId, {display_width * 0.5f, display_height * 0.5f, 0}));
+  session->Enqueue(scenic::NewAddChildCmd(test_session->scene.id(), kShapeNodeId));
+
+  // Present to flush create commands.
+  RunLoopUntilIdle();
+  Present(session);
+
+  // Check that all pixels have the expected color from a screenshot.
+  scenic::Screenshot screenshot = TakeScreenshot();
+  ASSERT_FALSE(screenshot.empty());
+  std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+  EXPECT_GT(histogram[kTargetColor], 0u);
+  histogram.erase(kTargetColor);
+  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+
+  // Cleanup
+  session->Enqueue(scenic::NewReleaseResourceCmd(kShapeId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kShapeNodeId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kMaterialId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kImageId));
+  RunLoopUntilIdle();
+  Present(session);
+}
+
+INSTANTIATE_TEST_SUITE_P(PixelFormats, ParameterizedImage3PixelTest,
+                         ::testing::Values(fuchsia::sysmem::PixelFormatType::BGRA32,
+                                           fuchsia::sysmem::PixelFormatType::R8G8B8A8,
+                                           fuchsia::sysmem::PixelFormatType::I420,
+                                           fuchsia::sysmem::PixelFormatType::NV12));
+
+TEST_F(ScenicPixelTest, CreateImage3FromMultipleSessions) {
+  // Create Sysmem Allocator channel.
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
+
+  // Create Sysmem tokens.
+  auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
+
+  // Create Scenic Allocator channel.
+  fuchsia::scenic::allocation::AllocatorPtr scenic_allocator;
+  environment_->ConnectToService(scenic_allocator.NewRequest());
+  EXPECT_TRUE(scenic_allocator.is_bound());
+  scenic_allocator.set_error_handler(
+      [](zx_status_t status) { FAIL() << "Lost connection to Scenic Allocator"; });
+
+  // Register BufferCollection with Scenic Allocator using |dup_token|.
+  auto ref_pair = allocation::BufferCollectionImportExportTokens::New();
+  scenic_allocator->RegisterBufferCollection(std::move(ref_pair.export_token), std::move(dup_token),
+                                             [this](auto result) {
+                                               EXPECT_FALSE(result.is_err());
+                                               QuitLoop();
+                                             });
+
+  // Make sure that Scenic is initalized and Allocator is done with RegisterBufferCollection().
+  ASSERT_FALSE(RunLoopWithTimeout(zx::sec(15)));
+
+  // Set constraints using |local_token|.
+  const uint32_t kShapeWidth = 32;
+  const uint32_t kShapeHeight = 32;
+  fuchsia::sysmem::BufferCollectionPtr buffer_collection;
+  zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                              buffer_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  buffer_collection.set_error_handler([](zx_status_t status) { EXPECT_NE(status, ZX_OK); });
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] =
+      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+  image_constraints.min_coded_width = kShapeWidth;
+  image_constraints.max_coded_width = kShapeWidth;
+  image_constraints.min_coded_height = kShapeHeight;
+  image_constraints.max_coded_height = kShapeHeight;
+
+  // Wait for allocation.
+  // TODO(fxbug.dev/60837): Currently in order to make WaitForBuffersAllocated() see a response
+  // before the BufferCollections channel is closed, we have to call WaitForBuffersAllocated()
+  // asynchronously before SetConstraints(). We should change it back to sync pointers after this
+  // bug is fixed.
+  bool allocation_processed = false;
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  buffer_collection->WaitForBuffersAllocated(
+      [&allocation_processed, &allocation_status, &buffer_collection_info](
+          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
+        allocation_processed = true;
+        allocation_status = status;
+        buffer_collection_info = std::move(info);
+      });
+  RunLoopUntilIdle();
+  buffer_collection->SetConstraints(true, constraints);
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&allocation_processed]() { return allocation_processed; },
+                                        zx::sec(1)));
+  EXPECT_EQ(allocation_status, ZX_OK);
+  buffer_collection->Close();
+
+  // Paint the allocated buffer.
+  uint8_t* vmo_base;
+  const zx::vmo& image_vmo = buffer_collection_info.buffers[0].vmo;
+  auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
+  EXPECT_GT(image_vmo_bytes, 0u);
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                      image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
+  EXPECT_EQ(status, ZX_OK);
+  vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
+  const uint32_t num_pixels = kShapeWidth * kShapeHeight;
+  scenic::Color kTargetColor(0xFA, 0x87, 0xF1, 0xFF);
+  for (uint32_t i = 0; i < num_pixels * 4; i += 4) {
+    vmo_base[i] = kTargetColor.b;
+    vmo_base[i + 1] = kTargetColor.g;
+    vmo_base[i + 2] = kTargetColor.r;
+    vmo_base[i + 3] = kTargetColor.a;
+  }
+
+  // Initialize first session.
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera().SetProjection(0);
+
+  // Initialize second session.
+  auto unique_session_2 = std::make_unique<scenic::Session>(scenic());
+  auto session2 = unique_session_2.get();
+  session2->set_error_handler([this](zx_status_t status) {
+    FX_LOGS(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  // Set left half of the screen to image from |session|.
+  const uint32_t kImageId1 = 123;
+  session->Enqueue(scenic::NewCreateImage3Cmd(kImageId1, kShapeWidth, kShapeHeight,
+                                              ref_pair.DuplicateImportToken(), 0));
+  int32_t pane_width = display_width / 2;
+  int32_t pane_height = display_height;
+  scenic::Rectangle pane_shape1(session, pane_width, pane_height);
+  scenic::Material pane_material1(session);
+  pane_material1.SetTexture(kImageId1);
+  scenic::ShapeNode pane_node1(session);
+  pane_node1.SetShape(pane_shape1);
+  pane_node1.SetMaterial(pane_material1);
+  pane_node1.SetTranslation(pane_width / 2, pane_height / 2, 0);
+  test_session->scene.AddChild(pane_node1);
+  Present(session);
+
+  // Half of the screenshot should be target color.
+  {
+    scenic::Screenshot screenshot = TakeScreenshot();
+    ASSERT_FALSE(screenshot.empty());
+    std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+    EXPECT_GT(histogram[kTargetColor], 0u);
+    EXPECT_EQ(histogram[kTargetColor], histogram[scenic::Color(0, 0, 0, 0)]);
+  }
+
+  // Set right half of the screen to image from |session2|.
+  const uint32_t kImageId2 = 123;
+  session2->Enqueue(scenic::NewCreateImage3Cmd(kImageId2, kShapeWidth, kShapeHeight,
+                                               ref_pair.DuplicateImportToken(), 0));
+  scenic::EntityNode transform_node(session);
+  transform_node.SetTranslation(display_width / 2, 0, 0);
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  scenic::View view(session2, std::move(view_token), "Image3View");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "Image3ViewHolder");
+  const std::array<float, 3> bmin = {0.f, 0.f, -2.f};
+  const std::array<float, 3> bmax = {display_width / 2, display_height, 1.f};
+  const std::array<float, 3> imin = {0, 0, 0};
+  const std::array<float, 3> imax = {0, 0, 0};
+  view_holder.SetViewProperties(bmin, bmax, imin, imax);
+  pane_width = display_width / 2;
+  pane_height = display_height;
+  scenic::Rectangle pane_shape(session2, pane_width, pane_height);
+  scenic::Material pane_material(session2);
+  pane_material.SetTexture(kImageId2);
+  scenic::ShapeNode pane_node(session2);
+  pane_node.SetShape(pane_shape);
+  pane_node.SetMaterial(pane_material);
+  pane_node.SetTranslation(pane_width / 2, pane_height / 2, 0);
+  transform_node.AddChild(view_holder);
+  view.AddChild(pane_node);
+  test_session->scene.AddChild(transform_node);
+  Present(session);
+  Present(session2);
+
+  // Check that all pixels have the target color from a screenshot.
+  {
+    scenic::Screenshot screenshot = TakeScreenshot();
+    ASSERT_FALSE(screenshot.empty());
+    std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+    histogram.erase(kTargetColor);
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+  }
 }
 
 }  // namespace
