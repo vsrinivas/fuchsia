@@ -52,8 +52,8 @@ TEST(VirtconSessionManager, TestWriting) {
   auto pty = fidl::Client(std::move(local), loop.dispatcher());
 
   char output[] = "Testing!";
-  auto result = pty->Write_Sync(fidl::VectorView<uint8_t>(
-      fidl::unowned_ptr(reinterpret_cast<uint8_t*>(output)), sizeof(output)));
+  auto result = pty->Write_Sync(
+      fidl::VectorView<uint8_t>::FromExternal(reinterpret_cast<uint8_t*>(output), sizeof(output)));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->s, ZX_OK);
   ASSERT_EQ(result->actual, sizeof(output));
@@ -96,8 +96,8 @@ TEST(VirtconSessionManager, TestWritingMultipleClients) {
   // Write pty_one.
   char output_one[] = "Testing One!";
   {
-    auto result = pty_one->Write_Sync(fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(reinterpret_cast<uint8_t*>(output_one)), sizeof(output_one)));
+    auto result = pty_one->Write_Sync(fidl::VectorView<uint8_t>::FromExternal(
+        reinterpret_cast<uint8_t*>(output_one), sizeof(output_one)));
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_EQ(result->s, ZX_OK);
     ASSERT_EQ(result->actual, sizeof(output_one));
@@ -106,8 +106,8 @@ TEST(VirtconSessionManager, TestWritingMultipleClients) {
   // Write pty_two.
   char output_two[] = "Testing One!";
   {
-    auto result = pty_two->Write_Sync(fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(reinterpret_cast<uint8_t*>(output_two)), sizeof(output_two)));
+    auto result = pty_two->Write_Sync(fidl::VectorView<uint8_t>::FromExternal(
+        reinterpret_cast<uint8_t*>(output_two), sizeof(output_two)));
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_EQ(result->s, ZX_OK);
     ASSERT_EQ(result->actual, sizeof(output_two));

@@ -38,7 +38,7 @@ class PayloadStreamer : public fuchsia_paver::PayloadStream::Interface {
   zx::vmo vmo_;
   fzl::VmoMapper mapper_;
   size_t read_offset_ = 0;
-  fidl::aligned<bool> eof_reached_ = false;
+  bool eof_reached_ = false;
 };
 
 }  // namespace netsvc

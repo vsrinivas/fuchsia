@@ -62,7 +62,8 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
       {fidl::StringView{"netsvc.all-features"}, false},
   };
 
-  auto bool_resp = client.GetBools(fidl::unowned_vec(bool_keys));
+  auto bool_resp =
+      client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (bool_resp.ok()) {
     out->disable = bool_resp->values[0];
     out->netboot = bool_resp->values[1];

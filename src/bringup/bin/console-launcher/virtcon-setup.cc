@@ -82,7 +82,8 @@ zx::status<VirtconArgs> GetVirtconArgs(fuchsia_boot::Arguments::SyncClient* boot
       {fidl::StringView{"netsvc.netboot"}, false},
       {fidl::StringView{"devmgr.require-system"}, false},
   };
-  auto bool_resp = boot_args->GetBools(fidl::unowned_vec(bool_keys));
+  auto bool_resp =
+      boot_args->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (!bool_resp.ok()) {
     return zx::error(bool_resp.status());
   }

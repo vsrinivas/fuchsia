@@ -112,7 +112,8 @@ std::optional<Arguments> GetArguments(fuchsia_boot::Arguments::SyncClient* clien
       {fidl::StringView{"console.is_virtio"}, false},
       {fidl::StringView{"devmgr.log-to-debuglog"}, false},
   };
-  auto bool_resp = client->GetBools(fidl::unowned_vec(bool_keys));
+  auto bool_resp =
+      client->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (!bool_resp.ok()) {
     printf("console-launcher: failed to get boot bools\n");
     return std::nullopt;
@@ -130,7 +131,7 @@ std::optional<Arguments> GetArguments(fuchsia_boot::Arguments::SyncClient* clien
       fidl::StringView{"zircon.autorun.boot"},
       fidl::StringView{"zircon.autorun.system"},
   };
-  auto resp = client->GetStrings(fidl::unowned_vec(vars));
+  auto resp = client->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(vars));
   if (!resp.ok()) {
     printf("console-launcher: failed to get console path\n");
     return std::nullopt;

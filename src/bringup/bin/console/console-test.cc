@@ -90,7 +90,7 @@ TEST(ConsoleTestCase, Log) {
       .tid = 2,
       .time = 4321000000,
       .severity = FX_LOG_INFO,
-      .tags = {fidl::unowned_ptr(&tag), 1},
+      .tags = fidl::VectorView<fidl::StringView>::FromExternal(&tag, 1),
       .msg = {"Hello World"},
   };
   ASSERT_OK(console->Log(std::move(log)));
@@ -119,7 +119,7 @@ TEST(ConsoleTestCase, LogDenyTag) {
       .tid = 2,
       .time = 4321000000,
       .severity = FX_LOG_INFO,
-      .tags = {fidl::unowned_ptr(&tag), 1},
+      .tags = fidl::VectorView<fidl::StringView>::FromExternal(&tag, 1),
       .msg = {"Goodbye World"},
   };
   ASSERT_OK(console->Log(std::move(log)));

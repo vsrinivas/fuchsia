@@ -67,15 +67,17 @@ zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> lis
   auto log = fidl::BindSyncClient(std::move(client_end.value()));
   std::vector<fidl::StringView> tags;
   for (auto& tag : allowed_log_tags) {
-    tags.emplace_back(fidl::unowned_str(tag));
+    tags.emplace_back(fidl::StringView::FromExternal(tag));
   }
   fuchsia_logger::wire::LogFilterOptions options{
       .filter_by_pid = false,
       .filter_by_tid = false,
       .min_severity = fuchsia_logger::wire::LogLevelFilter::TRACE,
-      .tags = fidl::unowned_vec(tags),
+      .tags = fidl::VectorView<fidl::StringView>::FromExternal(tags),
   };
-  auto result = log.ListenSafe(std::move(listener), fidl::unowned_ptr(&options));
+  auto result = log.ListenSafe(
+      std::move(listener),
+      fidl::ObjectView<fuchsia_logger::wire::LogFilterOptions>::FromExternal(&options));
   if (!result.ok()) {
     printf("console: fuchsia.logger.Log/ListenSafe() = %s\n", result.error());
     return result.status();

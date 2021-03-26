@@ -98,7 +98,7 @@ class DeviceNameProviderServer final : public fuchsia_device::NameProvider::Inte
  public:
   DeviceNameProviderServer(const char* device_name, size_t size) : name(device_name), size(size) {}
   void GetDeviceName(GetDeviceNameCompleter::Sync& completer) override {
-    completer.ReplySuccess(fidl::unowned_str(name, size));
+    completer.ReplySuccess(fidl::StringView::FromExternal(name, size));
   }
 };
 

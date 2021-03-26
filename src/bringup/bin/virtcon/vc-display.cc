@@ -257,10 +257,9 @@ zx_status_t import_vmo(zx_handle_t vmo, fhd::wire::ImageConfig* config, uint64_t
 }
 
 zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
-  RETURN_IF_ERROR(
-      dc_client->SetDisplayLayers(
-          display_id, fidl::VectorView<uint64_t>(fidl::unowned_ptr(&layer_id), layer_id ? 1 : 0)),
-      "vc: Failed to set display layers");
+  RETURN_IF_ERROR(dc_client->SetDisplayLayers(display_id, fidl::VectorView<uint64_t>::FromExternal(
+                                                              &layer_id, layer_id ? 1 : 0)),
+                  "vc: Failed to set display layers");
   return ZX_OK;
 }
 
@@ -310,11 +309,10 @@ static zx_status_t create_buffer_collection(
     }
   }
   constexpr uint32_t kVcNamePriority = 1000000;
-  const char* kVcCollectionName = "vc-framebuffer";
-  zx_status_t status =
-      sysmem::BufferCollectionToken::Call::SetName(
-          token, kVcNamePriority, fidl::unowned_str(kVcCollectionName, strlen(kVcCollectionName)))
-          .status();
+  const char kVcCollectionName[] = "vc-framebuffer";
+  zx_status_t status = sysmem::BufferCollectionToken::Call::SetName(
+                           token, kVcNamePriority, fidl::StringView(kVcCollectionName))
+                           .status();
   if (status != ZX_OK) {
     printf("vc: Failed to set debug info: %d\n", status);
     return status;
@@ -805,7 +803,7 @@ bool vc_sysmem_connect() {
   }
 
   sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(*std::move(sysmem_client));
-  sysmem_allocator->SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+  sysmem_allocator->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                        fsl::GetCurrentProcessKoid());
   return true;
 }

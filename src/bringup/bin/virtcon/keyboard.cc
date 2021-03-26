@@ -152,8 +152,8 @@ void Keyboard::ProcessInput(const fuchsia_input_report::wire::InputReport& repor
     return;
   }
 
-  fidl::VectorView last_pressed_keys(fidl::unowned_ptr(last_pressed_keys_.data()),
-                                     last_pressed_keys_size_);
+  fidl::VectorView last_pressed_keys(fidl::VectorView<fuchsia_ui_input2::wire::Key>::FromExternal(
+      last_pressed_keys_.data(), last_pressed_keys_size_));
 
   // Process the released keys.
   for (fuchsia_ui_input2::wire::Key prev_key : last_pressed_keys) {

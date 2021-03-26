@@ -22,7 +22,7 @@ namespace sysinfo {
 void SysInfo::GetBoardName(GetBoardNameCompleter::Sync &completer) {
   std::string board_name;
   zx_status_t status = GetBoardName(&board_name);
-  completer.Reply(status, fidl::unowned_str(board_name));
+  completer.Reply(status, fidl::StringView::FromExternal(board_name));
 }
 
 void SysInfo::GetBoardRevision(GetBoardRevisionCompleter::Sync &completer) {
@@ -34,13 +34,15 @@ void SysInfo::GetBoardRevision(GetBoardRevisionCompleter::Sync &completer) {
 void SysInfo::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync &completer) {
   std::string bootloader_vendor;
   zx_status_t status = GetBootloaderVendor(&bootloader_vendor);
-  completer.Reply(status, fidl::unowned_str(bootloader_vendor));
+  completer.Reply(status, fidl::StringView::FromExternal(bootloader_vendor));
 }
 
 void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync &completer) {
   fuchsia_sysinfo::wire::InterruptControllerInfo info = {};
   zx_status_t status = GetInterruptControllerInfo(&info);
-  completer.Reply(status, fidl::unowned_ptr(&info));
+  completer.Reply(
+      status,
+      fidl::ObjectView<fuchsia_sysinfo::wire::InterruptControllerInfo>::FromExternal(&info));
 }
 
 zx_status_t SysInfo::GetBoardName(std::string *board_name) {
