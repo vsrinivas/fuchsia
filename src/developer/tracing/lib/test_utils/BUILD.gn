@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("test_utils") {
   testonly = true
@@ -37,39 +37,27 @@ executable("tracing_test_utils_tests_app") {
 
 executable("tracing_test_utils_return_1234") {
   testonly = true
+  output_dir = target_out_dir
+  output_name = "return_1234"
 
   sources = [ "return_1234.cc" ]
 }
 
 executable("tracing_test_utils_signal_peer") {
   testonly = true
+  output_dir = target_out_dir
+  output_name = "signal_peer"
 
   sources = [ "signal_peer.cc" ]
 
   deps = [ "//zircon/public/lib/zx" ]
 }
 
-test_package("tracing_test_utils_tests") {
+fuchsia_unittest_package("tracing_test_utils_tests") {
+  manifest = "meta/tracing_test_utils_tests.cmx"
   deps = [
     ":tracing_test_utils_return_1234",
     ":tracing_test_utils_signal_peer",
     ":tracing_test_utils_tests_app",
-  ]
-
-  binaries = [
-    {
-      name = "tracing_test_utils_return_1234"
-      dest = "return_1234"
-    },
-    {
-      name = "tracing_test_utils_signal_peer"
-      dest = "signal_peer"
-    },
-  ]
-
-  tests = [
-    {
-      name = "tracing_test_utils_tests"
-    },
   ]
 }
