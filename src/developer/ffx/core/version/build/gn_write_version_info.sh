@@ -7,13 +7,13 @@ set -e
 OUTFILE="$1"
 GIT_DIR="$2"
 
-if [[ ! -d "$GIT_DIR" ]]; then
+if [ ! -d "$GIT_DIR" ]; then
   echo >&2 "Invalid GIT_DIR provided: $GIT_DIR"
 fi
 
 GIT_REV="$(git --git-dir=${GIT_DIR} rev-parse HEAD 2>/dev/null)"
 VERSION_INFO="$(TZ=UTC git --git-dir=${GIT_DIR} show --no-patch --no-notes --pretty='%H-%ct' ${GIT_REV} 2> /dev/null)"
-if [[ -z "$VERSION_INFO" ]]; then
+if [ -z "$VERSION_INFO" ]; then
   echo >&2 "Failed to gather version information from ${GIT_DIR}"
   exit 1
 fi
