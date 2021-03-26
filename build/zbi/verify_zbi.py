@@ -7,12 +7,27 @@
 import argparse
 import difflib
 import os
+import shlex
 import subprocess
 import sys
-import shlex
 import tempfile
 
 SUPPORTED_TYPES = ['kernel_cmdline', 'bootfs_filelist']
+
+SOFT_TRANSITION_MESSAGE_CMDLINE = """If you are making a change in fuchsia repo that causes this you need a soft transition by:
+1: copy the old golden file to *.orig.
+2: update the original golden file to a new golden file as suggested above.
+3: modify the product configuration GNI file where `fuchsia_zbi_kernel_cmdline_goldens` or `recovery_zbi_kernel_cmdline_goldens` is defined to contain both the old golden file and the new golden file.
+4: check in your fuchsia change.
+5: remove the original golden file and remove the entry from `fuchsia_zbi_kernel_cmdline_goldens` or `recovery_zbi_kernel_cmdline_goldens`.
+"""
+SOFT_TRANSITION_MESSAGE_BOOTFS = """If you are making a change in fuchsia repo that causes this you need a soft transition by:
+1: copy the old golden file to *.orig.
+2: update the original golden file to a new golden file as suggested above.
+3: modify the product configuration GNI file where `fuchsia_zbi_bootfs_filelist_goldens` or `recovery_zbi_bootfs_filelist_goldens` is defined to contain both the old golden file and the new golden file.
+4: check in your fuchsia change.
+5: remove the original golden file and remove the entry from `fuchsia_zbi_bootfs_filelist_goldens` or `recovery_zbi_bootfs_filelist_goldens`.
+"""
 
 
 def print_error(msg):
@@ -32,7 +47,15 @@ def main(input_args):
         help='Path to fuchsia root directory, required for scrutiny to work',
         required=True)
     parser.add_argument(
-        '--golden-file', help='Path to the golden file', required=True)
+        '--golden-files',
+        help=(
+            'Path to one of the possible golden files to check against, ' +
+            'there should only be one golden file in normal case, and only ' +
+            'two golden files, one old file and one new file during a soft ' +
+            'transition. After the transition, the old golden file should ' +
+            'be removed and only leave the new golden file.'),
+        nargs='+',
+        required=True)
     parser.add_argument(
         '--stamp', help='Path to the victory file', required=True)
     parser.add_argument(
@@ -41,6 +64,12 @@ def main(input_args):
         choices=SUPPORTED_TYPES,
         required=True)
     args = parser.parse_args(input_args)
+
+    if len(args.golden_files) > 2:
+        print_error(
+            'At most two optional golden files are supported, ' +
+            'is there a soft transition already in place? Please wait for ' +
+            'that to finish before starting a new one.')
 
     try:
         if not verify_zbi(args):
@@ -80,12 +109,15 @@ def verify_zbi(args):
             ],
             env={'FUCHSIA_DIR': args.fuchsia_dir})
 
-        if args.type == 'kernel_cmdline':
-            return verify_kernel_cmdline(args.golden_file, tmp)
-        elif args.type == 'bootfs_filelist':
-            return verify_bootfs_filelist(args.golden_file, tmp)
+        for golden_file in args.golden_files:
+            if args.type == 'kernel_cmdline':
+                if verify_kernel_cmdline(golden_file, tmp):
+                    return True
+            elif args.type == 'bootfs_filelist':
+                if verify_bootfs_filelist(golden_file, tmp):
+                    return True
 
-        return True
+    return False
 
 
 def verify_kernel_cmdline(kernel_cmdline_golden_file, scrutiny_out):
@@ -107,7 +139,7 @@ def verify_kernel_cmdline(kernel_cmdline_golden_file, scrutiny_out):
             print_error('Found no kernel cmdline in ZBI')
             print_error(
                 'Please update kernel cmdline golden file at ' +
-                golden_file_content + ' to be an empty file')
+                kernel_cmdline_golden_file + ' to be an empty file')
             return False
     with open(os.path.join(scrutiny_out, 'sections', 'cmdline.blk'), 'r') as f:
         # The cmdline.blk contains a trailing \x00.
@@ -148,6 +180,7 @@ def verify_bootfs_filelist(bootfs_filelist_golden_file, scrutiny_out):
                 got_content.splitlines(keepends=True),
                 fromfile='want',
                 tofile='got'))
+        print_error(SOFT_TRANSITION_MESSAGE_BOOTFS)
         return False
     return True
 
@@ -181,7 +214,13 @@ def compare_cmdline(actual_cmdline, golden_cmdline, golden_file):
         print_error('```')
         print_error('')
         print_error('Diff:')
-        print_error(difflib.context_diff(golden_cmd, actual_cmd))
+        sys.stderr.writelines(
+            difflib.context_diff(
+                golden_cmd.splitlines(keepends=True),
+                actual_cmd.splitlines(keepends=True),
+                fromfile='want',
+                tofile='got'))
+        print_error(SOFT_TRANSITION_MESSAGE_CMDLINE)
         return False
     return True
 

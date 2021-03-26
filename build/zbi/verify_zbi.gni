@@ -6,15 +6,20 @@ import("//build/dev.gni")
 
 # Check the kernel cmdline extracted from ZBI against a golden file.
 #
-# The target that generates 'zbi' needs to be added to deps.
-#
 # Parameters
 #
 #   zbi
 #     Required: Path to the ZBI image to extract kernel cmdline from.
 #   golden
-#     Required: Path to the golden file that contains golden kernel cmdline in
-#       a format of one cmdline entry per line.
+#     Optional: Path to the golden file that contains golden kernel cmdline in
+#       the format of one cmdline entry per line. Deprecated, would be removed
+#       after all usage migrated to goldens.
+#   goldens
+#     Optional: Path to a list of golden files that contain golden kernel
+#       cmdline in the format of one cmdline entry per line. The actual cmdline
+#       must match either one of the goldens. There should be only one golden
+#       file in this list for normal case and two golden files, one for the
+#       old golden file, one for the new golden file during a soft transition.
 #   zbi_target
 #     Required: The target to build the 'zbi'.
 #   deps, public_deps, data_deps (optional)
@@ -22,7 +27,6 @@ import("//build/dev.gni")
 
 template("verify_kernel_cmdline") {
   assert(defined(invoker.zbi), "verify_kernel_cmdline() must specify zbi")
-  assert(defined(invoker.golden), "verify_kernel_cmdline() must specify golden")
   assert(defined(invoker.zbi_target),
          "verify_kernel_cmdline() must specify zbi_target")
 
@@ -44,26 +48,33 @@ template("verify_kernel_cmdline") {
 
     inputs = [
       scrutiny_tool,
-      invoker.golden,
       invoker.zbi,
     ]
+
+    goldens = []
+    if (defined(invoker.golden)) {
+      goldens += [ invoker.golden ]
+    }
+    if (defined(invoker.goldens)) {
+      goldens += invoker.goldens
+    }
+    inputs += goldens
 
     outputs = [ stamp_file ]
 
     args = [
-      "--type",
-      "kernel_cmdline",
-      "--zbi-file",
-      rebase_path(inputs[2], root_build_dir),
-      "--golden-file",
-      rebase_path(invoker.golden, root_build_dir),
-      "--scrutiny",
-      rebase_path(scrutiny_tool, root_build_dir),
-      "--fuchsia-dir",
-      rebase_path("//", root_build_dir),
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
-    ]
+             "--type",
+             "kernel_cmdline",
+             "--zbi-file",
+             rebase_path(invoker.zbi, root_build_dir),
+             "--scrutiny",
+             rebase_path(scrutiny_tool, root_build_dir),
+             "--fuchsia-dir",
+             rebase_path("//", root_build_dir),
+             "--stamp",
+             rebase_path(stamp_file, root_build_dir),
+             "--golden-files",
+           ] + rebase_path(goldens, root_build_dir)
     if (!defined(invoker.deps)) {
       deps = []
     }
@@ -84,8 +95,15 @@ template("verify_kernel_cmdline") {
 #   zbi
 #     Required: Path to the ZBI image to extract kernel cmdline from.
 #   golden
-#     Required: Path to the golden file that contains golden kernel cmdline in
-#       a format of one cmdline entry per line.
+#     Optional: Path to the golden file that contains golden kernel cmdline in
+#       a format of one cmdline entry per line. Deprecated, would be removed
+#       after all usage migrated to goldens.
+#   goldens
+#     Optional: Path to a list of golden files that contain golden kernel
+#       cmdline in the format of one cmdline entry per line. The actual cmdline
+#       must match either one of the goldens. There should be only one golden
+#       file in this list for normal case and two golden files, one for the
+#       old golden file, one for the new golden file during a soft transition.
 #   zbi_target
 #     Required: The target to build the 'zbi'.
 #   deps, public_deps, data_deps (optional)
@@ -93,8 +111,6 @@ template("verify_kernel_cmdline") {
 
 template("verify_bootfs_filelist") {
   assert(defined(invoker.zbi), "verify_bootfs_filelist() must specify zbi")
-  assert(defined(invoker.golden),
-         "verify_bootfs_filelist() must specify golden")
   assert(defined(invoker.zbi_target),
          "verify_bootfs_filelist() must specify zbi_target")
 
@@ -116,26 +132,33 @@ template("verify_bootfs_filelist") {
 
     inputs = [
       scrutiny_tool,
-      invoker.golden,
       invoker.zbi,
     ]
+
+    goldens = []
+    if (defined(invoker.golden)) {
+      goldens += [ invoker.golden ]
+    }
+    if (defined(invoker.goldens)) {
+      goldens += invoker.goldens
+    }
+    inputs += goldens
 
     outputs = [ stamp_file ]
 
     args = [
-      "--type",
-      "bootfs_filelist",
-      "--zbi-file",
-      rebase_path(inputs[2], root_build_dir),
-      "--golden-file",
-      rebase_path(invoker.golden, root_build_dir),
-      "--scrutiny",
-      rebase_path(scrutiny_tool, root_build_dir),
-      "--fuchsia-dir",
-      rebase_path("//", root_build_dir),
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
-    ]
+             "--type",
+             "bootfs_filelist",
+             "--zbi-file",
+             rebase_path(invoker.zbi, root_build_dir),
+             "--scrutiny",
+             rebase_path(scrutiny_tool, root_build_dir),
+             "--fuchsia-dir",
+             rebase_path("//", root_build_dir),
+             "--stamp",
+             rebase_path(stamp_file, root_build_dir),
+             "--golden-files",
+           ] + rebase_path(goldens, root_build_dir)
 
     if (!defined(invoker.deps)) {
       deps = []

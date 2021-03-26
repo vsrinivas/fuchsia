@@ -44,7 +44,7 @@ def verify_kernel_cmdline(golden, actual):
 
         args = [
             '--type', 'kernel_cmdline', '--zbi-file', test_zbi, '--scrutiny',
-            scrutiny, '--fuchsia-dir', fuchsia_folder, '--golden-file',
+            scrutiny, '--fuchsia-dir', fuchsia_folder, '--golden-files',
             golden_file, '--stamp', stamp_file
         ]
         # Verify the cmdline in the generated ZBI.
@@ -77,7 +77,7 @@ def verify_bootfs_filelist(want_filelist, got_files):
             args = [
                 '--type', 'bootfs_filelist', '--zbi-file', test_zbi,
                 '--scrutiny', fake_scrutiny, '--fuchsia-dir', fuchsia_folder,
-                '--golden-file', golden_file, '--stamp', stamp_file
+                '--golden-files', golden_file, '--stamp', stamp_file
             ]
             return verify_zbi.main(args)
 
@@ -153,7 +153,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
             args = [
                 '--type', 'kernel_cmdline', '--zbi-file', test_zbi,
                 '--scrutiny', scrutiny, '--fuchsia-dir', fuchsia_folder,
-                '--golden-file', golden_file, '--stamp', stamp_file
+                '--golden-files', golden_file, '--stamp', stamp_file
             ]
             self.assertEqual(1, verify_zbi.main(args))
 
@@ -177,7 +177,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
             args = [
                 '--type', 'kernel_cmdline', '--zbi-file', test_zbi,
                 '--scrutiny', scrutiny, '--fuchsia-dir', fuchsia_folder,
-                '--golden-file', golden_file, '--stamp', stamp_file
+                '--golden-files', golden_file, '--stamp', stamp_file
             ]
             self.assertEqual(0, verify_zbi.main(args))
 
@@ -205,9 +205,86 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
             args = [
                 '--type', 'kernel_cmdline', '--zbi-file', test_zbi,
                 '--scrutiny', scrutiny, '--fuchsia-dir', fuchsia_folder,
-                '--golden-file', golden_file, '--stamp', stamp_file
+                '--golden-files', golden_file, '--stamp', stamp_file
             ]
             self.assertEqual(1, verify_zbi.main(args))
+
+    def test_verify_kernel_cmdline_multiple_golden_files_one_match(self):
+        with tempfile.TemporaryDirectory() as test_folder:
+            golden_file_1 = os.path.join(test_folder, 'golden_1')
+            golden_file_2 = os.path.join(test_folder, 'golden_2')
+            stamp_file = os.path.join(test_folder, 'stamp')
+            fuchsia_folder = os.path.join(test_folder, 'fuchsia')
+            test_zbi = os.path.join(test_folder, 'test.zbi')
+            scrutiny = os.environ['SCRUTINY']
+            cmdline_file = os.path.join(test_folder, 'cmdline')
+
+            # golden_file_1 does not match.
+            with open(golden_file_1, 'w+') as f:
+                f.write('option1')
+
+            # golden_file_2 matches.
+            with open(golden_file_2, 'w+') as f:
+                f.write('option1 option2')
+
+            with open(cmdline_file, 'wb+') as f:
+                f.write(b'option1 option2')
+
+            # Use ZBI to create a test.zbi that only contains cmdline.
+            subprocess.check_call(
+                [
+                    os.environ['ZBI'], '-o', test_zbi, '-T', 'CMDLINE',
+                    cmdline_file
+                ])
+
+            os.mkdir(fuchsia_folder)
+
+            args = [
+                '--type', 'kernel_cmdline', '--zbi-file', test_zbi,
+                '--scrutiny', scrutiny, '--fuchsia-dir', fuchsia_folder,
+                '--golden-files', golden_file_1, golden_file_2, '--stamp',
+                stamp_file
+            ]
+            self.assertEqual(1, verify_zbi.main(args))
+
+    def test_verify_kernel_cmdline_three_golden_files_not_supported(self):
+        with tempfile.TemporaryDirectory() as test_folder:
+            golden_file_1 = os.path.join(test_folder, 'golden_1')
+            golden_file_2 = os.path.join(test_folder, 'golden_2')
+            golden_file_3 = os.path.join(test_folder, 'golden_3')
+            stamp_file = os.path.join(test_folder, 'stamp')
+            fuchsia_folder = os.path.join(test_folder, 'fuchsia')
+            test_zbi = os.path.join(test_folder, 'test.zbi')
+            scrutiny = os.environ['SCRUTINY']
+            cmdline_file = os.path.join(test_folder, 'cmdline')
+
+            with open(golden_file_1, 'w+') as f:
+                f.write('option1')
+            with open(golden_file_2, 'w+') as f:
+                f.write('option1')
+            with open(golden_file_3, 'w+') as f:
+                f.write('option1')
+
+            with open(cmdline_file, 'wb+') as f:
+                f.write(b'option1')
+
+            # Use ZBI to create a test.zbi that only contains cmdline.
+            subprocess.check_call(
+                [
+                    os.environ['ZBI'], '-o', test_zbi, '-T', 'CMDLINE',
+                    cmdline_file
+                ])
+
+            os.mkdir(fuchsia_folder)
+
+            args = [
+                '--type', 'kernel_cmdline', '--zbi-file', test_zbi,
+                '--scrutiny', scrutiny, '--fuchsia-dir', fuchsia_folder,
+                '--golden-files', golden_file_1, golden_file_2, golden_file_3,
+                '--stamp', stamp_file
+            ]
+            # We do not support more than two golden files.
+            self.assertEqual(0, verify_zbi.main(args))
 
     def test_verify_bootfs_filelist_normal_case(self):
         self.assertEqual(
