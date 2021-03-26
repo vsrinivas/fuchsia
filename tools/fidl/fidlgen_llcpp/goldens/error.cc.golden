@@ -229,7 +229,8 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
   _response.y = std::move(y);
 
   return Reply(::fidl_test_error::wire::Example_foo_Result::WithResponse(
-      ::fidl::unowned_ptr(&_response)));
+      ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response>::
+          FromExternal(&_response)));
 }
 #endif
 
@@ -237,7 +238,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
 ::fidl::Result fidl::WireInterface<
     ::fidl_test_error::Example>::fooCompleterBase::ReplyError(uint32_t error) {
   return Reply(::fidl_test_error::wire::Example_foo_Result::WithErr(
-      ::fidl::unowned_ptr(&error)));
+      ::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
 #endif
 
@@ -258,9 +259,11 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::ReplySuccess(
   ::fidl_test_error::wire::Example_foo_Response response;
   response.y = std::move(y);
 
-  return Reply(std::move(_buffer),
-               ::fidl_test_error::wire::Example_foo_Result::WithResponse(
-                   ::fidl::unowned_ptr(&response)));
+  return Reply(
+      std::move(_buffer),
+      ::fidl_test_error::wire::Example_foo_Result::WithResponse(
+          ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response>::
+              FromExternal(&response)));
 }
 #endif
 

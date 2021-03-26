@@ -84,8 +84,8 @@ class Example_foo_Result {
   void set_response(
       ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response> elem) {
     ordinal_ = Ordinal::kResponse;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -126,8 +126,8 @@ class Example_foo_Result {
 
   void set_err(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kErr;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -404,8 +404,7 @@ class Example final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
-    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s)
-        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {
+    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
       _InitHeader(_txid);
     }
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }

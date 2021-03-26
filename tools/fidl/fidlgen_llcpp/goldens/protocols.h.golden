@@ -125,8 +125,8 @@ class WithErrorSyntax_ResponseAsStruct_Result {
                              WithErrorSyntax_ResponseAsStruct_Response>
           elem) {
     ordinal_ = Ordinal::kResponse;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -173,8 +173,8 @@ class WithErrorSyntax_ResponseAsStruct_Result {
 
   void set_err(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kErr;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -264,8 +264,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
                              WithErrorSyntax_ErrorAsPrimitive_Response>
           elem) {
     ordinal_ = Ordinal::kResponse;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -312,8 +312,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
 
   void set_err(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kErr;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -403,8 +403,8 @@ class WithErrorSyntax_ErrorAsEnum_Result {
           ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
           elem) {
     ordinal_ = Ordinal::kResponse;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -452,8 +452,8 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   void set_err(
       ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnun> elem) {
     ordinal_ = Ordinal::kErr;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -3931,7 +3931,7 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
     explicit NoRequestWithResponseResponse(const ::fidl::StringView& ret)
-        : ret(::fidl::unowned_ptr_t<const char>(ret.data()), ret.size()) {
+        : ret(ret) {
       _InitHeader();
     }
     NoRequestWithResponseResponse() { _InitHeader(); }
@@ -4197,7 +4197,7 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView arg;
     explicit WithRequestNoResponseRequest(zx_txid_t _txid,
                                           const ::fidl::StringView& arg)
-        : arg(::fidl::unowned_ptr_t<const char>(arg.data()), arg.size()) {
+        : arg(arg) {
       _InitHeader(_txid);
     }
     explicit WithRequestNoResponseRequest(zx_txid_t _txid) {
@@ -4460,7 +4460,7 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView arg;
     explicit WithRequestEmptyResponseRequest(zx_txid_t _txid,
                                              const ::fidl::StringView& arg)
-        : arg(::fidl::unowned_ptr_t<const char>(arg.data()), arg.size()) {
+        : arg(arg) {
       _InitHeader(_txid);
     }
     explicit WithRequestEmptyResponseRequest(zx_txid_t _txid) {
@@ -4594,7 +4594,7 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
     explicit WithRequestWithResponseResponse(const ::fidl::StringView& ret)
-        : ret(::fidl::unowned_ptr_t<const char>(ret.data()), ret.size()) {
+        : ret(ret) {
       _InitHeader();
     }
     WithRequestWithResponseResponse() { _InitHeader(); }
@@ -4731,7 +4731,7 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView arg;
     explicit WithRequestWithResponseRequest(zx_txid_t _txid,
                                             const ::fidl::StringView& arg)
-        : arg(::fidl::unowned_ptr_t<const char>(arg.data()), arg.size()) {
+        : arg(arg) {
       _InitHeader(_txid);
     }
     explicit WithRequestWithResponseRequest(zx_txid_t _txid) {
@@ -4994,8 +4994,7 @@ class WithAndWithoutRequestResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
-    explicit OnWithResponseResponse(const ::fidl::StringView& ret)
-        : ret(::fidl::unowned_ptr_t<const char>(ret.data()), ret.size()) {
+    explicit OnWithResponseResponse(const ::fidl::StringView& ret) : ret(ret) {
       _InitHeader();
     }
     OnWithResponseResponse() { _InitHeader(); }

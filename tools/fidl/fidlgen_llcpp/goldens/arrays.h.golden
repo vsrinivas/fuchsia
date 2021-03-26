@@ -85,8 +85,8 @@ class UnionSmallArray {
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
     ordinal_ = Ordinal::kA;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -163,8 +163,8 @@ class UnionLargeArray {
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
     ordinal_ = Ordinal::kA;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>

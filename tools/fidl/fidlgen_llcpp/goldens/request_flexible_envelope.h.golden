@@ -80,8 +80,8 @@ class StrictFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -118,8 +118,8 @@ class StrictFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -196,8 +196,8 @@ class FlexibleFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -234,8 +234,8 @@ class FlexibleFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>

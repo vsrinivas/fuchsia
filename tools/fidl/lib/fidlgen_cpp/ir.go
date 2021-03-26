@@ -131,11 +131,9 @@ func (t *Type) WireInitMessage(n string) string {
 	case FamilyKinds.Reference:
 		return fmt.Sprintf("%s(std::move(%s))", n, n)
 	case FamilyKinds.String:
-		return fmt.Sprintf("%s(::fidl::unowned_ptr_t<const char>(%s.data()), %s.size())",
-			n, n, n)
+		return fmt.Sprintf("%s(%s)", n, n)
 	case FamilyKinds.Vector:
-		return fmt.Sprintf("%s(::fidl::unowned_ptr_t<%s>(%s.mutable_data()), %s.count())",
-			n, t.ElementType, n, n)
+		return fmt.Sprintf("%s(%s)", n, n)
 	default:
 		panic(fmt.Sprintf("Unknown wire family kind %v", t.WireFamily))
 

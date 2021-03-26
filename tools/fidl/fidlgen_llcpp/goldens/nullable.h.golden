@@ -95,8 +95,8 @@ class SimpleUnion {
 
   void set_a(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kA;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -132,8 +132,8 @@ class SimpleUnion {
 
   void set_b(::fidl::ObjectView<float> elem) {
     ordinal_ = Ordinal::kB;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>

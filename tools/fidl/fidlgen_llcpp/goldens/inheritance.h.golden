@@ -178,8 +178,7 @@ class super final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
-    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s)
-        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {
+    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
       _InitHeader(_txid);
     }
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
@@ -696,8 +695,7 @@ class sub final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
-    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s)
-        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {
+    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
       _InitHeader(_txid);
     }
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }

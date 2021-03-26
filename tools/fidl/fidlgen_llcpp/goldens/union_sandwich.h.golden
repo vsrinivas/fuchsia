@@ -90,8 +90,8 @@ class UnionSize8Alignment4 {
 
   void set_variant(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -168,8 +168,8 @@ class UnionSize36Alignment4 {
 
   void set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>> elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -246,8 +246,8 @@ class UnionSize12Alignment4 {
 
   void set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>> elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -329,8 +329,8 @@ class UnionSize24Alignment8 {
                    ::fidl_test_unionsandwich::wire::StructSize16Alignment8>
                        elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>

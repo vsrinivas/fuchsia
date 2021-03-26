@@ -38,7 +38,8 @@ ReplySuccess({{ .Result.ValueMembers | Params }})
   _response.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  return Reply({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&_response)));
+  return Reply({{ .Result.ResultDecl }}::WithResponse(
+      ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&_response)));
 }
 #endif
 {{- end }}
@@ -53,7 +54,8 @@ ReplyError({{ .Result.ErrorDecl }} error)
 ::fidl::Result
 {{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedResultErrorMethodSignature" . }} {
-  return Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
+  return Reply({{ .Result.ResultDecl }}::WithErr(
+      ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
 }
 #endif
 {{- end }}

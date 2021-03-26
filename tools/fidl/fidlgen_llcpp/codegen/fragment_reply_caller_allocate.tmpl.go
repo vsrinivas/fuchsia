@@ -36,7 +36,10 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
   response.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
+  return Reply(
+      std::move(_buffer),
+      {{ .Result.ResultDecl }}::WithResponse(
+          ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&response)));
 }
 #endif
 {{- end }}

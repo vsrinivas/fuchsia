@@ -126,8 +126,8 @@ class Union {
 
   void set_Primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -168,8 +168,8 @@ class Union {
 
   void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -213,8 +213,8 @@ class Union {
   void set_VectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -299,8 +299,8 @@ class StrictUnion {
 
   void set_Primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -341,8 +341,8 @@ class StrictUnion {
 
   void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -386,8 +386,8 @@ class StrictUnion {
   void set_VectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -472,8 +472,8 @@ class StrictSimpleXUnion {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -510,8 +510,8 @@ class StrictSimpleXUnion {
 
   void set_f(::fidl::ObjectView<float> elem) {
     ordinal_ = Ordinal::kF;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -548,8 +548,8 @@ class StrictSimpleXUnion {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -627,8 +627,8 @@ class StrictFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -665,8 +665,8 @@ class StrictFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -742,8 +742,8 @@ class StrictBoundedXUnion {
 
   void set_v(::fidl::ObjectView<::fidl::VectorView<uint8_t>> elem) {
     ordinal_ = Ordinal::kV;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -820,8 +820,8 @@ class ReverseOrdinalUnion {
 
   void set_second(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kSecond;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -859,8 +859,8 @@ class ReverseOrdinalUnion {
 
   void set_first(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kFirst;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -939,8 +939,8 @@ class StrictPizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -979,8 +979,8 @@ class StrictPizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1059,8 +1059,8 @@ class PizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1099,8 +1099,8 @@ class PizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1179,8 +1179,8 @@ class FlexiblePizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1219,8 +1219,8 @@ class FlexiblePizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1296,8 +1296,8 @@ class ExplicitPizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1336,8 +1336,8 @@ class ExplicitPizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1416,8 +1416,8 @@ class OlderSimpleUnion {
 
   void set_i(::fidl::ObjectView<int64_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1454,8 +1454,8 @@ class OlderSimpleUnion {
 
   void set_f(::fidl::ObjectView<float> elem) {
     ordinal_ = Ordinal::kF;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1531,8 +1531,8 @@ class NewerSimpleUnion {
 
   void set_i(::fidl::ObjectView<int64_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1569,8 +1569,8 @@ class NewerSimpleUnion {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1609,8 +1609,8 @@ class NewerSimpleUnion {
 
   void set_v(::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = Ordinal::kV;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1690,8 +1690,8 @@ class FlexibleUnion {
 
   void set_Primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1732,8 +1732,8 @@ class FlexibleUnion {
 
   void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1777,8 +1777,8 @@ class FlexibleUnion {
   void set_VectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1860,8 +1860,8 @@ class FlexibleFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1898,8 +1898,8 @@ class FlexibleFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -1973,8 +1973,8 @@ class FieldCollision {
 
   void set_field_collision_tag(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kFieldCollisionTag;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2052,8 +2052,8 @@ class ExplicitXUnion {
 
   void set_i(::fidl::ObjectView<int64_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2089,8 +2089,8 @@ class ExplicitXUnion {
 
   void set_f(::fidl::ObjectView<float> elem) {
     ordinal_ = Ordinal::kF;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2164,8 +2164,8 @@ class ExplicitUnion {
 
   void set_Primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2206,8 +2206,8 @@ class ExplicitUnion {
 
   void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2286,8 +2286,8 @@ class ExplicitStrictFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2325,8 +2325,8 @@ class ExplicitStrictFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2403,8 +2403,8 @@ class ExplicitFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2441,8 +2441,8 @@ class ExplicitFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
@@ -2517,8 +2517,8 @@ class XUnionContainingEmptyStruct {
 
   void set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty> elem) {
     ordinal_ = Ordinal::kEmpty;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>

@@ -3271,7 +3271,10 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
 
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result::
-          WithResponse(::fidl::unowned_ptr(&_response)));
+          WithResponse(::fidl::ObjectView<
+                       ::fidl_test_protocols::wire::
+                           WithErrorSyntax_ResponseAsStruct_Response>::
+                           FromExternal(&_response)));
 }
 #endif
 
@@ -3280,7 +3283,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ResponseAsStructCompleterBase::ReplyError(uint32_t error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result::
-          WithErr(::fidl::unowned_ptr(&error)));
+          WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
 #endif
 
@@ -3309,7 +3312,10 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return Reply(
       std::move(_buffer),
       ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result::
-          WithResponse(::fidl::unowned_ptr(&response)));
+          WithResponse(::fidl::ObjectView<
+                       ::fidl_test_protocols::wire::
+                           WithErrorSyntax_ResponseAsStruct_Response>::
+                           FromExternal(&response)));
 }
 #endif
 
@@ -3334,7 +3340,10 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
 
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result::
-          WithResponse(::fidl::unowned_ptr(&_response)));
+          WithResponse(::fidl::ObjectView<
+                       ::fidl_test_protocols::wire::
+                           WithErrorSyntax_ErrorAsPrimitive_Response>::
+                           FromExternal(&_response)));
 }
 #endif
 
@@ -3343,7 +3352,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ErrorAsPrimitiveCompleterBase::ReplyError(uint32_t error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result::
-          WithErr(::fidl::unowned_ptr(&error)));
+          WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
 #endif
 
@@ -3367,7 +3376,10 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return Reply(
       std::move(_buffer),
       ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result::
-          WithResponse(::fidl::unowned_ptr(&response)));
+          WithResponse(::fidl::ObjectView<
+                       ::fidl_test_protocols::wire::
+                           WithErrorSyntax_ErrorAsPrimitive_Response>::
+                           FromExternal(&response)));
 }
 #endif
 
@@ -3389,8 +3401,12 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ErrorAsEnumCompleterBase::ReplySuccess() {
   ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response _response;
 
-  return Reply(::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
-                   WithResponse(::fidl::unowned_ptr(&_response)));
+  return Reply(
+      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+          WithResponse(
+              ::fidl::ObjectView<::fidl_test_protocols::wire::
+                                     WithErrorSyntax_ErrorAsEnum_Response>::
+                  FromExternal(&_response)));
 }
 #endif
 
@@ -3400,7 +3416,8 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
         ::fidl_test_protocols::wire::ErrorEnun error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::WithErr(
-          ::fidl::unowned_ptr(&error)));
+          ::fidl::ObjectView<
+              ::fidl_test_protocols::wire::ErrorEnun>::FromExternal(&error)));
 }
 #endif
 
@@ -3420,9 +3437,13 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ErrorAsEnumCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer) {
   ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response response;
 
-  return Reply(std::move(_buffer),
-               ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
-                   WithResponse(::fidl::unowned_ptr(&response)));
+  return Reply(
+      std::move(_buffer),
+      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+          WithResponse(
+              ::fidl::ObjectView<::fidl_test_protocols::wire::
+                                     WithErrorSyntax_ErrorAsEnum_Response>::
+                  FromExternal(&response)));
 }
 #endif
 

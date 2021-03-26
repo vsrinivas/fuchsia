@@ -75,8 +75,8 @@ class OnlyLlcpp {
 
   void set_x(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kX;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>

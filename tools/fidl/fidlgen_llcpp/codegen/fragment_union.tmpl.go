@@ -63,8 +63,7 @@ class {{ .Name }} {
   {{- end }}
   void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ordinal_ = Ordinal::{{ .TagName }};
-    envelope_.data =
-        ::fidl::ObjectView<void>(::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data = ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>

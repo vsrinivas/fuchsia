@@ -89,8 +89,8 @@ class UnionWithHandle {
 
   void set_h(::fidl::ObjectView<::zx::vmo> elem) {
     ordinal_ = Ordinal::kH;
-    envelope_.data = ::fidl::ObjectView<void>(
-        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
