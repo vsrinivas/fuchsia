@@ -10,9 +10,11 @@
 #include <zircon/time.h>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
@@ -132,6 +134,22 @@ bool ObjectCacheTests() {
       auto result = ObjectCache<TestObject, Option::PerCpu, TestAllocator>::Create(retain_slabs);
       ASSERT_TRUE(result.is_ok());
       object_cache.emplace(ktl::move(result.value()));
+    }
+
+    // Stay on one CPU during the following tests to verify numeric properties of a single per-CPU
+    // cache. Accounting for CPU migration during the tests would make them overly complicated for
+    // little value.
+    Thread* const current_thread = Thread::Current::Get();
+    const cpu_mask_t original_affinity_mask = current_thread->GetCpuAffinity();
+
+    const auto restore_affinity = fbl::MakeAutoCall([original_affinity_mask, current_thread]() {
+      current_thread->SetCpuAffinity(original_affinity_mask);
+    });
+
+    {
+      AutoPreemptDisabler preempt_disable;
+      const cpu_num_t current_cpu = arch_curr_cpu_num();
+      current_thread->SetCpuAffinity(cpu_num_to_mask(current_cpu));
     }
 
     EXPECT_EQ(0u, object_cache->slab_count());
