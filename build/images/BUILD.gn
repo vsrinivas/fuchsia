@@ -563,6 +563,7 @@ zbi("fuchsia_unverified") {
   }
 }
 
+# TODO(fxbug.dev/72958): Remove this once we migrate 'golden' to 'goldens'
 if (fuchsia_zbi_kernel_cmdline_golden != "") {
   verify_kernel_cmdline("kernel_cmdline_verify") {
     testonly = fuchsia_zbi_testonly
@@ -571,11 +572,29 @@ if (fuchsia_zbi_kernel_cmdline_golden != "") {
     zbi_target = ":fuchsia_unverified"
   }
 }
+
+# TODO(fxbug.dev/72958): Remove this once we migrate 'golden' to 'goldens'
 if (fuchsia_zbi_bootfs_filelist_golden != "") {
   verify_bootfs_filelist("bootfs_filelist_verify") {
     testonly = fuchsia_zbi_testonly
     zbi = "$root_out_dir/fuchsia_unverified.zbi"
     golden = fuchsia_zbi_bootfs_filelist_golden
+    zbi_target = ":fuchsia_unverified"
+  }
+}
+if (fuchsia_zbi_kernel_cmdline_goldens != []) {
+  verify_kernel_cmdline("kernel_cmdline_verify_files") {
+    testonly = fuchsia_zbi_testonly
+    zbi = "$root_out_dir/fuchsia_unverified.zbi"
+    goldens = fuchsia_zbi_kernel_cmdline_goldens
+    zbi_target = ":fuchsia_unverified"
+  }
+}
+if (fuchsia_zbi_bootfs_filelist_goldens != []) {
+  verify_bootfs_filelist("bootfs_filelist_verify_files") {
+    testonly = fuchsia_zbi_testonly
+    zbi = "$root_out_dir/fuchsia_unverified.zbi"
+    goldens = fuchsia_zbi_bootfs_filelist_goldens
     zbi_target = ":fuchsia_unverified"
   }
 }
@@ -642,11 +661,20 @@ copy("fuchsia") {
     ]
   }
 
+  # TODO(fxbug.dev/72958): Remove this once we migrate 'golden' to 'goldens'
   if (fuchsia_zbi_kernel_cmdline_golden != "") {
     deps += [ ":kernel_cmdline_verify" ]
   }
+
+  # TODO(fxbug.dev/72958): Remove this once we migrate 'golden' to 'goldens'
   if (fuchsia_zbi_bootfs_filelist_golden != "") {
     deps += [ ":bootfs_filelist_verify" ]
+  }
+  if (fuchsia_zbi_kernel_cmdline_goldens != []) {
+    deps += [ ":kernel_cmdline_verify_files" ]
+  }
+  if (fuchsia_zbi_bootfs_filelist_goldens != []) {
+    deps += [ ":bootfs_filelist_verify_files" ]
   }
 }
 default_image_deps += [ ":fuchsia" ]

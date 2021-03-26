@@ -76,11 +76,25 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   output_name (optional; default: target_name.zbi)
 #     [string] The name of the final system ZBI file.
 #
-#   cmdline_golden (optional)
-#     [string] The path to the kernel cmdline golden file to compare against.
+#   cmdline_golden (optional, deprecated)
+#     [string] Deprecated, use cmdline_goldens instead. The path to the kernel
+#     cmdline golden file to compare against.
 #
-#   bootfs_golden (optional)
-#     [string] The path to the bootFS golden file list to compare against.
+#   bootfs_golden (optional, deprecated)
+#     [string] Deprecated, use bootfs_goldens instead. The path to the bootFS
+#     golden file list to compare against.
+#
+#   cmdline_goldens (optional)
+#     [list of files] A list of possible kernel cmdline golden file to compare
+#     against. Verified if matches one of the goldens. At most two entries are
+#     supported for soft migration, if the content matches either of the entries,
+#     it is consider a match. Only one entry should be used for normal case.
+#
+#   bootfs_goldens (optional)
+#     [list of files] A list of possible bootFS golden file to compare against.
+#     Verified if matches one of the goldens. At most two entries are
+#     supported for soft migration, if the content matches either of the entries,
+#     it is consider a match. Only one entry should be used for normal case.
 #
 #   include_component_id_index (default: false)
 #     [bool] Collect and merges a component id index from the base
@@ -484,10 +498,12 @@ template("assemble_system") {
       assert_no_deps = [ "//build/validate:non_production_tag" ]
     }
   }
-  if (defined(invoker.cmdline_golden) || defined(invoker.bootfs_golden)) {
+  if (defined(invoker.cmdline_golden) || defined(invoker.bootfs_golden) ||
+      defined(invoker.cmdline_goldens) || defined(invoker.bootfs_goldens)) {
     zbi_outputs = get_target_outputs(":${image_name}_zbi")
   }
 
+  # TODO(fxbug.dev/72958): Remove this once we migrate 'golden' to 'goldens'
   if (defined(invoker.cmdline_golden)) {
     verify_kernel_cmdline("${image_name}_cmdline_verify") {
       forward_variables_from(invoker, [ "testonly" ])
@@ -497,11 +513,30 @@ template("assemble_system") {
     }
   }
 
+  # TODO(fxbug.dev/72958): Remove this once we migrate 'golden' to 'goldens'
   if (defined(invoker.bootfs_golden)) {
     verify_bootfs_filelist("${image_name}_bootfs_verify") {
       forward_variables_from(invoker, [ "testonly" ])
       zbi = zbi_outputs[0]
       golden = invoker.bootfs_golden
+      zbi_target = ":${image_name}_zbi"
+    }
+  }
+
+  if (defined(invoker.cmdline_goldens)) {
+    verify_kernel_cmdline("${image_name}_cmdline_verify_files") {
+      forward_variables_from(invoker, [ "testonly" ])
+      zbi = zbi_outputs[0]
+      goldens = invoker.cmdline_goldens
+      zbi_target = ":${image_name}_zbi"
+    }
+  }
+
+  if (defined(invoker.bootfs_goldens)) {
+    verify_bootfs_filelist("${image_name}_bootfs_verify_files") {
+      forward_variables_from(invoker, [ "testonly" ])
+      zbi = zbi_outputs[0]
+      goldens = invoker.bootfs_goldens
       zbi_target = ":${image_name}_zbi"
     }
   }
@@ -515,6 +550,12 @@ template("assemble_system") {
     }
     if (defined(invoker.bootfs_golden)) {
       deps += [ ":${image_name}_bootfs_verify" ]
+    }
+    if (defined(invoker.cmdline_goldens)) {
+      deps += [ ":${image_name}_cmdline_verify_files" ]
+    }
+    if (defined(invoker.bootfs_goldens)) {
+      deps += [ ":${image_name}_bootfs_verify_files" ]
     }
   }
 }
