@@ -33,6 +33,8 @@ protocol ImeService {
     DispatchKey3(fuchsia.ui.input3.KeyEvent event) -> (bool handled);
 
     // Notify IME Service when the currently focused view changes.
+    // DEPRECATED: Instead, use `fuchsia.ui.input.focus.Controller`.
+    // TODO(fxbug.dev/71968): remove this mmethod.
     ViewFocusChanged(fuchsia.ui.views.ViewRef view_ref) -> ();
 };
 
