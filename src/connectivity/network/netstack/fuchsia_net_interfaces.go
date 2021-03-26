@@ -212,7 +212,7 @@ func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID) {
 
 	nicInfo, ok := ns.stack.NICInfo()[nicid]
 	if !ok {
-		syslog.WarnTf("fuchsia.net.interfaces/Watcher", "onPropertiesChange interface %d cannot be found", nicid)
+		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "onPropertiesChange interface %d cannot be found", nicid)
 		return
 	}
 
@@ -225,7 +225,7 @@ func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID) {
 			}
 		}
 	} else {
-		syslog.WarnTf("fuchsia.net.interfaces/Watcher", "onPropertiesChange called regarding unknown interface %d", nicid)
+		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "onPropertiesChange called regarding unknown interface %d", nicid)
 	}
 }
 
@@ -270,13 +270,13 @@ func (ns *Netstack) onInterfaceAdd(nicid tcpip.NICID) {
 	defer ns.interfaceWatchers.mu.Unlock()
 
 	if properties, ok := ns.interfaceWatchers.mu.lastObserved[nicid]; ok {
-		syslog.WarnTf("fuchsia.net.interfaces/Watcher", "interface added but already known: %+v", properties)
+		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "interface added but already known: %+v", properties)
 		return
 	}
 
 	nicInfo, ok := ns.stack.NICInfo()[nicid]
 	if !ok {
-		syslog.WarnTf("fuchsia.net.interfaces/Watcher", "interface %d added but not in NICInfo map", nicid)
+		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "interface %d added but not in NICInfo map", nicid)
 		return
 	}
 
@@ -300,7 +300,7 @@ func (c *interfaceWatcherCollection) onInterfaceRemove(nicid tcpip.NICID) {
 	defer c.mu.Unlock()
 
 	if _, ok := c.mu.lastObserved[nicid]; !ok {
-		syslog.WarnTf("fuchsia.net.interfaces/Watcher", "unknown interface removed")
+		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "unknown interface removed")
 		return
 	}
 	delete(c.mu.lastObserved, nicid)
