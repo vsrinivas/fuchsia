@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -22,11 +20,8 @@ executable("scenic_util_tests_bin") {
   ]
 }
 
-test_package("scenic_util_tests_pkg") {
+fuchsia_unittest_package("scenic_util_tests_pkg") {
+  package_name = "scenic_util_tests"
+  manifest = "meta/scenic_util_tests.cmx"
   deps = [ ":scenic_util_tests_bin" ]
-  tests = [
-    {
-      name = "scenic_util_tests"
-    },
-  ]
 }
