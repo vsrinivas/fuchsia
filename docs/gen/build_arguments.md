@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/565240620102563d24e3f262a803f3e7721131dc/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/515a90b911b0655b37c762b29a9230ee61752a4d/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/565240620102563d24e3f262a803f3e7721131dc/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/515a90b911b0655b37c762b29a9230ee61752a4d/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -727,7 +727,14 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#32)
+
+### conformance_testing_netstack
+If true, uses a netstack tailored for network conformance testing.
+
+**Current value (from the default):** `false`
+
+From //src/connectivity/network/BUILD.gn:13
 
 ### coverage_sdk_source_sets
 Set this to true to profile sdk_source_set() instances reachable from the
@@ -1213,6 +1220,25 @@ during build time.
 
 From //build/security.gni:21
 
+### fuchsia_zbi_bootfs_filelist_goldens
+An optional lit of golden files for fuchsia.zbi bootFS file list. If
+specified, they would be compared against fuchsia.zbi bootFS file list
+during build time. At least one of the golden files must match.
+In normal case, there should only be one golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:71
+
 ### fuchsia_zbi_kernel_cmdline_golden
 An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
 this golden file would be compared against fuchsia.zbi kernel cmdline during
@@ -1221,6 +1247,25 @@ build time.
 **Current value (from the default):** `""`
 
 From //build/security.gni:11
+
+### fuchsia_zbi_kernel_cmdline_goldens
+An optional list of golden files for fuchsia.zbi kernel cmdline args. If
+specified, they would be compared against fuchsia.zbi kernel cmdline during
+build time.
+In normal case, there should only be golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:41
 
 ### fvm_emmc_partition_size
 The size in bytes of the FVM partition on the target eMMC devices.
@@ -1512,38 +1557,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -2803,6 +2848,25 @@ during build time.
 
 From //build/security.gni:26
 
+### recovery_zbi_bootfs_filelist_goldens
+An optional list of golden files for recovery.zbi bootFS file list. If
+specified, they would be compared against recovery.zbi bootFS file list
+during build time.  At least one of the golden files must match.
+In normal case, there should only be golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:86
+
 ### recovery_zbi_kernel_cmdline_golden
 An optional golden file for recovery.zbi kernel cmdline args. If specified,
 this golden file would be compared against recovery.zbi kernel cmdline
@@ -2811,6 +2875,25 @@ during build time.
 **Current value (from the default):** `""`
 
 From //build/security.gni:16
+
+### recovery_zbi_kernel_cmdline_goldens
+An optional list of golden files for recovery.zbi kernel cmdline args. If
+specified, they would be compared against recovery.zbi kernel cmdline
+during build time. At least one of the golden files must match.
+In normal case, there should only be one golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:56
 
 ### run_slow_bssl_tests
 
@@ -3308,7 +3391,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:39
+From //build/security.gni:99
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -3725,35 +3808,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/aede6335be7aa3b9ecf19c275fcc3ed96aa3128f/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/a30e5ba9b5039686b20aaa466a216236a541d81e/config.gni#23)
 
 ### with_live_usb
 Whether or not to include the live_usb component in the build.
