@@ -1807,6 +1807,7 @@ generated_file("fastboot_manifest") {
   metadata = {
     images = [
       {
+        archive = true
         name = "flash-manifest"
         path = "flash.json"
         type = "manifest"
