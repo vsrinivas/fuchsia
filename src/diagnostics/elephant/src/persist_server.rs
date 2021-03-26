@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{config::TaggedPersist, constants, file_handler, inspect_fetcher::InspectFetcher},
+    crate::{config::TaggedPersist, constants, file_handler},
     anyhow::Error,
     fidl_fuchsia_diagnostics_persist::{
         DataPersistenceRequest, DataPersistenceRequestStream, PersistResult,
@@ -12,10 +12,14 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, SinkExt, StreamExt},
+    inspect_fetcher::InspectFetcher,
     log::*,
     parking_lot::Mutex,
     std::{collections::HashMap, sync::Arc},
 };
+
+// The capability name for the Inspect reader
+const INSPECT_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor";
 
 pub struct PersistServer {
     // Service name that this persist server is hosting.
@@ -32,7 +36,7 @@ impl PersistServer {
     ) -> Result<PersistServer, Error> {
         let mut persisters = HashMap::new();
         for (tag, entry) in tags.into_iter() {
-            let inspect_fetcher = InspectFetcher::create(entry.selectors)?;
+            let inspect_fetcher = InspectFetcher::create(INSPECT_SERVICE_PATH, entry.selectors)?;
             let backoff = zx::Duration::from_seconds(entry.repeat_seconds);
             let fetcher =
                 Fetcher::create(inspect_fetcher, backoff, service_name.clone(), tag.clone());

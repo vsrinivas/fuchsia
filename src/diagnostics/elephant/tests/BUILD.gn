@@ -13,6 +13,7 @@ rustc_test("test-bin") {
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/elephant/fidl:persist-rustc",
+    "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/sampler/tests/fidl-for-test:fuchsia.samplertestcontroller-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/reader/rust",
@@ -39,6 +40,7 @@ fuchsia_component("canonical-elephant-test") {
     ":test-bin",
     "//src/diagnostics/elephant:elephant-v1",
     "//src/diagnostics/iquery/test/test_component",
+    "//src/diagnostics/lib/inspect-fetcher",
   ]
 }
 

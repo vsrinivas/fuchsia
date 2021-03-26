@@ -7,7 +7,6 @@
 mod config;
 mod constants;
 mod file_handler;
-mod inspect_fetcher;
 mod inspect_server;
 mod persist_server;
 
