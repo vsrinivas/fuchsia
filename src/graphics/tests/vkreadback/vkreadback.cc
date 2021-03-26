@@ -7,8 +7,6 @@
 #include <array>
 
 #include "src/graphics/tests/common/utils.h"
-#include "vulkan/vulkan.h"
-#include "vulkan/vulkan_core.h"
 
 #include "vulkan/vulkan.hpp"
 
@@ -28,15 +26,23 @@ static inline T round_up(T val, uint32_t alignment) {
   return ((val - 1) | (alignment - 1)) + 1;
 }
 
-VkReadbackTest::VkReadbackTest(Extension ext)
+VkReadbackTest::VkReadbackTest(Extension ext, bool use_temp_external_memory)
     : ext_(ext),
       import_export_((ext == VK_FUCHSIA_EXTERNAL_MEMORY) ? EXPORT_EXTERNAL_MEMORY : SELF),
+      use_temp_external_memory_(use_temp_external_memory),
+      external_memory_handle_type_(use_temp_external_memory
+                                       ? VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA
+                                       : VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA),
       command_buffers_(kNumCommandBuffers) {}
 
-VkReadbackTest::VkReadbackTest(uint32_t exported_memory_handle)
+VkReadbackTest::VkReadbackTest(uint32_t exported_memory_handle, bool use_temp_external_memory)
     : ext_(VK_FUCHSIA_EXTERNAL_MEMORY),
       exported_memory_handle_(exported_memory_handle),
       import_export_(IMPORT_EXTERNAL_MEMORY),
+      use_temp_external_memory_(use_temp_external_memory),
+      external_memory_handle_type_(use_temp_external_memory
+                                       ? VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA
+                                       : VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA),
       command_buffers_(kNumCommandBuffers) {}
 
 VkReadbackTest::~VkReadbackTest() {
@@ -93,19 +99,20 @@ void VkReadbackTest::VerifyExpectedImageFormats() const {
     // Test external buffer/image capabilities
     vk::PhysicalDeviceExternalBufferInfo buffer_info;
     buffer_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
-    buffer_info.handleType = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+    buffer_info.handleType =
+        static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_);
     vk::ExternalBufferProperties buffer_props;
     phys_device.getExternalBufferProperties(&buffer_info, &buffer_props);
     EXPECT_EQ(buffer_props.externalMemoryProperties.externalMemoryFeatures,
               vk::ExternalMemoryFeatureFlagBits::eExportable |
                   vk::ExternalMemoryFeatureFlagBits::eImportable);
-    EXPECT_EQ(buffer_props.externalMemoryProperties.exportFromImportedHandleTypes,
-              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
-    EXPECT_EQ(buffer_props.externalMemoryProperties.compatibleHandleTypes,
-              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
-
+    EXPECT_TRUE(buffer_props.externalMemoryProperties.exportFromImportedHandleTypes &
+                static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_));
+    EXPECT_TRUE(buffer_props.externalMemoryProperties.compatibleHandleTypes &
+                static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_));
     vk::PhysicalDeviceExternalImageFormatInfo ext_image_format_info;
-    ext_image_format_info.handleType = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+    ext_image_format_info.handleType =
+        static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_);
     vk::PhysicalDeviceImageFormatInfo2 image_format_info;
     image_format_info.pNext = &ext_image_format_info;
     image_format_info.format = vk::Format::eR8G8B8A8Unorm;
@@ -125,9 +132,9 @@ void VkReadbackTest::VerifyExpectedImageFormats() const {
               vk::ExternalMemoryFeatureFlagBits::eExportable |
                   vk::ExternalMemoryFeatureFlagBits::eImportable);
     EXPECT_EQ(ext_format_props.externalMemoryProperties.exportFromImportedHandleTypes,
-              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
+              static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_));
     EXPECT_EQ(ext_format_props.externalMemoryProperties.compatibleHandleTypes,
-              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
+              static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_));
   }
 }
 #endif  // __Fuchsia__
@@ -169,6 +176,10 @@ bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   // Validation layers not conveniently available yet in virtual Linux
   builder.set_validation_layers_enabled(false);
 #endif
+  // TODO(fxbug.dev/73025): remove this temp logic when it's time.
+  if (!use_temp_external_memory_) {
+    builder.set_validation_layers_enabled(false);
+  }
   ctx_ = builder.Unique();
 
 #ifdef __Fuchsia__
@@ -218,7 +229,7 @@ bool VkReadbackTest::InitImage() {
   vk::ExternalMemoryImageCreateInfo external_memory_create_info;
   if (import_export_ != SELF) {
     external_memory_create_info.handleTypes =
-        vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+        static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_);
     image_create_info.pNext = &external_memory_create_info;
   }
 #endif
@@ -279,7 +290,8 @@ bool VkReadbackTest::InitImage() {
   }
 
   vk::ExportMemoryAllocateInfoKHR export_info;
-  export_info.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+  export_info.handleTypes =
+      static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_);
 
   vk::MemoryDedicatedAllocateInfo dedicated_alloc_info;
   dedicated_alloc_info.image = image_.get();
@@ -344,12 +356,14 @@ bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_hand
   zx_vmo_get_size(exported_memory_handle, &vmo_size);
 
   VkMemoryZirconHandlePropertiesFUCHSIA zircon_handle_props{
-      .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
+      .sType = (use_temp_external_memory_
+                    ? VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA
+                    : static_cast<VkStructureType>(
+                          VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA)),
       .pNext = nullptr,
   };
   VkResult result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
-      *device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, exported_memory_handle,
-      &zircon_handle_props);
+      *device, external_memory_handle_type_, exported_memory_handle, &zircon_handle_props);
   RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandlePropertiesFUCHSIA failed.\n");
 
   // Find index of lowest set bit.
@@ -358,8 +372,13 @@ bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_hand
   vk::ImportMemoryZirconHandleInfoFUCHSIA import_memory_handle_info;
   import_memory_handle_info.pNext = nullptr;
   import_memory_handle_info.handleType =
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+      static_cast<vk::ExternalMemoryHandleTypeFlagBits>(external_memory_handle_type_);
   import_memory_handle_info.handle = exported_memory_handle;
+  reinterpret_cast<VkImportMemoryZirconHandleInfoFUCHSIA*>(&import_memory_handle_info)->sType =
+      static_cast<VkStructureType>(
+          use_temp_external_memory_
+              ? VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA
+              : VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA);
 
   vk::MemoryAllocateInfo imported_mem_alloc_info;
   imported_mem_alloc_info.pNext = &import_memory_handle_info;
@@ -377,21 +396,26 @@ bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_hand
 bool VkReadbackTest::AssignExportedMemoryHandle() {
   const auto& device = ctx_->device();
   VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
-      .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
+      .sType = (use_temp_external_memory_
+                    ? VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA
+                    : static_cast<VkStructureType>(
+                          VK_STRUCTURE_TYPE_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA)),
       .pNext = nullptr,
       .memory = device_memory_,
-      .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
+      .handleType = external_memory_handle_type_};
   VkResult result =
       vkGetMemoryZirconHandleFUCHSIA_(*device, &get_handle_info, &exported_memory_handle_);
   RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandleFUCHSIA.\n");
 
   VkMemoryZirconHandlePropertiesFUCHSIA zircon_handle_props{
-      .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
+      .sType = (use_temp_external_memory_
+                    ? VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA
+                    : static_cast<VkStructureType>(
+                          VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA)),
       .pNext = nullptr,
   };
-  result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
-      *device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, exported_memory_handle_,
-      &zircon_handle_props);
+  result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(*device, external_memory_handle_type_,
+                                                     exported_memory_handle_, &zircon_handle_props);
   RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandlePropertiesFUCHSIA\n");
 
   return true;
