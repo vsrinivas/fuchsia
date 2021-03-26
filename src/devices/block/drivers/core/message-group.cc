@@ -49,13 +49,9 @@ void MessageGroup::Complete(const zx_status_t status) {
   if (--op_count_ == 0 && pending_) {
     server_.SendResponse(response_);
 
-    if (response_.group == kNoGroup) {
-      delete this;
-    } else {
-      pending_ = false;
-      response_.count = 0;
-      response_.reqid = 0;
-      response_.status = ZX_OK;
-    }
+    pending_ = false;
+    response_.count = 0;
+    response_.reqid = 0;
+    response_.status = ZX_OK;
   }
 }

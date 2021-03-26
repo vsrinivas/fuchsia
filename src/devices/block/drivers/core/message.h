@@ -13,7 +13,7 @@
 class IoBuffer;
 class Server;
 
-using MessageCompleter = std::function<void(zx_status_t, block_fifo_request_t&)>;
+using MessageCompleter = fbl::Function<void(zx_status_t, block_fifo_request_t&)>;
 
 // A single unit of work transmitted to the underlying block layer.
 // Message contains a block_op_t, which is dynamically sized. Therefore, it implements its

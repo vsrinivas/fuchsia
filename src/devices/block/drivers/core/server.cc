@@ -250,11 +250,14 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
 
     // For groups, we simply add extra (uncounted) messages to the existing MessageGroup,
     // but for ungrouped messages we create a oneshot MessageGroup.
-    std::unique_ptr<MessageGroup> oneshot_group = nullptr;
+    // The oneshot group has to be shared, since there might be multiple Messages.
+    // A copy will be passed into each Message's completion callback, so the group is deallocated
+    // once all Messages are complete.
+    std::shared_ptr<MessageGroup> oneshot_group = nullptr;
     MessageGroup* transaction_group = nullptr;
 
     if (request->group == kNoGroup) {
-      oneshot_group = std::make_unique<MessageGroup>(*this);
+      oneshot_group = std::make_shared<MessageGroup>(*this);
       ZX_ASSERT(oneshot_group->ExpectResponses(sub_txns, 1, request->reqid) == ZX_OK);
       transaction_group = oneshot_group.get();
     } else {
@@ -269,18 +272,21 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
 
     uint32_t sub_txn_idx = 0;
 
-    auto completer = [transaction_group](zx_status_t status, block_fifo_request_t& req) {
-      TRACE_DURATION("storage", "FinishTransactionGroup");
-      if (req.trace_flow_id) {
-        TRACE_FLOW_STEP("storage", "BlockTransaction", req.trace_flow_id);
-      }
-      transaction_group->Complete(status);
-    };
     while (sub_txn_idx != sub_txns) {
       // We'll be using a new BlockMsg for each sub-component.
+      // Take a copy of the |oneshot_group| shared_ptr into each completer, so oneshot_group is
+      // deallocated after all messages complete.
+      auto completer = [oneshot_group, transaction_group](zx_status_t status,
+                                                          block_fifo_request_t& req) mutable {
+        TRACE_DURATION("storage", "FinishTransactionGroup");
+        if (req.trace_flow_id) {
+          TRACE_FLOW_STEP("storage", "BlockTransaction", req.trace_flow_id);
+        }
+        transaction_group->Complete(status);
+      };
       std::unique_ptr<Message> msg;
       if (zx_status_t status =
-              Message::Create(iobuf, this, request, block_op_size_, completer, &msg);
+              Message::Create(iobuf, this, request, block_op_size_, std::move(completer), &msg);
           status != ZX_OK) {
         return status;
       }
@@ -301,11 +307,6 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
       sub_txn_idx++;
     }
     ZX_DEBUG_ASSERT(len_remaining == 0);
-
-    if (oneshot_group) {
-      // Release the oneshot MessageGroup: it will free itself once all messages have been handled.
-      oneshot_group.release();
-    }
   } else {
     auto completer = [this](zx_status_t status, block_fifo_request_t& req) {
       TRACE_DURATION("storage", "FinishTransaction");

@@ -41,6 +41,8 @@ class MessageGroup {
   [[nodiscard]] zx_status_t ExpectResponses(int response_count, int request_count,
                                             std::optional<reqid_t> request_id) TA_EXCL(lock_);
 
+  // Completes the MessageGroup and sends |response_| to the client. If either of |response_| or
+  // |status| have a non-OK status, send that back.
   void Complete(zx_status_t status) TA_EXCL(lock_);
 
  private:
