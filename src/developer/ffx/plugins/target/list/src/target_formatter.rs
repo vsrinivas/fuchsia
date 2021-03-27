@@ -5,7 +5,8 @@
 use {
     anyhow::{anyhow, Error, Result},
     chrono::Duration,
-    ffx_daemon::target::{SshAddrFetcher, TargetAddr},
+    ffx_daemon::target::TargetAddr,
+    ffx_daemon_core::net::IsLocalAddr,
     ffx_list_args::Format,
     fidl_fuchsia_developer_bridge as bridge,
     serde::Serialize,
@@ -24,6 +25,38 @@ const AGE: &'static str = "AGE";
 const RCS: &'static str = "RCS";
 
 const PADDING_SPACES: usize = 4;
+/// A trait for returning a consistent SSH address.
+///
+/// Based on the structure from which the SSH address is coming, this will
+/// return in order of priority:
+/// -- The first local IPv6 address with a scope id.
+/// -- The last local IPv4 address.
+/// -- Any other address.
+///
+/// DEPRECATED: Migrate to using the ssh address target data.
+pub trait SshAddrFetcher {
+    fn to_ssh_addr(self) -> Option<TargetAddr>;
+}
+
+impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T {
+    fn to_ssh_addr(self) -> Option<TargetAddr> {
+        let mut res: Option<TargetAddr> = None;
+        for addr in self.into_iter() {
+            let is_valid_local_addr = addr.ip().is_local_addr()
+                && (addr.ip().is_ipv4()
+                    || !(addr.ip().is_link_local_addr() && addr.scope_id() == 0));
+
+            if res.is_none() || is_valid_local_addr {
+                res.replace(addr.clone());
+            }
+            if addr.ip().is_ipv6() && is_valid_local_addr {
+                res.replace(addr.clone());
+                break;
+            }
+        }
+        res
+    }
+}
 
 /// Simple trait for a target formatter.
 pub trait TargetFormatter {
@@ -385,6 +418,7 @@ impl TryFrom<Vec<bridge::Target>> for TabularTargetFormatter {
 mod test {
     use super::*;
     use fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address};
+    use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 
     fn make_valid_target() -> bridge::Target {
         bridge::Target {
@@ -642,5 +676,28 @@ mod test {
         assert_eq!(&lines[0],
                    "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           AGE     RCS");
         assert_eq!(&lines[1], "fooberdoober    <unknown>    foo.<unknown>    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N");
+    }
+
+    #[test]
+    fn test_to_ssh_addr() {
+        let sockets = vec![
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
+            SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 1)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::3".parse().unwrap(), 0, 0, 0)),
+        ];
+        let addrs = sockets.iter().map(|s| TargetAddr::from(*s)).collect::<Vec<_>>();
+        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[3]));
+
+        let sockets = vec![
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)),
+        ];
+        let addrs = sockets.iter().map(|s| TargetAddr::from(*s)).collect::<Vec<_>>();
+        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[0]));
+
+        let addrs = Vec::<TargetAddr>::new();
+        assert_eq!((&addrs).to_ssh_addr(), None);
     }
 }

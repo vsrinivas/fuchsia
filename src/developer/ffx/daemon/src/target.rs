@@ -41,7 +41,6 @@ use {
     std::fmt,
     std::fmt::{Debug, Display},
     std::hash::{Hash, Hasher},
-    std::io::Write,
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     std::sync::{Arc, Weak},
     std::time::Duration,
@@ -51,55 +50,6 @@ use {
 pub use crate::target_task::*;
 
 const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
-
-pub trait SshFormatter {
-    fn ssh_fmt<W: Write>(&self, f: &mut W) -> std::io::Result<()>;
-}
-
-impl SshFormatter for TargetAddr {
-    fn ssh_fmt<W: Write>(&self, f: &mut W) -> std::io::Result<()> {
-        if self.ip.is_ipv6() {
-            write!(f, "[")?;
-        }
-        write!(f, "{}", self)?;
-        if self.ip.is_ipv6() {
-            write!(f, "]")?;
-        }
-        Ok(())
-    }
-}
-
-/// A trait for returning a consistent SSH address.
-///
-/// Based on the structure from which the SSH address is coming, this will
-/// return in order of priority:
-/// -- The first local IPv6 address with a scope id.
-/// -- The last local IPv4 address.
-/// -- Any other address.
-///
-/// DEPRECATED: Please use `Target.ssh_address` or `ssh_address_from()` instead.
-pub trait SshAddrFetcher {
-    fn to_ssh_addr(self) -> Option<TargetAddr>;
-}
-
-impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T {
-    fn to_ssh_addr(self) -> Option<TargetAddr> {
-        let mut res: Option<TargetAddr> = None;
-        for addr in self.into_iter() {
-            let is_valid_local_addr = addr.ip().is_local_addr()
-                && (addr.ip().is_ipv4() || !(addr.ip().is_link_local_addr() && addr.scope_id == 0));
-
-            if res.is_none() || is_valid_local_addr {
-                res.replace(addr.clone());
-            }
-            if addr.ip().is_ipv6() && is_valid_local_addr {
-                res.replace(addr.clone());
-                break;
-            }
-        }
-        res
-    }
-}
 
 #[async_trait]
 pub trait ToFidlTarget {
@@ -2243,56 +2193,6 @@ mod test {
         res.unwrap();
     }
 
-    #[test]
-    fn test_to_ssh_addr() {
-        let sockets = vec![
-            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
-            SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)),
-            SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
-            SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 1)),
-            SocketAddr::V6(SocketAddrV6::new("fe80::3".parse().unwrap(), 0, 0, 0)),
-        ];
-        let addrs = sockets.iter().map(|s| TargetAddr::from(*s)).collect::<Vec<_>>();
-        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[3]));
-
-        let sockets = vec![
-            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
-            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)),
-        ];
-        let addrs = sockets.iter().map(|s| TargetAddr::from(*s)).collect::<Vec<_>>();
-        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[0]));
-
-        let addrs = Vec::<TargetAddr>::new();
-        assert_eq!((&addrs).to_ssh_addr(), None);
-    }
-
-    #[test]
-    fn test_ssh_formatting() {
-        struct SshFormatTest {
-            addr: TargetAddr,
-            expect: &'static str,
-        }
-        let tests_pre = vec![
-            (SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)), "127.0.0.1"),
-            (SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)), "129.0.0.1"),
-            (SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)), "[f111::3]"),
-            (SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)), "[fe80::1]"),
-            (
-                SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 198)),
-                "[fe80::2%198]",
-            ),
-        ];
-        let tests = tests_pre
-            .iter()
-            .map(|t| SshFormatTest { addr: TargetAddr::from(t.0), expect: t.1 })
-            .collect::<Vec<_>>();
-        for test in tests.iter() {
-            let mut res = Vec::<u8>::new();
-            test.addr.ssh_fmt(&mut res).unwrap();
-            assert_eq!(std::str::from_utf8(&res[..]).unwrap(), test.expect);
-        }
-    }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_get_default() {
         let default = "clam-chowder-is-tasty";
@@ -2434,8 +2334,8 @@ mod test {
             8,
         ));
         let addrs_pre = vec![
-            expected.clone(),
             SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 70, 68), 0)),
+            expected.clone(),
         ];
         let addrs_post = addrs_pre
             .iter()
@@ -2448,7 +2348,7 @@ mod test {
         for a in addrs_post.iter().cloned() {
             t.addrs_insert_entry(a).await;
         }
-        assert_eq!((&t.addrs().await).to_ssh_addr().unwrap(), TargetAddr::from(expected));
+        assert_eq!(t.addrs().await.into_iter().next().unwrap(), TargetAddr::from(expected));
     }
 
     #[test]
@@ -2465,33 +2365,6 @@ mod test {
             false,
         ));
         assert_eq!(ta.manual, false);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_addresses_prefer_local_vs_v6() {
-        let t = Target::new("hi-hi-hi");
-        let expected = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 70, 68), 0));
-        let addrs_pre = vec![
-            expected.clone(),
-            SocketAddr::V6(SocketAddrV6::new(
-                "9999::4559:49b2:462d:f46b".parse().unwrap(),
-                0,
-                0,
-                0,
-            )),
-        ];
-        let addrs_post = addrs_pre
-            .iter()
-            .cloned()
-            .enumerate()
-            .map(|(i, e)| {
-                (TargetAddr::from(e), Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12)).into()
-            })
-            .collect::<Vec<TargetAddrEntry>>();
-        for a in addrs_post.iter().cloned() {
-            t.addrs_insert_entry(a).await;
-        }
-        assert_eq!((&t.addrs().await).to_ssh_addr().unwrap(), TargetAddr::from(expected));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -11,6 +11,7 @@ ffx_plugin("ffx_list") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/developer/ffx/daemon:lib",
+    "//src/developer/ffx/daemon/core:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:regex",
