@@ -16,4 +16,10 @@
             from: "self",
         },
     ],
+    use: [
+        {
+            storage: "temp",
+            path: "/tmp",
+        },
+    ],
 }

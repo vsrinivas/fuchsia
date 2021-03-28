@@ -14,6 +14,9 @@ pub mod buffer_allocator;
 #[cfg(target_os = "fuchsia")]
 pub mod block_device;
 
+#[cfg(target_family = "unix")]
+pub mod file_backed_device;
+
 #[async_trait]
 /// Device is an abstract representation of an underlying block device.
 pub trait Device: Send + Sync {

@@ -23,6 +23,7 @@ fxfs_sources = [
   "src/device.rs",
   "src/device/buffer.rs",
   "src/device/buffer_allocator.rs",
+  "src/device/file_backed_device.rs",
   "src/errors.rs",
   "src/lib.rs",
   "src/lsm_tree.rs",
