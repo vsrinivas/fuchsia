@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::device::buffer::{Buffer, BufferRef, MutableBufferRef},
+    crate::{
+        device::buffer::{Buffer, BufferRef, MutableBufferRef},
+        object_store::transaction::Transaction,
+    },
     anyhow::{bail, Error},
     async_trait::async_trait,
+    std::ops::Range,
 };
 
 #[async_trait]
@@ -33,6 +37,16 @@ pub trait ObjectHandle: Send + Sync {
     /// this shrinks the object, space will be deallocated (if there are no more references to the
     /// data).
     async fn truncate(&self, size: u64) -> Result<(), Error>;
+
+    /// Preallocates the given file range.  Data will not be initialised so this should be a
+    /// privileged operation for now.  The data can be later written to using an overwrite mode.
+    /// Returns the device ranges allocated.  Existing allocated ranges will be left untouched and
+    /// the ranges returned will include those.
+    async fn preallocate_range(
+        &self,
+        transaction: &mut Transaction,
+        range: Range<u64>,
+    ) -> Result<Vec<Range<u64>>, Error>;
 }
 
 #[async_trait]

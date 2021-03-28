@@ -44,7 +44,7 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         cmp::min,
-        ops::Bound,
+        ops::{Bound, Range},
         sync::{Arc, Mutex, Weak},
     },
 };
@@ -65,6 +65,12 @@ pub struct StoreInfo {
 // will likely involve placing limits on the maximum number of layers.
 const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 
+#[derive(Default)]
+pub struct HandleOptions {
+    // If true, don't COW, write to blocks that are already allocated.
+    pub overwrite: bool,
+}
+
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
 /// identifier.  And object store has to be backed by a parent object store (which stores metadata
 /// for the object store).  The top-level object store (a.k.a. the root parent object store) is
@@ -73,7 +79,7 @@ pub struct ObjectStore {
     parent_store: Option<Arc<ObjectStore>>,
     store_object_id: u64,
     device: Arc<dyn Device>,
-    block_size: u64,
+    block_size: u32,
     filesystem: Weak<dyn Filesystem>,
     store_info: Mutex<StoreInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
@@ -100,7 +106,7 @@ impl ObjectStore {
             parent_store,
             store_object_id,
             device: device,
-            block_size: block_size.into(),
+            block_size,
             filesystem: Arc::downgrade(&filesystem),
             store_info: Mutex::new(store_info),
             tree,
@@ -208,7 +214,7 @@ impl ObjectStore {
                 store: self.clone(),
                 object_id: object_id,
                 attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
-                block_size: self.block_size,
+                block_size: self.block_size.into(),
                 size: Mutex::new(size),
                 options,
             })
@@ -244,7 +250,7 @@ impl ObjectStore {
         );
         Ok(StoreObjectHandle {
             store: self.clone(),
-            block_size: self.block_size,
+            block_size: self.block_size.into(),
             object_id,
             attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
             size: Mutex::new(0),
@@ -391,12 +397,6 @@ impl ApplyMutations for ObjectStore {
     }
 }
 
-#[derive(Default)]
-pub struct HandleOptions {
-    // If true, don't COW, write to blocks that are already allocated.
-    pub overwrite: bool,
-}
-
 pub struct StoreObjectHandle {
     store: Arc<ObjectStore>,
     block_size: u64,
@@ -460,6 +460,45 @@ impl StoreObjectHandle {
             aligned.start += extent_len;
             buf_offset += len;
             offset += len as u64;
+        }
+        Ok(())
+    }
+
+    // All the extents for the range must have been preallocated using preallocate_range or from
+    // existing writes.
+    async fn overwrite(&self, mut offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+        let tree = &self.store.tree;
+        let layer_set = tree.layer_set();
+        let mut merger = layer_set.merger();
+        let end = offset + buf.len() as u64;
+        let mut iter = merger
+            .seek(Bound::Included(
+                &ObjectKey::extent(self.object_id, self.attribute_id, offset..end).search_key(),
+            ))
+            .await?;
+        let mut pos = 0;
+        loop {
+            let (device_offset, to_do) = match iter.get() {
+                Some(ItemRef {
+                    key:
+                        ObjectKey { object_id, data: ObjectKeyData::Extent(ExtentKey { range, .. }) },
+                    value: ObjectValue::Extent(ExtentValue { device_offset: Some(device_offset) }),
+                }) if *object_id == self.object_id && range.start <= offset => (
+                    device_offset + (offset - range.start),
+                    min(buf.len() - pos, (range.end - offset) as usize),
+                ),
+                _ => bail!("offset {} not allocated", offset),
+            };
+            self.write_at(offset, buf.subslice(pos..pos + to_do), device_offset).await?;
+            pos += to_do;
+            if pos == buf.len() {
+                break;
+            }
+            offset += to_do as u64;
+            iter.advance_with_hint(
+                &ObjectKey::extent(self.object_id, self.attribute_id, offset..end).search_key(),
+            )
+            .await?;
         }
         Ok(())
     }
@@ -546,11 +585,13 @@ impl StoreObjectHandle {
     }
 }
 
-fn round_down(offset: u64, block_size: u64) -> u64 {
-    offset - offset % block_size
+// TODO(jfsulliv): Move into utils module or something else.
+fn round_down<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
+    offset - offset % block_size.into()
 }
 
-fn round_up(offset: u64, block_size: u64) -> u64 {
+fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
+    let block_size = block_size.into();
     round_down(offset + block_size - 1, block_size)
 }
 
@@ -672,8 +713,10 @@ impl ObjectHandle for StoreObjectHandle {
     }
 
     async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
-        if self.options.overwrite {
-            panic!("Not supported");
+        if buf.is_empty() {
+            Ok(())
+        } else if self.options.overwrite {
+            self.overwrite(offset, buf).await
         } else {
             let mut transaction = Transaction::new(); // TODO(csuter): transaction too big?
             self.write_cow(&mut transaction, offset, buf).await?;
@@ -728,6 +771,106 @@ impl ObjectHandle for StoreObjectHandle {
         *self.size.lock().unwrap() = length;
         Ok(())
     }
+
+    // Must be multiple of block size.
+    async fn preallocate_range(
+        &self,
+        transaction: &mut Transaction,
+        mut file_range: Range<u64>,
+    ) -> Result<Vec<Range<u64>>, Error> {
+        // TODO(csuter): Fix the locking here.
+        let mut ranges = Vec::new();
+        let tree = &self.store.tree;
+        let layer_set = tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger
+            .seek(Bound::Included(&ObjectKey::with_extent_key(
+                self.object_id,
+                ExtentKey::new(self.attribute_id, file_range.clone()).search_key(),
+            )))
+            .await?;
+        'outer: while file_range.start < file_range.end {
+            let allocate_end = loop {
+                match iter.get().and_then(decode_extent) {
+                    Some((oid, extent_key, ExtentValue { device_offset: Some(device_offset) }))
+                        if oid == self.object_id
+                            && extent_key.attribute_id == self.attribute_id
+                            && extent_key.range.start < file_range.end =>
+                    {
+                        if extent_key.range.start <= file_range.start {
+                            // Record the existing extent and move on.
+                            let device_range = device_offset + file_range.start
+                                - extent_key.range.start
+                                ..device_offset + min(extent_key.range.end, file_range.end)
+                                    - extent_key.range.start;
+                            file_range.start += device_range.end - device_range.start;
+                            ranges.push(device_range);
+                            iter.advance_with_hint(&ObjectKey::with_extent_key(
+                                self.object_id,
+                                ExtentKey::new(self.attribute_id, file_range.clone()).search_key(),
+                            ))
+                            .await?;
+                            continue 'outer;
+                        } else {
+                            // There's nothing allocated between file_range.start and the beginning
+                            // of this extent.
+                            break extent_key.range.start;
+                        }
+                    }
+                    Some((oid, extent_key, ExtentValue { device_offset: None }))
+                        if oid == self.object_id
+                            && extent_key.attribute_id == self.attribute_id
+                            && extent_key.range.end < file_range.end =>
+                    {
+                        // The current extent is sparse, so skip to the next extent.
+                        let next_extent_hint = extent_key.range.end..file_range.end;
+                        iter.advance_with_hint(&ObjectKey::with_extent_key(
+                            self.object_id,
+                            ExtentKey::new(self.attribute_id, next_extent_hint).search_key(),
+                        ))
+                        .await?;
+                    }
+                    _ => {
+                        // We can just preallocate the rest.
+                        break file_range.end;
+                    }
+                }
+            };
+            let device_range = self
+                .store
+                .allocator()
+                .allocate(transaction, allocate_end - file_range.start)
+                .await?;
+            let this_file_range =
+                file_range.start..file_range.start + device_range.end - device_range.start;
+            file_range.start = this_file_range.end;
+            transaction.add(
+                self.store.store_object_id,
+                Mutation::ReplaceExtent {
+                    item: ObjectItem {
+                        key: ObjectKey::extent(self.object_id, self.attribute_id, this_file_range),
+                        value: ObjectValue::extent(device_range.start),
+                    },
+                },
+            );
+            ranges.push(device_range);
+            // If we didn't allocate all that we requested, we'll loop around and try again.
+        }
+        // Update the file size if it changed.
+        if file_range.end > *self.size.lock().unwrap() {
+            *self.size.lock().unwrap() = file_range.end;
+            transaction.add(
+                self.store.store_object_id,
+                Mutation::ReplaceOrInsert {
+                    item: ObjectItem {
+                        key: ObjectKey::attribute(self.object_id, 0),
+                        value: ObjectValue::attribute(*self.size.lock().unwrap()),
+                    },
+                },
+            );
+        }
+        Ok(ranges)
+    }
 }
 
 #[cfg(test)]
@@ -737,7 +880,8 @@ mod tests {
             object_handle::ObjectHandle,
             object_store::{
                 allocator::Allocator,
-                filesystem::ApplyMutations,
+                filesystem::{ApplyMutations, Filesystem},
+                round_up,
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::{Mutation, Transaction},
                 HandleOptions, ObjectStore, StoreObjectHandle,
@@ -751,11 +895,21 @@ mod tests {
     };
 
     const ALLOCATOR_OBJECT_ID: u64 = 1;
+    const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
+
+    // Some tests (the preallocate_range ones) currently assume that the data only occupies a single
+    // device block.
     const TEST_DATA_OFFSET: u64 = 600;
     const TEST_DATA: &[u8] = b"hello";
     const TEST_OBJECT_SIZE: u64 = 913;
 
     struct FakeAllocator(Mutex<u64>);
+
+    impl FakeAllocator {
+        fn allocated(&self) -> u64 {
+            *self.0.lock().unwrap()
+        }
+    }
 
     #[async_trait]
     impl Allocator for FakeAllocator {
@@ -803,20 +957,23 @@ mod tests {
         async fn apply_mutation(&self, _mutation: Mutation, _replay: bool) {}
     }
 
-    async fn test_filesystem_and_store() -> (Arc<FakeFilesystem>, Arc<ObjectStore>) {
-        let device = Arc::new(FakeDevice::new(1024, 512));
+    async fn test_filesystem_and_store(
+    ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, Arc<ObjectStore>) {
+        let device = Arc::new(FakeDevice::new(1024, TEST_DEVICE_BLOCK_SIZE));
         let filesystem = FakeFilesystem::new(device);
         let allocator = Arc::new(FakeAllocator(Mutex::new(0)));
-        filesystem.object_manager().set_allocator(allocator);
+        filesystem.object_manager().set_allocator(allocator.clone());
         let parent_store = ObjectStore::new_empty(None, 2, filesystem.clone());
         (
             filesystem.clone(),
+            allocator,
             parent_store.create_child_store_with_id(3).await.expect("create_child_store failed"),
         )
     }
 
-    async fn test_filesystem_and_object() -> (Arc<FakeFilesystem>, StoreObjectHandle) {
-        let (fs, store) = test_filesystem_and_store().await;
+    async fn test_filesystem_and_object(
+    ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, StoreObjectHandle) {
+        let (fs, allocator, store) = test_filesystem_and_store().await;
         let mut transaction = Transaction::new();
         let object = store
             .create_object(&mut transaction, HandleOptions::default())
@@ -829,19 +986,19 @@ mod tests {
             object.write(TEST_DATA_OFFSET, buf.as_ref()).await.expect("write failed");
         }
         object.truncate(TEST_OBJECT_SIZE).await.expect("truncate failed");
-        (fs, object)
+        (fs, allocator, object)
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_zero_buf_len_read() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (_fs, _, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(0);
         assert_eq!(object.read(0u64, buf.as_mut()).await.expect("read failed"), 0);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_beyond_eof_read() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (_fs, _, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(TEST_DATA.len() * 2);
         buf.as_mut_slice().fill(123u8);
         assert_eq!(object.read(TEST_OBJECT_SIZE, buf.as_mut()).await.expect("read failed"), 0);
@@ -851,7 +1008,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sparse() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (_fs, _, object) = test_filesystem_and_object().await;
         // Deliberately read 1 byte into the object and not right to eof.
         let len = TEST_OBJECT_SIZE as usize - 2;
         let mut buf = object.allocate_buffer(len);
@@ -865,7 +1022,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_after_writes_interspersed_with_flush() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (_fs, _, object) = test_filesystem_and_object().await;
 
         object.store().flush(false).await.expect("flush failed");
 
@@ -888,7 +1045,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_after_truncate_and_extend() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (_fs, _, object) = test_filesystem_and_object().await;
 
         // Arrange for there to be <extent><deleted-extent><extent>.
         let mut buf = object.allocate_buffer(TEST_DATA.len());
@@ -919,7 +1076,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_whole_blocks_with_multiple_objects() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (_fs, _, object) = test_filesystem_and_object().await;
         let mut buffer = object.allocate_buffer(512);
         buffer.as_mut_slice().fill(0xaf);
         object.write(0, buffer.as_ref()).await.expect("write failed");
@@ -948,6 +1105,88 @@ mod tests {
         assert_eq!(&buffer.as_slice()[1024..1536], &[0; 512]);
         assert_eq!(object2.read(0, buffer.as_mut()).await.expect("read failed"), 1024);
         assert_eq!(&buffer.as_slice()[..1024], &[0xef; 1024]);
+    }
+
+    async fn test_preallocate_common(
+        fs: &FakeFilesystem,
+        allocator: &FakeAllocator,
+        object: StoreObjectHandle,
+    ) {
+        let allocated_before = allocator.allocated();
+        let mut transaction = Transaction::new();
+        object.preallocate_range(&mut transaction, 0..512).await.expect("preallocate_range failed");
+        fs.commit_transaction(transaction).await;
+        let mut transaction = Transaction::new();
+        object
+            .preallocate_range(&mut transaction, 0..1048576)
+            .await
+            .expect("preallocate_range failed");
+        fs.commit_transaction(transaction).await;
+        // Check that it didn't reallocate the space for the existing extent
+        let allocated_after = allocator.allocated();
+        assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as u64);
+
+        // Reopen the object in overwrite mode.
+        let object = object
+            .store
+            .open_object(
+                object.object_id(),
+                HandleOptions { overwrite: true, ..Default::default() },
+            )
+            .await
+            .expect("open_object_with_id failed");
+        let mut buf = object.allocate_buffer(2048);
+        buf.as_mut_slice().fill(47);
+        object.write(0, buf.subslice(..TEST_DATA_OFFSET as usize)).await.expect("write failed");
+        buf.as_mut_slice().fill(95);
+        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE);
+        object.write(offset, buf.as_ref()).await.expect("write failed");
+
+        // Make sure there were no more allocations.
+        assert_eq!(allocator.allocated(), allocated_after);
+
+        // Read back the data and make sure it is what we expect.
+        let mut buf = object.allocate_buffer(104876);
+        assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), buf.len());
+        assert_eq!(&buf.as_slice()[..TEST_DATA_OFFSET as usize], &[47; TEST_DATA_OFFSET as usize]);
+        assert_eq!(
+            &buf.as_slice()[TEST_DATA_OFFSET as usize..TEST_DATA_OFFSET as usize + TEST_DATA.len()],
+            TEST_DATA
+        );
+        assert_eq!(&buf.as_slice()[offset as usize..offset as usize + 2048], &[95; 2048]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_preallocate_range() {
+        let (fs, allocator, object) = test_filesystem_and_object().await;
+        test_preallocate_common(&fs, &allocator, object).await;
+    }
+
+    // This is identical to the previous test except that we flush so that extents end up in
+    // different layers.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_preallocate_suceeds_when_extents_are_in_different_layers() {
+        let (fs, allocator, object) = test_filesystem_and_object().await;
+        object.store().flush(false).await.expect("flush failed");
+        test_preallocate_common(&fs, &allocator, object).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_overwrite_fails_if_not_preallocated() {
+        let (_fs, _, object) = test_filesystem_and_object().await;
+
+        let object = object
+            .store
+            .open_object(
+                object.object_id(),
+                HandleOptions { overwrite: true, ..Default::default() },
+            )
+            .await
+            .expect("open_object_with_id failed");
+        let mut buf = object.allocate_buffer(2048);
+        buf.as_mut_slice().fill(95);
+        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE);
+        object.write(offset, buf.as_ref()).await.expect_err("write suceceded");
     }
 }
 

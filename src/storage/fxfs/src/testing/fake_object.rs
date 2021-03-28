@@ -9,11 +9,13 @@ use {
             buffer_allocator::{BufferAllocator, MemBufferSource},
         },
         object_handle::ObjectHandle,
+        object_store::transaction::Transaction,
     },
     anyhow::Error,
     async_trait::async_trait,
     std::{
         cmp::min,
+        ops::Range,
         sync::{Arc, Mutex},
         vec::Vec,
     },
@@ -87,5 +89,13 @@ impl ObjectHandle for FakeObjectHandle {
     async fn truncate(&self, length: u64) -> Result<(), Error> {
         self.object.lock().unwrap().buf.resize(length as usize, 0);
         Ok(())
+    }
+
+    async fn preallocate_range(
+        &self,
+        _transaction: &mut Transaction,
+        _range: Range<u64>,
+    ) -> Result<Vec<Range<u64>>, Error> {
+        panic!("Unsupported");
     }
 }
