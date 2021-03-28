@@ -8,6 +8,8 @@ pub mod filesystem;
 mod journal;
 mod merge;
 mod record;
+#[cfg(test)]
+mod testing;
 pub mod transaction;
 
 pub use record::ObjectType;
@@ -72,7 +74,6 @@ pub struct ObjectStore {
     store_object_id: u64,
     device: Arc<dyn Device>,
     block_size: u64,
-    allocator: Weak<dyn Allocator>,
     filesystem: Weak<dyn Filesystem>,
     store_info: Mutex<StoreInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
@@ -88,8 +89,7 @@ impl ObjectStore {
     fn new(
         parent_store: Option<Arc<ObjectStore>>,
         store_object_id: u64,
-        allocator: &Arc<dyn Allocator>,
-        filesystem: &Arc<dyn Filesystem>,
+        filesystem: Arc<dyn Filesystem>,
         store_info: StoreInfo,
         tree: LSMTree<ObjectKey, ObjectValue>,
         opened: bool,
@@ -101,8 +101,7 @@ impl ObjectStore {
             store_object_id,
             device: device,
             block_size: block_size.into(),
-            allocator: Arc::downgrade(allocator),
-            filesystem: Arc::downgrade(filesystem),
+            filesystem: Arc::downgrade(&filesystem),
             store_info: Mutex::new(store_info),
             tree,
             opened: Mutex::new(opened),
@@ -114,13 +113,11 @@ impl ObjectStore {
     pub fn new_empty(
         parent_store: Option<Arc<ObjectStore>>,
         store_object_id: u64,
-        allocator: &Arc<dyn Allocator>,
-        filesystem: &Arc<dyn Filesystem>,
+        filesystem: Arc<dyn Filesystem>,
     ) -> Arc<Self> {
         Self::new(
             parent_store,
             store_object_id,
-            allocator,
             filesystem,
             StoreInfo::default(),
             LSMTree::new(merge::merge),
@@ -160,23 +157,10 @@ impl ObjectStore {
         let filesystem = self.filesystem.upgrade().unwrap();
         filesystem.commit_transaction(transaction).await;
 
-        // Write a default StoreInfo file.  TODO(csuter): this should be part of a bigger
-        // transaction i.e.  this function should take transaction as an arg.
-        let mut serialized_info = Vec::new();
-        serialize_into(&mut serialized_info, &StoreInfo::default())?;
-        // TODO(jfsulliv): we should consider preallocating the maximum serialized_info can be and
-        // then write directly to the buffer.
-        {
-            let mut buf = self.device.allocate_buffer(serialized_info.len());
-            buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
-            handle.write(0u64, buf.as_ref()).await?;
-        }
-
         Ok(Self::new_empty(
             Some(self.clone()),
             handle.object_id(),
-            &self.allocator.upgrade().unwrap(),
-            &self.filesystem.upgrade().unwrap(),
+            self.filesystem.upgrade().unwrap(),
         ))
     }
 
@@ -192,8 +176,7 @@ impl ObjectStore {
         Self::new(
             Some(self.clone()),
             store_object_id,
-            &self.allocator.upgrade().unwrap(),
-            &self.filesystem.upgrade().unwrap(),
+            self.filesystem.upgrade().unwrap(),
             StoreInfo::default(),
             LSMTree::new(merge::merge),
             false,
@@ -340,16 +323,20 @@ impl ObjectStore {
             let parent_store = self.parent_store.as_ref().unwrap();
             let handle =
                 parent_store.open_object(self.store_object_id, HandleOptions::default()).await?;
-            let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-            let store_info: StoreInfo = deserialize_from(&serialized_info[..])?;
-            let mut handles = Vec::new();
-            for object_id in &store_info.layers {
-                handles.push(parent_store.open_object(*object_id, HandleOptions::default()).await?);
-            }
-            self.tree.set_layers(handles.into());
-            let mut current_store_info = self.store_info.lock().unwrap();
-            if store_info.last_object_id > current_store_info.last_object_id {
-                current_store_info.last_object_id = store_info.last_object_id
+            if handle.get_size() > 0 {
+                let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+                let store_info: StoreInfo = deserialize_from(&serialized_info[..])?;
+                let mut handles = Vec::new();
+                for object_id in &store_info.layers {
+                    handles.push(
+                        parent_store.open_object(*object_id, HandleOptions::default()).await?,
+                    );
+                }
+                self.tree.set_layers(handles.into());
+                let mut current_store_info = self.store_info.lock().unwrap();
+                if store_info.last_object_id > current_store_info.last_object_id {
+                    current_store_info.last_object_id = store_info.last_object_id
+                }
             }
             *self.opened.lock().unwrap() = true;
             Ok(())
@@ -361,6 +348,10 @@ impl ObjectStore {
         let mut store_info = self.store_info.lock().unwrap();
         store_info.last_object_id += 1;
         store_info.last_object_id
+    }
+
+    fn allocator(&self) -> Arc<dyn Allocator> {
+        self.filesystem().allocator()
     }
 }
 
@@ -395,7 +386,7 @@ impl ApplyMutations for ObjectStore {
                     self.tree.reset_immutable_layers();
                 }
             }
-            _ => panic!("unexpected mutation!"),
+            _ => panic!("unexpected mutation: {:?}", mutation),
         }
     }
 }
@@ -416,7 +407,7 @@ pub struct StoreObjectHandle {
 }
 
 impl StoreObjectHandle {
-    fn store(&self) -> Arc<ObjectStore> {
+    pub fn store(&self) -> Arc<ObjectStore> {
         self.store.clone()
     }
 
@@ -444,20 +435,9 @@ impl StoreObjectHandle {
         }
         self.delete_old_extents(transaction, &ExtentKey::new(self.attribute_id, aligned.clone()))
             .await?;
+        let allocator = self.store.allocator();
         while buf_offset < buf.len() {
-            let device_range = self
-                .store
-                .allocator
-                .upgrade()
-                .unwrap()
-                .allocate(
-                    transaction,
-                    self.store.store_object_id(),
-                    self.object_id,
-                    self.attribute_id,
-                    aligned.clone(),
-                )
-                .await?;
+            let device_range = allocator.allocate(transaction, aligned.end - aligned.start).await?;
             let extent_len = device_range.end - device_range.start;
             let end = aligned.start + extent_len;
             let len = min(buf.len() - buf_offset, (end - offset) as usize);
@@ -533,6 +513,7 @@ impl StoreObjectHandle {
         let lower_bound = ObjectKey::with_extent_key(self.object_id, key.search_key());
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Included(&lower_bound)).await?;
+        let allocator = self.store.allocator();
         loop {
             let (oid, extent_key, extent_value) = match iter.get().and_then(decode_extent) {
                 None => break,
@@ -543,18 +524,11 @@ impl StoreObjectHandle {
             }
             if let ExtentValue { device_offset: Some(device_offset) } = extent_value {
                 if let Some(overlap) = key.overlap(extent_key) {
-                    self.store
-                        .allocator
-                        .upgrade()
-                        .unwrap()
+                    allocator
                         .deallocate(
                             transaction,
-                            self.store.store_object_id(),
-                            self.object_id,
-                            key.attribute_id,
                             device_offset + overlap.start - extent_key.range.start
                                 ..device_offset + overlap.end - extent_key.range.start,
-                            overlap.start,
                         )
                         .await;
                 } else {
@@ -708,6 +682,10 @@ impl ObjectHandle for StoreObjectHandle {
         }
     }
 
+    fn get_size(&self) -> u64 {
+        *self.size.lock().unwrap()
+    }
+
     async fn truncate(&self, length: u64) -> Result<(), Error> {
         let mut transaction = Transaction::new(); // TODO(csuter): transaction too big?
         let old_size = *self.size.lock().unwrap();
@@ -750,22 +728,17 @@ impl ObjectHandle for StoreObjectHandle {
         *self.size.lock().unwrap() = length;
         Ok(())
     }
-
-    fn get_size(&self) -> u64 {
-        *self.size.lock().unwrap()
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         crate::{
-            device::Device,
             object_handle::ObjectHandle,
             object_store::{
                 allocator::Allocator,
-                filesystem::{ApplyMutations, Filesystem, ObjectManager, ObjectSync},
-                journal::JournalCheckpoint,
+                filesystem::ApplyMutations,
+                testing::fake_filesystem::FakeFilesystem,
                 transaction::{Mutation, Transaction},
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
@@ -793,13 +766,10 @@ mod tests {
         async fn allocate(
             &self,
             _transaction: &mut Transaction,
-            _store_object_id: u64,
-            _object_id: u64,
-            _attribute_id: u64,
-            object_range: std::ops::Range<u64>,
+            len: u64,
         ) -> Result<std::ops::Range<u64>, Error> {
             let mut last_end = self.0.lock().unwrap();
-            let result = *last_end..*last_end + object_range.end - object_range.start;
+            let result = *last_end..*last_end + len;
             *last_end = result.end;
             Ok(result)
         }
@@ -807,12 +777,20 @@ mod tests {
         async fn deallocate(
             &self,
             _transaction: &mut Transaction,
-            _store_object_id: u64,
-            _object_id: u64,
-            _attribute_id: u64,
             _device_range: std::ops::Range<u64>,
-            _file_offset: u64,
         ) {
+        }
+
+        async fn flush(&self, _force: bool) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn reserve(
+            &self,
+            _transaction: &mut Transaction,
+            _device_range: std::ops::Range<u64>,
+        ) {
+            panic!("Not supported");
         }
 
         fn as_apply_mutations(self: Arc<Self>) -> Arc<dyn ApplyMutations> {
@@ -825,58 +803,15 @@ mod tests {
         async fn apply_mutation(&self, _mutation: Mutation, _replay: bool) {}
     }
 
-    struct FakeFilesystem {
-        device: Arc<dyn Device>,
-        _allocator: Arc<FakeAllocator>,
-        object_manager: Arc<ObjectManager>,
-    }
-
-    impl FakeFilesystem {
-        fn new(device: Arc<dyn Device>, allocator: Arc<FakeAllocator>) -> Arc<Self> {
-            Arc::new(FakeFilesystem {
-                device,
-                _allocator: allocator,
-                object_manager: Arc::new(ObjectManager::new()),
-            })
-        }
-    }
-
-    #[async_trait]
-    impl Filesystem for FakeFilesystem {
-        async fn commit_transaction(&self, transaction: Transaction) {
-            for (object_id, mutation) in transaction.mutations {
-                self.object_manager
-                    .apply_mutation(object_id, mutation, false, &JournalCheckpoint::default())
-                    .await;
-            }
-        }
-
-        fn register_store(&self, store: &Arc<ObjectStore>) {
-            self.object_manager.register_store(store);
-        }
-
-        fn begin_object_sync(&self, object_id: u64) -> ObjectSync {
-            self.object_manager.begin_object_sync(object_id)
-        }
-
-        fn device(&self) -> Arc<dyn Device> {
-            self.device.clone()
-        }
-    }
-
     async fn test_filesystem_and_store() -> (Arc<FakeFilesystem>, Arc<ObjectStore>) {
         let device = Arc::new(FakeDevice::new(1024, 512));
+        let filesystem = FakeFilesystem::new(device);
         let allocator = Arc::new(FakeAllocator(Mutex::new(0)));
-        let filesystem = FakeFilesystem::new(device, allocator.clone());
-        let parent_store = ObjectStore::new_empty(
-            None,
-            2,
-            &(allocator.clone() as Arc<dyn Allocator>),
-            &(filesystem.clone() as Arc<dyn Filesystem>),
-        );
+        filesystem.object_manager().set_allocator(allocator);
+        let parent_store = ObjectStore::new_empty(None, 2, filesystem.clone());
         (
             filesystem.clone(),
-            parent_store.create_child_store().await.expect("create_child_store failed"),
+            parent_store.create_child_store_with_id(3).await.expect("create_child_store failed"),
         )
     }
 

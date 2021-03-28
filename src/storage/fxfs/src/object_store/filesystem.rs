@@ -34,6 +34,12 @@ pub trait Filesystem: Send + Sync {
 
     /// Returns access to the undeyling device.
     fn device(&self) -> Arc<dyn Device>;
+
+    /// Returns the root store or panics if it is not available.
+    fn root_store(&self) -> Arc<ObjectStore>;
+
+    /// Returns the allocator or panics if it is not available.
+    fn allocator(&self) -> Arc<dyn Allocator>;
 }
 
 pub struct ObjectManager {
