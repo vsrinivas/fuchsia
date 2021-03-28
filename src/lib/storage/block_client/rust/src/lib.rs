@@ -12,8 +12,11 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_hardware_block as block,
     fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
+    fuchsia_trace as trace,
     fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon_sys::zx_handle_t,
     futures::channel::oneshot,
+    lazy_static::lazy_static,
     std::{
         collections::HashMap,
         convert::TryInto,
@@ -68,6 +71,15 @@ struct BlockFifoResponse {
 
 unsafe impl fasync::FifoEntry for BlockFifoRequest {}
 unsafe impl fasync::FifoEntry for BlockFifoResponse {}
+
+// Generates a trace ID that will be unique across the system (as long as |request_id| isn't
+// reused within this process).
+fn generate_trace_flow_id(request_id: u32) -> u64 {
+    lazy_static! {
+        static ref SELF_HANDLE: zx_handle_t = fuchsia_runtime::process_self().raw_handle();
+    };
+    *SELF_HANDLE as u64 + (request_id as u64) << 32
+}
 
 pub enum BufferSlice<'a> {
     VmoId { vmo_id: &'a VmoId, offset: u64, length: u64 },
@@ -309,26 +321,32 @@ impl RemoteBlockClient {
 
     // Sends the request and waits for the response.
     async fn send(&self, mut request: BlockFifoRequest) -> Result<(), Error> {
-        let request_id;
-        {
+        trace::duration!("storage", "RemoteBlockClient::send");
+        let (request_id, trace_flow_id) = {
             let mut state = self.fifo_state.lock().unwrap();
             if state.fifo.is_none() {
                 // Fifo has been closed.
                 return Err(zx::Status::CANCELED.into());
             }
-            request_id = state.next_request_id;
+            let request_id = state.next_request_id;
+            let trace_flow_id = generate_trace_flow_id(request_id);
             state.next_request_id = state.next_request_id.overflowing_add(1).0;
             assert!(
                 state.map.insert(request_id, RequestState::default()).is_none(),
                 "request id in use!"
             );
             request.request_id = request_id;
+            request.trace_flow_id = generate_trace_flow_id(request_id);
+            trace::flow_begin!("storage", "BlockTransaction", trace_flow_id);
             state.queue.push_back(request);
             if let Some(waker) = state.poller_waker.take() {
                 waker.wake();
             }
-        }
-        Ok(ResponseFuture::new(self.fifo_state.clone(), request_id).await?)
+            (request_id, trace_flow_id)
+        };
+        ResponseFuture::new(self.fifo_state.clone(), request_id).await?;
+        trace::flow_end!("storage", "BlockTransaction", trace_flow_id);
+        Ok(())
     }
 }
 
@@ -359,6 +377,7 @@ impl BlockClient for RemoteBlockClient {
     ) -> Result<(), Error> {
         match buffer_slice {
             MutableBufferSlice::VmoId { vmo_id, offset, length } => {
+                trace::duration!("storage", "RemoteBlockClient::read_at", "len" => length);
                 self.send(BlockFifoRequest {
                     op_code: BLOCKIO_READ,
                     vmoid: vmo_id.id(),
@@ -370,6 +389,10 @@ impl BlockClient for RemoteBlockClient {
                 .await?
             }
             MutableBufferSlice::Memory(mut slice) => {
+                trace::duration!(
+                    "storage",
+                    "RemoteBlockClient::read_at",
+                    "len" => slice.len() as u64);
                 let temp_vmo = self.temp_vmo.lock().await;
                 let mut device_block = self.to_blocks(device_offset)?;
                 loop {
@@ -403,6 +426,7 @@ impl BlockClient for RemoteBlockClient {
     ) -> Result<(), Error> {
         match buffer_slice {
             BufferSlice::VmoId { vmo_id, offset, length } => {
+                trace::duration!("storage", "RemoteBlockClient::write_at", "len" => length);
                 self.send(BlockFifoRequest {
                     op_code: BLOCKIO_WRITE,
                     vmoid: vmo_id.id(),
@@ -414,6 +438,10 @@ impl BlockClient for RemoteBlockClient {
                 .await?;
             }
             BufferSlice::Memory(mut slice) => {
+                trace::duration!(
+                    "storage",
+                    "RemoteBlockClient::write_at",
+                    "len" => slice.len() as u64);
                 let temp_vmo = self.temp_vmo.lock().await;
                 let mut device_block = self.to_blocks(device_offset)?;
                 loop {
@@ -976,5 +1004,36 @@ mod tests {
 
         // After the server has finished running, we can check to see that close was called.
         assert!(*flush_called.lock().unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_trace_flow_ids_set() {
+        let flow_id: std::sync::Mutex<Option<u64>> = std::sync::Mutex::new(None);
+        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+
+        // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
+        // client and we are using a single threaded executor.
+        std::thread::spawn(move || {
+            let remote_block_device = RemoteBlockClient::new_sync(client)
+                .expect("RemoteBlockDeviceImpl::new_sync failed");
+            futures::executor::block_on(remote_block_device.flush())
+                .expect("RemoteBlockDevice::flush failed");
+        });
+
+        let fifo_handler = |request: BlockFifoRequest| -> BlockFifoResponse {
+            if request.trace_flow_id > 0 {
+                *flow_id.lock().unwrap() = Some(request.trace_flow_id);
+            }
+            BlockFifoResponse {
+                status: zx::Status::OK.into_raw(),
+                request_id: request.request_id,
+                ..Default::default()
+            }
+        };
+        let mut fake_server = FakeBlockServer::new(server, |_| false, fifo_handler);
+        fake_server.run().await;
+
+        // After the server has finished running, verify the trace flow ID was set to some value.
+        assert!(flow_id.lock().unwrap().is_some());
     }
 }
