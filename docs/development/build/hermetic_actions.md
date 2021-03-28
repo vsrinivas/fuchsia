@@ -181,6 +181,48 @@ You can find an example for fixing a build action to generate a depfile here:
 *   [472658: [build] Make go_library build hermetically](https://fuchsia-review.googlesource.com/c/fuchsia/+/472658)
 *   [472637: [build] Fix hermeticity of flatbuffer](https://fuchsia-review.googlesource.com/c/third_party/flatbuffers/+/472637)
 
+### Action arguments missing from inputs/outputs
+
+Build actions are often scripts that take certain file paths as arguments.
+
+```gn
+action("foo") {
+  script = "concatenate.py"
+  outputs = [ "$target_out_dir/file1_file2.txt" ]
+  args = [
+    "--concat-from",
+    rebase_path("data/file1.txt", root_build_dir),
+    rebase_path("data/file2.txt", root_build_dir),
+    "--output",
+  ] + outputs
+}
+```
+
+In the above case you'll get an action tracer error that `concatenate.py`
+read from `data/file1.txt` and `data/file2.txt`. The mistake is easy to spot,
+because you can see that these paths are passed as args to the script but are
+not listed as inputs or outputs. While it's technically possible to pass paths
+as args and not actually have the script read/write to those paths, it's very
+unlikely.
+
+The fix is as follows:
+
+```gn
+action("foo") {
+  script = "concatenate.py"
+  sources = [
+    "data/file1.txt",
+    "data/file2.txt",
+  ]
+  outputs = [ "$target_out_dir/file1_file2.txt" ]
+  args = [
+    "--concat-from",
+  ] + rebase_path(sources, root_build_dir) + [
+    "--output",
+  ] + outputs
+}
+```
+
 ### Expanding arguments from a file
 
 There is a common pattern used especially in Python scripts to expand the
