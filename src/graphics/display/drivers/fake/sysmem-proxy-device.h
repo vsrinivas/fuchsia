@@ -12,7 +12,6 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

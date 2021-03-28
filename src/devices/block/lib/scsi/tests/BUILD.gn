@@ -26,15 +26,12 @@ test("scsilib-disk-test-bin") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/devices/block/lib/scsi",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//sdk/lib/fit",
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",

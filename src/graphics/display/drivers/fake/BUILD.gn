@@ -46,9 +46,6 @@ source_set("fake-lib") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -71,9 +68,6 @@ static_library("sysmem-proxy-device") {
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 

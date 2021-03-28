@@ -30,12 +30,9 @@ driver_module("as370-tdm-output") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-    "//src/media/audio/lib/simple-codec",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
+    "//src/media/audio/lib/simple-codec",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",

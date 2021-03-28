@@ -27,7 +27,6 @@ driver_module("pci-sdhci") {
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",
   ]
 }

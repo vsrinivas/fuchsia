@@ -6,10 +6,10 @@
 
 #include <fuchsia/hardware/badblock/c/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -21,7 +21,6 @@
 #include <memory>
 #include <utility>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

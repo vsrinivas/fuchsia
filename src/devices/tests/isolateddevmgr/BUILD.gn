@@ -33,9 +33,6 @@ test("isolateddevmgr") {
     "//sdk/fidl/fuchsia.device.manager.test:fuchsia.device.manager.test_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

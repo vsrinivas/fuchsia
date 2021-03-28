@@ -7,7 +7,6 @@
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <fuchsia/hardware/hiddevice/cpp/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

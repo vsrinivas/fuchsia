@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/binding.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
 #include <memory>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 #include "integration-test.h"
 

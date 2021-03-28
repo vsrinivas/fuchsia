@@ -7,14 +7,13 @@
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/rawnand/cpp/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/time.h>
 #include <string.h>

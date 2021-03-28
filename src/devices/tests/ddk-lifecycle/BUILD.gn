@@ -49,11 +49,8 @@ test("ddk-lifecycle") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//sdk/lib/fit",
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
+    "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
