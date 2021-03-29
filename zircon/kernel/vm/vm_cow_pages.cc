@@ -826,13 +826,12 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
     removed->page_list_.ForEveryPageInRange(
         [removed_offset = removed->parent_offset_, this](auto* page, uint64_t offset) {
           AssertHeld(lock_);
-          if (page->IsMarker()) {
-            return ZX_ERR_NEXT;
-          }
+          // Whether this is a true page, or a marker, we must check |this| for a page as either
+          // represents a potential fork, even if we subsequently changed it to a marker.
           VmPageOrMarker* page_or_mark = page_list_.Lookup(offset + removed_offset);
           if (page_or_mark && page_or_mark->IsPage()) {
             vm_page* p_page = page_or_mark->Page();
-            // The page is definitely forked into |removed|, but
+            // The page was definitely forked into |removed|, but
             // shouldn't be forked twice.
             DEBUG_ASSERT(p_page->object.cow_left_split ^ p_page->object.cow_right_split);
             p_page->object.cow_left_split = 0;

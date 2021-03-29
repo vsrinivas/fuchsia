@@ -1687,4 +1687,36 @@ TEST_F(VmoClone2TestCase, NoAccumulatedOverflow) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, child2.set_size(0x8000));
 }
 
+TEST_F(VmoClone2TestCase, MarkerClearsSplitBits) {
+  zx::vmo vmo;
+
+  // Need three pages so that we can have a three page child allowing us to zero without being able
+  // to adjust parent limits;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 3, 0, &vmo));
+
+  uint64_t val = 42;
+  // Commit a page in what will become the hidden parent so we have something to fork.
+  EXPECT_OK(vmo.write(&val, zx_system_get_page_size(), sizeof(val)));
+
+  zx::vmo child;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 3, &child));
+
+  // Fork the page into this child
+  EXPECT_OK(child.write(&val, zx_system_get_page_size(), sizeof(val)));
+  // By zeroing the middle page we ensure that the zero cannot be 'faked' by adjusting the parent
+  // limits and that a marker really has to be inserted.
+  EXPECT_OK(child.op_range(ZX_VMO_OP_ZERO, zx_system_get_page_size(), zx_system_get_page_size(),
+                           nullptr, 0));
+
+  // Reset the child merging the hidden parent back into our sibling. This should update any pages
+  // that we forked (event if we later turned them into a marker) to no longer being forked as it
+  // is a leaf vmo again.
+  child.reset();
+
+  // Create another child and attempt to fork the same page again. This should succeed as this page
+  // should have been updated as not forked in the reset() above.
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 3, &child));
+  EXPECT_OK(child.write(&val, zx_system_get_page_size(), sizeof(val)));
+}
+
 }  // namespace vmo_test
