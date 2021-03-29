@@ -16,6 +16,7 @@
 #include <lib/heap.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/ktrace.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -78,7 +79,7 @@ KCOUNTER(cm_flush_all_replacing, "mmu.consistency_manager.flush_all_replacing")
 KCOUNTER(cm_single_tlb_invalidates, "mmu.consistency_manager.single_tlb_invalidate")
 KCOUNTER(cm_flush, "mmu.consistency_manager.flush")
 
-AsidAllocator asid;
+lazy_init::LazyInit<AsidAllocator> asid;
 
 KCOUNTER(vm_mmu_protect_make_execute_calls, "vm.mmu.protect.make_execute_calls")
 KCOUNTER(vm_mmu_protect_make_execute_pages, "vm.mmu.protect.make_execute_pages")
@@ -1528,9 +1529,12 @@ zx_status_t ArmArchVmAspace::Init() {
     } else {
       DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_USER_SIZE_SHIFT);
       page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
-      if (asid.Alloc(&asid_) != ZX_OK) {
-        return ZX_ERR_NO_MEMORY;
+      auto status = asid->Alloc();
+      if (status.is_error()) {
+        printf("ARM: out of ASIDs!\n");
+        return status.status_value();
       }
+      asid_ = status.value();
     }
 
     paddr_t pa;
@@ -1584,7 +1588,8 @@ zx_status_t ArmArchVmAspace::Destroy() {
 
   // Free any ASID.
   if (!(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
-    asid.Free(asid_);
+    auto status = asid->Free(asid_);
+    ASSERT(status.is_ok());
     asid_ = MMU_ARM64_UNUSED_ASID;
   }
 
@@ -1718,4 +1723,9 @@ void ArmVmICacheConsistencyManager::Finish() {
   asm volatile("ic ialluis" ::: "memory");
   __isb(ARM_MB_SY);
   need_invalidate_ = false;
+}
+
+void arm64_mmu_early_init() {
+  // after we've probed the feature set, initialize the asid allocator
+  asid.Initialize();
 }

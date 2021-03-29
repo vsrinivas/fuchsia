@@ -410,19 +410,21 @@ typedef uint64_t pte_t;
     __isb(ARM_MB_SY);                                            \
   })
 
-#define ARM64_TLBI_ASID(op, val)                                \
-  ({                                                            \
-    uint64_t v = val;                                           \
-    DEBUG_ASSERT((v & ((1u << MMU_ARM64_ASID_BITS) - 1)) == v); \
-    __asm__ volatile("tlbi " #op ", %0" ::"r"(v << 48));        \
-    __isb(ARM_MB_SY);                                           \
+#define ARM64_TLBI_ASID(op, val)                         \
+  ({                                                     \
+    uint64_t v = val;                                    \
+    __asm__ volatile("tlbi " #op ", %0" ::"r"(v << 48)); \
+    __isb(ARM_MB_SY);                                    \
   })
 
-const size_t MMU_ARM64_ASID_BITS = 16;
+// dedicated address space ids
 const uint16_t MMU_ARM64_UNUSED_ASID = 0;
-const uint16_t MMU_ARM64_GLOBAL_ASID = 1; // NOTE: keep in sync with start.S
+const uint16_t MMU_ARM64_GLOBAL_ASID = 1;  // NOTE: keep in sync with start.S
 const uint16_t MMU_ARM64_FIRST_USER_ASID = 2;
-const uint16_t MMU_ARM64_MAX_USER_ASID = (1u << MMU_ARM64_ASID_BITS) - 1;
+
+// max address space id for 8 and 16 bit asid ranges
+const uint16_t MMU_ARM64_MAX_USER_ASID_8 = (1u << 8) - 1;
+const uint16_t MMU_ARM64_MAX_USER_ASID_16 = (1u << 16) - 1;
 
 pte_t* arm64_get_kernel_ptable();
 
@@ -432,6 +434,8 @@ zx_status_t arm64_boot_map_v(const vaddr_t vaddr, const paddr_t paddr, const siz
 // use built-in virtual to physical translation instructions to query
 // the physical address of a virtual address
 zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write);
+
+void arm64_mmu_early_init();
 
 #endif  // __ASSEMBLER__
 

@@ -428,7 +428,7 @@ void arm64_feature_debug(bool full) {
   if (full) {
     print_isa_features();
     dprintf(INFO, "ARM ASID width %s\n",
-        (arm64_asid_width() == arm64_asid_width::ASID_16) ? "16" : "8");
+            (arm64_asid_width() == arm64_asid_width::ASID_16) ? "16" : "8");
     dprintf(INFO, "ARM cache line sizes: icache %u dcache %u zva %u\n", arm64_icache_size,
             arm64_dcache_size, arm64_zva_size);
     if (DPRINTF_ENABLED_FOR_LEVEL(INFO)) {

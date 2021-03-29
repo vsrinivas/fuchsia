@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_FEATURE_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_FEATURE_H_
 
+#include <assert.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/features.h>
@@ -52,12 +53,14 @@ extern uint32_t arm64_dcache_size;
 
 // size of the asid
 enum class arm64_asid_width {
+  UNKNOWN,  // invalid, should be set prior to anything actually using it
   ASID_8,
-  ASID_16
+  ASID_16,
 };
 
 static inline enum arm64_asid_width arm64_asid_width() {
   extern enum arm64_asid_width arm64_asid_width_;
+  DEBUG_ASSERT(arm64_asid_width_ != arm64_asid_width::UNKNOWN);
   return arm64_asid_width_;
 }
 
