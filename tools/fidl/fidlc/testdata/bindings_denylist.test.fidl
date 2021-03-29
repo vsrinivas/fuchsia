@@ -9,36 +9,42 @@ library fidl.test.bindingsdenylist;
 [BindingsDenylist = "there_are_no_bindings_with_this_name"]
 const uint32 AllBindings = 0;
 
-[BindingsDenylist = "hlcpp, dart, go, libfuzzer, llcpp, rust"]
+[BindingsDenylist = "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust"]
 bits OnlySyzkaller {
     A = 1;
 };
 
-[BindingsDenylist = "hlcpp, go, libfuzzer, llcpp, rust, syzkaller"]
+[BindingsDenylist = "cpp, go, hlcpp, libfuzzer, llcpp, rust, syzkaller"]
 enum OnlyDart {
     A = 1;
 };
 
-[BindingsDenylist = "hlcpp, dart, libfuzzer, llcpp, rust, syzkaller"]
+[BindingsDenylist = "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller"]
 struct OnlyGo {
 };
 
-[BindingsDenylist = "hlcpp, dart, go, libfuzzer, llcpp, syzkaller"]
+[BindingsDenylist = "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller"]
 table OnlyRust {
 };
 
-[BindingsDenylist = "hlcpp, dart, go, libfuzzer, rust, syzkaller"]
+[BindingsDenylist = "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller"]
 union OnlyLlcpp {
     1: uint32 x;
 };
 
 // TODO(fxbug.dev/72247): Libfuzzer depends on hlcpp and llcpp. A decision needs to be made on how
 // to manage these dependencies. For now, this test does not denylist the dependencies.
-[BindingsDenylist = "dart, go, rust, syzkaller"]
+[BindingsDenylist = "cpp, dart, go, rust, syzkaller"]
 protocol OnlyLibfuzzerAndDeps {
     LibfuzzerNeedsNonemptyProtocol() -> ();
 };
 
-[BindingsDenylist = "dart, go, libfuzzer, llcpp, rust, syzkaller"]
+// TODO(fxbug.dev/72247): Unified C++ bindings depends on hlcpp and llcpp. A decision needs to be
+// made on how to manage these dependencies. For now, this test does not denylist the dependencies.
+[BindingsDenylist = "dart, go, libfuzzer, rust, syzkaller"]
+protocol OnlyCppAndDeps {
+};
+
+[BindingsDenylist = "cpp, dart, go, libfuzzer, llcpp, rust, syzkaller"]
 service OnlyHlcpp {
 };

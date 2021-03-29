@@ -7,7 +7,7 @@ import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
-template("_fidl_cpp_codegen_impl") {
+template("_fidl_hlcpp_codegen_impl") {
   generation_target_name = "${target_name}_generate"
   fidl_target_name = invoker.fidl_target_name
 
@@ -88,10 +88,9 @@ template("_fidl_cpp_codegen_impl") {
       rebase_path("${clang_prefix}/clang-format", "", root_build_dir),
     ]
 
-    # From tools/fidl/fidlgen_hlcpp/codegen/codegen.go:
-    #   _test_base.h is omitted in this experimental mode
-    # TODO(fxb/70753): remove this logic once experimental flag is removed
+    # ${file_stem}_test_base.h is omitted when only generating domain objects.
     if (experimental_split_generation_domain_objects) {
+      assert(!generates_test_base_header)
       args += [ "--experimental-split-generation-domain-objects" ]
     }
 
@@ -103,15 +102,44 @@ template("_fidl_cpp_codegen_impl") {
   }
 }
 
-# Generates some C++ bindings for a FIDL library.
+# Generates high-level C++ bindings, or natural domain objects,
+# or the fuzzer header library, for a given FIDL library.
 #
-# The parameters for this template are defined in //build/fidl/fidl.gni. The
-# relevant parameters in this template are:
-#   - name;
-#   - sources;
-template("fidl_cpp_codegen") {
+# fidl_hlcpp_codegen accepts tools taking the "--output-base" command line flag.
+# Tools that take "--header" and "--source" should use fidl_cpp_codegen.
+#
+# Parameters
+#
+#  library_name (required)
+#    Name of the FIDL library.
+#
+#  fidl_target_name (required)
+#    Name of the GN target corresponding to the FIDL library.
+#
+#   output_stem (required)
+#     A suffix to name generated files, after library path, and before
+#     any file extension.
+#
+#   fidlgen_tool (required)
+#     The code generation tool to use, as an absolute GN label.
+#
+#   fuzzers (optional)
+#     A list of { protocol = ..., methods = ... } scopes declaring which
+#     methods will be fuzzed by a fuzzer.
+#
+#   experimental_split_generation_domain_objects (optional)
+#     If true, only generate the domain objects (structs, tables, ...)
+#     for this library.
+#
+#   generates_test_base_header (required)
+#     Specifies if the tool will generate a test base header.
+#     If experimental_split_generation_domain_objects is true, then this
+#     parameter must be false, as only protocols require a test base.
+#     This is required to support hermetic actions.
+#
+template("fidl_hlcpp_codegen") {
   if (current_toolchain == fidl_toolchain) {
-    _fidl_cpp_codegen_impl(target_name) {
+    _fidl_hlcpp_codegen_impl(target_name) {
       forward_variables_from(invoker, "*")
     }
   } else {
@@ -121,11 +149,11 @@ template("fidl_cpp_codegen") {
   }
 }
 
-template("_fidl_llcpp_codegen_impl") {
+template("_fidl_cpp_codegen_impl") {
   generation_target_name = "${target_name}_generate"
   generation_visibility = [
     ":$target_name",
-    "//tools/fidl/fidlgen_llcpp:*",
+    "${invoker.fidlgen_tool}:*",
   ]
 
   library_name = invoker.library_name
@@ -139,19 +167,26 @@ template("_fidl_llcpp_codegen_impl") {
   file_stem = "$fidl_target_gen_dir/$fidl_target_name/$include_stem"
 
   compiled_action(generation_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "generates_test_base_header",
+                           ])
 
     visibility = generation_visibility
 
-    tool = "//tools/fidl/fidlgen_llcpp"
+    tool = invoker.fidlgen_tool
 
     inputs = [ json_representation ]
 
     outputs = [
       "${file_stem}.h",
       "${file_stem}.cc",
-      "${file_stem}_test_base.h",
     ]
+
+    if (generates_test_base_header) {
+      outputs += [ "${file_stem}_test_base.h" ]
+    }
 
     args = [
       "--json",
@@ -160,8 +195,6 @@ template("_fidl_llcpp_codegen_impl") {
       rebase_path("${file_stem}.h", root_build_dir),
       "--source",
       rebase_path("${file_stem}.cc", root_build_dir),
-      "--test-base",
-      rebase_path("${file_stem}_test_base.h", root_build_dir),
       "--include-base",
       rebase_path("$fidl_target_gen_dir/$fidl_target_name", root_build_dir),
       "--include-stem",
@@ -169,6 +202,13 @@ template("_fidl_llcpp_codegen_impl") {
       "--clang-format-path",
       rebase_path("${clang_prefix}/clang-format", "", root_build_dir),
     ]
+
+    if (invoker.generates_test_base_header) {
+      args += [
+        "--test-base",
+        rebase_path("${file_stem}_test_base.h", root_build_dir),
+      ]
+    }
 
     deps = [ ":$fidl_target_name($fidl_toolchain)" ]
 
@@ -178,10 +218,34 @@ template("_fidl_llcpp_codegen_impl") {
   }
 }
 
-# Generates low-level C++ bindings for a library.
-template("fidl_llcpp_codegen") {
+# Generates low-level or unified C++ bindings for a FIDL library.
+#
+# fidl_cpp_codegen accepts tools taking the "--header" and "--source"
+# command line flags.
+# Tools that take "--output-base" should use fidl_hlcpp_codegen.
+#
+# Parameters
+#
+#  library_name (required)
+#    Name of the FIDL library.
+#
+#  fidl_target_name (required)
+#    Name of the GN target corresponding to the FIDL library.
+#
+#   output_stem (required)
+#     A suffix to name generated files, after library path, and before
+#     any file extension.
+#
+#   fidlgen_tool (required)
+#     The code generation tool to use, as an absolute GN label.
+#
+#   generates_test_base_header (required)
+#     Specifies if the tool will generate a test base header.
+#     This is required to support hermetic actions.
+#
+template("fidl_cpp_codegen") {
   if (current_toolchain == fidl_toolchain) {
-    _fidl_llcpp_codegen_impl(target_name) {
+    _fidl_cpp_codegen_impl(target_name) {
       forward_variables_from(invoker, "*")
     }
   } else {
@@ -297,7 +361,7 @@ template("_fidl_cpp_library_impl") {
 #
 #  source_only (optional)
 #    If true, the generated library only has a source file.
-
+#
 template("fidl_cpp_library") {
   if (current_toolchain != fidl_toolchain) {
     _fidl_cpp_library_impl(target_name) {
@@ -351,14 +415,14 @@ template("_fidl_cpp_fuzzer") {
   }
 }
 
-# Generates various C++ FIDL bindings: HLCPP, LLCPP, and fuzzers.
+# Generates various C++ FIDL bindings: HLCPP, LLCPP, Unified C++, and fuzzers.
 #
 # Note:
-# - Under the FIDL toolchain, we would create targets that generate
-#   the HLCPP/LLCPP bindings.
+# - Under the FIDL toolchain, we would create action targets that
+#   generate the C++ bindings.
 # - Under other toolchains, we would create library targets that
 #   reference the generated code.
-
+#
 template("fidl_cpp_family") {
   # Allow users to override the library name by specifying a
   # "name" variable in the `fidl("my_lib")` template invocation.
@@ -419,7 +483,7 @@ template("fidl_cpp_family") {
 
   # Define C++ natural types target.
   # They are generated using the HLCPP backend.
-  fidl_cpp_codegen("${target_name}_cpp_natural_types") {
+  fidl_hlcpp_codegen("${target_name}_cpp_natural_types") {
     forward_variables_from(common_options, "*")
     output_stem = "cpp/natural_types"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
@@ -440,7 +504,10 @@ template("fidl_cpp_family") {
   }
 
   # Define HLCPP target.
-  fidl_cpp_codegen("${target_name}_hlcpp") {
+  # TODO(fxbug.dev/64093): Currently the HLCPP generated code embeds the
+  # natural types inline. Change this to depend on the dedicated natural types
+  # target when the unified bindings and HLCPP are used in one program.
+  fidl_hlcpp_codegen("${target_name}_hlcpp") {
     forward_variables_from(common_options, "*")
     output_stem = "cpp/fidl"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
@@ -482,9 +549,11 @@ template("fidl_cpp_family") {
 
   # Define LLCPP target, if requested.
   if (llcpp_public_deps != []) {
-    fidl_llcpp_codegen("${target_name}_llcpp") {
+    fidl_cpp_codegen("${target_name}_llcpp") {
       forward_variables_from(common_options, "*")
       output_stem = "llcpp/fidl"
+      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+      generates_test_base_header = true
     }
     fidl_cpp_library("${target_name}_llcpp") {
       forward_variables_from(invoker,
@@ -499,12 +568,45 @@ template("fidl_cpp_family") {
     }
   }
 
+  # Unified C++ Bindings
+  #
+  # The unified bindings imports the natural types from HLCPP and the
+  # entire LLCPP bindings, and extends it with messaging APIs that works
+  # with the natural types.
+  #
+
+  # Define the unified bindings target.
+  # Note that we also check llcpp_public_deps here, because we would not
+  # generate the corresponding LLCPP bindings if it was empty.
+  if (llcpp_public_deps != []) {
+    fidl_cpp_codegen("${target_name}_cpp") {
+      forward_variables_from(common_options, "*")
+      output_stem = "cpp/fidl_v2"
+      fidlgen_tool = "//tools/fidl/fidlgen_cpp"
+      generates_test_base_header = false
+    }
+    fidl_cpp_library("${target_name}_cpp") {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "visibility",
+                             ])
+      forward_variables_from(common_options, "*")
+      output_stem = "cpp/fidl_v2"
+      target_suffix = "_cpp"
+      additional_public_deps = [
+        ":${fidl_target_name}_cpp_natural_types",
+        ":${fidl_target_name}_llcpp",
+      ]
+    }
+  }
+
   #
   # Fuzzers (also dependent on HLCPP and LLCPP)
   #
 
   # Define fuzzer targets.
-  fidl_cpp_codegen("${target_name}_libfuzzer") {
+  fidl_hlcpp_codegen("${target_name}_libfuzzer") {
     forward_variables_from(invoker, [ "fuzzers" ])
     forward_variables_from(common_options, "*")
     output_stem = "cpp/libfuzzer"

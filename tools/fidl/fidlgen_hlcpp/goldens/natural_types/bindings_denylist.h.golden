@@ -21,6 +21,11 @@ class OnlyHlcpp;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+class OnlyCppAndDeps;
+using OnlyCppAndDepsHandle = ::fidl::InterfaceHandle<OnlyCppAndDeps>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
@@ -63,6 +68,17 @@ class OnlyLibfuzzerAndDeps_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class OnlyCppAndDeps_RequestEncoder {
+ public:
+};
+
+class OnlyCppAndDeps_ResponseEncoder {
+ public:
 };
 #endif  // __Fuchsia__
 

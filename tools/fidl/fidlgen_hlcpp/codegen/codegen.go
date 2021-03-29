@@ -119,14 +119,15 @@ func (gen *FidlGenerator) generateFile(filepath, clangFormatPath string, generat
 
 // GenerateFidl generates all files required for the C++ bindings.
 func (gen *FidlGenerator) GenerateFidl(fidl fidlgen.Root, config *Config, clangFormatPath string) error {
-	tree := cpp.CompileHL(fidl)
-
 	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)
 	if err != nil {
 		return err
 	}
-	tree.PrimaryHeader = relStem + ".h"
-	tree.IncludeStem = config.IncludeStem
+
+	tree := cpp.CompileHL(fidl, cpp.HeaderOptions{
+		PrimaryHeader: relStem + ".h",
+		IncludeStem:   config.IncludeStem,
+	})
 
 	headerPath := config.OutputBase + ".h"
 	sourcePath := config.OutputBase + ".cc"

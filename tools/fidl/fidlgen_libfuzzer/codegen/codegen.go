@@ -88,8 +88,9 @@ type Config struct {
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl fidlgen.Root, config *Config, clangFormatPath string) error {
-	tree := cpp.CompileLibFuzzer(fidl)
-	prepareTree(fidl.Name, config.IncludeStem, &tree)
+	options, headers := headerOptions(fidl.Name, config.IncludeStem)
+	tree := cpp.CompileLibFuzzer(fidl, options)
+	tree.Headers = headers
 
 	baseDir := filepath.Dir(config.OutputBase)
 	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
@@ -100,7 +101,9 @@ func (gen FidlGenerator) GenerateFidl(fidl fidlgen.Root, config *Config, clangFo
 		return err
 	}
 
-	prepareTreeForDecoderEncoders(fidl.Name, config.IncludeStem, &tree)
+	options, headers = headerOptionsForDecoderEncoders(fidl.Name, config.IncludeStem)
+	tree.HeaderOptions = options
+	tree.Headers = headers
 	if err := gen.GenerateDecoderEncoders(fidl, tree, config, clangFormatPath); err != nil {
 		return err
 	}
@@ -190,18 +193,20 @@ func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidlgen.Root, tree cpp.Roo
 	return gen.GenerateDecoderEncoderSource(sourceFormatterPipe, tree)
 }
 
-func prepareTree(name fidlgen.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
+func headerOptions(name fidlgen.EncodedLibraryIdentifier, includeStem string) (cpp.HeaderOptions, []string) {
 	pkgPath := strings.Replace(string(name), ".", "/", -1)
-	tree.PrimaryHeader = pkgPath + "/" + includeStem + ".h"
-	tree.IncludeStem = includeStem
-	tree.Headers = []string{pkgPath}
+	return cpp.HeaderOptions{
+		PrimaryHeader: pkgPath + "/" + includeStem + ".h",
+		IncludeStem:   includeStem,
+	}, []string{pkgPath}
 }
 
-func prepareTreeForDecoderEncoders(name fidlgen.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
+func headerOptionsForDecoderEncoders(name fidlgen.EncodedLibraryIdentifier, includeStem string) (cpp.HeaderOptions, []string) {
 	pkgPath := strings.Replace(string(name), ".", "/", -1)
-	tree.PrimaryHeader = pkgPath + "/" + includeStem + "_decode_encode.h"
-	tree.IncludeStem = includeStem
-	tree.Headers = []string{pkgPath}
+	return cpp.HeaderOptions{
+		PrimaryHeader: pkgPath + "/" + includeStem + "_decode_encode.h",
+		IncludeStem:   includeStem,
+	}, []string{pkgPath}
 }
 
 func protocols(decls []cpp.Kinded) []cpp.Protocol {

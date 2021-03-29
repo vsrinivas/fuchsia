@@ -21,6 +21,11 @@ class OnlyHlcpp;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+class OnlyCppAndDeps;
+using OnlyCppAndDepsHandle = ::fidl::InterfaceHandle<OnlyCppAndDeps>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
@@ -66,6 +71,17 @@ class OnlyLibfuzzerAndDeps_ResponseEncoder {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+class OnlyCppAndDeps_RequestEncoder {
+ public:
+};
+
+class OnlyCppAndDeps_ResponseEncoder {
+ public:
+};
+#endif  // __Fuchsia__
+
 constexpr uint32_t AllBindings = 0u;
 
 }  // namespace bindingsdenylist
@@ -96,6 +112,17 @@ constexpr uint64_t
 
 #ifdef __Fuchsia__
 class OnlyHlcpp;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+using OnlyCppAndDepsPtr = ::fidl::InterfacePtr<OnlyCppAndDeps>;
+class OnlyCppAndDeps_Proxy;
+class OnlyCppAndDeps_Stub;
+class OnlyCppAndDeps_EventSender;
+class OnlyCppAndDeps_Sync;
+using OnlyCppAndDepsSyncPtr = ::fidl::SynchronousInterfacePtr<OnlyCppAndDeps>;
+class OnlyCppAndDeps_SyncProxy;
+
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class OnlyLibfuzzerAndDeps {
@@ -218,6 +245,89 @@ class OnlyHlcpp::Handler final {
   explicit Handler(::fidl::ServiceHandlerBase* service) { (void)service; }
 
  private:
+};
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class OnlyCppAndDeps {
+ public:
+  using Proxy_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Proxy;
+  using Stub_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Stub;
+  using EventSender_ =
+      ::fidl::test::bindingsdenylist::OnlyCppAndDeps_EventSender;
+  using Sync_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Sync;
+  virtual ~OnlyCppAndDeps();
+};
+
+class OnlyCppAndDeps_RequestDecoder {
+ public:
+  OnlyCppAndDeps_RequestDecoder() = default;
+  virtual ~OnlyCppAndDeps_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+};
+
+class OnlyCppAndDeps_ResponseDecoder {
+ public:
+  OnlyCppAndDeps_ResponseDecoder() = default;
+  virtual ~OnlyCppAndDeps_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+};
+
+class OnlyCppAndDeps_EventSender {
+ public:
+  virtual ~OnlyCppAndDeps_EventSender();
+};
+
+class OnlyCppAndDeps_Sync {
+ public:
+  using Proxy_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_SyncProxy;
+  virtual ~OnlyCppAndDeps_Sync();
+};
+
+class OnlyCppAndDeps_Proxy final : public ::fidl::internal::Proxy,
+                                   public OnlyCppAndDeps {
+ public:
+  explicit OnlyCppAndDeps_Proxy(::fidl::internal::ProxyController* controller);
+  ~OnlyCppAndDeps_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+
+ private:
+  OnlyCppAndDeps_Proxy(
+      const ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Proxy&) = delete;
+  OnlyCppAndDeps_Proxy& operator=(
+      const ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class OnlyCppAndDeps_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::bindingsdenylist::OnlyCppAndDeps_EventSender {
+ public:
+  typedef class ::fidl::test::bindingsdenylist::OnlyCppAndDeps
+      OnlyCppAndDeps_clazz;
+  explicit OnlyCppAndDeps_Stub(
+      ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Stub::OnlyCppAndDeps_clazz*
+          impl);
+  ~OnlyCppAndDeps_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Stub::OnlyCppAndDeps_clazz*
+      impl_;
+};
+
+class OnlyCppAndDeps_SyncProxy
+    : public ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Sync {
+ public:
+  explicit OnlyCppAndDeps_SyncProxy(::zx::channel channel);
+  ~OnlyCppAndDeps_SyncProxy() override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<OnlyCppAndDeps>;
 };
 #endif  // __Fuchsia__
 }  // namespace bindingsdenylist

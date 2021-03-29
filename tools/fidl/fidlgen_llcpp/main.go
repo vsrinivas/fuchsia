@@ -87,7 +87,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tree := cpp.CompileLL(fidl)
 
 	headerPath, err := filepath.Abs(*flags.header)
 	if err != nil {
@@ -108,8 +107,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tree.PrimaryHeader = primaryHeader
-	tree.IncludeStem = *flags.includeStem
+
+	tree := cpp.CompileLL(fidl, cpp.HeaderOptions{
+		PrimaryHeader: primaryHeader,
+		IncludeStem:   *flags.includeStem,
+	})
 
 	generator := codegen.NewGenerator()
 	if err := generator.GenerateHeader(tree, headerPath, *flags.clangFormatPath); err != nil {

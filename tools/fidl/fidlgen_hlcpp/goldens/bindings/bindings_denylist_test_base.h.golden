@@ -17,6 +17,13 @@ class OnlyLibfuzzerAndDeps_TestBase
     NotImplemented_("LibfuzzerNeedsNonemptyProtocol");
   }
 };
+
+class OnlyCppAndDeps_TestBase
+    : public ::fidl::test::bindingsdenylist::OnlyCppAndDeps {
+ public:
+  virtual ~OnlyCppAndDeps_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
 }  // namespace testing
 }  // namespace bindingsdenylist
 }  // namespace test

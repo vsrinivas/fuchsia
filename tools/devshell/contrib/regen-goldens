@@ -19,8 +19,8 @@
 ## fx regen-goldens fidlc -o  # regen fidlc goldens, printing verbose output
 ##
 ## Supported tools:
-##   fidlc, fidldoc, fidlgen_dart, fidlgen_go, fidlgen_hlcpp, fidlgen_libfuzzer,
-##   fidlgen_llcpp, fidlgen_rust, fidlgen_syzkaller, gidl_llcpp
+##   fidlc, fidldoc, fidlgen_cpp, fidlgen_dart, fidlgen_go, fidlgen_hlcpp,
+##   fidlgen_libfuzzer, fidlgen_llcpp, fidlgen_rust, fidlgen_syzkaller, gidl_llcpp
 
 set -eo pipefail
 
@@ -30,6 +30,7 @@ fx-config-read
 readonly all_tools=(
     "fidlc"
     "fidldoc"
+    "fidlgen_cpp"
     "fidlgen_dart"
     "fidlgen_go"
     "fidlgen_hlcpp"

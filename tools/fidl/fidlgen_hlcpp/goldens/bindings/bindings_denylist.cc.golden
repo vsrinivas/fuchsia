@@ -214,3 +214,107 @@ zx_status_t OnlyLibfuzzerAndDeps_SyncProxy::LibfuzzerNeedsNonemptyProtocol() {
 }  // namespace test
 }  // namespace fidl
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace fidl {
+namespace test {
+namespace bindingsdenylist {
+OnlyCppAndDeps::~OnlyCppAndDeps() = default;
+
+const fidl_type_t* ::fidl::test::bindingsdenylist::
+    OnlyCppAndDeps_RequestDecoder::GetType(uint64_t ordinal,
+                                           bool* out_needs_response) {
+  switch (ordinal) {
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* OnlyCppAndDeps_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    default:
+      return nullptr;
+  }
+}
+
+OnlyCppAndDeps_EventSender::~OnlyCppAndDeps_EventSender() = default;
+
+OnlyCppAndDeps_Sync::~OnlyCppAndDeps_Sync() = default;
+
+OnlyCppAndDeps_Proxy::OnlyCppAndDeps_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+OnlyCppAndDeps_Proxy::~OnlyCppAndDeps_Proxy() = default;
+
+zx_status_t OnlyCppAndDeps_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+OnlyCppAndDeps_Stub::OnlyCppAndDeps_Stub(
+    ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Stub::OnlyCppAndDeps_clazz*
+        impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+OnlyCppAndDeps_Stub::~OnlyCppAndDeps_Stub() = default;
+
+namespace {}  // namespace
+
+zx_status_t OnlyCppAndDeps_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::fidl::test::bindingsdenylist::OnlyCppAndDeps_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+OnlyCppAndDeps_SyncProxy::OnlyCppAndDeps_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+OnlyCppAndDeps_SyncProxy::~OnlyCppAndDeps_SyncProxy() = default;
+}  // namespace bindingsdenylist
+}  // namespace test
+}  // namespace fidl
+#endif  // __Fuchsia__

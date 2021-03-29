@@ -252,3 +252,52 @@ void ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::
   static_assert(offsetof(OnlyLlcpp, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
+
+#ifdef __Fuchsia__
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::DispatchEvent(
+        fidl_incoming_msg_t* msg) {
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
+}
+#endif
+
+namespace fidl_test_bindingsdenylist {
+#ifdef __Fuchsia__
+namespace methods {}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::MethodEntry OnlyCppAndDeps[] = {};
+
+}  // namespace entries
+
+::fidl::DispatchResult OnlyCppAndDeps::TryDispatch(Interface* impl,
+                                                   fidl_incoming_msg_t* msg,
+                                                   ::fidl::Transaction* txn) {
+  return ::fidl::DispatchResult::kNotFound;
+}
+#endif
+}  // namespace fidl_test_bindingsdenylist
+
+namespace fidl_test_bindingsdenylist {
+#ifdef __Fuchsia__
+::fidl::DispatchResult OnlyCppAndDeps::Dispatch(Interface* impl,
+                                                fidl_incoming_msg_t* msg,
+                                                ::fidl::Transaction* txn) {
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  txn->InternalError(
+      {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  return ::fidl::DispatchResult::kNotFound;
+}
+}  // namespace fidl_test_bindingsdenylist
+::fidl::DispatchResult
+fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::
+    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl_test_bindingsdenylist::OnlyCppAndDeps::Dispatch(this, msg, txn);
+}
+#endif
+
+#ifdef __Fuchsia__
+#endif

@@ -145,14 +145,52 @@ type Member interface {
 }
 
 type Root struct {
-	PrimaryHeader   string
-	IncludeStem     string
 	Headers         []string
 	FuzzerHeaders   []string
 	HandleTypes     []string
+	RawLibrary      fidlgen.LibraryIdentifier
 	Library         fidlgen.LibraryIdentifier
 	LibraryReversed fidlgen.LibraryIdentifier
 	Decls           []Kinded
+	HeaderOptions
+}
+
+// NaturalDomainObjectsHeader computes the path to #include the natural domain
+// object header.
+func (r Root) NaturalDomainObjectsHeader() string {
+	if r.NaturalDomainObjectsIncludeStem == "" {
+		fidlgen.TemplateFatalf("Natural domain objects include stem was missing")
+	}
+	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.RawLibrary), r.NaturalDomainObjectsIncludeStem)
+}
+
+// WireBindingsHeader computes the path to #include the natural domain
+// object header.
+func (r Root) WireBindingsHeader() string {
+	if r.WireBindingsIncludeStem == "" {
+		fidlgen.TemplateFatalf("Wire bindings include stem was missing")
+	}
+	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.RawLibrary), r.WireBindingsIncludeStem)
+}
+
+// HeaderOptions are independent from the FIDL library IR, but used in the generated
+// code to properly #include their dependencies.
+type HeaderOptions struct {
+	// PrimaryHeader will be used as the path to #include the generated header.
+	PrimaryHeader string
+
+	// IncludeStem is the suffix after library path when referencing includes.
+	// Includes will be of the form
+	//     #include <fidl/library/name/{include-stem}.h>
+	IncludeStem string
+
+	// NaturalDomainObjectsIncludeStem is the file stem of the natural
+	// domain object header, if it needs to be included by the generated code.
+	NaturalDomainObjectsIncludeStem string
+
+	// WireBindingsIncludeStem is the file stem of the wire bindings (LLCPP)
+	// header, if it needs to be included by the generated code.
+	WireBindingsIncludeStem string
 }
 
 // Holds information about error results on methods
@@ -264,6 +302,8 @@ func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) Na
 			Wire:    wireNamespace(ci.Library).Member(name),
 		}
 	case fidlgen.ProtocolDeclType, fidlgen.ServiceDeclType:
+		// TODO(yifeit): Protocols and services should not have DeclName.
+		// Not all bindings generate these types.
 		return NameVariants{
 			Natural: naturalNamespace(ci.Library).Member(name),
 			Wire:    unifiedNamespace(ci.Library).Member(name),
@@ -405,8 +445,10 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	return r
 }
 
-func compile(r fidlgen.Root) Root {
-	root := Root{}
+func compile(r fidlgen.Root, h HeaderOptions) Root {
+	root := Root{
+		HeaderOptions: h,
+	}
 	library := make(fidlgen.LibraryIdentifier, 0)
 	rawLibrary := make(fidlgen.LibraryIdentifier, 0)
 	for _, identifier := range fidlgen.ParseLibraryName(r.Name) {
@@ -423,6 +465,7 @@ func compile(r fidlgen.Root) Root {
 		resultForUnion:  make(map[fidlgen.EncodedCompoundIdentifier]*Result),
 	}
 
+	root.RawLibrary = rawLibrary
 	root.Library = library
 	libraryReversed := make(fidlgen.LibraryIdentifier, len(library))
 	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
@@ -506,14 +549,18 @@ func compile(r fidlgen.Root) Root {
 	return root
 }
 
-func CompileHL(r fidlgen.Root) Root {
-	return compile(r.ForBindings("hlcpp"))
+func CompileHL(r fidlgen.Root, h HeaderOptions) Root {
+	return compile(r.ForBindings("hlcpp"), h)
 }
 
-func CompileLL(r fidlgen.Root) Root {
-	return compile(r.ForBindings("llcpp"))
+func CompileLL(r fidlgen.Root, h HeaderOptions) Root {
+	return compile(r.ForBindings("llcpp"), h)
 }
 
-func CompileLibFuzzer(r fidlgen.Root) Root {
-	return compile(r.ForBindings("libfuzzer"))
+func CompileUnified(r fidlgen.Root, h HeaderOptions) Root {
+	return compile(r.ForBindings("cpp"), h)
+}
+
+func CompileLibFuzzer(r fidlgen.Root, h HeaderOptions) Root {
+	return compile(r.ForBindings("libfuzzer"), h)
 }

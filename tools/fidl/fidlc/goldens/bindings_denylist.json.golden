@@ -14,7 +14,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "hlcpp, dart, go, libfuzzer, llcpp, rust"
+          "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust"
         }
       ],
       "type": {
@@ -89,7 +89,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "hlcpp, go, libfuzzer, llcpp, rust, syzkaller"
+          "value": "cpp, go, hlcpp, libfuzzer, llcpp, rust, syzkaller"
         }
       ],
       "type": "uint32",
@@ -130,7 +130,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "dart, go, rust, syzkaller"
+          "value": "cpp, dart, go, rust, syzkaller"
         }
       ],
       "methods": [
@@ -168,6 +168,22 @@
           "is_composed": false
         }
       ]
+    },
+    {
+      "name": "fidl.test.bindingsdenylist/OnlyCppAndDeps",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
+        "line": 45,
+        "column": 10,
+        "length": 14
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "dart, go, libfuzzer, rust, syzkaller"
+        }
+      ],
+      "methods": []
     }
   ],
   "service_declarations": [
@@ -175,14 +191,14 @@
       "name": "fidl.test.bindingsdenylist/OnlyHlcpp",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
-        "line": 43,
+        "line": 49,
         "column": 9,
         "length": 9
       },
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "dart, go, libfuzzer, llcpp, rust, syzkaller"
+          "value": "cpp, dart, go, libfuzzer, llcpp, rust, syzkaller"
         }
       ],
       "members": []
@@ -201,7 +217,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "hlcpp, dart, libfuzzer, llcpp, rust, syzkaller"
+          "value": "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller"
         }
       ],
       "members": [],
@@ -229,7 +245,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "hlcpp, dart, go, libfuzzer, llcpp, syzkaller"
+          "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller"
         }
       ],
       "members": [],
@@ -258,7 +274,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "hlcpp, dart, go, libfuzzer, rust, syzkaller"
+          "value": "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller"
         }
       ],
       "members": [
@@ -300,6 +316,7 @@
     "fidl.test.bindingsdenylist/OnlyHlcpp",
     "fidl.test.bindingsdenylist/OnlyGo",
     "fidl.test.bindingsdenylist/OnlyDart",
+    "fidl.test.bindingsdenylist/OnlyCppAndDeps",
     "fidl.test.bindingsdenylist/AllBindings"
   ],
   "declarations": {
@@ -307,6 +324,7 @@
     "fidl.test.bindingsdenylist/AllBindings": "const",
     "fidl.test.bindingsdenylist/OnlyDart": "enum",
     "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
+    "fidl.test.bindingsdenylist/OnlyCppAndDeps": "interface",
     "fidl.test.bindingsdenylist/OnlyHlcpp": "service",
     "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix0": "struct",
     "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix1": "struct",

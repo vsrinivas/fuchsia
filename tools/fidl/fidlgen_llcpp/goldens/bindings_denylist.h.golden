@@ -41,6 +41,9 @@ namespace fidl_test_bindingsdenylist {
 class OnlyLibfuzzerAndDeps;
 namespace wire {
 class OnlyLlcpp;
+}  // namespace wire
+class OnlyCppAndDeps;
+namespace wire {
 
 extern "C" const fidl_type_t fidl_test_bindingsdenylist_OnlyLlcppTable;
 
@@ -680,6 +683,140 @@ class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
 };
 
 namespace fidl_test_bindingsdenylist {
+class OnlyCppAndDeps final {
+  OnlyCppAndDeps() = delete;
+
+ public:
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
+#ifdef __Fuchsia__
+  // Collection of return types of FIDL calls in this protocol.
+  class ResultOf final {
+    ResultOf() = delete;
+
+   public:
+  };
+
+  // Collection of return types of FIDL calls in this protocol,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+
+   public:
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel or a
+  // const reference to a
+  // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>|, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+  };
+
+  using SyncClient =
+      fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+
+#ifdef __Fuchsia__
+  using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+  using ClientImpl = ::fidl::internal::WireClientImpl<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+#endif
+
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static ::fidl::DispatchResult TryDispatch(Interface* impl,
+                                            fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the
+  // protocol. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static ::fidl::DispatchResult Dispatch(Interface* impl,
+                                         fidl_incoming_msg_t* msg,
+                                         ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Only used with |fidl::BindServer| to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static ::fidl::DispatchResult TypeErasedDispatch(void* impl,
+                                                   fidl_incoming_msg_t* msg,
+                                                   ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+#endif
+
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+};
+}  // namespace fidl_test_bindingsdenylist
+template <>
+class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+          client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>&
+  client_end() const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>&
+  client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_bindingsdenylist::OnlyCppAndDeps;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_bindingsdenylist {
 namespace wire {
 
 constexpr uint32_t AllBindings = 0u;
@@ -863,6 +1000,106 @@ class ::fidl::internal::WireWeakEventSender<
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>
+      binding_;
+};
+#endif
+
+namespace fidl_test_bindingsdenylist {
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_bindingsdenylist
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl_test_bindingsdenylist::OnlyCppAndDeps::
+          EventHandlerInterface {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
+namespace fidl_test_bindingsdenylist {}  // namespace fidl_test_bindingsdenylist
+template <>
+class ::fidl::internal::WireClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    final : private ::fidl::internal::ClientBase {
+ public:
+  ::fidl::WireAsyncEventHandler<::fidl_test_bindingsdenylist::OnlyCppAndDeps>*
+  event_handler() const {
+    return event_handler_.get();
+  }
+
+ private:
+  friend class ::fidl::Client<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+
+  explicit WireClientImpl(std::shared_ptr<::fidl::WireAsyncEventHandler<
+                              ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>
+                              event_handler)
+      : event_handler_(std::move(event_handler)) {}
+
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      fidl_incoming_msg_t* msg) override;
+
+  std::shared_ptr<::fidl::WireAsyncEventHandler<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>
+      event_handler_;
+};
+namespace fidl_test_bindingsdenylist {
+#endif
+
+}  // namespace fidl_test_bindingsdenylist
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the OnlyCppAndDeps protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+          server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>&
+  server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>&
+  server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps> server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
+ public:
+ private:
+  friend class ::fidl::ServerBindingRef<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>
+          binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>
       binding_;
 };
 #endif

@@ -206,7 +206,8 @@ func TestWireBindingsAllocation(t *testing.T) {
 	}
 	for _, ex := range cases {
 		t.Run(ex.desc, func(t *testing.T) {
-			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
+			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; "+ex.fidl),
+				HeaderOptions{})
 			var protocols []Protocol
 			for _, decl := range root.Decls {
 				if p, ok := decl.(Protocol); ok {
@@ -232,7 +233,7 @@ library fuchsia.foobar;
 // Regular protocol
 protocol P {};
 `
-	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
+	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl), HeaderOptions{})
 
 	messaging := root.Decls[0].(Protocol).hlMessaging
 	assertEqual(t, messaging.ProtocolMarker.String(), "::fuchsia::foobar::P")
