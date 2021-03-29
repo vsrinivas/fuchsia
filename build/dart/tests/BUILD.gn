@@ -4,6 +4,7 @@
 
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
+import("//build/python/python_host_test.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
@@ -33,4 +34,17 @@ dart_component("dart-component") {
 
 fuchsia_package("build-dart-test-package") {
   deps = [ ":dart-component" ]
+}
+
+# TODO(fxb/73062): Ideally the these two rules and the test script would live in
+# the parent directory, next to the script being tested.
+group("host_tests") {
+  testonly = true
+  deps = [ ":gen_reference_docs_test($host_toolchain)" ]
+}
+
+python_host_test("gen_reference_docs_test") {
+  main_source = "gen_reference_docs_test.py"
+  sources = [ "../gen_reference_docs.py" ]
+  libraries = [ "//third_party/pyyaml/lib3/yaml" ]
 }
