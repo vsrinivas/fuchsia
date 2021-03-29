@@ -170,11 +170,13 @@ mod test {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let manifest_contents = V1_SIMPLE_MANIFEST.to_string();
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         flash_impl(
             writer,
             manifest_contents.as_bytes(),
             setup().1,
-            FlashCommand { manifest: "whatever".to_string(), ..Default::default() },
+            FlashCommand { manifest: tmp_file_name, ..Default::default() },
         )
         .await?;
         let FlashManifest::V1(manifest) = FlashManifest::load(manifest_contents.as_bytes())?;
@@ -228,12 +230,14 @@ mod test {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let manifest_contents = V1_MANIFEST.to_string();
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         flash_impl(
             writer,
             manifest_contents.as_bytes(),
             setup().1,
             FlashCommand {
-                manifest: "whatever".to_string(),
+                manifest: tmp_file_name,
                 product: Some("product".to_string()),
                 ..Default::default()
             },
@@ -261,12 +265,15 @@ mod test {
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let test_staged_file = format!("{},{}", test_oem_cmd, tmp_file_name).parse::<OemFile>()?;
 
+        let tmp_manifest_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_manifest_file_name = tmp_manifest_file.path().to_string_lossy().to_string();
+
         flash_impl(
             writer,
             manifest_contents.as_bytes(),
             proxy,
             FlashCommand {
-                manifest: "whatever".to_string(),
+                manifest: tmp_manifest_file_name,
                 oem_stage: vec![test_staged_file],
                 ..Default::default()
             },

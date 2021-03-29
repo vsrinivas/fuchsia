@@ -291,7 +291,9 @@ impl Flash for FlashManifestV1 {
     where
         W: Write + Send,
     {
-        let path = Path::new(&cmd.manifest);
+        let path = Path::new(&cmd.manifest)
+            .canonicalize()
+            .context("Getting absolute path of flashing manifest")?;
         let product = match cmd.product {
             Some(p) => {
                 if let Some(res) = self.0.iter().find(|product| product.name == p) {
