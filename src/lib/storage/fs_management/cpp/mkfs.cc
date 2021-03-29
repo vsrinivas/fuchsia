@@ -102,6 +102,9 @@ zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
     case DISK_FORMAT_MINFS:
       return MkfsNativeFs(fs_management::GetBinaryPath("minfs").c_str(), device_path, cb, options,
                           true);
+    case DISK_FORMAT_FXFS:
+      return MkfsNativeFs(fs_management::GetBinaryPath("fxfs").c_str(), device_path, cb, options,
+                          true);
     case DISK_FORMAT_FAT:
       return MkfsFat(device_path, cb, options);
     case DISK_FORMAT_BLOBFS:

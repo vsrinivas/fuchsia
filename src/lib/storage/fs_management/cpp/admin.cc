@@ -127,6 +127,9 @@ zx::status<> FsInit(zx::channel device, disk_format_t df, const init_options_t& 
     case DISK_FORMAT_MINFS:
       return InitNativeFs(fs_management::GetBinaryPath("minfs").c_str(), std::move(device), options,
                           std::move(outgoing_directory));
+    case DISK_FORMAT_FXFS:
+      return InitNativeFs(fs_management::GetBinaryPath("fxfs").c_str(), std::move(device), options,
+                          std::move(outgoing_directory));
     case DISK_FORMAT_BLOBFS:
       return InitNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), std::move(device),
                           options, std::move(outgoing_directory));

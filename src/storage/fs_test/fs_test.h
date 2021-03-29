@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -32,6 +33,8 @@
 namespace fs_test {
 
 class Filesystem;
+
+using RamDevice = std::variant<storage::RamDisk, ramdevice_client::RamNand>;
 
 struct TestFilesystemOptions {
   static TestFilesystemOptions DefaultMinfs();
@@ -67,6 +70,9 @@ std::vector<TestFilesystemOptions> AllTestFilesystems();
 // Provides the ability to map and filter all test file systems, using the supplied function.
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
     std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>);
+
+// Returns device and device path.
+zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(const TestFilesystemOptions& options);
 
 // A file system instance is a specific instance created for test purposes.
 class FilesystemInstance {
@@ -127,11 +133,26 @@ class FilesystemImpl : public Filesystem {
   }
 };
 
-template <typename T, typename Instance>
+template <typename T>
 class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
  public:
+  virtual std::unique_ptr<FilesystemInstance> Create(RamDevice device,
+                                                     std::string device_path) const = 0;
+
   zx::status<std::unique_ptr<FilesystemInstance>> Make(
-      const TestFilesystemOptions& options) const override;
+      const TestFilesystemOptions& options) const override {
+    auto result = CreateRamDevice(options);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    auto [device, device_path] = std::move(result).value();
+    auto instance = Create(std::move(device), std::move(device_path));
+    zx::status<> status = instance->Format(options);
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    return zx::ok(std::move(instance));
+  }
 };
 
 // Support for Memfs.
@@ -247,6 +268,18 @@ class TestFilesystem {
   std::string mount_path_;
   bool mounted_ = false;
 };
+
+// -- Default implementations that use fs-management --
+
+zx::status<> FsFormat(const std::string& device_path, disk_format_t format,
+                      const mkfs_options_t& options);
+
+zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
+                     disk_format_t format, const mount_options_t& mount_options,
+                     zx::channel* outgoing_directory = nullptr);
+
+zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
+    const TestFilesystemOptions& options);
 
 }  // namespace fs_test
 
