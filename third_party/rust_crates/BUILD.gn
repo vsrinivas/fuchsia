@@ -870,10 +870,8 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("walkdir") {
-    deps = [ ":walkdir-v2_3_1" ]
-  }
+group("walkdir") {
+  deps = [ ":walkdir-v2_3_1" ]
 }
 
 group("wasm-bindgen") {
