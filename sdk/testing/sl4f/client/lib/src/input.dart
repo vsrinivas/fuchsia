@@ -275,7 +275,7 @@ class Input {
   ///
   /// Returns `true` on success, or false otherwise.
   Future<bool> keyEvents(final List<KeyEvent> keyEvents) async {
-    final events = keyEvents.map((e) => e.toJson());
+    final events = keyEvents.map((e) => e.toJson()).toList();
     final result = await _sl4f.request('input_facade.KeyEvents', {
       'key_events': events,
     });
