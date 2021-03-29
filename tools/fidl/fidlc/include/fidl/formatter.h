@@ -52,27 +52,27 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
  public:
   FormattingTreeVisitor() : last_location_(nullptr) {}
 
-  virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {
+  void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     DeclarationOrderTreeVisitor::OnProtocolDeclaration(element);
   }
 
-  virtual void OnSourceElementStart(const SourceElement& element) override {
+  void OnSourceElementStart(const SourceElement& element) override {
     OnSourceElementShared(element.start_);
   }
 
-  virtual void OnSourceElementEnd(const SourceElement& element) override {
+  void OnSourceElementEnd(const SourceElement& element) override {
     OnSourceElementShared(element.end_);
   }
 
-  virtual void OnAttribute(const Attribute& element) override {
+  void OnAttribute(const Attribute& element) override {
     // Remove leading whitespace from the element.
     remove_leading_ws_ = true;
     TreeVisitor::OnAttribute(element);
     // Remove leading whitespace from the closing square bracket after the element.
     remove_leading_ws_ = true;
   }
-  virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) override {
+  void OnAttributeList(std::unique_ptr<AttributeList> const& element) override {
     // Disabling these in case we're in a protocol method and it thinks
     // the next line needs to be indented more.  We don't want an indent
     // after a newline following an attribute list.  It will be reenabled by
@@ -92,56 +92,56 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     }
   }
 
-  virtual void OnUsing(std::unique_ptr<Using> const& element) override {
+  void OnUsing(std::unique_ptr<Using> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     TreeVisitor::OnUsing(element);
   }
 
-  virtual void OnAliasDeclaration(std::unique_ptr<AliasDeclaration> const& element) override {
+  void OnAliasDeclaration(std::unique_ptr<AliasDeclaration> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     TreeVisitor::OnAliasDeclaration(element);
   }
 
-  virtual void OnConstDeclaration(std::unique_ptr<ConstDeclaration> const& element) override {
+  void OnConstDeclaration(std::unique_ptr<ConstDeclaration> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     TreeVisitor::OnConstDeclaration(element);
   }
 
-  virtual void OnEnumMember(std::unique_ptr<EnumMember> const& element) override {
+  void OnEnumMember(std::unique_ptr<EnumMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     TreeVisitor::OnEnumMember(element);
   }
 
-  virtual void OnEnumDeclaration(std::unique_ptr<EnumDeclaration> const& element) override {
+  void OnEnumDeclaration(std::unique_ptr<EnumDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     ScopedBool mem(is_enum_or_bits_or_resource_decl_, true);
     TreeVisitor::OnEnumDeclaration(element);
   }
 
-  virtual void OnBitsMember(std::unique_ptr<BitsMember> const& element) override {
+  void OnBitsMember(std::unique_ptr<BitsMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     TreeVisitor::OnBitsMember(element);
   }
 
-  virtual void OnBitsDeclaration(std::unique_ptr<BitsDeclaration> const& element) override {
+  void OnBitsDeclaration(std::unique_ptr<BitsDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     ScopedBool mem(is_enum_or_bits_or_resource_decl_, true);
     TreeVisitor::OnBitsDeclaration(element);
   }
 
-  virtual void OnParameterList(std::unique_ptr<ParameterList> const& element) override {
+  void OnParameterList(std::unique_ptr<ParameterList> const& element) override {
     has_encountered_param_list_start_ = false;
     is_param_list_first_param_on_same_line_ = std::nullopt;
     ScopedBool method(is_param_decl_);
     TreeVisitor::OnParameterList(element);
   }
 
-  virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {
+  void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {
     protocol_method_alignment_ = true;
     protocol_method_alignment_size_ = -1;
     next_nonws_char_is_checkpoint_ = false;
@@ -151,50 +151,50 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnProtocolMethod(element);
   }
 
-  virtual void OnResourceProperty(std::unique_ptr<ResourceProperty> const& element) override {
+  void OnResourceProperty(std::unique_ptr<ResourceProperty> const& element) override {
     TreeVisitor::OnResourceProperty(element);
   }
 
-  virtual void OnResourceDeclaration(std::unique_ptr<ResourceDeclaration> const& element) override {
+  void OnResourceDeclaration(std::unique_ptr<ResourceDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     ScopedBool mem(is_enum_or_bits_or_resource_decl_, true);
     TreeVisitor::OnResourceDeclaration(element);
   }
 
-  virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) override {
+  void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) override {
     OnBlankLineRespectingNode();
     TreeVisitor::OnComposeProtocol(element);
   }
 
-  virtual void OnServiceDeclaration(std::unique_ptr<ServiceDeclaration> const& element) override {
+  void OnServiceDeclaration(std::unique_ptr<ServiceDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     TreeVisitor::OnServiceDeclaration(element);
   }
 
-  virtual void OnServiceMember(std::unique_ptr<ServiceMember> const& element) override {
+  void OnServiceMember(std::unique_ptr<ServiceMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     TreeVisitor::OnServiceMember(element);
   }
 
-  virtual void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) override {
+  void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     TreeVisitor::OnStructDeclaration(element);
   }
 
-  virtual void OnStructMember(std::unique_ptr<StructMember> const& element) override {
+  void OnStructMember(std::unique_ptr<StructMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     // If we are inside a method declaration this is actually a parameter declaration.
     TreeVisitor::OnStructMember(element);
   }
 
-  virtual void OnTableDeclaration(std::unique_ptr<TableDeclaration> const& element) override {
+  void OnTableDeclaration(std::unique_ptr<TableDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     TreeVisitor::OnTableDeclaration(element);
   }
 
-  virtual void OnTableMember(std::unique_ptr<TableMember> const& element) override {
+  void OnTableMember(std::unique_ptr<TableMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     ScopedBool before_colon(blank_space_before_colon_, false);
@@ -202,12 +202,12 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnTableMember(element);
   }
 
-  virtual void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) override {
+  void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     TreeVisitor::OnUnionDeclaration(element);
   }
 
-  virtual void OnUnionMember(std::unique_ptr<UnionMember> const& element) override {
+  void OnUnionMember(std::unique_ptr<UnionMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
     ScopedBool before_colon(blank_space_before_colon_, false);
@@ -215,14 +215,14 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnUnionMember(element);
   }
 
-  virtual void OnTypeConstructor(std::unique_ptr<TypeConstructorOld> const& element) override {
+  void OnTypeConstructor(std::unique_ptr<TypeConstructorOld> const& element) override {
     ScopedIncrement si(nested_type_depth_);
     ScopedBool before_colon(blank_space_before_colon_, is_enum_or_bits_or_resource_decl_);
     ScopedBool after_colon(blank_space_after_colon_, is_enum_or_bits_or_resource_decl_);
     TreeVisitor::OnTypeConstructor(element);
   }
 
-  virtual void OnFile(std::unique_ptr<File> const& element) override;
+  void OnFile(std::unique_ptr<File> const& element) override;
 
   std::string* formatted_output() { return &formatted_output_; }
 
