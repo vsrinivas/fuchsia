@@ -17,12 +17,12 @@ use {
     fuchsia_inspect::{self as inspect, HistogramProperty},
     fuchsia_inspect_contrib::nodes::BoundedListNode,
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task},
+    fuchsia_zircon_sys as zx_sys,
     futures::{lock::Mutex, FutureExt},
     log::warn,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         collections::{BTreeMap, VecDeque},
-        convert::{TryFrom, TryInto},
         ops::{AddAssign, Deref, DerefMut},
         sync::{Arc, Weak},
         time::Duration,
@@ -33,9 +33,9 @@ const CPU_SAMPLE_PERIOD_SECONDS: Duration = Duration::from_secs(60);
 const COMPONENT_CPU_MAX_SAMPLES: usize = 60;
 
 /// Provides stats for all components running in the system.
-pub struct ComponentTreeStats {
+pub struct ComponentTreeStats<T: RuntimeStatsSource> {
     /// Map from a moniker of a component running in the system to its stats.
-    tree: Mutex<BTreeMap<ExtendedMoniker, Arc<Mutex<ComponentStats>>>>,
+    tree: Mutex<BTreeMap<ExtendedMoniker, Arc<Mutex<ComponentStats<T>>>>>,
 
     /// The root of the tree stats.
     node: inspect::Node,
@@ -50,7 +50,7 @@ pub struct ComponentTreeStats {
     totals: Mutex<AggregatedStats>,
 }
 
-impl ComponentTreeStats {
+impl<T: 'static + RuntimeStatsSource + Send> ComponentTreeStats<T> {
     pub async fn new(node: inspect::Node) -> Arc<Self> {
         let processing_times = node.create_int_exponential_histogram(
             "processing_times_ns",
@@ -64,7 +64,7 @@ impl ComponentTreeStats {
 
         let totals = AggregatedStats::new(node.create_child("@total"));
         let this = Arc::new(Self {
-            tree: Mutex::new(Self::init_tree()),
+            tree: Mutex::new(BTreeMap::new()),
             node,
             processing_times,
             task: Mutex::new(None),
@@ -104,32 +104,12 @@ impl ComponentTreeStats {
         this
     }
 
-    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
-        vec![HooksRegistration::new(
-            "ComponentTreeStats",
-            vec![EventType::Started],
-            Arc::downgrade(self) as Weak<dyn Hook>,
-        )]
-    }
-
-    fn init_tree() -> BTreeMap<ExtendedMoniker, Arc<Mutex<ComponentStats>>> {
-        let mut tree = BTreeMap::new();
-        match fuchsia_runtime::job_default().duplicate_handle(zx::Rights::SAME_RIGHTS) {
-            Ok(job) => {
-                let stats = ComponentStats::ready(ComponentTasks {
-                    component_task: Some(DiagnosticsTask::Job(job)),
-                    ..ComponentTasks::EMPTY
-                });
-                tree.insert(ExtendedMoniker::ComponentManager, Arc::new(Mutex::new(stats)));
-            }
-            Err(err) => {
-                warn!(
-                    "Failed to duplicate component manager job. Not tracking its own stats: {:?}",
-                    err
-                )
-            }
+    async fn track_ready(&self, moniker: ExtendedMoniker, source: T) {
+        if let Ok(task_info) = TaskInfo::try_from(source) {
+            let mut stats = ComponentStats::ready(task_info);
+            stats.measure();
+            self.tree.lock().await.insert(moniker.clone(), Arc::new(Mutex::new(stats)));
         }
-        tree
     }
 
     async fn write_measurements_to_inspect(self: &Arc<Self>) -> inspect::Inspector {
@@ -174,33 +154,6 @@ impl ComponentTreeStats {
             }
         }
         task_count
-    }
-
-    async fn on_component_started(
-        self: &Arc<Self>,
-        moniker: ExtendedMoniker,
-        runtime: &RuntimeInfo,
-    ) {
-        let mut tree_guard = self.tree.lock().await;
-        if tree_guard.contains_key(&moniker) {
-            return;
-        }
-
-        let mut receiver_guard = runtime.diagnostics_receiver.lock().await;
-        if let Some(receiver) = receiver_guard.take() {
-            let weak_self = Arc::downgrade(&self);
-            let moniker_for_fut = moniker.clone();
-            let task = fasync::Task::spawn(async move {
-                if let Some(ComponentDiagnostics { tasks: Some(tasks), .. }) = receiver.await.ok() {
-                    if let Some(this) = weak_self.upgrade() {
-                        if let Some(stats) = this.tree.lock().await.get_mut(&moniker_for_fut) {
-                            stats.lock().await.start_measuring(tasks);
-                        }
-                    }
-                }
-            });
-            tree_guard.insert(moniker, Arc::new(Mutex::new(ComponentStats::pending(task))));
-        }
     }
 
     async fn measure(self: &Arc<Self>) {
@@ -251,8 +204,61 @@ impl ComponentTreeStats {
     }
 }
 
+impl ComponentTreeStats<DiagnosticsTask> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        vec![HooksRegistration::new(
+            "ComponentTreeStats",
+            vec![EventType::Started],
+            Arc::downgrade(self) as Weak<dyn Hook>,
+        )]
+    }
+
+    /// Starts tracking component manage rown stats.
+    pub async fn track_component_manager_stats(&self) {
+        match fuchsia_runtime::job_default().duplicate_handle(zx::Rights::SAME_RIGHTS) {
+            Ok(job) => {
+                self.track_ready(ExtendedMoniker::ComponentManager, DiagnosticsTask::Job(job))
+                    .await;
+            }
+            Err(err) => {
+                warn!(
+                    "Failed to duplicate component manager job. Not tracking its own stats: {:?}",
+                    err
+                )
+            }
+        }
+    }
+
+    async fn on_component_started(
+        self: &Arc<Self>,
+        moniker: ExtendedMoniker,
+        runtime: &RuntimeInfo,
+    ) {
+        let mut tree_guard = self.tree.lock().await;
+        if tree_guard.contains_key(&moniker) {
+            return;
+        }
+
+        let mut receiver_guard = runtime.diagnostics_receiver.lock().await;
+        if let Some(receiver) = receiver_guard.take() {
+            let weak_self = Arc::downgrade(&self);
+            let moniker_for_fut = moniker.clone();
+            let task = fasync::Task::spawn(async move {
+                if let Some(ComponentDiagnostics { tasks: Some(tasks), .. }) = receiver.await.ok() {
+                    if let Some(this) = weak_self.upgrade() {
+                        if let Some(stats) = this.tree.lock().await.get_mut(&moniker_for_fut) {
+                            stats.lock().await.start_measuring(tasks);
+                        }
+                    }
+                }
+            });
+            tree_guard.insert(moniker, Arc::new(Mutex::new(ComponentStats::pending(task))));
+        }
+    }
+}
+
 #[async_trait]
-impl Hook for ComponentTreeStats {
+impl Hook for ComponentTreeStats<DiagnosticsTask> {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         let target_moniker: ExtendedMoniker = event
             .target_moniker
@@ -314,13 +320,13 @@ impl AggregatedStats {
     }
 }
 
-struct ComponentStats {
-    tasks: Vec<TaskInfo>,
+struct ComponentStats<T: RuntimeStatsSource> {
+    tasks: Vec<TaskInfo<T>>,
     _task: Option<fasync::Task<()>>,
     is_measuring: bool,
 }
 
-impl ComponentStats {
+impl<T: RuntimeStatsSource> ComponentStats<T> {
     /// Creates a new `ComponentStats` awaiting the component tasks not ready to take measurements
     /// yet.
     pub fn pending(task: fasync::Task<()>) -> Self {
@@ -328,22 +334,8 @@ impl ComponentStats {
     }
 
     /// Creates a new `ComponentStats` and starts taking measurements.
-    pub fn ready(tasks: ComponentTasks) -> Self {
-        // TODO(fxbug.dev/56570): use parent task.
-        let mut ready_tasks = vec![];
-        if let Some(task) = tasks.component_task.and_then(|task| task.try_into().ok()) {
-            ready_tasks.push(task);
-        }
-        Self { tasks: ready_tasks, is_measuring: true, _task: None }
-    }
-
-    /// Start reading CPU stats.
-    pub fn start_measuring(&mut self, tasks: ComponentTasks) {
-        if let Some(task) = tasks.component_task.and_then(|task| task.try_into().ok()) {
-            self.tasks.push(task);
-            self.measure();
-        }
-        self.is_measuring = true;
+    pub fn ready(task: TaskInfo<T>) -> Self {
+        Self { tasks: vec![task], is_measuring: true, _task: None }
     }
 
     /// Takes a runtime info measurement and records it. Drops old ones if the maximum amount is
@@ -389,6 +381,20 @@ impl ComponentStats {
     }
 }
 
+impl ComponentStats<DiagnosticsTask> {
+    /// Start reading CPU stats.
+    pub fn start_measuring(&mut self, tasks: ComponentTasks) {
+        if let Some(task) = tasks.component_task.and_then(|task| TaskInfo::try_from(task).ok()) {
+            self.tasks.push(task);
+            self.measure();
+        }
+        // Still mark is_measuring as true, if we failed to convert to a TaskInfo it means the
+        // component already died since we couldn't query its basic info so we should make this
+        // true so at least we clean up.
+        self.is_measuring = true;
+    }
+}
+
 #[derive(Default)]
 struct Measurement {
     timestamp: zx::Time,
@@ -426,20 +432,33 @@ impl From<zx::TaskRuntimeInfo> for Measurement {
     }
 }
 
-struct TaskInfo {
-    koid: zx::Koid,
-    task: DiagnosticsTask,
+struct TaskInfo<T: RuntimeStatsSource> {
+    koid: zx_sys::zx_koid_t,
+    task: T,
     measurements: MeasurementsQueue,
     should_drop_old_measurements: bool,
     post_invalidation_measurements: usize,
 }
 
-impl TaskInfo {
+impl<T: RuntimeStatsSource> TaskInfo<T> {
+    /// Creates a new `TaskInfo` from the given cpu stats provider.
+    // Due to https://github.com/rust-lang/rust/issues/50133 we cannot just derive TryFrom on a
+    // generic type given a collision with the blanket implementation.
+    pub fn try_from(task: T) -> Result<Self, zx::Status> {
+        Ok(Self {
+            koid: task.koid()?,
+            task,
+            measurements: MeasurementsQueue::new(),
+            should_drop_old_measurements: false,
+            post_invalidation_measurements: 0,
+        })
+    }
+
     /// Take a new measurement. If the handle of this task is invalid, then it keeps track of how
     /// many measurements would have been done. When the maximum amount allowed is hit, then it
     /// drops the oldest measurement.
     pub fn measure(&mut self) -> Option<&Measurement> {
-        if self.handle_is_invalid() {
+        if self.task.handle_is_invalid() {
             if self.should_drop_old_measurements {
                 self.measurements.pop_front();
             } else {
@@ -450,7 +469,7 @@ impl TaskInfo {
             }
             return None;
         }
-        if let Ok(runtime_info) = self.get_runtime_info() {
+        if let Ok(runtime_info) = self.task.get_runtime_info() {
             let measurement = runtime_info.into();
             self.measurements.insert(measurement);
             return self.measurements.back();
@@ -462,12 +481,12 @@ impl TaskInfo {
     /// - Its handle is valid, or
     /// - There's at least one measurement saved.
     pub fn is_alive(&self) -> bool {
-        return !self.handle_is_invalid() || !self.measurements.is_empty();
+        return !self.task.handle_is_invalid() || !self.measurements.is_empty();
     }
 
     /// Writes the task measurements under the given inspect node `parent`.
     pub fn write_inspect_to(&self, parent: &inspect::Node) {
-        let node = parent.create_child(self.koid.raw_koid().to_string());
+        let node = parent.create_child(self.koid.to_string());
         let samples = node.create_child("@samples");
         for (i, measurement) in self.measurements.iter().enumerate() {
             let child = samples.create_child(i.to_string());
@@ -478,49 +497,6 @@ impl TaskInfo {
         }
         node.record(samples);
         parent.record(node);
-    }
-
-    fn handle_is_invalid(&self) -> bool {
-        match &self.task {
-            DiagnosticsTask::Job(job) => job.as_handle_ref().is_invalid(),
-            DiagnosticsTask::Process(process) => process.as_handle_ref().is_invalid(),
-            DiagnosticsTask::Thread(thread) => thread.as_handle_ref().is_invalid(),
-            TaskUnknown!() => {
-                unreachable!("only jobs, threads and processes are tasks");
-            }
-        }
-    }
-
-    fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status> {
-        match &self.task {
-            DiagnosticsTask::Job(job) => job.get_runtime_info(),
-            DiagnosticsTask::Process(process) => process.get_runtime_info(),
-            DiagnosticsTask::Thread(thread) => thread.get_runtime_info(),
-            TaskUnknown!() => {
-                unreachable!("only jobs, threads and processes are tasks");
-            }
-        }
-    }
-}
-
-impl TryFrom<DiagnosticsTask> for TaskInfo {
-    type Error = zx::Status;
-    fn try_from(task: DiagnosticsTask) -> Result<Self, Self::Error> {
-        let info = match &task {
-            DiagnosticsTask::Job(job) => job.basic_info(),
-            DiagnosticsTask::Process(process) => process.basic_info(),
-            DiagnosticsTask::Thread(thread) => thread.basic_info(),
-            TaskUnknown!() => {
-                unreachable!("only jobs, threads and processes are tasks");
-            }
-        }?;
-        Ok(Self {
-            koid: info.koid,
-            task,
-            measurements: MeasurementsQueue::new(),
-            should_drop_old_measurements: false,
-            post_invalidation_measurements: 0,
-        })
     }
 }
 
@@ -554,6 +530,51 @@ impl MeasurementsQueue {
     }
 }
 
+pub trait RuntimeStatsSource {
+    /// The koid of the Cpu stats source.
+    fn koid(&self) -> Result<zx_sys::zx_koid_t, zx::Status>;
+    /// Whether the handle backing up this source is invalid.
+    fn handle_is_invalid(&self) -> bool;
+    /// Provides the runtime info containing the stats.
+    fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status>;
+}
+
+impl RuntimeStatsSource for DiagnosticsTask {
+    fn koid(&self) -> Result<zx_sys::zx_koid_t, zx::Status> {
+        let info = match &self {
+            DiagnosticsTask::Job(job) => job.basic_info(),
+            DiagnosticsTask::Process(process) => process.basic_info(),
+            DiagnosticsTask::Thread(thread) => thread.basic_info(),
+            TaskUnknown!() => {
+                unreachable!("only jobs, threads and processes are tasks");
+            }
+        }?;
+        Ok(info.koid.raw_koid())
+    }
+
+    fn handle_is_invalid(&self) -> bool {
+        match &self {
+            DiagnosticsTask::Job(job) => job.as_handle_ref().is_invalid(),
+            DiagnosticsTask::Process(process) => process.as_handle_ref().is_invalid(),
+            DiagnosticsTask::Thread(thread) => thread.as_handle_ref().is_invalid(),
+            TaskUnknown!() => {
+                unreachable!("only jobs, threads and processes are tasks");
+            }
+        }
+    }
+
+    fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status> {
+        match &self {
+            DiagnosticsTask::Job(job) => job.get_runtime_info(),
+            DiagnosticsTask::Process(process) => process.get_runtime_info(),
+            DiagnosticsTask::Thread(thread) => thread.get_runtime_info(),
+            TaskUnknown!() => {
+                unreachable!("only jobs, threads and processes are tasks");
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -570,13 +591,39 @@ mod tests {
         moniker::AbsoluteMoniker,
     };
 
+    #[derive(Default)]
+    struct FakeTask {
+        values: Arc<std::sync::Mutex<VecDeque<zx::TaskRuntimeInfo>>>,
+        koid: zx_sys::zx_koid_t,
+        invalid_handle: bool,
+    }
+
+    impl FakeTask {
+        fn new(koid: zx_sys::zx_koid_t, values: Vec<zx::TaskRuntimeInfo>) -> Self {
+            Self {
+                koid,
+                invalid_handle: false,
+                values: Arc::new(std::sync::Mutex::new(values.into())),
+            }
+        }
+    }
+
+    impl RuntimeStatsSource for FakeTask {
+        fn koid(&self) -> Result<zx_sys::zx_koid_t, zx::Status> {
+            Ok(self.koid.clone())
+        }
+        fn handle_is_invalid(&self) -> bool {
+            self.invalid_handle
+        }
+        fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status> {
+            Ok(self.values.lock().unwrap().pop_front().unwrap_or(zx::TaskRuntimeInfo::default()))
+        }
+    }
+
     #[fuchsia::test]
     async fn rotates_measurements_per_task() {
         // Set up test
-        let job_dup = fuchsia_runtime::job_default()
-            .duplicate_handle(zx::Rights::SAME_RIGHTS)
-            .expect("duplicate default job");
-        let mut task: TaskInfo = DiagnosticsTask::Job(job_dup).try_into().unwrap();
+        let mut task: TaskInfo<FakeTask> = TaskInfo::try_from(FakeTask::default()).unwrap();
         assert!(task.is_alive());
 
         // Take three measurements.
@@ -589,8 +636,7 @@ mod tests {
         assert_eq!(task.measurements.len(), 3);
 
         // Invalidate the handle
-        let job = zx::Job::from(zx::Handle::invalid());
-        task.task = DiagnosticsTask::Job(job);
+        task.task.invalid_handle = true;
 
         // Allow MAX-N (N=3 here) measurements to be taken until we start dropping.
         for i in 3..COMPONENT_CPU_MAX_SAMPLES {
@@ -616,22 +662,18 @@ mod tests {
     async fn components_are_deleted_when_all_tasks_are_gone() {
         let inspector = inspect::Inspector::new();
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
-        let job_dup = fuchsia_runtime::job_default()
-            .duplicate_handle(zx::Rights::SAME_RIGHTS)
-            .expect("duplicate default job");
         let moniker: AbsoluteMoniker = vec!["a:0"].into();
         let moniker: ExtendedMoniker = moniker.into();
         stats.tree.lock().await.insert(
             moniker.clone(),
-            Arc::new(Mutex::new(ComponentStats::ready(ComponentTasks {
-                component_task: Some(DiagnosticsTask::Job(job_dup)),
-                ..ComponentTasks::EMPTY
-            }))),
+            Arc::new(Mutex::new(ComponentStats::ready(
+                TaskInfo::try_from(FakeTask::default()).unwrap(),
+            ))),
         );
         for _ in 0..=COMPONENT_CPU_MAX_SAMPLES {
             stats.measure().await;
         }
-        assert_eq!(stats.tree.lock().await.len(), 2);
+        assert_eq!(stats.tree.lock().await.len(), 1);
         assert_eq!(
             stats.tree.lock().await.get(&moniker).unwrap().lock().await.total_measurements(),
             COMPONENT_CPU_MAX_SAMPLES
@@ -639,8 +681,7 @@ mod tests {
 
         // Invalidate the handle, to simulate that the component stopped.
         for task in stats.tree.lock().await.get(&moniker).unwrap().lock().await.tasks.iter_mut() {
-            let job = zx::Job::from(zx::Handle::invalid());
-            task.task = DiagnosticsTask::Job(job);
+            task.task.invalid_handle = true;
         }
 
         for i in 0..COMPONENT_CPU_MAX_SAMPLES {
@@ -652,148 +693,125 @@ mod tests {
         }
         stats.measure().await;
         assert!(stats.tree.lock().await.get(&moniker).is_none());
-        assert_eq!(stats.tree.lock().await.len(), 1);
+        assert_eq!(stats.tree.lock().await.len(), 0);
     }
 
     #[fuchsia::test]
     async fn total_holds_sum_of_stats() {
-        // Set up the test
-        let test = RoutingTest::new(
-            "root",
-            vec![
-                ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),
-                ("a", component_decl_with_test_runner()),
-            ],
-        )
-        .await;
+        let inspector = inspect::Inspector::new();
+        let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
+        stats.tree.lock().await.insert(
+            ExtendedMoniker::ComponentInstance(vec!["a:0"].into()),
+            Arc::new(Mutex::new(ComponentStats::ready(
+                TaskInfo::try_from(FakeTask::new(
+                    1,
+                    vec![
+                        zx::TaskRuntimeInfo { cpu_time: 2, queue_time: 4 },
+                        zx::TaskRuntimeInfo { cpu_time: 6, queue_time: 8 },
+                    ],
+                ))
+                .unwrap(),
+            ))),
+        );
+        stats.tree.lock().await.insert(
+            ExtendedMoniker::ComponentInstance(vec!["b:0"].into()),
+            Arc::new(Mutex::new(ComponentStats::ready(
+                TaskInfo::try_from(FakeTask::new(
+                    2,
+                    vec![
+                        zx::TaskRuntimeInfo { cpu_time: 1, queue_time: 3 },
+                        zx::TaskRuntimeInfo { cpu_time: 5, queue_time: 7 },
+                    ],
+                ))
+                .unwrap(),
+            ))),
+        );
 
-        // Start the component "a".
-        let moniker: AbsoluteMoniker = vec!["a:0"].into();
-        let extended_moniker: ExtendedMoniker = moniker.clone().into();
-        let stats = &test.builtin_environment.component_tree_stats;
-        test.bind_instance(&moniker).await.expect("bind instance a success");
+        stats.measure().await;
+        let hierarchy = inspect::reader::read(&inspector).await.expect("read inspect hierarchy");
+        let total_cpu_time = get_total_property(&hierarchy, 1, "cpu_time");
+        let total_queue_time = get_total_property(&hierarchy, 1, "queue_time");
+        assert_eq!(total_cpu_time, 2 + 1);
+        assert_eq!(total_queue_time, 4 + 3);
 
-        // Make sure we have created a stats object for this moniker.
-        assert!(stats.tree.lock().await.get(&extended_moniker).is_some());
-
-        struct Values {
-            a_cpu_time: i64,
-            a_queue_time: i64,
-            root_queue_time: i64,
-            root_cpu_time: i64,
-            cm_queue_time: i64,
-            cm_cpu_time: i64,
-            total_cpu_time: i64,
-            total_queue_time: i64,
-        }
-
-        let get_properties = |hierarchy: &DiagnosticsHierarchy, index: usize| {
-            let index_str = format!("{}", index);
-            let res = Values {
-                a_cpu_time: get_property(&hierarchy, "a:0", "cpu_time", index),
-                a_queue_time: get_property(&hierarchy, "a:0", "queue_time", index),
-                root_queue_time: get_property(&hierarchy, "<root>", "queue_time", index),
-                root_cpu_time: get_property(&hierarchy, "<root>", "cpu_time", index),
-                cm_queue_time: get_property(&hierarchy, "<component_manager>", "queue_time", index),
-                cm_cpu_time: get_property(&hierarchy, "<component_manager>", "cpu_time", index),
-                total_cpu_time: *hierarchy
-                    .get_property_by_path(&vec!["cpu_stats", "@total", &index_str, "cpu_time"])
-                    .unwrap()
-                    .int()
-                    .unwrap(),
-                total_queue_time: *hierarchy
-                    .get_property_by_path(&vec!["cpu_stats", "@total", &index_str, "queue_time"])
-                    .unwrap()
-                    .int()
-                    .unwrap(),
-            };
-            assert_eq!(res.total_cpu_time, res.a_cpu_time + res.root_cpu_time + res.cm_cpu_time);
-            assert_eq!(
-                res.total_queue_time,
-                res.a_queue_time + res.root_queue_time + res.cm_queue_time
-            );
-            res
-        };
-
-        test.builtin_environment.component_tree_stats.measure().await;
-        let hierarchy = inspect::reader::read(&test.builtin_environment.inspector)
-            .await
-            .expect("read inspect hierarchy");
-        let res = get_properties(&hierarchy, 1);
-        let prev_total_cpu = res.total_cpu_time;
-        let prev_total_queue = res.total_queue_time;
-
-        test.builtin_environment.component_tree_stats.measure().await;
-        let hierarchy = inspect::reader::read(&test.builtin_environment.inspector)
-            .await
-            .expect("read inspect hierarchy");
-        println!("{}", serde_json::to_string_pretty(&hierarchy).unwrap());
-        let res = get_properties(&hierarchy, 2);
-        assert!(res.total_cpu_time != prev_total_cpu);
-        assert!(res.total_queue_time != prev_total_queue);
+        stats.measure().await;
+        let hierarchy = inspect::reader::read(&inspector).await.expect("read inspect hierarchy");
+        let total_cpu_time = get_total_property(&hierarchy, 2, "cpu_time");
+        let total_queue_time = get_total_property(&hierarchy, 2, "queue_time");
+        assert_eq!(total_cpu_time, 6 + 5);
+        assert_eq!(total_queue_time, 8 + 7);
     }
 
     #[fuchsia::test]
     async fn recent_usage() {
         // Set up the test
-        let test = RoutingTest::new(
-            "root",
-            vec![
-                ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),
-                ("a", component_decl_with_test_runner()),
-            ],
-        )
-        .await;
+        let inspector = inspect::Inspector::new();
+        let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
+        stats.tree.lock().await.insert(
+            ExtendedMoniker::ComponentInstance(vec!["a:0"].into()),
+            Arc::new(Mutex::new(ComponentStats::ready(
+                TaskInfo::try_from(FakeTask::new(
+                    1,
+                    vec![
+                        zx::TaskRuntimeInfo { cpu_time: 2, queue_time: 4 },
+                        zx::TaskRuntimeInfo { cpu_time: 6, queue_time: 8 },
+                    ],
+                ))
+                .unwrap(),
+            ))),
+        );
+        stats.tree.lock().await.insert(
+            ExtendedMoniker::ComponentInstance(vec!["b:0"].into()),
+            Arc::new(Mutex::new(ComponentStats::ready(
+                TaskInfo::try_from(FakeTask::new(
+                    2,
+                    vec![
+                        zx::TaskRuntimeInfo { cpu_time: 1, queue_time: 3 },
+                        zx::TaskRuntimeInfo { cpu_time: 5, queue_time: 7 },
+                    ],
+                ))
+                .unwrap(),
+            ))),
+        );
 
-        // Start the component "a".
-        let moniker: AbsoluteMoniker = vec!["a:0"].into();
-        let extended_moniker: ExtendedMoniker = moniker.clone().into();
-        let stats = &test.builtin_environment.component_tree_stats;
-        test.bind_instance(&moniker).await.expect("bind instance a success");
-
-        // We are now tracking the component stats.
-        assert!(stats.tree.lock().await.get(&extended_moniker).is_some());
-
-        let hierarchy = inspect::reader::read(&test.builtin_environment.inspector)
-            .await
-            .expect("read inspect hierarchy");
+        stats.measure().await;
+        let hierarchy = inspect::reader::read(&inspector).await.expect("read inspect hierarchy");
 
         // Verify initially there's no second most recent measurement since we only
         // have the initial measurement written.
         assert_inspect_tree!(&hierarchy, root: contains {
             cpu_stats: contains {
                 recent_usage: {
-                    recent_cpu_time: AnyProperty,
-                    recent_queue_time: AnyProperty,
+                    previous_cpu_time: 0i64,
+                    previous_queue_time: 0i64,
+                    previous_timestamp: AnyProperty,
+                    recent_cpu_time: 2 + 1i64,
+                    recent_queue_time: 4 + 3i64,
                     recent_timestamp: AnyProperty,
                 }
             }
         });
 
         // Verify that the recent values are equal to the total values.
-        let initial_cpu_time = get_recent_property(&hierarchy, "recent_cpu_time");
-        let initial_queue_time = get_recent_property(&hierarchy, "recent_queue_time");
         let initial_timestamp = get_recent_property(&hierarchy, "recent_timestamp");
-        assert_eq!(initial_cpu_time, get_total_property(&hierarchy, 0, "cpu_time"));
-        assert_eq!(initial_queue_time, get_total_property(&hierarchy, 0, "queue_time"));
-        assert_eq!(initial_timestamp, get_total_property(&hierarchy, 0, "timestamp"));
+        assert_eq!(2 + 1, get_total_property(&hierarchy, 1, "cpu_time"));
+        assert_eq!(4 + 3, get_total_property(&hierarchy, 1, "queue_time"));
+        assert_eq!(initial_timestamp, get_total_property(&hierarchy, 1, "timestamp"));
 
         // Add one measurement
-        test.builtin_environment.component_tree_stats.measure().await;
+        stats.measure().await;
 
-        let hierarchy = inspect::reader::read(&test.builtin_environment.inspector)
-            .await
-            .expect("read inspect hierarchy");
+        let hierarchy = inspect::reader::read(&inspector).await.expect("read inspect hierarchy");
 
         // Verify that previous is now there and holds the previously recent values.
         assert_inspect_tree!(&hierarchy, root: contains {
             cpu_stats: contains {
                 recent_usage: {
-                    previous_cpu_time: initial_cpu_time,
-                    previous_queue_time: initial_queue_time,
+                    previous_cpu_time: 2 + 1i64,
+                    previous_queue_time: 4 + 3i64,
                     previous_timestamp: initial_timestamp,
-                    recent_cpu_time: AnyProperty,
-                    recent_queue_time: AnyProperty,
+                    recent_cpu_time: 6 + 5i64,
+                    recent_queue_time: 8 + 7i64,
                     recent_timestamp: AnyProperty,
                 }
             }
@@ -802,14 +820,6 @@ mod tests {
         // Verify that the recent timestamp is higher than the previous timestamp.
         let recent_timestamp = get_recent_property(&hierarchy, "recent_timestamp");
         assert!(recent_timestamp > initial_timestamp);
-
-        // Verify that the previous values are equal to the previous total/recent values.
-        let previous_cpu_time = get_recent_property(&hierarchy, "previous_cpu_time");
-        let previous_queue_time = get_recent_property(&hierarchy, "previous_queue_time");
-        let previous_timestamp = get_recent_property(&hierarchy, "previous_timestamp");
-        assert_eq!(previous_cpu_time, initial_cpu_time);
-        assert_eq!(previous_queue_time, initial_queue_time);
-        assert_eq!(previous_timestamp, initial_timestamp);
     }
 
     #[fuchsia::test]
@@ -1016,36 +1026,6 @@ mod tests {
                 }
             }
         });
-    }
-
-    fn get_property(
-        hierarchy: &DiagnosticsHierarchy,
-        moniker: &str,
-        property: &str,
-        index: usize,
-    ) -> i64 {
-        // The test runner uses the default job just for testing purposes. We use its koid for
-        // asserting here.
-        let koid = fuchsia_runtime::job_default()
-            .basic_info()
-            .expect("got basic info")
-            .koid
-            .raw_koid()
-            .to_string();
-        *hierarchy
-            .get_property_by_path(&vec![
-                "cpu_stats",
-                "measurements",
-                "components",
-                moniker,
-                &koid,
-                "@samples",
-                &index.to_string(),
-                property,
-            ])
-            .unwrap()
-            .int()
-            .unwrap()
     }
 
     fn get_total_property(hierarchy: &DiagnosticsHierarchy, index: usize, property: &str) -> i64 {

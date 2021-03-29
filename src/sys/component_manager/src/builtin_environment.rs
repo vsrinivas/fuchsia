@@ -56,6 +56,7 @@ use {
     cm_types::Url,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_internal::{BuiltinPkgResolver, OutDirContents},
+    fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
@@ -340,7 +341,7 @@ pub struct BuiltinEnvironment {
     pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
-    pub component_tree_stats: Arc<ComponentTreeStats>,
+    pub component_tree_stats: Arc<ComponentTreeStats<DiagnosticsTask>>,
     pub execution_mode: ExecutionMode,
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
@@ -622,6 +623,7 @@ impl BuiltinEnvironment {
         // Set up the Component Tree Diagnostics runtime statistics.
         let component_tree_stats =
             ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
+        component_tree_stats.track_component_manager_stats().await;
         model.root.hooks.install(component_tree_stats.hooks()).await;
 
         // Serve stats about inspect in a lazy node.
