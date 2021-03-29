@@ -233,7 +233,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// testrunner logs this when the serial socket goes away unexpectedly.
 	ret = append(ret, &stringInLogCheck{String: ".sock: write: broken pipe", Type: swarmingOutputType})
 	// For fxbug.dev/57463.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("%s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/61452.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToResolveIPErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/65073.
