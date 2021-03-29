@@ -176,14 +176,14 @@ function main {
 
     readonly revision_file="${FX_CACHE_DIR}/fx-set-revision"
     local current_revision
-    current_revision="$(git -C "$FUCHSIA_DIR" rev-parse JIRI_HEAD)"
+    current_revision="$(git -C "$FUCHSIA_DIR" rev-parse HEAD)"
 
     # Determine whether we need to rebuild the fx-set executable. We'll only
-    # skip rebuilding if the --dev flag is unset, or if it has already been
-    # built since the last `jiri update`. We determine that by storing the
-    # current JIRI_HEAD of fuchsia.git in a cached version file whenever we
-    # build fx-set, and then we only rebuild if the current JIRI_HEAD differs
-    # from the revision referenced in the cached file.
+    # rebuild if the --dev flag is set, or if the cached version of fx-set was
+    # built at a revision other than the current revision. We determine that by
+    # storing the current HEAD of fuchsia.git in a cached version file whenever
+    # we build fx-set, and then we rebuild if the current HEAD differs from the
+    # revision referenced in the cached file.
     local should_rebuild=true
     if ! $dev && [ -f "$exe_path" ] && [ -f "$revision_file" ]; then
       local fx_set_revision
@@ -221,9 +221,8 @@ function main {
         echo -n -e "\r\033[1A\033[0K"
       fi
 
-      # Record the current JIRI_HEAD *after* building fx-set so that we always
-      # try to rebuild on subsequent attempts if compilation fails the first
-      # time.
+      # Record the current HEAD *after* building fx-set so that we always try
+      # to rebuild on subsequent attempts if compilation fails the first time.
       echo "$current_revision" > "$revision_file"
     fi
 
