@@ -606,7 +606,8 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
       // if we unmapped an entire page table leaf and/or the unmap made the level below us empty,
       // free the page table
       if (chunk_size == block_size || page_table_is_clear(next_page_table, page_size_shift)) {
-        LTRACEF("pte %p[0x%lx] = 0 (was page table)\n", page_table, index);
+        LTRACEF("pte %p[0x%lx] = 0 (was page table phys %#lx)\n", page_table, index,
+                page_table_paddr);
         update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
         // We can safely defer TLB flushing as the consistency manager will not return the backing
@@ -615,7 +616,8 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
         FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift, cm);
       }
     } else if (is_pte_valid(pte)) {
-      LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
+      LTRACEF("pte %p[0x%lx] = 0 (was phys %#lx)\n", page_table, index,
+              page_table[index] & MMU_PTE_OUTPUT_ADDR_MASK);
       update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
       cm.FlushEntry(vaddr, true);
     } else {
@@ -746,7 +748,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
       } else {
         pte |= MMU_PTE_L3_DESCRIPTOR_PAGE;
       }
-      LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
+      LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 " (paddr %#lx)\n", page_table, index, pte, paddr);
       update_pte(&page_table[index], pte);
     }
     vaddr += chunk_size;
