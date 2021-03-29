@@ -10,6 +10,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
+	"syscall/zx"
 	"testing"
 	"time"
 
@@ -161,20 +163,15 @@ func TestInterfacesWatcher(t *testing.T) {
 		return watcher
 	}
 	blockingWatcher, nonBlockingWatcher := initWatcher(), initWatcher()
-	defer func() {
-		if err := blockingWatcher.Close(); err != nil {
-			t.Fatalf("failed to close blocking Watcher client proxy: %s", err)
-		}
-		if err := nonBlockingWatcher.Close(); err != nil {
-			t.Fatalf("failed to close non-blocking Watcher client proxy: %s", err)
-		}
-	}()
 
 	ch := make(chan watchResult)
 	blockingWatch := func() {
 		go func() {
 			event, err := blockingWatcher.Watch(context.Background())
-			ch <- watchResult{event, err}
+			ch <- watchResult{
+				event: event,
+				err:   err,
+			}
 		}()
 		select {
 		case got := <-ch:
@@ -182,6 +179,46 @@ func TestInterfacesWatcher(t *testing.T) {
 		case <-time.After(50 * time.Millisecond):
 		}
 	}
+
+	defer func() {
+		getSize := func() int {
+			ns.interfaceWatchers.mu.Lock()
+			defer ns.interfaceWatchers.mu.Unlock()
+			return len(ns.interfaceWatchers.mu.watchers)
+		}
+
+		blockingWatch()
+
+		before := getSize()
+
+		if err := blockingWatcher.Close(); err != nil {
+			t.Errorf("failed to close blocking Watcher client proxy: %s", err)
+		}
+
+		func() {
+			got, want := <-ch, zx.ErrCanceled
+			switch err := got.err.(type) {
+			case nil:
+				t.Errorf("got Watch() = (%#v, %v), want = (_, %s)", got.event, got.err, want)
+			case *zx.Error:
+				if err.Status == want {
+					return
+				}
+			}
+			t.Errorf("got Watch() = (_, %s), want = (_, %s)", got.err, want)
+		}()
+		close(ch)
+
+		// The handler should terminate after the client channel closes.
+		for getSize() != before-1 {
+			runtime.Gosched()
+		}
+
+		if err := nonBlockingWatcher.Close(); err != nil {
+			t.Errorf("failed to close non-blocking Watcher client proxy: %s", err)
+		}
+	}()
+
 	blockingWatch()
 
 	// Add an interface.

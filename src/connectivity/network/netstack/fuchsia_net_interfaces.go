@@ -187,7 +187,7 @@ func (wi *interfaceWatcherImpl) Watch(ctx fidl.Context) (interfaces.Event, error
 		select {
 		case <-wi.ready:
 		case <-ctx.Done():
-			err = fmt.Errorf("cancelled: %s", ctx.Err())
+			err = fmt.Errorf("cancelled: %w", ctx.Err())
 		}
 
 		wi.mu.Lock()
@@ -334,7 +334,7 @@ func (si *interfaceStateImpl) GetWatcher(_ fidl.Context, _ interfaces.WatcherOpt
 	si.ns.interfaceWatchers.mu.Unlock()
 
 	go func() {
-		component.ServeExclusive(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, func(err error) {
+		component.ServeExclusiveConcurrent(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, func(err error) {
 			_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "%s", err)
 		})
 
