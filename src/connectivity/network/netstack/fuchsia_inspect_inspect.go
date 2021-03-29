@@ -7,6 +7,7 @@
 package netstack
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"reflect"
@@ -77,6 +78,8 @@ func (impl *inspectImpl) OpenChild(ctx fidl.Context, childName string, childChan
 		svc := (&inspectImpl{
 			inner: child,
 		}).asService()
+		// The child's lifetime is not tied to the parent's.
+		ctx := context.Background()
 		return true, svc.AddFn(ctx, childChannel.Channel)
 	}
 	_ = childChannel.Close()
@@ -86,7 +89,7 @@ func (impl *inspectImpl) OpenChild(ctx fidl.Context, childName string, childChan
 func (impl *inspectImpl) asService() *component.Service {
 	stub := inspect.InspectWithCtxStub{Impl: impl}
 	return &component.Service{
-		AddFn: func(ctx fidl.Context, c zx.Channel) error {
+		AddFn: func(ctx context.Context, c zx.Channel) error {
 			go component.ServeExclusive(ctx, &stub, c, func(err error) {
 				_ = syslog.WarnTf(inspect.InspectName, "%s", err)
 			})

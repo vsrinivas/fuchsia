@@ -57,7 +57,7 @@ func main() {
 		examples.EchoName,
 		// The handler for incoming requests for connecting to Echo. It serves
 		// our implementation of Echo on the provided channel
-		func(ctx fidl.Context, c zx.Channel) error {
+		func(ctx context.Context, c zx.Channel) error {
 			stub := examples.EchoWithCtxStub{
 				Impl: &echoImpl{
 					eventSender: examples.EchoEventProxy(fidl.ChannelProxy{Channel: c}),

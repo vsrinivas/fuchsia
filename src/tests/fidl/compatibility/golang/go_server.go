@@ -307,7 +307,7 @@ func main() {
 	stub := compatibility.EchoWithCtxStub{Impl: &echoImpl{ctx: ctx}}
 	ctx.OutgoingService.AddService(
 		compatibility.EchoName,
-		func(ctx fidl.Context, c zx.Channel) error {
+		func(ctx context.Context, c zx.Channel) error {
 			pxy := compatibility.EchoEventProxy{Channel: c}
 			mu.Lock()
 			mu.proxies[&pxy] = struct{}{}

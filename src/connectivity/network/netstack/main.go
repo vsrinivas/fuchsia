@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"sync/atomic"
 	"syscall/zx"
-	"syscall/zx/fidl"
 	"time"
 
 	networking_metrics "networking_metrics_golib"
@@ -442,7 +441,7 @@ func Main() {
 		stub := netstack.NetstackWithCtxStub{Impl: &netstackImpl{ns: ns}}
 		appCtx.OutgoingService.AddService(
 			netstack.NetstackName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				pxy := netstack.NetstackEventProxy{Channel: c}
 				// Send a synthetic InterfacesChanged event to each client when they join
 				// Prevents clients from having to race GetInterfaces / InterfacesChanged.
@@ -480,7 +479,7 @@ func Main() {
 		}}
 		appCtx.OutgoingService.AddService(
 			stack.StackName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(stack.StackName, "%s", err)
 				})
@@ -496,7 +495,7 @@ func Main() {
 		}}
 		appCtx.OutgoingService.AddService(
 			stack.LogName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(stack.LogName, "%s", err)
 				})
@@ -508,7 +507,7 @@ func Main() {
 		stub := socket.ProviderWithCtxStub{Impl: &socketProviderImpl}
 		appCtx.OutgoingService.AddService(
 			socket.ProviderName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(socket.ProviderName, "%s", err)
 				})
@@ -521,7 +520,7 @@ func Main() {
 		stub := routes.StateWithCtxStub{Impl: &routesImpl{ns.stack}}
 		appCtx.OutgoingService.AddService(
 			routes.StateName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(routes.StateName, "%s", err)
 				})
@@ -534,7 +533,7 @@ func Main() {
 		stub := interfaces.StateWithCtxStub{Impl: &interfaceStateImpl{ns: ns}}
 		appCtx.OutgoingService.AddService(
 			interfaces.StateName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(interfaces.StateName, "%s", err)
 				})
@@ -549,7 +548,7 @@ func Main() {
 		viewStub := neighbor.ViewWithCtxStub{Impl: impl}
 		appCtx.OutgoingService.AddService(
 			neighbor.ViewName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &viewStub, c, func(err error) {
 					_ = syslog.WarnTf(neighbor.ViewName, "%s", err)
 				})
@@ -560,7 +559,7 @@ func Main() {
 		controllerStub := neighbor.ControllerWithCtxStub{Impl: impl}
 		appCtx.OutgoingService.AddService(
 			neighbor.ControllerName,
-			func(ctx fidl.Context, c zx.Channel) error {
+			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &controllerStub, c, func(err error) {
 					_ = syslog.WarnTf(neighbor.ControllerName, "%s", err)
 				})

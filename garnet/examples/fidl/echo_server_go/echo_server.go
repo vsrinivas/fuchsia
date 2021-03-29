@@ -39,7 +39,7 @@ func main() {
 	stub := echo.EchoWithCtxStub{Impl: &echoImpl{quiet: quiet}}
 	ctx.OutgoingService.AddService(
 		echo.EchoName,
-		func(ctx fidl.Context, c zx.Channel) error {
+		func(ctx context.Context, c zx.Channel) error {
 			go component.ServeExclusive(ctx, &stub, c, func(err error) {
 				log.Print(err)
 			})

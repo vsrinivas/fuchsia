@@ -7,6 +7,7 @@
 package netstack
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -142,7 +143,7 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 			items: items,
 		},
 	}
-	go component.ServeExclusive(ctx, &stub, it.Channel, func(err error) {
+	go component.ServeExclusive(context.Background(), &stub, it.Channel, func(err error) {
 		_ = syslog.WarnTf(neighbor.ViewName, "EntryIterator: %s", err)
 	})
 

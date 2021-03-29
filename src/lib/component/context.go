@@ -7,6 +7,7 @@
 package component
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"syscall/zx"
@@ -73,7 +74,12 @@ func (od OutDirectory) AddDiagnostics(name string, n Node) {
 	od.getMapDirectory("diagnostics")[name] = n
 }
 
-func (od OutDirectory) AddService(name string, addFn addFn) {
+// AddService registers a named handler in the outgoing service directory.
+//
+// The handler function is called serially with each incoming request matching
+// the name. It must not block, and is expected to handle incoming calls on the
+// request.
+func (od OutDirectory) AddService(name string, addFn func(context.Context, zx.Channel) error) {
 	od.getMapDirectory("svc")[name] = &Service{AddFn: addFn}
 }
 

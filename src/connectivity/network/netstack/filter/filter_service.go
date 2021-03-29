@@ -7,6 +7,7 @@
 package filter
 
 import (
+	"context"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -24,7 +25,7 @@ func AddOutgoingService(ctx *component.Context, f *Filter) {
 	stub := filter.FilterWithCtxStub{Impl: &filterImpl{filter: f}}
 	ctx.OutgoingService.AddService(
 		filter.FilterName,
-		func(ctx fidl.Context, c zx.Channel) error {
+		func(ctx context.Context, c zx.Channel) error {
 			go component.ServeExclusive(ctx, &stub, c, func(err error) {
 				_ = syslog.WarnTf(tag, "%s", err)
 			})

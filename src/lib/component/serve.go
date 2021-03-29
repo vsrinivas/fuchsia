@@ -7,6 +7,7 @@
 package component
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"syscall/zx"
@@ -32,7 +33,7 @@ var handleDispositionsPool = sync.Pool{
 	},
 }
 
-func serveOne(ctx fidl.Context, stub fidl.Stub, req zx.Channel, onError func(error)) error {
+func serveOne(ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) error {
 	b := bytesPool.Get().([]byte)
 	defer bytesPool.Put(b)
 
@@ -123,7 +124,7 @@ func serveOne(ctx fidl.Context, stub fidl.Stub, req zx.Channel, onError func(err
 	return nil
 }
 
-func serve(ctx fidl.Context, stub fidl.Stub, req zx.Channel, onError func(error)) error {
+func serve(ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) error {
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -144,12 +145,16 @@ func serve(ctx fidl.Context, stub fidl.Stub, req zx.Channel, onError func(error)
 // ServeExclusive assumes ownership of req and serially serves requests on it
 // via stub until ctx is called or req's peer is closed. ServeExclusive closes
 // req before returning.
-func ServeExclusive(ctx fidl.Context, stub fidl.Stub, req zx.Channel, onError func(error)) {
+func ServeExclusive(ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) {
 	defer func() {
 		if err := req.Close(); err != nil {
 			onError(fmt.Errorf("failed to close request channel: %w", err))
 		}
 	}()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	if err := serve(ctx, stub, req, onError); err != nil {
 		if err == ctx.Err() {
 			return

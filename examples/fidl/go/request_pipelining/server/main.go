@@ -45,7 +45,7 @@ func (launcher *echoLauncherImpl) GetEcho(ctx fidl.Context, prefix string) (exam
 	}
 
 	stub := examples.EchoWithCtxStub{Impl: &echoImpl{prefix: prefix}}
-	go component.ServeExclusive(ctx, &stub, serverEnd.ToChannel(), func(err error) {
+	go component.ServeExclusive(context.Background(), &stub, serverEnd.ToChannel(), func(err error) {
 		log.Println(err)
 	})
 
@@ -57,7 +57,7 @@ func (launcher *echoLauncherImpl) GetEchoPipelined(ctx fidl.Context, prefix stri
 	// In the pipelined case, the client is responsible for initializing the
 	// channel. It keeps the client end and passes the server end in the request.
 	stub := examples.EchoWithCtxStub{Impl: &echoImpl{prefix: prefix}}
-	go component.ServeExclusive(ctx, &stub, serverEnd.ToChannel(), func(err error) {
+	go component.ServeExclusive(context.Background(), &stub, serverEnd.ToChannel(), func(err error) {
 		log.Println(err)
 	})
 	return nil
@@ -70,7 +70,7 @@ func main() {
 
 	ctx.OutgoingService.AddService(
 		examples.EchoLauncherName,
-		func(ctx fidl.Context, c zx.Channel) error {
+		func(ctx context.Context, c zx.Channel) error {
 			stub := examples.EchoLauncherWithCtxStub{Impl: &echoLauncherImpl{}}
 			go component.ServeExclusive(ctx, &stub, c, func(err error) {
 				log.Println(err)

@@ -8,6 +8,7 @@ package component
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -59,12 +60,12 @@ type Node interface {
 	addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error
 }
 
-type addFn func(fidl.Context, zx.Channel) error
-
 // TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type Service struct {
 	*fidlio.NodeWithCtxTransitionalBase
-	AddFn addFn
+	// AddFn is called serially with an incoming request. It must not block, and
+	// is expected to handle incoming calls on the request.
+	AddFn func(context.Context, zx.Channel) error
 }
 
 var _ Node = (*Service)(nil)
@@ -79,10 +80,10 @@ func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio
 	// but matches the behaviour of SDK VFS.
 	if flags&fidlio.OpenFlagNodeReference != 0 {
 		stub := fidlio.NodeWithCtxStub{Impl: s}
-		go ServeExclusive(ctx, &stub, req.Channel, logError)
+		go ServeExclusive(context.Background(), &stub, req.Channel, logError)
 		return respond(ctx, flags, req, nil, s)
 	}
-	return respond(ctx, flags, req, s.AddFn(ctx, req.Channel), s)
+	return respond(ctx, flags, req, s.AddFn(context.Background(), req.Channel), s)
 }
 
 func (s *Service) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
@@ -177,7 +178,7 @@ func (dir *DirectoryWrapper) getIO() fidlio.NodeWithCtx {
 func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
 	ioDir := dir.GetDirectory()
 	stub := fidlio.DirectoryWithCtxStub{Impl: ioDir}
-	go ServeExclusive(ctx, &stub, req.Channel, logError)
+	go ServeExclusive(context.Background(), &stub, req.Channel, logError)
 	return respond(ctx, flags, req, nil, ioDir)
 }
 
@@ -249,7 +250,7 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path 
 	return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotFound}, dirState)
 }
 
-func (dirState *directoryState) AddInotifyFilter(ctx fidl.Context, filters fidlio2.InotifyWatchMask, path string, wd uint32, socket zx.Socket, req fidlio2.InotifierWithCtxInterfaceRequest) error {
+func (dirState *directoryState) AddInotifyFilter(_ fidl.Context, filters fidlio2.InotifyWatchMask, path string, wd uint32, socket zx.Socket, req fidlio2.InotifierWithCtxInterfaceRequest) error {
 	return nil
 }
 
@@ -397,7 +398,7 @@ func (file *FileWrapper) getIO() fidlio.NodeWithCtx {
 func (file *FileWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
 	ioFile := file.getFile()
 	stub := fidlio.FileWithCtxStub{Impl: ioFile}
-	go ServeExclusive(ctx, &stub, req.Channel, logError)
+	go ServeExclusive(context.Background(), &stub, req.Channel, logError)
 	return respond(ctx, flags, req, nil, ioFile)
 }
 
