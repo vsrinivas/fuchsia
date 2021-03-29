@@ -45,6 +45,7 @@ timekeeper_sources = [
   "src/diagnostics/inspect.rs",
   "src/diagnostics/mod.rs",
   "src/enums.rs",
+  "src/estimator/frequency.rs",
   "src/estimator/kalman_filter.rs",
   "src/estimator/mod.rs",
   "src/main.rs",
