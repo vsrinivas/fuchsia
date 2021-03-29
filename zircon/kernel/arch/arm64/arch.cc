@@ -203,7 +203,11 @@ static void arm64_cpu_early_init() {
 
 void arch_early_init() { arm64_cpu_early_init(); }
 
-void arch_prevm_init() {}
+void arch_prevm_init() {
+  if (arm64_asid_width() == arm64_asid_width::ASID_8) {
+    printf("ARM WARNING cpu only supports 8 bit ASIDs, unsupported\n");
+  }
+}
 
 void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   arch_mp_init_percpu();

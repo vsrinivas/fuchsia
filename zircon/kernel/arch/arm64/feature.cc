@@ -19,6 +19,8 @@ uint32_t arm64_isa_features;
 
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
 
+enum arm64_asid_width arm64_asid_width_;
+
 // cache size parameters cpus, default to a reasonable minimum
 uint32_t arm64_zva_size = 32;
 uint32_t arm64_icache_size = 32;
@@ -372,17 +374,21 @@ void arm64_feature_init() {
     if (BITS_SHIFT(pfr0, 23, 20) < 0b1111) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_ASIMD;
     }
+
+    // check the size of the asid
+    uint64_t mmfr0 = __arm_rsr64("id_aa64mmfr0_el1");
+    if ((mmfr0 & ARM64_MMFR0_ASIDBITS_MASK) == ARM64_MMFR0_ASIDBITS_16) {
+      arm64_asid_width_ = arm64_asid_width::ASID_16;
+    } else {
+      arm64_asid_width_ = arm64_asid_width::ASID_8;
+    }
   }
 
   // read the cache info for each cpu
   arm64_get_cache_info(&(cache_info[cpu]));
-
-  // check to make sure implementation supports 16 bit asids
-  uint64_t mmfr0 = __arm_rsr64("id_aa64mmfr0_el1");
-  ASSERT((mmfr0 & ARM64_MMFR0_ASIDBITS_MASK) == ARM64_MMFR0_ASIDBITS_16);
 }
 
-static void print_feature() {
+static void print_isa_features() {
   const struct {
     uint32_t bit;
     const char* name;
@@ -420,7 +426,9 @@ void arm64_feature_debug(bool full) {
   print_cpu_info();
 
   if (full) {
-    print_feature();
+    print_isa_features();
+    dprintf(INFO, "ARM ASID width %s\n",
+        (arm64_asid_width() == arm64_asid_width::ASID_16) ? "16" : "8");
     dprintf(INFO, "ARM cache line sizes: icache %u dcache %u zva %u\n", arm64_icache_size,
             arm64_dcache_size, arm64_zva_size);
     if (DPRINTF_ENABLED_FOR_LEVEL(INFO)) {
