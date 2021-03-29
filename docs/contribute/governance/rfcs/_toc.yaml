@@ -71,5 +71,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0076_fidl_api_summaries.md
 - title: "RFC-0077 - zx_clock_update accuracy improvement"
   path: /docs/contribute/governance/rfcs/0077_zx_clock_update_accuracy.md
+- title: "RFC-0078 - Kernel Sanitizer Coverage for Fuchsia Fuzzing"
+  path: /docs/contribute/governance/rfcs/0078_kernel_coverage_for_fuchsia_fuzzing.md
 - title: "RFC-0082 - Runnning unmodified Linux programs on Fuchsia"
   path: /docs/contribute/governance/rfcs/0082_starnix.md

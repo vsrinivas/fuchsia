@@ -379,6 +379,19 @@
   submitted: '2021-03-04'
   reviewed: '2021-03-18'
 
+- name: 'RFC-0078'
+  title: 'Kernel Sanitizer Coverage for Fuchsia Fuzzing'
+  short_description: 'Export Fuchsia kernel code coverage so it can be used for fuzzing with Syzkaller.'
+  authors: ['eep@google.com', 'mvanotti@google.com', 'markdittmer@google.com']
+  file: '0078_kernel_coverage_for_fuchsia_fuzzing.md'
+  area: ['Zircon']
+  issue: []
+  gerrit_change_id: ['']
+  status: 'Accepted'
+  reviewers: ['phosek@google.com', 'mcgrathr@google.com', 'maniscalco@google.com', 'cpu@google.com']
+  submitted: '2021-02-26'
+  reviewed: '2021-03-25'
+
 - name: 'RFC-0082'
   title: 'Runnning unmodified Linux programs on Fuchsia'
   short_description: 'This document proposes a mechanism for running unmodified Linux programs on Fuchsia.'
