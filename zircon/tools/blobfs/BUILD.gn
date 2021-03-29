@@ -29,6 +29,9 @@ executable("blobfs") {
 
       # TODO(fxbug.dev/59219): blobfs performs poorly when built with profile
       "profile",
+
+      # TODO(fxbug.dev/59219): blobfs performs poorly when built with coverage
+      "coverage",
     ]
   }
   configs += [

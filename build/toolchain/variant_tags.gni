@@ -56,6 +56,9 @@ all_variant_tags = [
   # The `profile` tag is used for profile instrumentation.
   "profile",
 
+  # The `coverage` tag is used for coverage instrumentation.
+  "coverage",
+
   # The `lto` tag is used for LTO and ThinLTO.
   "lto",
 
