@@ -72,7 +72,6 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
         break;
     }
     ASSERT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
-    loop_.StartThread();
 
     options_ = {.compression_settings = {
                     .compression_algorithm = compression_algorithm,
@@ -189,7 +188,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
  protected:
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
 
   std::unique_ptr<Blobfs> fs_;
   MountOptions options_;
