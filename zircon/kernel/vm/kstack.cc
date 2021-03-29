@@ -166,6 +166,7 @@ zx_status_t KernelStack::Teardown() {
   size_ = 0;
 
   if (vmar_) {
+    LTRACEF("removing vmar at at %#" PRIxPTR "\n", vmar_->base());
     zx_status_t status = vmar_->Destroy();
     if (status != ZX_OK) {
       return status;
@@ -176,6 +177,7 @@ zx_status_t KernelStack::Teardown() {
 #if __has_feature(safe_stack)
   unsafe_base_ = 0;
   if (unsafe_vmar_) {
+    LTRACEF("removing unsafe vmar at at %#" PRIxPTR "\n", unsafe_vmar_->base());
     zx_status_t status = unsafe_vmar_->Destroy();
     if (status != ZX_OK) {
       return status;
@@ -187,6 +189,7 @@ zx_status_t KernelStack::Teardown() {
 #if __has_feature(shadow_call_stack)
   shadow_call_base_ = 0;
   if (shadow_call_vmar_) {
+    LTRACEF("removing shadow call vmar at at %#" PRIxPTR "\n", shadow_call_vmar_->base());
     zx_status_t status = shadow_call_vmar_->Destroy();
     if (status != ZX_OK) {
       return status;
