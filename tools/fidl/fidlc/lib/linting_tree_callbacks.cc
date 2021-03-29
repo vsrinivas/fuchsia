@@ -178,7 +178,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       }
       ProcessGapText(element->end_);
     }
-    void OnTypeConstructor(std::unique_ptr<raw::TypeConstructor> const& element) override {
+    void OnTypeConstructor(std::unique_ptr<raw::TypeConstructorOld> const& element) override {
       for (auto& callback : callbacks_.type_constructor_callbacks_) {
         callback(*element.get());
       }

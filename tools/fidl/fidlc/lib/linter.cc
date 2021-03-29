@@ -815,7 +815,7 @@ Linter::Linter()
        vector_bounds_check = DefineCheck("vector-bounds-not-specified",
                                          "Specify bounds for vector")]
       //
-      (const raw::TypeConstructor& element) {
+      (const raw::TypeConstructorOld& element) {
         if (element.identifier->components.size() != 1) {
           return;
         }

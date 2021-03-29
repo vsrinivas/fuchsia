@@ -126,7 +126,7 @@ class LintingTreeCallbacks {
   void OnTableDeclaration(fit::function<void(const raw::TableDeclaration&)> callback) {
     table_declaration_callbacks_.push_back(std::move(callback));
   }
-  void OnTypeConstructor(fit::function<void(const raw::TypeConstructor&)> callback) {
+  void OnTypeConstructor(fit::function<void(const raw::TypeConstructorOld&)> callback) {
     type_constructor_callbacks_.push_back(std::move(callback));
   }
   void OnTableMember(fit::function<void(const raw::TableMember&)> callback) {
@@ -188,7 +188,7 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::TableMember&)>> table_member_callbacks_;
   std::vector<fit::function<void(const raw::TableDeclaration&)>> table_declaration_callbacks_;
   std::vector<fit::function<void(const raw::TableDeclaration&)>> exit_table_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::TypeConstructor&)>> type_constructor_callbacks_;
+  std::vector<fit::function<void(const raw::TypeConstructorOld&)>> type_constructor_callbacks_;
   std::vector<fit::function<void(const raw::UnionMember&)>> union_member_callbacks_;
   std::vector<fit::function<void(const raw::UnionDeclaration&)>> union_declaration_callbacks_;
   std::vector<fit::function<void(const raw::UnionDeclaration&)>> exit_union_declaration_callbacks_;

@@ -120,8 +120,8 @@ std::optional<UnderlyingType> resolve_identifier(const std::unique_ptr<raw::Iden
 // Lookup the definition of a type's "key" identifier (ie, "vector" in the
 // identifier "vector<array<uint8>:>" or "Foo" in "some.lib.Foo") in a given
 // library.
-std::optional<UnderlyingType> resolve_type(const std::unique_ptr<raw::TypeConstructor>& type_ctor,
-                                           const flat::Library* lib) {
+std::optional<UnderlyingType> resolve_type(
+    const std::unique_ptr<raw::TypeConstructorOld>& type_ctor, const flat::Library* lib) {
   std::unique_ptr<raw::CompoundIdentifier>& id = type_ctor->identifier;
   std::string type_decl = id->copy_to_str();
 
@@ -150,7 +150,7 @@ std::optional<UnderlyingType> resolve_type(const std::unique_ptr<raw::TypeConstr
 }
 
 std::optional<UnderlyingType> ConvertingTreeVisitor::resolve(
-    const std::unique_ptr<raw::TypeConstructor>& type_ctor) {
+    const std::unique_ptr<raw::TypeConstructorOld>& type_ctor) {
   return resolve_type(type_ctor, library_);
 }
 
@@ -164,7 +164,7 @@ void ConvertingTreeVisitor::OnBitsDeclaration(
   auto ref =
       element->maybe_type_ctor == nullptr
           ? std::nullopt
-          : std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(
+          : std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>(
                 element->maybe_type_ctor);
   std::unique_ptr<Conversion> conv = std::make_unique<BitsDeclarationConversion>(
       element->identifier, ref, optional_strictness(*element->decl_start_token));
@@ -191,7 +191,7 @@ void ConvertingTreeVisitor::OnEnumDeclaration(
   auto ref =
       element->maybe_type_ctor == nullptr
           ? std::nullopt
-          : std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(
+          : std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>(
                 element->maybe_type_ctor);
   std::unique_ptr<Conversion> conv = std::make_unique<EnumDeclarationConversion>(
       element->identifier, ref, optional_strictness(*element->decl_start_token));
@@ -253,7 +253,7 @@ void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember
 }
 
 void ConvertingTreeVisitor::OnTypeConstructor(
-    const std::unique_ptr<raw::TypeConstructor>& element) {
+    const std::unique_ptr<raw::TypeConstructorOld>& element) {
   std::optional<UnderlyingType> underlying_type = resolve(element);
 
   // We should never get a null Builtin - if we do, there is a mistake in the

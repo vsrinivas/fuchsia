@@ -254,13 +254,13 @@ class AttributeList final : public SourceElement {
   std::vector<Attribute> attributes;
 };
 
-class TypeConstructor final : public SourceElement {
+class TypeConstructorOld final : public SourceElement {
  public:
-  TypeConstructor(SourceElement const& element, std::unique_ptr<CompoundIdentifier> identifier,
-                  std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-                  std::unique_ptr<Identifier> handle_subtype_identifier,
-                  std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
-                  types::Nullability nullability)
+  TypeConstructorOld(SourceElement const& element, std::unique_ptr<CompoundIdentifier> identifier,
+                     std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor,
+                     std::unique_ptr<Identifier> handle_subtype_identifier,
+                     std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
+                     types::Nullability nullability)
       : SourceElement(element),
         identifier(std::move(identifier)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
@@ -272,7 +272,7 @@ class TypeConstructor final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<CompoundIdentifier> identifier;
-  std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor;
   std::unique_ptr<Identifier> handle_subtype_identifier;
   std::unique_ptr<Constant> handle_rights;
   std::unique_ptr<Constant> maybe_size;
@@ -299,7 +299,7 @@ class BitsDeclaration final : public SourceElement {
  public:
   BitsDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
                   std::unique_ptr<AttributeList> attributes, std::unique_ptr<Identifier> identifier,
-                  std::unique_ptr<TypeConstructor> maybe_type_ctor,
+                  std::unique_ptr<TypeConstructorOld> maybe_type_ctor,
                   std::vector<std::unique_ptr<BitsMember>> members, types::Strictness strictness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
@@ -314,7 +314,7 @@ class BitsDeclaration final : public SourceElement {
   std::unique_ptr<Token> decl_start_token;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
   std::vector<std::unique_ptr<BitsMember>> members;
   const types::Strictness strictness;
 };
@@ -329,7 +329,7 @@ class AliasDeclaration final : public SourceElement {
 
  public:
   AliasDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                   std::unique_ptr<Identifier> alias, std::unique_ptr<TypeConstructor> type_ctor)
+                   std::unique_ptr<Identifier> alias, std::unique_ptr<TypeConstructorOld> type_ctor)
       : SourceElement(element),
         kind(Kind::kOld),
         attributes(std::move(attributes)),
@@ -357,7 +357,7 @@ class AliasDeclaration final : public SourceElement {
   const Kind kind;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> alias;
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   std::unique_ptr<TypeConstructorNew> type_ctor_new;
 };
 
@@ -365,7 +365,7 @@ class Using final : public SourceElement {
  public:
   Using(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
         std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias,
-        std::unique_ptr<TypeConstructor> maybe_type_ctor)
+        std::unique_ptr<TypeConstructorOld> maybe_type_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
         using_path(std::move(using_path)),
@@ -379,13 +379,13 @@ class Using final : public SourceElement {
   std::unique_ptr<Identifier> maybe_alias;
   // TODO(fxbug.dev/7807): Use a special purpose AST element, as is the case in the
   // flat AST.
-  std::unique_ptr<TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
 };
 
 class ConstDeclaration final : public SourceElement {
  public:
   ConstDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                   std::unique_ptr<TypeConstructor> type_ctor,
+                   std::unique_ptr<TypeConstructorOld> type_ctor,
                    std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> constant)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -396,7 +396,7 @@ class ConstDeclaration final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<AttributeList> attributes;
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<Constant> constant;
 };
@@ -421,7 +421,7 @@ class EnumDeclaration final : public SourceElement {
  public:
   EnumDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
                   std::unique_ptr<AttributeList> attributes, std::unique_ptr<Identifier> identifier,
-                  std::unique_ptr<TypeConstructor> maybe_type_ctor,
+                  std::unique_ptr<TypeConstructorOld> maybe_type_ctor,
                   std::vector<std::unique_ptr<EnumMember>> members, types::Strictness strictness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
@@ -436,14 +436,14 @@ class EnumDeclaration final : public SourceElement {
   std::unique_ptr<Token> decl_start_token;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
   std::vector<std::unique_ptr<EnumMember>> members;
   const types::Strictness strictness;
 };
 
 class Parameter final : public SourceElement {
  public:
-  Parameter(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+  Parameter(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
             std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
@@ -452,7 +452,7 @@ class Parameter final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<AttributeList> attributes;
 };
@@ -474,7 +474,7 @@ class ProtocolMethod : public SourceElement {
                  std::unique_ptr<Identifier> identifier,
                  std::unique_ptr<ParameterList> maybe_request,
                  std::unique_ptr<ParameterList> maybe_response,
-                 std::unique_ptr<TypeConstructor> maybe_error_ctor)
+                 std::unique_ptr<TypeConstructorOld> maybe_error_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
@@ -493,7 +493,7 @@ class ProtocolMethod : public SourceElement {
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<ParameterList> maybe_request;
   std::unique_ptr<ParameterList> maybe_response;
-  std::unique_ptr<TypeConstructor> maybe_error_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_error_ctor;
 };
 
 class ComposeProtocol final : public SourceElement {
@@ -528,7 +528,7 @@ class ProtocolDeclaration final : public SourceElement {
 
 class ResourceProperty final : public SourceElement {
  public:
-  ResourceProperty(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+  ResourceProperty(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
                    std::unique_ptr<Identifier> identifier,
                    std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
@@ -538,7 +538,7 @@ class ResourceProperty final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<AttributeList> attributes;
 };
@@ -547,7 +547,7 @@ class ResourceDeclaration final : public SourceElement {
  public:
   ResourceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                       std::unique_ptr<Identifier> identifier,
-                      std::unique_ptr<TypeConstructor> maybe_type_ctor,
+                      std::unique_ptr<TypeConstructorOld> maybe_type_ctor,
                       std::vector<std::unique_ptr<ResourceProperty>> properties)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -559,13 +559,13 @@ class ResourceDeclaration final : public SourceElement {
 
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
   std::vector<std::unique_ptr<ResourceProperty>> properties;
 };
 
 class ServiceMember final : public SourceElement {
  public:
-  ServiceMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+  ServiceMember(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
                 std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
@@ -574,7 +574,7 @@ class ServiceMember final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<AttributeList> attributes;
 };
@@ -598,7 +598,7 @@ class ServiceDeclaration final : public SourceElement {
 
 class StructMember final : public SourceElement {
  public:
-  StructMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+  StructMember(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
                std::unique_ptr<Identifier> identifier,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<AttributeList> attributes)
@@ -610,7 +610,7 @@ class StructMember final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<Constant> maybe_default_value;
   std::unique_ptr<AttributeList> attributes;
@@ -642,7 +642,7 @@ class StructDeclaration final : public SourceElement {
 
 struct TableMember final : public SourceElement {
   TableMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
-              std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+              std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
               std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
@@ -658,13 +658,13 @@ struct TableMember final : public SourceElement {
   std::unique_ptr<Ordinal64> ordinal;
   // A used member is not 'reserved'
   struct Used {
-    Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+    Used(std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
          std::unique_ptr<Constant> maybe_default_value, std::unique_ptr<AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)),
           attributes(std::move(attributes)) {}
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     std::unique_ptr<Identifier> identifier;
     // We parse default values on union members so that we can give precise
     // errors later in the compiler, but defaults are not supported
@@ -701,7 +701,7 @@ struct TableDeclaration final : public SourceElement {
 class UnionMember final : public SourceElement {
  public:
   UnionMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
-              std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+              std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
               std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
@@ -718,13 +718,13 @@ class UnionMember final : public SourceElement {
 
   // A used member is not 'reserved'
   struct Used {
-    Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+    Used(std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
          std::unique_ptr<Constant> maybe_default_value, std::unique_ptr<AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)),
           attributes(std::move(attributes)) {}
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     std::unique_ptr<Identifier> identifier;
     // We parse default values on union members so that we can give precise
     // errors later in the compiler, but defaults are not supported

@@ -87,7 +87,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override;
 
   // Types.
-  void OnTypeConstructor(std::unique_ptr<raw::TypeConstructor> const& element) override;
+  void OnTypeConstructor(std::unique_ptr<raw::TypeConstructorOld> const& element) override;
 
   // Unions.
   void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override;
@@ -145,7 +145,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // "Foo<Bar>:4," what do "Foo" and "Bar" represent?  The conversion applied
   // will look very different depending on which built-ins those identifiers
   // resolve to.
-  std::optional<UnderlyingType> resolve(const std::unique_ptr<raw::TypeConstructor>& type_ctor);
+  std::optional<UnderlyingType> resolve(const std::unique_ptr<raw::TypeConstructorOld>& type_ctor);
 };
 
 class Converting {

@@ -215,7 +215,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnUnionMember(element);
   }
 
-  virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) override {
+  virtual void OnTypeConstructor(std::unique_ptr<TypeConstructorOld> const& element) override {
     ScopedIncrement si(nested_type_depth_);
     ScopedBool before_colon(blank_space_before_colon_, is_enum_or_bits_or_resource_decl_);
     ScopedBool after_colon(blank_space_after_colon_, is_enum_or_bits_or_resource_decl_);

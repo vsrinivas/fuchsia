@@ -139,7 +139,7 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::AttributeList, *element);
     TreeVisitor::OnAttributeList(element);
   }
-  void OnTypeConstructor(std::unique_ptr<fidl::raw::TypeConstructor> const& element) override {
+  void OnTypeConstructor(std::unique_ptr<fidl::raw::TypeConstructorOld> const& element) override {
     CheckSpanOfType(ElementType::TypeConstructor, *element);
     TreeVisitor::OnTypeConstructor(element);
   }
@@ -289,9 +289,8 @@ std::multiset<std::string> extract_expected_spans(const std::string& source,
         break;
       }
 
-      const std::string span = remove_markers(
-          source.substr(stack.top(),     // index of left marker
-                        i - stack.top()) // length of span
+      const std::string span = remove_markers(source.substr(stack.top(),  // index of left marker
+                                                            i - stack.top())  // length of span
       );
       stack.pop();
       spans.insert(span);

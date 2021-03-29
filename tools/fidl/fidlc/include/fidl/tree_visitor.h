@@ -109,7 +109,7 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) {
+  virtual void OnTypeConstructor(std::unique_ptr<TypeConstructorOld> const& element) {
     element->Accept(this);
   }
 

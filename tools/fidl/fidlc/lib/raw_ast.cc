@@ -67,7 +67,7 @@ void AttributeList::Accept(TreeVisitor* visitor) const {
   }
 }
 
-void TypeConstructor::Accept(TreeVisitor* visitor) const {
+void TypeConstructorOld::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   visitor->OnCompoundIdentifier(identifier);
   if (maybe_arg_type_ctor != nullptr)

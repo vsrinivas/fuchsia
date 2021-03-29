@@ -90,12 +90,12 @@ class Conversion {
 // TypeConversions, as would be the case for something like "vector<handle?>."
 class TypeConversion : public Conversion {
  public:
-  explicit TypeConversion(const std::unique_ptr<raw::TypeConstructor>& type_ctor,
+  explicit TypeConversion(const std::unique_ptr<raw::TypeConstructorOld>& type_ctor,
                           const UnderlyingType underlying_type)
       : type_ctor_(type_ctor), underlying_type_(underlying_type) {}
   ~TypeConversion() override = default;
 
-  const std::unique_ptr<raw::TypeConstructor>& type_ctor_;
+  const std::unique_ptr<raw::TypeConstructorOld>& type_ctor_;
   const UnderlyingType underlying_type_;
   std::string wrapped_type_text_;
 
@@ -110,12 +110,12 @@ class TypeConversion : public Conversion {
 class NameAndTypeConversion : public Conversion {
  public:
   NameAndTypeConversion(const std::unique_ptr<raw::Identifier>& identifier,
-                        const std::unique_ptr<raw::TypeConstructor>& type_ctor)
+                        const std::unique_ptr<raw::TypeConstructorOld>& type_ctor)
       : identifier_(identifier), type_ctor_(type_ctor) {}
   ~NameAndTypeConversion() override = default;
 
   const std::unique_ptr<raw::Identifier>& identifier_;
-  const std::unique_ptr<raw::TypeConstructor>& type_ctor_;
+  const std::unique_ptr<raw::TypeConstructorOld>& type_ctor_;
   std::string type_text_;
 
   void AddChildText(std::string child) override { type_text_ = child; }
@@ -224,13 +224,13 @@ class BitsDeclarationConversion : public MemberedDeclarationConversion {
  public:
   BitsDeclarationConversion(
       const std::unique_ptr<raw::Identifier>& identifier,
-      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>&
+      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>&
           maybe_wrapped_type,
       const std::optional<types::Strictness>& strictness)
       : MemberedDeclarationConversion(identifier, strictness, types::Resourceness::kValue),
         maybe_wrapped_type_(maybe_wrapped_type) {}
 
-  const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>
+  const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>
       maybe_wrapped_type_;
 
   void AddChildText(std::string child) override {}
@@ -254,7 +254,7 @@ class EnumDeclarationConversion : public BitsDeclarationConversion {
  public:
   EnumDeclarationConversion(
       const std::unique_ptr<raw::Identifier>& identifier,
-      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>&
+      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>&
           maybe_wrapped_type,
       const std::optional<types::Strictness>& strictness)
       : BitsDeclarationConversion(identifier, maybe_wrapped_type, strictness) {}

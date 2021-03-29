@@ -823,9 +823,9 @@ class Library {
 
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
-  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor, SourceSpan span,
-                              fidl::utils::Syntax syntax,
-                              std::unique_ptr<TypeConstructor>* out_type);
+  bool ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> raw_type_ctor,
+                                 SourceSpan span, fidl::utils::Syntax syntax,
+                                 std::unique_ptr<TypeConstructor>* out_type);
 
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive, fidl::utils::Syntax syntax);
   bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration,

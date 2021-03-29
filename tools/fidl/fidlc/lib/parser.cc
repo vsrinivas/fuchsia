@@ -449,7 +449,7 @@ std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(
   if (!Ok())
     return Fail();
 
-  auto type_ctor = ParseTypeConstructor();
+  auto type_ctor = ParseTypeConstructorOld();
   if (!Ok())
     return Fail();
 
@@ -493,7 +493,7 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
     return Fail();
 
   std::unique_ptr<raw::Identifier> maybe_alias;
-  std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> maybe_type_ctor;
 
   if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kAs))) {
     if (!Ok())
@@ -507,7 +507,7 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
       return Fail(ErrOldUsingSyntaxDeprecated, using_path->span());
     if (!Ok() || using_path->components.size() != 1u)
       return Fail(ErrCompoundAliasIdentifier, using_path->span());
-    maybe_type_ctor = ParseTypeConstructor();
+    maybe_type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   }
@@ -517,13 +517,13 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
                                       std::move(maybe_type_ctor));
 }
 
-std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
+std::unique_ptr<raw::TypeConstructorOld> Parser::ParseTypeConstructorOld() {
   ASTScope scope(this);
   auto identifier = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
 
-  std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> maybe_arg_type_ctor;
   std::unique_ptr<raw::Constant> handle_rights;
   std::unique_ptr<raw::Constant> maybe_size;
   std::unique_ptr<raw::Identifier> handle_subtype_identifier;
@@ -532,7 +532,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
       return Fail();
-    maybe_arg_type_ctor = ParseTypeConstructor();
+    maybe_arg_type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
     ConsumeToken(OfKind(Token::Kind::kRightAngle));
@@ -573,7 +573,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
     nullability = types::Nullability::kNullable;
   }
 
-  return std::make_unique<raw::TypeConstructor>(
+  return std::make_unique<raw::TypeConstructorOld>(
       scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
       std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
       nullability);
@@ -614,11 +614,11 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
   if (!Ok())
     return Fail();
 
-  std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> maybe_type_ctor;
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     if (!Ok())
       return Fail();
-    maybe_type_ctor = ParseTypeConstructor();
+    maybe_type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   }
@@ -677,17 +677,17 @@ std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(
   ValidateModifiers</* none */>(modifiers, decl_token.value());
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
@@ -742,11 +742,11 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
   if (!Ok())
     return Fail();
 
-  std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> maybe_type_ctor;
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     if (!Ok())
       return Fail();
-    maybe_type_ctor = ParseTypeConstructor();
+    maybe_type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   }
@@ -803,17 +803,17 @@ std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
     return Fail();
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
@@ -887,9 +887,9 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
   if (!parse_params(&response))
     return Fail();
 
-  std::unique_ptr<raw::TypeConstructor> maybe_error;
+  std::unique_ptr<raw::TypeConstructorOld> maybe_error;
   if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
-    maybe_error = ParseTypeConstructor();
+    maybe_error = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   }
@@ -917,14 +917,14 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
     return Fail();
 
   std::unique_ptr<raw::ParameterList> maybe_response;
-  std::unique_ptr<raw::TypeConstructor> maybe_error;
+  std::unique_ptr<raw::TypeConstructorOld> maybe_error;
   if (MaybeConsumeToken(OfKind(Token::Kind::kArrow))) {
     if (!Ok())
       return Fail();
     if (!parse_params(&maybe_response))
       return Fail();
     if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
-      maybe_error = ParseTypeConstructor();
+      maybe_error = ParseTypeConstructorOld();
       if (!Ok())
         return Fail();
     }
@@ -1037,17 +1037,17 @@ std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration(
     return Fail();
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
@@ -1073,11 +1073,11 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
   if (!Ok())
     return Fail();
 
-  std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> maybe_type_ctor;
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     if (!Ok())
       return Fail();
-    maybe_type_ctor = ParseTypeConstructor();
+    maybe_type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   }
@@ -1148,17 +1148,17 @@ std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
     return Fail();
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructor();
+    type_ctor = ParseTypeConstructorOld();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
@@ -1220,7 +1220,7 @@ std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
-  auto type_ctor = ParseTypeConstructor();
+  auto type_ctor = ParseTypeConstructorOld();
   if (!Ok())
     return Fail();
   auto identifier = ParseIdentifier();
@@ -1311,7 +1311,7 @@ std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
     return std::make_unique<raw::TableMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
-  auto type_ctor = ParseTypeConstructor();
+  auto type_ctor = ParseTypeConstructorOld();
   if (!Ok())
     return Fail();
   auto identifier = ParseIdentifier();
@@ -1410,7 +1410,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
     return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
-  auto type_ctor = ParseTypeConstructor();
+  auto type_ctor = ParseTypeConstructorOld();
   if (!Ok())
     return Fail();
 

@@ -289,7 +289,7 @@ class Parser {
   std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&,
                                          const Modifiers&);
 
-  std::unique_ptr<raw::TypeConstructor> ParseTypeConstructor();
+  std::unique_ptr<raw::TypeConstructorOld> ParseTypeConstructorOld();
 
   std::unique_ptr<raw::BitsMember> ParseBitsMember();
   std::unique_ptr<raw::BitsDeclaration> ParseBitsDeclaration(
