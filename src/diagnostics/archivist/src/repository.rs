@@ -185,7 +185,8 @@ impl DataRepo {
     pub fn is_live(&self, identity: &ComponentIdentity) -> bool {
         let mut this = self.write();
         if let Some(containers) = this.data_directories.get(&identity.unique_key) {
-            containers.get_values()[0].should_retain()
+            let diagnostics_containers = containers.get_values();
+            diagnostics_containers.len() == 1 && diagnostics_containers[0].should_retain()
         } else {
             false
         }
@@ -227,7 +228,10 @@ impl DataRepoState {
 
     pub fn mark_stopped(&mut self, key: &UniqueKey) {
         if let Some(containers) = self.data_directories.get_mut(key) {
-            containers.get_values_mut()[0].mark_stopped();
+            let diagnostics_containers = containers.get_values_mut();
+            if diagnostics_containers.len() == 1 {
+                diagnostics_containers[0].mark_stopped();
+            }
         }
     }
 
