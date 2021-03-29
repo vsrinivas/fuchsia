@@ -120,7 +120,16 @@ func runGen(
 		genCmd = append(genCmd, fmt.Sprintf("--tracelog=%s", gnTracePath))
 	}
 	if staticSpec.GenerateCompdb {
-		genCmd = append(genCmd, "--export-compile-commands")
+		arg := "--export-compile-commands"
+		if len(staticSpec.CompdbTargets) > 0 {
+			arg = fmt.Sprintf("%s=%s", arg, strings.Join(staticSpec.CompdbTargets, ","))
+		}
+		genCmd = append(genCmd, arg)
+	} else if len(staticSpec.CompdbTargets) > 0 {
+		return "", fmt.Errorf("compdb_targets is only supported when generate_compdb is set")
+	}
+	if staticSpec.ExportRustProject {
+		genCmd = append(genCmd, "--export-rust-project")
 	}
 	for _, f := range staticSpec.IdeFiles {
 		genCmd = append(genCmd, fmt.Sprintf("--ide=%s", f))

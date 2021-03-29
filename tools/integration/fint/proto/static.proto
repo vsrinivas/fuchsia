@@ -111,16 +111,24 @@ message Static {
   // Whether to generate a listing of the commands run during the build.
   bool generate_compdb = 24;
 
+  // Compile commands should be generated for these targets (and all their
+  // dependencies). If `generate_compdb` is set and `compdb_targets` is empty,
+  // GN will generate compile commands for all targets in the graph.
+  repeated string compdb_targets = 25;
+
   // Whether to use a go cache when building.
-  bool enable_go_cache = 25;
+  bool enable_go_cache = 26;
 
   // Whether to use a rust cache when building.
-  bool enable_rust_cache = 26;
+  bool enable_rust_cache = 27;
 
   // Which IDE files to generate.
-  repeated string ide_files = 27;
+  repeated string ide_files = 28;
 
   // Passed to --json-ide-script GN flag; GN will execute each of these scripts
   // after regenerating the project.json IDE file.
-  repeated string json_ide_scripts = 28;
+  repeated string json_ide_scripts = 29;
+
+  // Whether to set --export-rust-project GN flag.
+  bool export_rust_project = 30;
 }

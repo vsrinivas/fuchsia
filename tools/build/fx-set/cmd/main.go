@@ -369,18 +369,21 @@ func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, a
 	}
 
 	return &fintpb.Static{
-		Board:            boardPath,
-		Product:          productPath,
-		Optimize:         optimize,
-		BasePackages:     basePackages,
-		CachePackages:    args.cachePackages,
-		UniversePackages: args.universePackages,
-		HostLabels:       args.hostLabels,
-		Variants:         variants,
-		GnArgs:           gnArgs,
-		UseGoma:          useGomaFinal,
-		IdeFiles:         args.ideFiles,
-		JsonIdeScripts:   args.jsonIDEScripts,
+		Board:             boardPath,
+		Product:           productPath,
+		Optimize:          optimize,
+		BasePackages:      basePackages,
+		CachePackages:     args.cachePackages,
+		UniversePackages:  args.universePackages,
+		HostLabels:        args.hostLabels,
+		Variants:          variants,
+		GnArgs:            gnArgs,
+		UseGoma:           useGomaFinal,
+		IdeFiles:          args.ideFiles,
+		JsonIdeScripts:    args.jsonIDEScripts,
+		GenerateCompdb:    true,
+		CompdbTargets:     []string{"default"},
+		ExportRustProject: true,
 	}, nil
 }
 
