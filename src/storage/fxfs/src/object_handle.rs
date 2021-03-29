@@ -28,7 +28,12 @@ pub trait ObjectHandle: Send + Sync {
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error>;
 
     /// Writes |buf| to the device at |offset|.
-    async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error>;
+    async fn txn_write(
+        &self,
+        transaction: &mut Transaction,
+        offset: u64,
+        buf: BufferRef<'_>,
+    ) -> Result<(), Error>;
 
     // Returns the size of the object.
     fn get_size(&self) -> u64;
@@ -36,7 +41,7 @@ pub trait ObjectHandle: Send + Sync {
     /// Sets the size of the object to |size|.  If this extends the object, a hole is created.  If
     /// this shrinks the object, space will be deallocated (if there are no more references to the
     /// data).
-    async fn truncate(&self, size: u64) -> Result<(), Error>;
+    async fn truncate(&self, transaction: &mut Transaction, size: u64) -> Result<(), Error>;
 
     /// Preallocates the given file range.  Data will not be initialised so this should be a
     /// privileged operation for now.  The data can be later written to using an overwrite mode.
@@ -47,16 +52,14 @@ pub trait ObjectHandle: Send + Sync {
         transaction: &mut Transaction,
         range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error>;
+
+    /// Commit the given transaction.
+    async fn commit_transaction(&self, transaction: Transaction);
 }
 
 #[async_trait]
-pub trait ObjectHandleExt {
+pub trait ObjectHandleExt: ObjectHandle {
     // Returns the contents of the object. The object must be < |limit| bytes in size.
-    async fn contents(&self, limit: usize) -> Result<Box<[u8]>, Error>;
-}
-
-#[async_trait]
-impl<T: ObjectHandle> ObjectHandleExt for T {
     async fn contents(&self, limit: usize) -> Result<Box<[u8]>, Error> {
         let size = self.get_size();
         if size > limit as u64 {
@@ -68,4 +71,15 @@ impl<T: ObjectHandle> ObjectHandleExt for T {
         vec.copy_from_slice(&buf.as_slice());
         Ok(vec.into())
     }
+
+    /// Performs a write within a transaction.
+    async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+        let mut transaction = Transaction::new();
+        self.txn_write(&mut transaction, offset, buf).await?;
+        self.commit_transaction(transaction).await;
+        Ok(())
+    }
 }
+
+#[async_trait]
+impl<T: ObjectHandle + ?Sized> ObjectHandleExt for T {}

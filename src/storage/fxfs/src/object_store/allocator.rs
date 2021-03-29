@@ -272,9 +272,9 @@ impl Allocator for SimpleAllocator {
         }
         let mut buf = object_handle.allocate_buffer(serialized_info.len());
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
-        object_handle.write(0u64, buf.as_ref()).await?;
-
         let mut transaction = Transaction::new();
+        object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
+
         transaction.add(self.object_id(), Mutation::TreeCompact);
         filesystem.commit_transaction(transaction).await;
 

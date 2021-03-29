@@ -245,14 +245,16 @@ impl Journal {
             Arc::new(SimpleAllocator::new(filesystem.clone(), INIT_ALLOCATOR_OBJECT_ID, true));
         self.objects.set_allocator(allocator.clone());
 
-        let root_store = root_parent.create_child_store_with_id(INIT_ROOT_STORE_OBJECT_ID).await?;
+        let mut transaction = Transaction::new();
+        let root_store = root_parent
+            .create_child_store_with_id(&mut transaction, INIT_ROOT_STORE_OBJECT_ID)
+            .await?;
         self.objects.set_root_store_object_id(root_store.store_object_id());
 
         // Create the super-block object...
-        SuperBlock::create_object(&root_store).await?;
+        SuperBlock::create_object(&mut transaction, &root_store).await?;
 
         // and the journal object...
-        let mut transaction = Transaction::new();
         let journal_handle =
             root_parent.create_object(&mut transaction, journal_handle_options()).await?;
         journal_handle.preallocate_range(&mut transaction, 0..self.chunk_size()).await?;
@@ -445,7 +447,7 @@ impl<OH> JournalWriter<OH> {
 mod tests {
     use {
         crate::{
-            object_handle::ObjectHandle,
+            object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 transaction::Transaction,

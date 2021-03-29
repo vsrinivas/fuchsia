@@ -231,7 +231,7 @@ mod tests {
     use {
         super::{JournalReader, ReadResult},
         crate::{
-            object_handle::ObjectHandle,
+            object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::journal::{writer::JournalWriter, JournalCheckpoint},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },

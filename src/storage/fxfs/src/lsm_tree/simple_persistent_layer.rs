@@ -8,6 +8,7 @@ use {
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, Value,
         },
         object_handle::ObjectHandle,
+        object_store::transaction::Transaction,
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
@@ -201,7 +202,9 @@ impl<'a> SimplePersistentLayerWriter<'a> {
         let mut buf = self.object_handle.allocate_buffer(len);
         // TODO(csuter): Consider making BufferRef implement AsRef<[u8]> to make this a bit tidier.
         buf.as_mut_slice().copy_from_slice(&self.buf[..len]);
-        self.object_handle.write(self.offset, buf.as_ref()).await?;
+        let mut transaction = Transaction::new();
+        self.object_handle.txn_write(&mut transaction, self.offset, buf.as_ref()).await?;
+        self.object_handle.commit_transaction(transaction).await;
         log::debug!("wrote {} items, {} bytes", self.item_count, len);
         self.buf.drain(..len - 2); // 2 bytes are used for the next item count.
         self.item_count = 0;
