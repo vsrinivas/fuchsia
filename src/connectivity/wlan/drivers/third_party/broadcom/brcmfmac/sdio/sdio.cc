@@ -2759,7 +2759,34 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
       for (int ndx = 0; ndx < len; ndx++) {
         if (ram_cmp[ndx] != expected_data[offset + ndx]) {
           BRCMF_ERR("Downloaded RAM image is corrupted at offset %d of %zu (saw:%#x expect:%#x)",
-                    offset, ram_sz, ram_cmp[ndx], expected_data[offset + ndx]);
+                    offset + ndx, ram_sz, ram_cmp[ndx], expected_data[offset + ndx]);
+
+                    /*const int start = (ndx & 63) == 0 ? 0 : ((ndx & 63) - 1);*/
+		    const int start = (ndx & ~63) == 0 ? 0 : ((ndx & ~63) - 64);
+          const int blocks = start == 0 ? 2 : 3;
+          zxlogf(ERROR, "Read:");
+          for (int i = start; len >= (64 * blocks) && i < (64 * blocks); i += 16) {
+            zxlogf(ERROR,
+                   "%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x "
+                   "%02x %02x",
+                   i, ram_cmp[i + 0], ram_cmp[i + 1], ram_cmp[i + 2], ram_cmp[i + 3],
+                   ram_cmp[i + 4], ram_cmp[i + 5], ram_cmp[i + 6], ram_cmp[i + 7], ram_cmp[i + 8],
+                   ram_cmp[i + 9], ram_cmp[i + 10], ram_cmp[i + 11], ram_cmp[i + 12],
+                   ram_cmp[i + 13], ram_cmp[i + 14], ram_cmp[i + 15]);
+          }
+          const char* expected = expected_data + offset;
+          zxlogf(ERROR, "Expected:");
+          for (int i = start; len >= (64 * blocks) && i < (64 * blocks); i += 16) {
+            zxlogf(ERROR,
+                   "%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x "
+                   "%02x %02x",
+                   i, expected[i + 0], expected[i + 1], expected[i + 2], expected[i + 3],
+                   expected[i + 4], expected[i + 5], expected[i + 6], expected[i + 7],
+                   expected[i + 8], expected[i + 9], expected[i + 10], expected[i + 11],
+                   expected[i + 12], expected[i + 13], expected[i + 14], expected[i + 15]);
+          }
+
+
           break;
         }
       }

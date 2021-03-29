@@ -155,7 +155,8 @@ zx_status_t Vim3::SdInit() {
     return status;
   }
 
-
+/*(void)comp_desc;
+*/
   return ZX_OK;
 }
 

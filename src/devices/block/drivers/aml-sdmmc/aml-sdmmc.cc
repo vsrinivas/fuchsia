@@ -1141,55 +1141,35 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   auto clk = AmlSdmmcClock::Get().ReadFrom(&mmio_);
 
   auto set_adj_delay = [&](uint32_t param) -> void { SetAdjDelay(param); };
-  auto set_delay_lines = [&](uint32_t param) -> void { SetDelayLines(param); };
-
-  set_delay_lines(0);
-
-  TuneWindow phase_windows[AmlSdmmcClock::kMaxClkPhase + 1] = {};
-  for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
-    if (phase != clk.cfg_co_phase()) {
-      clk.set_cfg_tx_phase(phase).WriteTo(&mmio_);
-      phase_windows[phase] =
-          TuneDelayParam(tuning_blk, tuning_cmd_idx, clk.cfg_div() - 1, set_adj_delay);
-    }
-  }
+  // auto set_delay_lines = [&](uint32_t param) -> void { SetDelayLines(param); };
 
   TuneWindow adj_delay_window;
-  uint32_t best_phase = 0;
-
-  // Find the largest window of working settings.
-  for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
-    if (phase_windows[phase].size > adj_delay_window.size) {
-      adj_delay_window = phase_windows[phase];
-      best_phase = phase;
-    }
-  }
-
-  if (adj_delay_window.size == 0) {
-    AML_SDMMC_ERROR("No window found for any phase");
+  uint32_t delay_lines = 0;
+  do {
+    SetDelayLines(delay_lines++);
+    adj_delay_window = TuneDelayParam(tuning_blk, tuning_cmd_idx, clk.cfg_div() - 1, set_adj_delay);
+  } while (delay_lines <= max_delay() && adj_delay_window.size == clk.cfg_div());
+  delay_lines--;
+  if (adj_delay_window.size == clk.cfg_div()) {
+    AML_SDMMC_ERROR("Unable to tune, all transfers succeeded");
     return ZX_ERR_IO;
   }
 
-  const uint32_t best_adj_delay =
-      adj_delay_window.size == clk.cfg_div() ? 0 : adj_delay_window.middle() % clk.cfg_div();
+  // Sweep the entire range of settings.
+  // for (uint32_t i = 0; i < clk.cfg_div(); i++) {
+  //   set_adj_delay(i);
+  //   TuneDelayParam(tuning_blk, tuning_cmd_idx, max_delay(), set_delay_lines);
+  // }
 
-  clk.set_cfg_tx_phase(best_phase).WriteTo(&mmio_);
+  AML_SDMMC_INFO("Delay %u produced failing adj delay value", delay_lines);
+
+  const uint32_t best_adj_delay = adj_delay_window.middle() % clk.cfg_div();
+
+  SetDelayLines(delay_lines);
   set_adj_delay(best_adj_delay);
 
-  TuneWindow delay_window =
-      TuneDelayParam(tuning_blk, tuning_cmd_idx, max_delay(), set_delay_lines);
-
-  if (delay_window.size == 0) {
-    AML_SDMMC_ERROR("No delay window found");
-    return ZX_ERR_IO;
-  }
-
-  const uint32_t best_delay = delay_window.middle() % (max_delay() + 1);
-  set_delay_lines(best_delay);
-
   AML_SDMMC_INFO("Clock divider %u, clock phase %u, adj delay %u, delay %u", clk.cfg_div(),
-                 best_phase, best_adj_delay, best_delay);
-
+                 clk.cfg_tx_phase(), best_adj_delay, delay_lines);
   return ZX_OK;
 }
 
