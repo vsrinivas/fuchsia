@@ -188,6 +188,7 @@ pub struct Rasterizer {
     line_indices: Vec<MaybeUninit<usize>>,
     pixel_indices: Vec<MaybeUninit<i32>>,
     segments: Vec<[CompactSegment; 2]>,
+    segments_len: usize,
 }
 
 impl Rasterizer {
@@ -196,17 +197,12 @@ impl Rasterizer {
     }
 
     pub fn segments(&self) -> &[CompactSegment] {
-        unsafe {
-            std::slice::from_raw_parts(self.segments.as_ptr() as *const _, self.segments.len() * 2)
-        }
+        unsafe { std::slice::from_raw_parts(self.segments.as_ptr() as *const _, self.segments_len) }
     }
 
     fn segments_mut(&mut self) -> &mut [CompactSegment] {
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.segments.as_mut_ptr() as *mut _,
-                self.segments.len() * 2,
-            )
+            std::slice::from_raw_parts_mut(self.segments.as_mut_ptr() as *mut _, self.segments_len)
         }
     }
 
@@ -273,6 +269,7 @@ impl Rasterizer {
             });
 
         self.segments.par_extend(par_iter);
+        self.segments_len = self.segments.len() * 2;
     }
 
     pub fn sort(&mut self) {
@@ -283,6 +280,8 @@ impl Rasterizer {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use super::*;
 
     use crate::{rasterizer::raster_segment::RasterSegment, Point, Segment, TILE_SIZE};
@@ -316,7 +315,7 @@ mod tests {
         segments
             .iter()
             .map(|&segment| {
-                let raster_segment: Option<RasterSegment> = segment.into();
+                let raster_segment: Option<RasterSegment> = segment.try_into().ok();
                 raster_segment.map(|segment| (segment.area, segment.cover))
             })
             .collect()
@@ -504,7 +503,7 @@ mod tests {
         segments
             .iter()
             .map(|&segment| {
-                let raster_segment: Option<RasterSegment> = segment.into();
+                let raster_segment: Option<RasterSegment> = segment.try_into().ok();
                 raster_segment
                     .map(|segment| (segment.tile_i, segment.tile_j, segment.tile_x, segment.tile_y))
             })

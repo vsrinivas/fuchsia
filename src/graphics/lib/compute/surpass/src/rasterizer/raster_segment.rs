@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::TILE_SHIFT;
 
@@ -156,24 +156,6 @@ impl Default for CompactSegment {
     }
 }
 
-impl Into<Option<RasterSegment>> for CompactSegment {
-    fn into(self) -> Option<RasterSegment> {
-        if self.is_none() == 1 {
-            None
-        } else {
-            Some(RasterSegment {
-                layer: self.layer(),
-                tile_i: self.tile_i(),
-                tile_j: self.tile_j(),
-                tile_x: self.tile_x(),
-                tile_y: self.tile_y(),
-                area: self.area(),
-                cover: self.cover(),
-            })
-        }
-    }
-}
-
 #[inline]
 pub fn search_last_by_key<F, K>(
     segments: &[CompactSegment],
@@ -217,4 +199,24 @@ pub struct RasterSegment {
     pub tile_y: u8,
     pub area: i16,
     pub cover: i8,
+}
+
+impl TryFrom<CompactSegment> for RasterSegment {
+    type Error = ();
+
+    fn try_from(value: CompactSegment) -> Result<Self, Self::Error> {
+        if value.is_none() == 1 {
+            Err(())
+        } else {
+            Ok(RasterSegment {
+                layer: value.layer(),
+                tile_i: value.tile_i(),
+                tile_j: value.tile_j(),
+                tile_x: value.tile_x(),
+                tile_y: value.tile_y(),
+                area: value.area(),
+                cover: value.cover(),
+            })
+        }
+    }
 }

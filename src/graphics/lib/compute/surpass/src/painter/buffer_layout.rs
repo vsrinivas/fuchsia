@@ -12,10 +12,12 @@ use std::{
 use rayon::prelude::*;
 
 use crate::{
-    painter::{Painter, Style},
+    painter::Style,
     rasterizer::{search_last_by_key, CompactSegment},
     TILE_MASK, TILE_SHIFT, TILE_SIZE,
 };
+
+use crate::painter::Painter;
 
 thread_local!(static PAINTER: RefCell<Painter> = RefCell::new(Painter::new()));
 
@@ -142,10 +144,10 @@ impl fmt::Debug for BufferLayout {
 impl BufferLayout {
     fn par_tile_rows(
         &mut self,
-        f: impl Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&Box<dyn Flusher>>) + Send + Sync,
+        f: impl Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&dyn Flusher>) + Send + Sync,
     ) {
         let row_len = self.row_len;
-        let flusher = self.flusher.as_ref();
+        let flusher = self.flusher.as_ref().map(|flusher| &**flusher);
         self.layout
             .par_chunks_mut(row_len * TILE_SIZE)
             .enumerate()
