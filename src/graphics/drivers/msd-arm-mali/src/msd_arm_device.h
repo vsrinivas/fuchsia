@@ -60,6 +60,8 @@ class MsdArmDevice : public msd_device_t,
 
   std::shared_ptr<MsdArmConnection> Open(msd_client_id_t client_id);
 
+  uint64_t GpuId() { return gpu_features_.gpu_id.reg_value(); }
+
   struct DumpState {
     struct CorePowerState {
       const char* core_type;

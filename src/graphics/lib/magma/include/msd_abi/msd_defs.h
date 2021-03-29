@@ -75,6 +75,16 @@ struct msd_notification_t {
   } u;
 };
 
+enum IcdSupportFlags {
+  ICD_SUPPORT_FLAG_VULKAN = 1,
+};
+
+typedef struct msd_icd_info_t {
+  // Same length as fuchsia.url.MAX_URL_LENGTH.
+  char component_url[4096];
+  uint32_t support_flags;
+} msd_icd_info_t;
+
 typedef void (*msd_connection_notification_callback_t)(void* token,
                                                        struct msd_notification_t* notification);
 

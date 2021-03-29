@@ -11,11 +11,12 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
+#include <zircon/errors.h>
 
 #include <memory>
 #include <mutex>
@@ -81,6 +82,9 @@ class Mt8167sGpu : public DeviceType,
   void DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) override;
   void TestRestart(TestRestartCompleter::Sync& _completer) override;
   void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override;
+  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   zx_status_t PowerUp() override;
   zx_status_t PowerDown() override;

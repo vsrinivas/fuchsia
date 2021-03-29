@@ -6,6 +6,12 @@
 
 // These entrypoints are used when the driver doesn't implement an extension to the interface yet.
 
+magma_status_t __attribute__((weak))
+msd_device_get_icd_list(struct msd_device_t* device, uint64_t count, msd_icd_info_t* icd_info_out,
+                        uint64_t* actual_count_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 uint32_t __attribute__((weak)) msd_driver_duplicate_inspect_handle(msd_driver_t* driver) {
   return 0;
 }

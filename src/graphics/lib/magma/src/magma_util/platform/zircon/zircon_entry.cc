@@ -8,6 +8,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -150,6 +151,24 @@ class GpuDevice : public fuchsia_gpu_magma::Device::Interface,
     std::unique_lock<std::mutex> lock(this->magma_mutex_);
     if (this->magma_system_device_)
       this->magma_system_device_->DumpStatus(dump_type);
+  }
+
+  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
+    fidl::FidlAllocator allocator;
+    std::vector<msd_icd_info_t> msd_icd_infos;
+    this->magma_system_device_->GetIcdList(&msd_icd_infos);
+    std::vector<fuchsia_gpu_magma::wire::IcdInfo> icd_infos;
+    for (auto& item : msd_icd_infos) {
+      fuchsia_gpu_magma::wire::IcdInfo icd_info(allocator);
+      icd_info.set_component_url(allocator, item.component_url);
+      fuchsia_gpu_magma::wire::IcdFlags flags;
+      if (item.support_flags & ICD_SUPPORT_FLAG_VULKAN)
+        flags |= fuchsia_gpu_magma::wire::IcdFlags::SUPPORTS_VULKAN;
+      icd_info.set_flags(allocator, flags);
+      icd_infos.push_back(std::move(icd_info));
+    }
+
+    completer.Reply(fidl::unowned_vec(icd_infos));
   }
 
   void TestRestart(TestRestartCompleter::Sync& _completer) override {

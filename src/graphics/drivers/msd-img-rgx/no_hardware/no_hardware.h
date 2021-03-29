@@ -45,6 +45,9 @@ class NoHardwareGpu : public DeviceType,
   void DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) override;
   void TestRestart(TestRestartCompleter::Sync& _completer) override;
   void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override;
+  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   zx_status_t PowerUp() override;
   zx_status_t PowerDown() override;

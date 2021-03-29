@@ -42,3 +42,14 @@ TEST(MagmaSystemDevice, MaximumInflightMessages) {
   EXPECT_EQ(1000u, value >> 32);
   EXPECT_EQ(100u, static_cast<uint32_t>(value));
 }
+
+TEST(MagmaSystemDevice, GetIcdList) {
+  auto msd_dev = MsdDeviceUniquePtr(new MsdMockDevice);
+  auto device = MagmaSystemDevice::Create(std::move(msd_dev));
+
+  std::vector<msd_icd_info_t> icds;
+  magma_status_t status = device->GetIcdList(&icds);
+  EXPECT_EQ(MAGMA_STATUS_OK, status);
+  EXPECT_EQ(2u, icds.size());
+  EXPECT_EQ(std::string(icds[0].component_url), "a");
+}

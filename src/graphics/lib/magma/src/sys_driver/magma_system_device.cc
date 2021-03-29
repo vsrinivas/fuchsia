@@ -88,3 +88,18 @@ magma::Status MagmaSystemDevice::Query(uint64_t id, uint64_t* value_out) {
   }
   return msd_device_query(msd_dev(), id, value_out);
 }
+
+magma_status_t MagmaSystemDevice::GetIcdList(std::vector<msd_icd_info_t>* icd_list_out) {
+  icd_list_out->clear();
+  uint64_t list_size;
+  magma_status_t status = msd_device_get_icd_list(msd_dev(), 0, nullptr, &list_size);
+  if (status != MAGMA_STATUS_OK)
+    return DRET(status);
+  icd_list_out->resize(list_size);
+  status =
+      msd_device_get_icd_list(msd_dev(), icd_list_out->size(), icd_list_out->data(), &list_size);
+  if (status != MAGMA_STATUS_OK)
+    return DRET(status);
+  DASSERT(list_size == icd_list_out->size());
+  return MAGMA_STATUS_OK;
+}

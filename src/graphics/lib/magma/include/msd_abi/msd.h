@@ -38,6 +38,12 @@ magma_status_t msd_device_query(struct msd_device_t* device, uint64_t id, uint64
 magma_status_t msd_device_query_returns_buffer(struct msd_device_t* device, uint64_t id,
                                                uint32_t* buffer_out);
 
+// Outputs a list of ICD components. If icd_info_out is nullptr, doesn't update the list but sets
+// *actual_count_out to the size of the list. Otherwise, returns an error if count is less than the
+// actual size of the list.
+magma_status_t msd_device_get_icd_list(struct msd_device_t* device, uint64_t count,
+                                       msd_icd_info_t* icd_info_out, uint64_t* actual_count_out);
+
 void msd_device_dump_status(struct msd_device_t* dev, uint32_t dump_flags);
 
 // Opens a device for the given client. Returns null on failure

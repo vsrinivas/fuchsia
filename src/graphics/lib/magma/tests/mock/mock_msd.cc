@@ -50,6 +50,23 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
   }
 }
 
+magma_status_t msd_device_get_icd_list(struct msd_device_t* device, uint64_t count,
+                                       msd_icd_info_t* icd_info_out, uint64_t* actual_count_out) {
+  // Hardcode results.
+  const char* kResults[] = {"a", "b"};
+  if (icd_info_out && count < std::size(kResults)) {
+    return MAGMA_STATUS_INVALID_ARGS;
+  }
+  *actual_count_out = std::size(kResults);
+  if (icd_info_out) {
+    for (uint32_t i = 0; i < std::size(kResults); i++) {
+      strcpy(icd_info_out[i].component_url, kResults[i]);
+      icd_info_out[i].support_flags = ICD_SUPPORT_FLAG_VULKAN;
+    }
+  }
+  return MAGMA_STATUS_OK;
+}
+
 msd_context_t* msd_connection_create_context(msd_connection_t* dev) {
   return MsdMockConnection::cast(dev)->CreateContext();
 }

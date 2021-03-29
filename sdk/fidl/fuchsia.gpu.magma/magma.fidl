@@ -4,6 +4,7 @@
 
 library fuchsia.gpu.magma;
 
+using fuchsia.url;
 using zx;
 
 enum QueryId {
@@ -39,6 +40,21 @@ enum BufferOp {
     DEPOPULATE_TABLES = 2;
 };
 
+const uint64 MAX_ICD_COUNT = 8;
+
+flexible bits IcdFlags : uint32 {
+    SUPPORTS_VULKAN = 1;
+};
+
+/// Information about an ICD implementation that can be used with a magma device.
+table IcdInfo {
+    /// URL of the component implementation that provides the ICD.
+    1: fuchsia.url.Url component_url;
+
+    /// Flags describing the basic capabilities of the ICD, including what APIs it supports.
+    2: IcdFlags flags;
+};
+
 protocol Device {
     /// Returns a parameter, or an error.
     Query2(uint64 query_id) -> (uint64 result) error Status;
@@ -51,6 +67,10 @@ protocol Device {
 
     /// Dumps driver and hardware state.
     DumpState(uint32 dump_type);
+
+    /// Gets a list of ICDs that can be used with this magma device. The list is sorted in descending
+    /// order of preference.
+    GetIcdList() -> (vector<IcdInfo>:MAX_ICD_COUNT icd_list);
 
     /// For testing only.
     TestRestart();
