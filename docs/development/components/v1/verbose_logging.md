@@ -33,5 +33,5 @@ Each service instance of `Scenic` (or `Root Presenter`) must be
 modified, unless you know that service is invoked first.
 
 In most ways, this is identical to modifying a
-<code>[sysmgr](/src/sys/sysmgr/sysmgr-configuration.md)</code> services
+<code>[sysmgr](/docs/concepts/components/v1/sysmgr.md)</code> services
 configuration file.

@@ -19,7 +19,7 @@ connect to that service.
 
 By default, sysmgr reads all configuration files from `/config/data/`. The
 configuration format as well as instructions for adding to the sysmgr
-configuration are [documented here](sysmgr-configuration.md).
+configuration are [documented here](/docs/concepts/components/v1/sysmgr.md).
 
 ## Building
 

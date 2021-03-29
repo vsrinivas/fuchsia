@@ -1,4 +1,4 @@
-# sysmgr configuration
+# sysmgr
 
 sysmgr is one of the two major pieces of Components v1 (appmgr being the other).
 It is responsible for hosting the 'sys' [realm](/docs/glossary.md#realm) that
@@ -24,15 +24,15 @@ At runtime, sysmgr loads all files present under /config/data in its namespace
 and parses them using the format described below. This directory is provided to
 sysmgr because it uses the 'config-data' feature in its component manifest,
 sysmgr.cmx. For more details, see the docs on [the config-data
-feature](/docs/development/components/config_data.md).
+feature](/docs/development/components/data.md).
 
 You can make a new service available in the 'sys' realm by adding to sysmgr's
 configuration. There are two supported ways to do so:
 
 1. Unless there is a specific reason to do otherwise, [the centralized
-   services.config file](config/services.config) that is included in the [core
-   product config (core.gni)](/products/core.gni) and all derivative products
-   can be updated.
+   services.config file](/src/sys/sysmgr/config/services.config) that is
+   included in the [core product config (core.gni)](/products/core.gni) and all
+   derivative products can be updated.
 
 2. Alternatively, a new GN `config_data` target can be defined and included in
    [product configurations](/products/README.md) to include an extra file in

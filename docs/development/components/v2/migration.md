@@ -1391,6 +1391,6 @@ parent realm.
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
 [syslog]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
-[sysmgr-config]: /src/sys/sysmgr/sysmgr-configuration.md
+[sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
 [system-services]: /docs/concepts/testing/v1_test_component.md#services
 [troubleshooting-components]: /docs/development/components/v2/troubleshooting.md
