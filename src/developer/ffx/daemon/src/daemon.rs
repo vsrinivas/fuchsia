@@ -879,17 +879,14 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_getting_rcs_multiple_targets_mdns_with_unclear_selector_should_not_err(
+    async fn test_getting_rcs_multiple_targets_mdns_with_empty_selector_should_return_ambiguous_target_error(
     ) -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
-        if let Err(_) = daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap()
-        {
-            panic!("failure expected for multiple targets");
-        }
+        assert!(matches!(daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap(), Err(DaemonError::TargetAmbiguous)));
         Ok(())
     }
 

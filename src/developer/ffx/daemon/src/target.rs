@@ -1269,6 +1269,9 @@ impl From<String> for TargetQuery {
     /// match based on that, else fall back to the nodename or serial matches.
     fn from(s: String) -> Self {
         // TODO(raggi): add support for named scopes in the strings
+        if s == "" {
+            return Self::First
+        }
 
         if let Ok(saddr) = s.parse::<SocketAddr>() {
             if saddr.port() == 0 {
@@ -1527,18 +1530,18 @@ impl TargetCollection {
     /// DaemonError::TargetAmbiguous error is returned. The matcher is converted to a
     /// TargetQuery for matching, and follows the TargetQuery semantics.
     pub async fn wait_for_match(&self, matcher: Option<String>) -> Result<Target, DaemonError> {
+        // If there's nothing to match against, unblock on the first target.
+        let target_query = TargetQuery::from(matcher.clone());
+
         // If there is no matcher, and there are already multiple targets in the
         // target collection, we know that the target is ambiguous and thus
         // produce an actionable error to the user.
-        if matcher.is_none() {
+        if let TargetQuery::First = target_query {
             // PERFORMANCE: it's possible to avoid the discarded clones here, with more work.
             if self.targets().await.len() > 1 {
                 return Err(DaemonError::TargetAmbiguous);
             }
         }
-
-        // If there's nothing to match against, unblock on the first target.
-        let target_query = TargetQuery::from(matcher.clone());
 
         // Infinite timeout here is fine, as the client dropping connection
         // will lead to this being cleaned up eventually. It is the client's
@@ -2620,6 +2623,12 @@ mod test {
             matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(port) == ti.ssh_port)
         );
         assert!(tq.match_info(&ti));
+    }
+
+    #[test]
+    fn test_target_query_from_empty_string() {
+        let query = TargetQuery::from(Some(""));
+        assert!(matches!(query, TargetQuery::First));
     }
 
     #[test]
