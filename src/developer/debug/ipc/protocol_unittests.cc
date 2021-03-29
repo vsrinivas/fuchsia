@@ -913,6 +913,7 @@ TEST(Protocol, NotifyThread) {
   initial.record.name = "Wolfgang";
   initial.record.state = ThreadRecord::State::kDying;
   initial.record.stack_amount = ThreadRecord::StackAmount::kNone;
+  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
 
   MessageWriter writer;
   WriteNotifyThread(MsgHeader::Type::kNotifyThreadStarting, initial, &writer);
@@ -926,6 +927,7 @@ TEST(Protocol, NotifyThread) {
   EXPECT_EQ(initial.record.name, second.record.name);
   EXPECT_EQ(initial.record.state, second.record.state);
   EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
+  EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 
 TEST(Protocol, NotifyException) {
@@ -936,6 +938,7 @@ TEST(Protocol, NotifyException) {
   initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
   initial.thread.frames.emplace_back(0x7647342634, 0x9861238251);
   initial.type = ExceptionType::kHardwareBreakpoint;
+  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
 
   initial.exception.arch.x64.vector = 22;
   initial.exception.arch.x64.err_code = 5;
@@ -966,6 +969,7 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.thread.stack_amount, second.thread.stack_amount);
   EXPECT_EQ(initial.thread.frames[0], second.thread.frames[0]);
   EXPECT_EQ(initial.type, second.type);
+  EXPECT_EQ(initial.timestamp, second.timestamp);
 
   EXPECT_EQ(initial.exception.arch.x64.vector, second.exception.arch.x64.vector);
   EXPECT_EQ(initial.exception.arch.x64.err_code, second.exception.arch.x64.err_code);
@@ -999,6 +1003,7 @@ TEST(Protocol, NotifyModules) {
   initial.modules[1].base = 0x43567;
   initial.stopped_thread_koids.push_back(34);
   initial.stopped_thread_koids.push_back(96);
+  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
 
   NotifyModules second;
   ASSERT_TRUE(
@@ -1011,6 +1016,7 @@ TEST(Protocol, NotifyModules) {
   EXPECT_EQ(initial.modules[1].name, second.modules[1].name);
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
   EXPECT_EQ(initial.stopped_thread_koids, second.stopped_thread_koids);
+  EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 
 TEST(Protocol, NotifyProcessStarting) {
@@ -1019,6 +1025,7 @@ TEST(Protocol, NotifyProcessStarting) {
   initial.koid = 10;
   initial.component_id = 2;
   initial.name = "some_process";
+  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
 
   NotifyProcessStarting second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessStarting,
@@ -1028,12 +1035,14 @@ TEST(Protocol, NotifyProcessStarting) {
   EXPECT_EQ(initial.koid, second.koid);
   EXPECT_EQ(initial.component_id, second.component_id);
   EXPECT_EQ(initial.name, second.name);
+  EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 
 TEST(Protocol, NotifyProcessExiting) {
   NotifyProcessExiting initial;
   initial.process_koid = 10;
   initial.return_code = 3;
+  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
 
   NotifyProcessExiting second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessExiting,
@@ -1041,6 +1050,7 @@ TEST(Protocol, NotifyProcessExiting) {
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.return_code, second.return_code);
+  EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 
 TEST(Protocol, NotifyIO) {
@@ -1049,6 +1059,7 @@ TEST(Protocol, NotifyIO) {
   initial.type = NotifyIO::Type::kStderr;
   initial.data = "Some data";
   initial.more_data_available = true;
+  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
 
   NotifyIO second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyIO, &ReadNotifyIO));
@@ -1056,6 +1067,7 @@ TEST(Protocol, NotifyIO) {
   EXPECT_EQ(initial.type, second.type);
   EXPECT_EQ(initial.data, second.data);
   EXPECT_EQ(initial.more_data_available, second.more_data_available);
+  EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 
 }  // namespace debug_ipc
