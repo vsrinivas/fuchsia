@@ -59,7 +59,7 @@ void main() {
     // The callback of the current alert in the model should be executed when
     // called.
     expect(isActionCalled, isFalse);
-    model.currentAlert.actions[0].action();
+    model.currentAlert.actions[0].callback();
     expect(isActionCalled, isTrue);
 
     isNotified = false;

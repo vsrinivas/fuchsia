@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import '../models/app_model.dart';
 import '../utils/styles.dart';
 
+import 'support/alert.dart';
 import 'support/home_container.dart';
 import 'support/overview.dart';
 import 'support/recents.dart';
@@ -62,6 +63,8 @@ class App extends StatelessWidget {
                           ? buildOverview(model)
                           : buildHome(model),
                     ),
+
+                    buildAlert(model),
                   ],
                 )),
           );
@@ -76,4 +79,7 @@ class App extends StatelessWidget {
 
   @visibleForTesting
   Widget buildHome(AppModel model) => HomeContainer(model: model);
+
+  @visibleForTesting
+  Widget buildAlert(AppModel model) => AlertContainer(model: model);
 }

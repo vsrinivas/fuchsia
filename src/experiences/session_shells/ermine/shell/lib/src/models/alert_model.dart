@@ -58,7 +58,7 @@ class AlertModel {
 
 class ActionModel {
   final String name;
-  final VoidCallback action;
+  final VoidCallback callback;
 
-  ActionModel(this.name, this.action);
+  ActionModel(this.name, this.callback);
 }

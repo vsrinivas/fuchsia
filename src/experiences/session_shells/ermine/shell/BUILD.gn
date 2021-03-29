@@ -79,6 +79,7 @@ flutter_app("ermine") {
     "src/widgets/story/tile_chrome.dart",
     "src/widgets/story/tile_sizer.dart",
     "src/widgets/story/tile_tab.dart",
+    "src/widgets/support/alert.dart",
     "src/widgets/support/animation_driver.dart",
     "src/widgets/support/home.dart",
     "src/widgets/support/home_container.dart",
@@ -181,6 +182,7 @@ config_data("ermine_fonts") {
 flutter_test("ermine_unittests") {
   sources = [
     "alert_model_test.dart",
+    "alert_widget_test.dart",
     "app_model_test.dart",
     "app_widget_test.dart",
     "ask_model_test.dart",

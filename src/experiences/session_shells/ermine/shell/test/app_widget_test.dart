@@ -67,6 +67,7 @@ void main() async {
     expect(find.byWidget(app.recents), findsOneWidget);
     expect(find.byWidget(app.overview), findsOneWidget);
     expect(find.byWidget(app.home), findsNothing);
+    expect(find.byWidget(app.alert), findsOneWidget);
 
     // Home should be visible.
     overviewNotifier.value = false;
@@ -75,6 +76,7 @@ void main() async {
     expect(find.byWidget(app.recents), findsOneWidget);
     expect(find.byWidget(app.overview), findsNothing);
     expect(find.byWidget(app.home), findsOneWidget);
+    expect(find.byWidget(app.alert), findsOneWidget);
   });
 }
 
@@ -82,6 +84,7 @@ class TestApp extends App {
   final Widget overview = Container();
   final Widget home = Container();
   final Widget recents = Container();
+  final Widget alert = Container();
 
   TestApp(AppModel model) : super(model: model);
 
@@ -93,6 +96,9 @@ class TestApp extends App {
 
   @override
   Widget buildHome(AppModel model) => home;
+
+  @override
+  Widget buildAlert(AppModel model) => alert;
 }
 
 class MockAppModel extends Mock implements AppModel {}

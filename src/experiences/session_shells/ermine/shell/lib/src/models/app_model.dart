@@ -25,6 +25,7 @@ import '../utils/presenter.dart';
 import '../utils/styles.dart';
 import '../utils/suggestions.dart';
 import '../widgets/ask/ask.dart';
+import 'alert_model.dart';
 import 'cluster_model.dart';
 import 'status_model.dart';
 import 'topbar_model.dart';
@@ -53,6 +54,7 @@ class AppModel {
 
   final ValueNotifier<DateTime> currentTime =
       ValueNotifier<DateTime>(DateTime.now());
+  ValueNotifier<bool> alertVisibility = ValueNotifier(false);
   ValueNotifier<bool> askVisibility = ValueNotifier(false);
   ValueNotifier<bool> overviewVisibility = ValueNotifier(true);
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
@@ -63,6 +65,7 @@ class AppModel {
   StreamSplitter<input.PointerEvent> _splitter;
   MethodChannel _flutterDriverHandler;
 
+  AlertsModel alertsModel;
   ClustersModel clustersModel;
   StatusModel statusModel;
   TopbarModel topbarModel;
@@ -79,6 +82,7 @@ class AppModel {
     FocusChainListenerBinding focusChainListenerBinding,
     this.statusModel,
     this.clustersModel,
+    this.alertsModel,
   })  : _componentContext = componentContext,
         _inspect = inspect,
         _keyboardShortcuts = keyboardShortcuts,
@@ -98,6 +102,8 @@ class AppModel {
     statusModel ??= StatusModel.withSvcPath(onLogout);
 
     clustersModel ??= ClustersModel();
+
+    alertsModel ??= AlertsModel();
 
     // Setup Inspect.
     _inspect ??= Inspect()..serve(outgoing);
@@ -183,6 +189,8 @@ class AppModel {
       peekNotifier,
     ]).addListener(onCancel);
 
+    alertsModel.addListener(onAlertChanged);
+
     // Add inspect data when requested.
     _inspect.onDemand('ermine', _onInspect);
 
@@ -224,6 +232,11 @@ class AppModel {
       // Hide system overlays.
       onCancel();
     }
+  }
+
+  void onAlertChanged() {
+    onCancel();
+    alertVisibility.value = alertsModel.currentAlert != null;
   }
 
   /// Toggles the Ask bar when Overview is not visible.
@@ -280,6 +293,7 @@ class AppModel {
   /// Escape key was pressed.
   void onCancel() {
     statusModel.reset();
+    alertVisibility.value = false;
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
