@@ -14,6 +14,7 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 	"testing"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
@@ -24,19 +25,19 @@ var _ bindingstest.Test1WithCtx = (*test1Impl)(nil)
 
 type test1Impl struct{}
 
-func (t *test1Impl) Echo(_ fidl.Context, s *string) (*string, error) {
+func (*test1Impl) Echo(_ fidl.Context, s *string) (*string, error) {
 	return s, nil
 }
 
-func (t *test1Impl) NoResponse(fidl.Context) error {
+func (*test1Impl) NoResponse(fidl.Context) error {
 	return nil
 }
 
-func (t *test1Impl) EmptyResponse(fidl.Context) error {
+func (*test1Impl) EmptyResponse(fidl.Context) error {
 	return nil
 }
 
-func (t *test1Impl) EchoHandleRights(_ fidl.Context, h zx.Port) (uint32, error) {
+func (*test1Impl) EchoHandleRights(_ fidl.Context, h zx.Port) (uint32, error) {
 	infoHandleBasic, err := h.Handle().GetInfoHandleBasic()
 	if err != nil {
 		return 0, err
@@ -86,8 +87,10 @@ func TestEmptyWriteErrors(t *testing.T) {
 	}
 
 	close(errChan)
-	if err := <-errChan; !errors.Is(err, fidl.ErrPayloadTooSmall) {
-		t.Errorf("got ServeExclusive error = %v, want %q", err, fidl.ErrPayloadTooSmall)
+	for err := range errChan {
+		if !errors.Is(err, fidl.ErrPayloadTooSmall) {
+			t.Errorf("got ServeExclusive error = %v, want %q", err, fidl.ErrPayloadTooSmall)
+		}
 	}
 }
 
@@ -302,7 +305,100 @@ func TestServeExclusive_MagicNumberCheck(t *testing.T) {
 	}
 
 	close(errChan)
-	if err := <-errChan; !errors.Is(err, fidl.ErrUnknownMagic) {
-		t.Errorf("got ServeExclusive error = %v, want %q", err, fidl.ErrUnknownMagic)
+	for err := range errChan {
+		if !errors.Is(err, fidl.ErrUnknownMagic) {
+			t.Errorf("got ServeExclusive error = %v, want %q", err, fidl.ErrUnknownMagic)
+		}
+	}
+}
+
+var _ bindingstest.Test1WithCtx = (*hangingImpl)(nil)
+
+type hangingImpl struct {
+	test1Impl
+
+	// Used to coordinate blocking.
+	sem chan struct{}
+}
+
+func (impl *hangingImpl) NoResponse(ctx fidl.Context) error {
+	defer func() {
+		<-impl.sem
+	}()
+
+	for {
+		select {
+		case <-impl.sem:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func TestServeExclusiveConcurrent(t *testing.T) {
+	ch, sh, err := zx.NewChannel(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := ch.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	impl := hangingImpl{
+		sem: make(chan struct{}),
+	}
+	defer close(impl.sem)
+
+	errChan := make(chan error, 1)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		component.ServeExclusiveConcurrent(context.Background(), &bindingstest.Test1WithCtxStub{
+			Impl: &impl,
+		}, sh, func(err error) {
+			errChan <- err
+		})
+	}()
+
+	client := bindingstest.Test1WithCtxInterface{Channel: ch}
+	if err := client.NoResponse(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure the handler is blocked.
+	impl.sem <- struct{}{}
+
+	// Closing the channel cancels the handler's context.
+	if err := ch.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Handler should now be blocked on deferred channel read.
+	select {
+	case <-done:
+		t.Error("serving returned while handler running")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	impl.sem <- struct{}{}
+	<-done
+
+	// Serving should have closed the channel.
+	func() {
+		err := sh.Close()
+		if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrBadHandle {
+			return
+		}
+		t.Errorf("got sh.Close() = %v, want %q", err, zx.ErrBadHandle)
+	}()
+
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			t.Errorf("ServeExclusiveConcurrent(...) = %s", err)
+		}
 	}
 }
