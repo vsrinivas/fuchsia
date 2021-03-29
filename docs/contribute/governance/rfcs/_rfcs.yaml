@@ -392,6 +392,19 @@
   submitted: '2021-02-26'
   reviewed: '2021-03-25'
 
+- name: 'RFC-0081'
+  title: 'fastboot boot'
+  short_description: 'Replace Zedboot based netbooting flows with fastboot boot'
+  authors: ['andresoportus@google.com']
+  file: 'NNNN_fastboot_boot.md'
+  area: ['General']
+  issue: ['']
+  gerrit_change_id: ['498344']
+  status: 'Accepted'
+  reviewers: ['amituttam@', 'boetger@google.com', 'bradenkell@google.com', 'cpu@google.com', 'curtisgalloway@google.com', 'dpursell@google.com', 'raggi@google.com', 'tkilbourn@google.com', 'travisg@google.com', 'alizhang@google.com']
+  submitted: '2021-03-09'
+  reviewed: '2021-03-25'
+
 - name: 'RFC-0082'
   title: 'Runnning unmodified Linux programs on Fuchsia'
   short_description: 'This document proposes a mechanism for running unmodified Linux programs on Fuchsia.'
