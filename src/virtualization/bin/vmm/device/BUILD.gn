@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//src/graphics/lib/magma/include/virtio/virtmagma_debug.gni")
+import("//src/sys/build/components.gni")
 
 group("packages") {
   deps = [
@@ -71,19 +71,9 @@ executable("virtio_balloon_bin") {
   deps = [ ":virtio" ]
 }
 
-package("virtio_balloon") {
-  binaries = [
-    {
-      name = "virtio_balloon"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_balloon") {
+  manifest = "../meta/virtio_balloon.cmx"
   deps = [ ":virtio_balloon_bin" ]
-  meta = [
-    {
-      path = "../meta/virtio_balloon.cmx"
-      dest = "virtio_balloon.cmx"
-    },
-  ]
 }
 
 source_set("block") {
@@ -121,19 +111,9 @@ executable("virtio_block_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("virtio_block") {
-  binaries = [
-    {
-      name = "virtio_block"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_block") {
+  manifest = "../meta/virtio_block.cmx"
   deps = [ ":virtio_block_bin" ]
-  meta = [
-    {
-      path = "../meta/virtio_block.cmx"
-      dest = "virtio_block.cmx"
-    },
-  ]
 }
 
 executable("virtio_console_bin") {
@@ -144,19 +124,9 @@ executable("virtio_console_bin") {
   deps = [ ":virtio" ]
 }
 
-package("virtio_console") {
-  binaries = [
-    {
-      name = "virtio_console"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_console") {
+  manifest = "../meta/virtio_console.cmx"
   deps = [ ":virtio_console_bin" ]
-  meta = [
-    {
-      path = "../meta/virtio_console.cmx"
-      dest = "virtio_console.cmx"
-    },
-  ]
 }
 
 executable("virtio_input_bin") {
@@ -167,19 +137,9 @@ executable("virtio_input_bin") {
   deps = [ ":virtio" ]
 }
 
-package("virtio_input") {
-  binaries = [
-    {
-      name = "virtio_input"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_input") {
+  manifest = "../meta/virtio_input.cmx"
   deps = [ ":virtio_input_bin" ]
-  meta = [
-    {
-      path = "../meta/virtio_input.cmx"
-      dest = "virtio_input.cmx"
-    },
-  ]
 }
 
 executable("virtio_gpu_bin") {
@@ -209,19 +169,9 @@ executable("virtio_gpu_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("virtio_gpu") {
-  binaries = [
-    {
-      name = "virtio_gpu"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_gpu") {
+  manifest = "../meta/virtio_gpu.cmx"
   deps = [ ":virtio_gpu_bin" ]
-  meta = [
-    {
-      path = "../meta/virtio_gpu.cmx"
-      dest = "virtio_gpu.cmx"
-    },
-  ]
 }
 
 source_set("magma_image") {
@@ -282,56 +232,34 @@ executable("virtio_magma_bin") {
 executable("virtio_magma_bin_mock_system") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "virtio_magma_mock_system"
+  output_dir = "$target_out_dir/virtio_magma_mock_system"
+  output_name = "virtio_magma"
   deps = [
     ":virtio_magma_lib",
     "//src/graphics/lib/magma/tests/mock:magma_system",
   ]
 }
 
-package("virtio_magma") {
-  binaries = [
-    {
-      name = "virtio_magma"
-    },
-  ]
+resource("virtio_magma_resources") {
+  sources = [ "${root_build_dir}/linux_x64-shared/libvulkan_intel.so" ]
+  outputs = [ "drivers/libvulkan_intel.so" ]
+}
+
+fuchsia_package_with_single_component("virtio_magma") {
+  manifest = "../meta/virtio_magma.cmx"
   deps = [
     ":virtio_magma_bin",
-    "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
-  ]
 
-  # TODO(fxbug.dev/13128): don't hard-code the driver
-  resources = [
-    {
-      path =
-          rebase_path("${root_build_dir}/linux_x64-shared/libvulkan_intel.so")
-      dest = "drivers/libvulkan_intel.so"
-    },
-  ]
-  meta = [
-    {
-      path = "../meta/virtio_magma.cmx"
-      dest = "virtio_magma.cmx"
-    },
+    # TODO(fxbug.dev/13128): don't hard-code the driver
+    ":virtio_magma_resources",
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
   ]
 }
 
-package("virtio_magma_mock_system") {
+fuchsia_package_with_single_component("virtio_magma_mock_system") {
   testonly = true
-  binaries = [
-    {
-      name = "virtio_magma_mock_system"
-      dest = "virtio_magma"
-    },
-  ]
+  manifest = "../meta/virtio_magma.cmx"
   deps = [ ":virtio_magma_bin_mock_system" ]
-
-  meta = [
-    {
-      path = "../meta/virtio_magma.cmx"
-      dest = "virtio_magma_mock_system.cmx"
-    },
-  ]
 }
 
 executable("virtio_net_bin") {
@@ -355,19 +283,9 @@ executable("virtio_net_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("virtio_net") {
-  binaries = [
-    {
-      name = "virtio_net"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_net") {
+  manifest = "../meta/virtio_net.cmx"
   deps = [ ":virtio_net_bin" ]
-  meta = [
-    {
-      path = "../meta/virtio_net.cmx"
-      dest = "virtio_net.cmx"
-    },
-  ]
 }
 
 executable("virtio_rng_bin") {
@@ -378,19 +296,9 @@ executable("virtio_rng_bin") {
   deps = [ ":virtio" ]
 }
 
-package("virtio_rng") {
-  binaries = [
-    {
-      name = "virtio_rng"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_rng") {
+  manifest = "../meta/virtio_rng.cmx"
   deps = [ ":virtio_rng_bin" ]
-  meta = [
-    {
-      path = "../meta/virtio_rng.cmx"
-      dest = "virtio_rng.cmx"
-    },
-  ]
 }
 
 executable("virtio_wl_bin") {
@@ -414,20 +322,9 @@ executable("virtio_wl_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("virtio_wl") {
-  binaries = [
-    {
-      name = "virtio_wl"
-    },
-  ]
+fuchsia_package_with_single_component("virtio_wl") {
+  manifest = "../meta/virtio_wl.cmx"
   deps = [ ":virtio_wl_bin" ]
-
-  meta = [
-    {
-      path = "../meta/virtio_wl.cmx"
-      dest = "virtio_wl.cmx"
-    },
-  ]
 }
 
 executable("device_tests") {
