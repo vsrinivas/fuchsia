@@ -441,7 +441,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
 
     fn handle_request_init_reboot(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let requested_ip =
-            *get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
+            get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
         if !is_in_subnet(&req, &self.params) {
             let error_msg = "client and server are in different subnets";
             let (nak, dest) = self.build_nak(req, error_msg)?;
@@ -451,15 +451,16 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         if !self.cache.contains_key(&client_id) {
             return Err(ServerError::UnknownClientId(client_id));
         }
-        let validated = self.validate_requested_addr_with_client(&req, &requested_ip);
+        let validated = self.validate_requested_addr_with_client(&req, requested_ip);
         match validated {
             Ok(()) => {
+                let requested_ip = *requested_ip;
                 let dest = self.get_destination(&req, requested_ip);
                 Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
             }
             Err(e) => {
                 let (nak, dest) =
-                    self.build_nak(req, &format!("requested ip is not assigned to client: {}", e))?;
+                    self.build_nak(req, format!("requested ip is not assigned to client: {}", e))?;
                 Ok(ServerAction::SendResponse(nak, dest))
             }
         }
@@ -647,12 +648,12 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     fn build_nak(
         &self,
         req: Message,
-        error: &str,
+        error: impl std::convert::Into<String>,
     ) -> Result<(Message, ResponseTarget), ServerError> {
         let options = vec![
             DhcpOption::DhcpMessageType(MessageType::DHCPNAK),
             DhcpOption::ServerIdentifier(self.get_server_ip(&req)?),
-            DhcpOption::Message(error.to_owned()),
+            DhcpOption::Message(error.into()),
         ];
         let mut nak = Message {
             op: OpCode::BOOTREPLY,

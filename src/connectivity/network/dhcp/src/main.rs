@@ -200,7 +200,7 @@ impl<DS: DataStore> SocketServerDispatcher for Server<DS> {
         bound_device_names
             .iter()
             .map(|name| {
-                // TODO(fxbug.dev/73010): Replace with nix::if_nametoindex()
+                // TODO(https://fxbug.dev/73010): Replace with nix::if_nametoindex()
                 let iface_id = {
                     let name = std::ffi::CString::new(name.clone()).map_err(|e| {
                         std::io::Error::new(
@@ -361,8 +361,8 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
     fn handle_from_sender(
         &mut self,
         buf: &[u8],
-        mut sender: std::net::SocketAddr,
-    ) -> Result<Option<(std::net::SocketAddr, Vec<u8>, Option<Mac>)>, Error> {
+        mut sender: std::net::SocketAddrV4,
+    ) -> Result<Option<(std::net::SocketAddrV4, Vec<u8>, Option<Mac>)>, Error> {
         let msg = match Message::from_buffer(buf) {
             Ok(msg) => {
                 log::debug!("parsed message from {}: {:?}", sender, msg);
@@ -415,7 +415,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
                         (addr, Some(chaddr))
                     }
                 };
-                sender.set_ip(IpAddr::V4(addr));
+                sender.set_ip(addr);
                 Ok(Some((sender, message.serialize(), chaddr)))
             }
         }
@@ -426,59 +426,67 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
     sock: SocketWithId<<Server<DS> as SocketServerDispatcher>::Socket>,
     server: &RefCell<ServerDispatcherRuntime<Server<DS>>>,
 ) -> Result<Void, Error> {
-    let mut handler = MessageHandler::new(server);
-    let mut buf = vec![0u8; BUF_SZ];
     let proxy = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_net_neighbor::ControllerMarker,
-    >()
-    .context("failed to connect to fuchsia.net.neighbor.Controller")?;
+    >()?;
+    let SocketWithId { socket, iface_id } = sock;
+    let mut handler = MessageHandler::new(server);
+    let mut buf = vec![0u8; BUF_SZ];
     loop {
-        let SocketWithId { socket, iface_id } = &sock;
         let (received, sender) =
             socket.recv_from(&mut buf).await.context("failed to read from socket")?;
+        let sender = match sender {
+            std::net::SocketAddr::V4(sender) => sender,
+            std::net::SocketAddr::V6(sender) => {
+                return Err(anyhow::anyhow!(
+                    "IPv4 socket received datagram from IPv6 sender: {}",
+                    sender
+                ))
+            }
+        };
         if let Some((dst, response, chaddr)) = handler
             .handle_from_sender(&buf[..received], sender)
             .context("failed to handle buffer")?
         {
-            if let Some(chaddr) = &chaddr {
-                if let IpAddr::V4(dst) = dst.ip() {
+            let cleanup = match chaddr {
+                Some(chaddr) => {
+                    let mut fidl_ip =
+                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                            addr: dst.ip().octets(),
+                        });
                     let () = proxy
                         .add_entry(
-                            *iface_id,
-                            &mut fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                addr: dst.octets(),
-                            }),
+                            iface_id,
+                            &mut fidl_ip,
                             &mut fidl_fuchsia_net::MacAddress { octets: chaddr.bytes() },
                         )
                         .await
                         .context("controller.add_entry() failed")?
                         .map_err(|e| fuchsia_zircon::Status::from_raw(e))
                         .context("failed to add static link resolution entry")?;
+                    let proxy = &proxy;
+                    Some(move || async move {
+                        proxy
+                            .remove_entry(iface_id, &mut fidl_ip)
+                            .await
+                            .context("controller.remove_entry() failed")?
+                            .map_err(|e| fuchsia_zircon::Status::from_raw(e))
+                            .or_else(|e| match e {
+                                // If the entry no longer exists, we're content with that result.
+                                fuchsia_zircon::Status::NOT_FOUND => Ok(()),
+                                e => Err(e),
+                            })
+                            .context("failed to remove static link resolution entry")
+                    })
                 }
-            }
-            // Apply try operator to send_to() after the subsequent call to proxy.remove_entry(),
-            // so that we remove the static ARP entry regardless of whether the call to send_to()
-            // succeeds.
-            let sent = socket.send_to(&response, dst).await.context("unable to send response");
-            if let Some(_) = chaddr {
-                if let IpAddr::V4(dst) = dst.ip() {
-                    let () = proxy
-                        .remove_entry(
-                            *iface_id,
-                            &mut fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                addr: dst.octets(),
-                            }),
-                        )
-                        .await
-                        .context("controller.remove_entry() failed")?
-                        .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                        .or_else(|e| match e {
-                            // If the entry no longer exists, we're content with that result.
-                            fuchsia_zircon::Status::NOT_FOUND => Ok(()),
-                            e => Err(e),
-                        })
-                        .context("failed to remove static link resolution entry")?;
-                }
+                None => None,
+            };
+            let sent = socket
+                .send_to(&response, SocketAddr::V4(dst))
+                .await
+                .context("unable to send response");
+            if let Some(cleanup) = cleanup {
+                let () = cleanup().await?;
             }
             let sent = sent?;
             log::info!("response sent to {}: {} bytes", dst, sent);
@@ -672,8 +680,14 @@ mod tests {
                 .map(String::as_str)
                 .enumerate()
                 .map(|(iface_id, name)| {
+                    let iface_id = std::convert::TryInto::try_into(iface_id).map_err(|e| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            format!("interface id {} out of range: {}", iface_id, e),
+                        )
+                    })?;
                     let socket = Self::create_socket(name, Ipv4Addr::UNSPECIFIED)?;
-                    Ok(SocketWithId { socket, iface_id: iface_id as u64 })
+                    Ok(SocketWithId { socket, iface_id })
                 })
                 .collect()
         }
@@ -1092,14 +1106,14 @@ mod tests {
 
     /// Test that a malformed message does not cause MessageHandler to return an
     /// error.
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_handle_failed_parse() {
+    #[test]
+    fn test_handle_failed_parse() {
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
         let mut handler = MessageHandler::new(&server);
         matches::assert_matches!(
             handler.handle_from_sender(
                 &[0xFF, 0x00, 0xBA, 0x03],
-                std::net::SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), 0),
+                std::net::SocketAddrV4::new(Ipv4Addr::UNSPECIFIED.into(), 0),
             ),
             Ok(None)
         );

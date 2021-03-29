@@ -485,7 +485,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
                 // is BINDTODEVICE, unicasting to an IP address bound to another endpoint on the
                 // same host WILL reach the network, rather than going through loopback. However,
                 // if the first endpoint is NOT BINDTODEVICE, the outgoing message will be sent via
-                // LOOPBACK.
+                // loopback.
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
