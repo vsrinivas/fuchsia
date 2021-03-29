@@ -392,6 +392,19 @@
   submitted: '2021-02-26'
   reviewed: '2021-03-25'
 
+- name: 'RFC-0080'
+  title: 'Detecting VMO Immutability'
+  short_description: 'This RFC proposes a new flag `ZX_INFO_VMO_IMMUTABLE` that makes it possible to determine if a VMO is immutable and has been since creation.'
+  authors: ['bprosnitz@google.com']
+  file: '0080_detecting_vmo_immutability.md'
+  area: ['Zircon']
+  issue: []
+  gerrit_change_id: []
+  status: 'Accepted'
+  reviewers: [ 'bryanhenry@google.com', 'adanis@google.com', 'mseaborn@google.com', 'pascallouis@google.com', 'ctiller@google.com', 'rashaeqbal@google.com', 'cpu@google.com' ]
+  submitted: '2021-02-18'
+  reviewed: '2021-03-29'
+
 - name: 'RFC-0081'
   title: 'fastboot boot'
   short_description: 'Replace Zedboot based netbooting flows with fastboot boot'

@@ -73,6 +73,8 @@ toc:
   path: /docs/contribute/governance/rfcs/0077_zx_clock_update_accuracy.md
 - title: "RFC-0078 - Kernel Sanitizer Coverage for Fuchsia Fuzzing"
   path: /docs/contribute/governance/rfcs/0078_kernel_coverage_for_fuchsia_fuzzing.md
+- title: "RFC-0080 - Detecting VMO Immutability"
+  path: /docs/contribute/governance/rfcs/0080_detecting_vmo_immutability.md
 - title: "RFC-0081 - fastboot boot"
   path: /docs/contribute/governance/rfcs/0081_fastboot_boot.md
 - title: "RFC-0082 - Runnning unmodified Linux programs on Fuchsia"
