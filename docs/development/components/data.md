@@ -12,22 +12,22 @@ At runtime, components are able to read the contents of their own package by
 accessing the path `/pkg/` in their namespace. The `resource()` template may be
 used to add contents to the package that may be accessed this way.
 
+{# note: the verbatim tags below are to avoid issues with the fuchsia.dev template engine #}
 ```gn
 import("//build/dist/resource.gni")
-
+{% verbatim %}
 # List of greetings
 resource("greetings") {
   sources = [ "greetings.txt" ]
   outputs = [ "data/{{source_file_part}}" ]
-}
+}{% endverbatim %}
 ```
 
 See the [resource][resource] template for more usage instructions.
-For information about `{{source_file_part}}` and similar syntax see [GN
-placeholders][gn-placehoders]{:.external}.
+For information about `{% verbatim %}{{source_file_part}}{% endverbatim %}`
+and similar syntax see [GN placeholders][gn-placeholders]{:.external}.
 
-Using `resource()` is also demonstrated in [additional packaged
-resources][additional-packaged-resources].
+Using `resource()` is also demonstrated in [additional packaged resources][additional-packaged-resources].
 
 ### Including resources with a component
 
@@ -141,9 +141,10 @@ The `config_data()` template allows developers to make files available to
 components in a different package without having to directly change the contents
 of that package.
 
+{# note: the verbatim tags below are to avoid issues with the fuchsia.dev template engine #}
 ```gn
 import("//build/config.gni")
-
+{% verbatim %}
 config_data("workstation_fonts") {
   for_pkg = "fonts"
   sources = [
@@ -152,7 +153,7 @@ config_data("workstation_fonts") {
     "RobotoMono-Regular.ttf",
   ]
   outputs = [ "fonts/{{source_file_part}}" ]
-}
+}{% endverbatim %}
 ```
 
 ### Using `config_data()` with a v1 component
