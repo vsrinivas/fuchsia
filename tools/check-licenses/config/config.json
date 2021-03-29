@@ -4,11 +4,11 @@
     "third_party/golibs/vendor/modules.txt"
   ],
   "skipDirs": [
-    "prebuilt"
   ],
   "stopLicensePropagation": [
     "third_party",
     "thirdparty",
+    "prebuilt",
     "vendor"
   ],
   "textExtensionList": [
