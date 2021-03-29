@@ -73,7 +73,6 @@ mod factory_reset;
 mod fidl_processor;
 mod hanging_get_handler;
 mod input;
-mod inspect;
 mod intl;
 mod light;
 mod night_mode;

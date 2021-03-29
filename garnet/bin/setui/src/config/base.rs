@@ -73,7 +73,7 @@ impl AgentType {
             }
             AgentType::InspectSettingData => {
                 storage_factory
-                    .initialize::<crate::inspect::inspect_broker::InspectSettingAgent>()
+                    .initialize::<crate::agent::inspect_setting_data::InspectSettingAgent>()
                     .await
             }
         }
