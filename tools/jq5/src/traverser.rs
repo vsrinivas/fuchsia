@@ -20,9 +20,9 @@ use std::mem::discriminant;
 ///
 /// `json5_val` is the original value containing the comments to be transferred.
 /// `jq_output_val` is presumed to reference a comment-less value generated from
-/// stdout from a jq call. While it may actually contain comments, many will be
-/// deleted.
-#[allow(dead_code)]
+/// stdout from a jq call. While it may actually contain comments, it is
+/// presumed that it will not. If it does, many will likely be deleted,
+/// especially if it is similar in structure to `json5_val`.
 pub(crate) fn fill_comments(
     json5_val: &Value,
     jq_output_val: &mut Value,
