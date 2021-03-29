@@ -91,8 +91,7 @@ impl InspectSettingAgent {
     ) {
         let inspector = custom_inspector.unwrap_or_else(|| component::inspector());
 
-        // TODO(fxb/71826): log and exit instead of panicking
-        let (messenger_client, receptor) = context
+        let (messenger_client, receptor) = match context
             .messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
@@ -104,7 +103,13 @@ impl InspectSettingAgent {
                 })),
             ))))
             .await
-            .expect("could not create inspect");
+        {
+            Ok(messenger) => messenger,
+            Err(err) => {
+                fx_log_err!("could not create inspect: {:?}", err);
+                return;
+            }
+        };
 
         // Add inspect node for the setting types.
         let setting_type_node = inspector.root().create_child(SETTING_TYPE_INSPECT_NODE_NAME);
