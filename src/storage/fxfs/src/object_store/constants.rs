@@ -3,3 +3,6 @@
 // found in the LICENSE file.
 
 pub const INVALID_OBJECT_ID: u64 = 0;
+
+// This only exists in the root store.
+pub const SUPER_BLOCK_OBJECT_ID: u64 = 1;

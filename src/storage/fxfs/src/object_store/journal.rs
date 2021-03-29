@@ -16,6 +16,7 @@
 // same per-block checksum that is used for the journal file.
 
 mod reader;
+mod super_block;
 mod writer;
 
 use {

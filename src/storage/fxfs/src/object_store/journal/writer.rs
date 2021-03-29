@@ -93,6 +93,10 @@ impl<OH> JournalWriter<OH> {
         Ok(())
     }
 
+    pub fn handle(&self) -> Option<&OH> {
+        self.handle.as_ref()
+    }
+
     /// Sets the handle, to be used once replay has finished.
     pub fn set_handle(&mut self, handle: OH, offset: u64, checksum: Checksum, reset: bool) {
         self.handle = Some(handle);

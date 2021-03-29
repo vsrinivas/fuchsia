@@ -411,6 +411,38 @@ impl StoreObjectHandle {
         self.store.clone()
     }
 
+    /// Extend the file with the given extent.  The only use case for this right now is for files
+    /// that must exist at certain offsets on the device, such as super-blocks.
+    pub async fn extend(&self, transaction: &mut Transaction, device_range: Range<u64>) {
+        // TODO(csuter): this needs locking
+        let (old_size, new_size) = {
+            let mut size = self.size.lock().unwrap();
+            let old_size = *size;
+            // TODO(csuter): roll back size change if transaction fails
+            *size += device_range.end - device_range.start;
+            (old_size, *size)
+        };
+        self.store.allocator().reserve(transaction, device_range.clone()).await;
+        transaction.add(
+            self.store.store_object_id,
+            Mutation::ReplaceOrInsert {
+                item: ObjectItem {
+                    key: ObjectKey::attribute(self.object_id, self.attribute_id),
+                    value: ObjectValue::attribute(old_size),
+                },
+            },
+        );
+        transaction.add(
+            self.store.store_object_id(),
+            Mutation::ReplaceExtent {
+                item: ObjectItem {
+                    key: ObjectKey::extent(self.object_id, self.attribute_id, old_size..new_size),
+                    value: ObjectValue::extent(device_range.start),
+                },
+            },
+        );
+    }
+
     async fn write_cow(
         &self,
         transaction: &mut Transaction,
@@ -879,22 +911,18 @@ mod tests {
         crate::{
             object_handle::ObjectHandle,
             object_store::{
-                allocator::Allocator,
-                filesystem::{ApplyMutations, Filesystem},
+                filesystem::Filesystem,
                 round_up,
-                testing::fake_filesystem::FakeFilesystem,
-                transaction::{Mutation, Transaction},
+                testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
+                transaction::Transaction,
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
             testing::fake_device::FakeDevice,
         },
-        anyhow::Error,
-        async_trait::async_trait,
         fuchsia_async as fasync,
-        std::sync::{Arc, Mutex},
+        std::sync::Arc,
     };
 
-    const ALLOCATOR_OBJECT_ID: u64 = 1;
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
 
     // Some tests (the preallocate_range ones) currently assume that the data only occupies a single
@@ -903,65 +931,11 @@ mod tests {
     const TEST_DATA: &[u8] = b"hello";
     const TEST_OBJECT_SIZE: u64 = 913;
 
-    struct FakeAllocator(Mutex<u64>);
-
-    impl FakeAllocator {
-        fn allocated(&self) -> u64 {
-            *self.0.lock().unwrap()
-        }
-    }
-
-    #[async_trait]
-    impl Allocator for FakeAllocator {
-        fn object_id(&self) -> u64 {
-            ALLOCATOR_OBJECT_ID
-        }
-
-        async fn allocate(
-            &self,
-            _transaction: &mut Transaction,
-            len: u64,
-        ) -> Result<std::ops::Range<u64>, Error> {
-            let mut last_end = self.0.lock().unwrap();
-            let result = *last_end..*last_end + len;
-            *last_end = result.end;
-            Ok(result)
-        }
-
-        async fn deallocate(
-            &self,
-            _transaction: &mut Transaction,
-            _device_range: std::ops::Range<u64>,
-        ) {
-        }
-
-        async fn flush(&self, _force: bool) -> Result<(), Error> {
-            Ok(())
-        }
-
-        async fn reserve(
-            &self,
-            _transaction: &mut Transaction,
-            _device_range: std::ops::Range<u64>,
-        ) {
-            panic!("Not supported");
-        }
-
-        fn as_apply_mutations(self: Arc<Self>) -> Arc<dyn ApplyMutations> {
-            self
-        }
-    }
-
-    #[async_trait]
-    impl ApplyMutations for FakeAllocator {
-        async fn apply_mutation(&self, _mutation: Mutation, _replay: bool) {}
-    }
-
     async fn test_filesystem_and_store(
     ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, Arc<ObjectStore>) {
         let device = Arc::new(FakeDevice::new(1024, TEST_DEVICE_BLOCK_SIZE));
         let filesystem = FakeFilesystem::new(device);
-        let allocator = Arc::new(FakeAllocator(Mutex::new(0)));
+        let allocator = Arc::new(FakeAllocator::new());
         filesystem.object_manager().set_allocator(allocator.clone());
         let parent_store = ObjectStore::new_empty(None, 2, filesystem.clone());
         (
@@ -1187,6 +1161,27 @@ mod tests {
         buf.as_mut_slice().fill(95);
         let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE);
         object.write(offset, buf.as_ref()).await.expect_err("write suceceded");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_extend() {
+        let (fs, _allocator, store) = test_filesystem_and_store().await;
+        let mut transaction = Transaction::new();
+        let handle = store
+            .create_object(
+                &mut transaction,
+                HandleOptions { overwrite: true, ..Default::default() },
+            )
+            .await
+            .expect("create_object failed");
+        handle.extend(&mut transaction, 0..5 * TEST_DEVICE_BLOCK_SIZE as u64).await;
+        fs.commit_transaction(transaction).await;
+        let mut buf = handle.allocate_buffer(5 * TEST_DEVICE_BLOCK_SIZE as usize);
+        buf.as_mut_slice().fill(123);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
+        buf.as_mut_slice().fill(67);
+        handle.read(0, buf.as_mut()).await.expect("read failed");
+        assert_eq!(buf.as_slice(), [123; 5 * TEST_DEVICE_BLOCK_SIZE as usize]);
     }
 }
 
