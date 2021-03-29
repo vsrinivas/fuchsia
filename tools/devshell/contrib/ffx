@@ -13,4 +13,4 @@ if is-remote-workflow-device; then
   "${FUCHSIA_BUILD_DIR}/host-tools/ffx" target add $(get-device-pair)
 fi
 
-exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" --target $(get-device-pair) "$@"
+exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" --target "$(get-device-pair)" "$@"
