@@ -222,7 +222,7 @@ mod tests {
     use super::*;
     use {
         fidl::endpoints::Proxy as _, fidl_fuchsia_netemul as fnetemul,
-        fidl_fuchsia_netemul_test::CounterMarker, fuchsia_zircon as zx,
+        fidl_fuchsia_netemul_test::CounterMarker, fuchsia_zircon as zx, std::convert::TryFrom,
     };
 
     // We can't just use a counter for the sandbox identifier, as we do in `main`, because tests
@@ -240,29 +240,31 @@ mod tests {
         })
     }
 
-    fn create_test_realm(
-        sandbox: &fnetemul::SandboxProxy,
-        options: fnetemul::RealmOptions,
-    ) -> fnetemul::ManagedRealmProxy {
-        let (realm, server) = fidl::endpoints::create_proxy::<fnetemul::ManagedRealmMarker>()
-            .expect("failed to create ManagedRealmProxy");
-        let () = sandbox
-            .create_realm(server, options)
-            .expect("fuchsia.netemul/Sandbox.create_realm call failed");
-        realm
+    struct TestRealm {
+        realm: fnetemul::ManagedRealmProxy,
     }
 
-    fn connect_to_service<S: fidl::endpoints::DiscoverableService>(
-        realm: &fnetemul::ManagedRealmProxy,
-    ) -> S::Proxy {
-        let (proxy, server) = zx::Channel::create().expect("failed to create zx::Channel");
-        let () = realm
-            .connect_to_service(S::SERVICE_NAME, None, server)
-            .with_context(|| format!("{}", S::SERVICE_NAME))
-            .expect("failed to connect");
-        let proxy = fasync::Channel::from_channel(proxy)
-            .expect("failed to create fasync::Channel from zx::Channel");
-        S::Proxy::from_channel(proxy)
+    impl TestRealm {
+        fn new(sandbox: &fnetemul::SandboxProxy, options: fnetemul::RealmOptions) -> TestRealm {
+            let (realm, server) = fidl::endpoints::create_proxy::<fnetemul::ManagedRealmMarker>()
+                .expect("failed to create ManagedRealmProxy");
+            let () = sandbox
+                .create_realm(server, options)
+                .expect("fuchsia.netemul/Sandbox.create_realm call failed");
+            TestRealm { realm }
+        }
+
+        fn connect_to_service<S: fidl::endpoints::DiscoverableService>(&self) -> S::Proxy {
+            let (proxy, server) = zx::Channel::create().expect("failed to create zx::Channel");
+            let () = self
+                .realm
+                .connect_to_service(S::SERVICE_NAME, None, server)
+                .with_context(|| format!("{}", S::SERVICE_NAME))
+                .expect("failed to connect");
+            let proxy = fasync::Channel::from_channel(proxy)
+                .expect("failed to create fasync::Channel from zx::Channel");
+            S::Proxy::from_channel(proxy)
+        }
     }
 
     async fn with_sandbox<F, Fut>(name: &str, test: F)
@@ -285,7 +287,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_connect_to_single_service() {
         with_sandbox("can_connect_to_single_service", |sandbox| async move {
-            let realm = create_test_realm(
+            let realm = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
                     children: Some(vec![fnetemul::ChildDef {
@@ -300,7 +302,7 @@ mod tests {
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
-            let counter = connect_to_service::<CounterMarker>(&realm);
+            let counter = realm.connect_to_service::<CounterMarker>();
             assert_eq!(
                 counter
                     .increment()
@@ -316,7 +318,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn multiple_realms() {
         with_sandbox("multiple_realms", |sandbox| async move {
-            let realm_a = create_test_realm(
+            let realm_a = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
                     name: Some("a".to_string()),
@@ -332,7 +334,7 @@ mod tests {
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
-            let realm_b = create_test_realm(
+            let realm_b = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
                     name: Some("b".to_string()),
@@ -348,8 +350,8 @@ mod tests {
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
-            let counter_a = connect_to_service::<CounterMarker>(&realm_a);
-            let counter_b = connect_to_service::<CounterMarker>(&realm_b);
+            let counter_a = realm_a.connect_to_service::<CounterMarker>();
+            let counter_b = realm_b.connect_to_service::<CounterMarker>();
             assert_eq!(
                 counter_a
                     .increment()
@@ -383,7 +385,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn drop_realm_destroys_children() {
         with_sandbox("drop_realm_destroys_children", |sandbox| async move {
-            let realm = create_test_realm(
+            let realm = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
                     children: Some(vec![fnetemul::ChildDef {
@@ -398,7 +400,7 @@ mod tests {
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
-            let counter = connect_to_service::<CounterMarker>(&realm);
+            let counter = realm.connect_to_service::<CounterMarker>();
             assert_eq!(
                 counter
                     .increment()
@@ -430,7 +432,7 @@ mod tests {
             let realms = std::iter::repeat(())
                 .take(REALMS_COUNT)
                 .map(|()| {
-                    create_test_realm(
+                    TestRealm::new(
                         &sandbox,
                         fnetemul::RealmOptions {
                             children: Some(vec![fnetemul::ChildDef {
@@ -450,7 +452,7 @@ mod tests {
 
             let mut counters = vec![];
             for realm in &realms {
-                let counter = connect_to_service::<CounterMarker>(&realm);
+                let counter = realm.connect_to_service::<CounterMarker>();
                 assert_eq!(
                     counter
                         .increment()
@@ -476,6 +478,7 @@ mod tests {
                 );
             }
             for realm in realms {
+                let TestRealm { realm } = realm;
                 assert_eq!(
                     fasync::OnSignals::new(
                         &realm
@@ -495,7 +498,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn set_realm_name() {
         with_sandbox("set_realm_name", |sandbox| async move {
-            let realm = create_test_realm(
+            let TestRealm { realm } = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
                     name: Some("test-realm-name".to_string()),
@@ -527,7 +530,7 @@ mod tests {
         with_sandbox("auto_generated_realm_name", |sandbox| async move {
             const REALMS_COUNT: usize = 10;
             for i in 0..REALMS_COUNT {
-                let realm = create_test_realm(
+                let TestRealm { realm } = TestRealm::new(
                     &sandbox,
                     fnetemul::RealmOptions {
                         name: None,
@@ -550,6 +553,76 @@ mod tests {
                         .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
                     format!("{}\\:auto_generated_realm_name{}-realm", REALM_COLLECTION_NAME, i),
                 );
+            }
+        })
+        .await
+    }
+
+    async fn get_inspect_data(
+        component_selector: Vec<String>,
+    ) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
+        diagnostics_reader::ArchiveReader::new()
+            .add_selector(diagnostics_reader::ComponentSelector::new(component_selector))
+            .snapshot::<diagnostics_reader::Inspect>()
+            .await
+            .context("failed to get inspect data")?
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("failed to find inspect data"))?
+            .payload
+            .ok_or_else(|| anyhow::anyhow!("empty inspect payload"))
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn inspect() {
+        with_sandbox("inspect", |sandbox| async move {
+            const REALMS_COUNT: usize = 10;
+            let realms = std::iter::repeat(())
+                .take(REALMS_COUNT)
+                .map(|()| {
+                    TestRealm::new(
+                        &sandbox,
+                        fnetemul::RealmOptions {
+                            children: Some(vec![fnetemul::ChildDef {
+                                url: Some(COUNTER_PACKAGE_URL.to_string()),
+                                name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                                exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                                ])),
+                                ..fnetemul::ChildDef::EMPTY
+                            }]),
+                            ..fnetemul::RealmOptions::EMPTY
+                        },
+                    )
+                })
+                .collect::<Vec<_>>();
+            for (i, realm) in realms.iter().enumerate() {
+                let counter = realm.connect_to_service::<CounterMarker>();
+                for j in 1..=i {
+                    assert_eq!(
+                        counter
+                            .increment()
+                            .await
+                            .expect("fuchsia.netemul.test/Counter.increment call failed"),
+                        u32::try_from(j).unwrap(),
+                        "unexpected counter value",
+                    );
+                }
+                let TestRealm { realm } = realm;
+                let selector = vec![
+                    realm
+                        .get_moniker()
+                        .await
+                        .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
+                    COUNTER_COMPONENT_NAME.into(),
+                ];
+                let data = get_inspect_data(selector).await.expect("get_inspect_data failed");
+                fuchsia_inspect::assert_inspect_tree!(data, root: {
+                    counter: {
+                        count: u64::try_from(i).unwrap(),
+                    }
+                });
             }
         })
         .await

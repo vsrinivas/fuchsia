@@ -17,6 +17,12 @@
             durability: "transient",
         },
     ],
+    use: [
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "parent",
+        },
+    ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
