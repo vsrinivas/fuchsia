@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-- name: 'Template'
+- name: 'RFC-0000'
   title: 'RFC template'
   short_description: 'The RFC template.'
   authors: []
@@ -359,7 +359,7 @@
   authors: ['fmil@google.com']
   file: '0076_fidl_api_summaries.md'
   area: ['FIDL']
-  issue: [68955]
+  issue: ['68955']
   gerrit_change_id: ['480497']
   status: 'Accepted'
   reviewers: ['pascallouis@google.com', 'mkember@google.com', 'jeremymanson@google.com', 'gridman@google.com']

@@ -1,4 +1,3 @@
-
 {% set rfcid = "RFC-0074" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }} - {{ rfc.title }}

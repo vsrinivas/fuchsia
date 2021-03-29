@@ -93,7 +93,7 @@ alternate A/B extents would appear at the same offset but with the top bit set
 The following diagram hopefully illustrates how each of the partitions would
 appear:
 
-![Partition Arrangement](0005_blobfs_snapshots_fig_1.png)
+![Partition Arrangement](resources/0005_blobfs_snapshots/fig_1.png)
 
 **Figure 1: Partition arrangement.**
 
@@ -114,12 +114,12 @@ The current flow is shown in [Figure 2](#fig-2), and the proposed alternative in
 [Figure 3](#fig-3). New APIs and interactions are colored.
 
 {#fig-2}
-![Current OTA](0005_blobfs_snapshots_fig_2.png)
+![Current OTA](resources/0005_blobfs_snapshots/fig_2.png)
 
 **Figure 2: Current upgrade implementation (high-level)**
 
 {#fig-3}
-![Proposed OTA](0005_blobfs_snapshots_fig_3.png)
+![Proposed OTA](resources/0005_blobfs_snapshots/fig_3.png)
 
 **Figure 3: Proposed upgrade implementation (high-level)**
 
@@ -130,7 +130,7 @@ Delivery (SWD) stack. These APIs are used to drive a state machine ([Figure
 4](#fig-4)), which ultimately switches the system between partitions.
 
 {#fig-4}
-![Snapshot state machine](0005_blobfs_snapshots_fig_4.png)
+![Snapshot state machine](resources/0005_blobfs_snapshots/fig_4.png)
 
 **Figure 4: State machine for snapshotting.**
 
