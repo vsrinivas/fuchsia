@@ -40,6 +40,7 @@ reclaimable memory, e.g. user pager backed memory that can be evicted.
 This RFC proposes a mechanism by which the kernel will directly be able
 to reclaim userspace memory buffers under memory pressure. There are a few
 advantages to this approach:
+
 - It allows for greater control over how much memory is evicted; the kernel can
   look at free memory levels and evict only as much memory as required.
 - The kernel can use an LRU scheme to discard memory, which might work better at
@@ -298,6 +299,7 @@ The Zircon syscall documentation will need to be updated to include the new API.
 The granularity of reclamation is chosen as the entire VMO, instead of
 supporting finer-grained discard operations of ranges within a VMO. There are a
 few reasons behind this.
+
 - Reconstructing a VMO which has some pages discarded can be tricky. Considering
   the generic use case, where a VMO is used to represent an anonymous memory
   buffer, repopulating discarded pages would likely be zero fills, which might
@@ -447,6 +449,7 @@ signals, and drop those buffers themselves.
 ### Interaction with other reclamation strategies
 
 Currently there are two other mechanisms by which we can reclaim memory:
+
 - Page eviction of user pager backed memory (in-memory blobs), which is done by
   the kernel at the CRITICAL  memory pressure level (and near OOM).
 - Memory pressure signals, where userspace components themselves free memory at
@@ -503,6 +506,7 @@ but they might prove useful as a debug tool.
 
 Catching unlocked VMO accesses through mappings might be more tricky to
 implement. A couple of approaches that we could explore to accomplish this:
+
  - Unmap a mapped discardable VMO when it is unlocked. With this approach, we
    would need to make sure that existing VMO / VMAR semantics remain unchanged.
  - Teach wrappers around lock / unlock calls to tell ASAN that an unlocked VMO's

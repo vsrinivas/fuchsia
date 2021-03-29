@@ -282,7 +282,7 @@ You can add the current Fuchsia Eng Council as reviewers:
 </ul>
 
 For more information, on creating a change in the Fuchsia project, see
-[Contribute changes][contribute-changes].
+[Contribute changes].
 
 ## Change the status of an RFC proposal {#rfc-change-status}
 
@@ -358,7 +358,7 @@ After you receive a final status from the Eng Council, do the following:
 You have succesfully submitted an RFC proposal.
 
 [rfc-overview]: /docs/contribute/governance/rfcs/README.md
-[contribute-changes]: /docs/development/source_code/contribute_changes.md
+[contribute changes]: /docs/development/source_code/contribute_changes.md
 [rfc-template]: TEMPLATE.md
 [eng-council]: ../eng_council.md
 [toc-file]: https://ci.android.com/edit?repo=fuchsia/fuchsia/master&file=docs/contribute/governance/rfcs/_toc.yaml

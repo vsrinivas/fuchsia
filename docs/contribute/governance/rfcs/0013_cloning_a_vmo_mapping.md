@@ -61,10 +61,12 @@ special care would have to be taken to ensure that
 the ability to modify the parent VMO doesn't break any security boundaries.)
 
 Returns `ZX_ERR_INVALID_ARGS` if:
+
 - the range `addr` to `addr`+`size` isn't a subrange of a single VMO mapping
 - `addr` or `size` is not page-aligned
 
 Returns `ZX_ERR_ACCESS_DENIED` if:
+
 - the mapping was done using a new flag `ZX_VM_CANNOT_CREATE_VMO_CHILD`,
   or the vmar options include this flag
 - `handle` doesn't have `ZX_RIGHT_INSPECT`
@@ -75,6 +77,7 @@ and `ZX_ERR_BAD_STATE` if the VMAR is destroyed.
 Can also return any error returned by `zx_vmo_create_child` if the documented reason applies.
 
 The returned VMO handle will have `ZX_DEFAULT_VMO_RIGHTS`, with the following changes:
+
 - `ZX_RIGHT_WRITE` will be removed if `ZX_VMO_CHILD_NO_WRITE` was specified.
 - `ZX_RIGHT_EXECUTE` will be added if the mapping was executable and `ZX_VMO_CHILD_NO_WRITE` was not specified.
   This means it is be possible to create executable clones of executable mappings,

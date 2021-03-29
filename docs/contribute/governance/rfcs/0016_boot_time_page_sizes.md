@@ -94,6 +94,7 @@ any code in a component.
 
 The `zx_system_get_page_size` VDSO call needs to be documented. The
 documentation should say that
+
  * This is the smallest page size and the base unit of all allocations.
  * The vdsocall can never fail.
  * Page size is guaranteed to be a power of 2.
@@ -104,6 +105,7 @@ otherwise already abstract and always refers to the "system page size".
 
 Platform documentation should have minimum and maximum page sizes documented and
 reflect the `PAGE_MIN_SIZE` and `PAGE_MAX_SIZE` constants. These values are
+
  * ARM aarch64: 4KiB minimum and 64KiB maximum.
  * x86-64: 4KiB minimum and 2MiB maximum.
 

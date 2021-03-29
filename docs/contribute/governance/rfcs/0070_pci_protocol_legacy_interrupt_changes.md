@@ -54,6 +54,7 @@ bus driver doesn't know when a device's interrupt should be re-enabled.
 ## Design
 
 We need to design for two different usages of interrupts in PCI drivers.
+
 1. Drivers which know they are PCI drivers and directly call the `PciProtocol` methods.
 2. Drivers which use the interrupt in a manner which prevents usage of `PciProtocol` methods.
 

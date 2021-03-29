@@ -58,6 +58,7 @@ built with the toolchain will benefit from the ABI.
 
 This proposal is expected to improve the performance of all compiled C/C++ code
 on the x86-64 platform. Initial microbenchmarks in perfcompare bear this out:
+
 * 716 test cases out of 2914 got faster; some key ones by substantial amounts
 * Of note, free() / delete of 100 byte objects got 30 ns faster (baseline 83ns);
   this is substantially because CRC32C instructions, used in malloc, are now

@@ -21,6 +21,7 @@ blocked (waiting)  thread, the safer and often simple solution is to add logic s
 thread exits by itself.
 
 Dangers killing a thread
+
 * Locks can be left acquired, including global locks like ones controlling the heap.
 * Memory can be leaked. At the very least the thread stack, but often many other pieces.
 * Runtime left in an inconsistent state. This is at least true for the C and Go runtime.

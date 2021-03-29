@@ -158,6 +158,7 @@ There are multiple standards to choose from, and this RFC chooses one standard
 from the many that exist.
 
 Examples
+
 -  IEC introduces the KiB, MiB, GiB...
     - [wikipedia MiB](https://en.wikipedia.org/wiki/Mebibyte)
 -  JEDEC firmly defines units of bytes as base 2

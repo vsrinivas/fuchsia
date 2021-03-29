@@ -128,6 +128,7 @@ potentially using a `zx_channel_iovec_t` entry.
 ### Kernel
 
 After receiving the `ZX_CHANNEL_WRITE_USE_IOVEC` option, the kernel will:
+
 - Copy the data pointed to by the `zx_channel_iovec_t` objects to the message
   buffer.  While the copy operations will typically also be performed in order
   of the `zx_channel_iovec_t` inputs, it is not mandatory. However, the final
