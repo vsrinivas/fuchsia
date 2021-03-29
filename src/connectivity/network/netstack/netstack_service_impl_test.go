@@ -44,13 +44,10 @@ func TestRouteTableTransactions(t *testing.T) {
 		// Create a basic netstack instance with a single interface. We need at
 		// least one interface in order to add routes.
 		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
-		ifs, err := addNoopEndpoint(netstackServiceImpl.ns, t.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
+		ifs := addNoopEndpoint(t, netstackServiceImpl.ns, "")
+		t.Cleanup(ifs.Remove)
 
-		var originalTable []netstack.RouteTableEntry2
-		originalTable, err = netstackServiceImpl.GetRouteTable2(context.Background())
+		originalTable, err := netstackServiceImpl.GetRouteTable2(context.Background())
 		AssertNoError(t, err)
 
 		req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()

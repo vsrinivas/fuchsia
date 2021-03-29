@@ -133,15 +133,11 @@ func TestInterfacesWatcher(t *testing.T) {
 	ni := &netstackImpl{ns: ns}
 	si := &interfaceStateImpl{ns: ns}
 
-	var nicid tcpip.NICID
-	{
-		ifs, err := addNoopEndpoint(ns, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer ifs.Remove()
-		nicid = ifs.nicid
-	}
+	nicid := func() tcpip.NICID {
+		ifs := addNoopEndpoint(t, ns, "")
+		t.Cleanup(ifs.Remove)
+		return ifs.nicid
+	}()
 
 	// The first watcher will always block, while the second watcher should never block.
 	initWatcher := func() *interfaces.WatcherWithCtxInterface {
@@ -222,10 +218,7 @@ func TestInterfacesWatcher(t *testing.T) {
 	blockingWatch()
 
 	// Add an interface.
-	ifs, err := addNoopEndpoint(ns, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs := addNoopEndpoint(t, ns, "")
 
 	verifyWatchResults := func(wantEvent interfaces.Event) {
 		got := <-ch

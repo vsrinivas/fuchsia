@@ -135,10 +135,8 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			si := &interfaceStateImpl{ns: ns}
 			ndpDisp.start(ctx)
 
-			ifs, err := addNoopEndpoint(ns, "TestNameTooLong")
-			if err != nil {
-				t.Fatal(err)
-			}
+			ifs := addNoopEndpoint(t, ns, "")
+			t.Cleanup(ifs.Remove)
 			if err := ifs.Up(); err != nil {
 				t.Fatalf("ifs.Up(): %s", err)
 			}
@@ -204,10 +202,8 @@ func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	ifs, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs.Remove)
 	if err := ifs.Up(); err != nil {
 		t.Fatalf("ifs.Up(): %s", err)
 	}
@@ -231,17 +227,13 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs1 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs1.Remove)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
-	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs2 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs2.Remove)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -351,10 +343,8 @@ func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	ifs, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs.Remove)
 	if err := ifs.Up(); err != nil {
 		t.Fatalf("ifs.Up(): %s", err)
 	}
@@ -378,17 +368,13 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs1 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs1.Remove)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
-	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs2 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs2.Remove)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -497,17 +483,13 @@ func TestLinkDown(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs1 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs1.Remove)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
-	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs2 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs2.Remove)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -618,17 +600,13 @@ func TestRecursiveDNSServers(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs1 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs1.Remove)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
-	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs2 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs2.Remove)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -737,10 +715,8 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	ifs, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs.Remove)
 	if err := ifs.Up(); err != nil {
 		t.Fatalf("ifs.Up(): %s", err)
 	}

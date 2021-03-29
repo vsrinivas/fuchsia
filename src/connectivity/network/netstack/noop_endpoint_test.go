@@ -7,7 +7,10 @@
 package netstack
 
 import (
+	"testing"
+
 	"fidl/fuchsia/hardware/network"
+	"fidl/fuchsia/posix/socket"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
@@ -93,7 +96,7 @@ func (*noopController) Down() error {
 	return nil
 }
 
-func (*noopController) SetPromiscuousMode(v bool) error {
+func (*noopController) SetPromiscuousMode(_ bool) error {
 	return nil
 }
 
@@ -116,12 +119,27 @@ func (n *noopObserver) SetOnLinkOnlineChanged(fn func(bool)) {
 	n.onLinkOnlineChanged = fn
 }
 
-func addNoopEndpoint(ns *Netstack, name string) (*ifState, error) {
-	return ns.addEndpoint(
-		makeEndpointName("test", name),
+func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
+	t.Helper()
+	ifs, err := ns.addEndpoint(
+		func(nicid tcpip.NICID) string {
+			prefix := t.Name()
+			for {
+				candidate := makeEndpointName(prefix, name)(nicid)
+				if overflow := len(candidate) - int(socket.InterfaceNameLength); overflow > 0 {
+					prefix = prefix[:len(prefix)-overflow]
+					continue
+				}
+				return candidate
+			}
+		},
 		&noopEndpoint{},
 		&noopController{},
 		nil, /* observer */
 		0,   /* metric */
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ifs
 }

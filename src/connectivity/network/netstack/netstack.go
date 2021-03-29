@@ -1056,12 +1056,12 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	)
 }
 
-func makeEndpointName(prefix, config_name string) func(nicid tcpip.NICID) string {
+func makeEndpointName(prefix, configName string) func(nicid tcpip.NICID) string {
 	return func(nicid tcpip.NICID) string {
-		if len(config_name) == 0 {
+		if len(configName) == 0 {
 			return fmt.Sprintf("%s%d", prefix, nicid)
 		}
-		return config_name
+		return configName
 	}
 }
 

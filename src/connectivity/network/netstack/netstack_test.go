@@ -88,10 +88,8 @@ func TestMain(m *testing.M) {
 func TestDelRouteErrors(t *testing.T) {
 	ns := newNetstack(t)
 
-	ifs, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs.Remove)
 
 	rt := tcpip.Route{
 		Destination: header.IPv4EmptySubnet,
@@ -121,10 +119,8 @@ func TestDelRouteErrors(t *testing.T) {
 // disabled when the underlying link is brought up or down, respectively.
 func TestStackNICEnableDisable(t *testing.T) {
 	ns := newNetstack(t)
-	ifs, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs.Remove)
 
 	// The NIC should initially be disabled in stack.Stack.
 	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
@@ -751,12 +747,21 @@ func TestNICName(t *testing.T) {
 		t.Fatalf("got ns.name(0) = %q, want %q", got, want)
 	}
 
-	ifs, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
+	{
+		ifs := addNoopEndpoint(t, ns, "")
+		t.Cleanup(ifs.Remove)
+		if got, want := ifs.ns.name(ifs.nicid), t.Name()+"1"; got != want {
+			t.Fatalf("got ifs.mu.name = %q, want = %q", got, want)
+		}
 	}
-	if got, want := ifs.ns.name(ifs.nicid), t.Name(); got != want {
-		t.Fatalf("got ifs.mu.name = %q, want = %q", got, want)
+
+	{
+		const name = "VerySpecialName"
+		ifs := addNoopEndpoint(t, ns, name)
+		t.Cleanup(ifs.Remove)
+		if got, want := ifs.ns.name(ifs.nicid), name; got != want {
+			t.Fatalf("got ifs.mu.name = %q, want = %q", got, want)
+		}
 	}
 }
 
@@ -948,14 +953,10 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 func TestUniqueFallbackNICNames(t *testing.T) {
 	ns := newNetstack(t)
 
-	ifs1, err := addNoopEndpoint(ns, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ifs2, err := addNoopEndpoint(ns, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifs1 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs1.Remove)
+	ifs2 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs2.Remove)
 
 	nicInfos := ns.stack.NICInfo()
 
@@ -1192,9 +1193,7 @@ func TestNetstackImpl_GetInterfaces2(t *testing.T) {
 	ns := newNetstack(t)
 	ni := &netstackImpl{ns: ns}
 
-	if _, err := addNoopEndpoint(ns, t.Name()); err != nil {
-		t.Fatal(err)
-	}
+	t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
 
 	ifaces, err := ni.GetInterfaces2(context.Background())
 	if err != nil {
@@ -1335,10 +1334,8 @@ func TestListInterfaceAddresses(t *testing.T) {
 func TestAddAddressesThenChangePrefix(t *testing.T) {
 	ns := newNetstack(t)
 	ni := &stackImpl{ns: ns}
-	ifState, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifState := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifState.Remove)
 
 	// The call to ns.addEndpoint() added addresses to the stack. Make sure we include
 	// those in our want list.
@@ -1387,10 +1384,8 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		},
 	}
 	subnetLocalAddress := tcpip.Address("\xf0\xf0\xf0\xf1")
-	ifState, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifState := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifState.Remove)
 
 	found, err := ns.addInterfaceAddress(ifState.nicid, addr)
 	if err != nil {
@@ -1455,10 +1450,8 @@ func TestAddRouteParameterValidation(t *testing.T) {
 
 func TestDHCPAcquired(t *testing.T) {
 	ns := newNetstack(t)
-	ifState, err := addNoopEndpoint(ns, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ifState := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifState.Remove)
 
 	addressBytes := []byte(testV4Address)
 	nextAddress := func() tcpip.Address {
