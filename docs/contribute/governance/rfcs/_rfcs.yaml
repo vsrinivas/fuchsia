@@ -396,7 +396,7 @@
   title: 'fastboot boot'
   short_description: 'Replace Zedboot based netbooting flows with fastboot boot'
   authors: ['andresoportus@google.com']
-  file: 'NNNN_fastboot_boot.md'
+  file: '0081_fastboot_boot.md'
   area: ['General']
   issue: ['']
   gerrit_change_id: ['498344']
