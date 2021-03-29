@@ -53,9 +53,6 @@ class VirtioMagma : public VirtioMagmaGeneric,
                                     virtio_magma_internal_unmap_resp_t* response) override;
   zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
                           virtio_magma_poll_resp_t* response) override;
-  zx_status_t Handle_read_notification_channel(
-      const virtio_magma_read_notification_channel_ctrl_t* request,
-      virtio_magma_read_notification_channel_resp_t* response) override;
   zx_status_t Handle_read_notification_channel2(
       const virtio_magma_read_notification_channel2_ctrl_t* request,
       virtio_magma_read_notification_channel2_resp_t* response) override;

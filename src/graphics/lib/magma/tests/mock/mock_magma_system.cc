@@ -194,11 +194,6 @@ void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer
 
 uint32_t magma_get_notification_channel_handle(magma_connection_t connection) { return 0; }
 
-magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
-                                               uint64_t buffer_size, uint64_t* buffer_size_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 magma_status_t magma_read_notification_channel2(magma_connection_t connection, void* buffer,
                                                 uint64_t buffer_size, uint64_t* buffer_size_out,
                                                 magma_bool_t* more_data_out) {

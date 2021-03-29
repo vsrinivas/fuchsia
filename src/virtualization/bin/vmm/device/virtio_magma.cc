@@ -225,15 +225,6 @@ zx_status_t VirtioMagma::Handle_poll(const virtio_magma_poll_ctrl_t* request,
   return VirtioMagmaGeneric::Handle_poll(&request_mod, response);
 }
 
-zx_status_t VirtioMagma::Handle_read_notification_channel(
-    const virtio_magma_read_notification_channel_ctrl_t* request,
-    virtio_magma_read_notification_channel_resp_t* response) {
-  auto request_mod = *request;
-  // The notification data immediately follows the response struct.
-  request_mod.buffer = reinterpret_cast<uint64_t>(&response[1]);
-  return VirtioMagmaGeneric::Handle_read_notification_channel(&request_mod, response);
-}
-
 zx_status_t VirtioMagma::Handle_read_notification_channel2(
     const virtio_magma_read_notification_channel2_ctrl_t* request,
     virtio_magma_read_notification_channel2_resp_t* response) {

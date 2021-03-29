@@ -142,13 +142,6 @@ uint32_t magma_get_notification_channel_handle(magma_connection_t connection) {
   return magma::PlatformConnectionClient::cast(connection)->GetNotificationChannelHandle();
 }
 
-magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
-                                               uint64_t buffer_size, uint64_t* buffer_size_out) {
-  magma_bool_t more_data_dummy;
-  return magma::PlatformConnectionClient::cast(connection)
-      ->ReadNotificationChannel(buffer, buffer_size, buffer_size_out, &more_data_dummy);
-}
-
 magma_status_t magma_read_notification_channel2(magma_connection_t connection, void* buffer,
                                                 uint64_t buffer_size, uint64_t* buffer_size_out,
                                                 magma_bool_t* more_data_out) {
