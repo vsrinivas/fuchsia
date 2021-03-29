@@ -12,6 +12,9 @@ type Image struct {
 	// Path is the path to the image within the build directory.
 	Path string `json:"path"`
 
+	// Label is the GN label of the image.
+	Label string `json:"label"`
+
 	// Type is the shorthand for the type of the image (e.g., "zbi" or "blk").
 	Type string `json:"type"`
 

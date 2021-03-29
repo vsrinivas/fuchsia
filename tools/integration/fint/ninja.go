@@ -77,6 +77,9 @@ func (p *ninjaParser) parseLine(line string) {
 	} else if failureStartRegex.MatchString(line) {
 		// We found a line that indicates the start of a build failure error
 		// message. Start recording information about this failure.
+		// TODO(olivernewman): Handle the case where the build doesn't even
+		// start due to some irreconcilable error, e.g. multiple rules
+		// generating the same target. These lines start with `ninja: error:`.
 		p.processingFailure = true
 		p.failureOutputLines = append(p.failureOutputLines, p.previousLine, line)
 	}

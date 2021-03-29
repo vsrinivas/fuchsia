@@ -26,4 +26,12 @@ message BuildArtifacts {
   // Archives produced by the build. We use a struct to avoid needing to
   // maintain a copy of the images.json schema here.
   repeated google.protobuf.Struct built_archives = 4;
+
+  // Zedboot paving images built for ZBI tests. Only populated if ZBI tests were
+  // built.
+  repeated google.protobuf.Struct built_zedboot_images = 5;
+
+  // Mapping from ZBI test name to QEMU kernel image for the test. Only
+  // populated if ZBI tests were built.
+  map<string, google.protobuf.Struct> zbi_test_qemu_kernel_images = 6;
 }

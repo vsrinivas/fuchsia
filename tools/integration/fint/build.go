@@ -17,8 +17,17 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+const (
+	// Name of the QEMU kernel image as it appears in images.json.
+	qemuKernelImageName = "qemu-kernel"
+)
+
 var (
-	qemuImageNames = []string{"qemu-kernel", "zircon-a"}
+	// Names of images that are used for running on QEMU.
+	qemuImageNames = []string{qemuKernelImageName, "zircon-a"}
+
+	// Values of the "device_type" zbi_tests.json field that are emulators.
+	emulatorDeviceTypes = []string{"QEMU", "AEMU"}
 
 	// Extra targets to build when building images. Needed for size checks and tracking.
 	extraTargetsForImages = []string{
@@ -122,9 +131,50 @@ func constructNinjaTargets(
 	}
 
 	if staticSpec.IncludeZbiTests {
+		artifacts.ZbiTestQemuKernelImages = map[string]*structpb.Struct{}
 		for _, zbiTest := range modules.ZBITests() {
 			targets = append(targets, zbiTest.Path)
+			for _, dt := range zbiTest.DeviceTypes {
+				if !contains(emulatorDeviceTypes, dt) {
+					continue
+				}
+				// A ZBI test may specify another image to be run as the QEMU
+				// kernel. Ensure that it is built.
+				img, err := getQEMUKernelImage(zbiTest, modules)
+				if err != nil {
+					return nil, nil, err
+				}
+				imgPB, err := toStructPB(img)
+				if err != nil {
+					return nil, nil, err
+				}
+				artifacts.ZbiTestQemuKernelImages[zbiTest.Name] = imgPB
+				targets = append(targets, img.Path)
+				break
+			}
 		}
+
+		var zedbootImages []*structpb.Struct
+		for _, img := range modules.Images() {
+			if len(img.PaveZedbootArgs) == 0 {
+				continue
+			}
+			// TODO(fxbug.dev/68977): Remove when we can find a way to boot from the
+			// same slot we pave zedboot to.
+			if staticSpec.TargetArch == fintpb.Static_ARM64 && contains(img.PaveZedbootArgs, "--zircona") {
+				img.PaveZedbootArgs = append(img.PaveZedbootArgs, "--zirconb")
+			}
+			imgPB, err := toStructPB(img)
+			if err != nil {
+				return nil, nil, err
+			}
+			zedbootImages = append(zedbootImages, imgPB)
+			targets = append(targets, img.Path)
+		}
+		if len(zedbootImages) == 0 {
+			return nil, nil, fmt.Errorf("missing zedboot pave images")
+		}
+		artifacts.BuiltZedbootImages = zedbootImages
 	}
 
 	if staticSpec.IncludePrebuiltBinaryManifests {
@@ -148,9 +198,7 @@ func constructNinjaTargets(
 	}
 
 	targets = append(targets, staticSpec.NinjaTargets...)
-
-	sort.Strings(targets)
-	return targets, &artifacts, nil
+	return removeDuplicates(targets), &artifacts, nil
 }
 
 // isTestingImage determines whether an image is necessary for testing Fuchsia.
@@ -185,6 +233,35 @@ func isTestingImage(image build.Image, pave bool) bool {
 	}
 }
 
+// getQEMUKernelImage iterates through images.json to find the QEMU kernel image
+// for the given ZBI test.
+func getQEMUKernelImage(zbiTest build.ZBITest, modules buildModules) (build.Image, error) {
+	var images []build.Image
+	for _, img := range modules.Images() {
+		include := false
+		if zbiTest.QEMUKernelLabel != "" {
+			include = img.Label == zbiTest.QEMUKernelLabel
+		} else {
+			include = img.Name == qemuKernelImageName
+		}
+		if include {
+			images = append(images, img)
+		}
+	}
+	// If 'qemu_kernel_label' is specified, precisely one image with that
+	// label must exist; else, precisely one with the name of "qemu-kernel"
+	// must exist.
+	if len(images) == 0 {
+		return build.Image{}, fmt.Errorf("no QEMU kernel match found for zbi test %q", zbiTest.Name)
+	} else if len(images) > 1 {
+		return build.Image{}, fmt.Errorf("multiple QEMU kernel matches found for zbi test %q", zbiTest.Name)
+	}
+	img := images[0]
+	img.Name = qemuKernelImageName
+	img.Type = "kernel"
+	return img, nil
+}
+
 // toStructPB converts a Go struct to a Struct protobuf. Unfortunately, short of
 // using some complicated `reflect` logic, the only way to do this conversion is
 // by using JSON as an intermediate format.
@@ -198,4 +275,22 @@ func toStructPB(s interface{}) (*structpb.Struct, error) {
 		return nil, err
 	}
 	return structpb.NewStruct(m)
+}
+
+// removeDuplicates rearranges and re-slices the given slice in-place, returning
+// a slice containing only the unique elements of the original slice.
+func removeDuplicates(slice []string) []string {
+	sort.Strings(slice)
+
+	var numUnique int
+	var previous string
+	for _, str := range slice {
+		if previous == "" || str != previous {
+			slice[numUnique] = str
+			numUnique++
+		}
+		previous = str
+	}
+
+	return slice[:numUnique]
 }
