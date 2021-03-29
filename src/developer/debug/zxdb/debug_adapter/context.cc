@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_pause.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
 
@@ -95,6 +96,13 @@ void DebugAdapterContext::Init() {
       [this](const dap::ThreadsRequest &req) -> dap::ResponseOrError<dap::ThreadsResponse> {
         DEBUG_LOG(DebugAdapter) << "ThreadRequest received";
         return OnRequestThreads(this, req);
+      });
+
+  dap_->registerHandler(
+      [this](const dap::PauseRequest &req,
+             std::function<void(dap::ResponseOrError<dap::PauseResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "PauseRequest received";
+        OnRequestPause(this, req, callback);
       });
 
   // Register to zxdb session events

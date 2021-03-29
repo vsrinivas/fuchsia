@@ -55,6 +55,9 @@ class MockRemoteAPI : public RemoteAPI {
     return last_write_registers_;
   }
 
+  // Sets pause reply.
+  void set_pause_reply(const debug_ipc::PauseReply& reply) { pause_reply_ = reply; }
+
   // RemoteAPI implementation.
   void Attach(const debug_ipc::AttachRequest& request,
               fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override;
@@ -66,6 +69,8 @@ class MockRemoteAPI : public RemoteAPI {
       fit::callback<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override;
   void ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                     fit::callback<void(const Err&, debug_ipc::ThreadStatusReply)> cb) override;
+  void Pause(const debug_ipc::PauseRequest& request,
+             fit::callback<void(const Err&, debug_ipc::PauseReply)> cb) override;
   void Resume(const debug_ipc::ResumeRequest& request,
               fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) override;
   void ReadMemory(const debug_ipc::ReadMemoryRequest& request,
@@ -84,6 +89,7 @@ class MockRemoteAPI : public RemoteAPI {
 
  private:
   debug_ipc::ThreadStatusReply thread_status_reply_;
+  debug_ipc::PauseReply pause_reply_;
 
   std::map<debug_ipc::RegisterCategory, std::vector<debug_ipc::Register>> register_replies_;
 

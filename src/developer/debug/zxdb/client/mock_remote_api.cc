@@ -64,6 +64,14 @@ void MockRemoteAPI::ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
       });
 }
 
+void MockRemoteAPI::Pause(const debug_ipc::PauseRequest& request,
+                          fit::callback<void(const Err&, debug_ipc::PauseReply)> cb) {
+  // Returns the canned response.
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE,
+      [cb = std::move(cb), response = pause_reply_]() mutable { cb(Err(), std::move(response)); });
+}
+
 void MockRemoteAPI::Resume(const debug_ipc::ResumeRequest& request,
                            fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) {
   // Always returns success.
