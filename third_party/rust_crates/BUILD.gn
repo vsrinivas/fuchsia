@@ -32,8 +32,20 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+if (!(current_os == "fuchsia")) {
+  group("async-io") {
+    deps = [ ":async-io-v1_3_1" ]
+  }
+}
+
 group("async-lock") {
   deps = [ ":async-lock-v2_3_0" ]
+}
+
+if (!(current_os == "fuchsia")) {
+  group("async-net") {
+    deps = [ ":async-net-v1_5_0" ]
+  }
 }
 
 if (!(current_os == "fuchsia")) {
@@ -1203,6 +1215,43 @@ rust_library("async-fs-v1_5_0") {
   ]
 }
 
+rust_library("async-io-v1_3_1") {
+  crate_name = "async_io"
+  crate_root = "//third_party/rust_crates/vendor/async-io/src/lib.rs"
+  output_name = "async_io-25bd5ddaa58d5ff3"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":concurrent-queue-v1_2_2" ]
+  deps += [ ":fastrand-v1_4_0" ]
+  deps += [ ":futures-lite-v1_11_3" ]
+  deps += [ ":log-v0_4_11" ]
+  deps += [ ":nb-connect-v1_1_0" ]
+  deps += [ ":once_cell-v1_5_2" ]
+  deps += [ ":parking-v2_0_0" ]
+  deps += [ ":polling-v2_0_2" ]
+  deps += [ ":vec-arena-v1_1_0" ]
+  deps += [ ":waker-fn-v1_1_0" ]
+  if (true) {
+    deps += [ ":libc-v0_2_88" ]
+  }
+  if (false) {
+    deps += [ ":winapi-v0_3_9" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=25bd5ddaa58d5ff3",
+    "-Cextra-filename=-25bd5ddaa58d5ff3",
+  ]
+}
+
 rust_library("async-lock-v2_3_0") {
   crate_name = "async_lock"
   crate_root = "//third_party/rust_crates/vendor/async-lock/src/lib.rs"
@@ -1222,6 +1271,31 @@ rust_library("async-lock-v2_3_0") {
     "--edition=2018",
     "-Cmetadata=f387e568e95b5301",
     "-Cextra-filename=-f387e568e95b5301",
+  ]
+}
+
+rust_library("async-net-v1_5_0") {
+  crate_name = "async_net"
+  crate_root = "//third_party/rust_crates/vendor/async-net/src/lib.rs"
+  output_name = "async_net-71edc5ce98ea85de"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":async-io-v1_3_1" ]
+  deps += [ ":blocking-v1_0_2" ]
+  deps += [ ":fastrand-v1_4_0" ]
+  deps += [ ":futures-lite-v1_11_3" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=71edc5ce98ea85de",
+    "-Cextra-filename=-71edc5ce98ea85de",
   ]
 }
 
@@ -5076,6 +5150,31 @@ rust_library("multipart-v0_15_4") {
     "--cfg=feature=\"safemem\"",
     "--cfg=feature=\"server\"",
     "--cfg=feature=\"twoway\"",
+  ]
+}
+
+rust_library("nb-connect-v1_1_0") {
+  crate_name = "nb_connect"
+  crate_root = "//third_party/rust_crates/vendor/nb-connect/src/lib.rs"
+  output_name = "nb_connect-9b9caa2f737a76f4"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":socket2-v0_4_0" ]
+  if (true) {
+    deps += [ ":libc-v0_2_88" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=9b9caa2f737a76f4",
+    "-Cextra-filename=-9b9caa2f737a76f4",
   ]
 }
 
@@ -10602,6 +10701,27 @@ rust_library("valico-v2_4_2") {
     "--edition=2015",
     "-Cmetadata=179ee54e44a59467",
     "-Cextra-filename=-179ee54e44a59467",
+  ]
+}
+
+rust_library("vec-arena-v1_1_0") {
+  crate_name = "vec_arena"
+  crate_root = "//third_party/rust_crates/vendor/vec-arena/src/lib.rs"
+  output_name = "vec_arena-cae5ec25c5855f5"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=cae5ec25c5855f5",
+    "-Cextra-filename=-cae5ec25c5855f5",
   ]
 }
 
