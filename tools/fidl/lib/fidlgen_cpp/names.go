@@ -27,33 +27,6 @@ const (
 
 var currentVariant = noVariant
 
-// UseNatural sets the template engine to default to the "natural" domain object
-// namespace, when printing NameVariants.
-//
-// Example of Natural type name: "fuchsia::library::MyType".
-func UseNatural() string {
-	currentVariant = naturalVariant
-	return ""
-}
-
-// UseUnified sets the template engine to default to the "unified" domain object
-// namespace, when printing NameVariants.
-//
-// Example of Unified type name: "fuchsia_library::MyType".
-func UseUnified() string {
-	currentVariant = unifiedVariant
-	return ""
-}
-
-// UseWire sets the template engine to default to the "wire" domain object
-// namespace, when printing NameVariants.
-//
-// Example of Wire type name: "fuchsia_library::wire::MyType".
-func UseWire() string {
-	currentVariant = wireVariant
-	return ""
-}
-
 // Namespace represents a C++ namespace.
 type Namespace []string
 
