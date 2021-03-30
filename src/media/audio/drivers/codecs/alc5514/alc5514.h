@@ -17,7 +17,7 @@ namespace alc5514 {
 class Alc5514Device;
 using DeviceType = ddk::Device<Alc5514Device, ddk::Unbindable>;
 
-class Alc5514Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
+class Alc5514Device : public DeviceType {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
