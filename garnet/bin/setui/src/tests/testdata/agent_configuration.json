@@ -4,6 +4,8 @@
         "MediaButtons",
         "Earcons",
         "Restore",
-        "Inspect"
+        "Inspect",
+        "InspectPolicy",
+        "InspectSettingData"
     ]
 }
