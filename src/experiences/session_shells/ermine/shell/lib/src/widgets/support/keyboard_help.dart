@@ -38,6 +38,7 @@ class KeyboardHelp extends StatelessWidget {
                     builder: (context, animation) => FractionalTranslation(
                       translation: animation.value,
                       child: Material(
+                        key: ValueKey('keyboardHelp'),
                         color: Colors.black,
                         elevation: Elevations.systemOverlayElevation,
                         child: Container(

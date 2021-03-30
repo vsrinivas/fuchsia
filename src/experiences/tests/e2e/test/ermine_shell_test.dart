@@ -11,6 +11,9 @@ import 'ermine_driver.dart';
 void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
+
+  const kTransientWait = Duration(seconds: 2);
+
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
@@ -39,6 +42,8 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           await ermine.driver.requestData('recents');
+          await ermine.driver
+              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
           viewRect = await ermine.getViewRect(componentUrl);
           return viewRect.left > 0;
         }),
@@ -46,6 +51,7 @@ void main() {
 
     // Close terminal.
     await ermine.driver.requestData('close');
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: kTransientWait);
     await ermine.isStopped(componentUrl);
   });
 
@@ -57,10 +63,13 @@ void main() {
     await ermine.launch(terminalUrl);
     expect(
         await ermine.waitFor(() async {
+          await ermine.driver
+              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
           final viewRect = await ermine.getViewRect(terminalUrl);
           return viewRect.width > 0;
         }),
         isTrue);
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: kTransientWait);
     expect(await ermine.driver.getText(title), 'terminal.cmx');
 
     print(' Launched terminal');
@@ -69,6 +78,8 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           await ermine.driver.requestData('nextCluster');
+          await ermine.driver
+              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
           final viewRect = await ermine.getViewRect(terminalUrl);
           return viewRect.width == 0;
         }),
@@ -79,10 +90,13 @@ void main() {
     await ermine.launch(simpleBrowserUrl);
     expect(
         await ermine.waitFor(() async {
+          await ermine.driver
+              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
           final viewRect = await ermine.getViewRect(simpleBrowserUrl);
           return viewRect.width > 0;
         }),
         isTrue);
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: kTransientWait);
     expect(await ermine.driver.getText(title), 'simple-browser.cmx');
     expect(await ermine.isRunning(simpleBrowserUrl), isTrue);
 
@@ -92,12 +106,16 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           await ermine.driver.requestData('previousCluster');
+          await ermine.driver
+              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
           final viewRect = await ermine.getViewRect(simpleBrowserUrl);
           return viewRect.width == 0;
         }),
         isTrue);
     expect(
         await ermine.waitFor(() async {
+          await ermine.driver
+              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
           final viewRect = await ermine.getViewRect(terminalUrl);
           return viewRect.width > 0;
         }),

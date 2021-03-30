@@ -198,7 +198,7 @@ void main() {
     expect(result.contains('boot'), isTrue);
 
     // Inject 'cd pkg' + ENTER
-    expect(await inject('cd pkg', delay: Duration(seconds: 1)), isTrue);
+    expect(await inject('cd /pkg', delay: Duration(seconds: 1)), isTrue);
 
     // Inject 'pwd' + ENTER
     expect(await inject('pwd', delay: Duration(seconds: 1)), isTrue);

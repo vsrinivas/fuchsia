@@ -117,6 +117,7 @@ class ErmineDriver {
   /// Got to the Overview screen.
   Future<void> gotoOverview() async {
     await _driver.requestData('overview');
+    await _driver.waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
     await _driver.waitFor(find.byValueKey('overview'));
   }
 

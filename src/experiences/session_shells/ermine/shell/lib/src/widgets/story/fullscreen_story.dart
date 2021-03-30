@@ -29,6 +29,7 @@ class FullscreenStory extends StatelessWidget {
           final story = model.clustersModel.fullscreenStory;
           return story != null
               ? AnimatedBuilder(
+                  key: ValueKey('fullscreen'),
                   animation: story.nameNotifier,
                   builder: (context, _) {
                     return TileChrome(
