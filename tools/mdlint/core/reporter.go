@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -109,8 +110,14 @@ func (r *RootReporter) warnf(category string, tok Token, format string, a ...int
 }
 
 // HasMessages indicates whether any message was added to this reporter.
-func (r *RootReporter) HasMessages() bool {
-	return len(r.messages) != 0
+func (r *RootReporter) HasMessages(filenamesFilter *regexp.Regexp) bool {
+	for _, msg := range r.messages {
+		if !filenamesFilter.MatchString(msg.tok.Doc.Filename) {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 // findingJSON captures the information needed to emit a `message Comment` as
@@ -129,10 +136,13 @@ type findingJSON struct {
 // messagesToFindingsJSON converts the reporter's messages to `findingJSON`.
 // This method is used to test the internals of the reporter, but should not be
 // used otherwise.
-func (r *RootReporter) messagesToFindingsJSON() []findingJSON {
+func (r *RootReporter) messagesToFindingsJSON(filenamesFilter *regexp.Regexp) []findingJSON {
 	sort.Sort(r.messages)
 	var findings []findingJSON
 	for _, msg := range r.messages {
+		if !filenamesFilter.MatchString(msg.tok.Doc.Filename) {
+			continue
+		}
 		numLines, numCharsOnLastLine := numLinesAndCharsOnLastLine(msg.tok)
 		findings = append(findings, findingJSON{
 			Category:  fmt.Sprintf("mdlint/%s", msg.category),
@@ -163,8 +173,8 @@ func numLinesAndCharsOnLastLine(tok Token) (int, int) {
 	return numLines, numCharsOnLastLine
 }
 
-func (r *RootReporter) printAsJSON(writer io.Writer) error {
-	data, err := json.Marshal(r.messagesToFindingsJSON())
+func (r *RootReporter) printAsJSON(filenamesFilter *regexp.Regexp, writer io.Writer) error {
+	data, err := json.Marshal(r.messagesToFindingsJSON(filenamesFilter))
 	if err != nil {
 		return err
 	}
@@ -174,10 +184,13 @@ func (r *RootReporter) printAsJSON(writer io.Writer) error {
 	return nil
 }
 
-func (r *RootReporter) printAsPrettyPrint(writer io.Writer) error {
+func (r *RootReporter) printAsPrettyPrint(filenamesFilter *regexp.Regexp, writer io.Writer) error {
 	sort.Sort(r.messages)
 	isFirst := true
 	for _, msg := range r.messages {
+		if !filenamesFilter.MatchString(msg.tok.Doc.Filename) {
+			continue
+		}
 		if isFirst {
 			isFirst = false
 		} else {
@@ -199,14 +212,20 @@ func (r *RootReporter) printAsPrettyPrint(writer io.Writer) error {
 	return nil
 }
 
+var allFilenames = regexp.MustCompile("")
+
 // Print prints this report to the writer. For instance:
 //
 //     reporter.Print(os.Stderr)
 func (r *RootReporter) Print(writer io.Writer) error {
+	return r.PrintOnlyForFiles(allFilenames, writer)
+}
+
+func (r *RootReporter) PrintOnlyForFiles(filenamesFilter *regexp.Regexp, writer io.Writer) error {
 	if r.JSONOutput {
-		return r.printAsJSON(writer)
+		return r.printAsJSON(filenamesFilter, writer)
 	}
-	return r.printAsPrettyPrint(writer)
+	return r.printAsPrettyPrint(filenamesFilter, writer)
 }
 
 func makeSquiggle(line string, tok Token) string {

@@ -12,13 +12,21 @@ Configure, and build
     fx set core.x64 --with //tools/mdlint:host # or similar
     fx build
 
-Then run
+Example invocation running specific rules over `//docs`, and reporting all
+findings:
 
     fx mdlint --root-dir docs \
               --enable no-extra-space-on-right \
               --enable casing-of-anchors \
               --enable bad-lists \
               --enable verify-internal-links
+
+Example invocation running all rules over `//docs`, and only reporting findings
+within Markdown documents whose filenames match `docs/contribute/governance`:
+
+    fx mdlint --root-dir docs \
+              --enable all \
+              --filter-filenames docs/contribute/governance
 
 ## Testing
 

@@ -69,7 +69,7 @@ func TestMessagesToFindingsJSON(t *testing.T) {
 		},
 	}
 
-	actual := rootReporter.messagesToFindingsJSON()
+	actual := rootReporter.messagesToFindingsJSON(allFilenames)
 	if diff := cmp.Diff(expected, actual); diff != "" {
 		t.Errorf("expected != actual (-want +got)\n%s", diff)
 	}

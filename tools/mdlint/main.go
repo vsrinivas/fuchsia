@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -42,7 +43,7 @@ func (flag *enabledRulesFlag) String() string {
 }
 
 func (flag *enabledRulesFlag) Set(name string) error {
-	if !core.HasRule(name) {
+	if name != core.AllRulesName && !core.HasRule(name) {
 		return fmt.Errorf("unknown rule '%s'", name)
 	}
 	*flag = append(*flag, name)
@@ -50,21 +51,25 @@ func (flag *enabledRulesFlag) Set(name string) error {
 }
 
 var (
-	rootDir      dirFlag
-	jsonOutput   bool
-	enabledRules enabledRulesFlag
+	rootDir                 dirFlag
+	reportFilenamesMatching string
+	jsonOutput              bool
+	enabledRules            enabledRulesFlag
 )
 
 func init() {
-	flag.Var(&rootDir, "root-dir", "Path to root directory containing Mardown files.")
+	flag.Var(&rootDir, "root-dir", "(required) Path to root directory containing Mardown files")
+	flag.StringVar(&reportFilenamesMatching, "filter-filenames", "", "Regex to filter warnings by their filenames")
 	flag.BoolVar(&jsonOutput, "json", false, "Enable JSON output")
 
 	var names []string
-	for _, name := range core.AllRuleNames() {
+	for _, name := range core.AllRules() {
 		names = append(names, fmt.Sprintf("'%s'", name))
 	}
 	sort.Strings(names)
-	flag.Var(&enabledRules, "enable", fmt.Sprintf("Enable a rule. Valid rules are %s", strings.Join(names, ", ")))
+	flag.Var(&enabledRules, "enable", fmt.Sprintf(
+		"Enable a rule. Valid rules are %s. To enable all rules, use the special '%s' name",
+		strings.Join(names, ", "), core.AllRulesName))
 }
 
 func printUsage() {
@@ -106,7 +111,7 @@ func processAllDocs(rules core.LintRuleOverTokens, filenames []string) error {
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
-	if !flag.Parsed() {
+	if !flag.Parsed() || rootDir == "" {
 		printUsage()
 		os.Exit(exitOnError)
 	}
@@ -126,8 +131,9 @@ func main() {
 		os.Exit(exitOnError)
 	}
 
-	if reporter.HasMessages() {
-		reporter.Print(os.Stderr)
+	filenamesFilter := regexp.MustCompile(reportFilenamesMatching)
+	if reporter.HasMessages(filenamesFilter) {
+		reporter.PrintOnlyForFiles(filenamesFilter, os.Stderr)
 		os.Exit(exitOnError)
 	}
 

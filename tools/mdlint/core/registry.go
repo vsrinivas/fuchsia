@@ -13,12 +13,14 @@ import (
 // are read only. We do not rely on the registry in tests.
 var allRules = make(map[string]func(rootReporter *RootReporter) (LintRuleOverTokens, LintRuleOverEvents))
 
+// HasRule tests whether a given rule is registered.
 func HasRule(name string) bool {
 	_, ok := allRules[name]
 	return ok
 }
 
-func AllRuleNames() []string {
+// AllRules returns the names of all the registered rules.
+func AllRules() []string {
 	var names []string
 	for name := range allRules {
 		names = append(names, name)
@@ -55,6 +57,12 @@ func InstantiateRules(rootReporter *RootReporter, enabledRules []string) LintRul
 		rulesOverTokens []LintRuleOverTokens
 		rulesOverEvents []LintRuleOverEvents
 	)
+	if len(enabledRules) == 1 && enabledRules[0] == AllRulesName {
+		enabledRules = nil
+		for name := range allRules {
+			enabledRules = append(enabledRules, name)
+		}
+	}
 	for _, name := range enabledRules {
 		instantiator, ok := allRules[name]
 		if !ok {
@@ -89,10 +97,15 @@ func RegisterLintRuleOverEvents(name string, instantiator func(Reporter) LintRul
 	}
 }
 
+// generalName is the category name reserved for warnings not issued by specific
+// rules, but rather 'general' warnings.
 const generalName = "general"
 
+// AllRulesName is a reserved rule name used to indicate "all" rules.
+const AllRulesName = "all"
+
 func checkRegisteredName(name string) {
-	if name == generalName {
+	if name == generalName || name == AllRulesName {
 		panic(fmt.Sprintf("rule name '%s' is reserved", generalName))
 	}
 	if _, ok := allRules[name]; ok {
