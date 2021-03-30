@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_continue.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_pause.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
@@ -77,8 +78,7 @@ void DebugAdapterContext::Init() {
     return response;
   });
 
-  dap_->registerHandler([this](const dap::SetBreakpointsRequest &req)
-                            -> dap::ResponseOrError<dap::SetBreakpointsResponse> {
+  dap_->registerHandler([this](const dap::SetBreakpointsRequest &req) {
     DEBUG_LOG(DebugAdapter) << "SetBreakpointsRequest received";
     return OnRequestBreakpoint(this, req);
   });
@@ -88,17 +88,15 @@ void DebugAdapterContext::Init() {
     return dap::ConfigurationDoneResponse();
   });
 
-  dap_->registerHandler(
-      [this](const dap::AttachRequestZxdb &req) -> dap::ResponseOrError<dap::AttachResponse> {
-        DEBUG_LOG(DebugAdapter) << "AttachRequest received";
-        return OnRequestAttach(this, req);
-      });
+  dap_->registerHandler([this](const dap::AttachRequestZxdb &req) {
+    DEBUG_LOG(DebugAdapter) << "AttachRequest received";
+    return OnRequestAttach(this, req);
+  });
 
-  dap_->registerHandler(
-      [this](const dap::ThreadsRequest &req) -> dap::ResponseOrError<dap::ThreadsResponse> {
-        DEBUG_LOG(DebugAdapter) << "ThreadRequest received";
-        return OnRequestThreads(this, req);
-      });
+  dap_->registerHandler([this](const dap::ThreadsRequest &req) {
+    DEBUG_LOG(DebugAdapter) << "ThreadRequest received";
+    return OnRequestThreads(this, req);
+  });
 
   dap_->registerHandler(
       [this](const dap::PauseRequest &req,
@@ -106,6 +104,11 @@ void DebugAdapterContext::Init() {
         DEBUG_LOG(DebugAdapter) << "PauseRequest received";
         OnRequestPause(this, req, callback);
       });
+
+  dap_->registerHandler([this](const dap::ContinueRequest &req) {
+    DEBUG_LOG(DebugAdapter) << "ContinueRequest received";
+    return OnRequestContinue(this, req);
+  });
 
   // Register to zxdb session events
   session()->thread_observers().AddObserver(this);
