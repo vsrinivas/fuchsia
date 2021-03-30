@@ -3,20 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
-    ffx_config::sdk::{Sdk, SdkVersion},
+    anyhow::{Context, Result},
+    ffx_config::{
+        sdk::{Sdk, SdkVersion},
+        set,
+    },
     ffx_core::ffx_plugin,
-    ffx_sdk_args::{SdkCommand, SubCommand},
+    ffx_sdk_args::{SdkCommand, SetCommand, SetRootCommand, SetSubCommand, SubCommand},
     std::io::Write,
 };
 
 #[ffx_plugin()]
 pub async fn exec_sdk(command: SdkCommand) -> Result<()> {
     let writer = Box::new(std::io::stdout());
-    let sdk = ffx_config::get_sdk().await?;
+    let sdk = ffx_config::get_sdk().await;
 
     match &command.sub {
-        SubCommand::Version(_) => exec_version(sdk, writer).await,
+        SubCommand::Version(_) => exec_version(sdk?, writer).await,
+        SubCommand::Set(cmd) => exec_set(cmd).await,
     }
 }
 
@@ -28,6 +32,17 @@ async fn exec_version<W: Write + Sync>(sdk: Sdk, mut writer: W) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn exec_set(cmd: &SetCommand) -> Result<()> {
+    match &cmd.sub {
+        SetSubCommand::Root(SetRootCommand { path }) => {
+            let abs_path =
+                path.canonicalize().context(format!("making path absolute: {:?}", path))?;
+            set("user.sdk.root", abs_path.to_string_lossy().into()).await?;
+            Ok(())
+        }
+    }
 }
 
 #[cfg(test)]

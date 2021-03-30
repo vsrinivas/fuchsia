@@ -13,4 +13,6 @@ ffx_plugin("ffx_sdk") {
     "src/args.rs",
     "src/lib.rs",
   ]
+
+  args_deps = [ "//third_party/rust_crates:async-std" ]
 }
