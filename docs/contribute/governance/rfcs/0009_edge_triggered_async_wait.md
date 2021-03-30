@@ -81,9 +81,9 @@ monitored by `zx_object_wait_async` and there is no gap in coverage.
 ## Implementation
 
 The addition of the `ZX_WAIT_ASYNC_EDGE` option to `zx_object_wait_async` has
-already been implemented in [https://fuchsia-review.googlesource.com/c/fuchsia/+/438521]
+already been implemented in [fxr/438521](https://fuchsia-review.googlesource.com/c/fuchsia/+/438521)
 and its use in epoll has been implemented in
-[https://fuchsia-review.googlesource.com/c/fuchsia/+/438656].
+[fxr/438656](https://fuchsia-review.googlesource.com/c/fuchsia/+/438656).
 
 ## Performance
 

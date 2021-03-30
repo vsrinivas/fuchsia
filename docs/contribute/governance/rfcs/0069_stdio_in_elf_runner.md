@@ -243,6 +243,7 @@ a socket, as proposed above, it’ll be POSIX compliant “out of the box”.
 [doc-cf-principles]: /docs/concepts/components/v2/design_principles.md
 [doc-cf-migration]: /docs/concepts/components/v2/migration.md
 [doc-elf-runner]: /docs/concepts/components/v2/elf_runner.md
+[doc-logs-recording]: /docs/development/diagnostics/logs/recording.md
 [doc-principles-inclusive]: /docs/concepts/principles/inclusive.md
 [doc-principles-pragmatism]: /docs/concepts/principles/pragmatic.md
 [fxr-370683]: https://fuchsia-review.googlesource.com/c/fuchsia/+/370683/

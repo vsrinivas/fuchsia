@@ -320,13 +320,14 @@ The go language API regularly produces [API surface summaries][gapi].
 
 [ast]: https://en.wikipedia.org/wiki/Abstract_syntax_tree
 [bnf]: https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form
-[bug71411]: http://fxbug.dev/72411
+[bug72411]: http://fxbug.dev/72411
 [fas]: /tools/fidl/fidl_api_summarize/README.md
 [fbs]: /docs/reference/fidl/language/bindings-spec.md
 [fidl]: /docs/development/languages/fidl
 [fidlir]: /docs/reference/fidl/language/json-ir.md
 [fqn]: /docs/contribute/governance/fidl/ftp/ftp-043.md#fully-qualified-names
 [ftp24c]: /docs/contribute/governance/fidl/ftp/ftp-024.md#compat
+[ftp-050]: /docs/contribute/governance/fidl/ftp/ftp-050.md
 [gapi]: https://golang.org/api
 [gesture]: /sdk/fidl/fuchsia.accessibility.gesture/gesture_listener.fidl
 [rfc15]: /docs/contribute/governance/rfcs/0015_cts.md

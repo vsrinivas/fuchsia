@@ -115,7 +115,7 @@ If your change affects encoding or decoding, plan to update the conformance test
 suite.
 
 If your change affects source compatibility, plan to update the [source
-compatibility test suite][source-compatibility-suite.
+compatibility test suite](/src/tests/fidl/source_compatibility).
 
 How will uses of your new feature be tested? If you add a language feature, how
 will you test it in each language's bindings?
