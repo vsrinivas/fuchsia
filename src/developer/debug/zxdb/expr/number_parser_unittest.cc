@@ -103,77 +103,92 @@ TEST(NumberParser, StringToNumber) {
   using ExpectedType = std::variant<int32_t, uint32_t, int64_t, uint64_t>;
 
   struct Case {
-    const char* input;    // Input with suffix.
+    const char* input;  // Input with suffix.
+    ExprLanguage lang;
     const char* err_msg;  // Null for no error.
 
     ExpectedType expected;
     const char* expected_type_name;
   } kCases[] = {
       // Normal positive input.
-      {"0", nullptr, int32_t(0), "int"},
-      {"23", nullptr, int32_t(23), "int"},
-      {"23u", nullptr, uint32_t(23), "unsigned"},
-      {"23l", nullptr, int64_t(23), "long"},
-      {"23ul", nullptr, uint64_t(23), "unsigned long"},
-      {"23ll", nullptr, int64_t(23), "long long"},
-      {"23ull", nullptr, uint64_t(23), "unsigned long long"},
+      {"0", ExprLanguage::kC, nullptr, int32_t(0), "int"},
+      {"23", ExprLanguage::kC, nullptr, int32_t(23), "int"},
+      {"23u", ExprLanguage::kC, nullptr, uint32_t(23), "unsigned"},
+      {"2_3u", ExprLanguage::kRust, nullptr, uint32_t(23), "unsigned"},
+      {"2'3u", ExprLanguage::kC, nullptr, uint32_t(23), "unsigned"},
+      {"23l", ExprLanguage::kC, nullptr, int64_t(23), "long"},
+      {"23ul", ExprLanguage::kC, nullptr, uint64_t(23), "unsigned long"},
+      {"23ll", ExprLanguage::kC, nullptr, int64_t(23), "long long"},
+      {"23ull", ExprLanguage::kC, nullptr, uint64_t(23), "unsigned long long"},
 
       // Normal negative input.
-      {"-0", nullptr, int32_t(0), "int"},
-      {"-23", nullptr, int32_t(-23), "int"},
-      {"-23u", nullptr, uint32_t(-23), "unsigned"},
-      {"-23l", nullptr, int64_t(-23), "long"},
-      {"-23lu", nullptr, uint64_t(-23), "unsigned long"},
-      {"-23ll", nullptr, int64_t(-23), "long long"},
-      {"-23llu", nullptr, uint64_t(-23), "unsigned long long"},
+      {"-0", ExprLanguage::kC, nullptr, int32_t(0), "int"},
+      {"-23", ExprLanguage::kC, nullptr, int32_t(-23), "int"},
+      {"-23u", ExprLanguage::kC, nullptr, uint32_t(-23), "unsigned"},
+      {"-23l", ExprLanguage::kC, nullptr, int64_t(-23), "long"},
+      {"-2_3l", ExprLanguage::kRust, nullptr, int64_t(-23), "long"},
+      {"-2'3l", ExprLanguage::kC, nullptr, int64_t(-23), "long"},
+      {"-23lu", ExprLanguage::kC, nullptr, uint64_t(-23), "unsigned long"},
+      {"-23ll", ExprLanguage::kC, nullptr, int64_t(-23), "long long"},
+      {"-23llu", ExprLanguage::kC, nullptr, uint64_t(-23), "unsigned long long"},
 
       // Hex input.
-      {"0xabcd", nullptr, int32_t(0xabcd), "int"},
-      {"- 0x614u", nullptr, uint32_t(-0x614), "unsigned"},
-      {"0xabcdull", nullptr, uint64_t(0xabcd), "unsigned long long"},
-      {"0xffffFFFFffffFFFF", nullptr, uint64_t(0xffffFFFFffffFFFF), "unsigned long"},
+      {"0xabcd", ExprLanguage::kC, nullptr, int32_t(0xabcd), "int"},
+      {"- 0x614u", ExprLanguage::kC, nullptr, uint32_t(-0x614), "unsigned"},
+      {"0xabcdull", ExprLanguage::kC, nullptr, uint64_t(0xabcd), "unsigned long long"},
+      {"0xffffFFFFffffFFFF", ExprLanguage::kC, nullptr, uint64_t(0xffffFFFFffffFFFF),
+       "unsigned long"},
+      {"0xffff_FFFF_ffff_FFFF", ExprLanguage::kRust, nullptr, uint64_t(0xffffFFFFffffFFFF),
+       "unsigned long"},
       // This overflow case gets promoted to "long long" because it's "bigger". C++ would put this
       // in a long.
-      {"-0xffffFFFFffffFFFF", nullptr, uint64_t(-0xffffFFFFffffFFFF), "unsigned long long"},
+      {"-0xffffFFFFffffFFFF", ExprLanguage::kC, nullptr, uint64_t(-0xffffFFFFffffFFFF),
+       "unsigned long long"},
+      {"-0xffff'FFFF'ffff'FFFF", ExprLanguage::kC, nullptr, uint64_t(-0xffffFFFFffffFFFF),
+       "unsigned long long"},
 
       // Octal input ("0" prefix disallowed).
-      {"0o567", nullptr, int32_t(0567), "int"},
-      {"-0o567", nullptr, int32_t(-0567), "int"},
-      {"-0o0567llu", nullptr, uint64_t(-0567), "unsigned long long"},
-      {"0567", "Octal numbers must be prefixed with '0o'.", int32_t(0567), "int"},
-      {"-0567llu", "Octal numbers must be prefixed with '0o'.", uint64_t(-0567),
+      {"0o567", ExprLanguage::kC, nullptr, int32_t(0567), "int"},
+      {"-0o567", ExprLanguage::kC, nullptr, int32_t(-0567), "int"},
+      {"-0o0567llu", ExprLanguage::kC, nullptr, uint64_t(-0567), "unsigned long long"},
+      {"0567", ExprLanguage::kC, "Octal numbers must be prefixed with '0o'.", int32_t(0567), "int"},
+      {"-0567llu", ExprLanguage::kC, "Octal numbers must be prefixed with '0o'.", uint64_t(-0567),
        "unsigned long long"},
 
       // Binary input.
-      {"0b0", nullptr, int32_t(0), "int"},
-      {"0b110010", nullptr, int32_t(0b110010), "int"},
-      {"0b110010l", nullptr, int64_t(0b110010), "long"},
-      {"-0b110010l", nullptr, int64_t(-0b110010), "long"},
+      {"0b0", ExprLanguage::kC, nullptr, int32_t(0), "int"},
+      {"0b11_0010", ExprLanguage::kRust, nullptr, int32_t(0b110010), "int"},
+      {"0b110'010l", ExprLanguage::kC, nullptr, int64_t(0b110010), "long"},
+      {"-0b110010l", ExprLanguage::kC, nullptr, int64_t(-0b110010), "long"},
 
       // This number is one too large to put in an signed 32-bit type. C++ would expand this to a
       // "long" unless it was in a non-decimal base, but our simpler rules put it in an unsigned
       // since it fits.
-      {"2147483648", nullptr, uint32_t(2147483648), "unsigned"},
+      {"2147483648", ExprLanguage::kC, nullptr, uint32_t(2147483648), "unsigned"},
       // Long override makes it more clear.
-      {"2147483648l", nullptr, int64_t(2147483648), "long"},
+      {"2147483648l", ExprLanguage::kC, nullptr, int64_t(2147483648), "long"},
 
       // Largest 32-bit negative number. Forcing it to unsigned gives the same bit pattern and same
       // size type, but in an unsigned type.
-      {"-2147483648", nullptr, int32_t(-2147483648), "int"},
-      {"-2147483648u", nullptr, uint32_t(-2147483648u), "unsigned"},
+      {"-2147483648", ExprLanguage::kC, nullptr, int32_t(-2147483648), "int"},
+      {"-2147483648u", ExprLanguage::kC, nullptr, uint32_t(-2147483648u), "unsigned"},
 
       // Some error cases.
-      {"", "Expected a number.", 0, nullptr},
-      {"0x56g", "Invalid character in number.", 0, nullptr},
-      {"0x56 56", "Invalid character in number.", 0, nullptr},
-      {"0b5", "Invalid character in number.", 0, nullptr},
-      {"0x0x34", "Invalid character in number.", 0, nullptr},
-      {"--45", "Invalid character in number.", 0, nullptr},
-      {"67lll", "Duplicate 'l' or 'll' in number suffix.", 0, nullptr},
+      {"", ExprLanguage::kC, "Expected a number.", 0, nullptr},
+      {"0x56g", ExprLanguage::kC, "Invalid character in number.", 0, nullptr},
+      {"0x56 56", ExprLanguage::kC, "Invalid character in number.", 0, nullptr},
+      {"0b5", ExprLanguage::kC, "Invalid character in number.", 0, nullptr},
+      {"0x0x34", ExprLanguage::kC, "Invalid character in number.", 0, nullptr},
+      {"--45", ExprLanguage::kC, "Invalid character in number.", 0, nullptr},
+      {"67lll", ExprLanguage::kC, "Duplicate 'l' or 'll' in number suffix.", 0, nullptr},
+
+      // Separators.
+      {"2'300", ExprLanguage::kRust, "Invalid character in number.", 0, nullptr},
+      {"2_300", ExprLanguage::kC, "Invalid character in number.", 0, nullptr},
   };
 
   for (const auto& cur : kCases) {
-    ErrOrValue result = StringToNumber(cur.input);
+    ErrOrValue result = StringToNumber(cur.lang, cur.input);
 
     if (cur.err_msg) {
       // Expected failure.
@@ -235,8 +250,8 @@ TEST(NumberParser, GetFloatTokenLength) {
   EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12extremely"));
   EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12e+"));  // Exponent needs digits.
   EXPECT_EQ(5u, GetFloatTokenLength(ExprLanguage::kC, "12e12"));
-  EXPECT_EQ(6u, GetFloatTokenLength(ExprLanguage::kC, "12.e12 "));
-  EXPECT_EQ(9u, GetFloatTokenLength(ExprLanguage::kC, "12.019e12+aa"));
+  EXPECT_EQ(8u, GetFloatTokenLength(ExprLanguage::kRust, "1_2.e1_2 "));
+  EXPECT_EQ(11u, GetFloatTokenLength(ExprLanguage::kC, "1'2.01'9e12+aa"));
   EXPECT_EQ(5u, GetFloatTokenLength(ExprLanguage::kC,
                                     "12e12.2"));  // ".2" not counted as part of the number.
   EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12e+"));
@@ -316,9 +331,12 @@ TEST(NumberParser, ValueForFloatToken) {
   EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kC, "3.14e+0f", "float", 3.14f));
   EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kC, "2e9", "double", 2e9));
 
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kC, "1'000.123'456", "double", 1000.123456));
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kRust, "1_000.123_456", "f64", 1000.123456));
+
   EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kRust, ".3", "f64", .3));
   EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kRust, "3.", "f64", 3.));
-  // Technically this line is wrong. It should be "2e9f32".
+  // Technically this line is wrong. The input should be "2e9f32".
   // TODO(bug 43220) Handle Rust-specific suffixes.
   EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kRust, "2e9f", "f32", 2e9f));
 

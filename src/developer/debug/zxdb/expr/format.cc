@@ -109,6 +109,8 @@ void FormatUnsignedInt(FormatNode* node, const FormatOptions& options) {
     node->set_err(err);
   } else if (options.num_format == NumFormat::kBin) {
     int pad_to = options.zero_pad_hex_bin ? node->value().data().size() * 8 : 0;
+    // It might be nice to use a language-specific digits separator here ('_' for Rust) but the
+    // source language information isn't easily avilable at this point.
     node->set_description(to_bin_string(int_val, pad_to, true, '\''));
   } else if (options.num_format == NumFormat::kHex) {
     int pad_to = options.zero_pad_hex_bin ? node->value().data().size() * 2 : 0;

@@ -21,7 +21,7 @@ class ExprToken;
 // suffixes and the magnitude of the number. The rules are somewhat simplified from C++ in that the
 // base of the number is not considered and it will pick the smallest type that will fit (C++ has
 // different rules for decimal numbers, see the .cc file).
-ErrOrValue StringToNumber(std::string_view str);
+ErrOrValue StringToNumber(ExprLanguage lang, std::string_view str);
 
 struct IntegerPrefix {
   enum Sign { kPositive, kNegative };

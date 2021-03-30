@@ -24,9 +24,10 @@ bool IsNameContinuingChar(char c) { return IsNameChar(c) || (c >= '0' && c <= '9
 
 bool IsIntegerFirstChar(char c) { return isdigit(c); }
 
-// This allows all alphanumeric characters for simplicity. Integer literals aren't validated at the
-// tokenizer level and will be checked later. Our job is to find the extent of the literal.
-bool IsIntegerContinuingChar(char c) { return isalnum(c); }
+// This allows all alphanumeric characters and digits separator for C++ (') and Rust (_) for
+// simplicity of handling hex and other bases. Numeric literals aren't validated at the tokenizer
+// level and will be checked later. Our job is to find the extent of the literal.
+bool IsIntegerContinuingChar(char c) { return isalnum(c) || c == '\'' || c == '_'; }
 
 // Returns a list of all tokens sharing the given first character.
 const std::vector<const ExprTokenRecord*>& TokensWithFirstChar(char c) {

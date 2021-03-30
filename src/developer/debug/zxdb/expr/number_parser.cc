@@ -68,8 +68,21 @@ struct TypeLookup {
     // clang-format on
 };
 
+bool IsDigitSeparator(ExprLanguage lang, char c) {
+  switch (lang) {
+    case ExprLanguage::kC:
+      return c == '\'';
+    case ExprLanguage::kRust:
+      return c == '_';
+  }
+  return false;
+}
+
 // Supports only base 2, 8, 10, and 16.
-bool ValidForBase(IntegerPrefix::Base base, char c) {
+bool ValidForBase(ExprLanguage lang, IntegerPrefix::Base base, char c) {
+  if (IsDigitSeparator(lang, c))
+    return true;
+
   switch (base) {
     case IntegerPrefix::kBin:
       return c == '0' || c == '1';
@@ -83,10 +96,11 @@ bool ValidForBase(IntegerPrefix::Base base, char c) {
   return false;
 }
 
-// Returns the length of a <digits> sequence starting at the beginning of the input.
-size_t GetDigitsLength(std::string_view input) {
+// Returns the length of a <digits> sequence (also allowing separators) starting at the beginning of
+// the input.
+size_t GetDigitsLength(ExprLanguage lang, std::string_view input) {
   size_t result = 0;
-  while (result < input.size() && isdigit(input[result]))
+  while (result < input.size() && (isdigit(input[result]) || IsDigitSeparator(lang, input[result])))
     result++;
   return result;
 }
@@ -97,7 +111,7 @@ bool IsSign(char c) { return c == '+' || c == '-'; }
 
 }  // namespace
 
-ErrOrValue StringToNumber(std::string_view str) {
+ErrOrValue StringToNumber(ExprLanguage lang, std::string_view str) {
   IntegerPrefix prefix = ExtractIntegerPrefix(&str);
   if (prefix.base == IntegerPrefix::kOct && prefix.octal_type == IntegerPrefix::OctalType::kC) {
     // Require "0o" prefixes for octal numbers instead of allowing C-style "0" prefixes. Octal
@@ -115,22 +129,26 @@ ErrOrValue StringToNumber(std::string_view str) {
     return Err("Expected a number.");
 
   // Validate the characters in the number. This prevents strtoull from being too smart and trying
-  // to handle prefixes itself.
+  // to handle prefixes itself. We also remove the separators.
+  std::string digits;
+  digits.reserve(str.size());
   for (char c : str) {
-    if (!ValidForBase(prefix.base, c))
+    if (!ValidForBase(lang, prefix.base, c))
       return Err("Invalid character in number.");
+    if (!IsDigitSeparator(lang, c))
+      digits.push_back(c);
   }
 
   // strtoull doesn't take a const ending, but it doesn't modify the input.
-  char* str_end = const_cast<char*>(str.end());
-  char* parsed_end = str_end;
+  char* digits_end = &digits[digits.size()];
+  char* parsed_end = digits_end;
 
   // This will be the absolute value of the returned number.
-  uint64_t abs_value = strtoull(str.data(), &parsed_end, static_cast<int>(prefix.base));
+  uint64_t abs_value = strtoull(digits.data(), &parsed_end, static_cast<int>(prefix.base));
 
   // If strtoull stopped early it means it it hit an invalid character (shouldn't happen since we
   // validated above) or maybe the input was too long.
-  if (parsed_end != str_end)
+  if (parsed_end != digits_end)
     return Err("Invalid number.");
 
   // Pick the smallest type that fits the data size as well as satisfies any suffixes.
@@ -269,6 +287,8 @@ ErrOr<IntegerSuffix> ExtractIntegerSuffix(std::string_view* s) {
 
 // The floating-point format we expect is:
 //
+//   <digits> := ("0" - "9") | "_" | "'"
+//
 //   <float> := ( <significand> [<exponent>] [<suffix>] ) |
 //              ( <digis> <exponent> [<suffix>] )
 //
@@ -292,7 +312,7 @@ size_t GetFloatTokenLength(ExprLanguage lang, std::string_view input) {
   std::string_view cur = input;
 
   // Digits before the dot.
-  size_t before_dot = GetDigitsLength(cur);
+  size_t before_dot = GetDigitsLength(lang, cur);
   cur = cur.substr(before_dot);
   if (lang == ExprLanguage::kRust & before_dot == 0)
     return 0;
@@ -307,7 +327,7 @@ size_t GetFloatTokenLength(ExprLanguage lang, std::string_view input) {
     return 0;  // Must begin with digits or a dot to be a float.
 
   // Digits after the dot.
-  size_t after_dot = GetDigitsLength(cur);
+  size_t after_dot = GetDigitsLength(lang, cur);
   cur = cur.substr(after_dot);
   if (has_dot && !before_dot && !after_dot)
     return 0;  // A dot must have digits on at least one side.
@@ -321,7 +341,7 @@ size_t GetFloatTokenLength(ExprLanguage lang, std::string_view input) {
     if (!cur.empty() && IsSign(cur[0]))
       cur = cur.substr(1);  // Skip optional sign.
 
-    size_t exponent = GetDigitsLength(cur);
+    size_t exponent = GetDigitsLength(lang, cur);
     if (!exponent)
       return 0;  // Must have exponent digits to be a float.
     cur = cur.substr(exponent);
@@ -366,6 +386,14 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
   if (lang != ExprLanguage::kC && suffix == FloatSuffix::kLong)
     suffix = FloatSuffix::kNone;  // Only C has a "long double" type.
 
+  // Strip digits separators.
+  std::string digits;
+  digits.reserve(value.size());
+  for (char c : value) {
+    if (!IsDigitSeparator(lang, c))
+      digits.push_back(c);
+  }
+
   double_conversion::StringToDoubleConverter converter(0, 0.0, nan(""), nullptr, nullptr);
 
   fxl::RefPtr<BaseType> type;
@@ -374,14 +402,15 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
   int consumed = 0;
   switch (suffix) {
     case FloatSuffix::kNone: {
-      double d = converter.StringToDouble(value.data(), static_cast<int>(value.size()), &consumed);
+      double d =
+          converter.StringToDouble(digits.data(), static_cast<int>(digits.size()), &consumed);
       data.resize(sizeof(double));
       memcpy(&data[0], &d, sizeof(double));
       type = GetBuiltinDoubleType(lang);
       break;
     }
     case FloatSuffix::kFloat: {
-      float f = converter.StringToFloat(value.data(), static_cast<int>(value.size()), &consumed);
+      float f = converter.StringToFloat(digits.data(), static_cast<int>(digits.size()), &consumed);
       data.resize(sizeof(float));
       memcpy(&data[0], &f, sizeof(float));
       type = GetBuiltinFloatType(lang);
@@ -390,7 +419,8 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
     case FloatSuffix::kLong: {
       // The parser doesn't support long doubles, but we can at least upcast if the local system
       // supports it.
-      double d = converter.StringToDouble(value.data(), static_cast<int>(value.size()), &consumed);
+      double d =
+          converter.StringToDouble(digits.data(), static_cast<int>(digits.size()), &consumed);
       long double ld = d;
       data.resize(sizeof(long double));
       memcpy(&data[0], &ld, sizeof(long double));
@@ -399,7 +429,7 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
     }
   }
 
-  if (consumed != static_cast<int>(value.size()))
+  if (consumed != static_cast<int>(digits.size()))
     return Err("Trailing characters on floating-point constant.");
 
   return ExprValue(std::move(type), std::move(data));

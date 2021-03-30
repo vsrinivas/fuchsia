@@ -165,7 +165,7 @@ TEST(ExprTokenizer, Integers) {
 
   // Char offsets: 01234567890123456789012345678901
   // Token #'s:    0    12 34 5          6        7
-  ExprTokenizer t("1234 -56-1 0x5a4bcdef 0o123llu 7hello ");
+  ExprTokenizer t("1234 -56-1 0x5a4bcdef 0o123llu 7_hell'o ");
 
   EXPECT_TRUE(t.Tokenize());
   EXPECT_FALSE(t.err().has_error()) << t.err().msg();
@@ -201,7 +201,7 @@ TEST(ExprTokenizer, Integers) {
   EXPECT_EQ(22u, tokens[6].byte_offset());
 
   EXPECT_EQ(ExprTokenType::kInteger, tokens[7].type());
-  EXPECT_EQ("7hello", tokens[7].value());
+  EXPECT_EQ("7_hell'o", tokens[7].value());
   EXPECT_EQ(31u, tokens[7].byte_offset());
 }
 

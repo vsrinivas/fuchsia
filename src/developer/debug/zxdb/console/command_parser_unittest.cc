@@ -61,6 +61,12 @@ TEST(CommandParser, Tokenizer) {
   ASSERT_EQ(1u, output.size());
   EXPECT_EQ(1u, output[0].offset);
   EXPECT_EQ("fooone stringbar", output[0].str);
+
+  // Single quotes don't quote.
+  EXPECT_FALSE(TokenizeCommand("123'456", &output).has_error());
+  ASSERT_EQ(1u, output.size());
+  EXPECT_EQ(0u, output[0].offset);
+  EXPECT_EQ("123'456", output[0].str);
 }
 
 TEST(CommandParser, ParserBasic) {

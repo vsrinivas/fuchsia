@@ -864,8 +864,7 @@ fxl::RefPtr<Type> ExprParser::ParseRustArrayType() {
       return nullptr;
     }
 
-    auto got = StringToNumber(cur_token().value());
-
+    auto got = StringToNumber(language_, cur_token().value());
     if (got.has_error()) {
       // Should this even be possible?
       SetError(cur_token(), "Could not parse integer: " + got.err().msg());

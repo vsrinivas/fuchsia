@@ -417,7 +417,7 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
 void LiteralExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
   switch (token_.type()) {
     case ExprTokenType::kInteger: {
-      cb(StringToNumber(token_.value()));
+      cb(StringToNumber(context->GetLanguage(), token_.value()));
       break;
     }
     case ExprTokenType::kFloat: {

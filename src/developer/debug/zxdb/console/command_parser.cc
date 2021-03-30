@@ -535,8 +535,12 @@ Err TokenizeCommand(const std::string& input, std::vector<CommandToken>* result)
 
     // Skip to end of token.
     while (cur < input.size() && !IsTokenSeparator(input[cur])) {
-      // Allow quoting.
-      if (auto string_info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, input, cur)) {
+      // Allow quoting. Only treat double-quotes as quoted commands. This handling of quotes
+      // will prohibit the use of strings in expressions. If that's needed, we may want to add a
+      // mode where the "treat everything as one parameter" mode that the "print" command uses
+      // doesn't do any quote handling.
+      if (auto string_info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, input, cur);
+          string_info && string_info->token_type == ExprTokenType::kStringLiteral) {
         size_t error_location = 0;
         auto str = ParseStringOrCharLiteral(input, *string_info, &cur, &error_location);
         if (str.has_error())

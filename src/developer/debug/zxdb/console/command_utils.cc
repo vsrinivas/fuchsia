@@ -135,7 +135,7 @@ Err StringToInt64(const std::string& s, int64_t* out) {
   // StringToNumber expects pre-trimmed input.
   std::string trimmed(fxl::TrimString(s, " "));
 
-  ErrOrValue number_value = StringToNumber(trimmed);
+  ErrOrValue number_value = StringToNumber(ExprLanguage::kC, trimmed);
   if (number_value.has_error())
     return number_value.err();
 
@@ -179,7 +179,7 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   // StringToNumber expects pre-trimmed input.
   std::string trimmed(fxl::TrimString(s, " "));
 
-  ErrOrValue number_value = StringToNumber(trimmed);
+  ErrOrValue number_value = StringToNumber(ExprLanguage::kC, trimmed);
   if (number_value.has_error())
     return number_value.err();
 
