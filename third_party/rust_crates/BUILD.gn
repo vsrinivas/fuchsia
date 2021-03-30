@@ -212,6 +212,10 @@ group("futures-io") {
   deps = [ ":futures-io-v0_3_12" ]
 }
 
+group("futures-lite") {
+  deps = [ ":futures-lite-v1_11_3" ]
+}
+
 group("futures-macro") {
   deps = [ ":futures-macro-v0_3_12($host_toolchain)" ]
 }
