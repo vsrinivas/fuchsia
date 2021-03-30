@@ -5,8 +5,9 @@
 //! Type-safe bindings for Zircon vmo objects.
 
 use crate::ok;
-use crate::{object_get_info, ObjectQuery, Topic};
+use crate::{object_get_info, object_get_property, object_set_property, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
+use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 use std::ptr;
@@ -229,6 +230,12 @@ assoc_values!(VmoOp, [
     CACHE_CLEAN_INVALIDATE = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
 ]);
 
+unsafe_handle_properties!(object: Vmo,
+    props: [
+        {query_ty: VMO_CONTENT_SIZE, tag: VmoContentSizeTag, prop_ty: u64, get:get_content_size, set: set_content_size},
+    ]
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -441,5 +448,19 @@ mod tests {
         let exec_vmo = vmo.replace_as_executable().unwrap();
         let info = exec_vmo.as_handle_ref().basic_info().unwrap();
         assert!(info.rights.contains(Rights::EXECUTE));
+    }
+
+    #[test]
+    fn vmo_content_size() {
+        let start_size = 1024;
+        let vmo = Vmo::create_with_opts(VmoOptions::RESIZABLE, start_size).unwrap();
+        assert_eq!(vmo.get_content_size().unwrap(), start_size);
+        vmo.set_content_size(&0).unwrap();
+        assert_eq!(vmo.get_content_size().unwrap(), 0);
+
+        // write should not change content size.
+        let content = b"abcdef";
+        assert!(vmo.write(content, 0).is_ok());
+        assert_eq!(vmo.get_content_size().unwrap(), 0);
     }
 }
