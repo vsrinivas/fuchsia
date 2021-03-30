@@ -1,7 +1,8 @@
 # symbolize
 
-```
-Usage of /usr/local/google/home/kasiahayden/fuchsia/out/default/host_x64/symbolize:
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage of symbolize:
   -build-id-dir value
     	path to .build-id directory
   -color value
@@ -29,3 +30,4 @@ Usage of /usr/local/google/home/kasiahayden/fuchsia/out/default/host_x64/symboli
   -symbol-server-timeout duration
     	Symbol server timeout for fetching an object from gs (default 5s)
 ```
+

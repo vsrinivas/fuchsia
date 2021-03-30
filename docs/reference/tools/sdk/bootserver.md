@@ -1,9 +1,14 @@
 # bootserver
 
-```
-usage:   bootserver [ <option> ]* [<kernel>] [ <ramdisk> ] [ -- [ <kerneloption> ]* ]
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-options:
+usage:   bootserver [ <option> ]* [<kernel>] [ <ramdisk> ] [ -- [ <kerneloption> ]* ]
+```
+
+__options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
   -1         only boot once, then exit
   -a         only boot device with this IPv6 address
   -b <sz>    tftp block size (default=1428, ignored with --netboot)
@@ -35,3 +40,4 @@ options:
   --fail-fast-if-version-mismatch  error if zedboot version does not match
   --no-bind    do not bind to bootserver port. Should be used with -a <IPV6>
 ```
+

@@ -34,8 +34,6 @@ toc:
   section:
   - title: "bootserver"
     path: /docs/reference/tools/sdk/bootserver.md
-  - title: "device-finder"
-    path: /docs/reference/tools/sdk/device-finder.md
   - title: "fconfig"
     path: /docs/reference/tools/sdk/fconfig.md
   - title: "fserve"
@@ -52,6 +50,8 @@ toc:
     path: /docs/reference/tools/sdk/zbi.md
 - title: "Packaging commands"
   section:
+  - title: "blobfs-compression"
+    path: /docs/reference/tools/sdk/blobfs-compression.md
   - title: "fpublish"
     path: /docs/reference/tools/sdk/fpublish.md
   - title: "pm"
