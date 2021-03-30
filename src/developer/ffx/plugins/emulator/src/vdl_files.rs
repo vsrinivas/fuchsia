@@ -617,6 +617,31 @@ mod tests {
 
     #[test]
     #[serial]
+    fn test_choosing_prebuild_with_path_specified() -> Result<()> {
+        setup();
+        create_fake_ssh()?;
+        let start_command = &create_start_command();
+
+        // --sdk
+        let mut aemu = VDLFiles::new(true)?.resolve_aemu_path(start_command)?;
+        assert_eq!(PathBuf::from("/path/to/aemu"), aemu);
+        let mut vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
+        assert_eq!(PathBuf::from("/path/to/device_launcher"), vdl);
+        let mut grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
+        assert_eq!(PathBuf::from("/path/to/grpcwebproxy"), grpcwebproxy);
+
+        // in-tree
+        aemu = VDLFiles::new(false)?.resolve_aemu_path(start_command)?;
+        assert_eq!(PathBuf::from("/path/to/aemu"), aemu);
+        vdl = VDLFiles::new(false)?.resolve_vdl_path(start_command)?;
+        assert_eq!(PathBuf::from("/path/to/device_launcher"), vdl);
+        grpcwebproxy = VDLFiles::new(false)?.resolve_grpcwebproxy_path(start_command)?;
+        assert_eq!(PathBuf::from("/path/to/grpcwebproxy"), grpcwebproxy);
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
     fn test_choosing_prebuild_with_cipd_label_specified() -> Result<()> {
         setup();
         create_fake_ssh()?;

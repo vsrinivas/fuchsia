@@ -20,7 +20,6 @@ use std::fs::{
 use std::io::{BufRead, BufReader};
 use std::os::unix;
 use std::path::PathBuf;
-use walkdir::WalkDir;
 
 pub fn read_env_path(var: &str) -> Result<PathBuf> {
     env::var_os(var)
@@ -30,20 +29,20 @@ pub fn read_env_path(var: &str) -> Result<PathBuf> {
 
 /// Walks the current execution path and its parent directories to find
 /// .fx-ssh-path file.
-pub fn find_fuchsia_root() -> Result<PathBuf> {
+pub fn get_fuchsia_ssh_path() -> Result<PathBuf> {
     for ancester in std::env::current_exe()?.ancestors() {
         if let Ok(entries) = read_dir(ancester) {
             for entry in entries {
                 if let Ok(entry) = entry {
                     if entry.file_name() == ".fx-ssh-path" {
-                        return Ok(ancester.to_path_buf());
+                        return Ok(entry.path());
                     }
                 }
             }
         }
     }
     ffx_bail!(
-        "Cannot find fuchsia repo root from current execution location and its parent directories"
+        "Cannot find .fx-ssh-path from current execution location and its parent directories"
     );
 }
 
@@ -110,42 +109,23 @@ impl HostTools {
     /// Initialize host tools for in-tree usage via fx vdl.
     ///
     /// Requires the environment variable HOST_OUT_DIR to be specified
+    /// PREBUILT_AEMU_DIR, PREBUILT_GRPCWEBPROXY_DIR, PREBUILT_VDL_DIR are optional.
     /// See: //tools/devshell/vdl
     pub fn from_tree_env() -> Result<HostTools> {
         let host_out_dir = read_env_path("HOST_OUT_DIR")?;
-        let fuchsia_root = find_fuchsia_root()?;
-        println!("[fvdl] Using fuchsia root dir: {:?}", fuchsia_root.display());
         Ok(HostTools {
             // prebuilt binaries that can be optionally fetched from cipd.
             aemu: match read_env_path("PREBUILT_AEMU_DIR") {
                 Ok(val) => val.join("emulator"),
-                _ => WalkDir::new(fuchsia_root.join("prebuilt/third_party/aemu"))
-                    .into_iter()
-                    .filter_map(|e| e.ok())
-                    .find(|e| e.file_name() == "emulator")
-                    .ok_or(anyhow!(
-                        "Cannot find find emulator executable from {:?}",
-                        fuchsia_root.join("prebuilt/third_party/aemu").display()
-                    ))?
-                    .path()
-                    .to_path_buf(),
+                _ => PathBuf::new(),
             },
             grpcwebproxy: match read_env_path("PREBUILT_GRPCWEBPROXY_DIR") {
                 Ok(val) => val.join("grpcwebproxy"),
-                _ => WalkDir::new(fuchsia_root.join("prebuilt/third_party/grpcwebproxy"))
-                    .into_iter()
-                    .filter_map(|e| e.ok())
-                    .find(|e| e.file_name() == "grpcwebproxy")
-                    .ok_or(anyhow!(
-                        "Cannot find find grpcwebproxy executable from {:?}",
-                        fuchsia_root.join("prebuilt/third_party/grpcwebproxy").display()
-                    ))?
-                    .path()
-                    .to_path_buf(),
+                _ => PathBuf::new(),
             },
             vdl: match read_env_path("PREBUILT_VDL_DIR") {
                 Ok(val) => val.join("device_launcher"),
-                _ => fuchsia_root.join("prebuilt/vdl/device_launcher"),
+                _ => PathBuf::new(),
             },
             device_finder: host_out_dir.join("device-finder"),
             far: host_out_dir.join("far"),
@@ -398,7 +378,7 @@ impl SSHKeys {
     ///
     /// Requires the environment variable FUCHSIA_BUILD_DIR to be specified.
     pub fn from_tree_env() -> Result<SSHKeys> {
-        let ssh_file = File::open(find_fuchsia_root()?.join(".fx-ssh-path"))?;
+        let ssh_file = File::open(get_fuchsia_ssh_path()?)?;
         let ssh_file = BufReader::new(ssh_file);
         let mut lines = ssh_file.lines();
 
@@ -596,6 +576,26 @@ mod tests {
         let host_tools = HostTools::from_tree_env()?;
         assert_eq!(host_tools.aemu.to_str().unwrap(), "/host/out/aemu/emulator");
         assert_eq!(host_tools.vdl.to_str().unwrap(), "/host/out/vdl/device_launcher");
+        assert_eq!(host_tools.far.to_str().unwrap(), "/host/out/far");
+        assert_eq!(host_tools.fvm.to_str().unwrap(), "/host/out/fvm");
+        assert_eq!(host_tools.pm.to_str().unwrap(), "/host/out/pm");
+        assert_eq!(host_tools.device_finder.to_str().unwrap(), "/host/out/device-finder");
+        assert_eq!(host_tools.zbi.to_str().unwrap(), "/host/out/zbi");
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_host_tools_no_env_var() -> Result<()> {
+        env::set_var("HOST_OUT_DIR", "/host/out");
+        env::remove_var("PREBUILT_AEMU_DIR");
+        env::remove_var("PREBUILT_VDL_DIR");
+        env::remove_var("PREBUILT_GRPCWEBPROXY_DIR");
+
+        let host_tools = HostTools::from_tree_env()?;
+        assert!(host_tools.aemu.as_os_str().is_empty());
+        assert!(host_tools.vdl.as_os_str().is_empty());
+        assert!(host_tools.grpcwebproxy.as_os_str().is_empty());
         assert_eq!(host_tools.far.to_str().unwrap(), "/host/out/far");
         assert_eq!(host_tools.fvm.to_str().unwrap(), "/host/out/fvm");
         assert_eq!(host_tools.pm.to_str().unwrap(), "/host/out/pm");
