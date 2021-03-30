@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/coding_unstable.h>
 #include <limits.h>
 #include <stddef.h>
 
@@ -2496,6 +2497,127 @@ TEST(Msg, EncodeOutgoingByteMsg) {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
 }
+
+TEST(Iovec, SimpleObject) {
+  BoolStruct obj{true};
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+  auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = unstable_fidl_encode_iovec(
+      &fidl_test_coding_BoolStructTable, &obj, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS, nullptr, 0,
+      buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_NULL(out_error);
+  ASSERT_EQ(out_actual_iovecs, 1);
+  EXPECT_EQ(out_actual_handles, 0);
+  EXPECT_EQ(iovecs[0].buffer, buffer.get());
+  EXPECT_EQ(iovecs[0].capacity, 8);
+  EXPECT_EQ(iovecs[0].reserved, 0);
+  EXPECT_EQ(*reinterpret_cast<const bool*>(iovecs[0].buffer), obj.v);
+}
+
+TEST(Iovec, TooFewIovec) {
+  zx_channel_iovec_t iovecs[1];
+  BoolStruct obj{true};
+  constexpr uint32_t kBufferSize = 128;
+  uint8_t buffer[kBufferSize];
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = unstable_fidl_encode_iovec(
+      &fidl_test_coding_BoolStructTable, &obj, iovecs, 0, nullptr, 0, buffer, kBufferSize,
+      &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_NOT_NULL(out_error);
+}
+
+TEST(Iovec, TooFewBytes) {
+  BoolStruct obj{true};
+  constexpr uint32_t kBufferSize = 2;
+  zx_channel_iovec_t out_iovec[kBufferSize];
+  uint8_t buffer[1];
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = unstable_fidl_encode_iovec(
+      &fidl_test_coding_BoolStructTable, &obj, out_iovec, kBufferSize, nullptr, 0, buffer, 0,
+      &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_NOT_NULL(out_error);
+}
+
+#ifdef __Fuchsia__
+TEST(Iovec, IovecWithHandles) {
+  array_of_nonnullable_handles_message_layout message = {};
+  message.inline_struct.handles[0] = dummy_handle_0;
+  message.inline_struct.handles[1] = dummy_handle_1;
+  message.inline_struct.handles[2] = dummy_handle_2;
+  message.inline_struct.handles[3] = dummy_handle_3;
+  constexpr uint32_t kIovecSize = 2;
+  constexpr uint32_t kHandleSize = 4;
+  zx_channel_iovec_t out_iovec[kIovecSize];
+  zx_handle_t handles[kHandleSize];
+  uint8_t buffer[sizeof(message)];
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = unstable_fidl_encode_iovec(
+      &array_of_nonnullable_handles_message_type, &message, out_iovec, kIovecSize, handles,
+      kHandleSize, buffer, sizeof(buffer), &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_EQ(out_error, nullptr);
+  EXPECT_NULL(out_error);
+  EXPECT_EQ(kHandleSize, out_actual_handles);
+  zx_handle_close_many(handles, out_actual_handles);
+}
+
+TEST(Iovec, IovecEtcWithHandles) {
+  array_of_nonnullable_handles_message_layout message = {};
+  message.inline_struct.handles[0] = dummy_handle_0;
+  message.inline_struct.handles[1] = dummy_handle_1;
+  message.inline_struct.handles[2] = dummy_handle_2;
+  message.inline_struct.handles[3] = dummy_handle_3;
+  constexpr uint32_t kIovecSize = 2;
+  constexpr uint32_t kHandleSize = 4;
+  zx_channel_iovec_t out_iovec[kIovecSize];
+  zx_handle_disposition_t handles[kHandleSize];
+  uint8_t buffer[sizeof(message)];
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = unstable_fidl_encode_iovec_etc(
+      &array_of_nonnullable_handles_message_type, &message, out_iovec, kIovecSize, handles,
+      kHandleSize, buffer, sizeof(buffer), &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_EQ(out_error, nullptr);
+  EXPECT_NULL(out_error);
+  EXPECT_EQ(kHandleSize, out_actual_handles);
+  FidlHandleDispositionCloseMany(handles, out_actual_handles);
+}
+
+TEST(Iovec, TooFewHandles) {
+  array_of_nonnullable_handles_message_layout message = {};
+  message.inline_struct.handles[0] = dummy_handle_0;
+  message.inline_struct.handles[1] = dummy_handle_1;
+  message.inline_struct.handles[2] = dummy_handle_2;
+  message.inline_struct.handles[3] = dummy_handle_3;
+  constexpr uint32_t kIovecSize = 2;
+  constexpr uint32_t kHandleSize = 1;
+  zx_channel_iovec_t iovec[2];
+  zx_handle_t handles[1];
+  uint8_t buffer[sizeof(message)];
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = unstable_fidl_encode_iovec(
+      &array_of_nonnullable_handles_message_type, &message, iovec, kIovecSize, handles, kHandleSize,
+      buffer, sizeof(buffer), &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_NOT_NULL(out_error);
+}
+#endif
 
 }  // namespace
 }  // namespace fidl

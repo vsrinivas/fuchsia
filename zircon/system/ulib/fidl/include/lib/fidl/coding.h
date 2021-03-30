@@ -46,19 +46,20 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* m
 //
 // On success, handles in the original object will be moved to the |out_handles| array.
 // On failure, handles in the original object will be closed.
-zx_status_t fidl_linearize_and_encode(const fidl_type_t* type, void* value, uint8_t* out_bytes,
-                                      uint32_t num_bytes, zx_handle_t* out_handles,
-                                      uint32_t num_handles, uint32_t* out_num_actual_bytes,
-                                      uint32_t* out_num_actual_handles, const char** out_error_msg);
-zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, uint8_t* out_bytes,
+zx_status_t fidl_linearize_and_encode(const fidl_type_t* type, void* value, uint8_t* bytes,
+                                      uint32_t num_bytes, zx_handle_t* handles,
+                                      uint32_t num_handles, uint32_t* out_actual_bytes,
+                                      uint32_t* out_actual_handles, const char** out_error_msg);
+// fidl_linearize_and_encode_etc is identical to fidl_linearize_and_encode but outputs
+// zx_handle_disposition_t instead of zx_handle_t that can be used as input into
+// zx_channel_write_etc and zx_channel_call_etc.
+zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, uint8_t* bytes,
                                           uint32_t num_bytes, zx_handle_disposition_t* out_handles,
-                                          uint32_t num_handles, uint32_t* out_num_actual_bytes,
-                                          uint32_t* out_num_actual_handles,
-                                          const char** out_error_msg);
+                                          uint32_t num_handles, uint32_t* out_actual_bytes,
+                                          uint32_t* out_actual_handles, const char** out_error_msg);
 zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
-                                          fidl_outgoing_msg_t* msg, uint32_t* out_num_actual_bytes,
-                                          uint32_t* out_num_actual_handles,
-                                          const char** out_error_msg);
+                                          fidl_outgoing_msg_t* msg, uint32_t* out_actual_bytes,
+                                          uint32_t* out_actual_handles, const char** out_error_msg);
 
 // See
 // https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/tutorial-c#fidl_encode-fidl_encode_msg
