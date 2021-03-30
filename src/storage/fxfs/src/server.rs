@@ -4,6 +4,7 @@
 
 pub mod directory;
 pub mod errors;
+pub mod file;
 pub mod node;
 pub mod volume;
 

@@ -82,7 +82,10 @@ impl FxVolumeAndRoot {
     }
 
     pub fn root(&self) -> &Arc<FxDirectory> {
-        let FxNode::Dir(dir) = &self.root;
-        dir
+        if let FxNode::Dir(dir) = &self.root {
+            dir
+        } else {
+            panic!("Invalid type for root");
+        }
     }
 }
