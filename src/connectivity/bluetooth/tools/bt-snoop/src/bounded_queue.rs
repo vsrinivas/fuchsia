@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fuchsia_inspect::{self as inspect, Property},
-    std::{collections::vec_deque, time::Duration},
-};
+use std::{collections::vec_deque, time::Duration};
 
 pub trait SizeOf {
     /// Size in bytes of an object. Makes no distinction between stack and heap allocated memory.
@@ -37,15 +34,7 @@ pub(crate) struct BoundedQueue<T> {
     eviction_size_minimum: usize,
     eviction_size_maximum: usize,
     current_size: usize,
-    /// A monotonically increasing count of the total number of items inserted over the lifetime of
-    /// the queue.
-    monotonic_count: usize,
     inner: vec_deque::VecDeque<T>,
-
-    // Inspect Data
-    inspect: inspect::Node,
-    size_metric: inspect::UintProperty,
-    len_metric: inspect::UintProperty,
 }
 
 impl<T> BoundedQueue<T>
@@ -57,18 +46,13 @@ where
         eviction_size_minimum: usize,
         eviction_size_maximum: usize,
         eviction_age_minimum: Duration,
-        inspect: inspect::Node,
     ) -> BoundedQueue<T> {
         BoundedQueue {
             eviction_age_minimum,
             eviction_size_minimum,
             eviction_size_maximum,
             current_size: 0,
-            monotonic_count: 0,
             inner: vec_deque::VecDeque::new(),
-            size_metric: inspect.create_uint("size_in_bytes", 0),
-            len_metric: inspect.create_uint("number_of_items", 0),
-            inspect,
         }
     }
 
@@ -108,12 +92,8 @@ where
             }
             self.current_size -= self.inner.pop_front().map(|item| item.size_of()).unwrap_or(0);
         }
-
-        self.monotonic_count += 1;
         self.current_size += item.size_of();
-        self.size_metric.set(self.current_size as u64);
         self.inner.push_back(item);
-        self.len_metric.set(self.inner.len() as u64);
     }
 
     /// Return an `Iterator` over mutable references to elements ordered from oldest to newest.
@@ -121,30 +101,20 @@ where
         self.inner.iter_mut()
     }
 
-    pub fn get_inspect(&self) -> &inspect::Node {
-        &self.inspect
-    }
-
-    /// A monotonic count of the number of items that have been inserted into the data structure
-    /// over the lifetime of the queue. The count is 1 after the first element is inserted.
-    pub fn get_monotonic_count(&self) -> usize {
-        self.monotonic_count
-    }
-
-    #[cfg(test)]
     /// Returns the number of elements in the queue
     pub fn len(&self) -> usize {
         self.inner.len()
+    }
+
+    /// The total size in bytes of all elements stored in the queue.
+    pub fn byte_len(&self) -> usize {
+        self.current_size
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fuchsia_inspect::{self as inspect, assert_inspect_tree},
-        std::time::Duration,
-    };
+    use {super::*, std::time::Duration};
 
     // Dummy struct that implements the SizeOf and CreatedAt traits required for elements of
     // a `BoundedQueue`
@@ -179,51 +149,20 @@ mod tests {
     }
 
     #[test]
-    fn test_bounded_queue_inspect() {
-        let inspect = inspect::Inspector::new();
-        let queue_inspect = inspect.root().create_child("queue");
-        let mut queue: BoundedQueue<Record> = BoundedQueue::new(
-            3 * std::mem::size_of::<Record>(),
-            3 * std::mem::size_of::<Record>(),
-            Duration::new(0, 0),
-            queue_inspect,
-        );
-        assert_inspect_tree!(inspect, root: {
-            queue: {
-                size_in_bytes: 0u64,
-                number_of_items: 0u64,
-            }
-        });
-        queue.insert(0.into());
-        assert_inspect_tree!(inspect, root: {
-            queue: {
-                size_in_bytes: std::mem::size_of::<Record>() as u64,
-                number_of_items: 1u64,
-            }
-        });
-    }
-
-    #[test]
     fn test_bounded_queue() {
-        let inspect = inspect::Inspector::new();
-        let root = inspect.root();
         // create a queue with age 0 and test inserting elements into it
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(
             3 * std::mem::size_of::<Record>(),
             3 * std::mem::size_of::<Record>(),
             Duration::new(0, 0),
-            root.create_child(""),
         );
         assert!(!queue.eviction_size_minimum_reached(&0.into()));
         assert_eq!(to_values(&mut queue), Vec::<u64>::new());
         assert_eq!(queue.len(), 0);
-        assert_eq!(queue.get_monotonic_count(), 0);
         queue.insert(0.into());
         assert!(!queue.eviction_size_minimum_reached(&1.into()));
-        assert_eq!(queue.get_monotonic_count(), 1);
         queue.insert(1.into());
         queue.insert(2.into());
-        assert_eq!(queue.get_monotonic_count(), 3);
         assert!(queue.eviction_size_minimum_reached(&3.into()));
         assert_eq!(to_values(&mut queue), vec![0, 1, 2]);
         assert_eq!(queue.len(), 3);
@@ -233,15 +172,10 @@ mod tests {
         queue.insert(4.into());
         assert_eq!(to_values(&mut queue), vec![2, 3, 4]);
         assert_eq!(queue.len(), 3);
-        assert_eq!(queue.get_monotonic_count(), 5);
 
         // create a queue with size 0 and test inserting elements into it
-        let mut queue: BoundedQueue<Record> = BoundedQueue::new(
-            0,
-            10 * std::mem::size_of::<Record>(),
-            Duration::new(2, 0),
-            root.create_child(""),
-        );
+        let mut queue: BoundedQueue<Record> =
+            BoundedQueue::new(0, 10 * std::mem::size_of::<Record>(), Duration::new(2, 0));
         assert!(!queue.oldest_item_will_expire(&0.into()));
         assert_eq!(to_values(&mut queue), Vec::<u64>::new());
         queue.insert(0.into());
@@ -261,7 +195,6 @@ mod tests {
             3 * std::mem::size_of::<Record>(),
             5 * std::mem::size_of::<Record>(),
             Duration::new(3, 0),
-            root.create_child(""),
         );
         assert_eq!(to_values(&mut queue), Vec::<u64>::new());
         queue.insert(0.into());
@@ -304,7 +237,6 @@ mod tests {
             2 * std::mem::size_of::<Record>(),
             2 * std::mem::size_of::<Record>(),
             Duration::new(3, 0),
-            root.create_child(""),
         );
         queue.insert(0.into());
         // Only age limit is exceeded.
@@ -326,7 +258,6 @@ mod tests {
             0 * std::mem::size_of::<Record>(),
             2 * std::mem::size_of::<Record>(),
             Duration::new(3, 0),
-            root.create_child(""),
         );
         queue.insert(0.into());
 
@@ -345,8 +276,7 @@ mod tests {
 
         // A queue with a hard max size of 1 will not accept any items inserted into it
         // because it is too small to fit any.
-        let mut queue: BoundedQueue<Record> =
-            BoundedQueue::new(0, 1, Duration::new(3, 0), root.create_child(""));
+        let mut queue: BoundedQueue<Record> = BoundedQueue::new(0, 1, Duration::new(3, 0));
 
         let record = 0.into();
         assert!(queue.eviction_size_minimum_reached(&record));

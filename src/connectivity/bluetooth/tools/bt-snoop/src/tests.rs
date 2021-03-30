@@ -3,6 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    crate::{
+        packet_logs::{append_pcap, write_pcap_header},
+        *,
+    },
+    async_utils::PollExt,
     fidl::{endpoints::RequestStream, Error as FidlError},
     fidl_fuchsia_bluetooth_snoop::{
         PacketType, SnoopMarker, SnoopPacket, SnoopProxy, SnoopRequestStream, Timestamp,
@@ -10,10 +15,9 @@ use {
     fuchsia_async::{Channel, Executor},
     fuchsia_inspect::{assert_inspect_tree, Inspector},
     fuchsia_zircon as zx,
+    futures::pin_mut,
     std::task::Poll,
 };
-
-use super::*;
 
 fn setup() -> (
     Executor,
@@ -119,8 +123,8 @@ fn test_snoop_command_line_args() {
     assert_eq!(args.verbosity, verbosity);
 }
 
-#[test]
-fn test_packet_logs_inspect() {
+#[fasync::run_until_stalled(test)]
+async fn test_packet_logs_inspect() {
     // This is a test that basic inspect data is plumbed through from the inspect root.
     // More comprehensive testing of possible permutations of packet log inspect data
     // is found in bounded_queue.rs
@@ -139,12 +143,17 @@ fn test_packet_logs_inspect() {
 
     packet_logs.add_device(id_1.clone());
 
+    let mut expected_data = vec![];
+    write_pcap_header(&mut expected_data).expect("write to succeed");
+
     assert_inspect_tree!(inspect, root: {
         runtime_metrics: {
             logging_active_for_devices: "\"001\"",
-            device_001: {
-                size_in_bytes: 0u64,
+            device_0: {
+                hci_device_name: "001",
+                byte_len: 0u64,
                 number_of_items: 0u64,
+                data: expected_data,
             },
         }
     });
@@ -157,15 +166,21 @@ fn test_packet_logs_inspect() {
         payload: vec![3, 2, 1],
     };
 
-    packet_logs.log_packet(&id_1, packet);
+    // write pcap header and packet data to expected_data buffer
+    let mut expected_data = vec![];
+    write_pcap_header(&mut expected_data).expect("write to succeed");
+    append_pcap(&mut expected_data, &packet).expect("write to succeed");
+
+    packet_logs.log_packet(&id_1, packet).await;
 
     assert_inspect_tree!(inspect, root: {
         runtime_metrics: {
             logging_active_for_devices: "\"001\"",
-            device_001: {
-                size_in_bytes: 75u64,
+            device_0: {
+                hci_device_name: "001",
+                byte_len: 59u64,
                 number_of_items: 1u64,
-                "0": vec![0u8, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 0, 2, 3, 2, 1],
+                data: expected_data,
             },
         }
     });
@@ -199,73 +214,92 @@ fn test_snoop_config_inspect() {
     drop(config);
 }
 
+// Helper that pumps the request stream to get back a single request, panicking if the stream
+// stalls before a request is returned.
+fn pump_request_stream(
+    exec: &mut fasync::Executor,
+    mut request_stream: SnoopRequestStream,
+    id: ClientId,
+) -> ClientRequest {
+    let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
+    (id, (Some(Ok(request)), request_stream))
+}
+
+// Helper that pumps the the handle_client_request until stalled, panicking if the future
+// stalls in a pending state or returns an error.
+fn pump_handle_client_request(
+    exec: &mut fasync::Executor,
+    request: ClientRequest,
+    client_requests: &mut ConcurrentClientRequestFutures,
+    subscribers: &mut SubscriptionManager,
+    packet_logs: &PacketLogs,
+) {
+    let handler = handle_client_request(request, client_requests, subscribers, packet_logs);
+    pin_mut!(handler);
+    exec.run_until_stalled(&mut handler)
+        .expect("Handler future to complete")
+        .expect("Client channel to accept response");
+}
+
 #[test]
 fn test_handle_client_request() {
     let (mut exec, mut _snoopers, mut logs, mut subscribers, mut requests, _inspect) = setup();
 
     // unrecognized device returns an error to the client
-    let (proxy, mut request_stream) = fidl_endpoints();
+    let (proxy, request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(true, Some(""));
     let _ = exec.run_until_stalled(&mut client_fut);
-    let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
-    let request = (ClientId(0), (Some(Ok(request)), request_stream));
-    handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
+    let request = pump_request_stream(&mut exec, request_stream, ClientId(0));
+    pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     let response = unwrap_response(exec.run_until_stalled(&mut client_fut));
     assert!(response.error.is_some());
     assert_eq!(subscribers.number_of_subscribers(), 0);
 
     // valid device returns no errors to a client subscribed to that device
-    let (proxy, mut request_stream) = fidl_endpoints();
+    let (proxy, request_stream) = fidl_endpoints();
     logs.add_device(String::new());
     let mut client_fut = proxy.start(true, Some(""));
     let _ = exec.run_until_stalled(&mut client_fut);
-    let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
-    let request = (ClientId(1), (Some(Ok(request)), request_stream));
-    handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
+    let request = pump_request_stream(&mut exec, request_stream, ClientId(1));
+    pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     let response = unwrap_response(exec.run_until_stalled(&mut client_fut));
     assert!(response.error.is_none());
     assert_eq!(subscribers.number_of_subscribers(), 1);
 
     // valid device returns no errors to a client subscribed globally
-    let (proxy, mut request_stream) = fidl_endpoints();
+    let (proxy, request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(true, None);
     let _ = exec.run_until_stalled(&mut client_fut);
-    let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
-    let request = (ClientId(2), (Some(Ok(request)), request_stream));
-    handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
+    let request = pump_request_stream(&mut exec, request_stream, ClientId(2));
+    pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     let response = unwrap_response(exec.run_until_stalled(&mut client_fut));
-    println!("{:?}", response.error);
     assert!(response.error.is_none());
     assert_eq!(subscribers.number_of_subscribers(), 2);
 
     // second request by the same client returns an error
-    let (proxy, mut request_stream) = fidl_endpoints();
+    let (proxy, request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(true, None);
     let _ = exec.run_until_stalled(&mut client_fut);
-    let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
-    let request = (ClientId(2), (Some(Ok(request)), request_stream));
-    handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
+    let request = pump_request_stream(&mut exec, request_stream, ClientId(2));
+    pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     let response = unwrap_response(exec.run_until_stalled(&mut client_fut));
-    println!("{:?}", response.error);
     assert!(response.error.is_some());
     assert_eq!(subscribers.number_of_subscribers(), 2);
 
     // valid device returns no errors to a client requesting a dump
-    let (proxy, mut request_stream) = fidl_endpoints();
+    let (proxy, request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(false, None);
     let _ = exec.run_until_stalled(&mut client_fut);
-    let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
-    let request = (ClientId(3), (Some(Ok(request)), request_stream));
-    handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
+    let request = pump_request_stream(&mut exec, request_stream, ClientId(3));
+    pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     let response = unwrap_response(exec.run_until_stalled(&mut client_fut));
-    println!("{:?}", response.error);
     assert!(response.error.is_none());
     assert_eq!(subscribers.number_of_subscribers(), 2);
 }
 
 #[test]
 fn test_handle_bad_client_request() {
-    let (_exec, mut _snoopers, mut logs, mut subscribers, mut requests, _inspect) = setup();
+    let (mut exec, mut _snoopers, mut logs, mut subscribers, mut requests, _inspect) = setup();
 
     let id = ClientId(0);
     let err = Some(Err(FidlError::Invalid));
@@ -274,7 +308,7 @@ fn test_handle_bad_client_request() {
     let request = (id, (err, req_stream));
     subscribers.register(id, handle, None).unwrap();
     assert!(subscribers.is_registered(&id));
-    handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
+    pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     assert!(!subscribers.is_registered(&id));
 
     let id = ClientId(1);
@@ -284,6 +318,6 @@ fn test_handle_bad_client_request() {
     let request = (id, (err, req_stream));
     subscribers.register(id, handle, None).unwrap();
     assert!(subscribers.is_registered(&id));
-    handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
+    pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     assert!(!subscribers.is_registered(&id));
 }

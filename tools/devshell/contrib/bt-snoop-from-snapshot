@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
 ### extract a snoop log from a snapshot as pcap formatted data
 
 import argparse
@@ -43,11 +44,16 @@ def exit_with_message(msg, code=1):
 def convert_device_data(device):
   """ Take a device dict and convert it into pcap bytes """
   b64_prefix = "b64:"
-  sorted_data_pairs = sorted((int(k), v)
-                             for k, v in device.items()
-                             if isinstance(v, str) and v.startswith(b64_prefix))
-  return b"".join(
-      b64decode(v[len(b64_prefix):]) for (_, v) in sorted_data_pairs)
+  if "data" in device:
+    # New inspect format
+    return b64decode(device["data"][len(b64_prefix):])
+  else:
+    # Old inspect format
+    sorted_data_pairs = sorted((int(k), v) for k, v in device.items()
+        if isinstance(v, str) and v.startswith(b64_prefix))
+    decoded = [b64decode(v[len(b64_prefix):]) for (_, v) in sorted_data_pairs]
+    decoded.insert(0, PCAP_HEADER)
+    return b"".join(decoded)
 
 
 def find_snoop_root(inspect):
@@ -87,6 +93,44 @@ def get_inspect_from_snapshot(filename):
     reason = "Failed to parse inspect json data from file '" + inspect_file + "'. " + BUG_MSG
     raise ConversionError(reason)
 
+def get_device_from_metrics(metrics, device_name):
+  """
+  Find and return the device data for the device with hci dev name "device_name", accounting
+  for differences between old and new inspect format
+
+  Raises: ConversionError if device_name not present in "metrics".
+  """
+  device_key_prefix = "device_"
+  new_device_name_key = "hci_device_name"
+
+  # determine which inspect format is in use by looking at the metrics data
+  new_format = False
+  for key, value in metrics.items():
+    if key.startswith(device_key_prefix) and new_device_name_key in value:
+      new_format = True
+
+  # device list with device name as key and value unchanged
+  devices = {}
+
+  if new_format:
+    # New inspect format
+    for k, v in metrics.items():
+      if k.startswith(device_key_prefix):
+        devices[v[new_device_name_key]] = v
+  else:
+    # Old inspect format
+    for k, v in metrics.items():
+      if k.startswith(device_key_prefix):
+        key = k[len(device_key_prefix):]
+        devices[key] = v
+
+  try:
+    return devices[device_name]
+  except KeyError:
+    reason = 'Device not present: "' + device_name + '". Valid device names: ' + \
+      ", ".join(devices.keys())
+    raise ConversionError(reason)
+
 
 def main():
   """Take a path to a fuchsia snapshot zip file and write binary pcap data to stdout"""
@@ -122,27 +166,16 @@ def main():
          "expected data format. ")
     exit_with_message(r + BUG_MSG + "\n")
 
-  device_key_prefix = "device_"
-
   try:
-    device = metrics[device_key_prefix + args.device]
-  except KeyError:
-    devices = [
-        k[len(device_key_prefix):]
-        for k in metrics
-        if k.startswith(device_key_prefix)
-    ]
-    msg = 'Device not present: "' + args.device + '". Valid device names: ' + ", ".join(
-        devices)
-    exit_with_message(msg + "\n")
+    device = get_device_from_metrics(metrics, args.device)
+  except ConversionError as e:
+    exit_with_message(e.reason + "\n")
 
   if args.outfile is not None:
     with open(args.outfile, "wb") as outfile:
-      outfile.write(PCAP_HEADER)
       outfile.write(convert_device_data(device))
   else:
     # write pcap binary data to stdout
-    sys.stdout.buffer.write(PCAP_HEADER)
     sys.stdout.buffer.write(convert_device_data(device))
     sys.stdout.buffer.flush()
 

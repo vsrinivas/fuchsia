@@ -147,11 +147,11 @@ fn register_new_client(
 
 /// Handle a client request to dump the packet log, subscribe to future events or do both.
 /// Returns an error if the client channel does not accept a response that it requested.
-fn handle_client_request(
+async fn handle_client_request(
     request: ClientRequest,
     client_requests: &mut ConcurrentClientRequestFutures,
     subscribers: &mut SubscriptionManager,
-    packet_logs: &mut PacketLogs,
+    packet_logs: &PacketLogs,
 ) -> Result<(), Error> {
     let (id, (request, client_stream)) = request;
     match request {
@@ -170,9 +170,9 @@ fn handle_client_request(
             let control_handle = responder.control_handle().clone();
 
             if let Some(ref device) = host_device {
-                if let Some(log) = packet_logs.get_log_mut(device) {
+                if let Some(log) = packet_logs.get(device) {
                     responder.send(&mut bt_fidl_status!())?;
-                    for packet in log.iter_mut() {
+                    for packet in log.lock().await.iter_mut() {
                         control_handle.send_on_packet(device, packet)?;
                     }
                 } else {
@@ -183,8 +183,8 @@ fn handle_client_request(
                 responder.send(&mut bt_fidl_status!())?;
                 let device_ids: Vec<_> = packet_logs.device_ids().cloned().collect();
                 for device in &device_ids {
-                    if let Some(log) = packet_logs.get_log_mut(device) {
-                        for packet in log.iter_mut() {
+                    if let Some(log) = packet_logs.get(device) {
+                        for packet in log.lock().await.iter_mut() {
                             control_handle.send_on_packet(device, packet)?;
                         }
                     }
@@ -216,7 +216,7 @@ fn handle_client_request(
 
 /// Handle a possible incoming packet. Returns an error if the snoop channel is closed and cannot
 /// be reopened.
-fn handle_packet(
+async fn handle_packet(
     packet: Option<(DeviceId, SnoopPacket)>,
     snooper: Snooper,
     snoopers: &mut ConcurrentSnooperPacketFutures,
@@ -230,7 +230,7 @@ fn handle_packet(
             packet.payload.truncate(len);
         }
         subscribers.notify(&device, &mut packet);
-        packet_logs.log_packet(&device, packet);
+        packet_logs.log_packet(&device, packet).await;
         snoopers.push(snooper.into_future());
     } else {
         info!("Snoop channel closed for device: {}", snooper.device_name);
@@ -385,7 +385,7 @@ async fn run(
             // A client has made a request to the server.
             request = client_requests.select_next_some() => {
                 if let Err(e) = handle_client_request(request, &mut client_requests,
-                    &mut subscribers, &mut packet_logs)
+                    &mut subscribers, &packet_logs).await
                 {
                     debug!("Unable to handle client request: {:?}", e);
                 }
@@ -395,7 +395,7 @@ async fn run(
             (packet, snooper) = snoopers.select_next_some() => {
                 trace::duration!("bluetooth", "Snoop::ProcessPacket");
                 handle_packet(packet, snooper, &mut snoopers, &mut subscribers,
-                    &mut packet_logs, config.truncate_payload);
+                    &mut packet_logs, config.truncate_payload).await;
             },
         }
     }
