@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod device;
+pub mod directory;
 pub mod errors;
-pub mod lsm_tree;
-pub mod object_handle;
-pub mod object_store;
-#[cfg(target_os = "fuchsia")]
-pub mod server;
-#[cfg(test)]
-pub mod testing;
+pub mod node;
 pub mod volume;
+
+#[cfg(test)]
+mod testing;

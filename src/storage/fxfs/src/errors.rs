@@ -4,12 +4,16 @@
 
 use thiserror::Error;
 
-#[derive(Eq, Error, Debug, PartialEq)]
+#[derive(Eq, Error, Clone, Debug, PartialEq)]
 pub enum FxfsError {
-    #[error("Not found")]
-    NotFound,
+    #[error("Already exists")]
+    AlreadyExists,
     #[error("Filesystem inconsistency")]
     Inconsistent,
+    #[error("Internal error")]
+    Internal,
     #[error("Expected directory")]
     NotDir,
+    #[error("Not found")]
+    NotFound,
 }
