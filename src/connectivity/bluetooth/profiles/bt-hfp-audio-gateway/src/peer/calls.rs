@@ -19,9 +19,50 @@ use {
     },
 };
 
-/// A phone number.
-#[derive(Debug, Clone, PartialEq, Hash, Default, Eq)]
-pub struct Number(String);
+pub use number::Number;
+
+// Enclose `Number` in a submodule to keep the private items from leaking into the `calls` module.
+mod number {
+    /// A phone number.
+    #[derive(Debug, Clone, PartialEq, Hash, Default, Eq)]
+    pub struct Number(String);
+
+    impl Number {
+        /// Format value indicating no changes on the number presentation are required.
+        /// See HFP v1.8, Section 4.34.2.
+        const NUMBER_FORMAT: i64 = 129;
+
+        /// Returns the numeric representation of the Number's format as specified in HFP v1.8,
+        /// Section 4.34.2.
+        pub fn type_(&self) -> i64 {
+            Number::NUMBER_FORMAT
+        }
+    }
+
+    impl From<Number> for String {
+        fn from(x: Number) -> Self {
+            x.0
+        }
+    }
+
+    impl From<&str> for Number {
+        fn from(n: &str) -> Self {
+            // Phone numbers must be enclosed in double quotes
+            let inner = if n.starts_with("\"") && n.ends_with("\"") {
+                n.to_string()
+            } else {
+                format!("\"{}\"", n)
+            };
+            Self(inner)
+        }
+    }
+
+    impl From<String> for Number {
+        fn from(n: String) -> Self {
+            n.as_str().into()
+        }
+    }
+}
 
 /// The index associated with a call, that is guaranteed to be unique for the lifetime of the call,
 /// but will be recycled after the call is released.
@@ -223,7 +264,7 @@ impl Calls {
         if let Some(new_calls) = &mut self.new_calls {
             match new_calls.poll_next_unpin(cx) {
                 Poll::Ready(Some(Ok((call, number_str, state)))) => {
-                    let number = Number(number_str);
+                    let number = Number::from(number_str);
                     self.handle_new_call(call, number.clone(), state);
                     return Some((number, state));
                 }
@@ -455,7 +496,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
         let mut calls = Calls::new(Some(proxy));
         let (client_end, call_stream) = fidl::endpoints::create_request_stream().unwrap();
-        let num = Number("1".into());
+        let num = Number::from("1");
         calls.handle_new_call(client_end, num.clone(), CallState::IncomingRinging);
         (calls, peer_stream, call_stream, 1, num)
     }
@@ -521,7 +562,7 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         let (mut calls, mut handler_stream, mut call_1, idx_1, num_1) = setup_ongoing_call();
-        let num_2 = Number("2".into());
+        let num_2 = Number::from("2");
 
         // Stream doesn't have an item ready.
         let result = exec.run_until_stalled(&mut calls.next());
@@ -609,5 +650,19 @@ mod tests {
         let result = exec.run_until_stalled(&mut calls.next());
         assert_matches!(result, Poll::Ready(None));
         assert!(calls.is_terminated());
+    }
+
+    #[test]
+    fn number_type_in_valid_range() {
+        let number = Number::from("1234567");
+        // type values must be in range 128-175.
+        assert!(number.type_() >= 128);
+        assert!(number.type_() <= 175);
+    }
+
+    #[test]
+    fn number_str_roundtrip() {
+        let number = Number::from("1234567");
+        assert_eq!(number.clone(), Number::from(&*String::from(number)));
     }
 }
