@@ -781,7 +781,7 @@ fidl fmt --library my_library.fidl -i
 
 [/tools/fidl/gidl]: /tools/fidl/gidl
 [/src/tests/fidl/conformance_suite]: /src/tests/fidl/conformance_suite
-[/src/lib/fidl/llcpp/tests/test_utils.h]: /src/lib/fidl/llcpp/tests/test_utils.h
+[/src/lib/fidl/llcpp/tests/conformance/conformance_utils.h]: /src/lib/fidl/llcpp/tests/conformance/conformance_utils.h
 [/src/lib/fidl/rust/gidl_util]: /src/lib/fidl/rust/gidl_util
 [/third_party/go/src/syscall/zx/fidl/fidl_test]: /third_party/go/src/syscall/zx/fidl/fidl_test
 [/src/lib/fidl/dart/gidl]: /src/lib/fidl/dart/gidl
