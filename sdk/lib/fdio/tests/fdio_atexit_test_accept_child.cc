@@ -30,15 +30,21 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::thread child([fd]() {
-    struct sockaddr_storage addr;
-    socklen_t len = sizeof(addr);
-    int rv = accept(fd, reinterpret_cast<struct sockaddr*>(&addr), &len);
+  struct FDErrno {
+    int FD;
+    int Errno;
+  };
+
+  const auto ret = std::make_shared<std::atomic<FDErrno>>();
+  std::thread child([fd, ret]() {
+    int rv = accept(fd, nullptr, nullptr);
 
     // We should be blocked here. The FD table should have an entry reserved
     // for the socket we are accepting.
-    printf("failed to block in accept: %s (rv=%d)\n", strerror(errno), rv);
-    return rv;
+    ret->store({
+        .FD = rv,
+        .Errno = errno,
+    });
   });
 
   // At this point, the child thread should spin up and get blocked in accept
@@ -71,6 +77,12 @@ int main(int argc, char** argv) {
   // Now we try to unwind the process cleanly while the child thread is
   // blocked in accept. The test passes if we do not crash while exiting
   // the process.
+
+  FDErrno rv = ret->load();
+  if (!(rv.FD == 0 && rv.Errno == 0)) {
+    printf("failed to block in accept: %s (rv=%d)\n", strerror(rv.Errno), rv.FD);
+    return 1;
+  }
 
   return 0;
 }

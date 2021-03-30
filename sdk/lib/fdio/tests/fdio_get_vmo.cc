@@ -18,8 +18,6 @@
 #include <zircon/syscalls/object.h>
 
 #include <algorithm>
-#include <cstdlib>
-#include <string>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
@@ -49,7 +47,7 @@ struct Context {
 };
 class TestServer final : public fuchsia_io::File::Interface {
  public:
-  TestServer(Context* context) : context(context) {}
+  explicit TestServer(Context* context) : context(context) {}
 
   void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
              CloneCompleter::Sync& completer) override {}
@@ -78,12 +76,12 @@ class TestServer final : public fuchsia_io::File::Interface {
   void Sync(SyncCompleter::Sync& completer) override {}
 
   void GetAttr(GetAttrCompleter::Sync& completer) override {
-    fuchsia_io::wire::NodeAttributes attributes;
-    attributes.id = 5;
-    attributes.content_size = context->content_size;
-    attributes.storage_size = ZX_PAGE_SIZE;
-    attributes.link_count = 1;
-    completer.Reply(ZX_OK, std::move(attributes));
+    completer.Reply(ZX_OK, {
+                               .id = 5,
+                               .content_size = context->content_size,
+                               .storage_size = ZX_PAGE_SIZE,
+                               .link_count = 1,
+                           });
   }
 
   void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,

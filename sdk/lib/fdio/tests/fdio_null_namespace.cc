@@ -5,7 +5,6 @@
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
-#include <stdlib.h>
 
 #include <string>
 

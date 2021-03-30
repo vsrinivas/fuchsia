@@ -12,6 +12,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "predicates.h"
+
 namespace {
 
 class Server final : public fuchsia_io::testing::Node_TestBase {
@@ -49,9 +51,9 @@ void ServeAndExerciseFileDescriptionTeardown(fuchsia_io::wire::NodeInfo node_inf
   Server server(std::move(node_info));
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  auto bind_result = fidl::BindServer(loop.dispatcher(), std::move(endpoints.server), &server);
-  ASSERT_TRUE(bind_result.is_ok(), "failed to bind server: %s",
-              zx_status_get_string(bind_result.error()));
+  fit::result bind_result =
+      fidl::BindServer(loop.dispatcher(), std::move(endpoints.server), &server);
+  ASSERT_TRUE(bind_result.is_ok(), "%s", zx_status_get_string(bind_result.error()));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 
   {
@@ -71,7 +73,7 @@ TEST(SocketCleanup, Datagram) {
   fuchsia_io::wire::NodeInfo node_info;
   node_info.set_datagram_socket(fidl::unowned_ptr(&dgram_info));
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
 
   // Client must have disposed of its channel and eventpair handle on close.
@@ -92,7 +94,7 @@ TEST(SocketCleanup, Stream) {
   fuchsia_io::wire::NodeInfo node_info;
   node_info.set_stream_socket(fidl::unowned_ptr(&stream_info));
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
 
   // Client must have disposed of its channel and socket handles on close.

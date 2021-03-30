@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <limits.h>
 #include <sys/eventfd.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -11,9 +10,11 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "predicates.h"
+
 TEST(EventFDTest, Unsupported) {
-  EXPECT_EQ(-1, eventfd(0, 39840));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  EXPECT_EQ(eventfd(0, 39840), -1);
+  ASSERT_ERRNO(EINVAL);
 }
 
 TEST(EventFDTest, Smoke) {
@@ -21,20 +22,20 @@ TEST(EventFDTest, Smoke) {
   EXPECT_TRUE(fd.is_valid());
 
   eventfd_t value = 7;
-  EXPECT_EQ(0, eventfd_write(fd.get(), value));
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(7, value);
+  EXPECT_SUCCESS(eventfd_write(fd.get(), value));
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 7u);
 
   value = 8;
-  EXPECT_EQ(0, eventfd_write(fd.get(), value));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), value));
   value = 3;
-  EXPECT_EQ(0, eventfd_write(fd.get(), value));
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(11, value);
+  EXPECT_SUCCESS(eventfd_write(fd.get(), value));
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 11u);
 
-  ASSERT_EQ(0, fcntl(fd.get(), F_SETFL, fcntl(fd.get(), F_GETFL) | O_NONBLOCK));
-  EXPECT_EQ(-1, eventfd_read(fd.get(), &value));
-  ASSERT_EQ(EAGAIN, errno, "errno incorrect");
+  ASSERT_SUCCESS(fcntl(fd.get(), F_SETFL, fcntl(fd.get(), F_GETFL) | O_NONBLOCK));
+  EXPECT_EQ(eventfd_read(fd.get(), &value), -1);
+  ASSERT_ERRNO(EAGAIN);
 }
 
 TEST(EventFDTest, SmokeSemaphore) {
@@ -42,25 +43,25 @@ TEST(EventFDTest, SmokeSemaphore) {
   EXPECT_TRUE(fd.is_valid());
 
   eventfd_t value = 7;
-  EXPECT_EQ(0, eventfd_write(fd.get(), value));
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(1, value);
+  EXPECT_SUCCESS(eventfd_write(fd.get(), value));
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 1u);
   // The event should now have a 6.
 
   value = 3;
-  EXPECT_EQ(0, eventfd_write(fd.get(), value));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), value));
   // The event should now have a 9.
 
   for (size_t i = 0; i < 9; ++i) {
     value = 424;
-    EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-    EXPECT_EQ(1, value);
+    EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+    EXPECT_EQ(value, 1u);
   }
 
   // The event should now have a 0.
-  ASSERT_EQ(0, fcntl(fd.get(), F_SETFL, fcntl(fd.get(), F_GETFL) | O_NONBLOCK));
-  EXPECT_EQ(-1, eventfd_read(fd.get(), &value));
-  ASSERT_EQ(EAGAIN, errno, "errno incorrect");
+  ASSERT_SUCCESS(fcntl(fd.get(), F_SETFL, fcntl(fd.get(), F_GETFL) | O_NONBLOCK));
+  EXPECT_EQ(eventfd_read(fd.get(), &value), -1);
+  ASSERT_ERRNO(EAGAIN);
 }
 
 TEST(EventFDTest, InitialValue) {
@@ -68,8 +69,8 @@ TEST(EventFDTest, InitialValue) {
   EXPECT_TRUE(fd.is_valid());
 
   eventfd_t value = 5464;
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(343, value);
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 343u);
 }
 
 TEST(EventFDTest, Cloexec) {
@@ -95,19 +96,19 @@ TEST(EventFDTest, WriteLimits) {
   fbl::unique_fd fd(eventfd(0, EFD_NONBLOCK));
   EXPECT_TRUE(fd.is_valid());
 
-  EXPECT_EQ(-1, eventfd_write(fd.get(), UINT64_MAX));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  EXPECT_EQ(eventfd_write(fd.get(), UINT64_MAX), -1);
+  ASSERT_ERRNO(EINVAL);
 
-  EXPECT_EQ(0, eventfd_write(fd.get(), UINT64_MAX - 5));
-  EXPECT_EQ(0, eventfd_write(fd.get(), 3));
-  EXPECT_EQ(-1, eventfd_write(fd.get(), 10));
-  ASSERT_EQ(EAGAIN, errno, "errno incorrect");
-  EXPECT_EQ(-1, eventfd_write(fd.get(), 2));
-  ASSERT_EQ(EAGAIN, errno, "errno incorrect");
-  EXPECT_EQ(0, eventfd_write(fd.get(), 1));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), UINT64_MAX - 5));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), 3));
+  EXPECT_EQ(eventfd_write(fd.get(), 10), -1);
+  ASSERT_ERRNO(EAGAIN);
+  EXPECT_EQ(eventfd_write(fd.get(), 2), -1);
+  ASSERT_ERRNO(EAGAIN);
+  EXPECT_SUCCESS(eventfd_write(fd.get(), 1));
 
   eventfd_t value = 5464;
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
   EXPECT_EQ(UINT64_MAX - 1, value);
 }
 
@@ -133,44 +134,44 @@ TEST(EventFDTest, Signals) {
 
   bool is_readable = false;
   bool is_writable = false;
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_FALSE(is_readable);
   EXPECT_TRUE(is_writable);
 
-  EXPECT_EQ(0, eventfd_write(fd.get(), 75));
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), 75));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_TRUE(is_writable);
 
-  EXPECT_EQ(0, eventfd_write(fd.get(), UINT64_MAX - 76));
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), UINT64_MAX - 76));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_FALSE(is_writable);
 
   eventfd_t value = 5464;
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
   EXPECT_EQ(UINT64_MAX - 1, value);
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_FALSE(is_readable);
   EXPECT_TRUE(is_writable);
 
-  EXPECT_EQ(0, eventfd_write(fd.get(), 95));
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), 95));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_TRUE(is_writable);
 
-  EXPECT_EQ(-1, eventfd_write(fd.get(), UINT64_MAX));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_EQ(eventfd_write(fd.get(), UINT64_MAX), -1);
+  ASSERT_ERRNO(EINVAL);
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_TRUE(is_writable);
 
-  EXPECT_EQ(-1, eventfd_write(fd.get(), UINT64_MAX - 1));
-  ASSERT_EQ(EAGAIN, errno, "errno incorrect");
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_EQ(eventfd_write(fd.get(), UINT64_MAX - 1), -1);
+  ASSERT_ERRNO(EAGAIN);
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
 #ifdef __Fuchsia__
-  // We get a different result than Linux here becaues we model blocking and
+  // We get a different result than Linux here because we model blocking and
   // non-blocking I/O more uniformly. Linux appears to block the write that
   // would overflow while still having |select| report the eventfd as writable.
   // The way we set things up, |select| and |write| need to give consistent
@@ -182,9 +183,9 @@ TEST(EventFDTest, Signals) {
 #endif
 
   value = 5464;
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(95, value);
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 95u);
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_FALSE(is_readable);
   EXPECT_TRUE(is_writable);
 }
@@ -193,32 +194,32 @@ TEST(EventFDTest, SemaphoreSignals) {
   fbl::unique_fd fd(eventfd(0, EFD_SEMAPHORE | EFD_NONBLOCK));
   EXPECT_TRUE(fd.is_valid());
 
-  EXPECT_EQ(0, eventfd_write(fd.get(), UINT64_MAX - 1));
+  EXPECT_SUCCESS(eventfd_write(fd.get(), UINT64_MAX - 1));
 
   bool is_readable = false;
   bool is_writable = false;
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_FALSE(is_writable);
 
   eventfd_t value = 5464;
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(1, value);
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 1u);
 
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_TRUE(is_writable);
 
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(1, value);
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 1u);
 
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_TRUE(is_writable);
 
-  EXPECT_EQ(-1, eventfd_write(fd.get(), 12));
-  ASSERT_EQ(EAGAIN, errno, "errno incorrect");
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_EQ(eventfd_write(fd.get(), 12), -1);
+  ASSERT_ERRNO(EAGAIN);
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
 #ifdef __Fuchsia__
   // We get a different result than Linux here becaues we model blocking and
@@ -232,9 +233,9 @@ TEST(EventFDTest, SemaphoreSignals) {
   EXPECT_TRUE(is_writable);
 #endif
 
-  EXPECT_EQ(0, eventfd_read(fd.get(), &value));
-  EXPECT_EQ(1, value);
-  ASSERT_NO_FAILURES(check_signals(fd.get(), &is_readable, &is_writable));
+  EXPECT_SUCCESS(eventfd_read(fd.get(), &value));
+  EXPECT_EQ(value, 1u);
+  ASSERT_NO_FATAL_FAILURE(check_signals(fd.get(), &is_readable, &is_writable));
   EXPECT_TRUE(is_readable);
   EXPECT_TRUE(is_writable);
 }
@@ -246,9 +247,9 @@ TEST(EventFDTest, BufferLimits) {
   char buffer[64];
   memset(buffer, 0, sizeof(buffer));
 
-  EXPECT_EQ(-1, read(fd.get(), buffer, 7));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  EXPECT_EQ(read(fd.get(), buffer, 7), -1);
+  ASSERT_ERRNO(EINVAL);
 
-  EXPECT_EQ(-1, write(fd.get(), buffer, 7));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  EXPECT_EQ(write(fd.get(), buffer, 7), -1);
+  ASSERT_ERRNO(EINVAL);
 }

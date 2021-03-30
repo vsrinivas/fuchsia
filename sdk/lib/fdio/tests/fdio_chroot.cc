@@ -13,6 +13,8 @@
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
+#include "predicates.h"
+
 static void spawn_child(const char** argv, std::string* out_stdout) {
   zx::socket stdout_parent, stdout_child;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &stdout_parent, &stdout_child));
@@ -65,8 +67,8 @@ TEST(ChrootTest, Slash) {
   auto clean_dir = prepare_directories();
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1/a", "/", "/tmp/chroot1", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1/a) SUCCESS\n"
       "chroot(/) SUCCESS\n"
       "access(/tmp/chroot1) SUCCESS\n"
@@ -80,8 +82,8 @@ TEST(ChrootTest, Smoke) {
   auto clean_dir = prepare_directories();
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1/a", "/tmp/chroot1", "/a", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1/a) SUCCESS\n"
       "chroot(/tmp/chroot1) SUCCESS\n"
       "access(/a) SUCCESS\n"
@@ -95,8 +97,8 @@ TEST(ChrootTest, AboveCWD) {
   auto clean_dir = prepare_directories();
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1/a", "..", "/a", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1/a) SUCCESS\n"
       "chroot(..) SUCCESS\n"
       "access(/a) SUCCESS\n"
@@ -110,8 +112,8 @@ TEST(ChrootTest, MountPoint) {
   auto clean_dir = prepare_directories();
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1", "/tmp", "/chroot1/a", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
       "chroot(/tmp) SUCCESS\n"
       "access(/chroot1/a) SUCCESS\n"
@@ -125,8 +127,8 @@ TEST(ChrootTest, AwayFromCWD) {
   auto clean_dir = prepare_directories();
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1", "/tmp/chroot1/a", "/foo", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
       "chroot(/tmp/chroot1/a) SUCCESS\n"
       "access(/foo) SUCCESS\n"
@@ -141,8 +143,8 @@ TEST(ChrootTest, TrickyPathPrefix) {
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1/aa", "/tmp/chroot1/a", "/foo",
                         nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1/aa) SUCCESS\n"
       "chroot(/tmp/chroot1/a) SUCCESS\n"
       "access(/foo) SUCCESS\n"
@@ -156,8 +158,8 @@ TEST(ChrootTest, AccessOutsideRoot) {
   auto clean_dir = prepare_directories();
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1", "a", "b", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
       "chroot(a) SUCCESS\n"
       "access(b) SUCCESS\n"
@@ -171,8 +173,8 @@ TEST(ChrootTest, BogusDirectory) {
   auto clean_dir = prepare_directories();
   std::string result;
   const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1", "/bogus", "/tmp/chroot1", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
       "chroot returned -1, errno=2\n",
       result.c_str());
@@ -181,9 +183,10 @@ TEST(ChrootTest, BogusDirectory) {
 TEST(ChrootTest, CannotEscapeWithDotDot) {
   auto clean_dir = prepare_directories();
   std::string result;
-  const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1", "/tmp/chroot1", "/../chroot1", nullptr};
-  ASSERT_NO_FAILURES(spawn_child(argv, &result));
-  EXPECT_STR_EQ(
+  const char* argv[] = {"/pkg/bin/chroot-child", "/tmp/chroot1", "/tmp/chroot1", "/../chroot1",
+                        nullptr};
+  ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
+  EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
       "chroot(/tmp/chroot1) SUCCESS\n"
       "access returned -1, errno=22\n",

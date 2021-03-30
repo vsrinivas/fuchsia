@@ -5,6 +5,8 @@
 #ifndef LIB_FDIO_TESTS_MEMFD_H_
 #define LIB_FDIO_TESTS_MEMFD_H_
 
+#include <zircon/compiler.h>
+
 __BEGIN_CDECLS
 
 int memfd_create(const char* name, unsigned int flags);

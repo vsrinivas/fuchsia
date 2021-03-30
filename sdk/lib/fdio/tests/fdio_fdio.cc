@@ -10,12 +10,13 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/zxio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <zircon/limits.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+#include "predicates.h"
 
 TEST(FDIOTest, CreateNull) {
   fdio_t* io = fdio_null_create();
@@ -36,18 +37,18 @@ TEST(FDIOTest, CreateSocket) {
 
   fdio_t* io = nullptr;
   ASSERT_OK(fdio_create(s1.release(), &io));
-  ASSERT_NOT_NULL(io);
-
-  uint8_t buffer[1024];
-  memset(buffer, 0, sizeof(buffer));
+  ASSERT_TRUE(io);
 
   fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));
   EXPECT_LE(0, fd.get());
-  EXPECT_EQ(3, write(fd.get(), "abc", 3));
-  size_t actual = 0;
+  constexpr char payload[] = "abc";
+  EXPECT_EQ(write(fd.get(), payload, sizeof(payload)), ssize_t(sizeof(payload)));
+
+  char buffer[sizeof(payload) + 1] = {};
+  size_t actual;
   EXPECT_OK(s2.read(0, buffer, sizeof(buffer), &actual));
-  EXPECT_EQ(3, actual);
-  EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>("abc"), buffer, actual, "Readback mismatch");
+  EXPECT_EQ(actual, sizeof(payload));
+  EXPECT_STREQ(buffer, payload);
 }
 
 TEST(FDIOTest, CreateVMO) {
@@ -57,17 +58,17 @@ TEST(FDIOTest, CreateVMO) {
 
   fdio_t* io = nullptr;
   ASSERT_OK(fdio_create(vmo.release(), &io));
-  ASSERT_NOT_NULL(io);
-
-  uint8_t buffer[1024];
-  memset(buffer, 0, sizeof(buffer));
+  ASSERT_TRUE(io);
 
   fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));
   EXPECT_LE(0, fd.get());
-  EXPECT_EQ(3, write(fd.get(), "xyz", 3));
+  constexpr char payload[] = "xyz";
+  EXPECT_EQ(write(fd.get(), payload, sizeof(payload)), ssize_t(sizeof(payload)));
+
+  char buffer[sizeof(payload) + 1] = {};
   ssize_t actual = pread(fd.get(), buffer, sizeof(buffer), 0);
-  EXPECT_EQ(sizeof(buffer), actual);
-  EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>("xyz"), buffer, 3, "Readback mismatch");
+  EXPECT_EQ(actual, ssize_t(sizeof(buffer)));
+  EXPECT_STREQ(buffer, payload);
 }
 
 TEST(FDIOTest, BindToFDAgain) {

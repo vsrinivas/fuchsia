@@ -7,226 +7,167 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <stdbool.h>
-#include <stdio.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/socket.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <threads.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+#include "predicates.h"
 
 TEST(HandleFDTest, Close) {
   zx_handle_t h = ZX_HANDLE_INVALID;
-  ASSERT_OK(zx_event_create(0u, &h), "zx_event_create() failed");
-  ASSERT_NE(h, ZX_HANDLE_INVALID, "");
+  ASSERT_OK(zx_event_create(0u, &h));
+  ASSERT_NE(h, ZX_HANDLE_INVALID);
 
   // fdio_handle_fd() with shared_handle = true
   int fd = fdio_handle_fd(h, ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_1, true);
-  ASSERT_GT(fd, 0, "fdio_handle_fd() failed");
+  ASSERT_GE(fd, 0, "%s", strerror(errno));
 
   close(fd);
 
   // close(fd) has not closed the wrapped handle
-  EXPECT_OK(zx_object_signal(h, 0, ZX_USER_SIGNAL_0), "zx_object_signal() should succeed");
+  EXPECT_OK(zx_object_signal(h, 0, ZX_USER_SIGNAL_0));
 
   // fdio_handle_fd() with shared_handle = false
   fd = fdio_handle_fd(h, ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_1, false);
-  ASSERT_GT(fd, 0, "fdio_handle_fd() failed");
+  ASSERT_GE(fd, 0, "%s", strerror(errno));
 
   close(fd);
 
   // close(fd) has closed the wrapped handle
-  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_signal(h, 0, ZX_USER_SIGNAL_0),
-            "zx_object_signal() should fail");
+  EXPECT_STATUS(zx_object_signal(h, 0, ZX_USER_SIGNAL_0), ZX_ERR_BAD_HANDLE);
 }
 
-TEST(HandleFDTest, Pipe) {
-  int fds[2];
-  int status = pipe(fds);
-  ASSERT_EQ(status, 0, "pipe() failed");
+class HandleFD : public zxtest::Test {
+ protected:
+  void SetUp() override {
+    int fds[2];
+    ASSERT_SUCCESS(pipe(fds));
 
-  struct stat st;
-  ASSERT_EQ(fstat(fds[0], &st), 0, "fstat() on pipe failed");
-  ASSERT_EQ(st.st_mode & S_IFMT, (mode_t)S_IFIFO, "Unexpected mode");
-  ASSERT_EQ(fstat(fds[1], &st), 0, "fstat() on pipe failed");
-  ASSERT_EQ(st.st_mode & S_IFMT, (mode_t)S_IFIFO, "Unexpected mode");
+    for (size_t i = 0; i < fds_.size(); ++i) {
+      fds_[i].reset(fds[i]);
+    }
 
-  status = fcntl(fds[0], F_GETFL);
-  ASSERT_EQ(status, 0, "fcntl(F_GETFL) failed");
+    int flags = fcntl(fds_[0].get(), F_GETFL);
+    ASSERT_GE(flags, 0, "%s", strerror(errno));
+    ASSERT_SUCCESS(fcntl(fds_[0].get(), F_SETFL, flags | O_NONBLOCK));
+  }
 
-  status |= O_NONBLOCK;
-  status = fcntl(fds[0], F_SETFL, status);
-  ASSERT_EQ(status, 0, "fcntl(FSETFL, O_NONBLOCK) failed");
+  const std::array<fbl::unique_fd, 2>& fds() { return fds_; }
+  std::array<fbl::unique_fd, 2>& mutable_fds() { return fds_; }
 
-  status = fcntl(fds[0], F_GETFL);
-  ASSERT_EQ(status, O_NONBLOCK, "fcntl(F_GETFL) failed");
+ private:
+  std::array<fbl::unique_fd, 2> fds_;
+};
 
-  int message[2] = {-6, 1};
-  ssize_t written = write(fds[1], message, sizeof(message));
-  ASSERT_GE(written, 0, "write() failed");
-  ASSERT_EQ((uint32_t)written, sizeof(message), "write() should have written the whole message.");
+TEST_F(HandleFD, Pipe) {
+  for (const auto& fd : fds()) {
+    struct stat st;
+    ASSERT_SUCCESS(fstat(fd.get(), &st));
+    ASSERT_EQ(st.st_mode & S_IFMT, unsigned(S_IFIFO));
+  }
 
-  int available = 0;
-  status = ioctl(fds[0], FIONREAD, &available);
-  ASSERT_GE(status, 0, "ioctl(FIONREAD) failed");
-  EXPECT_EQ((uint32_t)available, sizeof(message), "ioctl(FIONREAD) queried wrong number of bytes");
+  constexpr char message[] = "hello";
+  ASSERT_EQ(write(fds()[1].get(), message, sizeof(message)), ssize_t(sizeof(message)), "%s",
+            strerror(errno));
 
-  int read_message[2];
-  ssize_t bytes_read = read(fds[0], read_message, sizeof(read_message));
-  ASSERT_GE(bytes_read, 0, "read() failed");
-  ASSERT_EQ((uint32_t)bytes_read, sizeof(read_message), "read() read wrong number of bytes");
+  int available;
+  ASSERT_SUCCESS(ioctl(fds()[0].get(), FIONREAD, &available));
+  EXPECT_EQ(available, ssize_t(sizeof(message)));
 
-  EXPECT_EQ(read_message[0], message[0], "read() read wrong value");
-  EXPECT_EQ(read_message[1], message[1], "read() read wrong value");
+  char buffer[sizeof(message) + 1];
+  ASSERT_EQ(read(fds()[0].get(), buffer, sizeof(buffer)), ssize_t(sizeof(message)), "%s",
+            strerror(errno));
+  buffer[sizeof(message)] = 0;
+
+  EXPECT_STREQ(buffer, message);
 }
 
-int write_thread(void* arg) {
-  // Sleep to try to ensure the write happens after the poll.
-  zx_nanosleep(ZX_MSEC(5));
-  int message[2] = {-6, 1};
-  ssize_t written = write(*(int*)arg, message, sizeof(message));
-  EXPECT_GE(written, 0, "write() failed");
-  EXPECT_EQ((uint32_t)written, sizeof(message), "write() should have written the whole message.");
-  return 0;
-}
-
-void ppoll_test_handler(struct timespec* timeout) {
-  int fds[2];
-  int status = pipe(fds);
-  ASSERT_EQ(status, 0, "pipe() failed");
-
-  thrd_t t;
-  int thrd_create_result = thrd_create(&t, write_thread, &fds[1]);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
-
-  struct pollfd poll_fds[1] = {{fds[0], POLLIN, 0}};
-  int ppoll_result = ppoll(poll_fds, 1, timeout, NULL);
-
-  EXPECT_EQ(1, ppoll_result, "didn't read anything");
-
-  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
-}
-
-TEST(HandleFDTest, PPollNull) { ppoll_test_handler(NULL); }
-
-TEST(HandleFDTest, Overflow) {
-  constexpr unsigned int nanoseconds_in_seconds = 1000000000;
-  struct timespec timeout_ts = {
-      .tv_sec = UINT64_MAX / nanoseconds_in_seconds,
-      .tv_nsec = UINT64_MAX % nanoseconds_in_seconds,
-  };
-  ppoll_test_handler(&timeout_ts);
-}
-
-TEST(HandleFDTest, PPollImmediateTimeout) {
-  int fds[2];
-  int status = pipe(fds);
-  ASSERT_EQ(status, 0, "pipe() failed");
-
-  struct timespec timeout = {0, 0};
-  struct pollfd poll_fds[1] = {{fds[0], POLLIN, 0}};
-  int ppoll_result = ppoll(poll_fds, 1, &timeout, NULL);
-
-  EXPECT_EQ(0, ppoll_result, "no fds should be readable");
-}
-
-TEST(HandleFDTest, TransferFD) {
-  int fds[2];
-  int status = pipe(fds);
-  ASSERT_EQ(status, 0, "pipe() failed");
-
-  // Make pipe nonblocking, write message
-  status |= O_NONBLOCK;
-  status = fcntl(fds[0], F_SETFL, status);
-  ASSERT_EQ(status, 0, "fcntl(FSETFL, O_NONBLOCK) failed");
-  int message[2] = {-6, 1};
-  ssize_t written = write(fds[1], message, sizeof(message));
-  ASSERT_GE(written, 0, "write() failed");
-  ASSERT_EQ((uint32_t)written, sizeof(message), "write() should have written the whole message.");
+TEST_F(HandleFD, TransferFD) {
+  constexpr char message[] = "hello";
+  ASSERT_EQ(write(fds()[1].get(), message, sizeof(message)), ssize_t(sizeof(message)), "%s",
+            strerror(errno));
 
   // fd --> handle
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  status = fdio_fd_transfer(fds[0], &handle);
-  ASSERT_OK(status, "failed to transfer fds to handle");
+  zx::handle handle;
+  ASSERT_OK(fdio_fd_transfer(mutable_fds()[0].release(), handle.reset_and_get_address()));
 
   // handle --> fd
-  ASSERT_EQ(fdio_fd_create(handle, &fds[0]), ZX_OK, "failed to transfer handles to fds");
+  ASSERT_OK(fdio_fd_create(handle.release(), mutable_fds()[0].reset_and_get_address()));
 
   // Read message
-  int read_message[2];
-  ssize_t bytes_read = read(fds[0], read_message, sizeof(read_message));
-  ASSERT_GE(bytes_read, 0, "read() failed");
-  ASSERT_EQ((uint32_t)bytes_read, sizeof(read_message), "read() read wrong number of bytes");
+  char buffer[sizeof(message) + 1];
+  ASSERT_EQ(read(fds()[0].get(), buffer, sizeof(buffer)), ssize_t(sizeof(message)), "%s",
+            strerror(errno));
+  buffer[sizeof(message)] = 0;
 
-  EXPECT_EQ(read_message[0], message[0], "read() read wrong value");
-  EXPECT_EQ(read_message[1], message[1], "read() read wrong value");
+  EXPECT_STREQ(buffer, message);
 }
 
 TEST(HandleFDTest, TransferDevice) {
-  int fd = open("/dev/zero", O_RDONLY);
-  ASSERT_GE(fd, 0, "Failed to open /dev/zero");
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(open("/dev/zero", O_RDONLY)), "%s", strerror(errno));
 
   // fd --> handle
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_fd_transfer(fd, &handle);
-  ASSERT_OK(status, "failed to transfer fds to handles");
+  zx::handle handle;
+  ASSERT_OK(fdio_fd_transfer(fd.release(), handle.reset_and_get_address()));
 
   // handle --> fd
-  ASSERT_EQ(fdio_fd_create(handle, &fd), ZX_OK, "failed to transfer handles to fds");
+  ASSERT_OK(fdio_fd_create(handle.release(), fd.reset_and_get_address()));
 
-  ASSERT_EQ(close(fd), 0, "Failed to close fd");
+  ASSERT_SUCCESS(close(fd.release()));
 }
 
 TEST(HandleFDTest, CreateFDFromConnectedSocket) {
-  int fd;
-  zx_handle_t h1, h2;
-  ASSERT_OK(zx_socket_create(ZX_SOCKET_STREAM, &h1, &h2), "failed to create socket pair");
-  ASSERT_OK(fdio_fd_create(h1, &fd), "failed to create FD for socket handle");
+  zx::socket s1, s2;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &s1, &s2));
 
-  int message[2] = {0xab, 0x1234};
-  size_t written;
-  ASSERT_OK(zx_socket_write(h2, 0, message, sizeof(message), &written),
-            "failed to write to socket handle");
-  ASSERT_EQ(sizeof(message), written, "failed to write full message to socket handle");
+  fbl::unique_fd fd;
+  ASSERT_OK(fdio_fd_create(s1.release(), fd.reset_and_get_address()));
 
-  int read_message[2] = {};
-  ssize_t bytes_read = read(fd, read_message, sizeof(read_message));
-  ASSERT_EQ(sizeof(message), (uint32_t)bytes_read, "failed to read from socket fd");
-  ASSERT_EQ(0, memcmp(message, read_message, sizeof(message)),
-            "incorrect bytes read from socket fd");
+  constexpr char message[] = "hello";
+  size_t actual;
+  ASSERT_OK(s2.write(0, message, sizeof(message), &actual));
+  ASSERT_EQ(actual, sizeof(message));
+
+  char buffer[sizeof(message) + 1];
+  ASSERT_EQ(read(fd.get(), buffer, sizeof(buffer)), ssize_t(sizeof(message)), "%s",
+            strerror(errno));
+  buffer[actual] = 0;
+  EXPECT_STREQ(buffer, message);
 
   // Set O_NONBLOCK
-  int flags = fcntl(fd, F_GETFL);
-  ASSERT_EQ(flags, 0, "fcntl(F_GETFL) failed");
-  flags |= O_NONBLOCK;
-  int ret = fcntl(fd, F_SETFL, flags);
-  ASSERT_EQ(ret, 0, "fcntl(FSETFL, O_NONBLOCK) failed");
-  ASSERT_EQ(-1, read(fd, read_message, sizeof(read_message)),
-            "failed to read from socket with O_NONBLOCK");
-  ASSERT_EQ(EAGAIN, errno, "errno incorrect");
+  int flags = fcntl(fd.get(), F_GETFL);
+  ASSERT_GE(flags, 0, "%s", strerror(errno));
+  ASSERT_SUCCESS(fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK));
+  ASSERT_EQ(read(fd.get(), buffer, sizeof(buffer)), -1);
+  ASSERT_ERRNO(EAGAIN);
 }
 
 TEST(HandleFDTest, BindToFDInvalid) {
   {
     fdio_t* fdio = fdio_null_create();
-    EXPECT_NOT_NULL(fdio);
+    EXPECT_TRUE(fdio);
 
     // When binding and not providing a specific |fd|, the
     // |starting_fd| must be nonnegative.
     EXPECT_LT(fdio_bind_to_fd(fdio, -1, -1), 0);
-    EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
+    EXPECT_ERRNO(EINVAL);
   }
 
   {
     fdio_t* fdio = fdio_null_create();
-    EXPECT_NOT_NULL(fdio);
+    EXPECT_TRUE(fdio);
 
     // Starting with a huge |starting_fd| will fail since the table
     // does not hold so many.
     EXPECT_LT(fdio_bind_to_fd(fdio, -1, INT_MAX), 0);
-    EXPECT_EQ(errno, EMFILE, "%s", strerror(errno));
+    EXPECT_ERRNO(EMFILE);
   }
 }

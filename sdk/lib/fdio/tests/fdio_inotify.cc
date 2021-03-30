@@ -4,75 +4,69 @@
 
 #include <lib/fdio/inotify.h>
 #include <limits.h>
-#include <sys/types.h>
-#include <unistd.h>
 
-#include <fbl/auto_lock.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-TEST(InotifyTest, InotifyInitBadFlags) {
-  int inotifyfd = inotify_init1(5);
-  ASSERT_EQ(inotifyfd, -1, "inotify_init1() did not fail with bad flags.");
+#include "predicates.h"
+
+TEST(InotifyInit, BadFlags) {
+  ASSERT_EQ(inotify_init1(5), -1);
+  ASSERT_ERRNO(EINVAL);
 }
 
-TEST(InotifyTest, InotifyInit) {
-  int inotifyfd = inotify_init1(0);
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
+class Inotify : public zxtest::Test {
+ protected:
+  void SetUp() override {
+    ASSERT_TRUE(fd_ = fbl::unique_fd(inotify_init1(0)), "%s", strerror(errno));
+  }
+
+  const fbl::unique_fd& fd() { return fd_; }
+
+ private:
+  fbl::unique_fd fd_;
+};
+
+TEST_F(Inotify, AddWatch) { ASSERT_GE(inotify_add_watch(fd().get(), "/path/test", IN_CREATE), 0); }
+
+TEST_F(Inotify, AddWatchWithNullFilePath) {
+  ASSERT_EQ(inotify_add_watch(fd().get(), nullptr, 0), -1);
+  ASSERT_ERRNO(EFAULT);
 }
 
-TEST(InotifyTest, InotifyAddWatch) {
-  int inotifyfd = inotify_init1(0);
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
-  int ret_wd = inotify_add_watch(inotifyfd, "/path/test", IN_CREATE);
-  ASSERT_GT(ret_wd, -1, "inotify_add_watch() failed.");
+TEST_F(Inotify, AddWatchWithZeroLengthFilePath) {
+  ASSERT_EQ(inotify_add_watch(fd().get(), "", 0), -1);
+  ASSERT_ERRNO(EINVAL);
 }
 
-TEST(InotifyTest, InotifyAddWatchWithNullFilePath) {
-  int inotifyfd = inotify_init1(0);
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
-  int ret = inotify_add_watch(inotifyfd, 0, 0);
-  ASSERT_EQ(ret, -1, "inotify_add_watch() did not fail with null filepath.");
-}
-
-TEST(InotifyTest, InotifyAddWatchWithZeroLengthFilePath) {
-  int inotifyfd = inotify_init1(0);
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
-  int ret = inotify_add_watch(inotifyfd, "\0", 0);
-  ASSERT_EQ(ret, -1, "inotify_add_watch() did not fail with zero-length filepath.");
-}
-
-TEST(InotifyTest, InotifyAddWatchWithTooLongFilePath) {
-  int inotifyfd = inotify_init1(0);
+TEST_F(Inotify, AddWatchWithTooLongFilePath) {
   std::string long_filepath(PATH_MAX + 1, 'x');
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
-  int ret = inotify_add_watch(inotifyfd, long_filepath.c_str(), 0);
-  ASSERT_EQ(ret, -1, "inotify_add_watch() did not fail with too long filepath.");
+  ASSERT_EQ(inotify_add_watch(fd().get(), long_filepath.c_str(), 0), -1);
+  ASSERT_ERRNO(ENAMETOOLONG);
 }
 
-TEST(InotifyTest, InotifyRemoveWatch) {
-  int inotifyfd = inotify_init1(0);
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
-  int ret_wd = inotify_add_watch(inotifyfd, "/path/test", IN_CREATE);
-  ASSERT_GT(ret_wd, -1, "inotify_add_watch() failed.");
-  int ret = inotify_rm_watch(inotifyfd, ret_wd);
-  ASSERT_EQ(ret, 0, "inotify_rm_watch() failed.");
+class InotifyWatch : public Inotify {
+ protected:
+  void SetUp() override {
+    Inotify::SetUp();
+    ASSERT_GE(wd_ = inotify_add_watch(fd().get(), "/path/test", IN_CREATE), 0, "%s",
+              strerror(errno));
+  }
+
+  int wd() const { return wd_; }
+
+ private:
+  int wd_;
+};
+
+TEST_F(InotifyWatch, Remove) { ASSERT_SUCCESS(inotify_rm_watch(fd().get(), wd())); }
+
+TEST_F(InotifyWatch, RemoveWithInvalidInotifyDescriptor) {
+  ASSERT_EQ(inotify_rm_watch(fd().get() + 1, wd()), -1);
+  ASSERT_ERRNO(EBADF);
 }
 
-TEST(InotifyTest, InotifyRemoveWatchWithInvalidInotifyDescriptor) {
-  int inotifyfd = inotify_init1(0);
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
-  int ret_wd = inotify_add_watch(inotifyfd, "/path/test", IN_CREATE);
-  ASSERT_GT(ret_wd, -1, "inotify_add_watch() failed.");
-  int ret = inotify_rm_watch(inotifyfd + 1, ret_wd);
-  ASSERT_EQ(ret, -1, "inotify_rm_watch() did not fail with invalid inotify descriptor.");
-}
-
-TEST(InotifyTest, InotifyRemoveWatchWithInvalidWatchDescriptor) {
-  int inotifyfd = inotify_init1(0);
-  ASSERT_GT(inotifyfd, -1, "inotify_init1() failed");
-  int ret_wd = inotify_add_watch(inotifyfd, "/path/test", IN_CREATE);
-  ASSERT_GT(ret_wd, -1, "inotify_add_watch() failed.");
-  int ret = inotify_rm_watch(inotifyfd, ret_wd + 1);
-  ASSERT_EQ(ret, -1, "inotify_rm_watch() did not fail with invalid mask.");
+TEST_F(InotifyWatch, RemoveWithInvalidWatchDescriptor) {
+  ASSERT_EQ(inotify_rm_watch(fd().get(), wd() + 1), -1);
+  ASSERT_ERRNO(EINVAL);
 }

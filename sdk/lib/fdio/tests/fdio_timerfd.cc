@@ -7,34 +7,21 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <zircon/time.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#ifdef __Fuchsia__
-
-#include <zircon/syscalls.h>
-
-#else
-
-static zx_time_t zx_clock_get_monotonic() {
-  struct timespec t = {};
-  clock_gettime(CLOCK_MONOTONIC, &t);
-  return ZX_SEC(t.tv_sec) + t.tv_nsec;
-}
-
-#endif
+#include "predicates.h"
 
 TEST(TimerFDTest, Unsupported) {
 #ifdef __Fuchsia__
-  EXPECT_EQ(-1, timerfd_create(CLOCK_REALTIME, 0));
-  ASSERT_EQ(ENOSYS, errno, "errno incorrect");
+  EXPECT_EQ(timerfd_create(CLOCK_REALTIME, 0), -1);
+  ASSERT_ERRNO(ENOSYS);
 #endif
-  EXPECT_EQ(-1, timerfd_create(2513, 0));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
-  EXPECT_EQ(-1, timerfd_create(CLOCK_MONOTONIC, 4512));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  EXPECT_EQ(timerfd_create(2513, 0), -1);
+  ASSERT_ERRNO(EINVAL);
+  EXPECT_EQ(timerfd_create(CLOCK_MONOTONIC, 4512), -1);
+  ASSERT_ERRNO(EINVAL);
 }
 
 TEST(TimerFDTest, Cloexec) {
@@ -61,78 +48,82 @@ TEST(TimerFDTest, OneShotLifecycle) {
   EXPECT_TRUE(fd.is_valid());
 
   struct itimerspec value = {};
-  EXPECT_EQ(-1, timerfd_gettime(23984, &value));
-  ASSERT_EQ(EBADF, errno, "errno incorrect");
-  EXPECT_EQ(-1, timerfd_gettime(STDOUT_FILENO, &value));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  EXPECT_EQ(timerfd_gettime(23984, &value), -1);
+  ASSERT_ERRNO(EBADF);
+  EXPECT_EQ(timerfd_gettime(STDOUT_FILENO, &value), -1);
+  ASSERT_ERRNO(EINVAL);
 
   memset(&value, 'a', sizeof(value));
-  EXPECT_EQ(0, timerfd_gettime(fd.get(), &value));
-  EXPECT_EQ(0, value.it_value.tv_sec);
-  EXPECT_EQ(0, value.it_value.tv_nsec);
-  EXPECT_EQ(0, value.it_interval.tv_sec);
-  EXPECT_EQ(0, value.it_interval.tv_nsec);
+  EXPECT_EQ(timerfd_gettime(fd.get(), &value), 0);
+  EXPECT_EQ(value.it_value.tv_sec, 0);
+  EXPECT_EQ(value.it_value.tv_nsec, 0);
+  EXPECT_EQ(value.it_interval.tv_sec, 0);
+  EXPECT_EQ(value.it_interval.tv_nsec, 0);
 
-  value.it_value.tv_nsec = ZX_MSEC(5);
-  EXPECT_EQ(-1, timerfd_settime(23984, 0, &value, nullptr));
-  ASSERT_EQ(EBADF, errno, "errno incorrect");
-  EXPECT_EQ(-1, timerfd_settime(STDOUT_FILENO, 0, &value, nullptr));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
-  EXPECT_EQ(-1, timerfd_settime(fd.get(), 4512, &value, nullptr));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
+  EXPECT_EQ(timerfd_settime(23984, 0, &value, nullptr), -1);
+  ASSERT_ERRNO(EBADF);
+  EXPECT_EQ(timerfd_settime(STDOUT_FILENO, 0, &value, nullptr), -1);
+  ASSERT_ERRNO(EINVAL);
+  EXPECT_EQ(timerfd_settime(fd.get(), 4512, &value, nullptr), -1);
+  ASSERT_ERRNO(EINVAL);
 
-  value.it_value.tv_nsec = -ZX_MSEC(5);
-  EXPECT_EQ(-1, timerfd_settime(fd.get(), 0, &value, nullptr));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  value.it_value.tv_nsec = -std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
+  EXPECT_EQ(timerfd_settime(fd.get(), 0, &value, nullptr), -1);
+  ASSERT_ERRNO(EINVAL);
 
-  value.it_value.tv_nsec = ZX_MSEC(5);
-  value.it_interval.tv_nsec = -ZX_MSEC(5);
-  EXPECT_EQ(-1, timerfd_settime(fd.get(), 0, &value, nullptr));
-  ASSERT_EQ(EINVAL, errno, "errno incorrect");
+  value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
+  value.it_interval.tv_nsec = -std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
+  EXPECT_EQ(timerfd_settime(fd.get(), 0, &value, nullptr), -1);
+  ASSERT_ERRNO(EINVAL);
 
-  zx_time_t start = zx_clock_get_monotonic();
-  value.it_value.tv_nsec = ZX_MSEC(5);
+  const auto start = std::chrono::steady_clock::now();
+  value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
   value.it_interval.tv_nsec = 0;
-  EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
+  EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, nullptr));
 
   uint64_t counter = 2934;
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  zx_time_t end = zx_clock_get_monotonic();
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
+  const auto end = std::chrono::steady_clock::now();
 
-  EXPECT_EQ(1, counter);
-  EXPECT_LE(ZX_MSEC(5), end - start);
+  EXPECT_EQ(counter, 1u);
+  EXPECT_LE(std::chrono::milliseconds(5), end - start);
 
-  EXPECT_EQ(0, timerfd_gettime(fd.get(), &value));
-  EXPECT_EQ(0, value.it_value.tv_sec);
-  EXPECT_EQ(0, value.it_value.tv_nsec);
-  EXPECT_EQ(0, value.it_interval.tv_sec);
-  EXPECT_EQ(0, value.it_interval.tv_nsec);
+  EXPECT_EQ(timerfd_gettime(fd.get(), &value), 0);
+  EXPECT_EQ(value.it_value.tv_sec, 0);
+  EXPECT_EQ(value.it_value.tv_nsec, 0);
+  EXPECT_EQ(value.it_interval.tv_sec, 0);
+  EXPECT_EQ(value.it_interval.tv_nsec, 0);
 
-  ASSERT_EQ(0, fcntl(fd.get(), F_SETFL, fcntl(fd.get(), F_GETFL) | O_NONBLOCK));
-  EXPECT_EQ(-1, read(fd.get(), &counter, sizeof(counter)));
-  ASSERT_EQ(EWOULDBLOCK, errno, "errno incorrect");
+  int flags;
+  EXPECT_GE(flags = fcntl(fd.get(), F_GETFL), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK));
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), -1);
+  ASSERT_ERRNO(EWOULDBLOCK);
 }
 
 TEST(TimerFDTest, OneShotNonblocking) {
   fbl::unique_fd fd(timerfd_create(CLOCK_MONOTONIC, 0));
   EXPECT_TRUE(fd.is_valid());
-  ASSERT_EQ(0, fcntl(fd.get(), F_SETFL, fcntl(fd.get(), F_GETFL) | O_NONBLOCK));
+  int flags;
+  EXPECT_GE(flags = fcntl(fd.get(), F_GETFL), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK));
 
   uint64_t counter = 2934;
-  EXPECT_EQ(-1, read(fd.get(), &counter, sizeof(counter)));
-  ASSERT_EQ(EWOULDBLOCK, errno, "errno incorrect");
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), -1);
+  ASSERT_ERRNO(EWOULDBLOCK);
 
   struct itimerspec value = {};
   value.it_value.tv_sec = 600;
-  EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
+  EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, nullptr));
 
-  EXPECT_EQ(-1, read(fd.get(), &counter, sizeof(counter)));
-  ASSERT_EQ(EWOULDBLOCK, errno, "errno incorrect");
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), -1);
+  ASSERT_ERRNO(EWOULDBLOCK);
 
   struct itimerspec old_value = {};
   value.it_value.tv_sec = 0;
-  value.it_value.tv_nsec = ZX_MSEC(5);
-  EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, &old_value));
+  value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
+  EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, &old_value));
   EXPECT_GE(600, old_value.it_value.tv_sec);
 
   fd_set rfds;
@@ -140,74 +131,77 @@ TEST(TimerFDTest, OneShotNonblocking) {
   FD_SET(fd.get(), &rfds);
 
   EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
+  EXPECT_EQ(counter, 1u);
 
-  EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, &old_value));
+  EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, &old_value));
   EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)), "read on %d failed: %s",
-            fd.get(), strerror(errno));
-  EXPECT_EQ(1, counter);
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)), "%s",
+            strerror(errno));
+  EXPECT_EQ(counter, 1u);
 }
 
 TEST(TimerFDTest, RepeatingBlocking) {
   fbl::unique_fd fd(timerfd_create(CLOCK_MONOTONIC, 0));
   EXPECT_TRUE(fd.is_valid());
 
-  zx_time_t start = zx_clock_get_monotonic();
+  const auto start = std::chrono::steady_clock::now();
 
   struct itimerspec value = {};
-  value.it_value.tv_nsec = ZX_MSEC(15);
-  value.it_interval.tv_nsec = ZX_MSEC(15);
-  EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
+  value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(15)).count();
+  value.it_interval.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(15)).count();
+  EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, nullptr));
 
   uint64_t total = 0u;
   for (size_t i = 0; i < 5; ++i) {
     uint64_t counter = 2934;
-    EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-    EXPECT_LE(1, counter);
+    EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
+    EXPECT_LE(counter, 1u);
     total += counter;
   }
 
-  zx_time_t end = zx_clock_get_monotonic();
-  EXPECT_LE(total * ZX_MSEC(15), end - start);
+  const auto end = std::chrono::steady_clock::now();
+  EXPECT_LE(total * std::chrono::milliseconds(15), end - start);
 }
 
 TEST(TimerFDTest, Counter) {
   fbl::unique_fd fd(timerfd_create(CLOCK_MONOTONIC, 0));
   EXPECT_TRUE(fd.is_valid());
 
-  zx_time_t start = zx_clock_get_monotonic();
+  const auto start = std::chrono::steady_clock::now();
 
   struct itimerspec value = {};
-  value.it_value.tv_nsec = ZX_MSEC(5);
-  value.it_interval.tv_nsec = ZX_MSEC(5);
-  EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
+  value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
+  value.it_interval.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
+  EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, nullptr));
   uint64_t counter = 2934;
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_LE(1, counter);
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
+  EXPECT_LE(counter, 1u);
 
-  struct timespec sleep = {.tv_sec = 0, .tv_nsec = ZX_MSEC(20)};
-  EXPECT_EQ(0, nanosleep(&sleep, nullptr));
+  struct timespec sleep = {
+      .tv_sec = 0, .tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(20)).count()};
+  EXPECT_EQ(nanosleep(&sleep, nullptr), 0);
 
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_LE(4, counter);
+  EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
+  EXPECT_LE(counter, 4u);
 
-  zx_time_t end = zx_clock_get_monotonic();
-  EXPECT_LE(5 * ZX_MSEC(5), end - start);
+  const auto end = std::chrono::steady_clock::now();
+  EXPECT_LE(5 * std::chrono::milliseconds(5), end - start);
 }
 
 TEST(TimerFDTest, RepeatingNonblocking) {
   fbl::unique_fd fd(timerfd_create(CLOCK_MONOTONIC, 0));
   EXPECT_TRUE(fd.is_valid());
-  ASSERT_EQ(0, fcntl(fd.get(), F_SETFL, fcntl(fd.get(), F_GETFL) | O_NONBLOCK));
+  int flags;
+  EXPECT_GE(flags = fcntl(fd.get(), F_GETFL), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK));
 
-  zx_time_t start = zx_clock_get_monotonic();
+  const auto start = std::chrono::steady_clock::now();
 
   struct itimerspec value = {};
-  value.it_value.tv_nsec = ZX_MSEC(15);
-  value.it_interval.tv_nsec = ZX_MSEC(15);
-  EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
+  value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(15)).count();
+  value.it_interval.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(15)).count();
+  EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, nullptr));
 
   uint64_t total = 0u;
   for (size_t i = 0; i < 5; ++i) {
@@ -218,11 +212,11 @@ TEST(TimerFDTest, RepeatingNonblocking) {
     EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
 
     uint64_t counter = 2934;
-    EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-    EXPECT_LE(1, counter);
+    EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
+    EXPECT_LE(counter, 1u);
     total += counter;
   }
 
-  zx_time_t end = zx_clock_get_monotonic();
-  EXPECT_LE(total * ZX_MSEC(15), end - start);
+  const auto end = std::chrono::steady_clock::now();
+  EXPECT_LE(total * std::chrono::milliseconds(15), end - start);
 }

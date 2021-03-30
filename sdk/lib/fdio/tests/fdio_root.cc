@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <lib/fdio/private.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <zxtest/zxtest.h>
+
+#include "predicates.h"
 
 // These tests poke at some "global" behavior of fdio
 // that are not easily tested through filesystem tests,
@@ -21,20 +21,20 @@
 
 TEST(RootTest, Stat) {
   struct stat buf;
-  ASSERT_EQ(stat("/", &buf), 0, "");
-  ASSERT_EQ(stat("//", &buf), 0, "");
-  ASSERT_EQ(stat("///", &buf), 0, "");
-  ASSERT_EQ(stat("/tmp", &buf), 0, "");
-  ASSERT_EQ(stat("//tmp", &buf), 0, "");
-  ASSERT_EQ(stat("./", &buf), 0, "");
-  ASSERT_EQ(stat("./", &buf), 0, "");
-  ASSERT_EQ(stat(".", &buf), 0, "");
+  ASSERT_SUCCESS(stat("/", &buf));
+  ASSERT_SUCCESS(stat("//", &buf));
+  ASSERT_SUCCESS(stat("///", &buf));
+  ASSERT_SUCCESS(stat("/tmp", &buf));
+  ASSERT_SUCCESS(stat("//tmp", &buf));
+  ASSERT_SUCCESS(stat("./", &buf));
+  ASSERT_SUCCESS(stat("./", &buf));
+  ASSERT_SUCCESS(stat(".", &buf));
 }
 
 TEST(RootTest, Remove) {
-  ASSERT_EQ(remove("/"), -1, "");
-  ASSERT_EQ(errno, EBUSY, "");
+  ASSERT_EQ(remove("/"), -1);
+  ASSERT_ERRNO(EBUSY);
 
-  ASSERT_EQ(rmdir("/"), -1, "");
-  ASSERT_EQ(errno, EBUSY, "");
+  ASSERT_EQ(rmdir("/"), -1);
+  ASSERT_ERRNO(EBUSY);
 }

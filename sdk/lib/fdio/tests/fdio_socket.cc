@@ -27,6 +27,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "predicates.h"
+
 namespace {
 
 class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase {
@@ -34,7 +36,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
   explicit Server(zx::socket peer) : peer_(std::move(peer)) {
     // We need the FDIO to act like it's connected.
     // ZXSIO_SIGNAL_CONNECTED is private, but we know the value.
-    ASSERT_OK(peer_.signal(0, ZX_USER_SIGNAL_3));
+    EXPECT_OK(peer_.signal(0, ZX_USER_SIGNAL_3));
   }
 
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
@@ -78,22 +80,28 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
 };
 
 template <int sock_type>
-class BaseTest : public ::zxtest::Test {
+class BaseTest : public zxtest::Test {
   static_assert(sock_type == ZX_SOCKET_STREAM || sock_type == ZX_SOCKET_DATAGRAM);
 
  public:
-  BaseTest() : server_(clientSocket()), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_posix_socket::StreamSocket>();
+  BaseTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
+ protected:
+  void SetUp() override {
+    zx::socket client_socket;
+    ASSERT_OK(zx::socket::create(sock_type, &client_socket, &server_socket_));
+    server_ = Server(std::move(client_socket));
+
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_posix_socket::StreamSocket>();
     ASSERT_OK(endpoints.status_value());
 
-    ASSERT_OK(
-        fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(endpoints->server), &server_));
+    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(endpoints->server),
+                                           &server_.value()));
     ASSERT_OK(loop_.StartThread("fake-socket-server"));
     ASSERT_OK(
         fdio_fd_create(endpoints->client.channel().release(), client_fd_.reset_and_get_address()));
   }
 
- protected:
   const zx::socket& server_socket() { return server_socket_; }
 
   zx::socket& mutable_server_socket() { return server_socket_; }
@@ -102,28 +110,23 @@ class BaseTest : public ::zxtest::Test {
 
   fbl::unique_fd& mutable_client_fd() { return client_fd_; }
 
-  const Server& server() { return server_; }
+  const Server& server() { return server_.value(); }
 
-  Server& mutable_server() { return server_; }
+  Server& mutable_server() { return server_.value(); }
 
  private:
-  zx::socket clientSocket() {
-    zx::socket client_socket;
-    // ASSERT_* macros return on failure; wrap it in a lambda to avoid returning void here.
-    [&]() { ASSERT_OK(zx::socket::create(sock_type, &client_socket, &server_socket_)); }();
-    return client_socket;
-  }
+  zx::socket clientSocket() {}
 
   zx::socket server_socket_;
   fbl::unique_fd client_fd_;
-  Server server_;
+  std::optional<Server> server_;
   async::Loop loop_;
 };
 
 void set_nonblocking_io(int fd) {
   int flags;
   EXPECT_GE(flags = fcntl(fd, F_GETFL), 0, "%s", strerror(errno));
-  EXPECT_EQ(fcntl(fd, F_SETFL, flags | O_NONBLOCK), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(fcntl(fd, F_SETFL, flags | O_NONBLOCK));
 }
 
 using TcpSocketTest = BaseTest<ZX_SOCKET_STREAM>;
@@ -179,9 +182,9 @@ TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
       .msg_iovlen = std::size(iov),
   };
 
-  EXPECT_EQ(recvmsg(client_fd().get(), &msg, 0), sizeof(data_out), "%s", strerror(errno));
+  EXPECT_EQ(recvmsg(client_fd().get(), &msg, 0), ssize_t(sizeof(data_out)), "%s", strerror(errno));
 
-  EXPECT_EQ(close(mutable_client_fd().release()), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(close(mutable_client_fd().release()));
 }
 
 // Make sure we can successfully read zero bytes if we pass a zero sized input buffer.
@@ -198,7 +201,7 @@ TEST_F(TcpSocketTest, RecvmsgEmptyBuffer) {
   struct msghdr msg = {};
 
   // We should "successfully" read zero bytes.
-  EXPECT_EQ(recvmsg(client_fd().get(), &msg, 0), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(recvmsg(client_fd().get(), &msg, 0));
 }
 
 // Verify scenario, where multi-segment sendmsg is requested, but the socket has
@@ -239,7 +242,7 @@ TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
   // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
   EXPECT_EQ(sendmsg(client_fd().get(), &msg, 0), (ssize_t)memlength, "%s", strerror(errno));
 
-  EXPECT_EQ(close(mutable_client_fd().release()), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(close(mutable_client_fd().release()));
 }
 
 TEST_F(TcpSocketTest, WaitBeginEnd) {
@@ -282,31 +285,31 @@ TEST_F(TcpSocketTest, WaitBeginEnd) {
   {
     uint32_t events;
     fdio_unsafe_wait_end(io, ZX_SOCKET_READABLE, &events);
-    EXPECT_EQ(events, POLLIN);
+    EXPECT_EQ(int32_t(events), POLLIN);
   }
 
   {
     uint32_t events;
     fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
-    EXPECT_EQ(events, POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP);
+    EXPECT_EQ(int32_t(events), POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP);
   }
 
   {
     uint32_t events;
     fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);
-    EXPECT_EQ(events, POLLIN | POLLRDHUP);
+    EXPECT_EQ(int32_t(events), POLLIN | POLLRDHUP);
   }
 
   {
     uint32_t events;
     fdio_unsafe_wait_end(io, ZX_SOCKET_WRITABLE, &events);
-    EXPECT_EQ(events, POLLOUT);
+    EXPECT_EQ(int32_t(events), POLLOUT);
   }
 
   {
     uint32_t events;
     fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
-    EXPECT_EQ(events, POLLOUT | POLLHUP);
+    EXPECT_EQ(int32_t(events), POLLOUT | POLLHUP);
   }
 
   fdio_unsafe_release(io);
@@ -317,12 +320,13 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
   {
     const struct msghdr msg = {};
     // sendmsg should accept 0 length payload.
-    EXPECT_EQ(sendmsg(client_fd().get(), &msg, 0), 0, "%s", strerror(errno));
+    EXPECT_SUCCESS(sendmsg(client_fd().get(), &msg, 0));
     // no data will have arrived on the other end.
-    size_t actual = 1337;
+    constexpr size_t prior = 1337;
+    size_t actual = prior;
     std::array<char, 1> rcv_buf;
     EXPECT_EQ(server_socket().read(0, rcv_buf.data(), rcv_buf.size(), &actual), ZX_ERR_SHOULD_WAIT);
-    EXPECT_EQ(actual, 1337);
+    EXPECT_EQ(actual, prior);
   }
 
   struct sockaddr_in addr = {
@@ -335,7 +339,7 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
   struct iovec iov[] = {
       {
           .iov_base = static_cast<void*>(const_cast<char*>(payload)),
-          .iov_len = std::size(payload),
+          .iov_len = sizeof(payload),
       },
   };
 
@@ -346,25 +350,25 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
       .msg_iovlen = std::size(iov),
   };
 
-  EXPECT_EQ(sendmsg(client_fd().get(), &msg, 0), std::size(payload), "%s", strerror(errno));
+  EXPECT_EQ(sendmsg(client_fd().get(), &msg, 0), ssize_t(sizeof(payload)), "%s", strerror(errno));
 
   // sendmsg doesn't fail when msg_namelen is greater than sizeof(struct sockaddr_storage) because
   // what's being tested here is a fuchsia.posix.socket.StreamSocket backed by a
   // zx::socket(ZX_SOCKET_DATAGRAM), a Frankenstein's monster which implements stream semantics on
   // the network and datagram semantics on the transport to the netstack.
   msg.msg_namelen = sizeof(sockaddr_storage) + 1;
-  EXPECT_EQ(sendmsg(client_fd().get(), &msg, 0), std::size(payload), "%s", strerror(errno));
+  EXPECT_EQ(sendmsg(client_fd().get(), &msg, 0), ssize_t(sizeof(payload)), "%s", strerror(errno));
 
   {
     size_t actual;
-    std::array<char, std::size(payload) + 1> rcv_buf;
+    std::array<char, sizeof(payload) + 1> rcv_buf;
     for (int i = 0; i < 2; i++) {
       EXPECT_OK(server_socket().read(0, rcv_buf.data(), rcv_buf.size(), &actual));
-      EXPECT_EQ(actual, std::size(payload));
+      EXPECT_EQ(actual, sizeof(payload));
     }
   }
 
-  EXPECT_EQ(close(mutable_client_fd().release()), 0, "%s", strerror(errno));
+  EXPECT_SUCCESS(close(mutable_client_fd().release()));
 }
 
 template <int optname>
@@ -380,7 +384,7 @@ auto timeout = [](fbl::unique_fd& fd, zx::socket& server_socket) {
         .tv_sec = sec.count(),
         .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(timeout - sec).count(),
     };
-    ASSERT_EQ(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s", strerror(errno));
+    ASSERT_SUCCESS(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)));
     struct timeval actual_tv;
     socklen_t optlen = sizeof(actual_tv);
     ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen), 0, "%s",
@@ -413,15 +417,16 @@ auto timeout = [](fbl::unique_fd& fd, zx::socket& server_socket) {
 
   // Check that the actual time waited was close to the expectation.
   const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+  const auto timeout_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeout);
 
   // TODO(fxbug.dev/40135): Only the lower bound of the elapsed time is checked. The upper bound
   // check is ignored as the syscall could far miss the defined deadline to return.
   EXPECT_GT(elapsed, timeout - margin, "elapsed=%lld ms (which is not within %lld ms of %lld ms)",
-            elapsed_ms.count(), margin.count(), std::chrono::milliseconds(timeout).count());
+            elapsed_ms.count(), margin.count(), timeout_ms.count());
 
   // Remove the timeout.
   const struct timeval tv = {};
-  ASSERT_EQ(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s", strerror(errno));
+  ASSERT_SUCCESS(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)));
   // Wrap the read/write in a future to enable a timeout. We expect the future
   // to time out.
   std::latch fut_started(1);
@@ -443,7 +448,7 @@ auto timeout = [](fbl::unique_fd& fd, zx::socket& server_socket) {
   EXPECT_EQ(return_code_and_errno.first, -1);
   ASSERT_EQ(return_code_and_errno.second, ECONNRESET, "%s", strerror(return_code_and_errno.second));
 
-  ASSERT_EQ(close(fd.release()), 0, "%s", strerror(errno));
+  ASSERT_SUCCESS(close(fd.release()));
 };
 
 TEST_F(TcpSocketTest, RcvTimeout) {

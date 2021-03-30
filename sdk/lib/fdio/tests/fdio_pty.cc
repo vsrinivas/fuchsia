@@ -5,9 +5,7 @@
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/zx/channel.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>

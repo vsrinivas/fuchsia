@@ -46,11 +46,13 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     return completer.Close(sync_completion_wait(&accept_end_, ZX_TIME_INFINITE));
   }
 
-  sync_completion_t accept_end_;
+  sync_completion_t& accept_end() { return accept_end_; }
 
  private:
   zx_handle_t channel_;
   zx::socket peer_;
+
+  sync_completion_t accept_end_;
 };
 
 TEST(AtExit, ExitInAccept) {
@@ -88,12 +90,10 @@ TEST(AtExit, ExitInAccept) {
 
   // Wait until the child has let us know that it is exiting.
   ASSERT_OK(zx_object_wait_one(server_handle, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr));
-  // Close the channel to unblock the child's Close call.
-  ASSERT_OK(zx_handle_close(server_handle));
 
   // Verify that the child didn't crash.
   ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  sync_completion_signal(&server.accept_end_);
+  sync_completion_signal(&server.accept_end());
   zx_info_process_t proc_info;
   ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
   ASSERT_EQ(proc_info.return_code, 0);

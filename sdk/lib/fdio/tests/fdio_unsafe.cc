@@ -7,7 +7,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/zx/channel.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
@@ -18,7 +17,7 @@ TEST(UnsafeTest, BorrowChannel) {
   ASSERT_LE(0, fd.get());
 
   fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
-  ASSERT_NOT_NULL(io);
+  ASSERT_TRUE(io);
 
   auto dir = fidl::UnownedClientEnd<fuchsia_io::Node>(fdio_unsafe_borrow_channel(io));
   ASSERT_TRUE(dir.is_valid());
@@ -48,7 +47,7 @@ TEST(UnsafeTest, BorrowChannelFromUnsupportedObject) {
   fbl::unique_fd ns_fd(fdio_ns_opendir(ns));
   ASSERT_LE(0, ns_fd.get());
   fdio_t* io = fdio_unsafe_fd_to_io(ns_fd.get());
-  ASSERT_NOT_NULL(io);
+  ASSERT_TRUE(io);
 
   EXPECT_EQ(ZX_HANDLE_INVALID, fdio_unsafe_borrow_channel(io));
   fdio_unsafe_release(io);

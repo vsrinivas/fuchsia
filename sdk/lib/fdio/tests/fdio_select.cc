@@ -7,6 +7,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "predicates.h"
+
 namespace {
 
 constexpr std::chrono::duration minimum_duration = std::chrono::milliseconds(1);
@@ -32,7 +34,7 @@ TEST(Select, SelectZeroFds) {
     FD_ZERO(&exceptfds);
 
     const auto begin = std::chrono::steady_clock::now();
-    EXPECT_EQ(select(i, &readfds, &writefds, &exceptfds, &timeout), 0, "%s", strerror(errno));
+    EXPECT_SUCCESS(select(i, &readfds, &writefds, &exceptfds, &timeout));
     EXPECT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
 
     // All bits in all the fd sets should be 0.
@@ -47,7 +49,7 @@ TEST(Select, SelectZeroFds) {
 TEST(Select, Pipe) {
   std::array<fbl::unique_fd, 2> fds;
   int int_fds[fds.size()];
-  ASSERT_EQ(pipe(int_fds), 0, "%s", strerror(errno));
+  ASSERT_SUCCESS(pipe(int_fds));
   fds[0].reset(int_fds[0]);
   fds[1].reset(int_fds[1]);
 
@@ -71,7 +73,7 @@ TEST(Select, Pipe) {
     };
 
     char c;
-    ASSERT_EQ(write(fds[1].get(), &c, sizeof(c)), sizeof(c), "%s", strerror(errno));
+    ASSERT_EQ(write(fds[1].get(), &c, sizeof(c)), ssize_t(sizeof(c)), "%s", strerror(errno));
 
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -87,7 +89,7 @@ TEST(Select, Pipe) {
         .tv_usec = std::chrono::microseconds(minimum_duration).count(),
     };
 
-    ASSERT_EQ(close(fds[1].get()), 0, "%s", strerror(errno));
+    ASSERT_SUCCESS(close(fds[1].get()));
 
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -112,14 +114,14 @@ TEST(Select, SelectNegative) {
         .tv_sec = -1,
     };
     EXPECT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
-    EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
+    EXPECT_ERRNO(EINVAL);
   }
   {
     struct timeval timeout = {
         .tv_usec = -1,
     };
     EXPECT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
-    EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
+    EXPECT_ERRNO(EINVAL);
   }
 }
 

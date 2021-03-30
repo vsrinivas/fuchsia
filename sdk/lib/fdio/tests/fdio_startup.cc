@@ -6,9 +6,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
-#include <zircon/syscalls.h>
 
-#include <fbl/auto_call.h>
 #include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 

@@ -5,8 +5,12 @@
 #include <poll.h>
 #include <unistd.h>
 
+#include <thread>
+
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+#include "predicates.h"
 
 namespace {
 
@@ -65,7 +69,7 @@ TEST(Poll, PPollZeroFds) {
       .tv_nsec = std::chrono::nanoseconds(minimum_duration).count(),
   };
   const auto begin = std::chrono::steady_clock::now();
-  ASSERT_EQ(ppoll(nullptr, 0, &timeout, nullptr), 0, "%s", strerror(errno));
+  ASSERT_SUCCESS(ppoll(nullptr, 0, &timeout, nullptr));
   ASSERT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
 }
 
@@ -75,7 +79,7 @@ TEST(Poll, PPollNegativeTimeout) {
         .tv_sec = -1,
     };
     ASSERT_EQ(ppoll(nullptr, 0, &timeout_ts, nullptr), -1);
-    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+    ASSERT_ERRNO(EINVAL);
   }
 
   {
@@ -83,7 +87,7 @@ TEST(Poll, PPollNegativeTimeout) {
         .tv_nsec = -1,
     };
     ASSERT_EQ(ppoll(nullptr, 0, &timeout_ts, nullptr), -1);
-    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+    ASSERT_ERRNO(EINVAL);
   }
 }
 
@@ -92,41 +96,91 @@ TEST(Poll, PPollInvalidTimeout) {
       .tv_nsec = 1000000000,
   };
   ASSERT_EQ(ppoll(nullptr, 0, &timeout_ts, nullptr), -1);
-  ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+  ASSERT_ERRNO(EINVAL);
 }
 
-TEST(Poll, Pipe) {
-  std::array<fbl::unique_fd, 2> fds;
-  int int_fds[fds.size()];
-  ASSERT_EQ(pipe(int_fds), 0, "%s", strerror(errno));
-  fds[0].reset(int_fds[0]);
-  fds[1].reset(int_fds[1]);
+class Pipe : public zxtest::Test {
+ protected:
+  void SetUp() override {
+    int fds[2];
+    ASSERT_SUCCESS(pipe(fds));
 
+    for (size_t i = 0; i < fds_.size(); ++i) {
+      fds_[i].reset(fds[i]);
+    }
+  }
+
+  void PPollTimespec(const struct timespec* ts) {
+    std::thread t([this]() {
+      // Sleep to try to ensure the write happens after the poll.
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+      constexpr char message[] = "hello";
+      EXPECT_EQ(write(fds()[1].get(), message, sizeof(message)), ssize_t(sizeof(message)));
+    });
+
+    struct pollfd pfds[] = {{
+        .fd = fds()[0].get(),
+        .events = POLLIN,
+    }};
+
+    EXPECT_EQ(ppoll(pfds, std::size(pfds), ts, nullptr), 1);
+
+    t.join();
+  }
+
+  const std::array<fbl::unique_fd, 2>& fds() { return fds_; }
+
+ private:
+  std::array<fbl::unique_fd, 2> fds_;
+};
+
+TEST_F(Pipe, PPoll) { PPollTimespec(nullptr); }
+
+TEST_F(Pipe, PPollOverflow) {
+  constexpr unsigned int nanoseconds_in_seconds = 1000000000;
+  const struct timespec ts = {
+      .tv_sec = UINT64_MAX / nanoseconds_in_seconds,
+      .tv_nsec = UINT64_MAX % nanoseconds_in_seconds,
+  };
+  PPollTimespec(&ts);
+}
+
+TEST_F(Pipe, PPollImmediateTimeout) {
+  struct timespec timeout = {};
+  struct pollfd pfds[] = {{
+      .fd = fds()[0].get(),
+      .events = POLLIN,
+  }};
+  EXPECT_SUCCESS(ppoll(pfds, std::size(pfds), &timeout, nullptr));
+}
+
+TEST_F(Pipe, Pipe) {
   constexpr int kTimeout = 10000;
 
   {
     char c;
-    EXPECT_EQ(write(fds[1].get(), &c, sizeof(c)), sizeof(c), "%s", strerror(errno));
+    EXPECT_EQ(write(fds()[1].get(), &c, sizeof(c)), ssize_t(sizeof(c)), "%s", strerror(errno));
     struct pollfd pfds[] = {{
-                                .fd = fds[0].get(),
+                                .fd = fds()[0].get(),
                                 .events = POLLIN,
                             },
                             {
-                                .fd = fds[1].get(),
+                                .fd = fds()[1].get(),
                                 .events = POLLOUT,
                             }};
     int n = poll(pfds, std::size(pfds), kTimeout);
     EXPECT_GE(n, 0, "%s", strerror(errno));
-    EXPECT_EQ(n, std::size(pfds));
+    EXPECT_EQ(n, ssize_t(std::size(pfds)));
     EXPECT_EQ(pfds[0].revents, POLLIN);
     EXPECT_EQ(pfds[1].revents, POLLOUT);
   }
 
   {
-    ASSERT_EQ(close(fds[1].get()), 0, "%s", strerror(errno));
+    ASSERT_SUCCESS(close(fds()[1].get()));
     struct pollfd pfds[] = {
         {
-            .fd = fds[0].get(),
+            .fd = fds()[0].get(),
 #if defined(__Fuchsia__)
             // TODO(https://fxbug.dev/47132): For Linux parity, pipe wait_begin needs to always wait
             // on ZXIO_SIGNAL_PEER_CLOSED and wait_end needs to set POLLHUP on seeing this.
@@ -134,11 +188,11 @@ TEST(Poll, Pipe) {
 #endif
         },
         {
-            .fd = fds[1].get(),
+            .fd = fds()[1].get(),
         }};
     int n = poll(pfds, std::size(pfds), kTimeout);
     EXPECT_GE(n, 0, "%s", strerror(errno));
-    EXPECT_EQ(n, std::size(pfds));
+    EXPECT_EQ(n, ssize_t(std::size(pfds)));
     EXPECT_EQ(pfds[0].revents,
 #if defined(__Fuchsia__)
               // TODO(https://fxbug.dev/47132): For Linux parity, pipe wait_begin needs to always

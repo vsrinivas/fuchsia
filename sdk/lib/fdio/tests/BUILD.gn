@@ -10,7 +10,8 @@ fuchsia_unittest_package("fdio-unittest-package") {
   deps = [
     ":accept-child",
     ":chroot-child",
-    ":fdio",
+    ":fdio-gtest",
+    ":fdio-test",
     ":hello-world",
     ":null-namespace-child",
   ]
@@ -25,81 +26,80 @@ group("tests") {
     # test environment.
     ":chroot-child($host_toolchain)",
     ":fdio-unittest-package",
-    ":fdio_hosttests($host_toolchain)",
     "constructors:tests",
   ]
-}
-
-# FDIO tests that can run on host as well as target.
-test("fdio_hosttests") {
-  sources = []
-  if (is_linux) {
-    sources += [
-      "fdio_eventfd.cc",
-      "fdio_poll.cc",
-      "fdio_select.cc",
-      "fdio_timerfd.cc",
-    ]
+  if (host_os == "linux") {
+    deps += [ ":fdio-test($host_toolchain)" ]
   }
-  deps = [
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zxtest",
-  ]
 }
 
-test("fdio") {
-  output_name = "fdio-test"
-
+test("fdio-test") {
   configs += [ "//build/config:all_source" ]
 
-  # If your test can run on host as well as target, consider adding it to
-  # fdio_hosttests above.
+  # FDIO tests that can run on host as well as target.
   sources = [
-    "fdio_atexit.cc",
-    "fdio_chroot.cc",
-    "fdio_directory.cc",
     "fdio_eventfd.cc",
-    "fdio_fd.cc",
-    "fdio_fdio.cc",
-    "fdio_get_vmo.cc",
-    "fdio_handle_fd.cc",
-    "fdio_inotify.cc",
-    "fdio_io.cc",
-    "fdio_memfd.cc",
-    "fdio_null_namespace.cc",
-    "fdio_open_max.cc",
-    "fdio_path_canonicalize.cc",
     "fdio_poll.cc",
-    "fdio_pty.cc",
-    "fdio_root.cc",
     "fdio_select.cc",
-    "fdio_socket.cc",
-    "fdio_socket_cleanup.cc",
-    "fdio_socketpair.cc",
-    "fdio_startup.cc",
-    "fdio_stubs.cc",
     "fdio_timerfd.cc",
-    "fdio_unsafe.cc",
-    "fdio_watcher.cc",
-    "memfd.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
-    "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/stdcompat",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/test-utils",
-    "//zircon/system/ulib/zxio",
+  ]
+  if (is_fuchsia) {
+    sources += [
+      "fdio_atexit.cc",
+      "fdio_chroot.cc",
+      "fdio_directory.cc",
+      "fdio_fd.cc",
+      "fdio_fdio.cc",
+      "fdio_get_vmo.cc",
+      "fdio_handle_fd.cc",
+      "fdio_inotify.cc",
+      "fdio_io.cc",
+      "fdio_memfd.cc",
+      "fdio_null_namespace.cc",
+      "fdio_open_max.cc",
+      "fdio_path_canonicalize.cc",
+      "fdio_pty.cc",
+      "fdio_root.cc",
+      "fdio_socket.cc",
+      "fdio_socket_cleanup.cc",
+      "fdio_startup.cc",
+      "fdio_stubs.cc",
+      "fdio_unsafe.cc",
+      "fdio_watcher.cc",
+      "memfd.h",
+    ]
+    deps += [
+      "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+      "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
+      "//sdk/lib/fdio",
+      "//sdk/lib/stdcompat",
+      "//zircon/public/lib/sync",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fidl-async",
+      "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+      "//zircon/system/ulib/test-utils",
+      "//zircon/system/ulib/zxio",
+    ]
+  }
+}
+
+test("fdio-gtest") {
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "fdio_socketpair.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
+    "//zircon/public/lib/fbl",
   ]
 }
 
@@ -121,10 +121,7 @@ executable("chroot-child") {
   sources = [ "fdio_chroot_child.cc" ]
 
   if (is_fuchsia) {
-    deps = [
-      "//sdk/lib/fdio",
-      "//src/zircon/lib/zircon",
-    ]
+    deps = [ "//sdk/lib/fdio" ]
   }
 }
 
