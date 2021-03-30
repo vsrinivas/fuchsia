@@ -10,6 +10,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "lib/syslog/cpp/macros.h"
+
 using testing::Each;
 using testing::FloatEq;
 using testing::Not;
@@ -292,7 +294,7 @@ TEST_F(RampTest, SetSourceGainCancelsRamp) {
 
   gain_.SetSourceGainWithRamp(-20.0f, zx::sec(1));
   EXPECT_TRUE(gain_.IsRamping());
-  // Advance halfway through the ramp -- 500 msec (500 frames@1kHz).
+  // Advance halfway through the ramp (500 frames, which at 1kHz is 500 ms).
   gain_.Advance(500, rate_1khz_output_);
   EXPECT_TRUE(gain_.IsRamping());
 

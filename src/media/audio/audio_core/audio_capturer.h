@@ -70,7 +70,7 @@ class AudioCapturer : public BaseCapturer,
 
   const bool loopback_;
   bool mute_;
-  std::atomic<float> stream_gain_db_;
+  float stream_gain_db_;
   CaptureUsage usage_ = CaptureUsage::FOREGROUND;
 
   std::mutex mutex_;

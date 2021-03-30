@@ -200,26 +200,32 @@ void AudioCapturer::RealizeVolume(VolumeCommand volume_command) {
     FX_LOGS(WARNING) << "Capturer gain ramping is not implemented";
   }
 
-  context().link_matrix().ForEachSourceLink(
-      *this, [this, volume_command](LinkMatrix::LinkHandle link) {
-        float gain_db = link.loudness_transform->Evaluate<3>({
-            VolumeValue{volume_command.volume},
-            GainDbFsValue{volume_command.gain_db_adjustment},
-            GainDbFsValue{stream_gain_db_.load()},
-        });
-        // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or other
-        // real-time method for gain observation
-        if (gain_db != 0.0) {
-          FX_LOGS(INFO) << this << " " << StreamUsage::WithCaptureUsage(usage_).ToString()
-                        << " Gain(" << gain_db << "db) = "
-                        << "Vol(" << volume_command.volume << ") + GainAdjustment("
-                        << volume_command.gain_db_adjustment << "db) + StreamGain("
-                        << stream_gain_db_ << "db)";
-        }
+  context().link_matrix().ForEachSourceLink(*this, [this,
+                                                    volume_command](LinkMatrix::LinkHandle link) {
+    float gain_db = link.loudness_transform->Evaluate<3>({
+        VolumeValue{volume_command.volume},
+        GainDbFsValue{volume_command.gain_db_adjustment},
+        GainDbFsValue{stream_gain_db_},
+    });
 
-        mix_domain().PostTask(
-            [link, gain_db]() { link.mixer->bookkeeping().gain.SetDestGain(gain_db); });
-      });
+    std::stringstream stream;
+    stream << static_cast<const void*>(this) << " (link " << static_cast<const void*>(&link) << ") "
+           << StreamUsage::WithCaptureUsage(usage_).ToString() << " Gain(" << gain_db << "db) = "
+           << "Vol(" << volume_command.volume << ") + GainAdjustment("
+           << volume_command.gain_db_adjustment << "db) + StreamGain(" << stream_gain_db_ << "db)";
+    std::string log_string = stream.str();
+
+    // log_string is only included for log-display of loudness changes
+    mix_domain().PostTask([link, gain_db, log_string]() {
+      if (gain_db != link.mixer->bookkeeping().gain.GetGainDb()) {
+        link.mixer->bookkeeping().gain.SetDestGain(gain_db);
+
+        // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or
+        // other real-time method for gain observation
+        FX_LOGS(INFO) << log_string;
+      }
+    });
+  });
 }
 
 void AudioCapturer::SetGain(float gain_db) {
@@ -238,9 +244,9 @@ void AudioCapturer::SetGain(float gain_db) {
     return;
   }
 
+  stream_gain_db_ = gain_db;
   reporter().SetGain(gain_db);
 
-  stream_gain_db_.store(gain_db);
   if (!loopback_) {
     context().volume_manager().NotifyStreamChanged(this);
   }

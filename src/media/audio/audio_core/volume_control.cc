@@ -41,8 +41,7 @@ void VolumeControl::AddBinding(fidl::InterfaceRequest<fuchsia::media::audio::Vol
 }
 
 void VolumeControl::SetVolume(float volume) {
-  const auto volume_is_changed = volume != current_volume_;
-  if (!volume_is_changed) {
+  if (volume == current_volume_) {
     return;
   }
   FX_LOGS(INFO) << name_ << " VolumeControl::SetVolume(" << volume << ")";
@@ -57,8 +56,7 @@ void VolumeControl::SetVolume(float volume) {
 }
 
 void VolumeControl::SetMute(bool mute) {
-  bool mute_is_changed = mute != muted_;
-  if (!mute_is_changed) {
+  if (mute == muted_) {
     return;
   }
   FX_LOGS(INFO) << name_ << " VolumeControl::SetMute(" << mute << ")";

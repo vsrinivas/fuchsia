@@ -138,34 +138,45 @@ fuchsia::media::Usage AudioRenderer::GetStreamUsage() const {
 }
 
 void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
-  context().link_matrix().ForEachDestLink(
-      *this, [this, volume_command](LinkMatrix::LinkHandle link) {
-        FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
-        float gain_db = link.loudness_transform->Evaluate<3>({
-            VolumeValue{volume_command.volume},
-            GainDbFsValue{volume_command.gain_db_adjustment},
-            GainDbFsValue{stream_gain_db_},
-        });
-        // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or other
-        // real-time method for gain observation
-        FX_LOGS(INFO) << this << " " << StreamUsage::WithRenderUsage(usage_).ToString() << " Gain("
-                      << gain_db << "db) = "
-                      << "Vol(" << volume_command.volume << ") + GainAdjustment("
-                      << volume_command.gain_db_adjustment << "db) + StreamGain(" << stream_gain_db_
-                      << "db)";
+  context().link_matrix().ForEachDestLink(*this, [this,
+                                                  volume_command](LinkMatrix::LinkHandle link) {
+    FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
+    float gain_db = link.loudness_transform->Evaluate<3>({
+        VolumeValue{volume_command.volume},
+        GainDbFsValue{volume_command.gain_db_adjustment},
+        GainDbFsValue{stream_gain_db_},
+    });
 
-        reporter().SetFinalGain(gain_db);
+    std::stringstream stream;
+    stream << static_cast<const void*>(this) << " (link " << static_cast<const void*>(&link) << ") "
+           << StreamUsage::WithRenderUsage(usage_).ToString() << " Gain(" << gain_db << "db) = "
+           << "Vol(" << volume_command.volume << ") + GainAdjustment("
+           << volume_command.gain_db_adjustment << "db) + StreamGain(" << stream_gain_db_ << "db)";
+    std::string log_string = stream.str();
 
-        link.mix_domain->PostTask([link, volume_command, gain_db]() {
-          auto& gain = link.mixer->bookkeeping().gain;
-          if (volume_command.ramp.has_value()) {
-            gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                       volume_command.ramp->ramp_type);
-          } else {
-            gain.SetSourceGain(gain_db);
-          }
-        });
-      });
+    // log_string is only included for log-display of loudness changes
+    link.mix_domain->PostTask([link, volume_command, gain_db, log_string]() {
+      auto& gain = link.mixer->bookkeeping().gain;
+      // If not currently ramping, then exit early if asked to change to our current gain value --
+      // or if asked to RAMP to our current gain value.
+      if (!gain.IsRamping() && gain.GetGainDb() == gain_db) {
+        return;
+      }
+      if (volume_command.ramp.has_value()) {
+        // Stop any in-progress ramping; use this ramp instead
+        gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
+                                   volume_command.ramp->ramp_type);
+      } else {
+        // Stop any in-progress ramping; snap to this new gain_db
+        gain.SetSourceGain(gain_db);
+      }
+
+      // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or
+      // other real-time method for gain observation
+      FX_LOGS(INFO) << log_string;
+    });
+    reporter().SetFinalGain(gain_db);
+  });
 }
 
 // Set the stream gain, in each Renderer -> Output audio path. The Gain object contains multiple
@@ -175,7 +186,7 @@ void AudioRenderer::SetGain(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
   FX_LOGS(DEBUG) << " (" << gain_db << " dB)";
 
-  // Anywhere we set stream_gain_db_, we should perform this range check.
+  // Before setting stream_gain_db_, we should always perform this range check.
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FX_LOGS(WARNING) << "SetGain(" << gain_db << " dB) out of range.";
@@ -187,9 +198,9 @@ void AudioRenderer::SetGain(float gain_db) {
     return;
   }
 
+  stream_gain_db_ = gain_db;
   reporter().SetGain(gain_db);
 
-  stream_gain_db_ = gain_db;
   context().volume_manager().NotifyStreamChanged(this);
 
   NotifyGainMuteChanged();
