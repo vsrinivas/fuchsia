@@ -182,6 +182,147 @@ impl Default for Fill {
 #[derive(Clone, Copy, Debug)]
 pub enum BlendMode {
     Over,
+    Multiply,
+    Screen,
+    Overlay,
+    Darken,
+    Lighten,
+    ColorDodge,
+    ColorBurn,
+    HardLight,
+    SoftLight,
+    Difference,
+    Exclusion,
+}
+
+macro_rules! blend_function {
+    (
+        $mode:expr,
+        $dst0:expr,
+        $dst1:expr,
+        $dst2:expr,
+        $src0:expr,
+        $src1:expr,
+        $src2:expr
+        $( , )?
+    ) => {
+        match $mode {
+            BlendMode::Over => [$src0, $src1, $src2],
+            BlendMode::Multiply => [$dst0 * $src0, $dst1 * $src1, $dst2 * $src2],
+            BlendMode::Screen => [
+                $dst0.mul_add(-$src0, $dst0) + $src0,
+                $dst1.mul_add(-$src1, $dst1) + $src1,
+                $dst2.mul_add(-$src2, $dst2) + $src2,
+            ],
+            BlendMode::Overlay => [
+                ($dst0 * $src0 * f32x8::splat(2.0)).select(
+                    f32x8::splat(2.0) * ($src0 + $dst0 - $src0.mul_add($dst0, f32x8::splat(0.5))),
+                    $src0.le(f32x8::splat(0.5)),
+                ),
+                ($dst1 * $src1 * f32x8::splat(2.0)).select(
+                    f32x8::splat(2.0) * ($src1 + $dst1 - $src1.mul_add($dst1, f32x8::splat(0.5))),
+                    $src1.le(f32x8::splat(0.5)),
+                ),
+                ($dst2 * $src2 * f32x8::splat(2.0)).select(
+                    f32x8::splat(2.0) * ($src2 + $dst2 - $src2.mul_add($dst2, f32x8::splat(0.5))),
+                    $src2.le(f32x8::splat(0.5)),
+                ),
+            ],
+            BlendMode::Darken => [$dst0.min($src0), $dst1.min($src1), $dst2.min($src2)],
+            BlendMode::Lighten => [$dst0.max($src0), $dst1.max($src1), $dst2.max($src2)],
+            BlendMode::ColorDodge => [
+                f32x8::splat(0.0).select(
+                    f32x8::splat(1.0).min($src0 / (f32x8::splat(1.0) - $dst0)),
+                    $src0.eq(f32x8::splat(0.0)),
+                ),
+                f32x8::splat(0.0).select(
+                    f32x8::splat(1.0).min($src1 / (f32x8::splat(1.0) - $dst1)),
+                    $src1.eq(f32x8::splat(0.0)),
+                ),
+                f32x8::splat(0.0).select(
+                    f32x8::splat(1.0).min($src2 / (f32x8::splat(1.0) - $dst2)),
+                    $src2.eq(f32x8::splat(0.0)),
+                ),
+            ],
+            BlendMode::ColorBurn => [
+                f32x8::splat(1.0).select(
+                    f32x8::splat(1.0) - f32x8::splat(1.0).min((f32x8::splat(1.0) - $src0) / $dst0),
+                    $src0.eq(f32x8::splat(1.0)),
+                ),
+                f32x8::splat(1.0).select(
+                    f32x8::splat(1.0) - f32x8::splat(1.0).min((f32x8::splat(1.0) - $src1) / $dst1),
+                    $src1.eq(f32x8::splat(1.0)),
+                ),
+                f32x8::splat(1.0).select(
+                    f32x8::splat(1.0) - f32x8::splat(1.0).min((f32x8::splat(1.0) - $src2) / $dst2),
+                    $src2.eq(f32x8::splat(1.0)),
+                ),
+            ],
+            BlendMode::HardLight => [
+                ($dst0 * $src0 * f32x8::splat(2.0)).select(
+                    f32x8::splat(2.0) * ($src0 + $dst0 - $src0.mul_add($dst0, f32x8::splat(0.5))),
+                    $dst0.le(f32x8::splat(0.5)),
+                ),
+                ($dst1 * $src1 * f32x8::splat(2.0)).select(
+                    f32x8::splat(2.0) * ($src1 + $dst1 - $src1.mul_add($dst1, f32x8::splat(0.5))),
+                    $dst1.le(f32x8::splat(0.5)),
+                ),
+                ($dst2 * $src2 * f32x8::splat(2.0)).select(
+                    f32x8::splat(2.0) * ($src2 + $dst2 - $src2.mul_add($dst2, f32x8::splat(0.5))),
+                    $dst2.le(f32x8::splat(0.5)),
+                ),
+            ],
+            BlendMode::SoftLight => {
+                let d0 = (f32x8::splat(16.0)
+                    .mul_add($src0, f32x8::splat(-12.0))
+                    .mul_add($src0, f32x8::splat(4.0))
+                    * $src0)
+                    .select($src0.sqrt(), $src0.le(f32x8::splat(0.25)));
+                let d1 = (f32x8::splat(16.0)
+                    .mul_add($src1, f32x8::splat(-12.0))
+                    .mul_add($src1, f32x8::splat(4.0))
+                    * $src1)
+                    .select($src1.sqrt(), $src1.le(f32x8::splat(0.25)));
+                let d2 = (f32x8::splat(16.0)
+                    .mul_add($src2, f32x8::splat(-12.0))
+                    .mul_add($src2, f32x8::splat(4.0))
+                    * $src2)
+                    .select($src2.sqrt(), $src2.le(f32x8::splat(0.25)));
+
+                [
+                    (($src0 * (f32x8::splat(1.0) - $src0))
+                        .mul_add(f32x8::splat(2.0).mul_add($dst0, f32x8::splat(-1.0)), $src0))
+                    .select(
+                        (d0 - $src0)
+                            .mul_add(f32x8::splat(2.0).mul_add($dst0, f32x8::splat(-1.0)), $src0),
+                        $dst0.le(f32x8::splat(0.5)),
+                    ),
+                    (($src1 * (f32x8::splat(1.0) - $src1))
+                        .mul_add(f32x8::splat(2.0).mul_add($dst1, f32x8::splat(-1.0)), $src1))
+                    .select(
+                        (d1 - $src1)
+                            .mul_add(f32x8::splat(2.0).mul_add($dst1, f32x8::splat(-1.0)), $src1),
+                        $dst1.le(f32x8::splat(0.5)),
+                    ),
+                    (($src2 * (f32x8::splat(1.0) - $src2))
+                        .mul_add(f32x8::splat(2.0).mul_add($dst2, f32x8::splat(-1.0)), $src2))
+                    .select(
+                        (d2 - $src2)
+                            .mul_add(f32x8::splat(2.0).mul_add($dst2, f32x8::splat(-1.0)), $src2),
+                        $dst2.le(f32x8::splat(0.5)),
+                    ),
+                ]
+            }
+            BlendMode::Difference => {
+                [($dst0 - $src0).abs(), ($dst1 - $src1).abs(), ($dst2 - $src2).abs()]
+            }
+            BlendMode::Exclusion => [
+                (f32x8::splat(-2.0) * $dst0).mul_add($src0, $dst0) + $src0,
+                (f32x8::splat(-2.0) * $dst1).mul_add($src1, $dst1) + $src1,
+                (f32x8::splat(-2.0) * $dst2).mul_add($src2, $dst2) + $src2,
+            ],
+        }
+    };
 }
 
 impl Default for BlendMode {
@@ -230,6 +371,28 @@ mod tests {
         }
 
         colors
+    }
+
+    fn test_blend_mode(blend_mode: BlendMode, f: impl Fn(f32, f32) -> f32) {
+        let color_values = [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0];
+
+        for &dst in &color_values {
+            for &src in &color_values {
+                let [c0, c1, c2] = blend_function!(
+                    blend_mode,
+                    f32x8::splat(dst),
+                    f32x8::splat(dst),
+                    f32x8::splat(dst),
+                    f32x8::splat(src),
+                    f32x8::splat(src),
+                    f32x8::splat(src),
+                );
+
+                assert_eq!(c0.as_array(), f32x8::splat(f(dst, src)).as_array());
+                assert_eq!(c1.as_array(), f32x8::splat(f(dst, src)).as_array());
+                assert_eq!(c2.as_array(), f32x8::splat(f(dst, src)).as_array());
+            }
+        }
     }
 
     #[test]
@@ -319,5 +482,111 @@ mod tests {
         assert_eq!(col[5], color!(0.75));
         assert_eq!(col[6], color!(0.75));
         assert_eq!(col[7], color!(0.75));
+    }
+
+    #[test]
+    fn test_blend_mode_over() {
+        test_blend_mode(BlendMode::Over, |_dst, src| src);
+    }
+
+    fn multiply(dst: f32, src: f32) -> f32 {
+        dst * src
+    }
+
+    #[test]
+    fn test_blend_mode_multiply() {
+        test_blend_mode(BlendMode::Multiply, multiply);
+    }
+
+    fn screen(dst: f32, src: f32) -> f32 {
+        dst + src - (dst * src)
+    }
+
+    #[test]
+    fn test_blend_mode_screen() {
+        test_blend_mode(BlendMode::Screen, screen);
+    }
+
+    fn hard_light(dst: f32, src: f32) -> f32 {
+        if dst <= 0.5 {
+            multiply(2.0 * dst, src)
+        } else {
+            screen(2.0 * dst - 1.0, src)
+        }
+    }
+
+    #[test]
+    fn test_blend_mode_overlay() {
+        test_blend_mode(BlendMode::Overlay, |dst, src| hard_light(src, dst));
+    }
+
+    #[test]
+    fn test_blend_mode_darken() {
+        test_blend_mode(BlendMode::Darken, |dst, src| dst.min(src));
+    }
+
+    #[test]
+    fn test_blend_mode_lighten() {
+        test_blend_mode(BlendMode::Lighten, |dst, src| dst.max(src));
+    }
+
+    #[test]
+    fn test_blend_mode_color_dodge() {
+        test_blend_mode(BlendMode::ColorDodge, |dst, src| {
+            if src == 0.0 {
+                0.0
+            } else if dst == 1.0 {
+                1.0
+            } else {
+                1.0f32.min(src / (1.0 - dst))
+            }
+        });
+    }
+
+    #[test]
+    fn test_blend_mode_color_burn() {
+        test_blend_mode(BlendMode::ColorBurn, |dst, src| {
+            if src == 1.0 {
+                1.0
+            } else if dst == 0.0 {
+                0.0
+            } else {
+                1.0 - 1.0f32.min((1.0 - src) / dst)
+            }
+        });
+    }
+
+    #[test]
+    fn test_blend_mode_hard_light() {
+        test_blend_mode(BlendMode::HardLight, hard_light);
+    }
+
+    #[test]
+    fn test_blend_mode_soft_light() {
+        test_blend_mode(BlendMode::SoftLight, |dst, src| {
+            fn d(src: f32) -> f32 {
+                if src <= 0.25 {
+                    ((16.0 * src - 12.0) * src + 4.0) * src
+                } else {
+                    src.sqrt()
+                }
+            }
+
+            if dst <= 0.5 {
+                src - (1.0 - 2.0 * dst) * src * (1.0 - src)
+            } else {
+                src + (2.0 * dst - 1.0) * (d(src) - src)
+            }
+        });
+    }
+
+    #[test]
+    fn test_blend_mode_difference() {
+        test_blend_mode(BlendMode::Difference, |dst, src| (dst - src).abs());
+    }
+
+    #[test]
+    fn test_blend_mode_exclusion() {
+        test_blend_mode(BlendMode::Exclusion, |dst, src| dst + src - 2.0 * dst * src);
     }
 }

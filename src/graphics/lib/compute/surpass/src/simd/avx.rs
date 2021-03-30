@@ -366,12 +366,12 @@ impl f32x8 {
         Self(unsafe { _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0) })
     }
 
-    fn min(self, other: Self) -> Self {
+    pub fn min(self, other: Self) -> Self {
         let mask = self.le(other);
         self.select(other, mask)
     }
 
-    fn max(self, other: Self) -> Self {
+    pub fn max(self, other: Self) -> Self {
         let mask = other.le(self);
         self.select(other, mask)
     }

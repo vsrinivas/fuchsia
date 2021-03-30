@@ -16,6 +16,7 @@ use crate::{
 };
 
 mod buffer_layout;
+#[macro_use]
 mod style;
 
 use buffer_layout::TileSlice;
@@ -247,9 +248,19 @@ impl Painter {
                     alphas[y] = fill[3] * coverages[y];
                     inv_alphas[y] = f32x8::splat(1.0) - alphas[y];
 
-                    let current_c0 = fill[0] * alphas[y];
-                    let current_c1 = fill[1] * alphas[y];
-                    let current_c2 = fill[2] * alphas[y];
+                    let [mut current_c0, mut current_c1, mut current_c2] = blend_function!(
+                        style.blend_mode,
+                        c0[y],
+                        c1[y],
+                        c2[y],
+                        fill[0],
+                        fill[1],
+                        fill[2],
+                    );
+
+                    current_c0 *= alphas[y];
+                    current_c1 *= alphas[y];
+                    current_c2 *= alphas[y];
                     let current_alpha = alphas[y];
 
                     c0[y] = c0[y].mul_add(inv_alphas[y], current_c0);

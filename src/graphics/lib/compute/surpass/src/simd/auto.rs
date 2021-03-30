@@ -408,6 +408,16 @@ impl f32x8 {
         self
     }
 
+    pub fn min(mut self, other: Self) -> Self {
+        self.0.iter_mut().zip(other.0.iter()).for_each(|(t, &o)| *t = t.min(o));
+        self
+    }
+
+    pub fn max(mut self, other: Self) -> Self {
+        self.0.iter_mut().zip(other.0.iter()).for_each(|(t, &o)| *t = t.max(o));
+        self
+    }
+
     pub fn clamp(mut self, min: Self, max: Self) -> Self {
         self.0
             .iter_mut()
