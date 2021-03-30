@@ -4,16 +4,14 @@
 
 use {
     crate::{HyperConnectorFuture, TcpOptions, TcpStream},
-    async_std::{
-        net,
-        task::{Context, Poll},
-    },
+    async_net as net,
     futures::io,
     http::uri::{Scheme, Uri},
     hyper::service::Service,
     log::warn,
     rustls::ClientConfig,
     std::net::ToSocketAddrs,
+    std::task::{Context, Poll},
 };
 
 pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {
@@ -120,7 +118,10 @@ mod test {
     async fn test_download_succeeds() -> Result<()> {
         let output: Vec<u8> = Vec::new();
         let status = fetch_url("https://www.google.com".parse::<hyper::Uri>()?, output).await?;
-        assert_eq!(StatusCode::OK, status);
+        match status {
+            StatusCode::OK | StatusCode::FOUND => {}
+            _ => assert!(false, "Unexpected status code: {}", status),
+        }
         Ok(())
     }
 

@@ -19,7 +19,7 @@ use {
 };
 
 #[cfg(not(target_os = "fuchsia"))]
-use async_std::net;
+use async_net as net;
 
 #[cfg(target_os = "fuchsia")]
 use fuchsia_async::net;
