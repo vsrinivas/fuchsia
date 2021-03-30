@@ -17,8 +17,6 @@
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_util.h"
 
-using scheduling::Present2Info;
-
 namespace scenic_impl {
 namespace gfx {
 namespace test {

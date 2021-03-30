@@ -274,7 +274,7 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
 void DefaultFrameScheduler::GetFuturePresentationInfos(
     zx::duration requested_prediction_span,
     FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
+  std::vector<FuturePresentationInfo> infos;
 
   PredictionRequest request;
   request.now = zx::time(async_now(dispatcher_));
@@ -295,11 +295,8 @@ void DefaultFrameScheduler::GetFuturePresentationInfos(
     request.requested_presentation_time = zx::time(0);
 
     PredictedTimes times = frame_predictor_->GetPrediction(request);
-    fuchsia::scenic::scheduling::PresentationInfo info =
-        fuchsia::scenic::scheduling::PresentationInfo();
-    info.set_latch_point(times.latch_point_time.get());
-    info.set_presentation_time(times.presentation_time.get());
-    infos.push_back(std::move(info));
+    infos.push_back(
+        {.latch_point = times.latch_point_time, .presentation_time = times.presentation_time});
 
     // The new now time is one tick after the returned latch point. This ensures uniqueness in the
     // results we give to the client since we know we cannot schedule a frame for a latch point in
@@ -375,10 +372,8 @@ void DefaultFrameScheduler::OnFramePresented(uint64_t frame_number, zx::time ren
                     "elapsed time since presentation", elapsed_since_presentation.get());
     }
 
-    auto presentation_info = fuchsia::images::PresentationInfo();
-    presentation_info.presentation_time = timestamps.actual_presentation_time.get();
-    presentation_info.presentation_interval = vsync_timing_->vsync_interval().get();
-    SignalPresentedUpTo(frame_number, presentation_info);
+    SignalPresentedUpTo(frame_number, /*presentation_time*/ timestamps.actual_presentation_time,
+                        /*presentation_interval*/ vsync_timing_->vsync_interval());
   }
   outstanding_latch_points_.pop_front();
 
@@ -547,8 +542,8 @@ void DefaultFrameScheduler::RemoveFailedSessions(
   }
 }
 
-void DefaultFrameScheduler::SignalPresentedUpTo(
-    uint64_t frame_number, fuchsia::images::PresentationInfo presentation_info) {
+void DefaultFrameScheduler::SignalPresentedUpTo(uint64_t frame_number, zx::time presentation_time,
+                                                zx::duration presentation_interval) {
   // Get last present_id up to |frame_number| for each session.
   std::unordered_map<SessionId, PresentId> last_updates;
   std::unordered_map<SessionId, std::map<PresentId, zx::time>> latched_times;
@@ -564,8 +559,8 @@ void DefaultFrameScheduler::SignalPresentedUpTo(
   }
 
   const PresentTimestamps present_timestamps{
-      .presented_time = zx::time(presentation_info.presentation_time),
-      .vsync_interval = zx::duration(presentation_info.presentation_interval),
+      .presented_time = zx::time(presentation_time),
+      .vsync_interval = zx::duration(presentation_interval),
   };
   for (auto updater : session_updaters_) {
     if (auto locked = updater.lock()) {

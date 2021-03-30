@@ -114,12 +114,10 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
               // The requested_prediction_span should be at least one frame.
 
               // Give back at least one info.
-              flatland::Flatland::FuturePresentationInfos presentation_infos;
-
-              fuchsia::scenic::scheduling::PresentationInfo info;
-              info.set_latch_point(5);
-              info.set_presentation_time(10);
-              presentation_infos.push_back(std::move(info));
+              std::vector<scheduling::FuturePresentationInfo> presentation_infos;
+              auto& info = presentation_infos.emplace_back();
+              info.latch_point = zx::time(5);
+              info.presentation_time = zx::time(10);
 
               callback(std::move(presentation_infos));
             }));

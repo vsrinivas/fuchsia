@@ -28,24 +28,18 @@ source_set("frame_scheduler") {
     "frame_scheduler.h",
     "frame_stats.cc",
     "frame_stats.h",
-    "present1_helper.cc",
-    "present1_helper.h",
-    "present2_helper.cc",
-    "present2_helper.h",
     "windowed_frame_predictor.cc",
     "windowed_frame_predictor.h",
   ]
   deps = [
     ":frame_metrics_registry",
-    "//sdk/fidl/fuchsia.images",
-    "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/inspect",
   ]
   public_deps = [
+    ":frame_scheduler_interface",
     ":id",
-    ":present2_info",
     ":vsync_timing",
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//third_party/cobalt/src/lib/client/cpp:buckets_config",
@@ -54,6 +48,15 @@ source_set("frame_scheduler") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+source_set("frame_scheduler_interface") {
+  sources = [ "frame_scheduler.h" ]
+  public_deps = [
+    ":id",
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
+  ]
 }
 
 source_set("vsync_timing") {
@@ -67,16 +70,21 @@ source_set("vsync_timing") {
   ]
 }
 
-source_set("present2_info") {
+source_set("present_helpers") {
   sources = [
-    "present2_info.cc",
-    "present2_info.h",
+    "present1_helper.cc",
+    "present1_helper.h",
+    "present2_helper.cc",
+    "present2_helper.h",
   ]
-
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/trace",
+  ]
   public_deps = [
+    ":frame_scheduler_interface",
     ":id",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/lib/syslog/cpp",
   ]
 }
 

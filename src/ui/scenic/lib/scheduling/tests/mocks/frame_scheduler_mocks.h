@@ -5,9 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_SCHEDULING_TESTS_MOCKS_FRAME_SCHEDULER_MOCKS_H_
 #define SRC_UI_SCENIC_LIB_SCHEDULING_TESTS_MOCKS_FRAME_SCHEDULER_MOCKS_H_
 
-#include <set>
+#include <deque>
 #include <unordered_map>
-#include <variant>
 
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
@@ -45,8 +44,7 @@ class MockFrameScheduler : public FrameScheduler {
   using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
   using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, SchedulingIdPair, bool)>;
   using OnGetFuturePresentationInfosCallback =
-      std::function<std::vector<fuchsia::scenic::scheduling::PresentationInfo>(
-          zx::duration requested_prediction_span)>;
+      std::function<std::vector<FuturePresentationInfo>(zx::duration requested_prediction_span)>;
   using RegisterPresentCallback = std::function<void(
       SessionId session_id, std::vector<zx::event> release_fences, PresentId present_id)>;
   using RemoveSessionCallback = std::function<void(SessionId session_id)>;

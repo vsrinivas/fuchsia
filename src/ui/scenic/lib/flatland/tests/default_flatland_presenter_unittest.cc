@@ -192,21 +192,22 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
 
   // Capture the relevant arguments of the GetFuturePresentationInfos() call.
   zx::duration last_requested_prediction_span;
-  const uint32_t kLatchPoint = 15122;
-  const uint32_t kPresentationTime = 15410;
+  const zx::time kLatchPoint = zx::time(15122);
+  const zx::time kPresentationTime = zx::time(15410);
   frame_scheduler->set_get_future_presentation_infos_callback(
-      [&last_requested_prediction_span](zx::duration requested_prediction_span) {
+      [&last_requested_prediction_span, kLatchPoint,
+       kPresentationTime](zx::duration requested_prediction_span) {
         last_requested_prediction_span = requested_prediction_span;
-        std::vector<fuchsia::scenic::scheduling::PresentationInfo> presentation_infos(1);
-        presentation_infos[0].set_latch_point(kLatchPoint);
-        presentation_infos[0].set_presentation_time(kPresentationTime);
+        std::vector<scheduling::FuturePresentationInfo> presentation_infos(1);
+        presentation_infos[0].latch_point = kLatchPoint;
+        presentation_infos[0].presentation_time = kPresentationTime;
         return presentation_infos;
       });
 
   auto presenter = CreateDefaultFlatlandPresenter();
   presenter.SetFrameScheduler(frame_scheduler);
 
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> presentation_infos;
+  std::vector<scheduling::FuturePresentationInfo> presentation_infos;
   presenter.GetFuturePresentationInfos(
       [&presentation_infos](auto infos) { presentation_infos = std::move(infos); });
   RunLoopUntilIdle();
@@ -214,8 +215,8 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
   // The requested prediction span should be reasonable - greater than 1 frame's worth of data.
   EXPECT_GT(last_requested_prediction_span, zx::msec(17));
   EXPECT_EQ(presentation_infos.size(), 1u);
-  EXPECT_EQ(presentation_infos[0].latch_point(), kLatchPoint);
-  EXPECT_EQ(presentation_infos[0].presentation_time(), kPresentationTime);
+  EXPECT_EQ(presentation_infos[0].latch_point, kLatchPoint);
+  EXPECT_EQ(presentation_infos[0].presentation_time, kPresentationTime);
 }
 
 TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
@@ -248,13 +249,9 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
 
   frame_scheduler->set_get_future_presentation_infos_callback(
       [&function_count](zx::duration requested_prediction_span)
-          -> std::vector<fuchsia::scenic::scheduling::PresentationInfo> {
+          -> std::vector<scheduling::FuturePresentationInfo> {
         ++function_count;
-        std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
-        fuchsia::scenic::scheduling::PresentationInfo info;
-        info.set_latch_point(0);
-        info.set_presentation_time(0);
-        infos.push_back(std::move(info));
+        std::vector<scheduling::FuturePresentationInfo> infos;
         return infos;
       });
 

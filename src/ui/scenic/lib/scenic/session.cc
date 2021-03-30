@@ -209,9 +209,17 @@ void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_pred
     locked_frame_scheduler->GetFuturePresentationInfos(
         zx::duration(requested_prediction_span),
         [weak = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
-            std::vector<fuchsia::scenic::scheduling::PresentationInfo> presentation_infos) {
-          if (weak)
-            callback({std::move(presentation_infos), weak->num_presents_allowed_});
+            std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
+          if (weak) {
+            std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
+            for (auto& presentation_info : presentation_infos) {
+              auto& info = infos.emplace_back();
+              info.set_latch_point(presentation_info.latch_point.get());
+              info.set_presentation_time(presentation_info.presentation_time.get());
+            }
+
+            callback({std::move(infos), weak->num_presents_allowed_});
+          }
         });
   }
 }

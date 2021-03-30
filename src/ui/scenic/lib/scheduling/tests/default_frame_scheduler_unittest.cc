@@ -481,18 +481,18 @@ TEST_F(FrameSchedulerTest, SinglePredictedPresentation_ShouldBeReasonable) {
   zx::time next_vsync = vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval();
 
   // Ask for a prediction for one frame into the future.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
   scheduler->GetFuturePresentationInfos(zx::duration(0), [&](auto future_presents) {
     predicted_presents = std::move(future_presents);
   });
 
   EXPECT_GE(predicted_presents.size(), 1u);
-  EXPECT_EQ(predicted_presents[0].presentation_time(), next_vsync.get());
+  EXPECT_EQ(predicted_presents[0].presentation_time, next_vsync);
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = std::move(predicted_presents[i]);
-    EXPECT_LT(current.latch_point(), current.presentation_time());
-    EXPECT_GE(current.latch_point(), Now().get());
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, Now());
   }
 }
 
@@ -514,18 +514,18 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   RunLoopUntil(vsync1);
 
   // Ask for a prediction.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
   scheduler->GetFuturePresentationInfos(zx::duration(0), [&](auto future_presents) {
     predicted_presents = std::move(future_presents);
   });
 
   EXPECT_GE(predicted_presents.size(), 1u);
-  EXPECT_EQ(predicted_presents[0].presentation_time(), vsync2.get());
+  EXPECT_EQ(predicted_presents[0].presentation_time, vsync2);
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = std::move(predicted_presents[i]);
-    EXPECT_LT(current.latch_point(), current.presentation_time());
-    EXPECT_GE(current.latch_point(), Now().get());
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, Now());
   }
 }
 
@@ -542,7 +542,7 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
   EXPECT_GT(vsync_timing_->vsync_interval(), zx::duration(0));
 
   // Ask for a prediction a few frames into the future.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
   scheduler->GetFuturePresentationInfos(
       zx::duration((vsync4 - vsync0).get()),
       [&](auto future_presents) { predicted_presents = std::move(future_presents); });
@@ -554,11 +554,11 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = std::move(predicted_presents[i]);
-    EXPECT_LT(current.latch_point(), current.presentation_time());
-    EXPECT_GE(current.latch_point(), Now().get());
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, Now());
 
     if (i > 0)
-      EXPECT_LT(past_prediction.presentation_time(), current.presentation_time());
+      EXPECT_LT(past_prediction.presentation_time, current.presentation_time);
 
     past_prediction = std::move(current);
   }
@@ -570,7 +570,7 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
   zx::time next_vsync = vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval();
 
   // Ask for an extremely large prediction duration.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
   scheduler->GetFuturePresentationInfos(zx::duration(INTMAX_MAX), [&](auto future_presents) {
     predicted_presents = std::move(future_presents);
   });
@@ -578,12 +578,12 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
   constexpr static const uint64_t kOverlyLargeRequestCount = 100u;
 
   EXPECT_LE(predicted_presents.size(), kOverlyLargeRequestCount);
-  EXPECT_EQ(predicted_presents[0].presentation_time(), next_vsync.get());
+  EXPECT_EQ(predicted_presents[0].presentation_time, next_vsync);
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = std::move(predicted_presents[i]);
-    EXPECT_LT(current.latch_point(), current.presentation_time());
-    EXPECT_GE(current.latch_point(), Now().get());
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, Now());
   }
 }
 

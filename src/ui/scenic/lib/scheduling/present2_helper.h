@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_SCHEDULING_PRESENT2_HELPER_H_
 #define SRC_UI_SCENIC_LIB_SCHEDULING_PRESENT2_HELPER_H_
 
+#include <fuchsia/scenic/scheduling/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"

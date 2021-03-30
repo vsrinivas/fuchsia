@@ -11,6 +11,7 @@
 #include <lib/zx/time.h>
 
 #include <list>
+#include <queue>
 
 #include "lib/inspect/cpp/inspect.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
@@ -99,8 +100,8 @@ class DefaultFrameScheduler final : public FrameScheduler {
   bool HaveUpdatableSessions() const { return !pending_present_requests_.empty(); }
 
   // Signal all SessionUpdaters that frames up to |frame_number| have been presented.
-  void SignalPresentedUpTo(uint64_t frame_number,
-                           fuchsia::images::PresentationInfo presentation_info);
+  void SignalPresentedUpTo(uint64_t frame_number, zx::time presentation_time,
+                           zx::duration presentation_interval);
 
   // Get map of latch times for each present up to |id_pair.present_id| for |id_pair.session_id|.
   std::map<PresentId, zx::time> ExtractLatchTimestampsUpTo(SchedulingIdPair id_pair);

@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/scheduling/present1_helper.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 namespace scheduling {

@@ -5,6 +5,9 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_DEFAULT_FLATLAND_PRESENTER_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_DEFAULT_FLATLAND_PRESENTER_H_
 
+#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 

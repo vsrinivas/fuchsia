@@ -27,7 +27,6 @@
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
-#include "src/ui/scenic/lib/scheduling/present2_info.h"
 
 namespace scenic_impl {
 namespace gfx {

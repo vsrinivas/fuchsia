@@ -56,7 +56,8 @@ source_set("flatland") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ui/scenic/lib/gfx:object_linker",
-    "//src/ui/scenic/lib/scheduling:frame_scheduler",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
+    "//src/ui/scenic/lib/scheduling:present_helpers",
     "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/trace",
   ]

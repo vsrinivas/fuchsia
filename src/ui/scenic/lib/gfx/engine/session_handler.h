@@ -56,9 +56,6 @@ class SessionHandler : public TempSessionDelegate {
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void SetDebugName(const std::string& debug_name) override { session_->SetDebugName(debug_name); }
 
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
-      zx::duration requested_prediction_span) override;
-
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 

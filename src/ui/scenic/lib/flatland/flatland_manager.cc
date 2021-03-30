@@ -67,13 +67,19 @@ void FlatlandManager::CreateFlatland(
     //
     // `this` is safe to capture, as the callback is guaranteed to run on the calling thread.
     flatland_presenter_->GetFuturePresentationInfos(
-        [this, id](Flatland::FuturePresentationInfos presentation_infos) {
+        [this, id](std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
+          Flatland::FuturePresentationInfos infos;
+          for (const auto& presentation_info : presentation_infos) {
+            auto& info = infos.emplace_back();
+            info.set_latch_point(presentation_info.latch_point.get());
+            info.set_presentation_time(presentation_info.presentation_time.get());
+          }
           // The Flatland instance may have been destroyed since the call was made.
           auto instance = flatland_instances_.find(id);
           if (instance != flatland_instances_.end()) {
             SendPresentTokens(instance->second.get(),
                               scheduling::FrameScheduler::kMaxPresentsInFlight - 1u,
-                              std::move(presentation_infos));
+                              std::move(infos));
           }
         });
   });
@@ -110,7 +116,7 @@ void FlatlandManager::OnCpuWorkDone() {
   //
   // `this` is safe to capture, as the callback is guaranteed to run on the calling thread.
   flatland_presenter_->GetFuturePresentationInfos(
-      [this](Flatland::FuturePresentationInfos presentation_infos) {
+      [this](std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
         for (const auto& [session_id, num_present_tokens] : flatland_instances_updated_) {
           auto instance_kv = flatland_instances_.find(session_id);
 
@@ -124,8 +130,8 @@ void FlatlandManager::OnCpuWorkDone() {
           for (size_t i = 0; i < presentation_infos.size(); ++i) {
             auto& info = presentation_infos[i];
             fuchsia::scenic::scheduling::PresentationInfo info_copy;
-            info_copy.set_latch_point(info.latch_point());
-            info_copy.set_presentation_time(info.presentation_time());
+            info_copy.set_latch_point(info.latch_point.get());
+            info_copy.set_presentation_time(info.presentation_time.get());
             presentation_infos_copy[i] = std::move(info_copy);
           }
 

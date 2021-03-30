@@ -53,7 +53,7 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
     frame_scheduler1->set_set_render_continuously_callback(
         [&](auto...) { num_set_render_continuosly_callbacks++; });
     frame_scheduler1->set_get_future_presentation_infos_callback(
-        [&](auto...) -> std::vector<fuchsia::scenic::scheduling::PresentationInfo> {
+        [&](auto...) -> std::vector<scheduling::FuturePresentationInfo> {
           num_get_future_presentation_infos_callbacks++;
           return {};
         });

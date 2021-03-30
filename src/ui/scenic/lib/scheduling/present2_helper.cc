@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/async/time.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 namespace scheduling {

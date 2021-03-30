@@ -5,24 +5,26 @@
 #ifndef SRC_UI_SCENIC_LIB_SCHEDULING_FRAME_SCHEDULER_H_
 #define SRC_UI_SCENIC_LIB_SCHEDULING_FRAME_SCHEDULER_H_
 
-#include <fuchsia/images/cpp/fidl.h>
-#include <fuchsia/scenic/scheduling/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/zx/event.h>
 #include <lib/zx/time.h>
 
-#include <queue>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
-#include <variant>
 
 #include "src/ui/scenic/lib/scheduling/id.h"
-#include "src/ui/scenic/lib/scheduling/present2_info.h"
 
 namespace scheduling {
 
 struct PresentTimestamps {
   zx::time presented_time = zx::time(0);
   zx::duration vsync_interval = zx::duration(0);
+};
+
+struct FuturePresentationInfo {
+  zx::time latch_point = zx::time(0);
+  zx::time presentation_time = zx::time(0);
 };
 
 // Interface for performing session updates.
@@ -122,7 +124,7 @@ class FrameScheduler {
   // Gets the predicted latch points and presentation times for the frames at or before the next
   // |requested_prediction_span| time span. Uses the FramePredictor to do so.
   using GetFuturePresentationInfosCallback =
-      fit::function<void(std::vector<fuchsia::scenic::scheduling::PresentationInfo>)>;
+      fit::function<void(std::vector<FuturePresentationInfo>)>;
   virtual void GetFuturePresentationInfos(zx::duration requested_prediction_span,
                                           GetFuturePresentationInfosCallback callback) = 0;
 
