@@ -3127,6 +3127,9 @@ class TestProtocol final {
   TestProtocol() = delete;
 
  public:
+  class StrictXUnionHenceResponseMayBeStackAllocated;
+  class FlexibleXUnionHenceResponseMustBeHeapAllocated;
+
   struct StrictXUnionHenceResponseMayBeStackAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

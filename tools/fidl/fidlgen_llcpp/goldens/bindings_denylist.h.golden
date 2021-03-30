@@ -143,6 +143,8 @@ class OnlyLibfuzzerAndDeps final {
   OnlyLibfuzzerAndDeps() = delete;
 
  public:
+  class LibfuzzerNeedsNonemptyProtocol;
+
   struct LibfuzzerNeedsNonemptyProtocolResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

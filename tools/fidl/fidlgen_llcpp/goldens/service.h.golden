@@ -60,6 +60,8 @@ class SecondProtocol final {
   SecondProtocol() = delete;
 
  public:
+  class MethodOnSecond;
+
   struct MethodOnSecondRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -380,6 +382,8 @@ class FirstProtocol final {
   FirstProtocol() = delete;
 
  public:
+  class MethodOnFirst;
+
   struct MethodOnFirstRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

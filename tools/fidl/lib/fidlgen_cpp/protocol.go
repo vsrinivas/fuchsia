@@ -354,6 +354,7 @@ type methodInner struct {
 type Method struct {
 	methodInner
 	NameInLowerSnakeCase string
+	Marker               NameVariants
 	OrdinalName          NameVariants
 	Request              message
 	Response             message
@@ -418,6 +419,7 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 	m := Method{
 		methodInner:          inner,
 		NameInLowerSnakeCase: fidlgen.ToSnakeCase(inner.Name),
+		Marker:               inner.protocolName.Nest(inner.Name),
 		OrdinalName: NameVariants{
 			Natural: inner.protocolName.Natural.Namespace().Append("internal").Member(ordinalName),
 			Wire:    inner.protocolName.Wire.Namespace().Member(ordinalName),

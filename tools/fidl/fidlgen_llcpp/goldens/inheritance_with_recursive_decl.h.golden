@@ -52,6 +52,8 @@ class Parent final {
   Parent() = delete;
 
  public:
+  class First;
+
   struct FirstRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -444,6 +446,9 @@ class Child final {
   Child() = delete;
 
  public:
+  class First;
+  class Second;
+
   struct FirstRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

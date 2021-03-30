@@ -52,6 +52,8 @@ class Top final {
   Top() = delete;
 
  public:
+  class GetFoo;
+
   struct GetFooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

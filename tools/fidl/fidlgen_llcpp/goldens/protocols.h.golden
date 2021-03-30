@@ -900,6 +900,10 @@ class Transitional final {
   Transitional() = delete;
 
  public:
+  class Request;
+  class OneWay;
+  class Event;
+
   struct RequestResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -1802,6 +1806,12 @@ class ChannelProtocol final {
   ChannelProtocol() = delete;
 
  public:
+  class MethodA;
+  class EventA;
+  class MethodB;
+  class TakeHandle;
+  class MutateSocket;
+
   struct MethodARequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -3600,6 +3610,15 @@ class WithAndWithoutRequestResponse final {
   WithAndWithoutRequestResponse() = delete;
 
  public:
+  class NoRequestNoResponse;
+  class NoRequestEmptyResponse;
+  class NoRequestWithResponse;
+  class WithRequestNoResponse;
+  class WithRequestEmptyResponse;
+  class WithRequestWithResponse;
+  class OnEmptyResponse;
+  class OnWithResponse;
+
   struct NoRequestNoResponseRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -6151,6 +6170,10 @@ class WithErrorSyntax final {
   WithErrorSyntax() = delete;
 
  public:
+  class ResponseAsStruct;
+  class ErrorAsPrimitive;
+  class ErrorAsEnum;
+
   struct ResponseAsStructResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

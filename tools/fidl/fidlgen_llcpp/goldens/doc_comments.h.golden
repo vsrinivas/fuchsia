@@ -814,6 +814,15 @@ class Interface final {
   Interface() = delete;
 
  public:
+  // method comment #1
+  //
+  // method comment #3
+  class Method;
+  // event comment #1
+  //
+  // event comment #3
+  class OnEvent;
+
   struct MethodRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

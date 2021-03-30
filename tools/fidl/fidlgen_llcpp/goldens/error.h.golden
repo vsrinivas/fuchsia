@@ -288,6 +288,8 @@ class Example final {
   Example() = delete;
 
  public:
+  class foo;
+
   struct fooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

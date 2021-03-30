@@ -157,6 +157,10 @@ class EmptyProtocol final {
   EmptyProtocol() = delete;
 
  public:
+  class Send;
+  class Receive;
+  class SendAndReceive;
+
   struct SendRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

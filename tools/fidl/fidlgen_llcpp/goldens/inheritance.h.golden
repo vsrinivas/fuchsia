@@ -50,6 +50,8 @@ class super final {
   super() = delete;
 
  public:
+  class foo;
+
   struct fooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -577,6 +579,8 @@ class sub final {
   sub() = delete;
 
  public:
+  class foo;
+
   struct fooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

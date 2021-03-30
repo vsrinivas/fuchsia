@@ -340,6 +340,9 @@ class Protocol final {
   Protocol() = delete;
 
  public:
+  class RequestStrictResponseFlexible;
+  class RequestFlexibleResponseStrict;
+
   struct RequestStrictResponseFlexibleResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

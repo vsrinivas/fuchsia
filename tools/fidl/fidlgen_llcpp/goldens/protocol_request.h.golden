@@ -70,6 +70,11 @@ class Parent final {
   Parent() = delete;
 
  public:
+  class GetChild;
+  class GetChildRequest;
+  class TakeChild;
+  class TakeChildRequest;
+
   struct GetChildResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

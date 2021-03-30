@@ -616,6 +616,8 @@ class ExampleProtocol final {
   ExampleProtocol() = delete;
 
  public:
+  class Method;
+
   struct MethodRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;

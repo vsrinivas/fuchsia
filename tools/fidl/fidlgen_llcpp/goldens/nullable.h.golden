@@ -870,6 +870,8 @@ class SimpleProtocol final {
   SimpleProtocol() = delete;
 
  public:
+  class Add;
+
   struct AddResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
