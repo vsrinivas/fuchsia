@@ -1,0 +1,96 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// These augmentation protocols represent powerful introspection capabilities
+/// into the view hierarchy, and must be individually routed to specific target
+/// components. Most clients should not have access to these protocols. Some
+/// commonalities:
+/// - Theory of operation. These augmentation protocols accept a standard
+///   protocol endpoint and return an augmented protocol endpoint. In case of
+///   error, the original endpoint is returned.
+/// - View hierarchy scope. The reach of the augmented protocols are inherently
+///   bound to the original protocols they augment. That is, if the original
+///   protocol has power over only one view, the augmented protocol gives access
+///   to only that view.
+/// - Security warning. These protocols enable a form of clickjacking! While the
+///   view hierarchy prevents clickjacking of arbitrary views, care must be
+///   taken to route these augmentation protocols to the intended view's
+///   component.
+/// - Security guarantees. These protocols offer Confidentiality, Integrity, and
+///   Availability of the augmented data to authorized components. That is,
+///   non-authorized components cannot snoop on this data, modify its contents,
+///   or prevent its dispatch to authorized components.
+/// - Append semantics. Each augmentation provides augmentation-specific data to
+///   the protocol's regular event, but otherwise is not intended to modify the
+///   original protocol's basic functionality.
+/// - Synchronicity. The augmentation-specific data is synchronous with the
+///   original protocol's data.
+/// - API evolution. Server-side can introduce new methods to these protocols,
+///   and new fields to these tables, without breaking existing clients of the
+///   original or augmented protocol. For example, [`MouseEventWithGlobalMouse`]
+///   can be extended without consequences for
+///   [`fuchsia.ui.pointer.MouseEvent`].
+/// - API evolution. When clients require substantially different augmentation,
+///   new augmentation protocols representing those capabilities can (and
+///   should) be introduced. For example, if one client of [`GlobalMouse`]
+///   requires additional fields that are really about view-local hit data, it
+///   would be reasonable to mint a new augmentation.
+library fuchsia.ui.pointer.augment;
+
+using fuchsia.ui.pointer as pointer;
+
+/// Abnormal conditions for augmentation protocols.
+enum ErrorReason {
+    /// The augmentation attempt was denied.
+    DENIED = 1;
+};
+
+// GLOBAL MOUSE AUGMENTATION
+
+/// Abnormal return for global mouse.
+resource struct ErrorForGlobalMouse {
+    /// Abnormal reason for return.
+    ErrorReason error_reason;
+
+    /// Original protocol endpoint for client use.
+    pointer.MouseSource original;
+};
+
+/// A method for a client to receive view-global visibility for mouse behavior.
+/// - The augmented data are scoped to the view of the client.
+protocol GlobalMouse {
+    /// An exchange from an `original` mouse protocol endpoint to an `augmented`
+    /// mouse protocol endpoint. If successful, `error` is empty, `original` is
+    /// consumed, and `augmented` is returned for the client's use. Otherwise,
+    /// the `error` carries back `original` for the client's use, and
+    /// `augmented` is null.
+    Upgrade(pointer.MouseSource original) -> (MouseSourceWithGlobalMouse? augmented, ErrorForGlobalMouse? error);
+};
+
+/// Like [`fuchsia.ui.pointer.MouseSource`], but with additional information
+/// about the global position of mouse events, and otherwise identical in
+/// operation. See [`fuchsia.ui.pointer.MouseSource`] for regular usage
+/// information.
+protocol MouseSourceWithGlobalMouse {
+    /// Identical usage to [`fuchsia.ui.pointer.MouseSource.Watch`], but with
+    /// augmented data.
+    Watch() -> (vector<MouseEventWithGlobalMouse>:pointer.MOUSE_MAX_EVENT events);
+};
+
+/// An augmentation of [`fuchsia.ui.pointer.MouseEvent`] to provide view-global
+/// visibility for mouse behavior.
+/// - The augmented data are scoped to the view of the client.
+table MouseEventWithGlobalMouse {
+    /// Identical usage to [`fuchsia.ui.pointer.MouseEvent`]. In particular, if
+    /// the client's view is obscured, `mouse_event` will be empty.
+    1: pointer.MouseEvent mouse_event;
+
+    /// Augmented data that describes the position of a `mouse_event` within the
+    /// client's view, regardless of obscuring or latching.
+    2: pointer.MousePointerSample global_position;
+
+    /// Augmented data that describes when the mouse stream enters or exits
+    /// the client's view.
+    3: pointer.MouseEventStreamInfo global_stream_info;
+};

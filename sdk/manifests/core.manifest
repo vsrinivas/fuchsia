@@ -106,6 +106,7 @@ sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.pointer
+sdk://fidl/fuchsia.ui.pointer.augment
 sdk://fidl/fuchsia.ui.pointerinjector
 sdk://fidl/fuchsia.ui.policy
 sdk://fidl/fuchsia.ui.scenic

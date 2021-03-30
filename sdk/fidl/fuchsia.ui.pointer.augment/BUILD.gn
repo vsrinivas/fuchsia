@@ -5,7 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.pointer.augment") {
-  sdk_category = "experimental"
+  sdk_category = "partner"
 
-  sources = [ "upgrades.fidl" ]
+  sources = [ "augment.fidl" ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.ui.pointer" ]
 }

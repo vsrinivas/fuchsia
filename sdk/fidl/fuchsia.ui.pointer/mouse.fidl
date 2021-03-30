@@ -71,15 +71,16 @@ table MouseEvent {
 
     /// A description of each sampled data point in a mouse event stream.
     ///
-    /// Issuance policy. The stream can be "latched" to at most one client,
-    /// where the stream is dispatched fully and solely to that client,
-    /// regardless of view boundary, until unlatched. When "unlatched", the
-    /// stream is dispatched in fragments to the visible client that each mouse
-    /// event "hovers" over.
+    /// Issuance policy. There are two dispatch modes, "hover" and "latched".
+    /// Hover mode is default, and the stream is dispatched in fragments to the
+    /// visible client that each mouse event hovers above. Latched mode directs
+    /// the stream to a single client (regardless of view boundary) until
+    /// unlatched. Latched mode is typically toggled when the user presses the
+    /// primary mouse button, but is ultimately a product-specific policy.
     4: MousePointerSample pointer_sample;
 
-    /// The signal for view entry/exit on unlatched mouse events ("hover").
-    /// - It is issued on unlatched entry into a view, and unlatched exit from a view.
+    /// The signal for view entry/exit in hover mode.
+    /// - It is issued on hover entry into a view, and hover exit from a view.
     5: MouseEventStreamInfo stream_info;
 
     /// An identifier to correlate this event's send/receive occurrence across
@@ -94,10 +95,10 @@ table MouseDeviceInfo {
     1: uint32 id;
 
     /// Range of vertical scroll values issued by the device.
-    2: fuchsia.input.report.Axis scroll_v_range;
+    2: device.Axis scroll_v_range;
 
     /// Range of horizontal scroll values issued by the device.
-    3: fuchsia.input.report.Axis scroll_h_range;
+    3: device.Axis scroll_h_range;
 
     /// Button identifiers issued by the device.
     4: vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS buttons;
