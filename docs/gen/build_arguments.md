@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1537
+From //build/config/BUILDCONFIG.gn:1543
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -1080,7 +1080,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1294
+From //build/config/BUILDCONFIG.gn:1300
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1211,15 +1211,6 @@ non-SDK buildroots.
 
 From //build/fuchsia/sdk.gni:17
 
-### fuchsia_zbi_bootfs_filelist_golden
-An optional golden file for fuchsia.zbi bootFS file list. If specified,
-this golden file would be compared against fuchsia.zbi bootFS file list
-during build time.
-
-**Current value (from the default):** `""`
-
-From //build/security.gni:21
-
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional lit of golden files for fuchsia.zbi bootFS file list. If
 specified, they would be compared against fuchsia.zbi bootFS file list
@@ -1237,16 +1228,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:71
-
-### fuchsia_zbi_kernel_cmdline_golden
-An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
-this golden file would be compared against fuchsia.zbi kernel cmdline during
-build time.
-
-**Current value (from the default):** `""`
-
-From //build/security.gni:11
+From //build/security.gni:51
 
 ### fuchsia_zbi_kernel_cmdline_goldens
 An optional list of golden files for fuchsia.zbi kernel cmdline args. If
@@ -1265,7 +1247,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:41
+From //build/security.gni:21
 
 ### fvm_emmc_partition_size
 The size in bytes of the FVM partition on the target eMMC devices.
@@ -1755,13 +1737,13 @@ Each element of the list is one variant, which is a scope defining:
   tags = ["lto"]
 }, {
   configs = ["//build/config/profile:coverage"]
-  tags = ["instrumented", "profile"]
+  tags = ["instrumented", "coverage"]
 }, {
   configs = ["//build/config/profile"]
   tags = ["instrumented", "profile"]
 }, {
   configs = ["//build/config/profile:rustcoverage"]
-  tags = ["instrumented", "profile"]
+  tags = ["instrumented", "coverage"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
@@ -1832,7 +1814,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1153
+From //build/config/BUILDCONFIG.gn:1159
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2839,15 +2821,6 @@ Path to file to use for recovery logo
 
 From //src/recovery/system/system_recovery_args.gni:7
 
-### recovery_zbi_bootfs_filelist_golden
-An optional golden file for recovery.zbi bootFS file list. If specified,
-this golden file would be compared against recovery.zbi bootFS file list
-during build time.
-
-**Current value (from the default):** `""`
-
-From //build/security.gni:26
-
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
 specified, they would be compared against recovery.zbi bootFS file list
@@ -2865,16 +2838,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:86
-
-### recovery_zbi_kernel_cmdline_golden
-An optional golden file for recovery.zbi kernel cmdline args. If specified,
-this golden file would be compared against recovery.zbi kernel cmdline
-during build time.
-
-**Current value (from the default):** `""`
-
-From //build/security.gni:16
+From //build/security.gni:66
 
 ### recovery_zbi_kernel_cmdline_goldens
 An optional list of golden files for recovery.zbi kernel cmdline args. If
@@ -2893,7 +2857,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:56
+From //build/security.gni:36
 
 ### run_slow_bssl_tests
 
@@ -3154,7 +3118,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1527
+From //build/config/BUILDCONFIG.gn:1533
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3163,7 +3127,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1532
+From //build/config/BUILDCONFIG.gn:1538
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3207,7 +3171,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1340
+From //build/config/BUILDCONFIG.gn:1346
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3391,7 +3355,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:99
+From //build/security.gni:79
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -3504,7 +3468,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1324
+From //build/config/BUILDCONFIG.gn:1330
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
