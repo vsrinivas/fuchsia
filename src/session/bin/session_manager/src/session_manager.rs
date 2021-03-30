@@ -16,7 +16,7 @@ use {
         LauncherRequestStream, RestartError, RestarterRequest, RestarterRequestStream,
     },
     fidl_fuchsia_sessionmanager::StartupRequestStream,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_lifecycle as fui_lifecycle,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
@@ -49,9 +49,6 @@ struct SessionManagerState {
     realm: fsys::RealmProxy,
 }
 
-pub type UILifecycleFactory =
-    dyn Fn() -> Option<fui_lifecycle::LifecycleControllerProxy> + Send + Sync + 'static;
-
 /// Manages the session lifecycle and provides services to control the session.
 #[derive(Clone)]
 pub struct SessionManager {
@@ -63,7 +60,6 @@ impl SessionManager {
     ///
     /// # Parameters
     /// - `realm`: The realm in which sessions will be launched.
-    /// - `scenic_lifecycle`: Proxy to the scenic lifecycle service.
     pub fn new(realm: fsys::RealmProxy) -> Self {
         let state =
             SessionManagerState { session_url: None, session_exposed_dir_channel: None, realm };
@@ -408,8 +404,7 @@ mod tests {
             ElementManagerMarker, ElementManagerRequest, ElementSpec, LaunchConfiguration,
             LauncherMarker, LauncherProxy, RestartError, RestarterMarker, RestarterProxy,
         },
-        fidl_fuchsia_sys2 as fsys,
-        fuchsia_async as fasync,
+        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
         futures::prelude::*,
         matches::assert_matches,
     };
@@ -509,44 +504,6 @@ mod tests {
     /// Verifies that Launcher.Restart restarts an existing session.
     #[fasync::run_until_stalled(test)]
     async fn test_restart() {
-        let session_url = "session";
-
-        let realm = spawn_realm_server(move |realm_request| {
-            match realm_request {
-                fsys::RealmRequest::DestroyChild { child: _, responder } => {
-                    let _ = responder.send(&mut Ok(()));
-                }
-                fsys::RealmRequest::CreateChild { collection: _, decl, responder } => {
-                    assert_eq!(decl.url.unwrap(), session_url);
-                    let _ = responder.send(&mut Ok(()));
-                }
-                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                    let _ = responder.send(&mut Ok(()));
-                }
-                _ => {
-                    assert!(false);
-                }
-            };
-        });
-
-        let session_manager = SessionManager::new(realm);
-        let (launcher, restarter) = serve_session_manager_services(session_manager);
-
-        assert!(launcher
-            .launch(LaunchConfiguration {
-                session_url: Some(session_url.to_string()),
-                ..LaunchConfiguration::EMPTY
-            })
-            .await
-            .expect("could not call Launch")
-            .is_ok());
-
-        assert!(restarter.restart().await.expect("could not call Restart").is_ok());
-    }
-
-    /// Verifies that scenic is shut down on restart.
-    #[fasync::run_until_stalled(test)]
-    async fn test_restart_scenic() {
         let session_url = "session";
 
         let realm = spawn_realm_server(move |realm_request| {
