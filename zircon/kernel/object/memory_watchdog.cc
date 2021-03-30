@@ -165,7 +165,10 @@ void MemoryWatchdog::WorkerThread() {
 
       // Trigger eviction if the memory availability state is more critical than the previous one,
       // and we're configured to evict at that level.
-      if (idx < prev_mem_event_idx_ && idx <= max_eviction_level_) {
+      // Do not trigger asynchronous eviction at OOM level, since we already performed synchronous
+      // eviction above. Also, we're about to signal filesystems to shut down, after which eviction
+      // will be a no-op anyway, since there will no longer be any pager-backed memory to evict.
+      if (idx < prev_mem_event_idx_ && idx <= max_eviction_level_ && idx != 0) {
         // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
         // with the callback and are free to update the targets. Cancel will return true if the
         // timer was canceled before it was scheduled on a cpu, i.e. an eviction was outstanding.
