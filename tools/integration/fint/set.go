@@ -17,6 +17,7 @@ import (
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
 	"go.fuchsia.dev/fuchsia/tools/lib/isatty"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 )
@@ -99,6 +100,15 @@ func runGen(
 	gn := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "gn")
 
 	formattedArgs := gnFormat(ctx, gn, runner, args)
+	logger.Infof(ctx, "GN args:\n%s", formattedArgs)
+
+	// gn will return an error if the argument list is too long, so write the
+	// args directly to the build dir instead of using the --args flag.
+	if f, err := osmisc.CreateFile(filepath.Join(contextSpec.BuildDir, "args.gn")); err != nil {
+		return "", fmt.Errorf("failed to create args.gn: %v", err)
+	} else if _, err := io.WriteString(f, formattedArgs); err != nil {
+		return "", fmt.Errorf("failed to write args.gn: %v", err)
+	}
 
 	genCmd := []string{
 		gn,
@@ -137,8 +147,6 @@ func runGen(
 	for _, s := range staticSpec.JsonIdeScripts {
 		genCmd = append(genCmd, fmt.Sprintf("--json-ide-script=%s", s))
 	}
-
-	genCmd = append(genCmd, fmt.Sprintf("--args=\n%s", formattedArgs))
 
 	// When `gn gen` fails, it outputs a brief helpful error message to stdout.
 	var stdoutBuf bytes.Buffer

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -46,7 +47,7 @@ func TestRunSteps(t *testing.T) {
 
 	contextSpec := &fintpb.Context{
 		CheckoutDir: "/path/to/checkout",
-		BuildDir:    "/path/to/out/default",
+		BuildDir:    t.TempDir(),
 		ArtifactDir: "/tmp/fint-set-artifacts",
 	}
 	staticSpec := &fintpb.Static{
@@ -128,7 +129,7 @@ func TestRunGen(t *testing.T) {
 
 	contextSpec := fintpb.Context{
 		CheckoutDir: "/path/to/checkout",
-		BuildDir:    "/path/to/out/default",
+		BuildDir:    t.TempDir(),
 	}
 
 	testCases := []struct {
@@ -206,8 +207,8 @@ func TestRunGen(t *testing.T) {
 				t.Fatalf("runGen ran wrong command: %v", cmd)
 			}
 
-			exe, subcommand, buildDir, argsOption := cmd[0], cmd[1], cmd[2], cmd[len(cmd)-1]
-			otherOptions := cmd[3 : len(cmd)-1]
+			exe, subcommand, buildDir := cmd[0], cmd[1], cmd[2]
+			otherOptions := cmd[3:]
 			if filepath.Base(exe) != "gn" {
 				t.Errorf("runGen ran wrong GN executable: wanted basename %q, got %q", "gn", exe)
 			}
@@ -217,8 +218,8 @@ func TestRunGen(t *testing.T) {
 			if buildDir != contextSpec.BuildDir {
 				t.Errorf("Expected runGen to use build dir from context (%s) but got %s", contextSpec.BuildDir, buildDir)
 			}
-			if !strings.HasPrefix(argsOption, "--args=") {
-				t.Errorf("Expected runGen to pass --args as last flag")
+			if _, err := os.Stat(filepath.Join(contextSpec.BuildDir, "args.gn")); err != nil {
+				t.Errorf("Failed to read args.gn file: %v", err)
 			}
 			assertSubset(t, tc.expectedOptions, otherOptions, false)
 		})
