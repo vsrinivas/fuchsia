@@ -21,4 +21,11 @@ func TestNewDriver(t *testing.T) {
 	if d.sdkVersion != version {
 		t.Errorf("sdkVersion: want: %s, got: %s\n", version, d.sdkVersion)
 	}
+
+	manifest := "/test/path/manifest.json"
+	d.SetManifestPath(manifest)
+	if d.manifestPath != manifest {
+		t.Errorf("manifestPath: want: %s, got: %s\n", manifest, d.manifestPath)
+	}
+
 }

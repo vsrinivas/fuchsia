@@ -27,6 +27,7 @@ go_library("main_test") {
 go_library("lib") {
   sources = [
     "driver.go",
+    "manifest.go",
     "sdk.go",
   ]
   deps = [
@@ -39,6 +40,7 @@ go_library("lib_test") {
   sources = [
     "common_test.go",
     "driver_test.go",
+    "manifest_test.go",
     "sdk_test.go",
   ]
   deps = [ ":lib" ]

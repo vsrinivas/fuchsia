@@ -33,9 +33,9 @@ the Fuchsia tree.
 
 4) Run the tool using `fx`:
 
-       fx cts --sdk_version $SDK_VERSION --workspace $CTS_WORKSPACE
+       fx cts --sdk_version $SDK_VERSION --workspace $CTS_WORKSPACE --manifest $MANIFEST_PATH
 
-  e.g. `fx cts --sdk_version 3.20210308.2.1 --workspace ~/cts`
+  e.g. `fx cts --sdk_version 3.20210308.2.1 --workspace ~/cts --manifest cts_manifest.json`
 
   Currently it just downloads the specified SDK and exits. Soon, this will start
   up an emulator, download all necessary artifacts to your workspace, and

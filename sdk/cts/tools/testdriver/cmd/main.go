@@ -17,6 +17,7 @@ import (
 var (
 	sdkVersion = flag.String("sdk_version", "", "SDK version to execute the CTS against.")
 	workspace  = flag.String("workspace", "", "Location to store downloaded artifacts.")
+	manifest   = flag.String("manifest", "", "Location of the manifest defining CTS tests and dependencies.")
 	logLevel   = flag.Int("log_level", 0, "Log message verbosity. 0 == minimal logs, with higher numbers adding more.")
 )
 
@@ -34,6 +35,11 @@ func mainImpl() error {
 		return fmt.Errorf("'workspace' must be provided.")
 	}
 	d.SetWorkspacePath(*workspace)
+
+	if *manifest == "" {
+		return fmt.Errorf("'manifest' must be provided.")
+	}
+	d.SetManifestPath(*manifest)
 
 	if *logLevel == 0 {
 		log.SetOutput(ioutil.Discard)

@@ -28,6 +28,10 @@ type Driver struct {
 	// sdkVersion is the version of the GN SDK to download and execute the
 	// CTS against.
 	sdkVersion string
+
+	// manifestPath is the path to the manifest listing all tests and
+	// dependencies.
+	manifestPath string
 }
 
 func NewDriver() *Driver {
@@ -38,6 +42,7 @@ func NewDriver() *Driver {
 // methods allow external tools (e.g. cmd/main.go) to configure the driver.
 func (d *Driver) SetWorkspacePath(path string) { d.workspacePath = path }
 func (d *Driver) SetSDKVersion(version string) { d.sdkVersion = version }
+func (d *Driver) SetManifestPath(path string)  { d.manifestPath = path }
 
 // Run executes the Compatibility Test Suite.
 //
@@ -51,6 +56,12 @@ func (d *Driver) Run() error {
 	// Download the SDK archive.
 	if err := d.downloadSDK(); err != nil {
 		return err
+	}
+
+	// Load manifest file
+	_, err := NewManifest(filepath.Join(d.workspacePath, d.manifestPath))
+	if err != nil {
+		return fmt.Errorf("failed to load manifest file %v: %v\n", d.manifestPath, err)
 	}
 
 	return nil

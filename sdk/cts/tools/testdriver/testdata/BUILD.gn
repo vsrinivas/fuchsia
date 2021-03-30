@@ -4,5 +4,5 @@
 
 group("testdata") {
   testonly = true
-  deps = []
+  deps = [ "manifest" ]
 }
