@@ -280,6 +280,7 @@ pub fn set_default(dispatcher: &Dispatch) -> DefaultGuard {
 /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
 /// [`Event`]: ../event/struct.Event.html
 pub fn set_global_default(dispatcher: Dispatch) -> Result<(), SetGlobalDefaultError> {
+    #[allow(deprecated)]
     if GLOBAL_INIT.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) == UNINITIALIZED
     {
         unsafe {
@@ -628,6 +629,7 @@ impl Dispatch {
     /// `T`.
     #[inline]
     pub fn is<T: Any>(&self) -> bool {
+        #[allow(bare_trait_objects)]
         Subscriber::is::<T>(&*self.subscriber)
     }
 
@@ -635,6 +637,7 @@ impl Dispatch {
     /// if it is of type `T`, or `None` if it isn't.
     #[inline]
     pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
+        #[allow(bare_trait_objects)]
         Subscriber::downcast_ref(&*self.subscriber)
     }
 }
