@@ -26,7 +26,7 @@ class EchoImpl final : public fuchsia_examples::Echo::Interface {
     std::cout << "Got echo request for prefix " << prefix_ << std::endl;
     auto value_str = std::string(value.data(), value.size());
     auto response = prefix_ + value_str;
-    completer.Reply(fidl::unowned_str(response));
+    completer.Reply(fidl::StringView::FromExternal(response));
   }
 
   const std::string prefix_;

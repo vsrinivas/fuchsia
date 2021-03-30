@@ -47,35 +47,32 @@ Example:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
-### Unowned pointers
+### Unowned data
 
 In addition to the managed allocation strategies, it is also possible to directly
 create pointers to memory unowned by FIDL. This is discouraged, as it is easy to
-accidentally create use-after-free bugs. `unowned_ptr` exists to explicitly mark
+accidentally create use-after-free bugs. `FromExternal` exists to explicitly mark
 pointers to FIDL-unowned memory.
 
-The `unowned_ptr` helper is the recommended way to create `unowned_ptr_t`s,
-which is more ergonomic than using the `unowned_ptr_t` constructor directly.
+To create an `ObjectView` from an external object using `fidl::ObjectView::FromExternal`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-ptr" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-object" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
-To create a `VectorView` from a collection using an unowned pointer to the
-collection's data array, use `unowned_vec`.
+To create a `VectorView` from an external collection using `fidl::VectorView::FromExternal`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-vector" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
-To create a `StringView` from unowned memory, use `unowned_str`.
+To create a `StringView` from an external buffer using `fidl::StringView::FromExternal`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-str" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-string" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
-A `StringView` can also be created directly from string literals without using
-`unowned_ptr`.
+A `StringView` can also be created directly from string literals without using `FromExternal`.
 
 ```c++
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}

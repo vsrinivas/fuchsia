@@ -59,34 +59,36 @@ TEST(FidlExamples, Tables) {
 }
 // [END tables]
 
-// [START unowned-ptr]
-TEST(AllocationExamples, UnownedPtr) {
+// [START external-object]
+TEST(AllocationExamples, ExternalObject) {
   fuchsia_examples::wire::JsonValue val;
   int32_t i = 1;
-  val.set_int_value(fidl::unowned_ptr(&i));
+  val.set_int_value(fidl::ObjectView<int32_t>::FromExternal(&i));
 }
-// [END unowned-ptr]
+// [END external-object]
 
-// [START unowned-vec]
-TEST(AllocationExamples, UnownedVec) {
-  std::vector<uint32_t> vec = { 1, 2, 3, 4 };
-  fidl::VectorView<uint32_t> vv = fidl::unowned_vec(vec);
+// [START external-vector]
+TEST(AllocationExamples, ExternalVector) {
+  std::vector<uint32_t> vec = {1, 2, 3, 4};
+  fidl::VectorView<uint32_t> vv = fidl::VectorView<uint32_t>::FromExternal(vec);
   ASSERT_EQ(vv.count(), 4UL);
 }
-// [END unowned-vec]
+// [END external-vector]
 
-// [START unowned-str]
-TEST(AllocationExamples, UnownedStr) {
-  const char arr[] = {'h', 'e', 'l', 'l', 'o'};
-  fidl::StringView sv = fidl::unowned_str(arr, 5);
+// [START external-string]
+TEST(AllocationExamples, ExternalString) {
+  const char* string = "hello";
+  fidl::StringView sv = fidl::StringView::FromExternal(string);
   ASSERT_EQ(sv.size(), 5UL);
 }
-// [END unowned-str]
+// [END external-string]
 
 TEST(AllocationExamples, StringViewLiteral) {
   // [START stringview-assign]
-  fidl::StringView sv = "hello world";
-  ASSERT_EQ(sv.size(), 11UL);
+  fidl::StringView sv1 = "hello world";
+  fidl::StringView sv2("Hello");
+  ASSERT_EQ(sv1.size(), 11UL);
+  ASSERT_EQ(sv2.size(), 5UL);
   // [END stringview-assign]
 }
 
