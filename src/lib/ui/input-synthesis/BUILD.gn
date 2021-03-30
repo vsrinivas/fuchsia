@@ -66,3 +66,8 @@ config("use_modern_input_injection") {
 fuchsia_unittest_package("input-synthesis-tests") {
   deps = [ ":input-synthesis_test" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ ":input-synthesis-tests" ]
+}

@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Error, Result},
     core::convert::TryFrom,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input as ui_input,
     fidl_fuchsia_ui_input3 as ui_input3,
-    input_synthesis::{keymaps::QWERTY_MAP, usages::input3_key_to_hid_usage},
+    input_synthesis::{keymaps, usages::input3_key_to_hid_usage},
     std::collections::HashSet,
 };
 
-const EMPTY_CODEPOINT: u32 = 0;
 const EMPTY_TIME: u64 = 0;
 const EMPTY_DEVICE_ID: u32 = 0;
 
@@ -113,30 +112,21 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
             ui_input::MODIFIER_NONE
         };
 
-        let hid_usage = input3_key_to_hid_usage(event.key) as usize;
-        let code_point = if hid_usage < QWERTY_MAP.len() {
-            if let Some(map_entry) = QWERTY_MAP[hid_usage] {
-                if caps_lock | left_shift | right_shift != ui_input::MODIFIER_NONE {
-                    map_entry
-                        .1
-                        .and_then(|shifted_char| Some(shifted_char as u32))
-                        .ok_or(format_err!("Invalid USB HID code: {:?}", hid_usage))
-                } else {
-                    Ok(map_entry.0 as u32)
-                }
-            } else {
-                Ok(EMPTY_CODEPOINT) // No code point provided by a keymap, e.g. Enter.
-            }
-        } else {
-            Ok(EMPTY_CODEPOINT) // No code point available, e.g. Shift, Alt, etc.
-        };
-
+        let hid_usage = input3_key_to_hid_usage(event.key);
+        let code_point = keymaps::hid_usage_to_code_point(
+            hid_usage,
+            keymaps::ModifierState {
+                caps_lock: caps_lock == ui_input::MODIFIER_CAPS_LOCK,
+                left_shift: left_shift == ui_input::MODIFIER_LEFT_SHIFT,
+                right_shift: right_shift == ui_input::MODIFIER_RIGHT_SHIFT,
+            },
+        )?;
         Ok(ui_input::KeyboardEvent {
             event_time: inner.timestamp.unwrap_or(EMPTY_TIME as i64) as u64,
             device_id: EMPTY_DEVICE_ID,
-            phase: phase,
-            hid_usage: hid_usage as u32,
-            code_point: code_point?,
+            phase,
+            hid_usage,
+            code_point,
             modifiers: caps_lock
                 | left_shift
                 | right_shift
@@ -393,7 +383,7 @@ mod test {
                     device_id: EMPTY_DEVICE_ID,
                     phase: ui_input::KeyboardEventPhase::Pressed,
                     hid_usage: key2,
-                    code_point: EMPTY_CODEPOINT,
+                    code_point: 0,
                     modifiers: ui_input::MODIFIER_NONE,
                 }
             );

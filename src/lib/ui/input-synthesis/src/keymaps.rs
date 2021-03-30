@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{format_err, Result};
+
+/// A codepoint returned by [hid_usage_to_code_point] for HID usages that do
+/// not have an associated code point, e.g. Alt.
+pub(crate) const EMPTY_CODEPOINT: u32 = 0;
+
 /// Standard [qwerty] keymap.
 ///
 /// The value of this array at index `u`, where `u` is the usage, can be:
@@ -18,7 +24,7 @@ pub const QWERTY_MAP: &[Option<(char, Option<char>)>] = &[
     None,
     None,
     None,
-    // 0x04
+    // HID_USAGE_KEY_A
     Some(('a', Some('A'))),
     Some(('b', Some('B'))),
     Some(('c', Some('C'))),
@@ -139,3 +145,81 @@ pub const QWERTY_MAP: &[Option<(char, Option<char>)>] = &[
     Some(('0', None)),
     Some(('.', None)),
 ];
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ModifierState {
+    pub caps_lock: bool,
+    pub left_shift: bool,
+    pub right_shift: bool,
+}
+
+impl Default for ModifierState {
+    fn default() -> Self {
+        ModifierState { caps_lock: false, left_shift: false, right_shift: false }
+    }
+}
+
+impl ModifierState {
+    pub fn is_shift_active(&self) -> bool {
+        self.caps_lock | self.left_shift | self.right_shift
+    }
+}
+
+/// Converts a HID usage for a key to a Unicode code point where such a code point exists, based on
+/// a US QWERTY keyboard layout.  Returns EMPTY_CODEPOINT if a code point does not exist (e.g. Alt),
+/// and an error in case the mapping somehow fails.
+pub fn hid_usage_to_code_point(hid_usage: u32, modifier_state: ModifierState) -> Result<u32> {
+    if (hid_usage as usize) < QWERTY_MAP.len() {
+        if let Some(map_entry) = QWERTY_MAP[hid_usage as usize] {
+            if modifier_state.is_shift_active() {
+                map_entry
+                    .1
+                    .and_then(|shifted_char| Some(shifted_char as u32))
+                    .ok_or(format_err!("Invalid USB HID code: {:?}", hid_usage))
+            } else {
+                Ok(map_entry.0 as u32)
+            }
+        } else {
+            Ok(EMPTY_CODEPOINT) // No code point provided by a keymap, e.g. Enter.
+        }
+    } else {
+        Ok(EMPTY_CODEPOINT) // No code point available, e.g. Shift, Alt, etc.
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const HID_USAGE_KEY_A: u32 = 0x04;
+
+    #[test]
+    fn spotcheck_keymap() -> Result<()> {
+        assert_eq!(
+            'a' as u32,
+            hid_usage_to_code_point(HID_USAGE_KEY_A, ModifierState { ..Default::default() })?
+        );
+        assert_eq!(
+            'A' as u32,
+            hid_usage_to_code_point(
+                HID_USAGE_KEY_A,
+                ModifierState { caps_lock: true, ..Default::default() }
+            )?
+        );
+        assert_eq!(
+            'A' as u32,
+            hid_usage_to_code_point(
+                HID_USAGE_KEY_A,
+                ModifierState { right_shift: true, ..Default::default() }
+            )?
+        );
+        assert_eq!(
+            'A' as u32,
+            hid_usage_to_code_point(
+                HID_USAGE_KEY_A,
+                ModifierState { left_shift: true, ..Default::default() }
+            )?
+        );
+        Ok(())
+    }
+}

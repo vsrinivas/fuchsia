@@ -19,7 +19,7 @@ group("tests") {
     "carnelian:carnelian-tests",
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
     "input:tests",
-    "input-synthesis:input-synthesis-tests",
+    "input-synthesis:tests",
   ]
 }
 
