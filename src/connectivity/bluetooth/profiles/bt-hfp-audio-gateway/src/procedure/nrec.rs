@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{
+    AgUpdate, InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest,
+};
 
 use crate::peer::service_level_connection::SlcState;
 use at_commands as at;
@@ -61,7 +63,7 @@ impl Procedure for NrecProcedure {
                 let response = Box::new(|res: Result<(), ()>| {
                     res.map(|()| AgUpdate::Ok).unwrap_or(AgUpdate::Error)
                 });
-                ProcedureRequest::SetNrec { enable, response }
+                InformationRequest::SetNrec { enable, response }.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
@@ -147,7 +149,9 @@ mod tests {
 
         let req = proc.hf_update(at::Command::Nrec { nrec: true }, &mut state);
         let update = match req {
-            ProcedureRequest::SetNrec { enable: true, response } => response(Ok(())),
+            ProcedureRequest::Info(InformationRequest::SetNrec { enable: true, response }) => {
+                response(Ok(()))
+            }
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut state);

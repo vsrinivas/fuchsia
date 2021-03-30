@@ -4,7 +4,7 @@
 
 use {
     async_utils::hanging_get::client::HangingGetStream,
-    at_commands as at, fidl_fuchsia_bluetooth_bredr as bredr,
+    fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{NetworkInformation, PeerHandlerProxy},
     fuchsia_async::Task,
     fuchsia_bluetooth::{
@@ -31,7 +31,7 @@ use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
     indicator_status::IndicatorStatus,
-    procedure::{phone_status::PhoneStatus, ProcedureMarker, ProcedureRequest},
+    procedure::{phone_status::PhoneStatus, InformationRequest, ProcedureMarker},
     profile::ProfileEvent,
 };
 
@@ -170,115 +170,83 @@ impl PeerTask {
         Ok(())
     }
 
-    /// Processes a `request` associated with the given procedure (identified by the `marker`).
-    ///
-    /// This method is flow-controlled by an iterative loop. There are three termination conditions:
-    ///   1) There is no work requested (typically an ending state in a procedure).
-    ///   2) The procedure encountered an error.
-    ///   3) The procedure requests outbound messages to the peer, and will wait until an inbound
-    ///      event.
-    ///
-    /// Otherwise, the request is processed, the associated procedure is updated, and potentially
-    /// more requests are processed.
-    async fn procedure_request(
-        &mut self,
-        (marker, mut request): (ProcedureMarker, ProcedureRequest),
-    ) {
-        loop {
-            match request {
-                ProcedureRequest::None => return,
-                ProcedureRequest::Error(e) => {
-                    warn!("Error processing procedure update: {:?}", e);
-                    if let Err(err) =
-                        self.connection.send_message_to_peer(at::Response::Error).await
-                    {
-                        warn!("Unable to serialize AT error response with {:}", err);
+    /// Processes a `request` for information from an HFP procedure.
+    async fn procedure_request(&mut self, request: InformationRequest) {
+        let marker = (&request).into();
+        match request {
+            InformationRequest::GetAgFeatures { response } => {
+                let features = (&self._local_config).into();
+                // Update the procedure with the retrieved AG update.
+                self.connection.receive_ag_request(marker, response(features)).await;
+            }
+            InformationRequest::GetSubscriberNumberInformation { response } => {
+                let result = if let Some(handler) = &mut self.handler {
+                    handler.subscriber_number_information().await.ok().unwrap_or_else(Vec::new)
+                } else {
+                    vec![]
+                };
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
+            InformationRequest::GetAgIndicatorStatus { response } => {
+                let status = IndicatorStatus {
+                    service: self.network.service_available.unwrap_or(false),
+                    call: false,
+                    callsetup: (),
+                    callheld: (),
+                    signal: self.network.signal_strength.map(|ss| ss as u8).unwrap_or(0),
+                    roam: self.network.roaming.unwrap_or(false),
+                    battchg: 5, // TODO: Retrieve battery status from Fuchsia power service.
+                };
+                // Update the procedure with the retrieved AG update.
+                self.connection.receive_ag_request(marker, response(status)).await;
+            }
+            InformationRequest::GetNetworkOperatorName { response } => {
+                let format = self.connection.network_operator_name_format();
+                let name = match &self.handler {
+                    Some(h) => {
+                        let result = h.query_operator().await;
+                        if let Err(err) = &result {
+                            warn!(
+                                "Got error attempting to retrieve operator name from AG: {:}",
+                                err
+                            );
+                        };
+                        result.ok().flatten()
                     }
-                    return;
-                }
-                ProcedureRequest::SendMessages(messages) => {
-                    // Messages to be sent to the peer via the Service Level RFCOMM Connection.
-                    for message in messages {
-                        if let Err(err) = self.connection.send_message_to_peer(message).await {
-                            warn!("Unable to serialize AT response with {:}", err);
-                        }
-                    }
-                    return;
-                }
-                ProcedureRequest::GetAgFeatures { response } => {
-                    let features = (&self._local_config).into();
-                    // Update the procedure with the retrieved AG update.
-                    request = self.connection.ag_message(marker, response(features));
-                }
-                ProcedureRequest::GetSubscriberNumberInformation { response } => {
-                    let result = if let Some(handler) = &mut self.handler {
-                        handler.subscriber_number_information().await.ok().unwrap_or_else(Vec::new)
-                    } else {
-                        vec![]
-                    };
-                    request = self.connection.ag_message(marker, response(result));
-                }
-                ProcedureRequest::GetAgIndicatorStatus { response } => {
-                    let status = IndicatorStatus {
-                        service: self.network.service_available.unwrap_or(false),
-                        call: false,
-                        callsetup: (),
-                        callheld: (),
-                        signal: self.network.signal_strength.map(|ss| ss as u8).unwrap_or(0),
-                        roam: self.network.roaming.unwrap_or(false),
-                        battchg: 5, // TODO: Retrieve battery status from Fuchsia power service.
-                    };
-                    // Update the procedure with the retrieved AG update.
-                    request = self.connection.ag_message(marker, response(status));
-                }
-                ProcedureRequest::GetNetworkOperatorName { response } => {
-                    let format = self.connection.network_operator_name_format();
-                    let name = match &self.handler {
-                        Some(h) => {
-                            let result = h.query_operator().await;
-                            if let Err(err) = &result {
-                                warn!(
-                                    "Got error attempting to retrieve operator name from AG: {:}",
-                                    err
-                                );
-                            };
-                            result.ok().flatten()
-                        }
-                        None => None,
-                    };
-                    let name_option = match (name, format) {
-                        (Some(n), Some(_)) => Some(n),
-                        _ => None, // The format must be set before getting the network name.
-                    };
-                    // Update the procedure with the result of retrieving the AG network name.
-                    request = self.connection.ag_message(marker, response(name_option));
-                }
-                ProcedureRequest::SendDtmf { code, response } => {
-                    self.calls.send_dtmf_code(code).await;
-                    request = self.connection.ag_message(marker, response());
-                }
-                ProcedureRequest::SetNrec { enable, response } => {
-                    let result = if let Some(handler) = &mut self.handler {
-                        if let Ok(Ok(())) = handler.set_nrec_mode(enable).await {
-                            Ok(())
-                        } else {
-                            Err(())
-                        }
+                    None => None,
+                };
+                let name_option = match (name, format) {
+                    (Some(n), Some(_)) => Some(n),
+                    _ => None, // The format must be set before getting the network name.
+                };
+                // Update the procedure with the result of retrieving the AG network name.
+                self.connection.receive_ag_request(marker, response(name_option)).await;
+            }
+            InformationRequest::SendDtmf { code, response } => {
+                self.calls.send_dtmf_code(code).await;
+                self.connection.receive_ag_request(marker, response()).await;
+            }
+            InformationRequest::SetNrec { enable, response } => {
+                let result = if let Some(handler) = &mut self.handler {
+                    if let Ok(Ok(())) = handler.set_nrec_mode(enable).await {
+                        Ok(())
                     } else {
                         Err(())
-                    };
-                    request = self.connection.ag_message(marker, response(result));
-                }
-                ProcedureRequest::SpeakerVolumeSynchronization { level, response } => {
-                    self.gain_control.report_speaker_gain(level);
-                    request = self.connection.ag_message(marker, response());
-                }
-                ProcedureRequest::MicrophoneVolumeSynchronization { level, response } => {
-                    self.gain_control.report_microphone_gain(level);
-                    request = self.connection.ag_message(marker, response());
-                }
-            };
-        }
+                    }
+                } else {
+                    Err(())
+                };
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
+            InformationRequest::SpeakerVolumeSynchronization { level, response } => {
+                self.gain_control.report_speaker_gain(level);
+                self.connection.receive_ag_request(marker, response()).await;
+            }
+            InformationRequest::MicrophoneVolumeSynchronization { level, response } => {
+                self.gain_control.report_microphone_gain(level);
+                self.connection.receive_ag_request(marker, response()).await;
+            }
+        };
     }
 
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) -> Self {
@@ -329,10 +297,7 @@ impl PeerTask {
     /// Request to send the phone `status` by initiating the Phone Status Indicator
     /// procedure.
     async fn phone_status_update(&mut self, status: PhoneStatus) {
-        match self.connection.receive_ag_request(status.into()) {
-            Ok(request) => self.procedure_request(request).await,
-            Err(e) => log::warn!("Error sending phone status: {:?}", e),
-        }
+        self.connection.receive_ag_request(ProcedureMarker::PhoneStatus, status.into()).await;
     }
 
     /// Update the network information with the provided `update` value. Pass updates to the HF if
@@ -398,19 +363,19 @@ mod tests {
     use {
         super::*,
         async_utils::PollExt,
-        at_commands::SerDe,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerRequest, SignalStrength},
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
         futures::{future::ready, pin_mut, SinkExt},
-        matches::assert_matches,
         proptest::prelude::*,
-        std::io::Cursor,
     };
 
     use crate::{
-        peer::service_level_connection::{tests::create_and_initialize_slc, SlcState},
+        peer::service_level_connection::{
+            tests::{create_and_initialize_slc, expect_data_received_by_peer},
+            SlcState,
+        },
         protocol::features::HfFeatures,
     };
 
@@ -572,18 +537,6 @@ mod tests {
         let _ = exec.run_until_stalled(&mut peer_task_fut);
         // We then expect an outgoing message to the peer.
         expect_message_received_by_peer(&mut exec, &mut remote);
-    }
-
-    /// Expects the provided `expected` data to be received by the `remote` channel.
-    #[track_caller]
-    async fn expect_data_received_by_peer(remote: &mut Channel, expected: Vec<at::Response>) {
-        for expected_at in expected {
-            let mut bytes = Vec::new();
-            assert_matches!(remote.read_datagram(&mut bytes).await, Ok(_));
-            let actual =
-                at::Response::deserialize(&mut Cursor::new(bytes)).expect("valid response");
-            assert_eq!(actual, expected_at);
-        }
     }
 
     #[test]

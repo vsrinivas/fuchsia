@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{
+    AgUpdate, InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest,
+};
 
 use crate::peer::service_level_connection::SlcState;
 
@@ -163,7 +165,8 @@ impl Procedure for DtmfProcedure {
                 self.state.transition();
                 match code.as_str().try_into() {
                     Ok(code) => {
-                        ProcedureRequest::SendDtmf { code, response: Box::new(|| AgUpdate::Ok) }
+                        InformationRequest::SendDtmf { code, response: Box::new(|| AgUpdate::Ok) }
+                            .into()
                     }
                     Err(()) => ProcedureRequest::Error(ProcedureError::InvalidHfArgument(update)),
                 }
@@ -220,7 +223,10 @@ mod tests {
         let mut proc = DtmfProcedure::new();
         let req = proc.hf_update(at::Command::Vts { code: "1".into() }, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::SendDtmf { code: DtmfCode::One, response } => response(),
+            ProcedureRequest::Info(InformationRequest::SendDtmf {
+                code: DtmfCode::One,
+                response,
+            }) => response(),
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut SlcState::default());

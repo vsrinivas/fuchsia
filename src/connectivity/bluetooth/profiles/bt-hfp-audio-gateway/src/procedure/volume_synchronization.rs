@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{
+    AgUpdate, InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest,
+};
 
 use {at_commands as at, core::convert::TryInto};
 
@@ -68,20 +70,22 @@ impl Procedure for VolumeSynchronizationProcedure {
             (State::Start, at::Command::Vgs { level }) => {
                 self.state.transition();
                 match (*level).try_into() {
-                    Ok(level) => ProcedureRequest::SpeakerVolumeSynchronization {
+                    Ok(level) => InformationRequest::SpeakerVolumeSynchronization {
                         level,
                         response: Box::new(|| AgUpdate::Ok),
-                    },
+                    }
+                    .into(),
                     Err(_) => ProcedureRequest::Error(ProcedureError::InvalidHfArgument(update)),
                 }
             }
             (State::Start, at::Command::Vgm { level }) => {
                 self.state.transition();
                 match (*level).try_into() {
-                    Ok(level) => ProcedureRequest::MicrophoneVolumeSynchronization {
+                    Ok(level) => InformationRequest::MicrophoneVolumeSynchronization {
                         level,
                         response: Box::new(|| AgUpdate::Ok),
-                    },
+                    }
+                    .into(),
                     Err(_) => ProcedureRequest::Error(ProcedureError::InvalidHfArgument(update)),
                 }
             }
@@ -142,11 +146,10 @@ mod tests {
         let mut proc = VolumeSynchronizationProcedure::new();
         let req = proc.hf_update(at::Command::Vgs { level: 1 }, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::SpeakerVolumeSynchronization { level, response }
-                if level == 1u8.try_into().unwrap() =>
-            {
-                response()
-            }
+            ProcedureRequest::Info(InformationRequest::SpeakerVolumeSynchronization {
+                level,
+                response,
+            }) if level == 1u8.try_into().unwrap() => response(),
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut SlcState::default());
@@ -162,11 +165,10 @@ mod tests {
         let mut proc = VolumeSynchronizationProcedure::new();
         let req = proc.hf_update(at::Command::Vgm { level: 1 }, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::MicrophoneVolumeSynchronization { level, response }
-                if level == 1u8.try_into().unwrap() =>
-            {
-                response()
-            }
+            ProcedureRequest::Info(InformationRequest::MicrophoneVolumeSynchronization {
+                level,
+                response,
+            }) if level == 1u8.try_into().unwrap() => response(),
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut SlcState::default());
