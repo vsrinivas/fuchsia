@@ -1,7 +1,12 @@
 {
   "dontSkipDirs": [],
-  "skipFiles": [],
-  "skipDirs": [],
+  "skipFiles": [
+    "third_party/golibs/vendor/modules.txt",
+    "prebuilt/media/firmware/amlogic-decoder/video_ucode.bin",
+    "prebuilt/media/firmware/amlogic_encoder/h264_enc.bin"
+  ],
+  "skipDirs": [
+  ],
   "stopLicensePropagation": [
     "third_party",
     "thirdparty",
