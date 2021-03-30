@@ -9,5 +9,8 @@ fidl("fuchsia.ui.pointer.augment") {
 
   sources = [ "augment.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.pointer" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//zircon/vdso/zx",
+  ]
 }

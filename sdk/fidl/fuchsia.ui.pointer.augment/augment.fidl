@@ -39,6 +39,7 @@
 library fuchsia.ui.pointer.augment;
 
 using fuchsia.ui.pointer as pointer;
+using zx;
 
 /// Abnormal conditions for augmentation protocols.
 enum ErrorReason {
@@ -93,4 +94,61 @@ table MouseEventWithGlobalMouse {
     /// Augmented data that describes when the mouse stream enters or exits
     /// the client's view.
     3: pointer.MouseEventStreamInfo global_stream_info;
+};
+
+// LOCAL HIT AUGMENTATION
+
+// Abnormal return for local hit.
+resource struct ErrorForLocalHit {
+    /// Abnormal reason for return.
+    ErrorReason error_reason;
+
+    /// Original protocol endpoint for client use.
+    pointer.TouchSource original;
+};
+
+/// A method for a client to upgrade its touch event protocol to additionally
+/// receive local-hit data for touch events.
+protocol LocalHit {
+    /// An exchange from an `original` touch protocol endpoint to an `augmented`
+    /// touch protocol endpoint. If successful, `error` is empty, `original` is
+    /// consumed, and `augmented` is returned for the client's use. Otherwise,
+    /// the `error` carries back `original` for the client's use, and
+    /// `augmented` is null.
+    Upgrade(pointer.TouchSource original) -> (TouchSourceWithLocalHit? augmented, ErrorForLocalHit? error);
+};
+
+/// Like [`fuchsia.ui.pointer.TouchSource`], but with additional information
+/// about the local-hit position of touch events, and otherwise identical in
+/// operation. See [`fuchsia.ui.pointer.TouchSource`] for regular usage
+/// information.
+protocol TouchSourceWithLocalHit {
+    /// Identical usage to [`fuchsia.ui.pointer.TouchSource.Watch`], but with
+    /// augmented data.
+    Watch(vector<pointer.TouchResponse>:pointer.TOUCH_MAX_EVENT responses) -> (vector<TouchEventWithLocalHit>:pointer.TOUCH_MAX_EVENT events);
+    /// Identical usage to [`fuchsia.ui.pointer.TouchSource.UpdateResponse`].
+    UpdateResponse(pointer.TouchInteractionId interaction, pointer.TouchResponse response) -> ();
+};
+
+/// A floating point two-dimensional point.
+/// - The values are placed in (x, y) order.
+alias Point2 = array<float32>:2;
+
+/// An augmentation of [`fuchsia.ui.pointer.TouchEvent`] to provide local-hit
+/// data for a touch event.
+///
+/// For a given touch event `e`, consider the ordered list of intersections with
+/// graphical content: its "hits" from top to bottom. The "local hit" of `e` is
+/// the location of `e` in the coordinate system of the view in which `e` has
+/// the top-most intersection.
+struct TouchEventWithLocalHit {
+    /// Identical usage to [`fuchsia.ui.pointer.TouchEvent`].
+    pointer.TouchEvent touch_event;
+
+    /// Augmented data for `touch_event` that describes the top-most client KOID that it hits.
+    zx.koid local_viewref_koid;
+
+    /// Augmented data for `touch_event` that describes its local coordinates in
+    /// the coordinate space for `local_viewref_koid`.
+    Point2 local_point;
 };
