@@ -68,3 +68,8 @@ fuchsia_unittest_package("input_tests") {
   manifest = "meta/input_lib_test.cmx"
   deps = [ ":input_test" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ ":input_tests" ]
+}
