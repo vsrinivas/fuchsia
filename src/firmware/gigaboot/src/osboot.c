@@ -588,13 +588,6 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     }
   }
 
-  if (is_booting_from_usb(img, sys)) {
-    printf("booting from usb!\n");
-    // TODO(fxbug.dev/44586): remove devmgr.bind-eager once better driver prioritisation exists.
-    static const char* usb_boot_args = "boot.usb=true devmgr.bind-eager=usb_composite";
-    cmdline_append(usb_boot_args, strlen(usb_boot_args));
-  }
-
   if (!have_network && zedboot_kernel == NULL && kernel == NULL && kernel_b == NULL) {
     printf("No valid kernel image found to load. Abort.\n");
     goto fail;
@@ -714,6 +707,15 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     char key = key_prompt(valid_keys, timeout_s);
     printf("\n\n");
+
+    // Only set these flags when not booting zedboot. See http://fxbug.dev/72713 for more
+    // information.
+    if (is_booting_from_usb(img, sys) && strchr("12m", key) != NULL) {
+      printf("booting from usb!\n");
+      // TODO(fxbug.dev/44586): remove devmgr.bind-eager once better driver prioritisation exists.
+      static const char* usb_boot_args = "boot.usb=true devmgr.bind-eager=usb_composite";
+      cmdline_append(usb_boot_args, strlen(usb_boot_args));
+    }
 
     switch (key) {
       case 'b':
