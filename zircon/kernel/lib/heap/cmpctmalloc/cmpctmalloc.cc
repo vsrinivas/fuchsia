@@ -1067,6 +1067,10 @@ NO_ASAN void cmpct_sized_free(void* payload, size_t s) {
 
 NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
   LOCAL_TRACE_DURATION("cmpct_memalign", trace, alignment, size);
+  if (size == 0u) {
+    return NULL;
+  }
+
   if (alignment < 8) {
     return cmpct_alloc(size);
   }
