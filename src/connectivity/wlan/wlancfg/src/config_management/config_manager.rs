@@ -1248,9 +1248,9 @@ mod tests {
         assert!(path.exists());
         // Constructing a saved network config store should still succeed,
         // but the invalid file should be gone now
-        let stash_id = "ignore_legacy_file_bad_format";
+        let stash_id = rand_string();
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            stash_id,
+            &stash_id,
             &path,
             &tmp_path,
             create_mock_cobalt_sender(),
@@ -1326,9 +1326,9 @@ mod tests {
         file.write(contents).expect("Failed to write to file");
         file.flush().expect("failed to flush contents of file");
 
-        let stash_id = "do_not_migrate_networks_twice";
+        let stash_id = rand_string();
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            stash_id,
+            &stash_id,
             &path,
             &tmp_path,
             create_mock_cobalt_sender(),
@@ -1385,9 +1385,9 @@ mod tests {
         file.write(contents).expect("Failed to write to file");
         file.flush().expect("failed to flush contents of file");
 
-        let stash_id = "ignore_legacy_if_stash_exists";
+        let stash_id = rand_string();
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            stash_id,
+            &stash_id,
             &path,
             &tmp_path,
             create_mock_cobalt_sender(),
