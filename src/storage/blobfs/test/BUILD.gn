@@ -339,6 +339,20 @@ fuchsia_test_package("blobfs-integration-package") {
     ":executable-mount-test",
     ":external-decompressor-runner",
   ]
+
+  # TODO(fxbug.dev/73141): Temporarily disable test on profile/coverage builders.
+  if (select_variant + [
+        "coverage",
+        "profile",
+        "rustcoverage",
+      ] -
+      [
+        "coverage",
+        "profile",
+        "rustcoverage",
+      ] != select_variant) {
+    test_components -= [ ":blobfs-integration-component" ]
+  }
   deps = [
     ":external-decompressor-integration",
     "//src/storage/blobfs:decompressor-sandbox",
