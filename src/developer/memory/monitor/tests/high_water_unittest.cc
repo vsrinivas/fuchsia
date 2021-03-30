@@ -113,7 +113,7 @@ TEST_F(HighWaterUnitTest, Basic) {
                            {.koid = 2, .name = "p1", .vmos = {1}},
                        }}});
   ASSERT_FALSE(files::IsFileAt(memfs_dir_, "latest.txt"));
-  HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(),
+  HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(), {},
                [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   ASSERT_FALSE(files::IsFileAt(memfs_dir_, "latest.txt"));
   ASSERT_FALSE(files::IsFileAt(memfs_dir_, "previous.txt"));
@@ -143,7 +143,7 @@ TEST_F(HighWaterUnitTest, RunTwice) {
                          .processes = {
                              {.koid = 2, .name = "p1", .vmos = {1}},
                          }}});
-    HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(),
+    HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(), {},
                  [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
     RunLoopUntil([&cs] { return cs.empty(); });
     EXPECT_FALSE(hw.GetHighWater().empty());
@@ -164,7 +164,7 @@ TEST_F(HighWaterUnitTest, RunTwice) {
                          .processes = {
                              {.koid = 2, .name = "p1", .vmos = {1}},
                          }}});
-    HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(),
+    HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(), {},
                  [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
     RunLoopUntil([&cs] { return cs.empty(); });
     EXPECT_FALSE(hw.GetHighWater().empty());

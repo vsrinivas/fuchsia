@@ -13,8 +13,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "src/developer/memory/metrics/bucket_match.h"
 #include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/config.h"
 
 namespace memory {
 
@@ -50,8 +50,6 @@ class Digest {
 class Digester {
  public:
   explicit Digester(const std::vector<BucketMatch>& bucket_matches);
-
-  static Digester GetDefault();
 
  private:
   void Digest(const Capture& capture, Digest* digest);

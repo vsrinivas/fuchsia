@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_MEMORY_METRICS_CONFIG_H_
-#define SRC_DEVELOPER_MEMORY_METRICS_CONFIG_H_
+#ifndef SRC_DEVELOPER_MEMORY_METRICS_BUCKET_MATCH_H_
+#define SRC_DEVELOPER_MEMORY_METRICS_BUCKET_MATCH_H_
 
 #include <zircon/types.h>
 
@@ -28,6 +28,8 @@ class BucketMatch {
   BucketMatch(const std::string& name, const std::string& process, const std::string& vmo,
               std::optional<int64_t> event_code = std::nullopt);
   const std::string& name() const { return name_; }
+  // Returns the Cobalt event code associated with this bucket. This is used for reporting bucket
+  // usage through Cobalt.
   std::optional<int64_t> event_code() const { return event_code_; }
   bool ProcessMatch(const std::string& process);
   bool VmoMatch(const Vmo& vmo);
@@ -35,10 +37,8 @@ class BucketMatch {
   // Parses a configuration string (e.g. stored in a file) to create bucket matches. The
   // configuration format is described in the README.md file in this directory. Returns true if the
   // parsing succeded, false otherwise.
-  static bool ReadBucketMatchesFromConfig(const std::string& config_string,
-                                          std::vector<BucketMatch>* matches);
-
-  static std::vector<BucketMatch> GetDefaultBucketMatches();
+  static std::optional<std::vector<BucketMatch>> ReadBucketMatchesFromConfig(
+      const std::string& config_string);
 
  private:
   const std::string name_;
@@ -49,9 +49,9 @@ class BucketMatch {
   // Cache of the matching results against the |process_| regexp.
   std::unordered_map<std::string, bool> process_match_;
   // Cache of the matching results against the |vmo_| regexp.
-  std::unordered_map<zx_koid_t, bool> vmo_match_;
+  std::unordered_map<std::string, bool> vmo_match_;
 };
 
 }  // namespace memory
 
-#endif  // SRC_DEVELOPER_MEMORY_METRICS_CONFIG_H_
+#endif  // SRC_DEVELOPER_MEMORY_METRICS_BUCKET_MATCH_H_

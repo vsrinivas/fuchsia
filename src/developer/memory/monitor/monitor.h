@@ -18,6 +18,7 @@
 
 #include "lib/sys/inspect/cpp/component.h"
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/metrics.h"
 #include "src/developer/memory/monitor/pressure_notifier.h"
@@ -44,9 +45,9 @@ class Monitor : public fuchsia::memory::Monitor {
   static const char kTraceName[];
 
  private:
-  void ExposeBucketConfiguration();
+  void PublishBucketConfiguration();
 
-  void CreateMetrics();
+  void CreateMetrics(const std::vector<memory::BucketMatch>& bucket_matches);
 
   void UpdateState();
 
@@ -57,7 +58,7 @@ class Monitor : public fuchsia::memory::Monitor {
   void MeasureBandwidthAndPost();
   void PeriodicMeasureBandwidth();
   void PrintHelp();
-  inspect::Inspector Inspect();
+  inspect::Inspector Inspect(const std::vector<memory::BucketMatch>& bucket_matches);
 
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::memory::Watcher* watcher);
@@ -65,7 +66,7 @@ class Monitor : public fuchsia::memory::Monitor {
   void NotifyWatchers(const zx_info_kmem_stats_t& stats);
 
   memory::CaptureState capture_state_;
-  HighWater high_water_;
+  std::unique_ptr<HighWater> high_water_;
   uint64_t prealloc_size_;
   zx::vmo prealloc_vmo_;
   bool logging_;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/memory/metrics/config.h"
+#include "src/developer/memory/metrics/bucket_match.h"
 
 #include <zircon/syscalls/object.h>
 
@@ -41,9 +41,10 @@ Vmo CreateVmo(const std::string& name, size_t num_children = 0) {
 }
 
 TEST_F(ConfigUnitTest, ValidConfiguration) {
-  std::vector<BucketMatch> bucket_matches;
-  EXPECT_TRUE(BucketMatch::ReadBucketMatchesFromConfig(kValidConfiguration, &bucket_matches));
+  auto result = BucketMatch::ReadBucketMatchesFromConfig(kValidConfiguration);
+  ASSERT_TRUE(result);
 
+  auto bucket_matches = *result;
   EXPECT_THAT(bucket_matches, SizeIs(2));
 
   BucketMatch& match_0 = bucket_matches[0];
@@ -60,20 +61,16 @@ TEST_F(ConfigUnitTest, ValidConfiguration) {
 }
 
 TEST_F(ConfigUnitTest, InvalidConfiguration) {
-  std::vector<BucketMatch> bucket_matches;
   // Missing "name"
-  EXPECT_FALSE(BucketMatch::ReadBucketMatchesFromConfig(R"([{"process": "a", "vmo": ".*"}])",
-                                                        &bucket_matches));
+  EXPECT_FALSE(BucketMatch::ReadBucketMatchesFromConfig(R"([{"process": "a", "vmo": ".*"}])"));
   // Missing "process"
-  EXPECT_FALSE(
-      BucketMatch::ReadBucketMatchesFromConfig(R"([{"name": "a", "vmo": ".*"}])", &bucket_matches));
+  EXPECT_FALSE(BucketMatch::ReadBucketMatchesFromConfig(R"([{"name": "a", "vmo": ".*"}])"));
   // Missing "vmo"
-  EXPECT_FALSE(BucketMatch::ReadBucketMatchesFromConfig(R"([{"name": "a", "process": ".*"}])",
-                                                        &bucket_matches));
+  EXPECT_FALSE(BucketMatch::ReadBucketMatchesFromConfig(R"([{"name": "a", "process": ".*"}])"));
 
   // Badly formatted JSON
-  EXPECT_FALSE(BucketMatch::ReadBucketMatchesFromConfig(
-      R"([{"name": "a", "process": ".*", "vmo": ".*"]})", &bucket_matches));
+  EXPECT_FALSE(
+      BucketMatch::ReadBucketMatchesFromConfig(R"([{"name": "a", "process": ".*", "vmo": ".*"]})"));
 }
 
 }  // namespace test

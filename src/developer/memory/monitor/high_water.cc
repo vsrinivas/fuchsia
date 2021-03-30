@@ -27,7 +27,7 @@ static const char kPreviousDigest[] = "previous_digest.txt";
 
 HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
                      uint64_t high_water_threshold, async_dispatcher_t* dispatcher,
-                     CaptureFn capture_cb)
+                     const std::vector<memory::BucketMatch>& bucket_matches, CaptureFn capture_cb)
     : dir_(dir),
       watcher_(poll_frequency, high_water_threshold, dispatcher, std::move(capture_cb),
                [this](const Capture& c) {
@@ -35,7 +35,7 @@ HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
                  RecordHighWaterDigest(c);
                }),
       namer_(Summary::kNameMatches),
-      digester_(Digester::GetDefault()) {
+      digester_(bucket_matches) {
   // Ok to ignore result. last might not exist.
   remove(files::JoinPath(dir_, kPrevious).c_str());
   remove(files::JoinPath(dir_, kPreviousDigest).c_str());

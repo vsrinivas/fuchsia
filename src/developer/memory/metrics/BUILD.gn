@@ -4,10 +4,10 @@
 
 source_set("metrics") {
   sources = [
+    "bucket_match.cc",
+    "bucket_match.h",
     "capture.cc",
     "capture.h",
-    "config.cc",
-    "config.h",
     "digest.cc",
     "digest.h",
     "printer.cc",

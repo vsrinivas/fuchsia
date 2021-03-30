@@ -30,8 +30,8 @@ executable("memory_metrics_unittests") {
   testonly = true
   output_name = "memory_metrics_unittests"
   sources = [
+    "bucket_match_unittest.cc",
     "capture_unittest.cc",
-    "config_unittest.cc",
     "digest_unittest.cc",
     "printer_unittest.cc",
     "summary_unittest.cc",

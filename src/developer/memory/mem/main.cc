@@ -22,8 +22,8 @@
 #include <mutex>
 #include <utility>
 
+#include "src/developer/memory/metrics/bucket_match.h"
 #include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/config.h"
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/metrics/summary.h"
@@ -33,28 +33,25 @@
 using namespace memory;
 
 // Returns a Digester using the memory monitor configuration if available.
-Digester GetDigester() {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
+std::vector<BucketMatch> GetBucketMatchesFromConfig() {
   if (!std::filesystem::exists("/hub/c/memory_monitor.cmx")) {
     FX_LOGS(WARNING) << "No memory monitor component found, no bucket will be used.";
-    return Digester::GetDefault();
+    return {};
   }
 
   std::string instance_id =
       std::filesystem::directory_iterator("/hub/c/memory_monitor.cmx")->path();
-  std::string full_path = instance_id + "/out/debug/bucket_configuration.json";
+  std::string full_path = instance_id + "/out/debug/buckets.json";
 
   std::string config_str;
   if (!files::ReadFileToString(full_path, &config_str)) {
     FX_LOGS(ERROR) << "Unable to read configuration, no bucket will be used";
-    return Digester::GetDefault();
+    return {};
   }
 
-  std::vector<BucketMatch> matches;
-  FX_CHECK(BucketMatch::ReadBucketMatchesFromConfig(config_str, &matches));
-
-  return Digester(matches);
+  auto matches = BucketMatch::ReadBucketMatchesFromConfig(config_str);
+  FX_CHECK(matches.has_value());
+  return *matches;
 }
 
 int Mem(const fxl::CommandLine& command_line) {
@@ -106,7 +103,7 @@ int Mem(const fxl::CommandLine& command_line) {
         return EXIT_FAILURE;
       }
       if (command_line.HasOption("digest")) {
-        Digester digester = GetDigester();
+        Digester digester(GetBucketMatchesFromConfig());
         Digest d(capture, &digester);
         printer.OutputDigest(d);
       } else {
@@ -134,7 +131,7 @@ int Mem(const fxl::CommandLine& command_line) {
     return EXIT_FAILURE;
   }
   if (command_line.HasOption("digest")) {
-    Digester digester = GetDigester();
+    Digester digester(GetBucketMatchesFromConfig());
     Digest digest(capture, &digester);
     printer.PrintDigest(digest);
     if (command_line.HasOption("undigested")) {

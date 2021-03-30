@@ -13,8 +13,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "src/developer/memory/metrics/bucket_match.h"
 #include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/config.h"
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/watcher.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"

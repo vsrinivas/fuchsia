@@ -205,7 +205,7 @@ class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
     // class/tests thread. So the call to the Monitor needs to be made on a different thread, such
     // that the MockLogger*s running on the main thread can respond to those calls.
     std::future<void /*fuchsia::cobalt::Logger_Sync**/> result = std::async([this]() {
-      monitor_->CreateMetrics();
+      monitor_->CreateMetrics({});
     });
     while (result.wait_for(std::chrono::milliseconds(1)) != std::future_status::ready) {
       // Run the main thread's loop, allowing the MockLogger* objects to respond to requests.

@@ -28,8 +28,8 @@
 #include <trace-vthread/event_vthread.h>
 
 #include "fuchsia/mem/cpp/fidl.h"
+#include "src/developer/memory/metrics/bucket_match.h"
 #include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/config.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
@@ -45,6 +45,8 @@ using namespace memory;
 const char Monitor::kTraceName[] = "memory_monitor";
 
 namespace {
+// Path to the configuration file for buckets.
+const std::string kBucketConfigPath = "/config/data/buckets.json";
 const zx::duration kHighWaterPollFrequency = zx::sec(10);
 const uint64_t kHighWaterThreshold = 10 * 1024 * 1024;
 const zx::duration kMetricsPollFrequency = zx::min(5);
@@ -101,7 +103,7 @@ uint64_t TotalReadWriteCycles(const fuchsia::hardware::ram::metrics::BandwidthIn
   return total_readwrite_cycles;
 }
 
-fsl::SizedVmo ReadConfiguration() {
+fsl::SizedVmo ReadBucketConfiguration() {
   fsl::SizedVmo sized_vmo;
 
   if (std::filesystem::exists(kBucketConfigPath)) {
@@ -111,35 +113,53 @@ fsl::SizedVmo ReadConfiguration() {
   return sized_vmo;
 }
 
+std::vector<memory::BucketMatch> CreateBucketMatchesFromConfigData() {
+  if (!std::filesystem::exists(kBucketConfigPath)) {
+    FX_LOGS(WARNING) << "Bucket configuration file not found; no buckets will be available.";
+    return {};
+  }
+
+  std::string configuration_str;
+  FX_CHECK(files::ReadFileToString(kBucketConfigPath, &configuration_str));
+  auto bucket_matches = memory::BucketMatch::ReadBucketMatchesFromConfig(configuration_str);
+  FX_CHECK(bucket_matches.has_value()) << "Unable to read configuration: " << configuration_str;
+  return std::move(*bucket_matches);
+}
+
 }  // namespace
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                  const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher,
                  bool send_metrics, bool watch_memory_pressure,
                  bool send_critical_pressure_crash_reports)
-    : high_water_(
-          "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
-          [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
-      prealloc_size_(0),
+    : prealloc_size_(0),
       logging_(command_line.HasOption("log")),
       tracing_(false),
       delay_(zx::sec(1)),
       dispatcher_(dispatcher),
       component_context_(std::move(context)),
       inspector_(component_context_.get()) {
+  auto bucket_matches = CreateBucketMatchesFromConfigData();
+  high_water_ = std::make_unique<HighWater>(
+          "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
+          bucket_matches,
+          [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
   auto s = Capture::GetCaptureState(&capture_state_);
   if (s != ZX_OK) {
     FX_LOGS(ERROR) << "Error getting capture state: " << zx_status_get_string(s);
     exit(EXIT_FAILURE);
   }
 
+  if (send_metrics)
+    CreateMetrics(bucket_matches);
+
   // Expose lazy values under the root, populated from the Inspect method.
   inspector_.root().CreateLazyValues(
-      "memory_measurements", [this] { return fit::make_result_promise(fit::ok(Inspect())); },
+      "memory_measurements", [this, bucket_matches = std::move(bucket_matches)] { return fit::make_result_promise(fit::ok(Inspect(bucket_matches))); },
       &inspector_);
 
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
-  ExposeBucketConfiguration();
+  PublishBucketConfiguration();
 
   if (command_line.HasOption("help")) {
     PrintHelp();
@@ -196,9 +216,6 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                   << " Total Heap: " << kmem.total_heap_bytes;
   }
 
-  if (send_metrics)
-    CreateMetrics();
-
   pressure_notifier_ = std::make_unique<PressureNotifier>(watch_memory_pressure,
                                                           send_critical_pressure_crash_reports,
                                                           component_context_.get(), dispatcher);
@@ -214,7 +231,7 @@ void Monitor::SetRamDevice(fuchsia::hardware::ram::metrics::DevicePtr ptr) {
     PeriodicMeasureBandwidth();
 }
 
-void Monitor::CreateMetrics() {
+void Monitor::CreateMetrics(const std::vector<memory::BucketMatch>& bucket_matches) {
   // Connect to the cobalt fidl service provided by the environment.
   fuchsia::cobalt::LoggerFactorySyncPtr factory;
   component_context_->svc()->Connect(factory.NewRequest());
@@ -232,7 +249,7 @@ void Monitor::CreateMetrics() {
   }
 
   metrics_ = std::make_unique<Metrics>(
-      BucketMatch::GetDefaultBucketMatches(), kMetricsPollFrequency, dispatcher_, &inspector_,
+      bucket_matches, kMetricsPollFrequency, dispatcher_, &inspector_,
       logger_.get(),
       [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
 }
@@ -269,16 +286,15 @@ void Monitor::NotifyWatchers(const zx_info_kmem_stats_t& kmem_stats) {
   }
 }
 
-void Monitor::ExposeBucketConfiguration() {
-  fsl::SizedVmo sized_vmo = ReadConfiguration();
+void Monitor::PublishBucketConfiguration() {
+  fsl::SizedVmo sized_vmo = ReadBucketConfiguration();
   if (!sized_vmo) {
     return;
   }
 
   fuchsia::mem::Buffer buffer = std::move(sized_vmo).ToTransport();
   component_context_->outgoing()->debug_dir()->AddEntry(
-      "bucket_configuration.json",
-      std::make_unique<vfs::VmoFile>(std::move(buffer.vmo), 0, buffer.size));
+      "buckets.json", std::make_unique<vfs::VmoFile>(std::move(buffer.vmo), 0, buffer.size));
 }
 
 void Monitor::PrintHelp() {
@@ -289,7 +305,7 @@ void Monitor::PrintHelp() {
   std::cout << "  --delay=msecs" << std::endl;
 }
 
-inspect::Inspector Monitor::Inspect() {
+inspect::Inspector Monitor::Inspect(const std::vector<memory::BucketMatch>& bucket_matches) {
   inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
   auto& root = inspector.GetRoot();
   Capture capture;
@@ -300,8 +316,8 @@ inspect::Inspector Monitor::Inspect() {
   Printer summary_printer(summary_stream);
   summary_printer.PrintSummary(summary, VMO, SORTED);
   auto current_string = summary_stream.str();
-  auto high_water_string = high_water_.GetHighWater();
-  auto previous_high_water_string = high_water_.GetPreviousHighWater();
+  auto high_water_string = high_water_->GetHighWater();
+  auto previous_high_water_string = high_water_->GetPreviousHighWater();
   if (!current_string.empty()) {
     root.CreateString("current", current_string, &inspector);
   }
@@ -325,14 +341,14 @@ inspect::Inspector Monitor::Inspect() {
   values.CreateUint("wired_bytes", capture.kmem().wired_bytes, &inspector);
   inspector.emplace(std::move(values));
 
-  Digester digester = Digester::GetDefault();
+  Digester digester(bucket_matches);
   Digest digest(capture, &digester);
   std::ostringstream digest_stream;
   Printer digest_printer(digest_stream);
   digest_printer.PrintDigest(digest);
   auto current_digest_string = digest_stream.str();
-  auto high_water_digest_string = high_water_.GetHighWaterDigest();
-  auto previous_high_water_digest_string = high_water_.GetPreviousHighWaterDigest();
+  auto high_water_digest_string = high_water_->GetHighWaterDigest();
+  auto previous_high_water_digest_string = high_water_->GetPreviousHighWaterDigest();
   if (!current_digest_string.empty()) {
     root.CreateString("current_digest", current_digest_string, &inspector);
   }

@@ -20,7 +20,8 @@ namespace monitor {
 class HighWater {
  public:
   HighWater(const std::string& dir, zx::duration poll_frequency, uint64_t high_water_threshold,
-            async_dispatcher_t* dispatcher, memory::CaptureFn capture_cb);
+            async_dispatcher_t* dispatcher, const std::vector<memory::BucketMatch>& bucket_matches,
+            memory::CaptureFn capture_cb);
   ~HighWater() = default;
 
   void RecordHighWater(const memory::Capture& capture);

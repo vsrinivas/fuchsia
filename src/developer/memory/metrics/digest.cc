@@ -8,18 +8,17 @@
 
 #include <regex>
 
-#include "src/developer/memory/metrics/config.h"
+#include "src/developer/memory/metrics/bucket_match.h"
 
 namespace memory {
 Digest::Digest(const Capture& capture, Digester* digester) { digester->Digest(capture, this); }
 
 Digester::Digester(const std::vector<BucketMatch>& bucket_matches) {
+  bucket_matches_.reserve(bucket_matches.size());
   for (const auto& bucket_match : bucket_matches) {
     bucket_matches_.emplace_back(bucket_match);
   }
 }
-
-Digester Digester::GetDefault() { return Digester(BucketMatch::GetDefaultBucketMatches()); }
 
 void Digester::Digest(const Capture& capture, class Digest* digest) {
   TRACE_DURATION("memory_metrics", "Digester::Digest");
