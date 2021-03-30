@@ -14,7 +14,10 @@ pub enum OperationType {
     // Persist a buffer onto target that can be read at a later point in time.
     Write,
 
-    // "Open" target for other IO operations. This is not implement at the
+    // Read from a target.
+    Read,
+
+    // "Open" target for other IO operations. This is not implemented at the
     // moment but is used to unit test some of the generate functionality.
     Open,
 
@@ -25,7 +28,6 @@ pub enum OperationType {
 
     // Abort all outstanding operations and exit as soon as possible.
     Abort,
-    //    Read,
     //    LSeek,
     //    Truncate,
     //    Close,
@@ -49,7 +51,7 @@ pub enum OperationType {
 /// These functions makes better indexing and walking stages a bit better.
 impl OperationType {
     pub const fn operations_count() -> usize {
-        4 // number of entries in OperationType.
+        5 // number of entries in OperationType.
     }
 
     pub fn operation_number(self) -> usize {
@@ -57,8 +59,13 @@ impl OperationType {
     }
 
     pub fn iterator() -> Iter<'static, OperationType> {
-        static OPERATIONS: [OperationType; OperationType::operations_count()] =
-            [OperationType::Write, OperationType::Open, OperationType::Exit, OperationType::Abort];
+        static OPERATIONS: [OperationType; OperationType::operations_count()] = [
+            OperationType::Write,
+            OperationType::Read,
+            OperationType::Open,
+            OperationType::Exit,
+            OperationType::Abort,
+        ];
         OPERATIONS.iter()
     }
 }
@@ -100,7 +107,7 @@ mod tests {
 
     #[test]
     fn operation_count_test() {
-        assert_eq!(OperationType::operations_count(), 4);
+        assert_eq!(OperationType::operations_count(), 5);
     }
 
     #[test]
@@ -111,7 +118,7 @@ mod tests {
     #[test]
     fn operation_iterator_uniqueness() {
         for (i, operation) in OperationType::iterator().enumerate() {
-            assert!(i == operation.operation_number());
+            assert_eq!(i, operation.operation_number());
         }
     }
 }

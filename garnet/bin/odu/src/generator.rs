@@ -242,6 +242,8 @@ fn pick_operation_type(args: &GeneratorArgs) -> Vec<OperationType> {
     let mut operations: Vec<OperationType> = vec![];
     if args.operations.write {
         operations.push(OperationType::Write);
+    } else if args.operations.read {
+        operations.push(OperationType::Read);
     } else {
         assert!(false);
     }

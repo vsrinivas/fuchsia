@@ -20,6 +20,9 @@ pub enum Error {
 
     #[error("System error while performing IO.")]
     DoIoError(ErrorKind),
+
+    #[error("Read less bytes than requested")]
+    ShortRead,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -135,7 +138,7 @@ pub trait Target {
 pub struct TargetOps {
     pub write: bool,
     pub open: bool,
-    //    pub read: bool,
+    pub read: bool,
     //    pub lseek: bool,
     //    pub close: bool,
     //    pub fsync: bool,
@@ -155,12 +158,13 @@ pub struct TargetOps {
 
 impl TargetOps {
     pub fn friendly_names() -> Vec<&'static str> {
-        vec!["write", "open"]
+        vec!["write", "read", "open"]
     }
 
     pub fn enabled(&self, name: &str) -> bool {
         match name {
             "write" => return self.write,
+            "read" => return self.read,
             "open" => return self.open,
             _ => false,
         }
@@ -174,6 +178,7 @@ impl TargetOps {
         match name {
             "write" => self.write = enabled,
             "open" => self.open = enabled,
+            "read" => self.read = enabled,
             _ => return Err("Invalid input"),
         }
         Ok(())
@@ -189,30 +194,35 @@ mod tests {
 
     #[test]
     fn enabled_all_enabled() {
-        let x: TargetOps = TargetOps { write: true, open: true };
+        let x: TargetOps = TargetOps { write: true, open: true, read: true };
         assert!(x.enabled("write"));
         assert!(x.enabled("open"));
+        assert!(x.enabled("read"));
     }
 
     #[test]
     fn enabled_none_enabled() {
-        let x: TargetOps = TargetOps { write: false, open: false };
+        let x: TargetOps = TargetOps { write: false, open: false, read: false };
         assert!(!x.enabled("write"));
         assert!(!x.enabled("open"));
+        assert!(!x.enabled("read"));
     }
 
     #[test]
     fn enable_toggle_one() {
-        let mut x: TargetOps = TargetOps { write: false, open: false };
+        let mut x: TargetOps = TargetOps { write: false, open: false, read: false };
         assert!(!x.enabled("write"));
         assert!(!x.enabled("open"));
+        assert!(!x.enabled("read"));
 
         x.enable("open", true).unwrap();
         assert!(!x.enabled("write"));
+        assert!(!x.enabled("read"));
         assert!(x.enabled("open"));
 
         x.enable("open", false).unwrap();
         assert!(!x.enabled("write"));
+        assert!(!x.enabled("read"));
         assert!(!x.enabled("open"));
     }
 

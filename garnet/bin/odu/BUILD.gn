@@ -63,3 +63,11 @@ install_host_tools("odu_host") {
   deps = [ ":bin($host_toolchain)" ]
   outputs = [ "odu" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":bin_test($host_toolchain)",
+    ":odu_tests",
+  ]
+}

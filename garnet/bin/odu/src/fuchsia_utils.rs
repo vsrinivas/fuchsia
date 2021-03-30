@@ -39,6 +39,20 @@ pub fn get_trace_event(
             (false, OperationType::Write, 1) => {
                 Some(ftrace::duration(cstr!("benchmark"), cstr!("random/write/random_size"), &[]))
             }
+            (true, OperationType::Read, 8192) => {
+                Some(ftrace::duration(cstr!("benchmark"), cstr!("sequential/read/8192"), &[]))
+            }
+            (false, OperationType::Read, 8192) => {
+                Some(ftrace::duration(cstr!("benchmark"), cstr!("random/read/8192"), &[]))
+            }
+            (true, OperationType::Read, 1) => Some(ftrace::duration(
+                cstr!("benchmark"),
+                cstr!("sequential/read/random_size"),
+                &[],
+            )),
+            (false, OperationType::Read, 1) => {
+                Some(ftrace::duration(cstr!("benchmark"), cstr!("random/read/random_size"), &[]))
+            }
             _ => None,
         },
     }

@@ -172,7 +172,7 @@ fn target_operations_validator(
     // is subset of the operations allowed.
     let allowed_ops = allowed_ops(target_type);
 
-    let mut ops = TargetOps { write: false, open: false };
+    let mut ops = TargetOps { write: false, open: false, read: false };
     for value in operations {
         if !allowed_ops.enabled(value) {
             error!(
@@ -470,6 +470,9 @@ mod tests {
 
         assert!(
             args::target_operations_validator(AvailableTargets::FileTarget, &vec!["write"]).is_ok()
+        );
+        assert!(
+            args::target_operations_validator(AvailableTargets::FileTarget, &vec!["read"]).is_ok()
         );
     }
 

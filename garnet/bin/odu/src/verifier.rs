@@ -110,7 +110,7 @@ pub fn run_verifier(mut args: VerifierArgs) -> Result<(), Error> {
         }
 
         cmd.timestamp_stage_start(args.stage);
-        let _x = cmd.get_error()?;
+        cmd.get_error().unwrap();
 
         if cmd.verify_needs_io() {
             error!("VerifyIo not implemented");

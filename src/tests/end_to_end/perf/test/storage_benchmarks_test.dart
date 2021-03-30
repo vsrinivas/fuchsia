@@ -35,17 +35,18 @@ List<TestCaseResults> _storageBenchmarksMetricsProcessor(
   return results.values.toList();
 }
 
-Future<void> runStorageTest(
-    PerfTestHelper helper, int blockSize, int maxIoSize, String target) async {
+Future<void> runStorageTest(PerfTestHelper helper, int blockSize, int maxIoSize,
+    String operation, String cleanup, String target) async {
   final result = await helper.component.launch(_appPath, [
-    '--operations=write',
+    '--operations=$operation',
     '--target=$target',
-    '--max_io_count=1000',
+    '--max_io_count=500',
     '--sequential=true',
     '--block_size=$blockSize',
     '--log_ftrace=true',
     '--max_io_size=$maxIoSize',
-    '--align=true'
+    '--align=true',
+    '--cleanup=$cleanup'
   ]);
   if (result != 'Success') {
     throw Exception('Failed to launch $_appPath.');
@@ -61,9 +62,18 @@ void main() {
     final traceSession =
         await helper.performance.initializeTracing(categories: ['benchmark']);
     await traceSession.start();
+
+    // Run sequential write perf tests.
+    await runStorageTest(helper, 8192, 8192, 'write', 'false',
+        '/data/odu-sequential-block-aligned');
     await runStorageTest(
-        helper, 8192, 8192, '/data/odu-sequential-block-aligned');
-    await runStorageTest(helper, 1, 512, '/data/odu-sequential-unaligned');
+        helper, 1, 512, 'write', 'false', '/data/odu-sequential-unaligned');
+
+    // Run sequential read perf tests on the same set of files created by write tests above.
+    await runStorageTest(helper, 8192, 8192, 'read', 'true',
+        '/data/odu-sequential-block-aligned');
+    await runStorageTest(
+        helper, 1, 512, 'read', 'true', '/data/odu-sequential-unaligned');
 
     // TODO(fxbug.dev/54931): Explicitly stop tracing.
     // await traceSession.stop();

@@ -6,7 +6,7 @@
 //! implementation limits itself to blocking calls.
 
 use {
-    crate::common_operations::pwrite,
+    crate::common_operations::{pread, pwrite},
     crate::io_packet::{IoPacket, IoPacketType, TimeInterval},
     crate::operations::{OperationType, PipelineStages},
     crate::target::{Error, Target, TargetOps, TargetType},
@@ -172,7 +172,7 @@ impl FileBlockingTarget {
         offset_range: Range<u64>,
         start_instant: Instant,
     ) -> TargetType {
-        let file = OpenOptions::new().write(true).append(false).open(&name).unwrap();
+        let file = OpenOptions::new().write(true).read(true).append(false).open(&name).unwrap();
         Arc::new(Box::new(FileBlockingTarget {
             name,
             file,
@@ -196,6 +196,25 @@ impl FileBlockingTarget {
         let b = io_packet.buffer_mut();
 
         let ret = pwrite(raw_fd, b, offset_range.start as i64);
+        if let Err(err) = ret {
+            return io_packet.set_error(err);
+        }
+    }
+
+    // pread the buffer in IoPacket at io_offset_range.
+    fn read(&self, io_packet: &mut dyn IoPacket) {
+        let offset_range = io_packet.io_offset_range().clone();
+
+        if offset_range.start < self.offset_range.start || offset_range.end > self.offset_range.end
+        {
+            io_packet.set_error(Error::OffsetOutOfRange);
+            return;
+        }
+
+        let raw_fd = self.file.as_raw_fd().clone();
+        let b = io_packet.buffer_mut();
+
+        let ret = pread(raw_fd, b, offset_range.start as i64);
         if let Err(err) = ret {
             return io_packet.set_error(err);
         }
@@ -236,7 +255,7 @@ impl Target for FileBlockingTarget {
         Self: Sized,
     {
         // For now only writes are supported.
-        &TargetOps { write: true, open: false }
+        &TargetOps { write: true, read: true, open: false }
     }
 
     fn allowed_ops() -> &'static TargetOps
@@ -244,12 +263,13 @@ impl Target for FileBlockingTarget {
         Self: Sized,
     {
         // For now only writes are allowed.
-        &TargetOps { write: true, open: false }
+        &TargetOps { write: true, read: true, open: false }
     }
 
     fn do_io(&self, io_packet: &mut dyn IoPacket) {
         match io_packet.operation_type() {
             OperationType::Write => self.write(io_packet),
+            OperationType::Read => self.read(io_packet),
             OperationType::Open => self.open(io_packet),
             OperationType::Exit => self.exit(io_packet),
             _ => {
@@ -261,7 +281,10 @@ impl Target for FileBlockingTarget {
 
     fn is_complete(&self, io_packet: &dyn IoPacket) -> bool {
         match io_packet.operation_type() {
-            OperationType::Write | OperationType::Open | OperationType::Exit => true,
+            OperationType::Read
+            | OperationType::Write
+            | OperationType::Open
+            | OperationType::Exit => true,
             _ => {
                 error!("Complete for unsupported operation");
                 process::abort();
@@ -271,7 +294,10 @@ impl Target for FileBlockingTarget {
 
     fn verify_needs_io(&self, io_packet: &dyn IoPacket) -> bool {
         match io_packet.operation_type() {
-            OperationType::Write | OperationType::Open | OperationType::Exit => false,
+            OperationType::Read
+            | OperationType::Write
+            | OperationType::Open
+            | OperationType::Exit => false,
             _ => {
                 error!("verify_needs_io for unsupported operation");
                 process::abort();
@@ -290,7 +316,7 @@ impl Target for FileBlockingTarget {
 
     fn verify(&self, io_packet: &mut dyn IoPacket, _verify_packet: &dyn IoPacket) -> bool {
         match io_packet.operation_type() {
-            OperationType::Write | OperationType::Exit => true,
+            OperationType::Read | OperationType::Write | OperationType::Exit => true,
             _ => {
                 error!("verify for unsupported operation");
                 process::abort();
@@ -349,6 +375,42 @@ mod tests {
         // Try to write beyond allowed offset range
         let mut io_packet = target.create_io_packet(
             OperationType::Write,
+            0,
+            0,
+            (2 * FILE_LENGTH)..(3 * FILE_LENGTH),
+            target.clone(),
+        );
+        let mut _buffer = io_packet.buffer_mut();
+        io_packet.do_io();
+        assert_eq!(io_packet.is_complete(), true);
+        assert_eq!(io_packet.get_error().is_err(), true);
+        assert_eq!(io_packet.get_error().err(), Some(Error::OffsetOutOfRange));
+        teardown(&file_name);
+    }
+
+    #[test]
+    fn simple_read() {
+        let file_name = "/tmp/odu-file_target-simple_read-file01".to_string();
+
+        let target = setup(&file_name);
+        let mut io_packet =
+            target.create_io_packet(OperationType::Read, 0, 0, 0..4096, target.clone());
+        let mut _buffer = io_packet.buffer_mut();
+        io_packet.do_io();
+        assert_eq!(io_packet.is_complete(), true);
+        io_packet.get_error().unwrap();
+        teardown(&file_name);
+    }
+
+    #[test]
+    fn read_failure_out_of_range() {
+        let file_name = "/tmp/odu-file_target-read_failure-file01".to_string();
+
+        let target = setup(&file_name);
+
+        // Try to read beyond allowed offset range
+        let mut io_packet = target.create_io_packet(
+            OperationType::Read,
             0,
             0,
             (2 * FILE_LENGTH)..(3 * FILE_LENGTH),
