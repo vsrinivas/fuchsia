@@ -205,6 +205,7 @@ void = "1.0.2"
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }
+async-fs = "1.5"
 blocking = "1.0.2"
 crossterm = "0.17.7"
 concurrent-queue = "1"
