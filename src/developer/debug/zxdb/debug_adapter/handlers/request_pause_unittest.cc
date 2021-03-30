@@ -32,6 +32,8 @@ TEST_F(RequestPauseTest, PauseThread) {
   InitializeDebugging();
 
   InjectProcess(kProcessKoid);
+  // Run client to receive process started event.
+  RunClient();
   InjectThread(kProcessKoid, kThreadKoid);
   // Run client to receive threads started event.
   RunClient();

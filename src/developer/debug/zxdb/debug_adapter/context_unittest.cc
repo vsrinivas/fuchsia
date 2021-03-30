@@ -36,6 +36,19 @@ TEST_F(DebugAdapterContextTest, InitializedEvent) {
   EXPECT_TRUE(event_received);
 }
 
+TEST_F(DebugAdapterContextTest, ProcessStartEvent) {
+  bool start_received = false;
+
+  client().registerHandler([&](const dap::ProcessEvent& arg) { start_received = true; });
+
+  InitializeDebugging();
+  InjectProcess(kProcessKoid);
+
+  // Receive Process started event in client.
+  RunClient();
+  EXPECT_TRUE(start_received);
+}
+
 TEST_F(DebugAdapterContextTest, ThreadStartExitEvent) {
   bool start_received = false;
   bool exit_received = false;
@@ -53,8 +66,10 @@ TEST_F(DebugAdapterContextTest, ThreadStartExitEvent) {
   InitializeDebugging();
 
   InjectProcess(kProcessKoid);
-  InjectThread(kProcessKoid, kThreadKoid);
+  // Receive process started event in client.
+  RunClient();
 
+  InjectThread(kProcessKoid, kThreadKoid);
   // Receive thread started event in client.
   RunClient();
   EXPECT_TRUE(start_received);
@@ -83,8 +98,10 @@ TEST_F(DebugAdapterContextTest, StoppedEvent) {
   InitializeDebugging();
 
   InjectProcess(kProcessKoid);
-  InjectThread(kProcessKoid, kThreadKoid);
+  // Receive process started event in client.
+  RunClient();
 
+  InjectThread(kProcessKoid, kThreadKoid);
   // Receive thread started event in client.
   RunClient();
 

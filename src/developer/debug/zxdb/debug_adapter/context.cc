@@ -7,6 +7,7 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
@@ -54,6 +55,7 @@ DebugAdapterContext::DebugAdapterContext(Session *session, debug_ipc::StreamBuff
 DebugAdapterContext::~DebugAdapterContext() {
   if (init_done_) {
     session()->thread_observers().RemoveObserver(this);
+    session()->process_observers().RemoveObserver(this);
   }
 }
 
@@ -107,6 +109,7 @@ void DebugAdapterContext::Init() {
 
   // Register to zxdb session events
   session()->thread_observers().AddObserver(this);
+  session()->process_observers().AddObserver(this);
 
   init_done_ = true;
 }
@@ -171,6 +174,31 @@ void DebugAdapterContext::OnThreadFramesInvalidated(Thread *thread) {
     event.threadId = thread->GetKoid();
     dap_->send(event);
   }
+}
+
+void DebugAdapterContext::DidCreateProcess(Process *process, bool autoattached_to_new_process,
+                                           uint64_t timestamp) {
+  dap::ProcessEvent event;
+  event.name = process->GetName();
+  event.isLocalProcess = false;
+
+  switch (process->start_type()) {
+    case Process::StartType::kAttach:
+      event.startMethod = "attach";
+      break;
+    case Process::StartType::kComponent:
+    case Process::StartType::kLaunch:
+      event.startMethod = "launch";
+      break;
+  }
+
+  bool pause_on_attach =
+      session()->system().settings().GetBool(ClientSettings::System::kPauseOnAttach);
+  if (autoattached_to_new_process && pause_on_attach) {
+    event.startMethod = "attachForSuspendedLaunch";
+  }
+
+  dap_->send(event);
 }
 
 Target *DebugAdapterContext::GetCurrentTarget() {

@@ -9,6 +9,7 @@
 #include <dap/session.h>
 
 #include "src/developer/debug/shared/stream_buffer.h"
+#include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 
@@ -22,7 +23,7 @@ class DebugAdapterWriter;
 // Handles processing requests from debug adapter client with help from zxdb client session and dap
 // library.
 // Note: All methods in this class need to be executed on main thread to avoid concurrency bugs.
-class DebugAdapterContext : public ThreadObserver {
+class DebugAdapterContext : public ThreadObserver, ProcessObserver {
  public:
   explicit DebugAdapterContext(Session* session, debug_ipc::StreamBuffer* stream);
 
@@ -40,6 +41,10 @@ class DebugAdapterContext : public ThreadObserver {
   void WillDestroyThread(Thread* thread) override;
   void OnThreadStopped(Thread* thread, const StopInfo& info) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
+
+  // ProcessObserver implementation:
+  void DidCreateProcess(Process* process, bool autoattached_to_new_process,
+                        uint64_t timestamp) override;
 
   Target* GetCurrentTarget();
   Process* GetCurrentProcess();
