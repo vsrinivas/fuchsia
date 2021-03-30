@@ -13,7 +13,9 @@
 // The following test case is only meant to be run on boards that are booted
 // with a shim that provides a ZBI_TYPE_DEVICETREE ZBI item: our QEMU arm64
 // board is such an example.
-TEST(DevicetreeTest, SystemDevicetree) {
+//
+// TODO(fxbug.dev/73350): Investigate devicetree blob corruption.S
+TEST(DevicetreeTest, DISABLED_SystemDevicetree) {
   if (auto item = DevicetreeItem::Get(); item.is_error()) {
     ASSERT_OK(item.error_value(), "failed to get ZBI item");
   } else {
