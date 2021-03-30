@@ -137,11 +137,9 @@ func (b *unownedBuilder) visitStruct(value gidlir.Record, decl *gidlmixer.Struct
 	}
 	var result string
 	if decl.IsNullable() {
-		alignedVar := b.newVar()
-		b.write("fidl::aligned<%s> %s = std::move(%s);\n", typeNameIgnoreNullable(decl), alignedVar, containerVar)
-		unownedVar := b.newVar()
-		b.write("%s %s = fidl::unowned_ptr(&%s);\n", typeName(decl), unownedVar, alignedVar)
-		result = unownedVar
+		viewVar := b.newVar()
+		b.write("auto %s = fidl::ObjectView<%s>::FromExternal(&%s);\n", viewVar, typeNameIgnoreNullable(decl), containerVar)
+		result = viewVar
 	} else {
 		result = containerVar
 	}
@@ -157,7 +155,7 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 	tableVar := b.newVar()
 
 	b.write(
-		"%s %s(::fidl::ObjectView<%s::Frame>(fidl::unowned_ptr(&%s)));\n", declName(decl), tableVar, declName(decl), frameVar)
+		"%s %s(::fidl::ObjectView<%s::Frame>::FromExternal(&%s));\n", declName(decl), tableVar, declName(decl), frameVar)
 
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
@@ -168,10 +166,10 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
 		fieldVar := b.visit(field.Value, fieldDecl)
-		alignedVar := b.newVar()
-		b.write("fidl::aligned<%s> %s = std::move(%s);\n", typeName(fieldDecl), alignedVar, fieldVar)
+		storageVar := b.newVar()
+		b.write("auto %s = std::move(%s);\n", storageVar, fieldVar)
 		b.write(
-			"%s.set_%s(fidl::unowned_ptr(&%s));\n", tableVar, field.Key.Name, alignedVar)
+			"%s.set_%s(fidl::ObjectView<%s>::FromExternal(&%s));\n", tableVar, field.Key.Name, typeName(fieldDecl), storageVar)
 
 	}
 
@@ -193,10 +191,10 @@ func (b *unownedBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDe
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
 		fieldVar := b.visit(field.Value, fieldDecl)
-		alignedVar := b.newVar()
-		b.write("fidl::aligned<%s> %s = %s;\n", typeName(fieldDecl), alignedVar, fieldVar)
+		storageVar := b.newVar()
+		b.write("auto %s = std::move(%s);\n", storageVar, fieldVar)
 		b.write(
-			"%s.set_%s(fidl::unowned_ptr(&%s));\n", containerVar, field.Key.Name, alignedVar)
+			"%s.set_%s(fidl::ObjectView<%s>::FromExternal(&%s));\n", containerVar, field.Key.Name, typeName(fieldDecl), storageVar)
 	}
 	return fmt.Sprintf("std::move(%s)", containerVar)
 }
@@ -230,7 +228,7 @@ func (b *unownedBuilder) visitVector(value []interface{}, decl *gidlmixer.Vector
 	b.write("auto %s = fidl::Array<%s, %d>{%s};\n",
 		arrayVar, typeName(decl.Elem()), len(elements), strings.Join(elements, ", "))
 	sliceVar := b.newVar()
-	b.write("auto %s = %s(fidl::unowned_ptr(%s.data()), %d);\n",
-		sliceVar, typeName(decl), arrayVar, len(elements))
+	b.write("auto %s = fidl::VectorView<%s>::FromExternal(%s.data(), %d);\n", sliceVar,
+		typeName(decl.Elem()), arrayVar, len(elements))
 	return fmt.Sprintf("std::move(%s)", sliceVar)
 }
