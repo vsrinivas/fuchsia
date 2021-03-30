@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <string>
 
 #include <safemath/safe_conversions.h>
 
@@ -216,9 +217,8 @@ fit::result<Partition, std::string> CreateBlobfsFvmPartition(
   accumulated_slices += get_slice_count(journal_mapping);
 
   // Add any leftover space to the journal.
-  if (partition_options.max_allocated_bytes_for_leftovers.has_value()) {
-    uint64_t max_slices =
-        partition_options.max_allocated_bytes_for_leftovers.value() / fvm_options.slice_size;
+  if (partition_options.max_bytes.has_value()) {
+    uint64_t max_slices = partition_options.max_bytes.value() / fvm_options.slice_size;
     uint64_t available_slices =
         accumulated_slices > max_slices ? 0 : max_slices - accumulated_slices;
 
@@ -228,6 +228,20 @@ fit::result<Partition, std::string> CreateBlobfsFvmPartition(
         (available_slices + get_slice_count(journal_mapping)) * fvm_options.slice_size;
   }
   address.mappings.push_back(journal_mapping);
+
+  accumulated_slices = 0;
+  for (const auto& mapping : address.mappings) {
+    accumulated_slices += get_slice_count(mapping);
+  }
+  uint64_t accumulated_bytes = accumulated_slices * fvm_options.slice_size;
+
+  if (partition_options.max_bytes.has_value() &&
+      accumulated_bytes > partition_options.max_bytes.value()) {
+    return fit::error("Blobfs FVM Partition allocated " + std::to_string(accumulated_slices) + "(" +
+                      std::to_string(accumulated_bytes) +
+                      " bytes) exceeding provided upperbound |max_bytes|(" +
+                      std::to_string(partition_options.max_bytes.value()) + ").");
+  }
 
   auto patched_superblock_reader =
       std::make_unique<PatchedSuperblockReader>(std::move(source_image));

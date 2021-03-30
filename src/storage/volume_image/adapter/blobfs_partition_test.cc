@@ -156,9 +156,9 @@ void CheckSuperblock(const blobfs::Superblock& actual_superblock,
                           fvm_options.slice_size));
 
   // Check if there are leftover bytes, they are assigned to the journal.
-  if (partition_options.max_allocated_bytes_for_leftovers.has_value()) {
-    uint64_t max_slices_for_leftovers = GetBlockCount(
-        0, partition_options.max_allocated_bytes_for_leftovers.value(), fvm_options.slice_size);
+  if (partition_options.max_bytes.has_value()) {
+    uint64_t max_slices_for_leftovers =
+        GetBlockCount(0, partition_options.max_bytes.value(), fvm_options.slice_size);
     // slices for the journal, from original image.
     uint64_t min_journal_slices = GetBlockCount(
         blobfs::kFVMJournalStart,
@@ -369,7 +369,7 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountHi
       CreateBlobfsFvmPartition(std::move(blobfs_reader), partition_options, fvm_options);
   ASSERT_TRUE(partition_or.is_ok()) << partition_or.error();
   auto partition = partition_or.take_value();
-  ;
+
   ASSERT_NO_FATAL_FAILURE(CheckPartition(partition));
 
   auto maybe_superblocks = ReadSuperblocks(original_blobfs_reader, *partition.reader());
@@ -526,7 +526,7 @@ TEST(BlobfsPartitionTest,
   ASSERT_TRUE(original_blobfs_reader_or.is_ok()) << original_blobfs_reader_or.error();
   auto original_blobfs_reader = original_blobfs_reader_or.take_value();
   // Set it to an absurd amount, this should only be reflected on journal slices.
-  partition_options.max_allocated_bytes_for_leftovers = 10u * (1u << 30);
+  partition_options.max_bytes = 10u * (1u << 30);
 
   auto blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(blobfs_reader_or.is_ok()) << blobfs_reader_or.error();
@@ -562,8 +562,7 @@ TEST(BlobfsPartitionTest,
   ASSERT_NO_FATAL_FAILURE(CheckJournalMapping(partition, original_blobfs_reader, *original_sb));
 }
 
-TEST(BlobfsPartitionTest,
-     PartitionDataAndReaderIsCorrectWithMaxAllocatedBytesForLeftOverLowerThanImage) {
+TEST(BlobfsPartitionTest, ExceedingMaxBytesIsError) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
   AdapterOptions partition_options;
 
@@ -572,7 +571,7 @@ TEST(BlobfsPartitionTest,
   auto original_blobfs_reader = original_blobfs_reader_or.take_value();
 
   // Number of mappings - 1 slices, so this will be 4.
-  partition_options.max_allocated_bytes_for_leftovers = 4 * fvm_options.slice_size;
+  partition_options.max_bytes = 4 * fvm_options.slice_size;
 
   auto blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(blobfs_reader_or.is_ok()) << blobfs_reader_or.error();
@@ -580,33 +579,7 @@ TEST(BlobfsPartitionTest,
 
   auto partition_or =
       CreateBlobfsFvmPartition(std::move(blobfs_reader), partition_options, fvm_options);
-  ASSERT_TRUE(partition_or.is_ok()) << partition_or.error();
-  auto partition = partition_or.take_value();
-  ;
-  ASSERT_NO_FATAL_FAILURE(CheckPartition(partition));
-
-  auto maybe_superblocks = ReadSuperblocks(original_blobfs_reader, *partition.reader());
-  ASSERT_TRUE(maybe_superblocks.has_value());
-  auto [original_superblock, superblock] = maybe_superblocks.value();
-
-  // Check the fields in the superblock are at least as big as those in the original image, and
-  // the allocation counts remain unchanged.
-  const blobfs::Superblock* sb = reinterpret_cast<blobfs::Superblock*>(superblock.data());
-  const blobfs::Superblock* original_sb =
-      reinterpret_cast<blobfs::Superblock*>(original_superblock.data());
-
-  // The actual value will be matched in the |CheckSuperblock|, but we can at least verify, that
-  // is bigger than would have been for the original journal blocks.
-  uint64_t old_blocks =
-      GetBlockCount(blobfs::kFVMJournalStart,
-                    GetBlockCount(0, original_sb->journal_block_count * blobfs::kBlobfsBlockSize,
-                                  fvm_options.slice_size) *
-                        fvm_options.slice_size,
-                    blobfs::kBlobfsBlockSize);
-  ASSERT_EQ(sb->journal_block_count, old_blocks);
-  ASSERT_NO_FATAL_FAILURE(CheckSuperblock(*sb, *original_sb, fvm_options, partition_options));
-  ASSERT_NO_FATAL_FAILURE(CheckNonSuperBlockMapping(partition, original_blobfs_reader));
-  ASSERT_NO_FATAL_FAILURE(CheckJournalMapping(partition, original_blobfs_reader, *original_sb));
+  ASSERT_TRUE(partition_or.is_error());
 }
 
 }  // namespace

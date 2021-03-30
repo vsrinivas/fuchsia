@@ -19,11 +19,10 @@ struct AdapterOptions {
   // |min_data_bytes| at least. This is a lowerbound for the size of the mapping.
   std::optional<uint64_t> min_data_bytes;
 
-  // Given a partition, that the entire allocated bytes, are smaller than this amount of bytes,
-  // provides a leftover to be disposed by the specific adapter implementation.
+  // Maximum number of bytes a partition may use.
   //
   // E.g. BlobfsAdapter will increase its journal size based on the remaining slices.
-  std::optional<uint64_t> max_allocated_bytes_for_leftovers;
+  std::optional<uint64_t> max_bytes;
 };
 
 }  // namespace storage::volume_image
