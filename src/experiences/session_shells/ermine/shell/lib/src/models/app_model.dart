@@ -53,6 +53,9 @@ class AppModel {
   final String backgroundImageUrl = 'assets/images/fuchsia.png';
   final Color backgroundColor = Colors.grey[850];
 
+  static const String dynamicConfigPath = '/data/startup_config.json';
+  static const String staticConfigPath = '/config/data/startup_config.json';
+
   final ValueNotifier<DateTime> currentTime =
       ValueNotifier<DateTime>(DateTime.now());
   ValueNotifier<bool> alertVisibility = ValueNotifier(false);
@@ -118,11 +121,15 @@ class AppModel {
     );
     keyboardShortcutsHelpText = _keyboardShortcuts.helpText();
 
-    // Load startup configuration.
-    File startupConfig = File('/config/data/startup_config.json');
-    if (startupConfig.existsSync()) {
-      final data = json.decode(startupConfig.readAsStringSync());
-      oobeVisibility.value = data['launch_oobe'] ?? false;
+
+    // Load startup configuration. First check for dynamic config file, if it
+    // is not there look for the static file, otherwise default to normal start.
+    if (FileSystemEntity.typeSync(dynamicConfigPath) !=
+        FileSystemEntityType.notFound) {
+      _readStartupConfig(dynamicConfigPath);
+    } else if (FileSystemEntity.typeSync(staticConfigPath) !=
+        FileSystemEntityType.notFound) {
+      _readStartupConfig(staticConfigPath);
     } else {
       oobeVisibility.value = false;
     }
@@ -236,6 +243,14 @@ class AppModel {
     return file.readAsStringSync();
   }
 
+  void _readStartupConfig(String filename) {
+    File startupConfig = File(filename);
+    final data = json.decode(startupConfig.readAsStringSync());
+
+    // If configuration is not found, use default value false.
+    oobeVisibility.value = data['launch_oobe'] ?? false;
+  }
+
   void onFullscreen() {
     if (clustersModel.fullscreenStory != null) {
       clustersModel.fullscreenStory.restore();
@@ -291,6 +306,12 @@ class AppModel {
 
   /// Exit OOBE and go to overview.
   void exitOobe() {
+    // Set dynamic config file to false so that setup does not launch on next
+    // boot.
+    final configData = {'launch_startup_setup': false};
+    final configString = json.encode(configData);
+    File(dynamicConfigPath).writeAsStringSync(configString);
+
     oobeVisibility.value = false;
     overviewVisibility.value = true;
   }
