@@ -10,10 +10,10 @@ use {
     },
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth_hfp::{CallMarker, CallProxy, CallState, PeerHandlerProxy},
+    fuchsia_async as fasync,
     futures::stream::{FusedStream, Stream, StreamExt},
-    log::warn,
+    log::{debug, info, warn},
     std::{
-        collections::HashMap,
         pin::Pin,
         task::{Context, Poll},
     },
@@ -23,22 +23,102 @@ use {
 #[derive(Debug, Clone, PartialEq, Hash, Default, Eq)]
 pub struct Number(String);
 
-/// A request was made using an unknown number.
+/// The index associated with a call, that is guaranteed to be unique for the lifetime of the call,
+/// but will be recycled after the call is released.
+pub type CallIdx = usize;
+
+/// A request was made using an unknown call index.
 #[derive(Debug, PartialEq)]
-pub struct UnknownNumberError(Number);
+pub struct UnknownIndexError(CallIdx);
+
+/// The direction of call initiation.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Direction {
+    /// Call Direction is not known at this time.
+    Unknown,
+    /// Call originated on this device. This is also known as an Outgoing call.
+    MobileOriginated,
+    /// Call is terminated on this device. This is also known as an Incoming call.
+    MobileTerminated,
+}
+
+impl From<CallState> for Direction {
+    fn from(x: CallState) -> Self {
+        match x {
+            CallState::IncomingRinging | CallState::IncomingWaiting => Self::MobileTerminated,
+            CallState::OutgoingDialing | CallState::OutgoingAlerting => Self::MobileOriginated,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// Internal state and resources associated with a single call.
+#[allow(unused)] // TODO: Remove in fxrev.dev/497389
+struct CallEntry {
+    /// Proxy associated with this call.
+    proxy: CallProxy,
+    /// The remote party's number.
+    number: Number,
+    /// Current state.
+    state: CallState,
+    /// Time of the last update to the call's `state`.
+    state_updated_at: fasync::Time,
+    /// Direction of the call.
+    direction: Direction,
+}
+
+impl CallEntry {
+    pub fn new(proxy: CallProxy, number: Number, state: CallState) -> Self {
+        let state_updated_at = fasync::Time::now();
+        Self { proxy, number, state, state_updated_at, direction: state.into() }
+    }
+
+    /// Update the state. Also update the direction if it is Unknown.
+    /// `state_updated_at` is changed only if self.state != state.
+    pub fn set_state(&mut self, state: CallState) {
+        if self.direction == Direction::Unknown {
+            self.direction = state.into();
+        }
+        if self.state != state {
+            self.state_updated_at = fasync::Time::now();
+            self.state = state;
+        }
+    }
+}
+
+/// The current state of a call.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Call {
+    /// Unique identifier associated with a call for the lifetime of the call.
+    /// Once the state is `Terminated` or `TransferredToAg` the index may be reused by another
+    /// call.
+    pub index: CallIdx,
+    /// Remote party's number.
+    pub number: Number,
+    /// Current state.
+    pub state: CallState,
+    /// Direction of the call.
+    pub direction: Direction,
+}
+
+impl Call {
+    pub fn new(index: CallIdx, number: Number, state: CallState, direction: Direction) -> Self {
+        Self { index, number, state, direction }
+    }
+}
 
 /// A stream of updates to the state of calls. Each update contains the `Number` and the
 /// `CallState`. When the channel for a given call is closed, an epitaph is returned with the
 /// `Number`.
 /// The `Number` uniquely identifies a call. TODO (fxbug.dev/64558): Handle multi-party calls.
 type CallStateUpdates =
-    StreamMap<Number, StreamWithEpitaph<Tagged<Number, HangingGetStream<CallState>>, Number>>;
+    StreamMap<CallIdx, StreamWithEpitaph<Tagged<CallIdx, HangingGetStream<CallState>>, CallIdx>>;
 
 /// Manages the state of all ongoing calls reported by the call manager. Provides updates on the
 /// states and relays requests made by the Hands Free to act on calls.
 pub(crate) struct Calls {
     new_calls: Option<HangingGetStream<(ClientEnd<CallMarker>, String, CallState)>>,
-    current_calls: HashMap<Number, (CallProxy, CallState)>,
+    current_calls: CallList<CallEntry>,
     call_updates: CallStateUpdates,
     terminated: bool,
 }
@@ -49,24 +129,19 @@ impl Calls {
             proxy.map(|proxy| HangingGetStream::new(Box::new(move || Some(proxy.wait_for_call()))));
         Self {
             new_calls,
-            current_calls: HashMap::new(),
+            current_calls: CallList::default(),
             call_updates: CallStateUpdates::empty(),
             terminated: false,
         }
     }
 
     /// Insert a new call
-    pub fn handle_new_call(
-        &mut self,
-        call: ClientEnd<CallMarker>,
-        number: Number,
-        state: CallState,
-    ) {
-        let call = call.into_proxy().unwrap();
-        self.current_calls.insert(number.clone(), (call.clone(), state.clone()));
-        let call_state = HangingGetStream::new(Box::new(move || Some(call.watch_state())));
-        self.call_updates
-            .insert(number.clone(), call_state.tagged(number.clone()).with_epitaph(number));
+    fn handle_new_call(&mut self, call: ClientEnd<CallMarker>, number: Number, state: CallState) {
+        let proxy = call.into_proxy().unwrap();
+        let call = CallEntry::new(proxy.clone(), number.clone(), state);
+        let index = self.current_calls.insert(call);
+        let call_state = HangingGetStream::new(Box::new(move || Some(proxy.watch_state())));
+        self.call_updates.insert(index, call_state.tagged(index).with_epitaph(index));
         self.terminated = false;
     }
 
@@ -81,39 +156,38 @@ impl Calls {
     /// the CallProxy from the map if an error is returned by running `f`.
     fn _send_call_request(
         &mut self,
-        number: &Number,
+        index: CallIdx,
         f: impl FnOnce(&CallProxy) -> Result<(), fidl::Error>,
-    ) -> Result<(), UnknownNumberError> {
-        let result =
-            f(&self.current_calls.get(number).ok_or(UnknownNumberError(number.clone()))?.0);
+    ) -> Result<(), UnknownIndexError> {
+        let result = f(&self.current_calls.get(index).ok_or(UnknownIndexError(index))?.proxy);
         if let Err(e) = result {
             if !e.is_closed() {
-                warn!("Error making request on Call channel for {:?}: {}", number, e);
+                warn!("Error making request on Call channel for call {:?}: {}", index, e);
             }
-            self.current_calls.remove(number);
+            self.remove_call(index);
         }
         Ok(())
     }
 
-    /// Send a request to the call manager to place the call to `number` on hold.
-    pub fn _request_hold(&mut self, number: &Number) -> Result<(), UnknownNumberError> {
-        self._send_call_request(number, |proxy| proxy.request_hold())
+    /// Send a request to the call manager to place the call on hold.
+    pub fn _request_hold(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
+        self._send_call_request(index, |proxy| proxy.request_hold())
     }
 
-    /// Send a request to the call manager to make the call to `number` active.
-    pub fn _request_active(&mut self, number: &Number) -> Result<(), UnknownNumberError> {
-        self._send_call_request(number, |proxy| proxy.request_active())
+    /// Send a request to the call manager to make the call active.
+    pub fn _request_active(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
+        self._send_call_request(index, |proxy| proxy.request_active())
     }
 
-    /// Send a request to the call manager to terminate the call to `number`.
-    pub fn _request_terminate(&mut self, number: &Number) -> Result<(), UnknownNumberError> {
-        self._send_call_request(number, |proxy| proxy.request_terminate())
+    /// Send a request to the call manager to terminate the call.
+    pub fn _request_terminate(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
+        self._send_call_request(index, |proxy| proxy.request_terminate())
     }
 
-    /// Send a request to the call manager to transfer the audio of the call to `number` from the
+    /// Send a request to the call manager to transfer the audio of the call from the
     /// headset to the fuchsia device.
-    pub fn _request_transfer_audio(&mut self, number: &Number) -> Result<(), UnknownNumberError> {
-        self._send_call_request(number, |proxy| proxy.request_transfer_audio())
+    pub fn _request_transfer_audio(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
+        self._send_call_request(index, |proxy| proxy.request_transfer_audio())
     }
 
     /// Send a dtmf code to the call manager for active call,
@@ -122,6 +196,21 @@ impl Calls {
             "Sending a dtmf code can fail where other call requests cannot. \
             It must be handled separately"
         );
+    }
+
+    /// Return a Vec of the current call state for every call that `Calls` is tracking.
+    #[allow(unused)] // TODO: Remove in fxrev.dev/497389
+    pub fn current_calls(&self) -> Vec<Call> {
+        self.current_calls
+            .calls()
+            .map(|(index, call)| Call::new(index, call.number.clone(), call.state, call.direction))
+            .collect()
+    }
+
+    /// Remove all references to the call assigned to `index`.
+    fn remove_call(&mut self, index: CallIdx) {
+        self.call_updates.remove(&index);
+        self.current_calls.remove(index);
     }
 
     /// Helper function to poll the new_calls hanging get for the next available new call.
@@ -135,7 +224,7 @@ impl Calls {
             match new_calls.poll_next_unpin(cx) {
                 Poll::Ready(Some(Ok((call, number_str, state)))) => {
                     let number = Number(number_str);
-                    self.handle_new_call(call, number.clone(), state.clone());
+                    self.handle_new_call(call, number.clone(), state);
                     return Some((number, state));
                 }
                 Poll::Ready(Some(Err(_e))) => self.new_calls = None,
@@ -150,12 +239,21 @@ impl Calls {
     fn poll_next_call_updates(&mut self, cx: &mut Context<'_>) -> Option<<Self as Stream>::Item> {
         match self.call_updates.poll_next_unpin(cx) {
             Poll::Ready(Some(item)) => match item {
-                StreamItem::Item((number, Ok(state))) => return Some((number, state)),
-                StreamItem::Item((number, Err(_error))) => {
-                    self.call_updates.remove(&number);
+                StreamItem::Item((index, Ok(state))) => {
+                    if let Some(call) = self.current_calls.get_mut(index) {
+                        call.set_state(state);
+                        return Some((call.number.clone(), state));
+                    } else {
+                        self.remove_call(index);
+                    }
                 }
-                StreamItem::Epitaph(number) => {
-                    self.call_updates.remove(&number);
+                StreamItem::Item((index, Err(e))) => {
+                    info!("Call {} channel closed with error: {}", index, e);
+                    self.remove_call(index);
+                }
+                StreamItem::Epitaph(index) => {
+                    debug!("Call {} channel closed", index);
+                    self.remove_call(index);
                 }
             },
             Poll::Ready(None) | Poll::Pending => (),
@@ -196,6 +294,65 @@ impl FusedStream for Calls {
     }
 }
 
+/// A collection designed for the specific requirements of storing Calls with an associated index.
+///
+/// The requirements found in HFP v1.8, Section 4.34.2, "+CLCC":
+///
+///   * Each call is assigned a number starting at 1.
+///   * Calls hold their number until they are released.
+///   * New calls take the lowest available number.
+///
+/// Note: "Insert" is a O(n) operation in order to simplify the implementation.
+/// This data structure is best suited towards small n for this reason.
+// The CallIdx for a call starts at 1 instead of 0, so the internal index must be incremented
+// before being returned to the user and decremented after being received by the user.
+struct CallList<T> {
+    inner: Vec<Option<T>>,
+}
+
+impl<T> Default for CallList<T> {
+    fn default() -> Self {
+        Self { inner: Vec::default() }
+    }
+}
+
+impl<T> CallList<T> {
+    /// Insert a new value into the list, returning an index that is guaranteed to be unique until
+    /// the value is removed from the list.
+    fn insert(&mut self, value: T) -> CallIdx {
+        if let Some(index) = self.inner.iter_mut().position(|v| v.is_none()) {
+            self.inner[index] = Some(value);
+            index + 1
+        } else {
+            self.inner.push(Some(value));
+            self.inner.len()
+        }
+    }
+
+    /// Retrieve a value by index. Returns `None` if the index does not point to a value.
+    #[allow(unused)] // TODO: Remove in fxrev.dev/497389
+    fn get(&self, index: CallIdx) -> Option<&T> {
+        self.inner.get(index - 1).map(|v| v.as_ref()).unwrap_or(None)
+    }
+
+    /// Retrieve a mutable reference to a value by index. Returns `None` if the index does not point
+    /// to a value.
+    fn get_mut(&mut self, index: CallIdx) -> Option<&mut T> {
+        self.inner.get_mut(index - 1).map(|v| v.as_mut()).unwrap_or(None)
+    }
+
+    /// Remove a value by index. Returns `None` if the value did not point to a value.
+    fn remove(&mut self, index: CallIdx) -> Option<T> {
+        self.inner.get_mut(index - 1).map(|v| v.take()).unwrap_or(None)
+    }
+
+    /// Return an iterator of the calls and associated call indices.
+    #[allow(unused)] // TODO: Remove in fxrev.dev/497389
+    fn calls(&self) -> impl Iterator<Item = (CallIdx, &T)> {
+        self.inner.iter().enumerate().flat_map(|(i, entry)| entry.as_ref().map(|v| (i + 1, v)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -208,33 +365,115 @@ mod tests {
         matches::assert_matches,
     };
 
+    #[test]
+    fn call_list_insert() {
+        let mut list = CallList::default();
+        let i1 = list.insert(1);
+        assert_eq!(i1, 1, "The first value must be assigned the number 1");
+        let i2 = list.insert(2);
+        assert_eq!(i2, 2, "The second value is assigned the next available number");
+    }
+
+    #[test]
+    fn call_list_get() {
+        let mut list = CallList::default();
+        let i1 = list.insert(1);
+        let i2 = list.insert(2);
+        assert_eq!(list.get(0), None);
+        assert_eq!(list.get(i1), Some(&1));
+        assert_eq!(list.get(i2), Some(&2));
+        assert_eq!(list.get(3), None);
+    }
+
+    #[test]
+    fn call_list_get_mut() {
+        let mut list = CallList::default();
+        let i1 = list.insert(1);
+        let i2 = list.insert(2);
+        assert_eq!(list.get_mut(i1), Some(&mut 1));
+        assert_eq!(list.get_mut(i2), Some(&mut 2));
+        assert_eq!(list.get_mut(3), None);
+    }
+
+    #[test]
+    fn call_list_remove() {
+        let mut list = CallList::default();
+        let i1 = list.insert(1);
+        let i2 = list.insert(2);
+        let removed = list.remove(i1);
+        assert!(removed.is_some());
+        assert_eq!(list.get(i1), None, "The value at i1 is removed");
+        assert_eq!(list.get(i2), Some(&2), "The value at i2 is untouched");
+        let invalid_idx = 0;
+        assert!(list.remove(invalid_idx).is_none());
+    }
+
+    #[test]
+    fn call_list_remove_and_insert_behaves() {
+        let mut list = CallList::default();
+        let i1 = list.insert(1);
+        let i2 = list.insert(2);
+        let i3 = list.insert(3);
+        let i4 = list.insert(4);
+        list.remove(i2);
+        list.remove(i1);
+        list.remove(i3);
+        let i5 = list.insert(5);
+        assert_eq!(i5, i1, "i5 is the lowest possible index (i1) even though i1 was not the first or last index removed");
+        assert_eq!(list.get(i5), Some(&5), "The value at i5 is correct");
+        let i6 = list.insert(6);
+        let i7 = list.insert(7);
+        assert_eq!(i6, i2, "i6 takes the next available index (i2)");
+        assert_eq!(i7, i3, "i7 takes the next available index (i3)");
+        let i8_ = list.insert(8);
+        assert_ne!(i8_, i4, "i4 is reserved, so i8_ must take a new index");
+        assert_eq!(
+            i8_, 5,
+            "i8_ takes an index of 5 since it is the last of the 5 values to be inserted"
+        );
+    }
+
+    #[test]
+    fn call_list_iter_returns_all_valid_values() {
+        let mut list = CallList::default();
+        let i1 = list.insert(1);
+        let i2 = list.insert(2);
+        let i3 = list.insert(3);
+        let i4 = list.insert(4);
+        list.remove(i2);
+        let actual: Vec<_> = list.calls().collect();
+        let expected = vec![(i1, &1), (i3, &3), (i4, &4)];
+        assert_eq!(actual, expected);
+    }
+
     /// The most common test setup includes an initialized Calls instance and an ongoing call.
     /// This helper function sets up a `Calls` instance in that state and returns the associated
     /// endpoints.
-    fn setup_ongoing_call() -> (Calls, PeerHandlerRequestStream, CallRequestStream, Number) {
+    fn setup_ongoing_call() -> (Calls, PeerHandlerRequestStream, CallRequestStream, CallIdx, Number)
+    {
         let (proxy, peer_stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
         let mut calls = Calls::new(Some(proxy));
         let (client_end, call_stream) = fidl::endpoints::create_request_stream().unwrap();
         let num = Number("1".into());
         calls.handle_new_call(client_end, num.clone(), CallState::IncomingRinging);
-        (calls, peer_stream, call_stream, num)
+        (calls, peer_stream, call_stream, 1, num)
     }
 
     #[fasync::run_until_stalled(test)]
     async fn call_requests_send_requests_to_server() {
-        let (mut calls, _peer_handler, mut call_stream, num) = setup_ongoing_call();
+        let (mut calls, _peer_handler, mut call_stream, idx, _num) = setup_ongoing_call();
 
-        calls._request_hold(&num).expect("valid number");
+        calls._request_hold(idx).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestHold { .. })));
 
-        calls._request_active(&num).expect("valid number");
+        calls._request_active(idx).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestActive { .. })));
 
-        calls._request_terminate(&num).expect("valid number");
+        calls._request_terminate(idx).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestTerminate { .. })));
 
-        calls._request_transfer_audio(&num).expect("valid number");
+        calls._request_transfer_audio(idx).expect("valid index");
         assert_matches!(
             call_stream.next().await,
             Some(Ok(CallRequest::RequestTransferAudio { .. }))
@@ -242,45 +481,47 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn call_requests_invalid_number_return_error() {
-        let (mut calls, _peer_handler, _call_stream, _num) = setup_ongoing_call();
+    async fn call_requests_invalid_index_return_error() {
+        let (mut calls, _peer_handler, _call_stream, _idx, _num) = setup_ongoing_call();
 
-        let invalid = Number("2".into());
-        let result = calls._request_hold(&invalid);
-        assert_eq!(result, Err(UnknownNumberError(invalid.clone())));
+        let invalid = 2;
+        let result = calls._request_hold(invalid);
+        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
 
-        let invalid = Number("2".into());
-        let result = calls._request_active(&invalid);
-        assert_eq!(result, Err(UnknownNumberError(invalid.clone())));
+        let result = calls._request_active(invalid);
+        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
 
-        let invalid = Number("2".into());
-        let result = calls._request_terminate(&invalid);
-        assert_eq!(result, Err(UnknownNumberError(invalid.clone())));
+        let result = calls._request_terminate(invalid);
+        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
 
-        let invalid = Number("2".into());
-        let result = calls._request_transfer_audio(&invalid);
-        assert_eq!(result, Err(UnknownNumberError(invalid.clone())));
+        let result = calls._request_transfer_audio(invalid);
+        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
     }
 
     #[fasync::run_until_stalled(test)]
     async fn call_requests_manager_closed_clears_call() {
-        let (mut calls, _peer_handler, call_stream, num) = setup_ongoing_call();
+        let (mut calls, _peer_handler, call_stream, idx, num) = setup_ongoing_call();
         drop(call_stream);
 
-        assert!(calls.current_calls.contains_key(&num));
+        let call =
+            calls.current_calls().into_iter().find(|info| info.index == idx && info.number == num);
+        assert!(call.is_some(), "Call must exist in list of calls");
 
         // A request made to a Call channel that is closed will remove the call entry.
-        let result = calls._request_hold(&num);
+        let result = calls._request_hold(idx);
         assert_eq!(result, Ok(()));
 
-        assert!(!calls.current_calls.contains_key(&num));
+        let call =
+            calls.current_calls().into_iter().find(|info| info.index == idx && info.number == num);
+        assert!(call.is_none(), "Call must not exist in list of calls");
     }
 
     #[test]
     fn calls_stream_lifecycle() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (mut calls, mut handler_stream, mut call_1, num_1) = setup_ongoing_call();
+        let (mut calls, mut handler_stream, mut call_1, idx_1, num_1) = setup_ongoing_call();
+        let num_2 = Number("2".into());
 
         // Stream doesn't have an item ready.
         let result = exec.run_until_stalled(&mut calls.next());
@@ -300,11 +541,14 @@ mod tests {
 
         // Stream has an item ready.
         let result = exec.run_until_stalled(&mut calls.next());
-        let num_2 = match result {
-            Poll::Ready(Some((number, CallState::IncomingRinging))) => number,
+        let info = match result {
+            Poll::Ready(Some(info)) => info,
             result => panic!("Unexpected result: {:?}", result),
         };
-        assert_eq!(num_2, Number("2".into()));
+        let expected =
+            Call::new(2, num_2.clone(), CallState::IncomingRinging, Direction::MobileTerminated);
+        assert_eq!(info.0, expected.number);
+        assert_eq!(info.1, expected.state);
 
         assert!(!calls.is_terminated());
 
@@ -322,11 +566,15 @@ mod tests {
 
         // Stream has an item ready.
         let result = exec.run_until_stalled(&mut calls.next());
-        let num = match result {
-            Poll::Ready(Some((number, CallState::OngoingActive))) => number,
+        let info = match result {
+            Poll::Ready(Some(info)) => info,
             result => panic!("Unexpected result: {:?}", result),
         };
-        assert_eq!(num, num_1);
+
+        let expected =
+            Call::new(idx_1, num_1, CallState::OngoingActive, Direction::MobileTerminated);
+        assert_eq!(info.0, expected.number);
+        assert_eq!(info.1, expected.state);
 
         drop(call_1);
 
@@ -345,11 +593,15 @@ mod tests {
 
         // Stream has an item ready.
         let result = exec.run_until_stalled(&mut calls.next());
-        let num = match result {
-            Poll::Ready(Some((number, CallState::OngoingHeld))) => number,
+        let info = match result {
+            Poll::Ready(Some(info)) => info,
             result => panic!("Unexpected result: {:?}", result),
         };
-        assert_eq!(num, num_2);
+
+        let expected =
+            Call::new(2, num_2.clone(), CallState::OngoingHeld, Direction::MobileTerminated);
+        assert_eq!(info.0, expected.number);
+        assert_eq!(info.1, expected.state);
 
         drop(call_2);
 
