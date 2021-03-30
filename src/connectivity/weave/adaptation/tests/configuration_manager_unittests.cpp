@@ -183,7 +183,8 @@ class FakeWeaveFactoryStoreProvider
   FakeWeaveFactoryStoreProvider(const FakeWeaveFactoryStoreProvider&) = delete;
   FakeWeaveFactoryStoreProvider& operator=(const FakeWeaveFactoryStoreProvider&) = delete;
 
-  void AttachDir(std::unique_ptr<FakeDirectory> fake_dir) { fake_dir_ = std::move(fake_dir); }
+  // The lifetime of the fake_dir must outlive this FakeWeaveFactoryStoreProvider.
+  void AttachDir(FakeDirectory* fake_dir) { fake_dir_ = fake_dir; }
 
   void GetFactoryStore(::fidl::InterfaceRequest<::fuchsia::io::Directory> dir) override {
     if (!fake_dir_) {
@@ -197,7 +198,7 @@ class FakeWeaveFactoryStoreProvider
 
  private:
   fidl::Binding<fuchsia::factory::WeaveFactoryStoreProvider> binding_{this};
-  std::unique_ptr<FakeDirectory> fake_dir_;
+  FakeDirectory* fake_dir_;
   async_dispatcher_t* dispatcher_;
 };
 
@@ -246,7 +247,11 @@ class ThreadStackManagerTestDelegateImpl : public ThreadStackManagerDelegateImpl
   bool is_thread_provisioned_;
 };
 
-class ConfigurationManagerTest : public WeaveTestFixture {
+struct CfgMgrTestResource {
+  std::vector<std::unique_ptr<FakeDirectory>> fake_dirs;
+};
+
+class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
  public:
   ConfigurationManagerTest() {
     context_provider_.service_directory_provider()->AddService(
@@ -258,8 +263,8 @@ class ConfigurationManagerTest : public WeaveTestFixture {
   }
 
   void SetUp() {
-    WeaveTestFixture::SetUp();
-    WeaveTestFixture::RunFixtureLoop();
+    WeaveTestFixture<CfgMgrTestResource>::SetUp();
+    WeaveTestFixture<CfgMgrTestResource>::RunFixtureLoop();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     auto thread_stack_delegate = std::make_unique<ThreadStackManagerTestDelegateImpl>();
     thread_mgr_ = thread_stack_delegate.get();
@@ -269,8 +274,8 @@ class ConfigurationManagerTest : public WeaveTestFixture {
   }
 
   void TearDown() {
-    WeaveTestFixture::StopFixtureLoop();
-    WeaveTestFixture::TearDown();
+    WeaveTestFixture<CfgMgrTestResource>::StopFixtureLoop();
+    WeaveTestFixture<CfgMgrTestResource>::TearDown();
     ThreadStackMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(nullptr);
   }
@@ -299,6 +304,14 @@ class ConfigurationManagerTest : public WeaveTestFixture {
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
   FakeWeaveFactoryStoreProvider fake_weave_factory_store_provider_;
   ThreadStackManagerTestDelegateImpl* thread_mgr_;
+
+  // Add a fake directory to the resource that will be destroyed only after the
+  // background loop has completed. There is no interface for removing a fake
+  // directory as it may still be referenced by the loop.
+  FakeDirectory& AddFakeDirectory() {
+    resource().fake_dirs.push_back(std::make_unique<FakeDirectory>());
+    return *resource().fake_dirs.back();
+  }
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
@@ -389,9 +402,9 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFile) {
       (ConfigurationManagerTestDelegateImpl*)ConfigurationMgrImpl().GetDelegate();
   EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
 
-  auto fake_dir = std::make_unique<FakeDirectory>();
-  EXPECT_EQ(ZX_OK, fake_dir->AddResource(kFilename, data));
-  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
+  auto& fake_dir = AddFakeDirectory();
+  EXPECT_EQ(ZX_OK, fake_dir.AddResource(kFilename, data));
+  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
 
   EXPECT_EQ(delegate->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_OK);
 
@@ -413,9 +426,9 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFileLargerThanExpected) {
       (ConfigurationManagerTestDelegateImpl*)ConfigurationMgrImpl().GetDelegate();
   EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
 
-  auto fake_dir = std::make_unique<FakeDirectory>();
-  EXPECT_EQ(ZX_OK, fake_dir->AddResource(kFilename, data));
-  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
+  auto& fake_dir = AddFakeDirectory();
+  EXPECT_EQ(ZX_OK, fake_dir.AddResource(kFilename, data));
+  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
 
   EXPECT_EQ(delegate->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_ERR_BUFFER_TOO_SMALL);
 }
@@ -427,17 +440,17 @@ TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
 
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
 
-  auto fake_dir = std::make_unique<FakeDirectory>();
-  EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_device_id_file, test_device_id_data));
-  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
+  auto& fake_dir = AddFakeDirectory();
+  EXPECT_EQ(ZX_OK, fake_dir.AddResource(test_device_id_file, test_device_id_data));
+  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
   EXPECT_EQ(ConfigurationMgr().GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
 
   // Show that even if the file is modified, it doesn't affect us as we read from
   // factory only once.
   stored_weave_device_id = 0;
-  auto fake_dir2 = std::make_unique<FakeDirectory>();
-  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir2));
+  auto& fake_dir2 = AddFakeDirectory();
+  fake_weave_factory_store_provider_.AttachDir(&fake_dir2);
   EXPECT_EQ(ConfigurationMgr().GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
 }
@@ -453,9 +466,9 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
   EXPECT_EQ(EnvironmentConfig::WriteConfigValue(
                 EnvironmentConfig::kConfigKey_MfrDeviceCertAllowLocal, false),
             WEAVE_NO_ERROR);
-  auto fake_dir = std::make_unique<FakeDirectory>();
-  EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_mfr_cert_file, test_mfr_cert_data));
-  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
+  auto& fake_dir = AddFakeDirectory();
+  EXPECT_EQ(ZX_OK, fake_dir.AddResource(test_mfr_cert_file, test_mfr_cert_data));
+  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
   EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
                                                                 cert_len),
             WEAVE_NO_ERROR);
@@ -465,8 +478,8 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
 
   // Show that after being read in once, modifying the  data has no effect
   std::memset(mfr_cert_buf, 0, sizeof(mfr_cert_buf));
-  auto fake_dir2 = std::make_unique<FakeDirectory>();
-  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir2));
+  auto& fake_dir2 = AddFakeDirectory();
+  fake_weave_factory_store_provider_.AttachDir(&fake_dir2);
   EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
                                                                 cert_len),
             WEAVE_NO_ERROR);

@@ -28,18 +28,18 @@ class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegate
     bool member_of_fabric = false;
 };
 
-class TraitUpdaterImplTest : public WeaveTestFixture {
+class TraitUpdaterImplTest : public WeaveTestFixture<> {
  public:
   void SetUp() {
-    WeaveTestFixture::SetUp();
-    WeaveTestFixture::RunFixtureLoop();
+    WeaveTestFixture<>::SetUp();
+    WeaveTestFixture<>::RunFixtureLoop();
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
     TraitUpdater().SetDelegate(std::make_unique<TraitUpdaterDelegateImpl>());
   }
 
   void TearDown() {
-    WeaveTestFixture::StopFixtureLoop();
-    WeaveTestFixture::TearDown();
+    WeaveTestFixture<>::StopFixtureLoop();
+    WeaveTestFixture<>::TearDown();
     ConfigurationMgrImpl().SetDelegate(nullptr);
     TraitUpdater().SetDelegate(nullptr);
   }

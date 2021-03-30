@@ -294,10 +294,10 @@ class FakeNetStack : public fuchsia::net::stack::testing::Stack_TestBase {
   uint64_t last_id_assigned = 0;
 };
 
-class WarmTest : public WeaveTestFixture {
+class WarmTest : public WeaveTestFixture<> {
  public:
   void SetUp() override {
-    WeaveTestFixture::SetUp();
+    WeaveTestFixture<>::SetUp();
 
     // Initialize everything needed for the test.
     context_provider_.service_directory_provider()->AddService(
@@ -317,7 +317,7 @@ class WarmTest : public WeaveTestFixture {
   void TearDown() override {
     StopFixtureLoop();
     ThreadStackMgrImpl().SetDelegate(nullptr);
-    WeaveTestFixture::TearDown();
+    WeaveTestFixture<>::TearDown();
   }
 
  protected:

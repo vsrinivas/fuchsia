@@ -15,14 +15,14 @@ using nl::Weave::DeviceLayer::PlatformManager;
 using nl::Weave::DeviceLayer::PlatformManagerImpl;
 }  // namespace
 
-class PlatformManagerTest : public WeaveTestFixture {
+class PlatformManagerTest : public WeaveTestFixture<> {
  public:
   void SetUp() {
-    WeaveTestFixture::SetUp();
+    WeaveTestFixture<>::SetUp();
     PlatformMgrImpl().SetDispatcher(dispatcher());
   }
 
-  void TearDown() { WeaveTestFixture::TearDown(); }
+  void TearDown() { WeaveTestFixture<>::TearDown(); }
 };
 
 class TestAppend {

@@ -383,7 +383,7 @@ class OverridableThreadConfigurationManagerDelegate : public ConfigurationManage
   }
 };
 
-class ThreadStackManagerTest : public WeaveTestFixture {
+class ThreadStackManagerTest : public WeaveTestFixture<> {
  public:
   ThreadStackManagerTest() {
     context_provider_.service_directory_provider()->AddService(
@@ -393,7 +393,7 @@ class ThreadStackManagerTest : public WeaveTestFixture {
   }
 
   void SetUp() override {
-    WeaveTestFixture::SetUp();
+    WeaveTestFixture<>::SetUp();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     RunFixtureLoop();
     auto config_delegate = std::make_unique<OverridableThreadConfigurationManagerDelegate>();
@@ -405,7 +405,7 @@ class ThreadStackManagerTest : public WeaveTestFixture {
 
   void TearDown() override {
     StopFixtureLoop();
-    WeaveTestFixture::TearDown();
+    WeaveTestFixture<>::TearDown();
     ThreadStackMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(nullptr);
   }

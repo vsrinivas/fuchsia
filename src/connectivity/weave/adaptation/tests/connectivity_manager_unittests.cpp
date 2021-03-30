@@ -151,7 +151,7 @@ class TestConnectivityManagerDelegateImpl : public ConnectivityManagerDelegateIm
   }
 };
 
-class ConnectivityManagerTest : public WeaveTestFixture {
+class ConnectivityManagerTest : public WeaveTestFixture<> {
  public:
   ConnectivityManagerTest() {
     context_provider_.service_directory_provider()->AddService(
@@ -159,7 +159,7 @@ class ConnectivityManagerTest : public WeaveTestFixture {
   }
 
   void SetUp() {
-    WeaveTestFixture::SetUp();
+    WeaveTestFixture<>::SetUp();
     // In order to handle callbacks on the same thread, the delegate cannot be
     // registered while using RunFixtureLoop, which runs the loop in a separate
     // thread context.
@@ -176,7 +176,7 @@ class ConnectivityManagerTest : public WeaveTestFixture {
 
   void TearDown() {
     Warm::Shutdown(FabricState);
-    WeaveTestFixture::TearDown();
+    WeaveTestFixture<>::TearDown();
 
     ConfigurationMgrImpl().SetDelegate(nullptr);
     ConnectivityMgrImpl().SetDelegate(nullptr);

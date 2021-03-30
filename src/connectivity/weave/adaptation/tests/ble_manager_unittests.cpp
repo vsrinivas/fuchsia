@@ -125,7 +125,7 @@ class FakeBLEPeripheral : public fuchsia::bluetooth::le::testing::Peripheral_Tes
   fidl::InterfaceRequest<fuchsia::bluetooth::le::AdvertisingHandle> adv_handle_;
 };
 
-class BLEManagerTest : public WeaveTestFixture {
+class BLEManagerTest : public WeaveTestFixture<> {
  public:
   BLEManagerTest() {
     context_provider_.service_directory_provider()->AddService(
@@ -135,8 +135,8 @@ class BLEManagerTest : public WeaveTestFixture {
   }
 
   void SetUp() {
-    WeaveTestFixture::SetUp();
-    WeaveTestFixture::RunFixtureLoop();
+    WeaveTestFixture<>::SetUp();
+    WeaveTestFixture<>::RunFixtureLoop();
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     PlatformMgrImpl().SetDispatcher(event_loop_.dispatcher());
@@ -152,8 +152,8 @@ class BLEManagerTest : public WeaveTestFixture {
   }
   void TearDown() {
     event_loop_.Quit();
-    WeaveTestFixture::StopFixtureLoop();
-    WeaveTestFixture::TearDown();
+    WeaveTestFixture<>::StopFixtureLoop();
+    WeaveTestFixture<>::TearDown();
 
     ThreadStackMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(nullptr);
@@ -202,14 +202,14 @@ class BLEManagerTest : public WeaveTestFixture {
 
     // Stop fixture loop before waiting for FakeGATTLocalService::NotifyValue
     // on dispatcher().
-    WeaveTestFixture::StopFixtureLoop();
+    WeaveTestFixture<>::StopFixtureLoop();
     // Wait until FakeGATTLocalService::NotifyValue is called.
     RunLoopUntil([&]() {
       bool res = fake_gatt_server_.WeaveConnectionConfirmed();
       return res;
     });
     // Wait for FakeGATTLocalService::NotifyValue completed. Restart fixture loop.
-    WeaveTestFixture::RunFixtureLoop();
+    WeaveTestFixture<>::RunFixtureLoop();
 
     bool is_confirmed = fake_gatt_server_.WeaveConnectionConfirmed();
     EXPECT_EQ(is_confirmed, true);

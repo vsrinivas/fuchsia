@@ -196,7 +196,7 @@ class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegate
   bool use_local_private_key = false;
 };
 
-class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
+class PlatformCASEAuthDelegateTest : public WeaveTestFixture<> {
  public:
   PlatformCASEAuthDelegateTest() {
     context_provider_.service_directory_provider()->AddService(
@@ -205,8 +205,8 @@ class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
   }
 
   void SetUp() {
-    WeaveTestFixture::SetUp();
-    WeaveTestFixture::RunFixtureLoop();
+    WeaveTestFixture<>::SetUp();
+    WeaveTestFixture<>::RunFixtureLoop();
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
 
@@ -223,8 +223,8 @@ class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
   }
 
   void TearDown() {
-    WeaveTestFixture::StopFixtureLoop();
-    WeaveTestFixture::TearDown();
+    WeaveTestFixture<>::StopFixtureLoop();
+    WeaveTestFixture<>::TearDown();
   }
 
  protected:
