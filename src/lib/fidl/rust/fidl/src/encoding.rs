@@ -1399,7 +1399,7 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
         ALLOC_ABSENT_U64 => {
             return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
         }
-        _ => return Err(Error::Invalid),
+        _ => return Err(Error::InvalidPresenceIndicator),
     };
     let len = len as usize;
     decoder.read_out_of_line(len, |decoder, offset| {
@@ -1430,7 +1430,7 @@ unsafe fn decode_vector<T: Decodable>(
         ALLOC_ABSENT_U64 => {
             return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
         }
-        _ => return Err(Error::Invalid),
+        _ => return Err(Error::InvalidPresenceIndicator),
     }
 
     let len = len as usize;
@@ -2100,7 +2100,7 @@ impl Decodable for Handle {
         match present {
             ALLOC_PRESENT_U32 => {}
             ALLOC_ABSENT_U32 => return Err(Error::NotNullable),
-            _ => return Err(Error::Invalid),
+            _ => return Err(Error::InvalidPresenceIndicator),
         }
         *self = decoder.take_next_handle()?;
         Ok(())
@@ -2140,7 +2140,7 @@ impl Decodable for Option<Handle> {
                 *self = Some(decoder.take_next_handle()?);
                 Ok(())
             }
-            _ => Err(Error::Invalid),
+            _ => Err(Error::InvalidPresenceIndicator),
         }
     }
 }
@@ -2438,7 +2438,7 @@ impl<T: Autonull> Decodable for Option<Box<T>> {
                     *self = None;
                     Ok(())
                 }
-                _ => Err(Error::Invalid),
+                _ => Err(Error::InvalidPresenceIndicator),
             }
         }
     }
@@ -2821,7 +2821,7 @@ pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<
                 Ok(None)
             }
         }
-        _ => Err(Error::Invalid),
+        _ => Err(Error::InvalidPresenceIndicator),
     }
 }
 
@@ -2853,7 +2853,7 @@ pub fn decode_unknown_data(
                 Ok(None)
             }
         }
-        _ => Err(Error::Invalid),
+        _ => Err(Error::InvalidPresenceIndicator),
     }
 }
 
@@ -3077,8 +3077,10 @@ macro_rules! fidl_table {
                         $crate::fidl_unsafe_decode!(&mut present, decoder, offset+8)?;
                     }
 
-                    if present != $crate::encoding::ALLOC_PRESENT_U64 {
-                        return Err($crate::Error::Invalid);
+                    match present {
+                        $crate::encoding::ALLOC_PRESENT_U64 => (),
+                        $crate::encoding::ALLOC_ABSENT_U64 => return Err($crate::Error::UnexpectedNullRef),
+                        _ => return Err($crate::Error::InvalidPresenceIndicator),
                     }
 
                     let len = len as usize;
@@ -3150,7 +3152,7 @@ macro_rules! fidl_table {
                                         return Err($crate::Error::InvalidNumHandlesInEnvelope);
                                     }
                                 }
-                                _ => return Err($crate::Error::Invalid),
+                                _ => return Err($crate::Error::InvalidPresenceIndicator),
                             }
                             if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                                 return Err($crate::Error::InvalidNumBytesInEnvelope);
@@ -3263,14 +3265,18 @@ pub unsafe fn unsafe_decode_xunion_inline_portion(
 
     let mut present: u64 = 0;
     present.unsafe_decode(decoder, offset + 16)?;
-    if present != ALLOC_PRESENT_U64 {
-        return if num_bytes != 0 {
-            Err(Error::InvalidNumBytesInEnvelope)
-        } else if num_handles != 0 {
-            Err(Error::InvalidNumHandlesInEnvelope)
-        } else {
-            Err(Error::Invalid)
-        };
+    match present {
+        ALLOC_PRESENT_U64 => (),
+        ALLOC_ABSENT_U64 => {
+            return Err(if num_bytes != 0 {
+                Error::InvalidNumBytesInEnvelope
+            } else if num_handles != 0 {
+                Error::InvalidNumHandlesInEnvelope
+            } else {
+                Error::UnexpectedNullRef
+            })
+        }
+        _ => return Err(Error::InvalidPresenceIndicator),
     }
 
     Ok((ordinal, num_bytes, num_handles))

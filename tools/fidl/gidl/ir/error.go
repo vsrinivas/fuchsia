@@ -18,6 +18,7 @@ const (
 	StrictBitsUnknownBit                  = "STRICT_BITS_UNKNOWN_BIT"
 	StrictEnumUnknownValue                = "STRICT_ENUM_UNKNOWN_VALUE"
 	ExceededMaxOutOfLineDepth             = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
+	InvalidPresenceIndicator              = "INVALID_PRESENCE_INDICATOR"
 	InvalidNumBytesInEnvelope             = "INVALID_NUM_BYTES_IN_ENVELOPE"
 	InvalidNumHandlesInEnvelope           = "INVALID_NUM_HANDLES_IN_ENVELOPE"
 	InvalidPaddingByte                    = "INVALID_PADDING_BYTE"
@@ -37,6 +38,7 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	StrictBitsUnknownBit:        {},
 	StrictEnumUnknownValue:      {},
 	ExceededMaxOutOfLineDepth:   {},
+	InvalidPresenceIndicator:    {},
 	InvalidNumBytesInEnvelope:   {},
 	InvalidNumHandlesInEnvelope: {},
 	InvalidPaddingByte:          {},

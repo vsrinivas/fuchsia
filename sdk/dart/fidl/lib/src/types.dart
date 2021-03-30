@@ -897,11 +897,11 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
 
         if (header.numHandles != numHandlesConsumed) {
           throw FidlError('envelope handles were mis-sized',
-              FidlErrorCode.fidlInvaliNumHandlesInEnvelope);
+              FidlErrorCode.fidlInvalidNumHandlesInEnvelope);
         }
         if (header.numBytes != numBytesConsumed) {
           throw FidlError('envelope was mis-sized',
-              FidlErrorCode.fidlInvaliNumBytesInEnvelope);
+              FidlErrorCode.fidlInvalidNumBytesInEnvelope);
         }
         return field;
       }
@@ -920,13 +920,14 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
     case kAllocAbsent:
       if (header.numBytes != 0)
         throw FidlError('absent envelope with non-zero bytes',
-            FidlErrorCode.fidlInvaliNumBytesInEnvelope);
+            FidlErrorCode.fidlInvalidNumBytesInEnvelope);
       if (header.numHandles != 0)
         throw FidlError('absent envelope with non-zero handles',
-            FidlErrorCode.fidlInvaliNumHandlesInEnvelope);
+            FidlErrorCode.fidlInvalidNumHandlesInEnvelope);
       return null;
     default:
-      throw FidlError('Bad reference encoding');
+      throw FidlError(
+          'Bad reference encoding', FidlErrorCode.fidlInvalidPresenceIndicator);
   }
 }
 
@@ -1016,9 +1017,11 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       case kAllocPresent:
         break; // good
       case kAllocAbsent:
-        throw FidlError('Unexpected null reference');
+        throw FidlError('Unexpected null reference',
+            FidlErrorCode.fidlNonNullableTypeWithNullValue);
       default:
-        throw FidlError('Bad reference encoding');
+        throw FidlError('Bad reference encoding',
+            FidlErrorCode.fidlInvalidPresenceIndicator);
     }
 
     // Early exit on empty table.

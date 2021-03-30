@@ -118,6 +118,11 @@ pub enum Error {
     #[error("Invalid response with txid 0.")]
     InvalidResponseTxid,
 
+    /// A presence indicator (for out-of-line data or a handle) had a value
+    /// other than all 0x00 or all 0xFF.
+    #[error("Invalid presence indicator.")]
+    InvalidPresenceIndicator,
+
     /// An envelope in the FIDL message had an unexpected number of bytes.
     #[error("Invalid number of bytes in FIDL envelope.")]
     InvalidNumBytesInEnvelope,

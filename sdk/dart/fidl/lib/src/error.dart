@@ -8,8 +8,9 @@
 enum FidlErrorCode {
   unknown,
   fidlExceededMaxOutOfLineDepth,
-  fidlInvaliNumBytesInEnvelope,
-  fidlInvaliNumHandlesInEnvelope,
+  fidlInvalidPresenceIndicator,
+  fidlInvalidNumBytesInEnvelope,
+  fidlInvalidNumHandlesInEnvelope,
   fidlTooManyHandles,
   fidlTooFewHandles,
   fidlStringTooLong,

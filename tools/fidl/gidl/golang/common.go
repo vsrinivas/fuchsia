@@ -330,6 +330,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictEnumUnknownValue:      "ErrInvalidEnumValue",
 	gidlir.StrictBitsUnknownBit:        "ErrInvalidBitsValue",
 	gidlir.ExceededMaxOutOfLineDepth:   "ErrExceededMaxOutOfLineDepth",
+	gidlir.InvalidPresenceIndicator:    "ErrBadRefEncoding",
 	gidlir.InvalidNumBytesInEnvelope:   "ErrInvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope: "ErrInvalidNumHandlesInEnvelope",
 	gidlir.ExtraHandles:                "ErrTooManyHandles",
