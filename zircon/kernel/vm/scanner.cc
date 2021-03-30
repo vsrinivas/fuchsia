@@ -286,10 +286,16 @@ int scanner_request_thread(void *) {
     if ((op & kScannerOpReclaim) || reclaim_all) {
       op &= ~kScannerOpReclaim;
       uint64_t pager_backed = 0, discardable = 0;
+      if (print) {
+        printf("[SCAN]: Free memory before eviction is %zuMB\n",
+               pmm_count_free_pages() * PAGE_SIZE / MB);
+      }
       scanner_do_evict(&pager_backed, &discardable);
       if (print) {
         printf("[SCAN]: Evicted %lu user pager backed pages\n", pager_backed);
         printf("[SCAN]: Evicted %lu pages from discardable vmos\n", discardable);
+        printf("[SCAN]: Free memory after eviction is %zuMB\n",
+               pmm_count_free_pages() * PAGE_SIZE / MB);
       }
     }
     if (op & kScannerOpDump) {

@@ -132,16 +132,20 @@ void MemoryWatchdog::WorkerThread() {
   while (true) {
     // If we've hit OOM level perform some immediate synchronous eviction to attempt to avoid OOM.
     if (mem_event_idx_ == PressureLevel::kOutOfMemory) {
+      printf("memory-pressure: free memory is %zuMB, evicting pages to prevent OOM...\n",
+             pmm_count_free_pages() * PAGE_SIZE / MB);
       // Keep trying to perform eviction for as long as we are evicting non-zero pages and we remain
       // in the out of memory state.
       while (mem_event_idx_ == PressureLevel::kOutOfMemory) {
         uint64_t evicted_pages = scanner_synchronous_evict(
             MB * 10 / PAGE_SIZE, scanner::EvictionLevel::IncludeNewest, scanner::Output::Print);
         if (evicted_pages == 0) {
+          printf("memory-pressure: found no pages to evict\n");
           break;
         }
-        printf("memory-pressure: evicted %zu pages to prevent OOM\n", evicted_pages);
       }
+      printf("memory-pressure: free memory after OOM eviction is %zuMB\n",
+             pmm_count_free_pages() * PAGE_SIZE / MB);
     }
 
     // Get a local copy of the atomic. It's possible by the time we read this that we've already
@@ -154,9 +158,9 @@ void MemoryWatchdog::WorkerThread() {
     // We signal a memory state change immediately if:
     // 1) The current index is lower than the previous one signaled (i.e. available memory is lower
     // now), so that clients can act on the signal quickly.
-    // 2) |kHysteresisSeconds| have elapsed since the last time we examined the state.
+    // 2) |hysteresis_seconds_| have elapsed since the last time we examined the state.
     if (idx < prev_mem_event_idx_ ||
-        zx_time_sub_time(time_now, prev_mem_state_eval_time_) >= kHysteresisSeconds_) {
+        zx_time_sub_time(time_now, prev_mem_state_eval_time_) >= hysteresis_seconds_) {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
 
       // Trigger eviction if the memory availability state is more critical than the previous one,
@@ -183,8 +187,10 @@ void MemoryWatchdog::WorkerThread() {
         // release memory and the eviction running before the end of the hysteresis period.
         eviction_trigger_.SetOneshot(
             (eviction_was_outstanding ? time_now
-                                      : zx_time_add_duration(time_now, kHysteresisSeconds_ / 2)),
+                                      : zx_time_add_duration(time_now, hysteresis_seconds_ / 2)),
             EvictionTriggerCallback, this);
+        printf("memory-pressure: set target memory to evict %zuMB (free memory is %zuMB)\n",
+               min_free_target_ / MB, free_mem / MB);
       }
 
       // Unsignal the last event that was signaled.
@@ -215,11 +221,11 @@ void MemoryWatchdog::WorkerThread() {
     } else {
       prev_mem_state_eval_time_ = time_now;
 
-      // We are ignoring this memory state transition. Wait for only |kHysteresisSeconds|, and then
+      // We are ignoring this memory state transition. Wait for only |hysteresis_seconds_|, and then
       // re-evaluate the memory state. Otherwise we could remain stuck at the lower memory state if
       // mem_avail_state_updated_cb() is not invoked.
       mem_state_signal_.Wait(
-          Deadline::no_slack(zx_time_add_duration(time_now, kHysteresisSeconds_)));
+          Deadline::no_slack(zx_time_add_duration(time_now, hysteresis_seconds_)));
     }
   }
 }
@@ -261,6 +267,8 @@ void MemoryWatchdog::Init(Executor* executor) {
     // level, taking into account the debounce.
     free_mem_target_ = mem_watermarks[max_eviction_level_] + watermark_debounce;
 
+    hysteresis_seconds_ = ZX_SEC(gBootOptions->oom_hysteresis_seconds);
+
     zx_status_t status =
         pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory], kNumWatermarks,
                              watermark_debounce, this, &AvailableStateUpdatedCallback);
@@ -274,8 +282,11 @@ void MemoryWatchdog::Init(Executor* executor) {
         mem_watermarks[PressureLevel::kOutOfMemory] / MB,
         mem_watermarks[PressureLevel::kCritical] / MB, mem_watermarks[PressureLevel::kWarning] / MB,
         watermark_debounce / MB);
+
     printf("memory-pressure: eviction trigger level - %s\n",
            PressureLevelToString(max_eviction_level_));
+
+    printf("memory-pressure: hysteresis interval - %ld seconds\n", hysteresis_seconds_ / ZX_SEC(1));
 
     auto memory_worker_thread = [](void* arg) -> int {
       MemoryWatchdog* watchdog = reinterpret_cast<MemoryWatchdog*>(arg);

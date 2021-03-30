@@ -245,6 +245,14 @@ This option triggers eviction of file pages at the Warning pressure state,
 in addition to the default behavior, which is to evict at the Critical and OOM
 states.
 
+### kernel.oom.hysteresis-seconds=\<uint64_t>
+**Default:** `0xa`
+
+This option specifies the hysteresis interval (in seconds) between memory
+pressure state transitions. Note that hysteresis is only applicable for
+transitions from a state with less free memory to a state with more free memory;
+transitions in the opposite direction are not delayed.
+
 ### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
 **Default:** `none`
 

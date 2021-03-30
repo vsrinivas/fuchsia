@@ -60,7 +60,7 @@ class MemoryWatchdog {
   PressureLevel prev_mem_event_idx_ = mem_event_idx_;
 
   // Used to delay signaling memory level transitions in the case of rapid changes.
-  static constexpr zx_time_t kHysteresisSeconds_ = ZX_SEC(10);
+  zx_time_t hysteresis_seconds_ = ZX_SEC(10);
 
   // Tracks last time the memory state was evaluated (and signaled if required).
   zx_time_t prev_mem_state_eval_time_ = ZX_TIME_INFINITE_PAST;

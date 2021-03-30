@@ -236,6 +236,13 @@ in addition to the default behavior, which is to evict at the Critical and OOM
 states.
 )""")
 
+DEFINE_OPTION("kernel.oom.hysteresis-seconds", uint64_t, oom_hysteresis_seconds, {10}, R"""(
+This option specifies the hysteresis interval (in seconds) between memory
+pressure state transitions. Note that hysteresis is only applicable for
+transitions from a state with less free memory to a state with more free memory;
+transitions in the opposite direction are not delayed.
+)""")
+
 DEFINE_OPTION("kernel.serial", uart::all::Driver, serial, {}, R"""(
 TODO(53594)
 )""")
