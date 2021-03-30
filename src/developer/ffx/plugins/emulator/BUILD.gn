@@ -30,6 +30,7 @@ ffx_plugin("ffx_emulator") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serial_test",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:walkdir",
     "//third_party/rust_crates:zip",
   ]
 }
