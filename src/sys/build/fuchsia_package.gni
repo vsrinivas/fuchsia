@@ -66,6 +66,13 @@ import("//tools/cmc/build/cmc.gni")
 #     Type: boolean
 #     Default: false
 #
+#    system_image_package_allowed_in_extra_deps (optional)
+#     Used internally to implement fuchsia_system_package(), do not use!
+#     If defined, this is a fuchsia_system_package(), and the argument value
+#     determines whether it is allowed in extra dependency trees beside
+#     the one from //build/input:system_image.
+#     Type: boolean
+#
 #   deps
 #   testonly
 #   visibility
@@ -113,6 +120,13 @@ template("fuchsia_package") {
       }
     }
 
+    _is_system_package = false
+    if (defined(invoker.system_image_package_allowed_in_extra_deps)) {
+      _is_system_package = true
+      _is_system_package_allowed_in_extra_deps =
+          invoker.system_image_package_allowed_in_extra_deps
+    }
+
     # Build package
     pm_build(target_name) {
       forward_variables_from(invoker,
@@ -127,22 +141,45 @@ template("fuchsia_package") {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
         }
-        if (!bootfs_only) {
-          # If the bringup configuration is being built, the contents need to be
-          # exposed to other containers.
-          # See fxbug.dev/45680 for more information.
+        if (!bootfs_only && !_is_system_package) {
+          # Installing a Fuchsia package into another one should not also install
+          # its content to the root install location, which is why this metadata key
+          # is set to an empty list. However, there are two exceptions to this:
+          #
+          #  - fuchsia_system_package() instances whose content must end up
+          #    into either the system image (handled by system_image_package_info below)
+          #    or the boot filesystem (handled through distribution_manifest().
+          #
+          #  - When 'bootfs_only' is set to true, which corresponds to the "bringup"
+          #    configuration which requires subtle adjustments in the build graph.
+          #
           distribution_entries_barrier = []
         }
 
         # Used by system_image_fuchsia_packages_list() to allow embedding
         # the content of this package into the system image, if necessary.
-        package_fini_manifest = [
+        #
+        # The schema is the following:
+        #
+        #   label: GN label of this target (used for debugging only).
+        #   fini_manifest: path to FINI manifest listing this package's content.
+        #   system_image_packaged_allowed_in_extra_deps: (optional)
+        #     If defined, this is a fuchsia_system_package() instance, and its
+        #     value determines whether it is allowed in extra dependency trees
+        #     (see fuchsia_system_package() description for details). If undefined,
+        #     this is a regular fuchsia_package().
+        #
+        system_image_package_info = [
           {
             label = get_label_info(":$target_name", "label_with_toolchain")
             fini_manifest = rebase_path(package_manifest_file, root_build_dir)
+            if (_is_system_package) {
+              system_image_package_allowed_in_extra_deps =
+                  _is_system_package_allowed_in_extra_deps
+            }
           },
         ]
-        package_fini_manifest_barrier = []
+        system_image_package_barrier = []
       }
       if (!defined(deps)) {
         deps = []

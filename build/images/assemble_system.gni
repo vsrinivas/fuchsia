@@ -226,9 +226,10 @@ template("assemble_system") {
     deps = system_image_deps
   }
 
-  system_image_fuchsia_packages_list("${image_name}_fuchsia_packages") {
+  system_image_fuchsia_system_packages("${image_name}_fuchsia_packages") {
     forward_variables_from(invoker, [ "testonly" ])
     deps = system_image_deps
+    filter_packages = "system_only"
   }
 
   generate_manifest("${image_name}_system_image.manifest") {

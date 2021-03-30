@@ -6,6 +6,7 @@ import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_system_package.gni")
 
 # Only including packages built inside this file.
 have_libvulkan_mali =
@@ -49,20 +50,26 @@ if (have_prebuilt_libvulkan_arm) {
   }
 }
 
-fuchsia_package("msd-arm-mali-test") {
+fuchsia_system_package("msd-arm-mali-test") {
   testonly = true
   deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm_test" ]
 }
 
-fuchsia_package("msd-arm-mali") {
+fuchsia_system_package("msd-arm-mali") {
   deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm" ]
+
+  # This package is reachable from //garnet/packages:all
+  allowed_in_extra_deps = true
 }
 
-fuchsia_package("magma-arm-mali") {
+fuchsia_system_package("magma-arm-mali") {
   deps = build_libvulkan_arm_mali
   if (have_prebuilt_libvulkan_arm) {
     deps += [ ":prebuilt_libvulkan_arm" ]
   }
+
+  # This package is reachable from //garnet/packages:all
+  allowed_in_extra_deps = true
 }
 
 if (have_libvulkan_mali) {

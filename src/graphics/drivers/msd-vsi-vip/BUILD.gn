@@ -4,26 +4,16 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/fuchsia_system_package.gni")
 
-driver_package("msd-vsi-vip") {
+fuchsia_system_package("msd-vsi-vip") {
   deps = [ ":msd_vsi" ]
-  drivers = [
-    {
-      name = "libmsd_vsi.so"
-    },
-  ]
 }
 
-driver_package("msd-vsi-vip-test") {
+fuchsia_system_package("msd-vsi-vip-test") {
   testonly = true
   deps = [ ":msd_vsi_test" ]
-  drivers = [
-    {
-      name = "libmsd_vsi_test.so"
-    },
-  ]
 }
 
 driver_module("msd_vsi") {

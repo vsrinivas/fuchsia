@@ -228,11 +228,35 @@ generated_file(system_image_manifest_args) {
 }
 
 # Generate a response file that lists the content of all
-# fuchsia_package() instances that the system image depends on.
+# fuchsia_system_package() instances that the system image directly
+# depends on. This excludes anything reachable from :base_packages
+# and :meta_packages intentionally.
 #
-system_image_fuchsia_packages_list("system_image_fuchsia_packages") {
+# This also checks that this dependency tree does not include any
+# regular fuchsia_package() instance, which would be an error, since
+# the system image cannot include any components.
+#
+system_image_fuchsia_system_packages("system_image_fuchsia_packages") {
   testonly = fuchsia_zbi_testonly
   deps = [ "//build/input:system_image" ]
+  filter_packages = "system_only"
+}
+
+# Generate a response file that lists the content of all
+# fuchsia_system_package() instances reachable from :base_packages
+# and :meta_packages. This is seldom used when a base package requires
+# its own driver to be installed in the system image.
+#
+# This also checks that any such driver package has set its
+# 'allowed_in_extra_deps' argument to true.
+#
+system_image_fuchsia_system_packages("system_image_extra_driver_packages") {
+  testonly = fuchsia_zbi_testonly
+  deps = [
+    ":base_packages",
+    ":meta_packages",
+  ]
+  filter_packages = "extras"
 }
 
 # The system_image "package" manifest is everything that appears in /system.
@@ -246,13 +270,16 @@ generate_manifest("system_image.manifest") {
   deps = [
     ":" + system_image_manifest_args,
     ":system_image_fuchsia_packages",
+    ":system_image_extra_driver_packages",
   ]
   sources = [ system_image_manifest_args_path ]
   sources += get_target_outputs(deps[1])
+  sources += get_target_outputs(deps[2])
 
   args = [
     "@" + rebase_path(sources[0], root_build_dir),
     "@" + rebase_path(sources[1], root_build_dir),
+    "@" + rebase_path(sources[2], root_build_dir),
   ]
 
   args += [ "--entry-manifest=" +

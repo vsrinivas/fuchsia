@@ -1,0 +1,68 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/fuchsia_package.gni")
+
+# Defines a Fuchsia package that contains binaries or resources to be
+# part of the Fuchsia system image (i.e. copied to /system/...).
+#
+# Such packages should not contain any component, and should be
+# reachable from the //build/input:system_image target, and optionally
+# for //build/images:base_packages and //build/images:meta_packages.
+#
+# System packages should be rare, and can be added to the system image in
+# two different ways:
+#
+#   1) By adding them to the //build/input:system_image dependency tree,
+#      which should _only_ list fuchsia_system_package() intances. The
+#      build will complain if it finds a non-driver fuchsia_package()
+#      there.
+#
+#   2) By adding them to the //build/images:base_packages or
+#      //build/images:meta_packages dependency trees. This is useful when
+#      a base package requires the content of a specific extra
+#      fuchsia_system_package() to be installed in the system image as well.
+#
+#      Such a package instance must set the "allowed_in_extra_deps" parameter
+#      below. The build system will complain if it finds an unmarked extra
+#      fuchsia_system_package() in this set.
+#
+# Parameters:
+#
+#   package_name (optional)
+#     The name of the package.
+#     Type: string
+#     Default: target_name
+#
+#   allowed_in_extra_deps (optional)
+#     Set to true to allow this package to be part of extra dependency
+#     trees used to build the system image. This is useful when this
+#     package is required by another base or meta package, but shouldn't
+#     be part of the default system image dependency tree otherwise.
+#
+#   deps
+#   testonly
+#   visibility
+#
+#
+template("fuchsia_system_package") {
+  fuchsia_package(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "allowed_in_extra_deps",
+                             "disable_elf_binaries_check",
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    system_image_package_allowed_in_extra_deps =
+        defined(invoker.allowed_in_extra_deps) && invoker.allowed_in_extra_deps
+  }
+}

@@ -7,6 +7,7 @@ import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_system_package.gni")
 
 # Only including packages built inside this file.
 have_libvulkan_img =
@@ -50,11 +51,14 @@ group("magma-vulkan-no-hardware") {
   }
 }
 
-fuchsia_package("magma-img-rgx-mt8167-firmware") {
+fuchsia_system_package("magma-img-rgx-mt8167-firmware") {
   # internal access is needed to get the firmware.
   if (internal_access) {
     deps = [ ":firmware" ]
   }
+
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }
 
 if (have_prebuilt_libvulkan_img && build_libvulkan_img_rgx == []) {
@@ -64,7 +68,7 @@ if (have_prebuilt_libvulkan_img && build_libvulkan_img_rgx == []) {
   }
 }
 
-fuchsia_package("magma-img-rgx-mt8167") {
+fuchsia_system_package("magma-img-rgx-mt8167") {
   deps = [ "//src/graphics/drivers/msd-img-rgx/mtk:msd_img_rgx_mt8167" ]
 
   if (magma_enable_developer_build) {
@@ -76,9 +80,12 @@ fuchsia_package("magma-img-rgx-mt8167") {
   } else if (have_prebuilt_libvulkan_img) {
     deps += [ ":prebuilt_libvulkan_img_rgx" ]
   }
+
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }
 
-fuchsia_package("magma-img-rgx-no-hardware") {
+fuchsia_system_package("magma-img-rgx-no-hardware") {
   deps = [
     "//src/graphics/drivers/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
   ]

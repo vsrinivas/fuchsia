@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Create a response file that lists the content of all fuchsia packages
+# Create a response file that lists the content of all fuchsia driver packages
 # reachable from a given list of deps, with the exception of their meta/
 # directories.
 #
@@ -11,30 +11,41 @@
 # Use get_target_outputs() to get the path to the generated file.
 #
 # Parameters:
+#   filter_packages (optional)
+#     If set, indicates how fuchsia_system_package() instances that appear
+#     in the dependency tree are processed. Based on the following values:
+#
+#       "system_only": Only fuchsia_system_package() instances are allowed in
+#       the tree. A regular fuchsia_package() in the tree is an error, and
+#       their list will be printed by the script for debugging the issue.
+#
+#       "extras": Error when a fuchsia_system_package() instance that does
+#       not have its 'allowed_in_extra_deps = true' in its definition appears
+#       in the dependency tree. Regular fuchsia_package() instances are
+#       allowed but will be ignored.
+#
+#     If undefined, the content of all fuchsia_system_package() instances that
+#     appear in the dependency tree will be listed in the output, while
+#     regular fuchsia_package() instances will be ignored.
+#
+#     Type: string
+#
 #   deps, testonly, visibility: Usual GN meaning.
-template("system_image_fuchsia_packages_list") {
-  _fini_manifests_json = "${target_name}_fini_manifests"
-  _fini_manifests_json_path =
-      target_gen_dir + "/${target_name}.fini_manifests.json"
+template("system_image_fuchsia_system_packages") {
+  _system_image_packages_json = "${target_name}_packages"
+  _system_image_packages_json_path =
+      target_gen_dir + "/${target_name}.info.json"
 
   # First collect metadata to list all the fini manifest of the fuchsia_package()
   # instances reachable from invoker.deps. This generates a JSON file which is a list
-  # of scopes with the following schema:
-  #
-  #    label: label of the fuchsia_package() instance.
-  #    fini_manifest: path to the package's FINI manifest, relative to root_build_dir.
-  #
-  # The fini_manifest contains lines that look like <destination>=<source>
-  # Where <destination> is a package installation location, and <source> is the path
-  # to the input file, relative to root_build_dir.
-  #
-  generated_file(_fini_manifests_json) {
+  # of scopes whose schema is described in fuchsia_package().
+  generated_file(_system_image_packages_json) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     deps = invoker.deps
-    outputs = [ _fini_manifests_json_path ]
-    data_keys = [ "package_fini_manifest" ]
-    walk_keys = [ "package_fini_manifest_barrier" ]
+    outputs = [ _system_image_packages_json_path ]
+    data_keys = [ "system_image_package_info" ]
+    walk_keys = [ "system_image_package_barrier" ]
     output_conversion = "json"
   }
 
@@ -49,22 +60,27 @@ template("system_image_fuchsia_packages_list") {
   #
   # Note that the script will omit any meta/... content from the input fini manifest
   # intentionally.
-  #
   action(target_name) {
+    _filter_packages = "none"
+    if (defined(invoker.filter_packages)) {
+      _filter_packages = invoker.filter_packages
+    }
+
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
-    script = "//build/images/convert_fini_manifests_to_system_rsp.py"
-    sources = [ _fini_manifests_json_path ]
-    outputs = [ target_gen_dir + "/${target_name}.fuchsia_packages.rsp" ]
+    script = "//build/images/convert_system_package_info_to_system_rsp.py"
+    sources = [ _system_image_packages_json_path ]
+    outputs = [ target_gen_dir + "/${target_name}.system.rsp" ]
     depfile = outputs[0] + ".d"
     args = [
       "--input=" + rebase_path(sources[0], root_build_dir),
       "--output=" + rebase_path(outputs[0], root_build_dir),
       "--depfile=" + rebase_path(depfile, root_build_dir),
+      "--filter-packages=" + _filter_packages,
     ]
-    deps = [ ":" + _fini_manifests_json ]
+    deps = [ ":" + _system_image_packages_json ]
   }
 }
