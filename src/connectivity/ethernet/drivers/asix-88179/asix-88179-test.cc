@@ -56,7 +56,8 @@ void USBVirtualBus::InitUsbAx88179(fbl::String* dev_path, fbl::String* test_func
   std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(usb_ax88179_desc);
   ConfigurationDescriptor config_desc;
-  config_desc = fidl::VectorView(fidl::unowned_ptr(function_descs.data()), function_descs.size());
+  config_desc =
+      fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs);
   config_descs.push_back(std::move(config_desc));
   ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 

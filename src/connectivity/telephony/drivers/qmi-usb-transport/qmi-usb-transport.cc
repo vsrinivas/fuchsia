@@ -503,8 +503,8 @@ void Device::SnoopQmiMsgSend(uint8_t* msg_arr, uint32_t msg_arr_len,
   qmi_msg.direction = direction;
   qmi_msg.timestamp = zx_clock_get_monotonic();
   memcpy(qmi_msg.opaque_bytes.data_, msg_arr, current_length);
-  telephony_snoop::wire::Message snoop_msg =
-      telephony_snoop::wire::Message::WithQmiMessage(fidl::unowned_ptr(&qmi_msg));
+  telephony_snoop::wire::Message snoop_msg = telephony_snoop::wire::Message::WithQmiMessage(
+      fidl::ObjectView<telephony_snoop::wire::QmiMessage>::FromExternal(&qmi_msg));
   telephony_snoop::Publisher::Call::SendMessage(snoop_client_end_, std::move(snoop_msg));
 }
 

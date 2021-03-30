@@ -304,10 +304,7 @@ zx_status_t FakeOtRadioDevice::TrySendClientboundFrame() {
   if (power_status_ == OT_SPINEL_DEVICE_ON && clientbound_allowance_ > 0 &&
       !clientbound_queue_.empty()) {
     // send out 1 packet
-    auto spinel_frame = clientbound_queue_.front();
-    ::fidl::VectorView<uint8_t> data;
-    data.set_count(spinel_frame.size());
-    data.set_data(fidl::unowned_ptr(spinel_frame.data()));
+    auto data = fidl::VectorView<uint8_t>::FromExternal(clientbound_queue_.front());
     zx_status_t res = (*fidl_binding_)->OnReceiveFrame(std::move(data));
     if (res != ZX_OK) {
       zxlogf(ERROR, "fake-ot-radio: failed to send OnReceive() event due to %s",

@@ -925,7 +925,8 @@ TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
   auto frame_type = netdev::wire::FrameType::IPV4;
   ASSERT_STATUS(
       OpenSession(&session, netdev::wire::SessionFlags::PRIMARY, kDefaultDescriptorCount,
-                  kDefaultBufferLength, fidl::VectorView(fidl::unowned_ptr(&frame_type), 1)),
+                  kDefaultBufferLength,
+                  fidl::VectorView<netdev::wire::FrameType>::FromExternal(&frame_type, 1)),
       ZX_ERR_INVALID_ARGS);
 }
 
@@ -943,7 +944,7 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
 
   const char* name_str = "hello world";
   // String view only contains "hello".
-  fidl::StringView name(fidl::unowned_ptr(name_str), 5u);
+  fidl::StringView name = fidl::StringView::FromExternal(name_str, 5u);
 
   netdev::wire::Device_OpenSession_Response rsp;
   ASSERT_OK(dev->OpenSession(std::move(name), std::move(info), &rsp));

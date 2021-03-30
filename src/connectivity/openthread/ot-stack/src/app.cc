@@ -188,9 +188,7 @@ OtStackApp::OtStackCallBackImpl::OtStackCallBackImpl(OtStackApp& app) : app_(app
 
 // TODO (jiamingw): flow control, and timeout when it is unable to send out the packet
 void OtStackApp::OtStackCallBackImpl::SendOneFrameToRadio(uint8_t* buffer, uint32_t size) {
-  ::fidl::VectorView<uint8_t> data;
-  data.set_count(size);
-  data.set_data(fidl::unowned_ptr_t<uint8_t>(buffer));
+  auto data = fidl::VectorView<uint8_t>::FromExternal(buffer, size);
   if (app_.radio_outbound_allowance_ == 0) {
     FX_LOGS(ERROR) << "ot-stack: radio_outbound_allowance_ is 0, cannot send packet";
     return;
@@ -330,10 +328,7 @@ void OtStackApp::SendOneFrameToClient() {
     assert(0);
   }
   if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
-    ::fidl::VectorView<uint8_t> data;
-    uint8_t* ptr = client_inbound_queue_.front().data();
-    data.set_data(fidl::unowned_ptr_t<uint8_t>(ptr));
-    data.set_count(client_inbound_queue_.front().size());
+    auto data = fidl::VectorView<uint8_t>::FromExternal(client_inbound_queue_.front());
     (*binding_)->OnReceiveFrame(std::move(data));
     UpdateClientInboundAllowance();
     client_inbound_queue_.pop_front();

@@ -229,10 +229,10 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
     dst.type = static_cast<netdev::wire::FrameType>(src.type);
   }
 
-  info.rx_types.set_count(device_info_.rx_types_count);
-  info.rx_types.set_data(fidl::unowned_ptr(rx.data()));
-  info.tx_types.set_count(device_info_.tx_types_count);
-  info.tx_types.set_data(fidl::unowned_ptr(tx.data()));
+  info.rx_types = fidl::VectorView<netdev::wire::FrameType>::FromExternal(
+      rx.data(), device_info_.rx_types_count);
+  info.tx_types = fidl::VectorView<netdev::wire::FrameTypeSupport>::FromExternal(
+      tx.data(), device_info_.tx_types_count);
 
   std::array<netdev::wire::RxAcceleration, netdev::wire::MAX_ACCEL_FLAGS> rx_accel;
   std::array<netdev::wire::TxAcceleration, netdev::wire::MAX_ACCEL_FLAGS> tx_accel;
@@ -242,10 +242,10 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   for (size_t i = 0; i < device_info_.tx_accel_count; i++) {
     tx_accel[i] = static_cast<netdev::wire::TxAcceleration>(device_info_.tx_accel_list[i]);
   }
-  info.rx_accel.set_count(device_info_.rx_accel_count);
-  info.rx_accel.set_data(fidl::unowned_ptr(rx_accel.data()));
-  info.tx_accel.set_count(device_info_.tx_accel_count);
-  info.tx_accel.set_data(fidl::unowned_ptr(tx_accel.data()));
+  info.rx_accel = fidl::VectorView<netdev::wire::RxAcceleration>::FromExternal(
+      rx_accel.data(), device_info_.rx_accel_count);
+  info.tx_accel = fidl::VectorView<netdev::wire::TxAcceleration>::FromExternal(
+      tx_accel.data(), device_info_.tx_accel_count);
 
   completer.Reply(std::move(info));
 }
@@ -263,9 +263,10 @@ void DeviceInterface::OpenSession(::fidl::StringView session_name,
   zx_status_t status = OpenSession(std::move(session_name), std::move(session_info), &rsp);
   netdev::wire::Device_OpenSession_Result result;
   if (status != ZX_OK) {
-    result.set_err(fidl::unowned_ptr(&status));
+    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
   } else {
-    result.set_response(fidl::unowned_ptr(&rsp));
+    result.set_response(
+        fidl::ObjectView<netdev::wire::Device_OpenSession_Response>::FromExternal(&rsp));
   }
   completer.Reply(std::move(result));
 }

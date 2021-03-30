@@ -118,8 +118,10 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
     std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
     function_descs.push_back(usb_cdc_ecm_function_desc);
     std::vector<ConfigurationDescriptor> config_descs;
-    config_descs.emplace_back(fidl::unowned_vec(function_descs));
-    config_descs.emplace_back(fidl::unowned_vec(function_descs));
+    config_descs.emplace_back(
+        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
+    config_descs.emplace_back(
+        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
 
     ASSERT_NO_FATAL_FAILURES(
         SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));

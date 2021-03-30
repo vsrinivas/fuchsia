@@ -222,8 +222,7 @@ zx_status_t TestSession::Open(netdev::Device::SyncClient& netdevice, const char*
   netdev::wire::SessionInfo info{};
   if (frame_types.count() == 0) {
     // default to just ethernet
-    info.rx_frames =
-        fidl::VectorView<netdev::wire::FrameType>(fidl::unowned_ptr(supported_frames), 1);
+    info.rx_frames = fidl::VectorView<netdev::wire::FrameType>::FromExternal(supported_frames, 1);
   } else {
     info.rx_frames = std::move(frame_types);
   }
@@ -236,7 +235,7 @@ zx_status_t TestSession::Open(netdev::Device::SyncClient& netdevice, const char*
     return status;
   }
 
-  auto session_name = fidl::unowned_str(name, strlen(name));
+  auto session_name = fidl::StringView::FromExternal(name);
 
   auto res = netdevice.OpenSession(std::move(session_name), std::move(info));
   if (res.status() != ZX_OK) {
