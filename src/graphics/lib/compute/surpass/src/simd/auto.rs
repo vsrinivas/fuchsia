@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Shr, Sub};
+use std::ops::{
+    Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Shr, Sub,
+};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct m8x16([u8; 16]);
@@ -15,6 +17,49 @@ impl m8x16 {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct m32x8([u32; 8]);
+
+impl m32x8 {
+    pub fn all(self) -> bool {
+        self.0.iter().all(|&val| val == u32::MAX)
+    }
+
+    pub fn any(self) -> bool {
+        self.0.iter().any(|&val| val == u32::MAX)
+    }
+}
+
+impl Not for m32x8 {
+    type Output = Self;
+
+    fn not(mut self) -> Self::Output {
+        self.0.iter_mut().for_each(|t| *t = !*t);
+        self
+    }
+}
+
+impl BitOr for m32x8 {
+    type Output = Self;
+
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t |= o);
+        self
+    }
+}
+
+impl BitOrAssign for m32x8 {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
+impl BitXor for m32x8 {
+    type Output = Self;
+
+    fn bitxor(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t ^= o);
+        self
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct u8x8([u8; 8]);
@@ -297,9 +342,39 @@ impl f32x8 {
         Self([val, val, val, val, val, val, val, val])
     }
 
+    pub fn indexed() -> Self {
+        Self([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
+    }
+
     #[cfg(test)]
     pub fn as_array(&self) -> &[f32; 8] {
         &self.0
+    }
+
+    pub fn eq(self, other: Self) -> m32x8 {
+        m32x8([
+            if self.0[0] == other.0[0] { u32::MAX } else { 0 },
+            if self.0[1] == other.0[1] { u32::MAX } else { 0 },
+            if self.0[2] == other.0[2] { u32::MAX } else { 0 },
+            if self.0[3] == other.0[3] { u32::MAX } else { 0 },
+            if self.0[4] == other.0[4] { u32::MAX } else { 0 },
+            if self.0[5] == other.0[5] { u32::MAX } else { 0 },
+            if self.0[6] == other.0[6] { u32::MAX } else { 0 },
+            if self.0[7] == other.0[7] { u32::MAX } else { 0 },
+        ])
+    }
+
+    pub fn lt(self, other: Self) -> m32x8 {
+        m32x8([
+            if self.0[0] < other.0[0] { u32::MAX } else { 0 },
+            if self.0[1] < other.0[1] { u32::MAX } else { 0 },
+            if self.0[2] < other.0[2] { u32::MAX } else { 0 },
+            if self.0[3] < other.0[3] { u32::MAX } else { 0 },
+            if self.0[4] < other.0[4] { u32::MAX } else { 0 },
+            if self.0[5] < other.0[5] { u32::MAX } else { 0 },
+            if self.0[6] < other.0[6] { u32::MAX } else { 0 },
+            if self.0[7] < other.0[7] { u32::MAX } else { 0 },
+        ])
     }
 
     pub fn le(self, other: Self) -> m32x8 {
@@ -364,6 +439,12 @@ impl Add for f32x8 {
     }
 }
 
+impl AddAssign for f32x8 {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl Sub for f32x8 {
     type Output = Self;
 
@@ -385,6 +466,49 @@ impl Mul for f32x8 {
 impl MulAssign for f32x8 {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
+    }
+}
+
+impl Div for f32x8 {
+    type Output = Self;
+
+    fn div(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t /= o);
+        self
+    }
+}
+
+impl Neg for f32x8 {
+    type Output = Self;
+
+    fn neg(mut self) -> Self::Output {
+        self.0.iter_mut().for_each(|t| *t = -*t);
+        self
+    }
+}
+
+impl BitOr for f32x8 {
+    type Output = Self;
+
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| {
+            let t_bytes = t.to_ne_bytes();
+            let o_bytes = o.to_ne_bytes();
+
+            *t = f32::from_ne_bytes([
+                t_bytes[0] | o_bytes[0],
+                t_bytes[1] | o_bytes[1],
+                t_bytes[2] | o_bytes[2],
+                t_bytes[3] | o_bytes[3],
+            ]);
+        });
+        self
+    }
+}
+
+impl BitOrAssign for f32x8 {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 

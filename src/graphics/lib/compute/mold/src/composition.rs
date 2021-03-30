@@ -188,7 +188,7 @@ impl Composition {
                     .expect("orders_to_layers was not populated in Composition::render");
                 layers
                     .get(layer_id)
-                    .map(|layer| *layer.style())
+                    .map(|layer| layer.style().clone())
                     .expect("orders_to_layers points to non-existant Layer")
             });
 

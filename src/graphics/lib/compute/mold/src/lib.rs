@@ -19,4 +19,6 @@ pub use path::Path;
 pub use point::Point;
 pub use utils::clear_buffer;
 
-pub use surpass::painter::{BlendMode, Fill, FillRule, Rect, Style};
+pub use surpass::painter::{
+    BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Rect, Style,
+};

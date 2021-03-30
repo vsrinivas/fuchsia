@@ -4,7 +4,9 @@
 
 use std::{
     arch::x86_64::*,
-    ops::{Add, AddAssign, BitAnd, Mul, MulAssign, Shr, Sub},
+    ops::{
+        Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Shr, Sub,
+    },
     ptr,
 };
 
@@ -25,6 +27,46 @@ impl Default for m8x16 {
 
 #[derive(Clone, Copy, Debug)]
 pub struct m32x8(__m256i);
+
+impl m32x8 {
+    pub fn all(self) -> bool {
+        unsafe { _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.0, _mm256_setzero_si256())) == 0 }
+    }
+
+    pub fn any(self) -> bool {
+        unsafe { _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.0, _mm256_setzero_si256())) != -1 }
+    }
+}
+
+impl Not for m32x8 {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self(unsafe { _mm256_xor_si256(self.0, _mm256_cmpeq_epi32(self.0, self.0)) })
+    }
+}
+
+impl BitOr for m32x8 {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm256_or_si256(self.0, rhs.0) })
+    }
+}
+
+impl BitOrAssign for m32x8 {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
+impl BitXor for m32x8 {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm256_xor_si256(self.0, rhs.0) })
+    }
+}
 
 impl Default for m32x8 {
     fn default() -> Self {
@@ -295,9 +337,21 @@ impl f32x8 {
         Self(unsafe { _mm256_set1_ps(val) })
     }
 
+    pub fn indexed() -> Self {
+        Self(unsafe { _mm256_set_ps(7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0) })
+    }
+
     #[cfg(test)]
     pub fn as_array(&self) -> &[f32; 8] {
         unsafe { std::mem::transmute(&self.0) }
+    }
+
+    pub fn eq(self, other: Self) -> m32x8 {
+        m32x8(unsafe { _mm256_castps_si256(_mm256_cmp_ps(self.0, other.0, _CMP_EQ_OQ)) })
+    }
+
+    pub fn lt(self, other: Self) -> m32x8 {
+        m32x8(unsafe { _mm256_castps_si256(_mm256_cmp_ps(self.0, other.0, _CMP_LT_OQ)) })
     }
 
     pub fn le(self, other: Self) -> m32x8 {
@@ -349,6 +403,12 @@ impl Add for f32x8 {
     }
 }
 
+impl AddAssign for f32x8 {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl Sub for f32x8 {
     type Output = Self;
 
@@ -368,6 +428,36 @@ impl Mul for f32x8 {
 impl MulAssign for f32x8 {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
+    }
+}
+
+impl Div for f32x8 {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm256_div_ps(self.0, rhs.0) })
+    }
+}
+
+impl Neg for f32x8 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(unsafe { _mm256_xor_ps(self.0, _mm256_set1_ps(-0.0)) })
+    }
+}
+
+impl BitOr for f32x8 {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm256_or_ps(self.0, rhs.0) })
+    }
+}
+
+impl BitOrAssign for f32x8 {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 

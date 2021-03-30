@@ -16,53 +16,15 @@ use crate::{
 };
 
 mod buffer_layout;
+mod style;
 
 use buffer_layout::TileSlice;
 pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher, Rect};
 
+pub use style::{BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Style};
+
 const LAST_BYTE_MASK: i32 = 0b1111_1111;
 const LAST_BIT_MASK: i32 = 0b1;
-
-#[derive(Clone, Copy, Debug)]
-pub enum FillRule {
-    NonZero,
-    EvenOdd,
-}
-
-impl Default for FillRule {
-    fn default() -> Self {
-        Self::NonZero
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum Fill {
-    Solid([f32; 4]),
-}
-
-impl Default for Fill {
-    fn default() -> Self {
-        Self::Solid([0.0, 0.0, 0.0, 1.0])
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum BlendMode {
-    Over,
-}
-
-impl Default for BlendMode {
-    fn default() -> Self {
-        Self::Over
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Style {
-    pub fill_rule: FillRule,
-    pub fill: Fill,
-    pub blend_mode: BlendMode,
-}
 
 macro_rules! cols {
     ( & $array:expr, $x0:expr, $x1:expr ) => {{
@@ -222,11 +184,12 @@ impl Painter {
     }
 
     #[inline]
-    fn fill_at(_x: usize, _y: usize, style: Style) -> [f32x8; 4] {
-        match style.fill {
+    fn fill_at(x: usize, y: usize, style: &Style) -> [f32x8; 4] {
+        match &style.fill {
             Fill::Solid([c0, c1, c2, alpha]) => {
-                [f32x8::splat(c0), f32x8::splat(c1), f32x8::splat(c2), f32x8::splat(alpha)]
+                [f32x8::splat(*c0), f32x8::splat(*c1), f32x8::splat(*c2), f32x8::splat(*alpha)]
             }
+            Fill::Gradient(gradient) => gradient.color_at(x as f32, y as f32),
         }
     }
 
@@ -247,7 +210,12 @@ impl Painter {
         }
     }
 
-    fn paint_layer(&mut self, style: Style) -> [i8x16; TILE_SIZE / i8x16::LANES] {
+    fn paint_layer(
+        &mut self,
+        tile_i: usize,
+        tile_j: usize,
+        style: &Style,
+    ) -> [i8x16; TILE_SIZE / i8x16::LANES] {
         let mut areas = [i32x8::splat(0); TILE_SIZE / i32x8::LANES];
         let mut covers = [i8x16::splat(0); TILE_SIZE / i8x16::LANES];
         let mut coverages = [f32x8::splat(0.0); TILE_SIZE / f32x8::LANES];
@@ -256,19 +224,26 @@ impl Painter {
 
         for x in 0..=TILE_SIZE {
             if x != 0 {
-                let fill = Self::fill_at(x, 0, style);
-
                 self.compute_areas(x - 1, &covers, &mut areas);
 
                 for y in 0..coverages.len() {
                     coverages[y] = from_area(areas[y], style.fill_rule);
-                }
 
-                let c0 = cols!(&mut self.c0, x - 1, x);
-                let c1 = cols!(&mut self.c1, x - 1, x);
-                let c2 = cols!(&mut self.c2, x - 1, x);
-                let alpha = cols!(&mut self.alpha, x - 1, x);
-                for y in 0..coverages.len() {
+                    if coverages[y].eq(f32x8::splat(0.0)).all() {
+                        continue;
+                    }
+
+                    let fill = Self::fill_at(
+                        x + tile_i * TILE_SIZE,
+                        y * f32x8::LANES + tile_j * TILE_SIZE,
+                        &style,
+                    );
+
+                    let c0 = cols!(&mut self.c0, x - 1, x);
+                    let c1 = cols!(&mut self.c1, x - 1, x);
+                    let c2 = cols!(&mut self.c2, x - 1, x);
+                    let alpha = cols!(&mut self.alpha, x - 1, x);
+
                     alphas[y] = fill[3] * coverages[y];
                     inv_alphas[y] = f32x8::splat(1.0) - alphas[y];
 
@@ -325,8 +300,13 @@ impl Painter {
         }
     }
 
-    pub fn paint_tile<F>(&mut self, segments: &[CompactSegment], styles: &F)
-    where
+    pub fn paint_tile<F>(
+        &mut self,
+        tile_i: usize,
+        tile_j: usize,
+        segments: &[CompactSegment],
+        styles: &F,
+    ) where
         F: Fn(u16) -> Style + Send + Sync,
     {
         let mut i = 0;
@@ -357,7 +337,7 @@ impl Painter {
                 });
             }
 
-            let covers = self.paint_layer(styles(layer));
+            let covers = self.paint_layer(tile_i, tile_j, &styles(layer));
             if covers.iter().any(|&cover| !cover.eq(i8x16::splat(0)).all()) {
                 self.next_queue.push_back(CoverCarry { covers, layer });
             }
@@ -436,6 +416,7 @@ impl Painter {
 
                 Some(color)
             }
+            _ => None,
         }
     }
 
@@ -450,7 +431,7 @@ impl Painter {
             *channel = (linear_to_srgb_approx_simd(*channel) * *alpha) * f32x8::splat(255.0);
         }
         for alpha in self.alpha.iter_mut() {
-            *alpha *= f32x8::splat(255.0);
+            *alpha = alpha.mul_add(f32x8::splat(255.0), f32x8::splat(0.5));
         }
 
         let srgb: &mut [u8x8; TILE_SIZE * TILE_SIZE * 4 / 8] =
@@ -487,6 +468,8 @@ impl Painter {
     ) where
         F: Fn(u16) -> Style + Send + Sync,
     {
+        let j = segments[0].tile_j() as usize;
+
         let mut covers_left_of_row: BTreeMap<u16, [i8x16; TILE_SIZE / 16]> = BTreeMap::new();
         let mut populate_covers = |limit: Option<i16>| {
             let query = search_last_by_key(segments, false, |segment| match limit {
@@ -558,7 +541,7 @@ impl Painter {
                 } else {
                     self.clear(clear_color);
 
-                    self.paint_tile(current_segments, &styles);
+                    self.paint_tile(i, j, current_segments, &styles);
                     self.compute_srgb();
 
                     let srgb: &[[u8; 4]] = unsafe {
@@ -677,7 +660,7 @@ mod tests {
         let mut painter = Painter::new();
         painter.queue.push_back(cover_carry);
 
-        painter.paint_tile(&segments, &|order| styles[&order]);
+        painter.paint_tile(0, 0, &segments, &|order| styles[&order].clone());
 
         assert_eq!(painter.colors()[0..2], [GREEN, RED]);
     }
@@ -709,7 +692,7 @@ mod tests {
         );
 
         let mut painter = Painter::new();
-        painter.paint_tile(&segments, &|order| styles[&order]);
+        painter.paint_tile(0, 0, &segments, &|order| styles[&order].clone());
 
         let row_start = TILE_SIZE / 2 - 2;
         let row_end = TILE_SIZE / 2 + 2;
@@ -766,7 +749,7 @@ mod tests {
         );
 
         let mut painter = Painter::new();
-        painter.paint_tile(&segments, &|order| styles[&order]);
+        painter.paint_tile(0, 0, &segments, &|order| styles[&order].clone());
 
         assert_eq!(painter.colors()[0], RED_50);
     }

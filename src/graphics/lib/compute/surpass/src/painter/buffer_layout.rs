@@ -196,9 +196,14 @@ impl BufferLayout {
                     Err(i) => i,
                 };
 
+                let segments = &segments[start..=end];
+                if segments.is_empty() {
+                    return;
+                }
+
                 PAINTER.with(|painter| {
                     painter.borrow_mut().paint_tile_row(
-                        &segments[start..=end],
+                        segments,
                         &styles,
                         clear_color,
                         flusher,
@@ -339,7 +344,7 @@ mod tests {
             },
         );
 
-        buffer_layout.print(&mut buffer, &segments, BLACK, None, |layer| styles[&layer]);
+        buffer_layout.print(&mut buffer, &segments, BLACK, None, |layer| styles[&layer].clone());
 
         let tiles: Vec<_> =
             buffer_layout.layout.iter_mut().map(|slice| slice.as_mut_slice().to_owned()).collect();
@@ -400,7 +405,7 @@ mod tests {
             &segments,
             RED,
             Some(Rect::new(TILE_SIZE..TILE_SIZE * 2 + TILE_SIZE / 2, TILE_SIZE..TILE_SIZE * 2)),
-            |layer| styles[&layer],
+            |layer| styles[&layer].clone(),
         );
 
         let tiles: Vec<_> =
