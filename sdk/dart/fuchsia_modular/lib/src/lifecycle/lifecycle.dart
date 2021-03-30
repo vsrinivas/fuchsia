@@ -29,18 +29,12 @@ abstract class Lifecycle {
 
   /// Obtains an instance of the shared [Lifecycle] instance.
   factory Lifecycle() {
-    // TODO(fxbug.dev/72277): Require _singleton after soft transition.
-    return _singleton ??= LifecycleImpl(
-      outgoing: StartupContext.fromStartupInfo().outgoing,
-      exitHandler: fuchsia.exit,
-    );
-    // if (_singleton == null) {
-    //   throw Exception(
-    //       'Attempted to construct Lifecycle before lifecycle events have been enabled. '
-    //       'Ensure that Lifecycle.enableLifecycleEvents is called first.');
-    // } else {
-    //   return _singleton;
-    // }
+    if (_singleton == null) {
+      throw Exception(
+          'Attempted to construct Lifecycle before lifecycle events have been enabled. '
+          'Ensure that Lifecycle.enableLifecycleEvents is called first.');
+    }
+    return _singleton!;
   }
 
   /// Adds a terminate [listener] which will be called when the system starts to

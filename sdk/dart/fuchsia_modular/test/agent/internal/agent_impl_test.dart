@@ -34,6 +34,11 @@ class MockInterfaceRequest<T> extends Mock implements InterfaceRequest<T> {}
 void main() {
   setupLogger();
 
+  setUpAll(() {
+    final context = ComponentContext.createAndServe();
+    Lifecycle.enableLifecycleEvents(context.outgoing);
+  });
+
   test('verify Lifecycle init during the construction of AgentImpl', () {
     final mockLifecycle = MockLifecycle();
     AgentImpl(lifecycle: mockLifecycle);

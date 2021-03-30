@@ -6,6 +6,7 @@
 
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as fidl;
 import 'package:fuchsia_modular/lifecycle.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
@@ -17,6 +18,11 @@ class MockLifecycle extends Mock implements Lifecycle {}
 class MockModuleContext extends Mock implements fidl.ModuleContext {}
 
 void main() {
+  setUpAll(() {
+    final context = ComponentContext.createAndServe();
+    Lifecycle.enableLifecycleEvents(context.outgoing);
+  });
+
   test('verify Lifecycle init during the construction of ModuleImpl', () {
     final mockLifecycle = MockLifecycle();
     ModuleImpl(lifecycle: mockLifecycle);

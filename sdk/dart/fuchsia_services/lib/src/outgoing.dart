@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
-import 'package:fuchsia_vfs/vfs.dart' as vfs;
+import 'dart:io';
+
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
+import 'package:fuchsia/fuchsia.dart';
+import 'package:fuchsia_vfs/vfs.dart' as vfs;
+import 'package:zircon/zircon.dart';
 
 /// Helper class to publish outgoing services and other directories for debug
 /// and control purposes
@@ -15,8 +19,6 @@ class Outgoing {
   final vfs.PseudoDir _diagnostics = vfs.PseudoDir();
   final vfs.PseudoDir _ctrl = vfs.PseudoDir();
   bool _isClosed = false;
-  // TODO(fxbug.dev/71185): Remove after we stop using StartupContext.
-  bool _isServingStartupInfo = false;
 
   /// This will setup outgoing directory and add required
   /// directories to root of this class.
@@ -51,12 +53,12 @@ class Outgoing {
   /// This method should be called after all public services are added and may
   /// only be called once.
   void serveFromStartupInfo() {
-    if (_isServingStartupInfo) {
-      throw Exception(
-          'Attempted to call Outgoing.serveFromStartupInfo after serving. Ensure that Outgoing.serveFromStartupInfo is not called multiple times.');
+    _ensureNotClosed();
+    // No-op on non-fuchsia platforms to allow for host side tests.
+    if (Platform.isFuchsia) {
+      final outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
+      serve(InterfaceRequest<Node>(Channel(outgoingServicesHandle)));
     }
-    // No-op for now since StartupContext is already serving /out.
-    _isServingStartupInfo = true;
   }
 
   /// Closes root directory

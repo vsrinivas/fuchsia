@@ -36,8 +36,6 @@ class AgentImpl extends fidl.Agent implements Agent {
   AgentImpl({Lifecycle? lifecycle, ServiceProviderImpl? serviceProviderImpl})
       : _serviceProvider = serviceProviderImpl ?? ServiceProviderImpl() {
     (lifecycle ??= Lifecycle()).addTerminateListener(_terminate);
-    // TODO(fxbug.dev/72277): Remove after soft transition.
-    serve(StartupContext.fromStartupInfo().outgoing);
   }
 
   @override

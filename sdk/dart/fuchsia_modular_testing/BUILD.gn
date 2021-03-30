@@ -29,6 +29,7 @@ dart_library("fuchsia_modular_testing") {
     "//sdk/dart/fuchsia_modular",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",

@@ -6,12 +6,13 @@ import 'dart:async';
 
 import 'package:fuchsia_modular/agent.dart';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_services/services.dart';
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_modular_testing/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
 import 'package:fuchsia_modular/src/agent/internal/_agent_impl.dart'; // ignore: implementation_imports
 import 'package:fuchsia_modular/src/lifecycle/internal/_lifecycle_impl.dart'; // ignore: implementation_imports
+
+import 'test_harness_fixtures.dart';
 
 /// A function which is called when a new agent that is being launched.
 typedef OnNewAgent = void Function(Agent? agent);
@@ -109,7 +110,7 @@ class _MockedAgent {
     required fidl_sys.StartupInfo startupInfo,
     required InterfaceHandle<InterceptedComponent> interceptedComponentRequest,
   }) {
-    final outgoing = ComponentContext.from(startupInfo).outgoing;
+    final outgoing = createComponentContext(startupInfo).outgoing;
     agent = AgentImpl()..serve(outgoing);
 
     // Note: we want to have a exitHandler which does not call exit here

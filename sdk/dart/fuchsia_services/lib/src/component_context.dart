@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
+import 'dart:io';
 
 import 'incoming.dart';
-import 'internal/_startup_context_impl.dart';
 import 'outgoing.dart';
-import 'startup_context.dart';
 
 /// Context information that this component received at startup.
 ///
@@ -30,6 +28,9 @@ class ComponentContext {
   /// other components.
   final Outgoing outgoing;
 
+  /// This constructor is used by the modular test harness, but should not be
+  /// used elsewhere. [ComponentContext.create()] and
+  /// [ComponentContext.createAndServe()] should typically be used instead.
   ComponentContext({
     required this.svc,
     required this.outgoing,
@@ -52,14 +53,13 @@ class ComponentContext {
   /// }
   /// ```
   factory ComponentContext.create() {
-    final context = StartupContext.fromStartupInfo();
     if (_componentContext != null) {
       throw Exception(
           'Attempted to construct ComponentContext multiple times. Ensure that the existing ComponentContext is reused instead of constructing multiple instances.');
     }
     return _componentContext = ComponentContext(
-      svc: context.incoming,
-      outgoing: context.outgoing,
+      svc: Platform.isFuchsia ? Incoming.fromSvcPath() : Incoming(),
+      outgoing: Outgoing(),
     );
   }
 
@@ -79,17 +79,5 @@ class ComponentContext {
   /// ```
   factory ComponentContext.createAndServe() {
     return ComponentContext.create()..outgoing.serveFromStartupInfo();
-  }
-
-  /// Creates a component context from [fidl_sys.StartupInfo].
-  ///
-  /// Typically used for testing or by implementations of [fidl_sys.Runner] to
-  /// obtain the [ComponentContext] for components being run by the runner.
-  factory ComponentContext.from(fidl_sys.StartupInfo startupInfo) {
-    final context = StartupContextImpl.from(startupInfo);
-    return ComponentContext(
-      svc: context.incoming,
-      outgoing: context.outgoing,
-    );
   }
 }

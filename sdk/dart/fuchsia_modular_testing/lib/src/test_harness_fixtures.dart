@@ -5,14 +5,15 @@
 import 'dart:async';
 import 'dart:math';
 
-// ignore_for_file: implementation_imports
-
+import 'package:fidl/fidl.dart';
+import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as fidl_modular;
 import 'package:fidl_fuchsia_modular_testing/fidl_async.dart' as fidl_testing;
 import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
 import 'package:fuchsia_services/services.dart';
-import 'package:fuchsia_services/src/internal/_startup_context_impl.dart';
+import 'package:zircon/zircon.dart';
 
+const _serviceRootPath = '/svc';
 const _modularTestHarnessURL =
     'fuchsia-pkg://fuchsia.com/modular_test_harness#meta/modular_test_harness.cmx';
 
@@ -66,10 +67,27 @@ Future<fidl_modular.ComponentContextProxy> getComponentContext(
   return proxy;
 }
 
-/// Creates an instance of [ComponentContext] from the given [startupInfo]
-ComponentContext createComponentContext(fidl_sys.StartupInfo startupInfo) =>
-    ComponentContext.from(startupInfo);
+/// Creates an instance of [ComponentContext] from [fidl_sys.StartupInfo].
+///
+/// Note: This automatically serves [ComponentContext.outgoing].
+ComponentContext createComponentContext(fidl_sys.StartupInfo startupInfo) {
+  final flat = startupInfo.flatNamespace;
+  if (flat.paths.length != flat.directories.length) {
+    throw Exception('The flat namespace in the given fuchsia.sys.StartupInfo '
+        '[$startupInfo] is misconfigured');
+  }
+  Channel? serviceRoot;
+  for (var i = 0; i < flat.paths.length; ++i) {
+    if (flat.paths[i] == _serviceRootPath) {
+      serviceRoot = flat.directories[i];
+      break;
+    }
+  }
+  final svcDirProxy = DirectoryProxy()..ctrl.bind(InterfaceHandle(serviceRoot));
 
-/// Creates an instance of [StartupContext] from the given [startupInfo]
-StartupContext createStartupContext(fidl_sys.StartupInfo startupInfo) =>
-    StartupContextImpl.from(startupInfo);
+  return ComponentContext(
+    svc: Incoming.withDirectory(svcDirProxy),
+    outgoing: Outgoing()
+      ..serve(InterfaceRequest<Node>(startupInfo.launchInfo.directoryRequest)),
+  );
+}

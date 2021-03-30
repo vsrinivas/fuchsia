@@ -4,9 +4,16 @@
 
 import 'package:test/test.dart';
 
-import 'package:fuchsia_modular/src/module/module.dart'; // ignore: implementation_imports
+import 'package:fuchsia_modular/lifecycle.dart';
+import 'package:fuchsia_modular/module.dart';
+import 'package:fuchsia_services/services.dart';
 
 void main() {
+  setUpAll(() {
+    final context = ComponentContext.createAndServe();
+    Lifecycle.enableLifecycleEvents(context.outgoing);
+  });
+
   group('module tests', () {
     test('factory returns same instance', () {
       expect(Module(), Module());

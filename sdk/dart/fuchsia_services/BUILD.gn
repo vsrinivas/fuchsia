@@ -20,10 +20,8 @@ dart_library("fuchsia_services") {
     "services.dart",
     "src/component_context.dart",
     "src/incoming.dart",
-    "src/internal/_startup_context_impl.dart",
     "src/outgoing.dart",
     "src/service_provider_impl.dart",
-    "src/startup_context.dart",
   ]
 
   deps = [
@@ -38,11 +36,7 @@ dart_library("fuchsia_services") {
 }
 
 flutter_test("fuchsia_services_package_unittests") {
-  sources = [
-    "component_context_test.dart",
-    "service_provider_impl_test.dart",
-    "startup_context_test.dart",
-  ]
+  sources = [ "service_provider_impl_test.dart" ]
 
   deps = [
     ":fuchsia_services",
@@ -61,7 +55,6 @@ dart_test_component("integration-test-component") {
     "launch_flow_test.dart",
     "outgoing_test.dart",
     "service_provider_impl_test.dart",
-    "startup_context_test.dart",
   ]
 
   deps = [

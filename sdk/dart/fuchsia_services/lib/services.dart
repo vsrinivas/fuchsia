@@ -7,4 +7,3 @@ export 'src/component_context.dart';
 export 'src/incoming.dart';
 export 'src/outgoing.dart';
 export 'src/service_provider_impl.dart';
-export 'src/startup_context.dart';
