@@ -36,6 +36,7 @@ pub trait Device: Send + Sync {
     async fn read(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<(), Error>;
     /// Writes the contents of |buffer| to the device at |offset|.
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error>;
-    /// Closes and consumes the block device.
-    async fn close(self) -> Result<(), Error>;
+    /// Closes the block device. It is an error to continue using the device after this, but close
+    /// itself is idempotent.
+    async fn close(&self) -> Result<(), Error>;
 }

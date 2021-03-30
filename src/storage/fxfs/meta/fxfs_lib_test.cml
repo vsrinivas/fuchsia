@@ -10,16 +10,16 @@
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
     ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
     use: [
         {
             storage: "temp",
             path: "/tmp",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }

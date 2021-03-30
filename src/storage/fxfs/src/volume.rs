@@ -79,6 +79,20 @@ impl VolumeDirectory {
 
         Ok(Volume::new(volume_store, dir))
     }
+
+    pub async fn open_or_create_volume(&self, volume_name: &str) -> Result<Volume, Error> {
+        match self.volume(volume_name).await {
+            Ok(volume) => Ok(volume),
+            Err(e) => {
+                let cause = e.root_cause().downcast_ref::<FxfsError>().cloned();
+                if let Some(FxfsError::NotFound) = cause {
+                    self.new_volume(volume_name).await
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
 }
 
 /// Returns the volume directory for the filesystem or creates it if it does not exist.

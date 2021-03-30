@@ -8,14 +8,18 @@ use {
         buffer_allocator::{BufferAllocator, MemBufferSource},
         Device,
     },
-    anyhow::Error,
+    anyhow::{ensure, Error},
     async_trait::async_trait,
-    std::sync::Mutex,
+    std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
 };
 
 pub struct FakeDevice {
     allocator: BufferAllocator,
     data: Mutex<Vec<u8>>,
+    closed: AtomicBool,
 }
 
 const TRANSFER_HEAP_SIZE: usize = 16 * 1024 * 1024;
@@ -29,6 +33,7 @@ impl FakeDevice {
         Self {
             allocator,
             data: Mutex::new(vec![0 as u8; block_count as usize * block_size as usize]),
+            closed: AtomicBool::new(false),
         }
     }
 }
@@ -36,6 +41,7 @@ impl FakeDevice {
 #[async_trait]
 impl Device for FakeDevice {
     fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+        assert!(!self.closed.load(Ordering::Relaxed));
         self.allocator.allocate_buffer(size)
     }
 
@@ -48,6 +54,7 @@ impl Device for FakeDevice {
     }
 
     async fn read(&self, offset: u64, mut buffer: MutableBufferRef<'_>) -> Result<(), Error> {
+        ensure!(!self.closed.load(Ordering::Relaxed));
         let offset = offset as usize;
         assert_eq!(offset % self.allocator.block_size(), 0);
         let data = self.data.lock().unwrap();
@@ -58,6 +65,7 @@ impl Device for FakeDevice {
     }
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
+        ensure!(!self.closed.load(Ordering::Relaxed));
         let offset = offset as usize;
         assert_eq!(offset % self.allocator.block_size(), 0);
         let mut data = self.data.lock().unwrap();
@@ -66,7 +74,8 @@ impl Device for FakeDevice {
         Ok(())
     }
 
-    async fn close(self) -> Result<(), Error> {
+    async fn close(&self) -> Result<(), Error> {
+        self.closed.store(true, Ordering::Relaxed);
         Ok(())
     }
 }
