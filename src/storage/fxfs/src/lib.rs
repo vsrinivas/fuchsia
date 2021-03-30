@@ -5,6 +5,10 @@
 pub mod device;
 pub mod errors;
 pub mod lsm_tree;
+#[cfg(target_os = "fuchsia")]
+pub mod mkfs;
+#[cfg(target_os = "fuchsia")]
+pub mod mount;
 pub mod object_handle;
 pub mod object_store;
 #[cfg(target_os = "fuchsia")]
