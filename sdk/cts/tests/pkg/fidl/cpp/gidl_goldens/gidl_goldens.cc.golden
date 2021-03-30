@@ -1,0 +1,875 @@
+
+#include <zxtest/zxtest.h>
+
+#include <conformance/cpp/natural_types.h>
+#include <cts/tests/pkg/fidl/cpp/test/test_util.h>
+
+#ifdef __Fuchsia__
+#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
+#include <zircon/syscalls.h>
+#endif
+
+
+TEST(Conformance, GoldenBoolStruct_V1_Encode) {
+	conformance::GoldenBoolStruct v1;
+
+v1.v = true;
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenBoolStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenIntStruct_V1_Encode) {
+	conformance::GoldenIntStruct v1;
+
+v1.v = 1ull;
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenIntStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenUintStruct_V1_Encode) {
+	conformance::GoldenUintStruct v1;
+
+v1.v = 1ull;
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenUintStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenFloatStruct_V1_Encode) {
+	conformance::GoldenFloatStruct v1;
+
+v1.v = 0;
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenFloatStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenDoubleStruct_V1_Encode) {
+	conformance::GoldenDoubleStruct v1;
+
+v1.v = 0;
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenDoubleStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenStringStruct_V1_Encode) {
+	conformance::GoldenStringStruct v1;
+
+v1.v = std::string("abcd", 4);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenStringStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableStringStructNonNull_V1_Encode) {
+	conformance::GoldenNullableStringStruct v1;
+
+v1.v = ::fidl::StringPtr("abcd", 4);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableStringStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableStringStructNull_V1_Encode) {
+	conformance::GoldenNullableStringStruct v1;
+
+v1.v = ::fidl::StringPtr();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableStringStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenEnumStruct_V1_Encode) {
+	conformance::GoldenEnumStruct v1;
+
+v1.v = conformance::GoldenEnum(1ull);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenEnumStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenBitsStruct_V1_Encode) {
+	conformance::GoldenBitsStruct v1;
+
+v1.v = conformance::GoldenBits(1ull);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenBitsStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenTableStruct_V1_Encode) {
+	conformance::GoldenTableStruct v1;
+
+conformance::GoldenTable v2;
+
+v2.set_v(1ull);
+v1.v = std::move(v2);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenTableStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenUnionStruct_V1_Encode) {
+	conformance::GoldenUnionStruct v1;
+
+conformance::GoldenUnion v2;
+
+v2.set_v(1ull);
+v1.v = std::move(v2);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenUnionStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableUnionStructNonNull_V1_Encode) {
+	conformance::GoldenNullableUnionStruct v1;
+
+std::unique_ptr<conformance::GoldenUnion> v2 = std::make_unique<conformance::GoldenUnion>();
+
+v2->set_v(1ull);
+v1.v = std::move(v2);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableUnionStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableUnionStructNull_V1_Encode) {
+	conformance::GoldenNullableUnionStruct v1;
+
+v1.v = std::unique_ptr<conformance::GoldenUnion>();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableUnionStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenByteArrayStruct_V1_Encode) {
+	conformance::GoldenByteArrayStruct v1;
+
+v1.v = std::array<uint8_t, 4>{1ull, 2ull, 3ull, 4ull};
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenByteArrayStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenStructArrayStruct_V1_Encode) {
+	conformance::GoldenStructArrayStruct v1;
+
+conformance::GoldenIntStruct v2;
+
+v2.v = 1ull;
+conformance::GoldenIntStruct v3;
+
+v3.v = 2ull;
+v1.v = std::array<conformance::GoldenIntStruct, 2>{std::move(v2), std::move(v3)};
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenStructArrayStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenByteVectorStruct_V1_Encode) {
+	conformance::GoldenByteVectorStruct v1;
+
+v1.v = std::vector<uint8_t>{1ull, 2ull, 3ull, 4ull};
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenByteVectorStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenStructVectorStruct_V1_Encode) {
+	conformance::GoldenStructVectorStruct v1;
+
+conformance::GoldenIntStruct v2;
+
+v2.v = 1ull;
+conformance::GoldenIntStruct v3;
+
+v3.v = 2ull;
+std::vector<conformance::GoldenIntStruct> v4;
+v4.push_back(std::move(v2));
+v4.push_back(std::move(v3));
+v1.v = std::move(v4);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenStructVectorStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableStructNonNull_V1_Encode) {
+	conformance::GoldenNullableStruct v1;
+
+std::unique_ptr<conformance::GoldenBoolStruct> v2 = std::make_unique<conformance::GoldenBoolStruct>();
+
+v2->v = true;
+v1.v = std::move(v2);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableStructNull_V1_Encode) {
+	conformance::GoldenNullableStruct v1;
+
+v1.v = std::unique_ptr<conformance::GoldenBoolStruct>();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenHandleBasicRightsStruct_V1_Encode) {
+	const auto handle_defs = std::vector<zx_handle_t>{
+fidl::test::util::CreateChannel(61454), // #0
+};
+	conformance::GoldenHandleBasicRightsStruct v1;
+
+v1.v = zx::event(handle_defs[0]);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{
+{
+	.operation = ZX_HANDLE_OP_MOVE,
+	.handle = handle_defs[0],
+	.type = 5,
+	.rights = 49155,
+	.result = ZX_OK,
+},};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenHandleBasicRightsStruct>(
+			std::move(v1), expected_bytes, expected_handles, true);
+	EXPECT_TRUE(result);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenNullableHandleStructNonNull_V1_Encode) {
+	const auto handle_defs = std::vector<zx_handle_t>{
+fidl::test::util::CreateEvent(2147483648), // #0
+};
+	conformance::GoldenNullableHandleStruct v1;
+
+v1.v = zx::handle(handle_defs[0]);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{
+{
+	.operation = ZX_HANDLE_OP_MOVE,
+	.handle = handle_defs[0],
+	.type = 0,
+	.rights = 2147483648,
+	.result = ZX_OK,
+},};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableHandleStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenNullableHandleStructNull_V1_Encode) {
+	conformance::GoldenNullableHandleStruct v1;
+
+v1.v = zx::handle();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableHandleStruct>(
+			std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+#endif  // __Fuchsia__
+
+
+
+TEST(Conformance, GoldenBoolStruct_V1_Decode) {
+	conformance::GoldenBoolStruct v1;
+
+v1.v = true;
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenBoolStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenIntStruct_V1_Decode) {
+	conformance::GoldenIntStruct v1;
+
+v1.v = 1ull;
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenIntStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenUintStruct_V1_Decode) {
+	conformance::GoldenUintStruct v1;
+
+v1.v = 1ull;
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenUintStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenFloatStruct_V1_Decode) {
+	conformance::GoldenFloatStruct v1;
+
+v1.v = 0;
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenFloatStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenDoubleStruct_V1_Decode) {
+	conformance::GoldenDoubleStruct v1;
+
+v1.v = 0;
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenDoubleStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenStringStruct_V1_Decode) {
+	conformance::GoldenStringStruct v1;
+
+v1.v = std::string("abcd", 4);
+
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenStringStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStringStructNonNull_V1_Decode) {
+	conformance::GoldenNullableStringStruct v1;
+
+v1.v = ::fidl::StringPtr("abcd", 4);
+
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStringStructNull_V1_Decode) {
+	conformance::GoldenNullableStringStruct v1;
+
+v1.v = ::fidl::StringPtr();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenEnumStruct_V1_Decode) {
+	conformance::GoldenEnumStruct v1;
+
+v1.v = conformance::GoldenEnum(1ull);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenEnumStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenBitsStruct_V1_Decode) {
+	conformance::GoldenBitsStruct v1;
+
+v1.v = conformance::GoldenBits(1ull);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenBitsStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenTableStruct_V1_Decode) {
+	conformance::GoldenTableStruct v1;
+
+conformance::GoldenTable v2;
+
+v2.set_v(1ull);
+v1.v = std::move(v2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenTableStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenUnionStruct_V1_Decode) {
+	conformance::GoldenUnionStruct v1;
+
+conformance::GoldenUnion v2;
+
+v2.set_v(1ull);
+v1.v = std::move(v2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenUnionStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableUnionStructNonNull_V1_Decode) {
+	conformance::GoldenNullableUnionStruct v1;
+
+std::unique_ptr<conformance::GoldenUnion> v2 = std::make_unique<conformance::GoldenUnion>();
+
+v2->set_v(1ull);
+v1.v = std::move(v2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableUnionStructNull_V1_Decode) {
+	conformance::GoldenNullableUnionStruct v1;
+
+v1.v = std::unique_ptr<conformance::GoldenUnion>();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenByteArrayStruct_V1_Decode) {
+	conformance::GoldenByteArrayStruct v1;
+
+v1.v = std::array<uint8_t, 4>{1ull, 2ull, 3ull, 4ull};
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenByteArrayStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenStructArrayStruct_V1_Decode) {
+	conformance::GoldenStructArrayStruct v1;
+
+conformance::GoldenIntStruct v2;
+
+v2.v = 1ull;
+conformance::GoldenIntStruct v3;
+
+v3.v = 2ull;
+v1.v = std::array<conformance::GoldenIntStruct, 2>{std::move(v2), std::move(v3)};
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenStructArrayStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenByteVectorStruct_V1_Decode) {
+	conformance::GoldenByteVectorStruct v1;
+
+v1.v = std::vector<uint8_t>{1ull, 2ull, 3ull, 4ull};
+
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenByteVectorStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenStructVectorStruct_V1_Decode) {
+	conformance::GoldenStructVectorStruct v1;
+
+conformance::GoldenIntStruct v2;
+
+v2.v = 1ull;
+conformance::GoldenIntStruct v3;
+
+v3.v = 2ull;
+std::vector<conformance::GoldenIntStruct> v4;
+v4.push_back(std::move(v2));
+v4.push_back(std::move(v3));
+v1.v = std::move(v4);
+
+	auto bytes = std::vector<uint8_t>{
+0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenStructVectorStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStructNonNull_V1_Decode) {
+	conformance::GoldenNullableStruct v1;
+
+std::unique_ptr<conformance::GoldenBoolStruct> v2 = std::make_unique<conformance::GoldenBoolStruct>();
+
+v2->v = true;
+v1.v = std::move(v2);
+
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStructNull_V1_Decode) {
+	conformance::GoldenNullableStruct v1;
+
+v1.v = std::unique_ptr<conformance::GoldenBoolStruct>();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, std::move(v1)));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenHandleBasicRightsStruct_V1_Decode) {
+	const auto handle_defs = std::vector<zx_handle_info_t>{
+
+// #0
+zx_handle_info_t{
+	.handle = fidl::test::util::CreateEvent(53251),
+	.type = ZX_OBJ_TYPE_EVENT,
+	.rights = 53251,
+	.unused = 0u,
+},
+};
+	conformance::GoldenHandleBasicRightsStruct v1;
+
+v1.v = zx::event(handle_defs[0].handle);
+
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{
+handle_defs[0],};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenHandleBasicRightsStruct>(std::move(bytes), std::move(handles));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenNullableHandleStructNonNull_V1_Decode) {
+	const auto handle_defs = std::vector<zx_handle_info_t>{
+
+// #0
+zx_handle_info_t{
+	.handle = fidl::test::util::CreateEvent(2147483648),
+	.type = ZX_OBJ_TYPE_EVENT,
+	.rights = 2147483648,
+	.unused = 0u,
+},
+};
+	conformance::GoldenNullableHandleStruct v1;
+
+v1.v = zx::handle(handle_defs[0].handle);
+
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{
+handle_defs[0],};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(std::move(bytes), std::move(handles));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenNullableHandleStructNull_V1_Decode) {
+	conformance::GoldenNullableHandleStruct v1;
+
+v1.v = zx::handle();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value = fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(std::move(bytes), std::move(handles));
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+#endif  // __Fuchsia__
+
+
+
+TEST(Conformance, GoldenStringWithMaxSize2_V1_Encode_Failure) {
+	conformance::GoldenStringWithMaxSize2 v1;
+
+v1.s = std::string("abc", 3);
+
+	fidl::test::util::CheckEncodeFailure<conformance::GoldenStringWithMaxSize2>(
+		std::move(v1), ZX_ERR_INVALID_ARGS);
+}
+
+
+
+TEST(Conformance, GoldenStringStructNullBody_V1_Decode_Failure) {
+	auto bytes = std::vector<uint8_t>{
+0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	fidl::test::util::CheckDecodeFailure<conformance::GoldenStringStruct>(std::move(bytes), std::move(handles), ZX_ERR_INVALID_ARGS);
+}
+

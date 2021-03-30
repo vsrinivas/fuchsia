@@ -63,6 +63,7 @@ TEST_regen_substring_match() {
     fidlgen_hlcpp_golden_tests \
     fidlgen_hlcpp_natural_types_golden_tests \
     fidlgen_llcpp_golden_tests \
+    gidl_hlcpp_golden_tests \
     gidl_llcpp_golden_tests \
     -- --regen
 }
