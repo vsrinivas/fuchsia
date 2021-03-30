@@ -78,9 +78,7 @@ impl<'a> Device<'a> {
         }
 
         if self.name.is_none() || self.args.print_numeric || self.args.only_print_numeric {
-            unsafe {
-                write!(f, " [{:04x}:{:04x}]", self.cfg.vendor_id, self.cfg.device_id)?;
-            }
+            write!(f, " [{:04x}:{:04x}]", { self.cfg.vendor_id }, { self.cfg.device_id })?;
         }
         writeln!(f, " (rev {:02x})", self.cfg.revision_id)?;
         if self.args.verbose {

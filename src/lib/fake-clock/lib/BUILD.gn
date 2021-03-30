@@ -6,6 +6,16 @@ import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 import("//tools/cmc/build/expect_includes.gni")
 
+config("rust-link-fake-time") {
+  rustflags = [
+    "-Clink-args=--push-state",
+    "-Clink-args=--no-as-needed",
+    "-Clink-args=-Lnative=$target_out_dir",
+    "-Clink-args=-lfake_clock",
+    "-Clink-args=--pop-state",
+  ]
+}
+
 shared_library("lib") {
   output_name = "fake_clock"
   testonly = true
@@ -22,6 +32,7 @@ shared_library("lib") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+  public_configs = [ "//src/lib/fake-clock/lib:rust-link-fake-time" ]
 }
 
 expect_includes("fake_clock_lib_includes") {

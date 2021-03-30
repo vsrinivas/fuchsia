@@ -129,28 +129,24 @@ impl<'a> Capability<'a> {
             is_set(control.can_be_64bit())
         )?;
 
-        // Due to fxbug.dev/59245 we need to include repr(packed) in our structs.
-        // Unfortunately, this results in the compiler warning of a misaligned
-        // reference which requires unsafe (E0133
-        // https://github.com/rust-lang/rust/issues/46043).
-        unsafe {
-            if control.can_be_64bit() {
-                let (msi, _) = LayoutVerified::<_, Msi64Capability>::new_from_prefix(
-                    &self.config[self.offset..self.config.len()],
-                )
-                .unwrap();
-                write!(
-                    f,
-                    "\t\tAddress: {:#010x} {:#08x} Data: {:#06x}",
-                    msi.address_upper, msi.address, msi.data
-                )
-            } else {
-                let (msi, _) = LayoutVerified::<_, Msi32Capability>::new_from_prefix(
-                    &self.config[self.offset..self.config.len()],
-                )
-                .unwrap();
-                write!(f, "\t\tAddress: {:#010x} Data: {:#06x}", msi.address, msi.data)
-            }
+        if control.can_be_64bit() {
+            let (msi, _) = LayoutVerified::<_, Msi64Capability>::new_from_prefix(
+                &self.config[self.offset..self.config.len()],
+            )
+            .unwrap();
+            write!(
+                f,
+                "\t\tAddress: {:#010x} {:#08x} Data: {:#06x}",
+                { msi.address_upper },
+                { msi.address },
+                { msi.data }
+            )
+        } else {
+            let (msi, _) = LayoutVerified::<_, Msi32Capability>::new_from_prefix(
+                &self.config[self.offset..self.config.len()],
+            )
+            .unwrap();
+            write!(f, "\t\tAddress: {:#010x} Data: {:#06x}", { msi.address }, { msi.data })
         }
     }
 
