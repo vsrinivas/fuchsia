@@ -5,26 +5,6 @@
 # A collection of GN arguments that are used for security purpose.
 
 declare_args() {
-  # An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
-  # this golden file would be compared against fuchsia.zbi kernel cmdline during
-  # build time.
-  fuchsia_zbi_kernel_cmdline_golden = ""
-
-  # An optional golden file for recovery.zbi kernel cmdline args. If specified,
-  # this golden file would be compared against recovery.zbi kernel cmdline
-  # during build time.
-  recovery_zbi_kernel_cmdline_golden = ""
-
-  # An optional golden file for fuchsia.zbi bootFS file list. If specified,
-  # this golden file would be compared against fuchsia.zbi bootFS file list
-  # during build time.
-  fuchsia_zbi_bootfs_filelist_golden = ""
-
-  # An optional golden file for recovery.zbi bootFS file list. If specified,
-  # this golden file would be compared against recovery.zbi bootFS file list
-  # during build time.
-  recovery_zbi_bootfs_filelist_golden = ""
-
   # An optional list of golden files for fuchsia.zbi kernel cmdline args. If
   # specified, they would be compared against fuchsia.zbi kernel cmdline during
   # build time.

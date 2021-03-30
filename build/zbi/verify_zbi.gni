@@ -10,12 +10,8 @@ import("//build/dev.gni")
 #
 #   zbi
 #     Required: Path to the ZBI image to extract kernel cmdline from.
-#   golden
-#     Optional: Path to the golden file that contains golden kernel cmdline in
-#       the format of one cmdline entry per line. Deprecated, would be removed
-#       after all usage migrated to goldens.
 #   goldens
-#     Optional: Path to a list of golden files that contain golden kernel
+#     Required: Path to a list of golden files that contain golden kernel
 #       cmdline in the format of one cmdline entry per line. The actual cmdline
 #       must match either one of the goldens. There should be only one golden
 #       file in this list for normal case and two golden files, one for the
@@ -29,6 +25,8 @@ template("verify_kernel_cmdline") {
   assert(defined(invoker.zbi), "verify_kernel_cmdline() must specify zbi")
   assert(defined(invoker.zbi_target),
          "verify_kernel_cmdline() must specify zbi_target")
+  assert(defined(invoker.goldens),
+         "verify_kernel_cmdline() must specify goldens")
 
   action("${target_name}") {
     forward_variables_from(invoker,
@@ -50,15 +48,7 @@ template("verify_kernel_cmdline") {
       scrutiny_tool,
       invoker.zbi,
     ]
-
-    goldens = []
-    if (defined(invoker.golden)) {
-      goldens += [ invoker.golden ]
-    }
-    if (defined(invoker.goldens)) {
-      goldens += invoker.goldens
-    }
-    inputs += goldens
+    inputs += invoker.goldens
 
     outputs = [ stamp_file ]
 
@@ -74,7 +64,7 @@ template("verify_kernel_cmdline") {
              "--stamp",
              rebase_path(stamp_file, root_build_dir),
              "--golden-files",
-           ] + rebase_path(goldens, root_build_dir)
+           ] + rebase_path(invoker.goldens, root_build_dir)
     if (!defined(invoker.deps)) {
       deps = []
     }
@@ -94,12 +84,8 @@ template("verify_kernel_cmdline") {
 #
 #   zbi
 #     Required: Path to the ZBI image to extract kernel cmdline from.
-#   golden
-#     Optional: Path to the golden file that contains golden kernel cmdline in
-#       a format of one cmdline entry per line. Deprecated, would be removed
-#       after all usage migrated to goldens.
 #   goldens
-#     Optional: Path to a list of golden files that contain golden kernel
+#     Required: Path to a list of golden files that contain golden kernel
 #       cmdline in the format of one cmdline entry per line. The actual cmdline
 #       must match either one of the goldens. There should be only one golden
 #       file in this list for normal case and two golden files, one for the
@@ -113,6 +99,8 @@ template("verify_bootfs_filelist") {
   assert(defined(invoker.zbi), "verify_bootfs_filelist() must specify zbi")
   assert(defined(invoker.zbi_target),
          "verify_bootfs_filelist() must specify zbi_target")
+  assert(defined(invoker.goldens),
+         "verify_kernel_cmdline() must specify goldens")
 
   action("${target_name}") {
     forward_variables_from(invoker,
@@ -134,15 +122,7 @@ template("verify_bootfs_filelist") {
       scrutiny_tool,
       invoker.zbi,
     ]
-
-    goldens = []
-    if (defined(invoker.golden)) {
-      goldens += [ invoker.golden ]
-    }
-    if (defined(invoker.goldens)) {
-      goldens += invoker.goldens
-    }
-    inputs += goldens
+    inputs += invoker.goldens
 
     outputs = [ stamp_file ]
 
@@ -158,7 +138,7 @@ template("verify_bootfs_filelist") {
              "--stamp",
              rebase_path(stamp_file, root_build_dir),
              "--golden-files",
-           ] + rebase_path(goldens, root_build_dir)
+           ] + rebase_path(invoker.goldens, root_build_dir)
 
     if (!defined(invoker.deps)) {
       deps = []
