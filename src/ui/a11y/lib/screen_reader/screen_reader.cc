@@ -253,7 +253,16 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
         FX_DCHECK(context_->mode() ==
                   ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
         context_->set_mode(ScreenReaderContext::ScreenReaderMode::kNormal);
+        // At the end of an explore action, if a virtual keyboard is in focus, activate the last
+        // touched key.
+        if (context_->IsVirtualKeyboardFocused()) {
+          ScreenReaderAction::ActionData action_data;
+          action_data.current_view_koid = context.view_ref_koid;
+          action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
+          ExecuteAction(kDefaultActionLabel, action_data);
+        }
       } /*on_complete*/);
+
   FX_DCHECK(gesture_bind_status);
 
   // Add TwoFingerSingleTap recognizer.

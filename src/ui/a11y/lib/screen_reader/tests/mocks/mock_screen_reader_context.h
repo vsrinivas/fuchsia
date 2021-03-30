@@ -82,6 +82,9 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
   // |ScreenReaderContext|
   a11y::Speaker* speaker() override { return speaker_.get(); }
 
+  // |ScreenReaderContext|
+  bool IsVirtualKeyboardFocused() const override { return false; }
+
  private:
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
   MockA11yFocusManager* mock_a11y_focus_manager_ptr_;
@@ -96,7 +99,7 @@ class MockScreenReaderContextFactory : public a11y::ScreenReaderContextFactory {
 
   std::unique_ptr<a11y::ScreenReaderContext> CreateScreenReaderContext(
       std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager, a11y::TtsManager* tts_manager,
-      std::string locale_id) override {
+      a11y::SemanticsSource* semantics_source, std::string locale_id) override {
     auto mock_screen_reader_context = std::make_unique<MockScreenReaderContext>();
     mock_screen_reader_context->set_locale_id(locale_id);
     mock_screen_reader_context_ = mock_screen_reader_context.get();

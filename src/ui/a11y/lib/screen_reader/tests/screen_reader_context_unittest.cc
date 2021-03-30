@@ -11,6 +11,7 @@
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_focus_highlight_manager.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace accessibility_test {
@@ -27,14 +28,15 @@ class ScreenReaderContextTest : public gtest::RealLoopFixture {
     a11y_focus_manager_ptr_ = a11y_focus_manager.get();
 
     // Initialize screen reader context.
-    screen_reader_context_ =
-        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager), &tts_manager_);
+    screen_reader_context_ = std::make_unique<a11y::ScreenReaderContext>(
+        std::move(a11y_focus_manager), &tts_manager_, &mock_semantics_source_);
   }
 
   sys::testing::ComponentContextProvider context_provider_;
   MockAccessibilityFocusChainRequester mock_focus_requester_;
   MockAccessibilityFocusChainRegistry mock_focus_registry_;
   MockFocusHighlightManager mock_focus_highlight_manager_;
+  MockSemanticsSource mock_semantics_source_;
   a11y::A11yFocusManager* a11y_focus_manager_ptr_ = nullptr;
   a11y::TtsManager tts_manager_;
   std::unique_ptr<a11y::ScreenReaderContext> screen_reader_context_;
@@ -61,6 +63,16 @@ TEST_F(ScreenReaderContextTest, SetsSemanticLevel) {
   screen_reader_context_->set_semantic_level(a11y::ScreenReaderContext::SemanticLevel::kWord);
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             a11y::ScreenReaderContext::SemanticLevel::kWord);
+}
+
+TEST_F(ScreenReaderContextTest, IsVirtualKeyboardFocused) {
+  a11y_focus_manager_ptr_->SetA11yFocus(1u, 0u, [](auto...) {});
+  fuchsia::accessibility::semantics::Node node;
+  node.set_node_id(0u);
+  node.mutable_attributes()->set_is_keyboard_key(true);
+  mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+
+  EXPECT_TRUE(screen_reader_context_->IsVirtualKeyboardFocused());
 }
 
 }  // namespace

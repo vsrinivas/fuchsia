@@ -12,6 +12,7 @@
 
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/speaker.h"
+#include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y {
@@ -56,8 +57,10 @@ class ScreenReaderContext {
   // |a11y_focus_manager| will be owned by this class.
   // |tts_manager| is not kept, and must be valid only during this constructor, where
   // |tts_engine_ptr_| is instantiated.
+  // |semantics_source| must outlive this object.
   explicit ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager,
-                               TtsManager* tts_manager, std::string locale_id = "en-US");
+                               TtsManager* tts_manager, SemanticsSource* semantics_source,
+                               std::string locale_id = "en-US");
 
   virtual ~ScreenReaderContext() = default;
 
@@ -80,6 +83,9 @@ class ScreenReaderContext {
   void set_locale_id(const std::string& locale_id) { locale_id_ = locale_id; }
   const std::string& locale_id() const { return locale_id_; }
 
+  // Returns true if the node currently focused by the screen reader is part of a virtual keyboard.
+  virtual bool IsVirtualKeyboardFocused() const;
+
  protected:
   // For mocks.
   ScreenReaderContext();
@@ -90,6 +96,9 @@ class ScreenReaderContext {
   // Stores A11yFocusManager pointer.
   // A11yFocusManager pointer should never be nullptr.
   std::unique_ptr<A11yFocusManager> a11y_focus_manager_;
+
+  // Interface used to obtain semantic data.
+  SemanticsSource* const semantics_source_ = nullptr;
 
   // Interface to the engine is owned by this class so that it can build and rebuild the Speaker
   // when the locale changes.
@@ -115,9 +124,9 @@ class ScreenReaderContextFactory {
 
   virtual std::unique_ptr<ScreenReaderContext> CreateScreenReaderContext(
       std::unique_ptr<A11yFocusManager> a11y_focus_manager, TtsManager* tts_manager,
-      std::string locale_id = "en-US") {
+      SemanticsSource* semantics_source, std::string locale_id = "en-US") {
     return std::make_unique<ScreenReaderContext>(std::move(a11y_focus_manager), tts_manager,
-                                                 locale_id);
+                                                 semantics_source, locale_id);
   }
 };
 
