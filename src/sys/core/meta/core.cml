@@ -136,6 +136,11 @@
             to: [ "#appmgr" ],
         },
         {
+            protocol: "fuchsia.sys2.ComponentResolver",
+            from: "parent",
+            to: [ "#universe-resolver" ],
+        },
+        {
             storage: "data",
             from: "self",
             to: [ "#device_settings" ],

@@ -265,6 +265,17 @@
                     "/core/appmgr",
                 ],
             },
-        ]
-    }
+            {
+                // We restrict access to base-resolver's ComponentResolver protocol because we
+                // expect only parts of component framework to be able to access it.
+                source_moniker: "/bootstrap/base-resolver",
+                source: "component",
+                source_name: "fuchsia.sys2.ComponentResolver",
+                capability: "protocol",
+                target_monikers: [
+                    "/core/universe-resolver",
+                ],
+            },
+        ],
+    },
 }

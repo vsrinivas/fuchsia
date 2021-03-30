@@ -1,29 +1,30 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/base_resolver",
+        binary: "bin/universe_resolver",
     },
     capabilities: [
         {
-            resolver: "base_resolver",
+            resolver: "universe-resolver",
             path: "/svc/fuchsia.sys2.ComponentResolver",
         },
-        { protocol: "fuchsia.sys2.ComponentResolver" },
+        {
+            protocol: "fuchsia.sys2.ComponentResolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
     ],
     use: [
         {
-            directory: "pkgfs-delayed",
-            rights: [ "rx*" ],
-            path: "/pkgfs",
+            protocol: [ "fuchsia.sys2.ComponentResolver" ],
         },
     ],
     expose: [
         {
-            resolver: "base_resolver",
+            resolver: "universe-resolver",
             from: "self",
         },
         {

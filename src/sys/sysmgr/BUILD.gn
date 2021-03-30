@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/security.gni")
 import("//src/sys/build/components.gni")
-
-declare_args() {
-  # Whether the component loader should automatically update packages.
-  auto_update_packages = true
-}
 
 group("tests") {
   testonly = true

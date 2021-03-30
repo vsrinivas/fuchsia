@@ -4,11 +4,15 @@
 
 use {
     anyhow::{self, Context},
+    argh::FromArgs,
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_mem as fmem,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
-    fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
+    fidl_fuchsia_sys2::{
+        self as fsys, ComponentResolverMarker, ComponentResolverRequest,
+        ComponentResolverRequestStream,
+    },
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_url::{errors::ParseError as PkgUrlParseError, pkg_url::PkgUrl},
     fuchsia_zircon::Status,
@@ -17,21 +21,59 @@ use {
     thiserror::Error,
 };
 
+#[derive(FromArgs, Debug)]
+#[argh(description = "Controls for universe resolver")]
+struct Args {
+    #[argh(
+        switch,
+        description = "if true the fuchsia.pkg.PkgResolver protocol provided to \
+        this component is used, otherwise the fuchsia.sys2.ComponentResolver \
+        protocol (assumed to come from base-resolver) is used"
+    )]
+    enable_ephemeral_components: bool,
+}
+
 #[fuchsia::component]
 async fn main() -> anyhow::Result<()> {
     info!("started");
+    let args: Args = argh::from_env();
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(|stream: ComponentResolverRequestStream| stream);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
     service_fs
-        .for_each_concurrent(None, |stream| async move {
-            match serve(stream).await {
-                Ok(()) => {}
-                Err(err) => error!("failed to serve resolve request: {:?}", err),
+        .for_each_concurrent(None, |stream| {
+            let all = args.enable_ephemeral_components;
+            async move {
+                let r = if all { serve(stream).await } else { forward_to_base(stream).await };
+
+                match r {
+                    Ok(()) => {}
+                    Err(err) => error!("failed to serve resolve request: {:?}", err),
+                }
             }
         })
         .await;
 
+    Ok(())
+}
+
+async fn forward_to_base(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
+    let base_resolver = connect_to_service::<ComponentResolverMarker>()
+        .context("failed to connect to base package resolver")?;
+
+    while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
+        stream.try_next().await.context("failed to read request from FIDL stream")?
+    {
+        match base_resolver.resolve(&component_url).await {
+            Ok(Ok(r)) => responder.send(&mut Ok(r)),
+            Ok(Err(e)) => responder.send(&mut Err(e)),
+            Err(err) => {
+                info!("universe resolver got FIDL error forward request to base resolver for component URL {}: {}", &component_url, &err);
+                responder.send(&mut Err(fsys::ResolverError::Internal))
+            }
+        }
+        .context("failed to send response")?;
+    }
     Ok(())
 }
 
@@ -44,7 +86,7 @@ async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()>
         match resolve_component(&component_url, &package_resolver).await {
             Ok(result) => responder.send(&mut Ok(result)),
             Err(err) => {
-                error!("failed to resolve component URL {}: {}", &component_url, &err);
+                info!("failed to resolve component URL {}: {}", &component_url, &err);
                 responder.send(&mut Err(err.into()))
             }
         }
@@ -157,12 +199,22 @@ impl From<ResolverError> for fsys::ResolverError {
 mod tests {
     use {
         super::*,
+        anyhow::Error,
         fidl::{encoding::encode_persistent, endpoints::ServerEnd},
         fidl_fuchsia_mem,
-        fidl_fuchsia_pkg::PackageResolverRequest,
+        fidl_fuchsia_pkg::{self as fpkg, PackageResolverRequest},
+        fidl_fuchsia_sys2::{self as fsys, ComponentResolverMarker},
+        fuchsia_async as fasync,
+        fuchsia_component::server as fserver,
+        fuchsia_component_test::{
+            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+            mock::{Mock, MockHandles},
+        },
+        fuchsia_zircon as zx,
         fuchsia_zircon::Vmo,
-        futures::join,
+        futures::{channel::mpsc, join, lock::Mutex},
         matches::assert_matches,
+        std::{boxed::Box, sync::Arc},
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
@@ -171,6 +223,232 @@ mod tests {
             pseudo_directory,
         },
     };
+
+    async fn mock_pkg_resolver(
+        trigger: Arc<Mutex<Option<mpsc::Sender<Result<(), Error>>>>>,
+        handles: MockHandles,
+    ) -> Result<(), Error> {
+        let mut fs = fserver::ServiceFs::new();
+        fs.dir("svc").add_fidl_service(
+            move |mut req_stream: fpkg::PackageResolverRequestStream| {
+                let tx = trigger.clone();
+                fasync::Task::local(async move {
+                    while let Some(fpkg::PackageResolverRequest::Resolve { responder, .. }) =
+                        req_stream.try_next().await.expect("Serving package resolver stream failed")
+                    {
+                        responder
+                            .send(&mut Err(zx::Status::NOT_FOUND.into_raw()))
+                            .expect("failed sending package resolver response to client");
+
+                        {
+                            let mut lock = tx.lock().await;
+                            let mut c = lock.take().unwrap();
+                            c.send(Ok(())).await.expect("failed sending oneshot to test");
+                            lock.replace(c);
+                        }
+                    }
+                })
+                .detach();
+            },
+        );
+
+        fs.serve_connection(handles.outgoing_dir.into_channel())?;
+        fs.collect::<()>().await;
+        Ok(())
+    }
+
+    async fn package_requester(
+        trigger: Arc<Mutex<Option<mpsc::Sender<Result<(), Error>>>>>,
+        url: String,
+        handles: MockHandles,
+    ) -> Result<(), Error> {
+        let resolver_proxy = handles.connect_to_service::<ComponentResolverMarker>()?;
+        let _ = resolver_proxy.resolve(&url).await?;
+        fasync::Task::local(async move {
+            let mut lock = trigger.lock().await;
+            let mut c = lock.take().unwrap();
+            c.send(Ok(())).await.expect("sending oneshot from package requester failed");
+            lock.replace(c);
+        })
+        .detach();
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    // Test that the default configuration which forwards requests to
+    // PackageResolver works properly.
+    async fn test_using_pkg_resolver() {
+        let (sender, mut receiver) = mpsc::channel(2);
+        let tx = Arc::new(Mutex::new(Some(sender)));
+        let resolver_url =
+            "fuchsia-pkg://fuchsia.com/universe-resolver-unittests#meta/universe-resolver-for-test.cm"
+                .to_string();
+        let requested_url =
+            "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();
+        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        builder
+            .add_component("universe-resolver", ComponentSource::url(resolver_url))
+            .await
+            .expect("Failed add universe-resolver to test topology")
+            .add_component(
+                "fake-pkg-resolver",
+                ComponentSource::Mock(Mock::new({
+                    let sender = tx.clone();
+                    move |mock_handles: MockHandles| {
+                        Box::pin(mock_pkg_resolver(sender.clone(), mock_handles))
+                    }
+                })),
+            )
+            .await
+            .expect("Failed adding base resolver mock")
+            .add_eager_component(
+                "requesting-component",
+                ComponentSource::Mock(Mock::new({
+                    let sender = tx.clone();
+                    move |mock_handles: MockHandles| {
+                        Box::pin(package_requester(
+                            sender.clone(),
+                            requested_url.clone(),
+                            mock_handles,
+                        ))
+                    }
+                })),
+            )
+            .await
+            .expect("Failed adding mock request component")
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
+                source: RouteEndpoint::component("fake-pkg-resolver"),
+                targets: vec![RouteEndpoint::component("universe-resolver")],
+            })
+            .expect("Failed adding resolver route from fake-base-resolver to universe-resolver")
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.sys2.ComponentResolver"),
+                source: RouteEndpoint::component("universe-resolver"),
+                targets: vec![RouteEndpoint::component("requesting-component")],
+            })
+            .expect("Failed adding resolver route from universe-resolver to requesting-component")
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("universe-resolver"),
+                    RouteEndpoint::component("fake-pkg-resolver"),
+                    RouteEndpoint::component("requesting-component"),
+                ],
+            })
+            .expect("Failed adding LogSink route to test components");
+        let _test_topo = builder.build().create().await.unwrap();
+
+        receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
+        receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
+    }
+
+    async fn mock_base_resolver(
+        trigger: Arc<Mutex<Option<mpsc::Sender<Result<(), Error>>>>>,
+        handles: MockHandles,
+    ) -> Result<(), Error> {
+        let mut fs = fserver::ServiceFs::new();
+        fs.dir("svc").add_fidl_service(
+            move |mut req_stream: fsys::ComponentResolverRequestStream| {
+                let tx = trigger.clone();
+                fasync::Task::local(async move {
+                    while let Some(fsys::ComponentResolverRequest::Resolve { responder, .. }) =
+                        req_stream
+                            .try_next()
+                            .await
+                            .expect("Serving component resolver stream failed")
+                    {
+                        responder
+                            .send(&mut Err(fsys::ResolverError::PackageNotFound))
+                            .expect("failed sending resolve response to client");
+
+                        {
+                            let mut lock = tx.lock().await;
+                            let mut c = lock.take().unwrap();
+                            c.send(Ok(())).await.expect("failed sending oneshot to test");
+                            lock.replace(c);
+                        }
+                    }
+                })
+                .detach();
+            },
+        );
+
+        fs.serve_connection(handles.outgoing_dir.into_channel())?;
+        fs.collect::<()>().await;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    // Test configuration where use of package resolver is disabled and
+    // requests are forwarded to the base resolver.
+    async fn test_using_base_resolver() {
+        let (sender, mut receiver) = mpsc::channel(2);
+        let tx = Arc::new(Mutex::new(Some(sender)));
+        let resolver_url =
+            "fuchsia-pkg://fuchsia.com/universe-resolver-unittests#meta/universe-resolver-base-only-for-test.cm"
+                .to_string();
+        let requested_url =
+            "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();
+        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        builder
+            .add_component("universe-resolver", ComponentSource::url(resolver_url))
+            .await
+            .expect("Failed add universe-resolver to test topology")
+            .add_component(
+                "fake-base-resolver",
+                ComponentSource::Mock(Mock::new({
+                    let sender = tx.clone();
+                    move |mock_handles: MockHandles| {
+                        Box::pin(mock_base_resolver(sender.clone(), mock_handles))
+                    }
+                })),
+            )
+            .await
+            .expect("Failed adding base resolver mock")
+            .add_eager_component(
+                "requesting-component",
+                ComponentSource::Mock(Mock::new({
+                    let sender = tx.clone();
+                    move |mock_handles: MockHandles| {
+                        Box::pin(package_requester(
+                            sender.clone(),
+                            requested_url.clone(),
+                            mock_handles,
+                        ))
+                    }
+                })),
+            )
+            .await
+            .expect("Failed adding mock request component")
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.sys2.ComponentResolver"),
+                source: RouteEndpoint::component("fake-base-resolver"),
+                targets: vec![RouteEndpoint::component("universe-resolver")],
+            })
+            .expect("Failed adding resolver route from fake-base-resolver to universe-resolver")
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.sys2.ComponentResolver"),
+                source: RouteEndpoint::component("universe-resolver"),
+                targets: vec![RouteEndpoint::component("requesting-component")],
+            })
+            .expect("Failed adding resolver route from universe-resolver to requesting-component")
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("universe-resolver"),
+                    RouteEndpoint::component("fake-base-resolver"),
+                    RouteEndpoint::component("requesting-component"),
+                ],
+            })
+            .expect("Failed adding LogSink route to test components");
+        let _test_topo = builder.build().create().await.unwrap();
+
+        receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
+        receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
+    }
 
     #[fuchsia::test]
     async fn resolve_package_succeeds() {

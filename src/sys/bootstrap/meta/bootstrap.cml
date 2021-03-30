@@ -858,6 +858,10 @@
             from: "#driver_manager",
         },
         {
+            protocol: "fuchsia.sys2.ComponentResolver",
+            from: "#base_resolver",
+        },
+        {
             protocol: [ "fuchsia.virtualconsole.SessionManager" ],
             from: "#virtual_console",
         },

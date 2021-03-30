@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
@@ -6,7 +6,6 @@
     program: {
         runner: "elf",
         binary: "bin/universe_resolver",
-        args: [ "--enable-ephemeral-components" ],
     },
     capabilities: [
         {
@@ -16,10 +15,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.pkg.PackageResolver",
-                "fuchsia.sys2.ComponentResolver",
-            ],
+            protocol: [ "fuchsia.sys2.ComponentResolver" ],
         },
     ],
     expose: [

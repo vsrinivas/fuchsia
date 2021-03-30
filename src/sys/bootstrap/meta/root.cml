@@ -239,6 +239,11 @@
             from: "parent",
             to: [ "#bootstrap" ],
         },
+        {
+            protocol: [ "fuchsia.sys2.ComponentResolver" ],
+            from: "#bootstrap",
+            to: [ "#core" ],
+        },
     ],
     environments: [
         {
