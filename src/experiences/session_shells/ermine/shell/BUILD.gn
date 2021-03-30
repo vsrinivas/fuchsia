@@ -11,6 +11,11 @@ import("//build/package.gni")
 import("//build/testing/flutter_driver.gni")
 import("//src/lib/icu/tools/static_icu_data.gni")
 
+declare_args() {
+  # Whether or not to launch setup workflow on startup.
+  start_oobe = false
+}
+
 group("shell") {
   public_deps = [
     ":ermine",
@@ -84,6 +89,7 @@ flutter_app("ermine") {
     "src/widgets/support/home.dart",
     "src/widgets/support/home_container.dart",
     "src/widgets/support/keyboard_help.dart",
+    "src/widgets/support/oobe.dart",
     "src/widgets/support/overview.dart",
     "src/widgets/support/recents.dart",
     "src/widgets/topbar/button.dart",
@@ -134,6 +140,12 @@ flutter_app("ermine") {
     "//third_party/dart-pkg/pub/vector_math",
   ]
 
+  if (start_oobe) {
+    deps += [ ":oobe_config" ]
+  } else {
+    deps += [ ":default_config" ]
+  }
+
   non_dart_deps = [ ":time_zone_list" ]
 
   resources = [
@@ -177,6 +189,22 @@ config_data("ermine_fonts") {
                          "//prebuilt/third_party/fonts/robotomono/")
 
   outputs = [ "fonts/{{source_file_part}}" ]
+}
+
+# With the default config, Ermine will not launch the OOBE on startup.
+config_data("default_config") {
+  for_pkg = "ermine"
+
+  sources = [ "config/default_config.json" ]
+  outputs = [ "startup_config.json" ]
+}
+
+# With the OOBE config, Ermine will launch the OOBE on startup.
+config_data("oobe_config") {
+  for_pkg = "ermine"
+
+  sources = [ "config/oobe_config.json" ]
+  outputs = [ "startup_config.json" ]
 }
 
 flutter_test("ermine_unittests") {

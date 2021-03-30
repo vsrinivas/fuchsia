@@ -16,6 +16,7 @@ import '../utils/styles.dart';
 
 import 'support/alert.dart';
 import 'support/home_container.dart';
+import 'support/oobe.dart';
 import 'support/overview.dart';
 import 'support/recents.dart';
 
@@ -56,12 +57,17 @@ class App extends StatelessWidget {
                     // Recents.
                     buildRecents(model),
 
-                    // Overview or Home.
+                    // OOBE or Overview or Home.
                     AnimatedBuilder(
-                      animation: model.overviewVisibility,
-                      builder: (context, _) => model.overviewVisibility.value
-                          ? buildOverview(model)
-                          : buildHome(model),
+                      animation: Listenable.merge([
+                        model.overviewVisibility,
+                        model.oobeVisibility,
+                      ]),
+                      builder: (context, _) => model.oobeVisibility.value
+                          ? buildOobe(model)
+                          : model.overviewVisibility.value
+                              ? buildOverview(model)
+                              : buildHome(model),
                     ),
 
                     buildAlert(model),
@@ -82,4 +88,7 @@ class App extends StatelessWidget {
 
   @visibleForTesting
   Widget buildAlert(AppModel model) => AlertContainer(model: model);
+
+  @visibleForTesting
+  Widget buildOobe(AppModel model) => OobeContainer(model: model);
 }

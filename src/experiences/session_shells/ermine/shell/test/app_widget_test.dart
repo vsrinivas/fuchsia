@@ -35,6 +35,7 @@ void main() async {
 
   testWidgets('Test locale change', (tester) async {
     when(model.overviewVisibility).thenReturn(ValueNotifier<bool>(true));
+    when(model.oobeVisibility).thenReturn(ValueNotifier<bool>(false));
 
     await tester.pumpWidget(app);
     // app should be OffStage until locale is pushed.
@@ -61,6 +62,9 @@ void main() async {
     final overviewNotifier = ValueNotifier<bool>(true);
     when(model.overviewVisibility).thenReturn(overviewNotifier);
 
+    // OOBE is turned off.
+    when(model.oobeVisibility).thenReturn(ValueNotifier<bool>(false));
+
     await tester.pumpWidget(app);
     await tester.pumpUntilVisible(app.overview);
 
@@ -68,6 +72,7 @@ void main() async {
     expect(find.byWidget(app.overview), findsOneWidget);
     expect(find.byWidget(app.home), findsNothing);
     expect(find.byWidget(app.alert), findsOneWidget);
+    expect(find.byWidget(app.oobe), findsNothing);
 
     // Home should be visible.
     overviewNotifier.value = false;
@@ -77,6 +82,7 @@ void main() async {
     expect(find.byWidget(app.overview), findsNothing);
     expect(find.byWidget(app.home), findsOneWidget);
     expect(find.byWidget(app.alert), findsOneWidget);
+    expect(find.byWidget(app.oobe), findsNothing);
   });
 }
 
@@ -85,6 +91,7 @@ class TestApp extends App {
   final Widget home = Container();
   final Widget recents = Container();
   final Widget alert = Container();
+  final Widget oobe = Container();
 
   TestApp(AppModel model) : super(model: model);
 
@@ -99,6 +106,9 @@ class TestApp extends App {
 
   @override
   Widget buildAlert(AppModel model) => alert;
+
+  @override
+  Widget buildOobe(AppModel model) => oobe;
 }
 
 class MockAppModel extends Mock implements AppModel {}

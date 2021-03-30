@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "features": [
+            "config-data",
             "isolated-persistent-storage"
         ],
         "pkgfs": [
@@ -35,7 +36,7 @@
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Registry",
             "fuchsia.ui.views.ViewRefInstalled",
-            "fuchsia.update.channelcontrol.ChannelControl",
+            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }

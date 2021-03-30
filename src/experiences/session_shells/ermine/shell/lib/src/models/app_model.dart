@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert' show json;
 import 'dart:io';
 
 import 'package:async/async.dart';
@@ -56,7 +57,8 @@ class AppModel {
       ValueNotifier<DateTime>(DateTime.now());
   ValueNotifier<bool> alertVisibility = ValueNotifier(false);
   ValueNotifier<bool> askVisibility = ValueNotifier(false);
-  ValueNotifier<bool> overviewVisibility = ValueNotifier(true);
+  ValueNotifier<bool> overviewVisibility = ValueNotifier(false);
+  ValueNotifier<bool> oobeVisibility = ValueNotifier(true);
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
@@ -115,6 +117,16 @@ class AppModel {
       bindings: keyboardBindings,
     );
     keyboardShortcutsHelpText = _keyboardShortcuts.helpText();
+
+    // Load startup configuration.
+    File startupConfig = File('/config/data/startup_config.json');
+    if (startupConfig.existsSync()) {
+      final data = json.decode(startupConfig.readAsStringSync());
+      oobeVisibility.value = data['launch_oobe'] ?? false;
+    } else {
+      oobeVisibility.value = false;
+    }
+    overviewVisibility.value = !oobeVisibility.value;
 
     // Setup pointer events listener.
     _pointerEventsStream ??= PointerEventsStream.withSvcPath();
@@ -275,6 +287,12 @@ class AppModel {
     }
     // Toggle recents visibility.
     recentsVisibility.value = !recentsVisibility.value;
+  }
+
+  /// Exit OOBE and go to overview.
+  void exitOobe() {
+    oobeVisibility.value = false;
+    overviewVisibility.value = true;
   }
 
   /// Toggles the Status menu on/off when Overview is not visible.
