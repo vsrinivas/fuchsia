@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <pow2.h>
 #include <sys/types.h>
@@ -29,7 +30,7 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
   }
 
   msi_block_t block = {};
-  auto cleanup = fbl::MakeAutoCall([&msi_free_fn, &block]() {
+  auto cleanup = fit::defer([&msi_free_fn, &block]() {
     if (block.allocated) {
       msi_free_fn(&block);
     }

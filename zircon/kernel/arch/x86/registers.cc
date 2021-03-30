@@ -394,7 +394,7 @@ static void read_xsave_state_info(void) {
   }
 
   /* if we bail, set everything to unsupported */
-  auto ac = fit::defer([]() {
+  auto unsupported_fallback = fit::defer([]() {
     xsave_supported = false;
     xsaves_supported = false;
     xsaveopt_supported = false;
@@ -428,7 +428,7 @@ static void read_xsave_state_info(void) {
   }
 
   /* we're okay from now on out */
-  ac.cancel();
+  unsupported_fallback.cancel();
 
   /* Read info about the state components */
   for (int i = XSAVE_FIRST_EXT_COMPONENT; i < XSAVE_MAX_COMPONENTS; ++i) {

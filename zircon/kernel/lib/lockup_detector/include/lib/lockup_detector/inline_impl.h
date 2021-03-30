@@ -11,7 +11,6 @@
 #include <lib/lockup_detector/state.h>
 
 #include <arch/ops.h>
-#include <fbl/auto_call.h>
 #include <ktl/atomic.h>
 #include <ktl/forward.h>
 

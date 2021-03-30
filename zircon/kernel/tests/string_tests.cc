@@ -7,13 +7,13 @@
 
 #include <align.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <kernel/thread.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -300,7 +300,7 @@ static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
   list_initialize(&list);
 
   // free the physical pages on exit
-  auto free_pages = fbl::MakeAutoCall([&list]() {
+  auto free_pages = fit::defer([&list]() {
     pmm_free(&list);
     src = dst = src2 = dst2 = nullptr;
   });

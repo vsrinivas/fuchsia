@@ -11,6 +11,7 @@ zx_library("debuglog") {
   sources = [ "debuglog.cc" ]
   deps = [
     ":tests",
+    "//sdk/lib/fit",
     "//zircon/kernel/dev/udisplay:headers",
     "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/crashlog",

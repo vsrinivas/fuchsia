@@ -19,7 +19,6 @@
 #include <arch/kernel_aspace.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <kernel/semaphore.h>
 #include <ktl/algorithm.h>

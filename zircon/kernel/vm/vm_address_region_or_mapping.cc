@@ -10,7 +10,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 

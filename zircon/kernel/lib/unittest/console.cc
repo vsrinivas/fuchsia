@@ -12,6 +12,7 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/console.h>
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <stddef.h>
@@ -23,7 +24,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <vm/vm_aspace.h>
@@ -148,7 +148,7 @@ bool run_testcase_in_thread(const unittest_testcase_registration_t* testcase) {
     unittest_printf("failed to create unittest user aspace\n");
     return false;
   }
-  auto destroy_aspace = fbl::MakeAutoCall([&]() {
+  auto destroy_aspace = fit::defer([&]() {
     zx_status_t status = aspace->Destroy();
     DEBUG_ASSERT(status == ZX_OK);
   });

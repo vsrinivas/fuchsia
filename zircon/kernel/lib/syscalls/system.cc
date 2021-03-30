@@ -9,6 +9,7 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
+#include <lib/fit/defer.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/image.h>
@@ -31,7 +32,6 @@
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <dev/interrupt.h>
-#include <fbl/auto_call.h>
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
 #include <kernel/thread.h>
@@ -109,7 +109,7 @@ zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t l
   // allocate |count| pages or 0 pages. If we complete a partial allocation
   // but are unable to fulfil the complete request, we'll clean up any pages
   // that we may have allocated in the process.
-  auto pmm_cleanup = fbl::MakeAutoCall([&list]() { pmm_free(&list); });
+  auto pmm_cleanup = fit::defer([&list]() { pmm_free(&list); });
 
   while (count) {
     // TODO: replace with pmm routine that can allocate while excluding a range.

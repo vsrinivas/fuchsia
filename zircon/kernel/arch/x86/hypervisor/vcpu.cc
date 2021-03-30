@@ -7,6 +7,7 @@
 #include <bits.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/speculation.h>
+#include <lib/fit/defer.h>
 #include <lib/ktrace.h>
 #include <zircon/syscalls/hypervisor.h>
 
@@ -16,7 +17,6 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
 #include <arch/x86/pv.h>
-#include <fbl/auto_call.h>
 #include <hwreg/x86msr.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/ktrace.h>
@@ -694,7 +694,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (status != ZX_OK) {
     return status;
   }
-  auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
+  auto free_vpid = fit::defer([guest, vpid]() { guest->FreeVpid(vpid); });
 
   Thread* thread = Thread::Current::Get();
   if (thread->vcpu()) {
@@ -706,7 +706,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  auto_call.cancel();
+  free_vpid.cancel();
 
   status = vcpu->local_apic_state_.interrupt_tracker.Init();
   if (status != ZX_OK) {

@@ -23,7 +23,6 @@
 #include <arch/vm.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <kernel/thread.h>
 #include <object/handle.h>
@@ -62,8 +61,8 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
   // We haven't yet compeleted initialization of |user_thread|, and
   // references to it haven't possibly escaped this thread. We can
   // safely set |core_thread_| outside the lock.
-  [&user_thread, &core_thread]()
-      TA_NO_THREAD_SAFETY_ANALYSIS { user_thread->core_thread_ = core_thread; }();
+  [&user_thread,
+   &core_thread]() TA_NO_THREAD_SAFETY_ANALYSIS { user_thread->core_thread_ = core_thread; }();
 
   // The syscall layer will call Initialize(), which used to be called here.
 

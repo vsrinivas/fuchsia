@@ -133,6 +133,7 @@ if (toolchain.environment == "physmem" ||
     ]
     deps = [
       ":boot-mmu",
+      "//sdk/lib/fit",
       "//zircon/kernel/dev/coresight",
       "//zircon/kernel/dev/interrupt/arm_gic/common",
       "//zircon/kernel/dev/iommu/dummy",

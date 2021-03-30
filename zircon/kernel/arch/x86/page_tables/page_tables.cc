@@ -7,13 +7,13 @@
 #include <align.h>
 #include <assert.h>
 #include <lib/arch/intrin.h>
+#include <lib/fit/defer.h>
 #include <trace.h>
 
 #include <arch/x86/feature.h>
 #include <arch/x86/page_tables/constants.h>
 #include <arch/x86/page_tables/page_tables.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <ktl/algorithm.h>
 #include <ktl/iterator.h>
 #include <vm/physmap.h>
@@ -691,7 +691,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
     return AddMappingL0(table, mmu_flags, existing_action, start_cursor, new_cursor, cm);
   }
 
-  auto abort = fbl::MakeAutoCall([&]() {
+  auto abort = fit::defer([&]() {
     AssertHeld(lock_);
     if (level == top_level()) {
       // Build an unmap cursor. new_cursor->size should be how much is left to be mapped still.

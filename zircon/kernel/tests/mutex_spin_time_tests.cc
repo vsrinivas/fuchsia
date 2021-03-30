@@ -6,12 +6,12 @@
 
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
 #include <lib/zx/time.h>
 #include <platform.h>
 
-#include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
 #include <ktl/atomic.h>
@@ -45,8 +45,8 @@ bool mutex_spin_time_test(void) {
   // No matter what happens from here on out, make sure we restore our main
   // thread's priority and cpu affinity.
   auto cleanup =
-      fbl::MakeAutoCall([affinity = Thread::Current::Get()->GetCpuAffinity(),
-                         priority = Thread::Current::Get()->scheduler_state().base_priority()]() {
+      fit::defer([affinity = Thread::Current::Get()->GetCpuAffinity(),
+                  priority = Thread::Current::Get()->scheduler_state().base_priority()]() {
         Thread::Current::Get()->SetCpuAffinity(affinity);
         Thread::Current::Get()->SetPriority(priority);
       });

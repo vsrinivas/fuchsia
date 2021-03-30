@@ -8,8 +8,8 @@
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_GPARENA_H_
 
 #include <align.h>
+#include <lib/fit/defer.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/confine_array_index.h>
 #include <kernel/mutex.h>
 #include <vm/vm_address_region.h>
@@ -66,7 +66,7 @@ class __OWNER(void) GPArena {
     }
     // The VMAR's parent holds a ref, so it won't be destroyed
     // automatically when we return.
-    auto destroy_vmar = fbl::MakeAutoCall([this]() { vmar_->Destroy(); });
+    auto destroy_vmar = fit::defer([this]() { vmar_->Destroy(); });
 
     st = vmar_->CreateVmMapping(0,  // mapping_offset
                                 mem_sz,

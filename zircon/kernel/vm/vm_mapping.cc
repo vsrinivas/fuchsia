@@ -8,12 +8,12 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <ktl/algorithm.h>
 #include <ktl/iterator.h>
 #include <ktl/move.h>
@@ -643,7 +643,7 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   // set the currently faulting flag for any recursive calls the vmo may make back into us.
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
-  auto ac = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     AssertHeld(object_->lock_ref());
     currently_faulting_ = false;
   });
@@ -799,7 +799,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
   // skip the unmap operation.
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
-  auto ac = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     AssertHeld(object_->lock_ref());
     currently_faulting_ = false;
   });
@@ -883,9 +883,8 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
       }
 
       size_t mapped;
-      status =
-          aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages,
-                                     mmu_flags, ArchVmAspace::ExistingEntryAction::Skip, &mapped);
+      status = aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, mmu_flags,
+                                          ArchVmAspace::ExistingEntryAction::Skip, &mapped);
       if (status != ZX_OK) {
         TRACEF("failed to map replacement page\n");
         return ZX_ERR_NO_MEMORY;
@@ -903,9 +902,8 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
                              [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
     size_t mapped;
-    status =
-        aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, mmu_flags,
-                                   ArchVmAspace::ExistingEntryAction::Skip, &mapped);
+    status = aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, mmu_flags,
+                                        ArchVmAspace::ExistingEntryAction::Skip, &mapped);
     if (status != ZX_OK) {
       TRACEF("failed to map page\n");
       return ZX_ERR_NO_MEMORY;

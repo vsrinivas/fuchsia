@@ -6,6 +6,7 @@
 
 #include <align.h>
 #include <assert.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
@@ -15,7 +16,6 @@
 #include <new>
 
 #include <fbl/arena.h>
-#include <fbl/auto_call.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
@@ -85,7 +85,7 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   }
   // The VMAR's parent holds a ref, so it won't be destroyed
   // automatically when we return.
-  auto destroy_vmar = fbl::MakeAutoCall([&vmar]() { vmar->Destroy(); });
+  auto destroy_vmar = fit::defer([&vmar]() { vmar->Destroy(); });
 
   // Create a mapping for the control pool.
   fbl::RefPtr<VmMapping> control_mapping;

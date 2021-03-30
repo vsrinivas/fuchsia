@@ -4,12 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
 #include <lib/user_copy/user_ptr.h>
 #include <stdio.h>
-
-#include <fbl/auto_call.h>
 
 #include "object/buffer_chain.h"
 
@@ -75,7 +74,7 @@ static bool append_copy_out() {
 
   BufferChain* bc = BufferChain::Alloc(kSize);
   ASSERT_NE(nullptr, bc);
-  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  auto free_bc = fit::defer([&bc]() { BufferChain::Free(bc); });
   ASSERT_EQ(1u, bc->buffers()->size_slow());
 
   bc->Skip(kOffset);
@@ -157,7 +156,7 @@ static bool free_unused_pages() {
 
   BufferChain* bc = BufferChain::Alloc(kSize);
   ASSERT_NE(nullptr, bc);
-  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  auto free_bc = fit::defer([&bc]() { BufferChain::Free(bc); });
   ASSERT_EQ(1u, bc->buffers()->size_slow());
 
   memset(buf.get(), 0, kWriteSize);
@@ -186,7 +185,7 @@ static bool append_more_than_allocated() {
 
   BufferChain* bc = BufferChain::Alloc(kAllocSize);
   ASSERT_NE(nullptr, bc);
-  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  auto free_bc = fit::defer([&bc]() { BufferChain::Free(bc); });
   ASSERT_EQ(1u, bc->buffers()->size_slow());
 
   memset(buf.get(), 0, kWriteSize);
@@ -211,7 +210,7 @@ static bool append_after_fail_fails() {
 
   BufferChain* bc = BufferChain::Alloc(kAllocSize);
   ASSERT_NE(nullptr, bc);
-  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  auto free_bc = fit::defer([&bc]() { BufferChain::Free(bc); });
   ASSERT_EQ(1u, bc->buffers()->size_slow());
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,

@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <lib/ktrace.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -13,7 +14,6 @@
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/type_traits.h>
 #include <object/channel_dispatcher.h>
@@ -308,7 +308,7 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
 
   auto up = ProcessDispatcher::GetCurrent();
 
-  auto cleanup = fbl::MakeAutoCall([&]() { RemoveUserHandles(user_handles, num_handles, up); });
+  auto cleanup = fit::defer([&]() { RemoveUserHandles(user_handles, num_handles, up); });
 
   if ((options & ~ZX_CHANNEL_WRITE_USE_IOVEC) != 0u) {
     return ZX_ERR_INVALID_ARGS;
@@ -370,7 +370,7 @@ zx_status_t channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_
 
   auto up = ProcessDispatcher::GetCurrent();
 
-  auto cleanup = fbl::MakeAutoCall([&]() { RemoveUserHandles(user_handles, num_handles, up); });
+  auto cleanup = fit::defer([&]() { RemoveUserHandles(user_handles, num_handles, up); });
 
   if ((options & ~ZX_CHANNEL_WRITE_USE_IOVEC) != 0u) {
     return ZX_ERR_INVALID_ARGS;

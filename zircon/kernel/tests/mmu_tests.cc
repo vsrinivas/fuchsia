@@ -5,12 +5,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/aspace.h>
-#include <fbl/auto_call.h>
 #include <ktl/iterator.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
@@ -203,7 +203,7 @@ static bool test_mapping_oom() {
   vm_page_t* mapping_pages[kMappingPageCount] = {};
   paddr_t mapping_paddrs[kMappingPageCount] = {};
 
-  auto undo = fbl::MakeAutoCall([&]() {
+  auto undo = fit::defer([&]() {
     for (vm_page_t* mapping_page : mapping_pages) {
       if (mapping_page) {
         pmm_free_page(mapping_page);

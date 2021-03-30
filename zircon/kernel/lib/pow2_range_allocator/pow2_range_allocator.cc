@@ -13,7 +13,7 @@
 #include <string.h>
 #include <trace.h>
 
-#include <fbl/auto_call.h>
+#include <fbl/alloc_checker.h>
 #include <kernel/lockdep.h>
 #include <ktl/move.h>
 

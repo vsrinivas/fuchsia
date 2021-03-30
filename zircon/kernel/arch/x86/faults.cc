@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
+#include <lib/fit/defer.h>
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <trace.h>
@@ -28,7 +29,6 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/perf_mon.h>
 #include <arch/x86/registers.h>
-#include <fbl/auto_call.h>
 #include <kernel/interrupt.h>
 #include <kernel/thread.h>
 #include <pretty/hexdump.h>
@@ -269,7 +269,7 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
   arch_enable_ints();
 
   /* make sure we put interrupts back as we exit */
-  auto ac = fbl::MakeAutoCall([&preemption_state]() {
+  auto cleanup = fit::defer([&preemption_state]() {
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
     preemption_state.PreemptDisable();

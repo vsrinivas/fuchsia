@@ -20,5 +20,8 @@ zx_library("cmdline") {
   kernel = true
   static = true
   sources = [ "cmdline.cc" ]
-  deps = [ "//zircon/system/ulib/fbl" ]
+  deps = [
+    "//sdk/lib/fit",
+    "//zircon/system/ulib/fbl",
+  ]
 }

@@ -7,11 +7,11 @@
 #include "device_context.h"
 
 #include <align.h>
+#include <lib/fit/defer.h>
 #include <trace.h>
 
 #include <new>
 
-#include <fbl/auto_call.h>
 #include <kernel/range_check.h>
 #include <ktl/algorithm.h>
 #include <ktl/move.h>
@@ -245,7 +245,7 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
   paddr_t base = region->base;
   size_t remaining = size;
 
-  auto cleanup_partial = fbl::MakeAutoCall([&]() {
+  auto cleanup_partial = fit::defer([&]() {
     size_t allocated = base - region->base;
     size_t unmapped;
     second_level_pt_.UnmapPages(base, allocated / PAGE_SIZE, &unmapped);

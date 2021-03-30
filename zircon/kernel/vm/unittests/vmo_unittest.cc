@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
 
 #include "test_helper.h"
 
@@ -358,7 +358,7 @@ static bool vmo_demand_paged_map_test() {
   ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
 
   VmAspace* old_aspace = Thread::Current::Get()->aspace();
-  auto cleanup_aspace = fbl::MakeAutoCall([&]() {
+  auto cleanup_aspace = fit::defer([&]() {
     vmm_set_active_aspace(old_aspace);
     ASSERT(aspace->Destroy() == ZX_OK);
   });
@@ -1038,7 +1038,7 @@ static bool vmo_eviction_test() {
   BEGIN_TEST;
   // Disable the page scanner as this test would be flaky if our pages get evicted by someone else.
   scanner_push_disable_count();
-  auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
+  auto pop_count = fit::defer([] { scanner_pop_disable_count(); });
 
   // Make two pager backed vmos
   fbl::RefPtr<VmObjectPaged> vmo;
@@ -1751,7 +1751,7 @@ static bool vmo_discard_failure_test() {
   ASSERT_NONNULL(aspace);
 
   VmAspace* old_aspace = Thread::Current::Get()->aspace();
-  auto cleanup_aspace = fbl::MakeAutoCall([&]() {
+  auto cleanup_aspace = fit::defer([&]() {
     vmm_set_active_aspace(old_aspace);
     ASSERT(aspace->Destroy() == ZX_OK);
   });

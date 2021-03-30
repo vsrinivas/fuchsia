@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <lib/heap.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/ktrace.h>
@@ -26,7 +27,6 @@
 
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/aspace.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <kernel/mutex.h>
 #include <ktl/algorithm.h>
@@ -652,7 +652,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto cleanup = fbl::AutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     AssertHeld(lock_);
     UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift, page_size_shift, page_table,
                    cm);
@@ -1211,7 +1211,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
     ssize_t ret;
     size_t idx = 0;
     ConsistencyManager cm(*this);
-    auto undo = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+    auto undo = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
       if (idx > 0) {
         UnmapPages(vaddr, idx * PAGE_SIZE, vaddr_base, top_size_shift, top_index_shift,
                    page_size_shift, cm);

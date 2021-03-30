@@ -4,12 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/page_cache.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/listnode.h>
 
 #include <arch/ops.h>
-#include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 
 namespace {
@@ -30,7 +30,7 @@ bool page_cache_tests() {
   Thread* const current_thread = Thread::Current::Get();
   const cpu_mask_t original_affinity_mask = current_thread->GetCpuAffinity();
 
-  const auto restore_affinity = fbl::MakeAutoCall([original_affinity_mask, current_thread]() {
+  const auto restore_affinity = fit::defer([original_affinity_mask, current_thread]() {
     current_thread->SetCpuAffinity(original_affinity_mask);
   });
 

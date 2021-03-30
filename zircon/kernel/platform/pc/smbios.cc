@@ -5,13 +5,13 @@
 // https://opensource.org/licenses/MIT
 //
 #include <lib/console.h>
+#include <lib/fit/defer.h>
 #include <lib/smbios/smbios.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <ktl/move.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/smbios.h>
@@ -115,7 +115,7 @@ zx_status_t SmbiosWalkStructs(smbios::StructWalkCallback cb) {
 
 void pc_init_smbios() {
   fbl::RefPtr<VmMapping> mapping;
-  auto cleanup_mapping = fbl::MakeAutoCall([&mapping] {
+  auto cleanup_mapping = fit::defer([&mapping] {
     if (mapping) {
       mapping->Destroy();
     }

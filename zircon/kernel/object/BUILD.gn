@@ -63,6 +63,7 @@ zx_library("object") {
   ]
   deps = [
     ":tests",
+    "//sdk/lib/fit",
     "//zircon/kernel/dev/interrupt",
     "//zircon/kernel/dev/iommu/dummy",
     "//zircon/kernel/dev/pcie",

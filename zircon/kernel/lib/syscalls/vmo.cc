@@ -5,13 +5,13 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
@@ -263,7 +263,7 @@ zx_status_t sys_vmo_replace_as_executable(zx_handle_t handle, zx_handle_t vmex,
   if (!source)
     return ZX_ERR_BAD_HANDLE;
 
-  auto handle_cleanup = fbl::MakeAutoCall([up, source]() TA_NO_THREAD_SAFETY_ANALYSIS {
+  auto handle_cleanup = fit::defer([up, source]() TA_NO_THREAD_SAFETY_ANALYSIS {
     up->handle_table().RemoveHandleLocked(source);
   });
 

@@ -4,10 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/lockup_detector.h>
 #include <lib/unittest/unittest.h>
 
-#include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/percpu.h>
 
@@ -19,7 +19,7 @@ bool NestedCriticalSectionTest() {
   AutoPreemptDisabler ap_disabler;
 
   // For the context of this test, use the maximum threshold to prevent the detector from "firing".
-  auto cleanup = fbl::MakeAutoCall(
+  auto cleanup = fit::defer(
       [orig = lockup_get_cs_threshold_ticks()]() { lockup_set_cs_threshold_ticks(orig); });
   lockup_set_cs_threshold_ticks(INT64_MAX);
 
@@ -61,7 +61,7 @@ bool NestedTimedCriticalSectionTest() {
   AutoPreemptDisabler ap_disabler;
 
   // For the context of this test, use the maximum threshold to prevent the detector from "firing".
-  auto cleanup = fbl::MakeAutoCall(
+  auto cleanup = fit::defer(
       [orig = lockup_get_cs_threshold_ticks()]() { lockup_set_cs_threshold_ticks(orig); });
   lockup_set_cs_threshold_ticks(INT64_MAX);
 

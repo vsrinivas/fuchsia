@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <lib/console.h>
+#include <lib/fit/defer.h>
 #include <lib/lockup_detector.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
@@ -24,7 +25,6 @@
 #include <arch/ops.h>
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <kernel/align.h>
 #include <kernel/cpu.h>
 #include <kernel/deadline.h>
@@ -302,7 +302,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
   percpu& percpu_to_unplug = percpu::Get(cpu_id);
 
   Thread* thread = nullptr;
-  auto cleanup_thread = fbl::MakeAutoCall([&thread, &leaked_thread, cpu_id]() {
+  auto cleanup_thread = fit::defer([&thread, &leaked_thread, cpu_id]() {
     // TODO(fxbug.dev/34447): Work around a race in thread cleanup by leaking the thread and stack
     // structure. Since we're only using this while turning off the system currently, it's not a big
     // problem leaking the thread structure and stack.

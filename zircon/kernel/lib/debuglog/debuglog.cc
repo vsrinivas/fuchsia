@@ -7,6 +7,7 @@
 #include <lib/cmdline.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
+#include <lib/fit/defer.h>
 #include <lib/io.h>
 #include <lib/lazy_init/lazy_init.h>
 #include <lib/version.h>
@@ -17,7 +18,6 @@
 #include <zircon/types.h>
 
 #include <dev/udisplay.h>
-#include <fbl/auto_call.h>
 #include <kernel/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
@@ -411,7 +411,7 @@ static int debuglog_dumper(void* arg) {
   dlog_record_t rec;
   DlogReader reader;
   reader.Initialize(&debuglog_dumper_notify, &dumper_event);
-  fbl::AutoCall disconnect{[&reader]() { reader.Disconnect(); }};
+  auto disconnect = fit::defer([&reader]() { reader.Disconnect(); });
 
   bool done = false;
   while (!done) {

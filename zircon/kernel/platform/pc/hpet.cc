@@ -8,11 +8,11 @@
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/structures.h>
 #include <lib/affine/ratio.h>
+#include <lib/fit/defer.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <ktl/algorithm.h>
@@ -95,7 +95,7 @@ static void hpet_init(uint level) {
   }
 
   // If something goes wrong, make sure we free the HPET registers.
-  auto cleanup = fbl::MakeAutoCall([]() {
+  auto cleanup = fit::defer([]() {
     VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(hpet_regs));
     hpet_regs = nullptr;
     num_timers = 0;

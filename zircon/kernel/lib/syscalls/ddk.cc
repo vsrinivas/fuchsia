@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+#include <lib/fit/defer.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
 #include <stdint.h>
@@ -24,7 +25,6 @@
 #include <dev/interrupt.h>
 #include <dev/iommu.h>
 #include <dev/udisplay.h>
-#include <fbl/auto_call.h>
 #include <fbl/inline_array.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/handle.h>
@@ -490,7 +490,7 @@ zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, u
   // reference to the |new_pmt_handle|.  Just before we return, |new_pmt_handle|
   // will be moved in order to make a user_out_handle.  |new_pmt_handle| will
   // not be valid after the move so we keep a RefPtr to the dispatcher instead.
-  auto cleanup = fbl::MakeAutoCall([disp = new_pmt_handle.dispatcher()]() { disp->Unpin(); });
+  auto cleanup = fit::defer([disp = new_pmt_handle.dispatcher()]() { disp->Unpin(); });
 
   status = new_pmt_handle.dispatcher()->EncodeAddrs(compress_results, contiguous,
                                                     mapped_addrs.get(), addrs_count);

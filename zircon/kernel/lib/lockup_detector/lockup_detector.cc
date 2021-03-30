@@ -22,7 +22,6 @@
 
 #include <dev/hw_watchdog.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>

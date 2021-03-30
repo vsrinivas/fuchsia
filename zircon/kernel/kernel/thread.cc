@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 #include <lib/lazy_init/lazy_init.h>
@@ -863,7 +864,7 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
   if (has_user_thread) {
     arch_set_suspended_general_regs(current_thread, source, gregs);
   }
-  auto cleanup_suspended_general_regs = fbl::MakeAutoCall([current_thread, has_user_thread]() {
+  auto cleanup_suspended_general_regs = fit::defer([current_thread, has_user_thread]() {
     if (has_user_thread) {
       arch_reset_suspended_general_regs(current_thread);
     }

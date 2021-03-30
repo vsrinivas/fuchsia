@@ -12,7 +12,6 @@
 #include <trace.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/null_lock.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/scheduler.h>

@@ -26,6 +26,7 @@ source_set("kernel") {
 
   deps = [
     ":tests",
+    "//sdk/lib/fit",
     "//zircon/kernel/dev/interrupt",
     "//zircon/kernel/dev/pdev/hw_watchdog",
     "//zircon/kernel/lib/abi_type_validator",

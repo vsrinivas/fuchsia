@@ -22,7 +22,6 @@
 
 #include <arch/kernel_aspace.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>

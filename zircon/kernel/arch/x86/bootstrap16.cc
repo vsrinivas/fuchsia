@@ -8,6 +8,7 @@
 
 #include <align.h>
 #include <assert.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <string.h>
 #include <trace.h>
@@ -20,7 +21,6 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <kernel/mutex.h>
 #include <ktl/iterator.h>
 #include <vm/pmm.h>
@@ -61,8 +61,8 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
   // Ensure only one caller is using the bootstrap region
   bootstrap_lock.Acquire();
 
-  // add an auto caller to clean up the address space on the way out
-  auto ac = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+  // Clean up the address space on the way out.
+  auto cleanup = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
     bootstrap_aspace->Destroy();
     if (bootstrap_virt_addr) {
       kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(bootstrap_virt_addr));
@@ -154,11 +154,12 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
   *temp_aspace = bootstrap_aspace;
   *instr_ptr = bootstrap_phys_addr;
 
-  // Cancel the cleanup autocall, since we're returning the new aspace and region
-  // NOTE: Since we cancel the autocall, we are not releasing
-  // |bootstrap_lock|.  This is released in x86_bootstrap16_release() when the
-  // caller is done with the bootstrap region.
-  ac.cancel();
+  // Cancel the deferred cleanup, since we're returning the new aspace and
+  // region.
+  // NOTE: Since we cancel the cleanup, we are not releasing |bootstrap_lock|.
+  // This is released in x86_bootstrap16_release() when the caller is done
+  // with the bootstrap region.
+  cleanup.cancel();
 
   return ZX_OK;
 }

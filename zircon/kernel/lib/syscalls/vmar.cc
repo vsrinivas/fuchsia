@@ -5,12 +5,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/user_copy/user_ptr.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
@@ -59,7 +59,7 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle, zx_vm_option_t opt
 
   // Setup a handler to destroy the new VMAR if the syscall is unsuccessful.
   fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher = handle.dispatcher();
-  auto cleanup_handler = fbl::MakeAutoCall([&vmar_dispatcher]() { vmar_dispatcher->Destroy(); });
+  auto cleanup_handler = fit::defer([&vmar_dispatcher]() { vmar_dispatcher->Destroy(); });
 
   // Create a handle and attach the dispatcher to it
   status = child_vmar->make(ktl::move(handle), new_rights);
@@ -171,7 +171,7 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
   }
 
   // Setup a handler to destroy the new mapping if the syscall is unsuccessful.
-  auto cleanup_handler = fbl::MakeAutoCall([&vm_mapping]() { vm_mapping->Destroy(); });
+  auto cleanup_handler = fit::defer([&vm_mapping]() { vm_mapping->Destroy(); });
 
   if (do_map_range) {
     status = vm_mapping->MapRange(0, len, false);

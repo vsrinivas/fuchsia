@@ -7,13 +7,13 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
 #include <pow2.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
@@ -389,7 +389,7 @@ bool set_migrate_ready_threads_test() {
   current_thread->SetCpuAffinity(cpu_num_to_mask(kStartingCpu));
   ASSERT_EQ(arch_curr_cpu_num(), kStartingCpu, "Failed to move test thread to the starting CPU.");
 
-  auto auto_call = fbl::MakeAutoCall([current_thread, original_affinity]() {
+  auto cleanup = fit::defer([current_thread, original_affinity]() {
     // Restore original CPU affinity of the test thread.
     current_thread->SetCpuAffinity(original_affinity);
   });

@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
@@ -15,7 +16,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
@@ -78,7 +78,7 @@ zx_status_t allocate_map(const StackType& type, KernelStack::Mapping* map) {
 
   // destroy the vmar if we early abort
   // this will also clean up any mappings that may get placed on the vmar
-  auto vmar_cleanup = fbl::MakeAutoCall([&kstack_vmar]() { kstack_vmar->Destroy(); });
+  auto vmar_cleanup = fit::defer([&kstack_vmar]() { kstack_vmar->Destroy(); });
 
   LTRACEF("%s vmar at %#" PRIxPTR "\n", type.name, kstack_vmar->base());
 

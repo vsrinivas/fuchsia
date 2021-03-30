@@ -7,9 +7,9 @@
 #include "vm/vm_cow_pages.h"
 
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <trace.h>
 
-#include <fbl/auto_call.h>
 #include <kernel/range_check.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
@@ -1828,7 +1828,7 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
     }
   }
 
-  auto list_cleanup = fbl::MakeAutoCall([&page_list]() {
+  auto list_cleanup = fit::defer([&page_list]() {
     if (!list_is_empty(&page_list)) {
       pmm_free(&page_list);
     }
@@ -1920,7 +1920,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
   uint64_t next_offset = offset;
 
   // Should any errors occur we need to unpin everything.
-  auto pin_cleanup = fbl::MakeAutoCall([this, offset, &next_offset]() {
+  auto pin_cleanup = fit::defer([this, offset, &next_offset]() {
     if (next_offset > offset) {
       AssertHeld(*lock());
       UnpinLocked(offset, next_offset - offset);
@@ -2108,7 +2108,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   list_node_t freed_list;
   list_initialize(&freed_list);
 
-  auto auto_free = fbl::MakeAutoCall([&freed_list]() {
+  auto auto_free = fit::defer([&freed_list]() {
     if (!list_is_empty(&freed_list)) {
       pmm_free(&freed_list);
     }

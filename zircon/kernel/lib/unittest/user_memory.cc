@@ -4,10 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
-
-#include <fbl/auto_call.h>
 
 namespace testing {
 
@@ -38,7 +37,7 @@ ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
     unittest_printf("CreateVmMapping failed: %d\n", status);
     return nullptr;
   }
-  auto unmap = fbl::MakeAutoCall([&]() {
+  auto unmap = fit::defer([&]() {
     if (mapping) {
       zx_status_t status = mapping->Unmap(mapping->base(), mapping->size());
       DEBUG_ASSERT(status == ZX_OK);

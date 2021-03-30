@@ -4,13 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/object_cache.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/time.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
@@ -142,7 +142,7 @@ bool ObjectCacheTests() {
     Thread* const current_thread = Thread::Current::Get();
     const cpu_mask_t original_affinity_mask = current_thread->GetCpuAffinity();
 
-    const auto restore_affinity = fbl::MakeAutoCall([original_affinity_mask, current_thread]() {
+    const auto restore_affinity = fit::defer([original_affinity_mask, current_thread]() {
       current_thread->SetCpuAffinity(original_affinity_mask);
     });
 

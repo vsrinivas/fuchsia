@@ -6,14 +6,14 @@
 
 #include <assert.h>
 #include <lib/crypto/prng.h>
+#include <lib/fit/defer.h>
 #include <pow2.h>
 #include <string.h>
-#include <zircon/errors.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <explicit-memory/bytes.h>
-#include <fbl/auto_call.h>
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
 
@@ -52,7 +52,7 @@ void PRNG::AddEntropy(const void* data, size_t size) {
   Guard<Mutex> guard(&mutex_);
   // Save the key on the stack, but guarantee we clean them up
   uint8_t key[sizeof(key_)];
-  auto cleanup = fbl::MakeAutoCall([&] { mandatory_memset(key, 0, sizeof(key)); });
+  auto cleanup = fit::defer([&] { mandatory_memset(key, 0, sizeof(key)); });
   // We mix all of the entropy with the previous key to make the PRNG state
   // depend on both the entropy added and the sequence in which it was added.
   SHA256_CTX ctx;
@@ -88,7 +88,7 @@ void PRNG::Draw(void* out, size_t size) {
   // Save these on the stack, but guarantee we clean them up
   uint8_t key[sizeof(key_)];
   uint128_t nonce;
-  auto cleanup = fbl::MakeAutoCall([&] {
+  auto cleanup = fit::defer([&] {
     mandatory_memset(key, 0, sizeof(key));
     nonce = 0;
   });

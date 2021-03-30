@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
@@ -12,7 +13,6 @@
 #include <new>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <kernel/owned_wait_queue.h>
@@ -571,7 +571,7 @@ bool pi_test_basic() {
         TestThread pressure_thread;
         TestThread blocking_thread;
 
-        auto cleanup = fbl::MakeAutoCall([&]() {
+        auto cleanup = fit::defer([&]() {
           TestThread::ClearShutdownBarrier();
           owq.ReleaseAllThreads();
           pressure_thread.Reset();
@@ -663,7 +663,7 @@ bool pi_test_changing_priority() {
   TestThread pressure_thread;
   TestThread blocking_thread;
 
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     TestThread::ClearShutdownBarrier();
     owq.ReleaseAllThreads();
     pressure_thread.Reset();
@@ -766,7 +766,7 @@ bool pi_test_chain() {
       uint32_t release_ordering[CHAIN_LEN - 1];
       CreateDistribution(release_ordering, RELEASE_ORDERS[ro_ndx]);
 
-      auto cleanup = fbl::MakeAutoCall([&]() {
+      auto cleanup = fit::defer([&]() {
         TestThread::ClearShutdownBarrier();
         for (auto& l : *links) {
           l.queue.ReleaseAllThreads();
@@ -911,7 +911,7 @@ bool pi_test_multi_waiter() {
       PRINT_LOOP_ITER(pgen_ndx);
 
       // At the end of the tests, success or failure, be sure to clean up.
-      auto cleanup = fbl::MakeAutoCall([&]() {
+      auto cleanup = fit::defer([&]() {
         TestThread::ClearShutdownBarrier();
         blocking_queue.ReleaseAllThreads();
         blocking_thread.Reset();
@@ -1091,7 +1091,7 @@ bool pi_test_multi_owned_queues() {
       PRINT_LOOP_ITER(pgen_ndx);
 
       // At the end of the tests, success or failure, be sure to clean up.
-      auto cleanup = fbl::MakeAutoCall([&]() {
+      auto cleanup = fit::defer([&]() {
         TestThread::ClearShutdownBarrier();
         blocking_thread.Reset();
         for (auto& q : *queues) {
@@ -1217,7 +1217,7 @@ bool pi_test_cycle() {
   ASSERT_TRUE(ac.check());
 
   // At the end of the tests, success or failure, be sure to clean up.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     TestThread::ClearShutdownBarrier();
     for (auto& n : *nodes) {
       n.link.ReleaseAllThreads();
@@ -1307,7 +1307,7 @@ bool pi_test_zx4153() {
   LockedOwnedWaitQueue Q1, Q2;
 
   // At the end of the tests, success or failure, be sure to clean up.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     TestThread::ClearShutdownBarrier();
     Q1.ReleaseAllThreads();
     Q2.ReleaseAllThreads();

@@ -16,6 +16,7 @@ source_set("hypervisor") {
     "vmexit.cc",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//zircon/kernel/dev/interrupt/arm_gic/common",
     "//zircon/kernel/dev/interrupt/arm_gic/v2",
     "//zircon/kernel/dev/interrupt/arm_gic/v3",

@@ -6,6 +6,7 @@
 
 #include <lib/arch/intrin.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <platform.h>
 #include <reg.h>
 #include <trace.h>
@@ -75,7 +76,7 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
     LTRACEF("failed to reserve msi_id %u: %d\n", msi_id, st);
     return st;
   }
-  auto cleanup = fbl::MakeAutoCall([alloc, msi_id]() { alloc->ReleaseId(msi_id); });
+  auto cleanup = fit::defer([alloc, msi_id]() { alloc->ReleaseId(msi_id); });
 
   // To handle MSI masking we need to create a kernel mapping for the VMO handed
   // to us, this will provide access to the register controlling the given MSI.

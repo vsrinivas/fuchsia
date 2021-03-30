@@ -19,7 +19,6 @@
 #include <arch/arm64/mp.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <ktl/iterator.h>

@@ -11,6 +11,7 @@
 #include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <lib/fixed_point.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
@@ -23,7 +24,6 @@
 #include <arch/quirks.h>
 #include <dev/interrupt.h>
 #include <dev/timer/arm_generic.h>
-#include <fbl/auto_call.h>
 #include <ktl/atomic.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
@@ -638,7 +638,6 @@ bool test_event_stream() {
         // event.
         __asm__ volatile("sevl;wfe;wfe");
       }
-
     }
     printf("cpu-%u done\n", arch_curr_cpu_num());
     return 0;
@@ -667,7 +666,7 @@ bool test_event_stream() {
   const cpu_mask_t orig_mask = Thread::Current::Get()->GetCpuAffinity();
   Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(last));
   auto restore_mask =
-      fbl::MakeAutoCall([&orig_mask]() { Thread::Current::Get()->SetCpuAffinity(orig_mask); });
+      fit::defer([&orig_mask]() { Thread::Current::Get()->SetCpuAffinity(orig_mask); });
 
   // Now that we're running on the last online+active CPU we can simply start them in order.
   for (cpu_num_t i = 0; i < percpu::processor_count(); ++i) {

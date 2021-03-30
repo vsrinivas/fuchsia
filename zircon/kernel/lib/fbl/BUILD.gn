@@ -11,11 +11,14 @@ zx_library("fbl") {
   sources = [ "arena.cc" ]
   deps = [
     ":tests",
+    "//sdk/lib/fit",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/vm:headers",
     "//zircon/system/ulib/fbl",
   ]
   public_deps = [
+    # <fbl/gparena.h> has #include <lib/fit/defer.h>
+    "//sdk/lib/fit:headers",
     "//zircon/system/ulib/fbl:headers",
 
     # <include/fbl/arena.h> has #include <ktl/forward.h>.

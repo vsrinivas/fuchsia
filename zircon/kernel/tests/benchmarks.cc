@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdio.h>
@@ -18,7 +19,6 @@
 
 #include <arch/ops.h>
 #include <dev/hw_watchdog.h>
-#include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/brwlock.h>
 #include <kernel/mp.h>
@@ -369,7 +369,7 @@ int benchmarks(int, const cmd_args*, uint32_t) {
     hw_watchdog_set_enabled(false);
     need_to_reenable = true;
   }
-  auto reenable_hw_watchdog = fbl::MakeAutoCall([need_to_reenable]() {
+  auto reenable_hw_watchdog = fit::defer([need_to_reenable]() {
     if (need_to_reenable) {
       hw_watchdog_set_enabled(true);
     }

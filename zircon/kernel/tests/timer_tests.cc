@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
@@ -16,7 +17,6 @@
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <kernel/auto_lock.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
@@ -497,7 +497,7 @@ static bool print_timer_queues() {
     timers[i].Set(
         Deadline::infinite(), [](Timer*, zx_time_t, void*) {}, nullptr);
   }
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     for (size_t i = 0; i < kNumTimers; ++i) {
       timers[i].Cancel();
     }

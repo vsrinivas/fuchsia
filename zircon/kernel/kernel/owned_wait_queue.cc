@@ -7,10 +7,10 @@
 #include "kernel/owned_wait_queue.h"
 
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 
 #include <arch/mp.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <kernel/scheduler.h>
 #include <kernel/wait_queue_internal.h>
@@ -282,7 +282,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
   // Note, the only real reason that this is an accurate max at all is because
   // the counter is effectively protected by the thread lock (although there
   // is no real good way to annotate that fact).
-  auto on_exit = fbl::MakeAutoCall([&traverse_len]() {
+  auto on_exit = fit::defer([&traverse_len]() {
     auto old = max_pi_chain_traverse.Value();
     if (old < traverse_len) {
       max_pi_chain_traverse.Add(traverse_len - old);

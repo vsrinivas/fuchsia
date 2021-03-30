@@ -16,7 +16,6 @@
 #include <new>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <ktl/algorithm.h>
 #include <object/bus_transaction_initiator_dispatcher.h>

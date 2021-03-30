@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -18,7 +19,6 @@
 
 #include <arch/ops.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <ktl/algorithm.h>
 #include <ktl/array.h>
 #include <ktl/move.h>
@@ -704,7 +704,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   }
 
   // Should any errors occur we need to unpin everything.
-  auto pin_cleanup = fbl::MakeAutoCall([this, original_offset = offset, &offset, pin]() {
+  auto pin_cleanup = fit::defer([this, original_offset = offset, &offset, pin]() {
     // Regardless of any resizes or other things that may have happened any pinned pages *must*
     // still be within a valid range, and so we know Unpin should succeed. The edge case is if we
     // had failed to pin *any* pages and so our original offset may be outside the current range of

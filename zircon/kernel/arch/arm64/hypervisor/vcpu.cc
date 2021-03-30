@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
+#include <lib/fit/defer.h>
 #include <lib/ktrace.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -13,7 +14,6 @@
 #include <arch/ops.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
-#include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/ktrace.h>
@@ -178,7 +178,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (status != ZX_OK) {
     return status;
   }
-  auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
+  auto free_vpid = fit::defer([guest, vpid]() { guest->FreeVpid(vpid); });
 
   Thread* thread = Thread::Current::Get();
   if (thread->vcpu()) {
@@ -190,7 +190,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  auto_call.cancel();
+  free_vpid.cancel();
 
   status = vcpu->el2_state_.Alloc();
   if (status != ZX_OK) {

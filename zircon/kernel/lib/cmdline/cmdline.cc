@@ -6,12 +6,11 @@
 
 #include "lib/cmdline.h"
 
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
-
-#include <fbl/auto_call.h>
 
 Cmdline gCmdline;
 
@@ -149,7 +148,7 @@ void Cmdline::ProcessRamReservations(const ProcessRamReservationsCbk& cbk) {
 
     // If something goes wrong from here on out, be sure to log a warning and
     // erase the entry.
-    auto cleanup = fbl::MakeAutoCall([arg, arg_len]() {
+    auto cleanup = fit::defer([arg, arg_len]() {
       printf("WARN - Reservation was rejected or encountered a parsing error.  \"%s\"\n", arg);
       memset(arg, kErasedArgFillChar, arg_len);
     });

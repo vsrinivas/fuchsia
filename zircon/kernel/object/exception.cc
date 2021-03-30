@@ -7,6 +7,7 @@
 #include <arch.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -14,7 +15,6 @@
 #include <zircon/types.h>
 
 #include <arch/exception.h>
-#include <fbl/auto_call.h>
 #include <object/exception_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -174,7 +174,7 @@ static zx_status_t exception_handler_worker(uint exception_type,
   //
   // For simplicity and to catch any unhandled status cases below, just clean
   // out the exception before returning no matter what.
-  auto exception_cleaner = fbl::MakeAutoCall([&exception]() { exception->Clear(); });
+  auto exception_cleaner = fit::defer([&exception]() { exception->Clear(); });
 
   ExceptionHandlerIterator iter(thread, exception);
   zx_status_t status = ZX_ERR_NEXT;
