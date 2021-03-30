@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -108,6 +109,22 @@ func processAllDocs(rules core.LintRuleOverTokens, filenames []string) error {
 	return nil
 }
 
+func allMdFilenames() ([]string, error) {
+	var filenames []string
+	if err := filepath.WalkDir(string(rootDir), func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if filepath.Ext(path) == ".md" {
+			filenames = append(filenames, path)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return filenames, nil
+}
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
@@ -120,7 +137,7 @@ func main() {
 		JSONOutput: jsonOutput,
 	}
 	rules := core.InstantiateRules(&reporter, enabledRules)
-	filenames, err := filepath.Glob(filepath.Join(string(rootDir), "*/*/*.md"))
+	filenames, err := allMdFilenames()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(exitOnError)
