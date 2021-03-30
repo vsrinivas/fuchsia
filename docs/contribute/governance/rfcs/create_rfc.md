@@ -318,7 +318,7 @@ After you receive a final status from the Eng Council, do the following:
 
 1. Update the metadata for your RFC proposal. If you correctly filled out the
    initial metadata, you only need to update the following values in
-   [docs/governance/rfcs/_rfcs.yaml][rfc-yaml].
+   [docs/contribute/governance/rfcs/_rfcs.yaml][rfc-yaml].
 
    * `name`: Use the RFC name that was assigned. For example, `"'RFC-9999'`.
    * `file`: Use the filename that you used in the steps above. For example,
