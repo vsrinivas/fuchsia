@@ -5,6 +5,7 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "rust_test_runner",
+        runner: "rust_test_runner",
         binary: "bin/fxfs_lib_test",
     },
     capabilities: [
