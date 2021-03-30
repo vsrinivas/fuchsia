@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"unicode"
 )
@@ -252,6 +253,8 @@ func (t *tokenizer) newToken(kind TokenKind) Token {
 	return tok
 }
 
+var numberedListPattern = regexp.MustCompile("^[0-9]+\\.$")
+
 func (t *tokenizer) next() (Token, error) {
 	t.updateLnCol()
 	tok, err := func() (Token, error) {
@@ -349,7 +352,21 @@ func (t *tokenizer) next() (Token, error) {
 		}
 
 		t.readUntil(false, func(r rune) bool { return !isSeparatorText(r) })
-		return t.newToken(Text), nil
+		tok := t.newToken(Text)
+
+		// We prefer classifying a text token (here, in the fallback case),
+		// rather than directly recognizing the token above. This avoids the
+		// limitation imposed by the fixed runes lookahead buffer: we could only
+		// recognize list elements with fixed number of digits.
+		//
+		// While having a list element with that many digits is a  bit of an
+		// extreme case, if we were to misqualify the token in that case, it
+		// would be quite difficult to track down.
+		if numberedListPattern.MatchString(tok.Content) && t.context.onlySpaceSinceNewline {
+			tok.Kind = List
+		}
+
+		return tok, nil
 	}()
 	if err != nil {
 		return Token{}, err

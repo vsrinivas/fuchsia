@@ -9,9 +9,7 @@ import (
 )
 
 func init() {
-	core.RegisterLintRuleOverTokens(badListsName, func(reporter core.Reporter) core.LintRuleOverTokens {
-		return &badLists{reporter: reporter}
-	})
+	core.RegisterLintRuleOverTokens(badListsName, newBadLists)
 }
 
 const badListsName = "bad-lists"
@@ -27,10 +25,15 @@ type badLists struct {
 
 var _ core.LintRuleOverTokens = (*badLists)(nil)
 
+func newBadLists(reporter core.Reporter) core.LintRuleOverTokens {
+	return &badLists{reporter: reporter}
+}
+
 func (rule *badLists) OnDocStart(_ *core.Doc) {
-	var defaultTok core.Token
-	rule.buf[0] = defaultTok
-	rule.buf[1] = defaultTok
+	var fakeNewlineTok core.Token
+	fakeNewlineTok.Kind = core.Newline
+	rule.buf[0] = fakeNewlineTok
+	rule.buf[1] = fakeNewlineTok
 	rule.inList = false
 }
 
@@ -47,7 +50,7 @@ func (rule *badLists) OnNext(tok core.Token) {
 		}
 		rule.inList = true
 	case core.Newline:
-		if rule.inList && rule.buf[rule.i].Kind == core.Newline {
+		if rule.inList && rule.buf[(rule.i+1)%2].Kind == core.Newline {
 			rule.inList = false
 		}
 	}

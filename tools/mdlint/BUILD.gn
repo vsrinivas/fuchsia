@@ -20,6 +20,7 @@ go_library("gopkg") {
     "core/tokenizer_test.go",
     "main.go",
     "rules/bad_lists.go",
+    "rules/bad_lists_test.go",
     "rules/casing_of_anchors.go",
     "rules/mdhelpers.go",
     "rules/mdhelpers_test.go",
