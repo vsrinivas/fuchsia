@@ -154,6 +154,10 @@
       "prebuilt/media/firmware/amlogic_encoder",
       "prebuilt/media/firmware/amlogic-decoder"
     ],
+    "amlogic2.lic": [
+      "prebuilt/media/firmware/amlogic_encoder",
+      "prebuilt/media/firmware/amlogic-decoder"
+    ],
     "cryptsoft.lic": [
       "prebuilt/third_party/flutter"
     ],
