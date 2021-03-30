@@ -25,8 +25,12 @@ struct ParsedSetCommand {
   std::string name;
   Operation op = kAssign;
 
-  // The things to add/assign/remove.
+  // The things to add/assign/remove. These are split on whitespace but allows quoting.
   std::vector<std::string> values;
+
+  // The thing to add/assign/remove as one string. This will have leading and trailing whitespace
+  // trimmed but will otherwise include all input including original whitespace.
+  std::string raw_value;
 };
 
 // Parses the command-line for the "set" command which has its own mini expression grammar.

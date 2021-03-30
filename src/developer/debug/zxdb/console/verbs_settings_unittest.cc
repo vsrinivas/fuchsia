@@ -71,6 +71,7 @@ TEST(VerbsSettings, ParseSetCommand) {
   ASSERT_TRUE(result.ok());
   EXPECT_EQ("foo", result.value().name);
   EXPECT_EQ(ParsedSetCommand::kAssign, result.value().op);
+  EXPECT_EQ("bar", result.value().raw_value);
   ASSERT_EQ(1u, result.value().values.size());
   EXPECT_EQ("bar", result.value().values[0]);
 
@@ -89,10 +90,11 @@ TEST(VerbsSettings, ParseSetCommand) {
   EXPECT_EQ("Invalid setting name.", result.err().msg());
 
   // Regular three-argument form with spaces.
-  result = ParseSetCommand("foo = bar");
+  result = ParseSetCommand("foo = bar ");
   ASSERT_TRUE(result.ok());
   EXPECT_EQ("foo", result.value().name);
   EXPECT_EQ(ParsedSetCommand::kAssign, result.value().op);
+  EXPECT_EQ("bar", result.value().raw_value);
   ASSERT_EQ(1u, result.value().values.size());
   EXPECT_EQ("bar", result.value().values[0]);
 
@@ -109,6 +111,7 @@ TEST(VerbsSettings, ParseSetCommand) {
   ASSERT_TRUE(result.ok());
   EXPECT_EQ("foo", result.value().name);
   EXPECT_EQ(ParsedSetCommand::kRemove, result.value().op);
+  EXPECT_EQ("\"bar baz\"", result.value().raw_value);
   ASSERT_EQ(1u, result.value().values.size());
   EXPECT_EQ("bar baz", result.value().values[0]);
 
@@ -117,6 +120,7 @@ TEST(VerbsSettings, ParseSetCommand) {
   ASSERT_TRUE(result.ok());
   EXPECT_EQ("foo", result.value().name);
   EXPECT_EQ(ParsedSetCommand::kAssign, result.value().op);
+  EXPECT_EQ("bar baz", result.value().raw_value);
   ASSERT_EQ(2u, result.value().values.size());
   EXPECT_EQ("bar", result.value().values[0]);
   EXPECT_EQ("baz", result.value().values[1]);
@@ -125,6 +129,7 @@ TEST(VerbsSettings, ParseSetCommand) {
   ASSERT_TRUE(result.ok());
   EXPECT_EQ("foo", result.value().name);
   EXPECT_EQ(ParsedSetCommand::kAppend, result.value().op);
+  EXPECT_EQ("bar \"baz goo\"", result.value().raw_value);
   ASSERT_EQ(2u, result.value().values.size());
   EXPECT_EQ("bar", result.value().values[0]);
   EXPECT_EQ("baz goo", result.value().values[1]);
@@ -174,6 +179,14 @@ TEST_F(VerbsSettingsTest, GetSet) {
       "  • gldir3\n"
       "  • \"gldir four\"\n",
       DoInput("set build-dirs += gldir3 \"gldir four\""));
+
+  // Create a breakpoint and test scope assignment (this doesn't need to be quoted).
+  DoInput("break main");
+  EXPECT_EQ("Set breakpoint 1 scope = pr 1\n", DoInput("bp 1 set scope pr 1"));
+
+  // There is no current thread so setting the thread scope should fail.
+  EXPECT_EQ("There are no threads in the process.", DoInput("bp 1 set scope thread 1"));
+  EXPECT_EQ("There is no current thread to use for the scope.", DoInput("bp 1 set scope thread"));
 
   EXPECT_EQ("gldir2 gldir3 \"gldir four\"", DoInput("global get --value-only build-dirs"));
   EXPECT_EQ("prdir", DoInput("get --value-only build-dirs"));

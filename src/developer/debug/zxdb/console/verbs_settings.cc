@@ -360,7 +360,7 @@ Arguments
   <value>
       The value(s) to set, add, or remove. Multiple values for list settings
       are whitespace separated. You can "quote" strings to include literal
-      spaces.
+      spaces, and backslash-escape literal quotes.
 
 Setting Types
 
@@ -590,8 +590,15 @@ Err DoSet(ConsoleContext* console_context, const Command& cmd) {
     return Err("List modification (+=, -=) used on a non-list option.");
 
   if (parsed.value().values.size() > 1u && !setting_context.value.is_list()) {
-    return Err(
-        "Multiple values on a non-list option. Use \"quotes\" to include literal whitespace.");
+    // When the value is a non-list, assume input with spaces is a single literal. This allows
+    // input like:
+    //    bp set scope process 1
+    // without quoting "process 1" which is much more intuitive. The potentially surprising side
+    // effect of this rule is that if two things are quoted (triggering this condition), the quotes
+    // will be literally included in the value, while if only one thing is quoted, the quotes will
+    // br trimmed. But this edge case is not worth adding extra complexity here.
+    parsed.value().values.clear();
+    parsed.value().values.push_back(parsed.value().raw_value);
   }
 
   SettingValue out_value;  // Used for showing the new value.
@@ -717,6 +724,11 @@ ErrOr<ParsedSetCommand> ParseSetCommand(const std::string& input) {
   while (cur < input.size() && isspace(input[cur]))
     ++cur;
 
+  // Save the original raw value (trimming whitespace from the right).
+  result.raw_value = input.substr(cur);
+  while (!result.raw_value.empty() && isspace(result.raw_value.back()))
+    result.raw_value.resize(result.raw_value.size() - 1);
+
   // Value(s) parsed as a command token. This handles the various types of escaping and quoting
   // supported by the interactive command line.
   //
@@ -754,11 +766,18 @@ ErrOr<ExecutionScope> ParseExecutionScope(ConsoleContext* console_context,
   if (Err err = console_context->FillOutCommand(&parsed); err.has_error())
     return err;
 
-  // Valid, convert to scope based on what nouns were specified.
-  if (parsed.HasNoun(Noun::kThread))
+  // Valid, convert to scope based on what nouns were specified. The thread or process could have
+  // failed to resolve to objects if there is no current one.
+  if (parsed.HasNoun(Noun::kThread)) {
+    if (!parsed.thread())
+      return Err("There is no current thread to use for the scope.");
     return ExecutionScope(parsed.thread());
-  if (parsed.HasNoun(Noun::kProcess))
+  }
+  if (parsed.HasNoun(Noun::kProcess)) {
+    if (!parsed.target())
+      return Err("There is no current process to use for the scope.");
     return ExecutionScope(parsed.target());
+  }
   return ExecutionScope();
 }
 
