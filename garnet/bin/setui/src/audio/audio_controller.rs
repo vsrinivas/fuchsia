@@ -72,7 +72,7 @@ impl VolumeController {
         Ok(())
     }
 
-    async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
+    async fn get_info(&self) -> Result<AudioInfo, ControllerError> {
         let mut audio_info = self.client.read_setting::<AudioInfo>().await;
 
         // Only override the mic mute state if present.
@@ -85,8 +85,6 @@ impl VolumeController {
     }
 
     async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingHandlerResult {
-        self.get_info().await?;
-
         // Update counters for changed streams.
         for stream in volume.iter() {
             // We don't care what the value of the counter is, just that it is different from the
