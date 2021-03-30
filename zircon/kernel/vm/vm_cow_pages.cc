@@ -3043,10 +3043,6 @@ bool VmCowPages::DebugValidatePageSplitsHierarchyLocked() const {
 bool VmCowPages::DebugValidatePageSplitsLocked() const {
   canary_.Assert();
 
-  if (!is_hidden_locked()) {
-    // Nothing to validate on a leaf vmo.
-    return true;
-  }
   // Assume this is valid until we prove otherwise.
   bool valid = true;
   page_list_.ForEveryPage([this, &valid](const VmPageOrMarker* page, uint64_t offset) {
@@ -3055,6 +3051,20 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
     }
     vm_page_t* p = page->Page();
     AssertHeld(this->lock_);
+
+    // All pages in non-hidden VMOs should not be split, as this is a meaningless thing to talk
+    // about and indicates a book keeping error somewhere else.
+    if (!this->is_hidden_locked()) {
+      if (p->object.cow_left_split || p->object.cow_right_split) {
+        printf("Found split page %p (off %p) in non-hidden node %p\n", p, (void*)offset, this);
+        this->DumpLocked(1, true);
+        valid = false;
+        return ZX_ERR_STOP;
+      }
+      // Nothing else to test for non-hidden VMOs.
+      return ZX_ERR_NEXT;
+    }
+
     // We found a page in the hidden VMO, if it has been forked in either direction then we
     // expect that if we search down that path we will find that the forked page and that no
     // descendant can 'see' back to this page.
@@ -3126,6 +3136,85 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
         }
         cur = next;
       } while (1);
+    }
+
+    // The inverse case must also exist where the side that hasn't forked it must still be able to
+    // see it. It can either be seen by a leaf vmo that does not have a page, or a hidden vmo that
+    // has partial_cow_release_ set.
+    // No leaf VMO in expected should be able to 'see' this page and potentially re-fork it. To
+    // validate this we need to walk the entire sub tree.
+    if (p->object.cow_left_split) {
+      cur = &right_child_locked();
+    } else if (p->object.cow_right_split) {
+      cur = &left_child_locked();
+    } else {
+      return ZX_ERR_NEXT;
+    }
+    off = offset;
+    // Initially we haven't seen the page, unless this VMO itself has done a partial cow release, in
+    // which case we ourselves can see it. Logic is structured this way to avoid indenting this
+    // whole code block in an if, whilst preserving the ability to add future checks below.
+    bool seen = partial_cow_release_;
+    // We start with cur being an immediate child of 'this', so we can preform subtree traversal
+    // until we end up back in 'this'.
+    while (cur != this && !seen) {
+      AssertHeld(cur->lock_);
+      // Check that we can see this page in the parent. Importantly this first checks if
+      // |off < cur->parent_offset_| allowing us to safely perform that subtraction from then on.
+      if (off < cur->parent_offset_ || off - cur->parent_offset_ < cur->parent_start_limit_ ||
+          off - cur->parent_offset_ >= cur->parent_limit_) {
+        // This blank case is used to capture the scenario where current does not see the target
+        // offset in the parent, in which case there is no point traversing into the children.
+      } else if (cur->is_hidden_locked()) {
+        // A hidden VMO can see the page if it performed a partial cow release.
+        if (cur->partial_cow_release_) {
+          seen = true;
+          break;
+        }
+        // Otherwise recurse into the children.
+        off -= cur->parent_offset_;
+        cur = &cur->left_child_locked();
+        continue;
+      } else {
+        // We already checked in the first 'if' branch that this offset was visible, and so if this
+        // leaf has no committed page then it is able to see it.
+        const VmPageOrMarker* l = cur->page_list_.Lookup(off - cur->parent_offset_);
+        if (!l || l->IsEmpty()) {
+          seen = true;
+          break;
+        }
+      }
+      // Find our next node by walking up until we see we have come from a left path, then go right.
+      do {
+        VmCowPages* next = cur->parent_.get();
+        AssertHeld(next->lock_);
+        off += next->parent_offset_;
+        if (next == this) {
+          cur = next;
+          break;
+        }
+
+        // If we came from the left, go back down on the right, otherwise just keep going up.
+        if (cur == &next->left_child_locked()) {
+          off -= next->parent_offset_;
+          cur = &next->right_child_locked();
+          break;
+        }
+        cur = next;
+      } while (1);
+    }
+    if (!seen) {
+      printf(
+          "Failed to find any child who could fork the remaining split page %p (off %p) in node "
+          "%p\n",
+          p, (void*)offset, this);
+      this->DumpLocked(1, true);
+      printf("Left:\n");
+      left_child_locked().DumpLocked(1, true);
+      printf("Right:\n");
+      right_child_locked().DumpLocked(1, true);
+      valid = false;
+      return ZX_ERR_STOP;
     }
     return ZX_ERR_NEXT;
   });
