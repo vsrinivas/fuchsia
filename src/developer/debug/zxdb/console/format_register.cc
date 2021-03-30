@@ -102,7 +102,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
   if (!is_float) {
     // Force padded hex output for all non-floating-point values.
     format_options.num_format = FormatOptions::NumFormat::kHex;
-    format_options.zero_pad_hex = true;
+    format_options.zero_pad_hex_bin = true;
   }
 
   // The formatter needs an eval context but we don't need it to have any capabilities.

@@ -110,15 +110,22 @@ TEST_F(FormatTest, Unsigned) {
   EXPECT_EQ(" = insanely long, 0xdeadbeef010203041112131415161718\n",
             GetDebugTreeForValue(eval_context(), val_int128, opts));
 
-  // Force a 32-bit float to an unsigned and a hex.
+  // Force a 32-bit float to different bases.
   ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
                       {0x04, 0x03, 0x02, 0x01});
   opts.num_format = FormatOptions::NumFormat::kUnsigned;
   EXPECT_EQ(" = float, 16909060\n", GetDebugTreeForValue(eval_context(), val_float, opts));
   opts.num_format = FormatOptions::NumFormat::kHex;
   EXPECT_EQ(" = float, 0x1020304\n", GetDebugTreeForValue(eval_context(), val_float, opts));
+  opts.num_format = FormatOptions::NumFormat::kBin;
+  EXPECT_EQ(" = float, 0b1'00000010'00000011'00000100\n",
+            GetDebugTreeForValue(eval_context(), val_float, opts));
 
-  opts.zero_pad_hex = true;
+  // Zero-pad.
+  opts.zero_pad_hex_bin = true;
+  EXPECT_EQ(" = float, 0b00000001'00000010'00000011'00000100\n",
+            GetDebugTreeForValue(eval_context(), val_float, opts));
+  opts.num_format = FormatOptions::NumFormat::kHex;
   EXPECT_EQ(" = float, 0x01020304\n", GetDebugTreeForValue(eval_context(), val_float, opts));
   EXPECT_EQ(" = char, 0x7b\n", GetDebugTreeForValue(eval_context(), val_int8, opts));
   ExprValue val_int8_short(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "char"),

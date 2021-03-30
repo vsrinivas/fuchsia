@@ -57,6 +57,11 @@ TEST_F(VerbPrint, TypeOverrides) {
   event = console().GetOutputEvent();
   EXPECT_EQ("0x64", event.output.AsString());
 
+  // Bin.
+  console().ProcessInputLine("print -b 1234");
+  event = console().GetOutputEvent();
+  EXPECT_EQ("0b100'11010010", event.output.AsString());
+
   // Unsigned (currently we treat "-1" as a 32-bit integer so the unsigned version is also 32 bits).
   // The "--" is required to mark the end of switches so the "-1" is treated as the expression
   // rather than another switch).
@@ -72,7 +77,7 @@ TEST_F(VerbPrint, TypeOverrides) {
   // More than one is an error.
   console().ProcessInputLine("print -d -c 100");
   event = console().GetOutputEvent();
-  EXPECT_EQ("More than one type override (-c, -d, -u, -x) specified.", event.output.AsString());
+  EXPECT_EQ("More than one type override (-b, -c, -d, -u, -x) specified.", event.output.AsString());
 }
 
 // A client end-to-end test for vector register formats.

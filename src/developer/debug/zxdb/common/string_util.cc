@@ -88,4 +88,72 @@ std::string to_hex_string(uint128_t i, int digits, bool include_prefix) {
   return result;
 }
 
+template <typename T>
+std::string to_bin_string(T value, int digits, bool include_prefix, char byte_separator) {
+  std::ostringstream out;
+  if (include_prefix)
+    out << "0b";
+
+  // When no padding is requested, always output at least one digit.
+  if (digits == 0)
+    digits = 1;
+
+  int high_bit = sizeof(T) * 8 - 1;              // Largest bit of the input type (0-based).
+  bool written_digit = false;                    // Set when we've written any digit.
+  int cur_bit = std::max(digits - 1, high_bit);  // 0-based bit index (counting from low bit).
+
+  // Computes whether a byte separator is needed at cur_bit.
+  auto needs_separator = [&]() {
+    return written_digit &&         // Don't do a leading separator.
+           byte_separator &&        // Separator requested.
+           (cur_bit + 1) % 8 == 0;  // Byte boundary.
+  };
+
+  // Left 0-padding for padding beyond the range of the input type.
+  while (cur_bit > high_bit) {
+    if (needs_separator())
+      out << byte_separator;
+    out << '0';
+
+    written_digit = true;
+    cur_bit--;
+  }
+
+  while (cur_bit >= 0) {
+    if (needs_separator())
+      out << byte_separator;
+
+    bool bit_value = value & (static_cast<T>(1) << cur_bit);
+    if (bit_value || written_digit || (cur_bit + 1) <= digits) {
+      out << (bit_value ? '1' : '0');
+      written_digit = true;
+    }
+
+    cur_bit--;
+  }
+
+  return out.str();
+}
+
+template std::string to_bin_string<int8_t>(int8_t i, int digits, bool include_prefix,
+                                           char byte_separator);
+template std::string to_bin_string<uint8_t>(uint8_t i, int digits, bool include_prefix,
+                                            char byte_separator);
+template std::string to_bin_string<int16_t>(int16_t i, int digits, bool include_prefix,
+                                            char byte_separator);
+template std::string to_bin_string<uint16_t>(uint16_t i, int digits, bool include_prefix,
+                                             char byte_separator);
+template std::string to_bin_string<int32_t>(int32_t i, int digits, bool include_prefix,
+                                            char byte_separator);
+template std::string to_bin_string<uint32_t>(uint32_t i, int digits, bool include_prefix,
+                                             char byte_separator);
+template std::string to_bin_string<int64_t>(int64_t i, int digits, bool include_prefix,
+                                            char byte_separator);
+template std::string to_bin_string<uint64_t>(uint64_t i, int digits, bool include_prefix,
+                                             char byte_separator);
+template std::string to_bin_string<int128_t>(int128_t i, int digits, bool include_prefix,
+                                             char byte_separator);
+template std::string to_bin_string<uint128_t>(uint128_t i, int digits, bool include_prefix,
+                                              char byte_separator);
+
 }  // namespace zxdb

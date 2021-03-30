@@ -10,7 +10,7 @@
 namespace zxdb {
 
 struct FormatOptions {
-  enum class NumFormat { kDefault, kUnsigned, kSigned, kHex, kChar };
+  enum class NumFormat { kDefault, kUnsigned, kSigned, kHex, kChar, kBin };
 
   // Maximum number of elements to print in an array. For strings we'll speculatively fetch this
   // much data since we don't know mow long the string will be in advance. This means that
@@ -23,8 +23,8 @@ struct FormatOptions {
   // Format to apply to numeric types.
   NumFormat num_format = NumFormat::kDefault;
 
-  // When set, hex numbers will be 0-padded out to the size of their data type.
-  bool zero_pad_hex = false;
+  // When set, hex and bin numbers will be 0-padded out to the size of their data type.
+  bool zero_pad_hex_bin = false;
 
   bool enable_pretty_printing = true;
 };

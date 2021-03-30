@@ -52,6 +52,7 @@ ErrOr<ConsoleFormatOptions> GetPrintCommandFormatOptions(const Command& cmd);
   "\n"                                                                        \
   "  Force numeric values to be of specific types with these options:\n"      \
   "\n"                                                                        \
+  "  -b  Binary\n"                                                            \
   "  -c  Character\n"                                                         \
   "  -d  Signed decimal\n"                                                    \
   "  -u  Unsigned decimal\n"                                                  \

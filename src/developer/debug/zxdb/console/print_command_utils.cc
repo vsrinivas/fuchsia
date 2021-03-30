@@ -22,8 +22,9 @@ constexpr int kForceNumberChar = kPrintCommandSwitchBase + 2;
 constexpr int kForceNumberSigned = kPrintCommandSwitchBase + 3;
 constexpr int kForceNumberUnsigned = kPrintCommandSwitchBase + 4;
 constexpr int kForceNumberHex = kPrintCommandSwitchBase + 5;
-constexpr int kMaxArraySize = kPrintCommandSwitchBase + 6;
-constexpr int kRawOutput = kPrintCommandSwitchBase + 7;
+constexpr int kForceNumberBin = kPrintCommandSwitchBase + 6;
+constexpr int kMaxArraySize = kPrintCommandSwitchBase + 7;
+constexpr int kRawOutput = kPrintCommandSwitchBase + 8;
 
 }  // namespace
 
@@ -35,6 +36,7 @@ void AppendPrintCommandSwitches(VerbRecord* record) {
   record->switches.emplace_back(kForceNumberSigned, false, "", 'd');
   record->switches.emplace_back(kForceNumberUnsigned, false, "", 'u');
   record->switches.emplace_back(kForceNumberHex, false, "", 'x');
+  record->switches.emplace_back(kForceNumberBin, false, "", 'b');
   record->switches.emplace_back(kMaxArraySize, true, "max-array");
 }
 
@@ -75,12 +77,13 @@ ErrOr<ConsoleFormatOptions> GetPrintCommandFormatOptions(const Command& cmd) {
   }
 
   // Mapping from command-line parameter to format enum.
-  constexpr size_t kFormatCount = 4;
+  constexpr size_t kFormatCount = 5;
   static constexpr std::pair<int, ConsoleFormatOptions::NumFormat> kFormats[kFormatCount] = {
       {kForceNumberChar, ConsoleFormatOptions::NumFormat::kChar},
       {kForceNumberUnsigned, ConsoleFormatOptions::NumFormat::kUnsigned},
       {kForceNumberSigned, ConsoleFormatOptions::NumFormat::kSigned},
-      {kForceNumberHex, ConsoleFormatOptions::NumFormat::kHex}};
+      {kForceNumberHex, ConsoleFormatOptions::NumFormat::kHex},
+      {kForceNumberBin, ConsoleFormatOptions::NumFormat::kBin}};
 
   int num_type_overrides = 0;
   for (const auto& cur : kFormats) {
@@ -95,7 +98,7 @@ ErrOr<ConsoleFormatOptions> GetPrintCommandFormatOptions(const Command& cmd) {
     options.enable_pretty_printing = false;
 
   if (num_type_overrides > 1)
-    return Err("More than one type override (-c, -d, -u, -x) specified.");
+    return Err("More than one type override (-b, -c, -d, -u, -x) specified.");
   return options;
 }
 

@@ -163,6 +163,22 @@ uint64_t ExprValue::GetAs<uint64_t>() const {
 }
 
 template <>
+int128_t ExprValue::GetAs<int128_t>() const {
+  FX_DCHECK(data_.size() == sizeof(int128_t)) << "Got size of " << data_.size();
+  int128_t result;
+  memcpy(&result, &data_[0], sizeof(int128_t));
+  return result;
+}
+
+template <>
+uint128_t ExprValue::GetAs<uint128_t>() const {
+  FX_DCHECK(data_.size() == sizeof(uint128_t)) << "Got size of " << data_.size();
+  uint128_t result;
+  memcpy(&result, &data_[0], sizeof(uint128_t));
+  return result;
+}
+
+template <>
 float ExprValue::GetAs<float>() const {
   FX_DCHECK(data_.size() == sizeof(float)) << "Got size of " << data_.size();
   float result;
@@ -221,6 +237,36 @@ Err ExprValue::PromoteTo64(uint64_t* output) const {
       return Err(
           fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
+  return Err();
+}
+
+Err ExprValue::PromoteTo128(int128_t* output) const {
+  if (data_.size() == sizeof(int128_t)) {
+    *output = GetAs<int128_t>();
+    return Err();
+  }
+
+  // Use PromoteTo64 to handle all other cases.
+  int64_t out64 = 0;
+  if (Err err = PromoteTo64(&out64); err.has_error())
+    return err;
+
+  *output = out64;
+  return Err();
+}
+
+Err ExprValue::PromoteTo128(uint128_t* output) const {
+  if (data_.size() == sizeof(uint128_t)) {
+    *output = GetAs<uint128_t>();
+    return Err();
+  }
+
+  // Use PromoteTo64 to handle all other cases.
+  uint64_t out64 = 0;
+  if (Err err = PromoteTo64(&out64); err.has_error())
+    return err;
+
+  *output = out64;
   return Err();
 }
 

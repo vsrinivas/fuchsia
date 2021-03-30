@@ -91,7 +91,8 @@ void FormatSignedInt(FormatNode* node) {
 
 void FormatUnsignedInt(FormatNode* node, const FormatOptions& options) {
   // All > 64-bit output needs a separate code path since they can't be printf'ed. We only ever
-  // bother to output this as 0-padded hex. This could be enhanced in the future.
+  // bother to output this as 0-padded hex. This could be enhanced in the future, and the hex and
+  // bin output already supports 128-bit output if needed.
   if (node->value().data().size() > sizeof(uint64_t)) {
     // This assumes little-endian.
     std::string desc = "0x";
@@ -101,18 +102,17 @@ void FormatUnsignedInt(FormatNode* node, const FormatOptions& options) {
     return;
   }
 
-  // This formatter handles unsigned and hex output.
+  // This formatter handles unsigned, binary, and hex output.
   uint64_t int_val = 0;
   Err err = node->value().PromoteTo64(&int_val);
   if (err.has_error()) {
     node->set_err(err);
+  } else if (options.num_format == NumFormat::kBin) {
+    int pad_to = options.zero_pad_hex_bin ? node->value().data().size() * 8 : 0;
+    node->set_description(to_bin_string(int_val, pad_to, true, '\''));
   } else if (options.num_format == NumFormat::kHex) {
-    if (options.zero_pad_hex) {
-      int pad_to = node->value().data().size() * 2;
-      node->set_description(to_hex_string(int_val, pad_to));
-    } else {
-      node->set_description(to_hex_string(int_val));
-    }
+    int pad_to = options.zero_pad_hex_bin ? node->value().data().size() * 2 : 0;
+    node->set_description(to_hex_string(int_val, pad_to));
   } else {
     node->set_description(std::to_string(int_val));
   }
@@ -676,6 +676,7 @@ void FormatNumericNode(FormatNode* node, const FormatOptions& options) {
     // Overridden format option.
     switch (options.num_format) {
       case NumFormat::kUnsigned:
+      case NumFormat::kBin:
       case NumFormat::kHex:
         FormatUnsignedInt(node, options);
         break;

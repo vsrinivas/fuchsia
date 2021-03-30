@@ -34,6 +34,11 @@ std::string to_hex_string(uint64_t i, int digits = 0, bool include_prefix = true
 std::string to_hex_string(int128_t i, int digits = 0, bool include_prefix = true);
 std::string to_hex_string(uint128_t i, int digits = 0, bool include_prefix = true);
 
+// Similar to to_hex_string but additional can optionally write byte separators. If nonzero, the
+// given byte_separator characer will be output for every 8 bits.
+template <typename T>
+std::string to_bin_string(T i, int digits = 0, bool include_prefix = true, char byte_separator = 0);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_COMMON_STRING_UTIL_H_

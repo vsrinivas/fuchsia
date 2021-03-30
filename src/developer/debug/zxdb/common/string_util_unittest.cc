@@ -29,4 +29,37 @@ TEST(StringUtil, to_hex_string) {
   EXPECT_EQ("0xffffffffffffffffffffffffffffffff", to_hex_string(minus_one_128));
 }
 
+TEST(StringUtil, to_bin_string) {
+  EXPECT_EQ("0", to_bin_string(0, 0, false));
+  EXPECT_EQ("0b0", to_bin_string(0, 0, true));
+  EXPECT_EQ("000", to_bin_string(0, 3, false));
+  EXPECT_EQ("0b000", to_bin_string(0, 3, true));
+  EXPECT_EQ("0b10000000", to_bin_string(0b10000000));
+  EXPECT_EQ("0b11110000111000001100000010000000",
+            to_bin_string(0b11110000111000001100000010000000u));
+
+  // Unneeded byte separator
+  EXPECT_EQ("0b10000000", to_bin_string(0b10000000, 0, true, '.'));
+
+  // Padding beyond type size.
+  EXPECT_EQ("0b000010000000", to_bin_string(static_cast<uint8_t>(0b10000000), 12));
+  EXPECT_EQ("0b0000'10000000", to_bin_string(static_cast<uint8_t>(0b10000000), 12, true, '\''));
+
+  EXPECT_EQ("0b1111111111111111", to_bin_string(static_cast<int16_t>(-1)));
+  EXPECT_EQ("11111111,11111111,11111111,11111111",
+            to_bin_string(static_cast<int32_t>(-1), 0, false, ','));
+
+  uint128_t high_bit_128 = static_cast<uint128_t>(1) << 127;
+  EXPECT_EQ(
+      "0b1000000000000000000000000000000000000000000000000000000000000000"
+      "0000000000000000000000000000000000000000000000000000000000000000",
+      to_bin_string(high_bit_128));
+
+  int128_t minus_one_128 = -1;
+  EXPECT_EQ(
+      "0b1111111111111111111111111111111111111111111111111111111111111111"
+      "1111111111111111111111111111111111111111111111111111111111111111",
+      to_bin_string(minus_one_128));
+}
+
 }  // namespace zxdb

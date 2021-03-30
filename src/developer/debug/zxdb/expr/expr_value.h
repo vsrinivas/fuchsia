@@ -11,6 +11,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
+#include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -77,8 +78,8 @@ class ExprValue {
 
   // Determines which base type the Value's Type is.
   //
-  // TODO(brettw) this should be removed, it does not support forward
-  // definitions. Callers should interrogate GetConcreteType() instead.
+  // TODO(brettw) this should be removed, it does not support forward definitions. Callers should
+  // interrogate GetConcreteType() instead.
   int GetBaseType() const;
 
   // Strips C-V qualifications and resolves forward declarations.
@@ -99,10 +100,12 @@ class ExprValue {
   template <typename T>
   T GetAs() const;
 
-  // Gets the result as the given 64-bit value, promoting all shorter values to the longer ones. If
-  // the data size is empty or greater than 64 bits it will return an error.
+  // Gets the result as the given 64/128-bit value, promoting all shorter values to the longer ones.
+  // If the data size is empty or greater than the requested bits it will return an error.
   Err PromoteTo64(int64_t* output) const;
   Err PromoteTo64(uint64_t* output) const;
+  Err PromoteTo128(int128_t* output) const;
+  Err PromoteTo128(uint128_t* output) const;
 
   // Gets the result as a double. This will convert floats and doubles to doubles. It will not
   // convert ints to floating point.
@@ -145,6 +148,12 @@ int64_t ExprValue::GetAs<int64_t>() const;
 
 template <>
 uint64_t ExprValue::GetAs<uint64_t>() const;
+
+template <>
+int128_t ExprValue::GetAs<int128_t>() const;
+
+template <>
+uint128_t ExprValue::GetAs<uint128_t>() const;
 
 template <>
 float ExprValue::GetAs<float>() const;
