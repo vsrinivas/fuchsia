@@ -100,10 +100,12 @@ class Union final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  bool is_Primitive() const {
+    return tag_ == ::fidl::test::union_::Union::Tag::kPrimitive;
+  }
 
   int32_t& Primitive() {
-    EnsureStorageInitialized(Tag::kPrimitive);
+    EnsureStorageInitialized(::fidl::test::union_::Union::Tag::kPrimitive);
     return Primitive_;
   }
 
@@ -114,11 +116,12 @@ class Union final {
   Union& set_Primitive(int32_t value);
 
   bool is_StringNeedsConstructor() const {
-    return tag_ == Tag::kStringNeedsConstructor;
+    return tag_ == ::fidl::test::union_::Union::Tag::kStringNeedsConstructor;
   }
 
   ::std::string& StringNeedsConstructor() {
-    EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::Union::Tag::kStringNeedsConstructor);
     return StringNeedsConstructor_;
   }
 
@@ -129,11 +132,13 @@ class Union final {
   Union& set_StringNeedsConstructor(::std::string value);
 
   bool is_VectorStringAlsoNeedsConstructor() const {
-    return tag_ == Tag::kVectorStringAlsoNeedsConstructor;
+    return tag_ ==
+           ::fidl::test::union_::Union::Tag::kVectorStringAlsoNeedsConstructor;
   }
 
   ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() {
-    EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::Union::Tag::kVectorStringAlsoNeedsConstructor);
     return VectorStringAlsoNeedsConstructor_;
   }
 
@@ -144,7 +149,9 @@ class Union final {
   Union& set_VectorStringAlsoNeedsConstructor(
       ::std::vector<::std::string> value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::Union::Tag Which() const {
+    return ::fidl::test::union_::Union::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -156,7 +163,8 @@ class Union final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ =
+      static_cast<fidl_xunion_tag_t>(::fidl::test::union_::Union::Tag::Invalid);
   union {
     int32_t Primitive_;
     ::std::string StringNeedsConstructor_;
@@ -233,10 +241,13 @@ class StrictUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  bool is_Primitive() const {
+    return tag_ == ::fidl::test::union_::StrictUnion::Tag::kPrimitive;
+  }
 
   int32_t& Primitive() {
-    EnsureStorageInitialized(Tag::kPrimitive);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::StrictUnion::Tag::kPrimitive);
     return Primitive_;
   }
 
@@ -247,11 +258,13 @@ class StrictUnion final {
   StrictUnion& set_Primitive(int32_t value);
 
   bool is_StringNeedsConstructor() const {
-    return tag_ == Tag::kStringNeedsConstructor;
+    return tag_ ==
+           ::fidl::test::union_::StrictUnion::Tag::kStringNeedsConstructor;
   }
 
   ::std::string& StringNeedsConstructor() {
-    EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::StrictUnion::Tag::kStringNeedsConstructor);
     return StringNeedsConstructor_;
   }
 
@@ -262,11 +275,13 @@ class StrictUnion final {
   StrictUnion& set_StringNeedsConstructor(::std::string value);
 
   bool is_VectorStringAlsoNeedsConstructor() const {
-    return tag_ == Tag::kVectorStringAlsoNeedsConstructor;
+    return tag_ == ::fidl::test::union_::StrictUnion::Tag::
+                       kVectorStringAlsoNeedsConstructor;
   }
 
   ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() {
-    EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+    EnsureStorageInitialized(::fidl::test::union_::StrictUnion::Tag::
+                                 kVectorStringAlsoNeedsConstructor);
     return VectorStringAlsoNeedsConstructor_;
   }
 
@@ -277,7 +292,9 @@ class StrictUnion final {
   StrictUnion& set_VectorStringAlsoNeedsConstructor(
       ::std::vector<::std::string> value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::StrictUnion::Tag Which() const {
+    return ::fidl::test::union_::StrictUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -289,7 +306,8 @@ class StrictUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::StrictUnion::Tag::Invalid);
   union {
     int32_t Primitive_;
     ::std::string StringNeedsConstructor_;
@@ -339,10 +357,12 @@ class StrictSimpleXUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::union_::StrictSimpleXUnion::Tag::kI;
+  }
 
   int32_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::StrictSimpleXUnion::Tag::kI);
     return i_;
   }
 
@@ -352,10 +372,12 @@ class StrictSimpleXUnion final {
   }
   StrictSimpleXUnion& set_i(int32_t value);
 
-  bool is_f() const { return tag_ == Tag::kF; }
+  bool is_f() const {
+    return tag_ == ::fidl::test::union_::StrictSimpleXUnion::Tag::kF;
+  }
 
   float& f() {
-    EnsureStorageInitialized(Tag::kF);
+    EnsureStorageInitialized(::fidl::test::union_::StrictSimpleXUnion::Tag::kF);
     return f_;
   }
 
@@ -365,10 +387,12 @@ class StrictSimpleXUnion final {
   }
   StrictSimpleXUnion& set_f(float value);
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const {
+    return tag_ == ::fidl::test::union_::StrictSimpleXUnion::Tag::kS;
+  }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(::fidl::test::union_::StrictSimpleXUnion::Tag::kS);
     return s_;
   }
 
@@ -378,7 +402,9 @@ class StrictSimpleXUnion final {
   }
   StrictSimpleXUnion& set_s(::std::string value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::StrictSimpleXUnion::Tag Which() const {
+    return ::fidl::test::union_::StrictSimpleXUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -390,7 +416,8 @@ class StrictSimpleXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::StrictSimpleXUnion::Tag::Invalid);
   union {
     int32_t i_;
     float f_;
@@ -437,10 +464,10 @@ class StrictFoo final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const { return tag_ == ::fidl::test::union_::StrictFoo::Tag::kS; }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(::fidl::test::union_::StrictFoo::Tag::kS);
     return s_;
   }
 
@@ -450,10 +477,10 @@ class StrictFoo final {
   }
   StrictFoo& set_s(::std::string value);
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const { return tag_ == ::fidl::test::union_::StrictFoo::Tag::kI; }
 
   int32_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::StrictFoo::Tag::kI);
     return i_;
   }
 
@@ -463,7 +490,9 @@ class StrictFoo final {
   }
   StrictFoo& set_i(int32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::StrictFoo::Tag Which() const {
+    return ::fidl::test::union_::StrictFoo::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -475,7 +504,8 @@ class StrictFoo final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::StrictFoo::Tag::Invalid);
   union {
     ::std::string s_;
     int32_t i_;
@@ -520,10 +550,13 @@ class StrictBoundedXUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_v() const { return tag_ == Tag::kV; }
+  bool is_v() const {
+    return tag_ == ::fidl::test::union_::StrictBoundedXUnion::Tag::kV;
+  }
 
   ::std::vector<uint8_t>& v() {
-    EnsureStorageInitialized(Tag::kV);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::StrictBoundedXUnion::Tag::kV);
     return v_;
   }
 
@@ -533,7 +566,9 @@ class StrictBoundedXUnion final {
   }
   StrictBoundedXUnion& set_v(::std::vector<uint8_t> value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::StrictBoundedXUnion::Tag Which() const {
+    return ::fidl::test::union_::StrictBoundedXUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -545,7 +580,8 @@ class StrictBoundedXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::StrictBoundedXUnion::Tag::Invalid);
   union {
     ::std::vector<uint8_t> v_;
   };
@@ -591,10 +627,13 @@ class ReverseOrdinalUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_second() const { return tag_ == Tag::kSecond; }
+  bool is_second() const {
+    return tag_ == ::fidl::test::union_::ReverseOrdinalUnion::Tag::kSecond;
+  }
 
   uint32_t& second() {
-    EnsureStorageInitialized(Tag::kSecond);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::ReverseOrdinalUnion::Tag::kSecond);
     return second_;
   }
 
@@ -604,10 +643,13 @@ class ReverseOrdinalUnion final {
   }
   ReverseOrdinalUnion& set_second(uint32_t value);
 
-  bool is_first() const { return tag_ == Tag::kFirst; }
+  bool is_first() const {
+    return tag_ == ::fidl::test::union_::ReverseOrdinalUnion::Tag::kFirst;
+  }
 
   uint32_t& first() {
-    EnsureStorageInitialized(Tag::kFirst);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::ReverseOrdinalUnion::Tag::kFirst);
     return first_;
   }
 
@@ -617,7 +659,9 @@ class ReverseOrdinalUnion final {
   }
   ReverseOrdinalUnion& set_first(uint32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::ReverseOrdinalUnion::Tag Which() const {
+    return ::fidl::test::union_::ReverseOrdinalUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -629,7 +673,8 @@ class ReverseOrdinalUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::ReverseOrdinalUnion::Tag::Invalid);
   union {
     uint32_t second_;
     uint32_t first_;
@@ -724,10 +769,13 @@ class StrictPizzaOrPasta final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_pizza() const { return tag_ == Tag::kPizza; }
+  bool is_pizza() const {
+    return tag_ == ::fidl::test::union_::StrictPizzaOrPasta::Tag::kPizza;
+  }
 
   ::fidl::test::union_::Pizza& pizza() {
-    EnsureStorageInitialized(Tag::kPizza);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::StrictPizzaOrPasta::Tag::kPizza);
     return pizza_;
   }
 
@@ -737,10 +785,13 @@ class StrictPizzaOrPasta final {
   }
   StrictPizzaOrPasta& set_pizza(::fidl::test::union_::Pizza value);
 
-  bool is_pasta() const { return tag_ == Tag::kPasta; }
+  bool is_pasta() const {
+    return tag_ == ::fidl::test::union_::StrictPizzaOrPasta::Tag::kPasta;
+  }
 
   ::fidl::test::union_::Pasta& pasta() {
-    EnsureStorageInitialized(Tag::kPasta);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::StrictPizzaOrPasta::Tag::kPasta);
     return pasta_;
   }
 
@@ -750,7 +801,9 @@ class StrictPizzaOrPasta final {
   }
   StrictPizzaOrPasta& set_pasta(::fidl::test::union_::Pasta value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::StrictPizzaOrPasta::Tag Which() const {
+    return ::fidl::test::union_::StrictPizzaOrPasta::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -762,7 +815,8 @@ class StrictPizzaOrPasta final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::StrictPizzaOrPasta::Tag::Invalid);
   union {
     ::fidl::test::union_::Pizza pizza_;
     ::fidl::test::union_::Pasta pasta_;
@@ -809,10 +863,12 @@ class PizzaOrPasta final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_pizza() const { return tag_ == Tag::kPizza; }
+  bool is_pizza() const {
+    return tag_ == ::fidl::test::union_::PizzaOrPasta::Tag::kPizza;
+  }
 
   ::fidl::test::union_::Pizza& pizza() {
-    EnsureStorageInitialized(Tag::kPizza);
+    EnsureStorageInitialized(::fidl::test::union_::PizzaOrPasta::Tag::kPizza);
     return pizza_;
   }
 
@@ -822,10 +878,12 @@ class PizzaOrPasta final {
   }
   PizzaOrPasta& set_pizza(::fidl::test::union_::Pizza value);
 
-  bool is_pasta() const { return tag_ == Tag::kPasta; }
+  bool is_pasta() const {
+    return tag_ == ::fidl::test::union_::PizzaOrPasta::Tag::kPasta;
+  }
 
   ::fidl::test::union_::Pasta& pasta() {
-    EnsureStorageInitialized(Tag::kPasta);
+    EnsureStorageInitialized(::fidl::test::union_::PizzaOrPasta::Tag::kPasta);
     return pasta_;
   }
 
@@ -835,7 +893,9 @@ class PizzaOrPasta final {
   }
   PizzaOrPasta& set_pasta(::fidl::test::union_::Pasta value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::PizzaOrPasta::Tag Which() const {
+    return ::fidl::test::union_::PizzaOrPasta::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -847,7 +907,8 @@ class PizzaOrPasta final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::PizzaOrPasta::Tag::Invalid);
   union {
     ::fidl::test::union_::Pizza pizza_;
     ::fidl::test::union_::Pasta pasta_;
@@ -896,10 +957,13 @@ class FlexiblePizzaOrPasta final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_pizza() const { return tag_ == Tag::kPizza; }
+  bool is_pizza() const {
+    return tag_ == ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPizza;
+  }
 
   ::fidl::test::union_::Pizza& pizza() {
-    EnsureStorageInitialized(Tag::kPizza);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPizza);
     return pizza_;
   }
 
@@ -909,10 +973,13 @@ class FlexiblePizzaOrPasta final {
   }
   FlexiblePizzaOrPasta& set_pizza(::fidl::test::union_::Pizza value);
 
-  bool is_pasta() const { return tag_ == Tag::kPasta; }
+  bool is_pasta() const {
+    return tag_ == ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPasta;
+  }
 
   ::fidl::test::union_::Pasta& pasta() {
-    EnsureStorageInitialized(Tag::kPasta);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPasta);
     return pasta_;
   }
 
@@ -924,14 +991,14 @@ class FlexiblePizzaOrPasta final {
   FlexiblePizzaOrPasta& SetUnknownData(fidl_xunion_tag_t ordinal,
                                        std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::FlexiblePizzaOrPasta::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kPizza:
-      case Tag::kPasta:
-        return Tag(tag_);
+      case ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::Invalid:
+      case ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPizza:
+      case ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPasta:
+        return ::fidl::test::union_::FlexiblePizzaOrPasta::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kUnknown;
     }
   }
 
@@ -939,7 +1006,7 @@ class FlexiblePizzaOrPasta final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -951,7 +1018,8 @@ class FlexiblePizzaOrPasta final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::Invalid);
   union {
     ::fidl::test::union_::Pizza pizza_;
     ::fidl::test::union_::Pasta pasta_;
@@ -1000,10 +1068,13 @@ class ExplicitPizzaOrPasta final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_pizza() const { return tag_ == Tag::kPizza; }
+  bool is_pizza() const {
+    return tag_ == ::fidl::test::union_::ExplicitPizzaOrPasta::Tag::kPizza;
+  }
 
   ::fidl::test::union_::Pizza& pizza() {
-    EnsureStorageInitialized(Tag::kPizza);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::ExplicitPizzaOrPasta::Tag::kPizza);
     return pizza_;
   }
 
@@ -1013,10 +1084,13 @@ class ExplicitPizzaOrPasta final {
   }
   ExplicitPizzaOrPasta& set_pizza(::fidl::test::union_::Pizza value);
 
-  bool is_pasta() const { return tag_ == Tag::kPasta; }
+  bool is_pasta() const {
+    return tag_ == ::fidl::test::union_::ExplicitPizzaOrPasta::Tag::kPasta;
+  }
 
   ::fidl::test::union_::Pasta& pasta() {
-    EnsureStorageInitialized(Tag::kPasta);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::ExplicitPizzaOrPasta::Tag::kPasta);
     return pasta_;
   }
 
@@ -1026,7 +1100,9 @@ class ExplicitPizzaOrPasta final {
   }
   ExplicitPizzaOrPasta& set_pasta(::fidl::test::union_::Pasta value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::ExplicitPizzaOrPasta::Tag Which() const {
+    return ::fidl::test::union_::ExplicitPizzaOrPasta::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -1038,7 +1114,8 @@ class ExplicitPizzaOrPasta final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::ExplicitPizzaOrPasta::Tag::Invalid);
   union {
     ::fidl::test::union_::Pizza pizza_;
     ::fidl::test::union_::Pasta pasta_;
@@ -1088,10 +1165,12 @@ class OlderSimpleUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::union_::OlderSimpleUnion::Tag::kI;
+  }
 
   int64_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::OlderSimpleUnion::Tag::kI);
     return i_;
   }
 
@@ -1101,10 +1180,12 @@ class OlderSimpleUnion final {
   }
   OlderSimpleUnion& set_i(int64_t value);
 
-  bool is_f() const { return tag_ == Tag::kF; }
+  bool is_f() const {
+    return tag_ == ::fidl::test::union_::OlderSimpleUnion::Tag::kF;
+  }
 
   float& f() {
-    EnsureStorageInitialized(Tag::kF);
+    EnsureStorageInitialized(::fidl::test::union_::OlderSimpleUnion::Tag::kF);
     return f_;
   }
 
@@ -1116,14 +1197,14 @@ class OlderSimpleUnion final {
   OlderSimpleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
                                    std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::OlderSimpleUnion::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kI:
-      case Tag::kF:
-        return Tag(tag_);
+      case ::fidl::test::union_::OlderSimpleUnion::Tag::Invalid:
+      case ::fidl::test::union_::OlderSimpleUnion::Tag::kI:
+      case ::fidl::test::union_::OlderSimpleUnion::Tag::kF:
+        return ::fidl::test::union_::OlderSimpleUnion::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::OlderSimpleUnion::Tag::kUnknown;
     }
   }
 
@@ -1131,7 +1212,7 @@ class OlderSimpleUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::union_::OlderSimpleUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -1143,7 +1224,8 @@ class OlderSimpleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::OlderSimpleUnion::Tag::Invalid);
   union {
     int64_t i_;
     float f_;
@@ -1305,10 +1387,12 @@ class NewerSimpleUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::union_::NewerSimpleUnion::Tag::kI;
+  }
 
   int64_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::NewerSimpleUnion::Tag::kI);
     return i_;
   }
 
@@ -1318,10 +1402,12 @@ class NewerSimpleUnion final {
   }
   NewerSimpleUnion& set_i(int64_t value);
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const {
+    return tag_ == ::fidl::test::union_::NewerSimpleUnion::Tag::kS;
+  }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(::fidl::test::union_::NewerSimpleUnion::Tag::kS);
     return s_;
   }
 
@@ -1331,10 +1417,12 @@ class NewerSimpleUnion final {
   }
   NewerSimpleUnion& set_s(::std::string value);
 
-  bool is_v() const { return tag_ == Tag::kV; }
+  bool is_v() const {
+    return tag_ == ::fidl::test::union_::NewerSimpleUnion::Tag::kV;
+  }
 
   ::std::vector<::std::string>& v() {
-    EnsureStorageInitialized(Tag::kV);
+    EnsureStorageInitialized(::fidl::test::union_::NewerSimpleUnion::Tag::kV);
     return v_;
   }
 
@@ -1346,15 +1434,15 @@ class NewerSimpleUnion final {
   NewerSimpleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
                                    std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::NewerSimpleUnion::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kI:
-      case Tag::kS:
-      case Tag::kV:
-        return Tag(tag_);
+      case ::fidl::test::union_::NewerSimpleUnion::Tag::Invalid:
+      case ::fidl::test::union_::NewerSimpleUnion::Tag::kI:
+      case ::fidl::test::union_::NewerSimpleUnion::Tag::kS:
+      case ::fidl::test::union_::NewerSimpleUnion::Tag::kV:
+        return ::fidl::test::union_::NewerSimpleUnion::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::NewerSimpleUnion::Tag::kUnknown;
     }
   }
 
@@ -1362,7 +1450,7 @@ class NewerSimpleUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::union_::NewerSimpleUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -1374,7 +1462,8 @@ class NewerSimpleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::NewerSimpleUnion::Tag::Invalid);
   union {
     int64_t i_;
     ::std::string s_;
@@ -1428,10 +1517,13 @@ class FlexibleUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  bool is_Primitive() const {
+    return tag_ == ::fidl::test::union_::FlexibleUnion::Tag::kPrimitive;
+  }
 
   int32_t& Primitive() {
-    EnsureStorageInitialized(Tag::kPrimitive);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::FlexibleUnion::Tag::kPrimitive);
     return Primitive_;
   }
 
@@ -1442,11 +1534,13 @@ class FlexibleUnion final {
   FlexibleUnion& set_Primitive(int32_t value);
 
   bool is_StringNeedsConstructor() const {
-    return tag_ == Tag::kStringNeedsConstructor;
+    return tag_ ==
+           ::fidl::test::union_::FlexibleUnion::Tag::kStringNeedsConstructor;
   }
 
   ::std::string& StringNeedsConstructor() {
-    EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::FlexibleUnion::Tag::kStringNeedsConstructor);
     return StringNeedsConstructor_;
   }
 
@@ -1457,11 +1551,13 @@ class FlexibleUnion final {
   FlexibleUnion& set_StringNeedsConstructor(::std::string value);
 
   bool is_VectorStringAlsoNeedsConstructor() const {
-    return tag_ == Tag::kVectorStringAlsoNeedsConstructor;
+    return tag_ == ::fidl::test::union_::FlexibleUnion::Tag::
+                       kVectorStringAlsoNeedsConstructor;
   }
 
   ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() {
-    EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+    EnsureStorageInitialized(::fidl::test::union_::FlexibleUnion::Tag::
+                                 kVectorStringAlsoNeedsConstructor);
     return VectorStringAlsoNeedsConstructor_;
   }
 
@@ -1474,15 +1570,16 @@ class FlexibleUnion final {
   FlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
                                 std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::FlexibleUnion::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kPrimitive:
-      case Tag::kStringNeedsConstructor:
-      case Tag::kVectorStringAlsoNeedsConstructor:
-        return Tag(tag_);
+      case ::fidl::test::union_::FlexibleUnion::Tag::Invalid:
+      case ::fidl::test::union_::FlexibleUnion::Tag::kPrimitive:
+      case ::fidl::test::union_::FlexibleUnion::Tag::kStringNeedsConstructor:
+      case ::fidl::test::union_::FlexibleUnion::Tag::
+          kVectorStringAlsoNeedsConstructor:
+        return ::fidl::test::union_::FlexibleUnion::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::FlexibleUnion::Tag::kUnknown;
     }
   }
 
@@ -1490,7 +1587,7 @@ class FlexibleUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::union_::FlexibleUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -1502,7 +1599,8 @@ class FlexibleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::FlexibleUnion::Tag::Invalid);
   union {
     int32_t Primitive_;
     ::std::string StringNeedsConstructor_;
@@ -1553,10 +1651,12 @@ class FlexibleFoo final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const {
+    return tag_ == ::fidl::test::union_::FlexibleFoo::Tag::kS;
+  }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(::fidl::test::union_::FlexibleFoo::Tag::kS);
     return s_;
   }
 
@@ -1566,10 +1666,12 @@ class FlexibleFoo final {
   }
   FlexibleFoo& set_s(::std::string value);
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::union_::FlexibleFoo::Tag::kI;
+  }
 
   int32_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::FlexibleFoo::Tag::kI);
     return i_;
   }
 
@@ -1581,14 +1683,14 @@ class FlexibleFoo final {
   FlexibleFoo& SetUnknownData(fidl_xunion_tag_t ordinal,
                               std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::FlexibleFoo::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kS:
-      case Tag::kI:
-        return Tag(tag_);
+      case ::fidl::test::union_::FlexibleFoo::Tag::Invalid:
+      case ::fidl::test::union_::FlexibleFoo::Tag::kS:
+      case ::fidl::test::union_::FlexibleFoo::Tag::kI:
+        return ::fidl::test::union_::FlexibleFoo::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::FlexibleFoo::Tag::kUnknown;
     }
   }
 
@@ -1596,7 +1698,7 @@ class FlexibleFoo final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::union_::FlexibleFoo::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -1608,7 +1710,8 @@ class FlexibleFoo final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::FlexibleFoo::Tag::Invalid);
   union {
     ::std::string s_;
     int32_t i_;
@@ -1655,11 +1758,13 @@ class FieldCollision final {
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_field_collision_tag() const {
-    return tag_ == Tag::kFieldCollisionTag;
+    return tag_ ==
+           ::fidl::test::union_::FieldCollision::Tag::kFieldCollisionTag;
   }
 
   int32_t& field_collision_tag() {
-    EnsureStorageInitialized(Tag::kFieldCollisionTag);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::FieldCollision::Tag::kFieldCollisionTag);
     return field_collision_tag_;
   }
 
@@ -1669,7 +1774,9 @@ class FieldCollision final {
   }
   FieldCollision& set_field_collision_tag(int32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::FieldCollision::Tag Which() const {
+    return ::fidl::test::union_::FieldCollision::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -1681,7 +1788,8 @@ class FieldCollision final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::FieldCollision::Tag::Invalid);
   union {
     int32_t field_collision_tag_;
   };
@@ -1729,10 +1837,12 @@ class ExplicitXUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::union_::ExplicitXUnion::Tag::kI;
+  }
 
   int64_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::ExplicitXUnion::Tag::kI);
     return i_;
   }
 
@@ -1742,10 +1852,12 @@ class ExplicitXUnion final {
   }
   ExplicitXUnion& set_i(int64_t value);
 
-  bool is_f() const { return tag_ == Tag::kF; }
+  bool is_f() const {
+    return tag_ == ::fidl::test::union_::ExplicitXUnion::Tag::kF;
+  }
 
   float& f() {
-    EnsureStorageInitialized(Tag::kF);
+    EnsureStorageInitialized(::fidl::test::union_::ExplicitXUnion::Tag::kF);
     return f_;
   }
 
@@ -1757,14 +1869,14 @@ class ExplicitXUnion final {
   ExplicitXUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
                                  std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::ExplicitXUnion::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kI:
-      case Tag::kF:
-        return Tag(tag_);
+      case ::fidl::test::union_::ExplicitXUnion::Tag::Invalid:
+      case ::fidl::test::union_::ExplicitXUnion::Tag::kI:
+      case ::fidl::test::union_::ExplicitXUnion::Tag::kF:
+        return ::fidl::test::union_::ExplicitXUnion::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::ExplicitXUnion::Tag::kUnknown;
     }
   }
 
@@ -1772,7 +1884,7 @@ class ExplicitXUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::union_::ExplicitXUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -1784,7 +1896,8 @@ class ExplicitXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::ExplicitXUnion::Tag::Invalid);
   union {
     int64_t i_;
     float f_;
@@ -1832,10 +1945,13 @@ class ExplicitUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  bool is_Primitive() const {
+    return tag_ == ::fidl::test::union_::ExplicitUnion::Tag::kPrimitive;
+  }
 
   int32_t& Primitive() {
-    EnsureStorageInitialized(Tag::kPrimitive);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::ExplicitUnion::Tag::kPrimitive);
     return Primitive_;
   }
 
@@ -1846,11 +1962,13 @@ class ExplicitUnion final {
   ExplicitUnion& set_Primitive(int32_t value);
 
   bool is_StringNeedsConstructor() const {
-    return tag_ == Tag::kStringNeedsConstructor;
+    return tag_ ==
+           ::fidl::test::union_::ExplicitUnion::Tag::kStringNeedsConstructor;
   }
 
   ::std::string& StringNeedsConstructor() {
-    EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::ExplicitUnion::Tag::kStringNeedsConstructor);
     return StringNeedsConstructor_;
   }
 
@@ -1860,7 +1978,9 @@ class ExplicitUnion final {
   }
   ExplicitUnion& set_StringNeedsConstructor(::std::string value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::ExplicitUnion::Tag Which() const {
+    return ::fidl::test::union_::ExplicitUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -1872,7 +1992,8 @@ class ExplicitUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::ExplicitUnion::Tag::Invalid);
   union {
     int32_t Primitive_;
     ::std::string StringNeedsConstructor_;
@@ -1919,10 +2040,12 @@ class ExplicitStrictFoo final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const {
+    return tag_ == ::fidl::test::union_::ExplicitStrictFoo::Tag::kS;
+  }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(::fidl::test::union_::ExplicitStrictFoo::Tag::kS);
     return s_;
   }
 
@@ -1932,10 +2055,12 @@ class ExplicitStrictFoo final {
   }
   ExplicitStrictFoo& set_s(::std::string value);
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::union_::ExplicitStrictFoo::Tag::kI;
+  }
 
   int32_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::ExplicitStrictFoo::Tag::kI);
     return i_;
   }
 
@@ -1945,7 +2070,9 @@ class ExplicitStrictFoo final {
   }
   ExplicitStrictFoo& set_i(int32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::union_::ExplicitStrictFoo::Tag Which() const {
+    return ::fidl::test::union_::ExplicitStrictFoo::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -1957,7 +2084,8 @@ class ExplicitStrictFoo final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::ExplicitStrictFoo::Tag::Invalid);
   union {
     ::std::string s_;
     int32_t i_;
@@ -2006,10 +2134,12 @@ class ExplicitFoo final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const {
+    return tag_ == ::fidl::test::union_::ExplicitFoo::Tag::kS;
+  }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(::fidl::test::union_::ExplicitFoo::Tag::kS);
     return s_;
   }
 
@@ -2019,10 +2149,12 @@ class ExplicitFoo final {
   }
   ExplicitFoo& set_s(::std::string value);
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::union_::ExplicitFoo::Tag::kI;
+  }
 
   int32_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(::fidl::test::union_::ExplicitFoo::Tag::kI);
     return i_;
   }
 
@@ -2034,14 +2166,14 @@ class ExplicitFoo final {
   ExplicitFoo& SetUnknownData(fidl_xunion_tag_t ordinal,
                               std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::ExplicitFoo::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kS:
-      case Tag::kI:
-        return Tag(tag_);
+      case ::fidl::test::union_::ExplicitFoo::Tag::Invalid:
+      case ::fidl::test::union_::ExplicitFoo::Tag::kS:
+      case ::fidl::test::union_::ExplicitFoo::Tag::kI:
+        return ::fidl::test::union_::ExplicitFoo::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::ExplicitFoo::Tag::kUnknown;
     }
   }
 
@@ -2049,7 +2181,7 @@ class ExplicitFoo final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::union_::ExplicitFoo::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -2061,7 +2193,8 @@ class ExplicitFoo final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::ExplicitFoo::Tag::Invalid);
   union {
     ::std::string s_;
     int32_t i_;
@@ -2133,10 +2266,14 @@ class XUnionContainingEmptyStruct final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_empty() const { return tag_ == Tag::kEmpty; }
+  bool is_empty() const {
+    return tag_ ==
+           ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::kEmpty;
+  }
 
   ::fidl::test::union_::Empty& empty() {
-    EnsureStorageInitialized(Tag::kEmpty);
+    EnsureStorageInitialized(
+        ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::kEmpty);
     return empty_;
   }
 
@@ -2148,13 +2285,13 @@ class XUnionContainingEmptyStruct final {
   XUnionContainingEmptyStruct& SetUnknownData(fidl_xunion_tag_t ordinal,
                                               std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::union_::XUnionContainingEmptyStruct::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kEmpty:
-        return Tag(tag_);
+      case ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::Invalid:
+      case ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::kEmpty:
+        return ::fidl::test::union_::XUnionContainingEmptyStruct::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::kUnknown;
     }
   }
 
@@ -2162,7 +2299,8 @@ class XUnionContainingEmptyStruct final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() !=
+        ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -2174,7 +2312,8 @@ class XUnionContainingEmptyStruct final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::Invalid);
   union {
     ::fidl::test::union_::Empty empty_;
     std::vector<uint8_t> unknown_data_;

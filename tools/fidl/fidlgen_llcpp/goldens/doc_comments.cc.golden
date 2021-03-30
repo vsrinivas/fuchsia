@@ -232,13 +232,15 @@ zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
 }
 
 #endif
-auto ::fidl_test_doccomments::wire::FlexibleUnion::which() const -> Tag {
+auto ::fidl_test_doccomments::wire::FlexibleUnion::which() const
+    -> ::fidl_test_doccomments::wire::FlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kField:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField:
+      return static_cast<::fidl_test_doccomments::wire::FlexibleUnion::Tag>(
+          ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_doccomments::wire::FlexibleUnion::Tag::kUnknown;
   }
 }
 

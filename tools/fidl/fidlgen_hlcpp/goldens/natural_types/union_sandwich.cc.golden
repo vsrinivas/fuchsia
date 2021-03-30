@@ -21,10 +21,11 @@ UnionSize8Alignment4::~UnionSize8Alignment4() { Destroy(); }
 UnionSize8Alignment4::UnionSize8Alignment4(UnionSize8Alignment4&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant:
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid):
       break;
   }
 }
@@ -35,10 +36,11 @@ UnionSize8Alignment4& UnionSize8Alignment4::operator=(
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant:
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid):
         break;
     }
   }
@@ -60,7 +62,7 @@ void UnionSize8Alignment4::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kVariant: {
+    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &variant_, envelope_offset);
@@ -88,8 +90,8 @@ void UnionSize8Alignment4::Decode(::fidl::Decoder* decoder,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid));
     return;
   }
 
@@ -98,7 +100,7 @@ void UnionSize8Alignment4::Decode(::fidl::Decoder* decoder,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant:
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
     default:
@@ -110,9 +112,9 @@ zx_status_t UnionSize8Alignment4::Clone(UnionSize8Alignment4* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid:
       return ZX_OK;
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant:
       return ::fidl::Clone(variant_, &result->variant_);
     default:
       return ZX_OK;
@@ -120,20 +122,22 @@ zx_status_t UnionSize8Alignment4::Clone(UnionSize8Alignment4* result) const {
 }
 
 UnionSize8Alignment4& UnionSize8Alignment4::set_variant(uint32_t value) {
-  EnsureStorageInitialized(Tag::kVariant);
+  EnsureStorageInitialized(
+      ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
 
 void UnionSize8Alignment4::Destroy() {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant:
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid);
 }
 
 void UnionSize8Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -141,9 +145,10 @@ void UnionSize8Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid):
         break;
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant:
         new (&variant_) uint32_t();
         break;
       default:
@@ -206,11 +211,12 @@ UnionSize36Alignment4::~UnionSize36Alignment4() { Destroy(); }
 UnionSize36Alignment4::UnionSize36Alignment4(UnionSize36Alignment4&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
       new (&variant_)::std::array<uint8_t, 32>();
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
       break;
   }
 }
@@ -221,11 +227,12 @@ UnionSize36Alignment4& UnionSize36Alignment4::operator=(
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
         new (&variant_)::std::array<uint8_t, 32>();
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
         break;
     }
   }
@@ -248,7 +255,7 @@ void UnionSize36Alignment4::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kVariant: {
+    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint8_t, 32>,
                                                     ::fidl::Encoder>(encoder));
@@ -278,8 +285,8 @@ void UnionSize36Alignment4::Decode(::fidl::Decoder* decoder,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid));
     return;
   }
 
@@ -288,7 +295,7 @@ void UnionSize36Alignment4::Decode(::fidl::Decoder* decoder,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
       new (&value->variant_)::std::array<uint8_t, 32>();
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
@@ -301,9 +308,9 @@ zx_status_t UnionSize36Alignment4::Clone(UnionSize36Alignment4* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid:
       return ZX_OK;
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
       new (&result->variant_)::std::array<uint8_t, 32>();
       return ::fidl::Clone(variant_, &result->variant_);
     default:
@@ -313,21 +320,23 @@ zx_status_t UnionSize36Alignment4::Clone(UnionSize36Alignment4* result) const {
 
 UnionSize36Alignment4& UnionSize36Alignment4::set_variant(
     ::std::array<uint8_t, 32> value) {
-  EnsureStorageInitialized(Tag::kVariant);
+  EnsureStorageInitialized(
+      ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
 
 void UnionSize36Alignment4::Destroy() {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
       variant_.~decltype(variant_)();
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid);
 }
 
 void UnionSize36Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -335,9 +344,10 @@ void UnionSize36Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
         break;
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
         new (&variant_)::std::array<uint8_t, 32>();
         break;
       default:
@@ -400,11 +410,12 @@ UnionSize12Alignment4::~UnionSize12Alignment4() { Destroy(); }
 UnionSize12Alignment4::UnionSize12Alignment4(UnionSize12Alignment4&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant:
       new (&variant_)::std::array<uint8_t, 6>();
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid):
       break;
   }
 }
@@ -415,11 +426,12 @@ UnionSize12Alignment4& UnionSize12Alignment4::operator=(
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant:
         new (&variant_)::std::array<uint8_t, 6>();
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid):
         break;
     }
   }
@@ -442,7 +454,7 @@ void UnionSize12Alignment4::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kVariant: {
+    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::std::array<uint8_t, 6>, ::fidl::Encoder>(
               encoder));
@@ -472,8 +484,8 @@ void UnionSize12Alignment4::Decode(::fidl::Decoder* decoder,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid));
     return;
   }
 
@@ -482,7 +494,7 @@ void UnionSize12Alignment4::Decode(::fidl::Decoder* decoder,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant:
       new (&value->variant_)::std::array<uint8_t, 6>();
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
@@ -495,9 +507,9 @@ zx_status_t UnionSize12Alignment4::Clone(UnionSize12Alignment4* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid:
       return ZX_OK;
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant:
       new (&result->variant_)::std::array<uint8_t, 6>();
       return ::fidl::Clone(variant_, &result->variant_);
     default:
@@ -507,21 +519,23 @@ zx_status_t UnionSize12Alignment4::Clone(UnionSize12Alignment4* result) const {
 
 UnionSize12Alignment4& UnionSize12Alignment4::set_variant(
     ::std::array<uint8_t, 6> value) {
-  EnsureStorageInitialized(Tag::kVariant);
+  EnsureStorageInitialized(
+      ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
 
 void UnionSize12Alignment4::Destroy() {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant:
       variant_.~decltype(variant_)();
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid);
 }
 
 void UnionSize12Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -529,9 +543,10 @@ void UnionSize12Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid):
         break;
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant:
         new (&variant_)::std::array<uint8_t, 6>();
         break;
       default:
@@ -632,11 +647,12 @@ UnionSize24Alignment8::~UnionSize24Alignment8() { Destroy(); }
 UnionSize24Alignment8::UnionSize24Alignment8(UnionSize24Alignment8&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant:
       new (&variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid):
       break;
   }
 }
@@ -647,11 +663,12 @@ UnionSize24Alignment8& UnionSize24Alignment8::operator=(
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant:
         new (&variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid):
         break;
     }
   }
@@ -674,7 +691,7 @@ void UnionSize24Alignment8::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kVariant: {
+    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<
                          ::fidl::test::unionsandwich::StructSize16Alignment8,
@@ -705,8 +722,8 @@ void UnionSize24Alignment8::Decode(::fidl::Decoder* decoder,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid));
     return;
   }
 
@@ -715,7 +732,7 @@ void UnionSize24Alignment8::Decode(::fidl::Decoder* decoder,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant:
       new (
           &value
                ->variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
@@ -730,9 +747,9 @@ zx_status_t UnionSize24Alignment8::Clone(UnionSize24Alignment8* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid:
       return ZX_OK;
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant:
       new (
           &result
                ->variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
@@ -744,21 +761,23 @@ zx_status_t UnionSize24Alignment8::Clone(UnionSize24Alignment8* result) const {
 
 UnionSize24Alignment8& UnionSize24Alignment8::set_variant(
     ::fidl::test::unionsandwich::StructSize16Alignment8 value) {
-  EnsureStorageInitialized(Tag::kVariant);
+  EnsureStorageInitialized(
+      ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
 
 void UnionSize24Alignment8::Destroy() {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant:
       variant_.~decltype(variant_)();
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid);
 }
 
 void UnionSize24Alignment8::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -766,9 +785,10 @@ void UnionSize24Alignment8::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid):
         break;
-      case Tag::kVariant:
+      case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant:
         new (&variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
         break;
       default:

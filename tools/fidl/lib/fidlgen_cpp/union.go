@@ -15,13 +15,18 @@ type Union struct {
 	fidlgen.Strictness
 	fidlgen.Resourceness
 	NameVariants
-	CodingTableType string
-	Members         []UnionMember
-	InlineSize      int
-	MaxHandles      int
-	MaxOutOfLine    int
-	Result          *Result
-	HasPointer      bool
+	CodingTableType    string
+	TagEnum            NameVariants
+	TagUnknown         NameVariants
+	TagInvalid         NameVariants
+	WireOrdinalEnum    Name
+	WireInvalidOrdinal Name
+	Members            []UnionMember
+	InlineSize         int
+	MaxHandles         int
+	MaxOutOfLine       int
+	Result             *Result
+	HasPointer         bool
 }
 
 func (Union) Kind() declKind {
@@ -36,7 +41,8 @@ type UnionMember struct {
 	Type              Type
 	Name              string
 	StorageName       string
-	TagName           string
+	TagName           NameVariants
+	WireOrdinalName   Name
 	Offset            int
 	HandleInformation *HandleInformation
 }
@@ -48,53 +54,57 @@ func (um UnionMember) UpperCamelCaseName() string {
 func (um UnionMember) NameAndType() (string, Type) {
 	return um.Name, um.Type
 }
-
-func (c *compiler) compileUnionMember(val fidlgen.UnionMember) UnionMember {
-	n := changeIfReserved(val.Name)
-	return UnionMember{
-		Attributes:        val.Attributes,
-		Ordinal:           uint64(val.Ordinal),
-		Type:              c.compileType(val.Type),
-		Name:              n,
-		StorageName:       changeIfReserved(val.Name + "_"),
-		TagName:           fmt.Sprintf("k%s", fidlgen.ToUpperCamelCase(n)),
-		Offset:            val.Offset,
-		HandleInformation: c.fieldHandleInformation(&val.Type),
-	}
-}
-
 func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
-	r := Union{
-		Attributes:      val.Attributes,
-		Strictness:      val.Strictness,
-		Resourceness:    val.Resourceness,
-		NameVariants:    name,
-		CodingTableType: codingTableType,
-		InlineSize:      val.TypeShapeV1.InlineSize,
-		MaxHandles:      val.TypeShapeV1.MaxHandles,
-		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
-		HasPointer:      val.TypeShapeV1.Depth > 0,
+	tagEnum := name.Nest("Tag")
+	wireOrdinalEnum := name.Wire.Nest("Ordinal")
+	u := Union{
+		Attributes:         val.Attributes,
+		Strictness:         val.Strictness,
+		Resourceness:       val.Resourceness,
+		NameVariants:       name,
+		CodingTableType:    codingTableType,
+		TagEnum:            tagEnum,
+		TagUnknown:         tagEnum.Nest("kUnknown"),
+		TagInvalid:         tagEnum.Nest("Invalid"),
+		WireOrdinalEnum:    wireOrdinalEnum,
+		WireInvalidOrdinal: wireOrdinalEnum.Nest("Invalid"),
+		InlineSize:         val.TypeShapeV1.InlineSize,
+		MaxHandles:         val.TypeShapeV1.MaxHandles,
+		MaxOutOfLine:       val.TypeShapeV1.MaxOutOfLine,
+		HasPointer:         val.TypeShapeV1.Depth > 0,
 	}
 
-	for _, v := range val.Members {
-		if v.Reserved {
+	for _, mem := range val.Members {
+		if mem.Reserved {
 			continue
 		}
-		r.Members = append(r.Members, c.compileUnionMember(v))
+		n := changeIfReserved(mem.Name)
+		t := fmt.Sprintf("k%s", fidlgen.ToUpperCamelCase(n))
+		u.Members = append(u.Members, UnionMember{
+			Attributes:        mem.Attributes,
+			Ordinal:           uint64(mem.Ordinal),
+			Type:              c.compileType(mem.Type),
+			Name:              n,
+			StorageName:       changeIfReserved(mem.Name + "_"),
+			TagName:           u.TagEnum.Nest(t),
+			WireOrdinalName:   u.WireOrdinalEnum.Nest(t),
+			Offset:            mem.Offset,
+			HandleInformation: c.fieldHandleInformation(&mem.Type),
+		})
 	}
 
 	if val.MethodResult != nil {
 		result := Result{
-			ResultDecl:      r.NameVariants,
-			ValueStructDecl: r.Members[0].Type.NameVariants,
-			ErrorDecl:       r.Members[1].Type.NameVariants,
+			ResultDecl:      u.NameVariants,
+			ValueStructDecl: u.Members[0].Type.NameVariants,
+			ErrorDecl:       u.Members[1].Type.NameVariants,
 		}
 		c.resultForStruct[val.MethodResult.ValueType.Identifier] = &result
 		c.resultForUnion[val.Name] = &result
-		r.Result = &result
+		u.Result = &result
 	}
 
-	return r
+	return u
 }

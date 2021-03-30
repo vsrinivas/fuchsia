@@ -64,10 +64,13 @@ class UnionWithHandle final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_h() const { return tag_ == Tag::kH; }
+  bool is_h() const {
+    return tag_ == ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH;
+  }
 
   ::zx::vmo& h() {
-    EnsureStorageInitialized(Tag::kH);
+    EnsureStorageInitialized(
+        ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH);
     return h_;
   }
 
@@ -80,13 +83,13 @@ class UnionWithHandle final {
                                   std::vector<uint8_t> bytes,
                                   std::vector<zx::handle> handles);
 
-  Tag Which() const {
+  ::fidl::test::handlesintypes::UnionWithHandle::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kH:
-        return Tag(tag_);
+      case ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid:
+      case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
+        return ::fidl::test::handlesintypes::UnionWithHandle::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::handlesintypes::UnionWithHandle::Tag::kUnknown;
     }
   }
 
@@ -94,13 +97,15 @@ class UnionWithHandle final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() !=
+        ::fidl::test::handlesintypes::UnionWithHandle::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_.bytes;
   }
   const std::vector<zx::handle>* UnknownHandles() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() !=
+        ::fidl::test::handlesintypes::UnionWithHandle::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_.handles;
@@ -112,7 +117,8 @@ class UnionWithHandle final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid);
   union {
     ::zx::vmo h_;
     ::fidl::UnknownData unknown_data_;

@@ -59,10 +59,14 @@ class UnionSize8Alignment4 final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const {
+    return tag_ ==
+           ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant;
+  }
 
   uint32_t& variant() {
-    EnsureStorageInitialized(Tag::kVariant);
+    EnsureStorageInitialized(
+        ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant);
     return variant_;
   }
 
@@ -72,7 +76,9 @@ class UnionSize8Alignment4 final {
   }
   UnionSize8Alignment4& set_variant(uint32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag Which() const {
+    return ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -84,7 +90,8 @@ class UnionSize8Alignment4 final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid);
   union {
     uint32_t variant_;
   };
@@ -160,10 +167,14 @@ class UnionSize36Alignment4 final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const {
+    return tag_ ==
+           ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant;
+  }
 
   ::std::array<uint8_t, 32>& variant() {
-    EnsureStorageInitialized(Tag::kVariant);
+    EnsureStorageInitialized(
+        ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant);
     return variant_;
   }
 
@@ -173,7 +184,9 @@ class UnionSize36Alignment4 final {
   }
   UnionSize36Alignment4& set_variant(::std::array<uint8_t, 32> value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag Which() const {
+    return ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -185,7 +198,8 @@ class UnionSize36Alignment4 final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid);
   union {
     ::std::array<uint8_t, 32> variant_;
   };
@@ -261,10 +275,14 @@ class UnionSize12Alignment4 final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const {
+    return tag_ ==
+           ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant;
+  }
 
   ::std::array<uint8_t, 6>& variant() {
-    EnsureStorageInitialized(Tag::kVariant);
+    EnsureStorageInitialized(
+        ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant);
     return variant_;
   }
 
@@ -274,7 +292,9 @@ class UnionSize12Alignment4 final {
   }
   UnionSize12Alignment4& set_variant(::std::array<uint8_t, 6> value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag Which() const {
+    return ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -286,7 +306,8 @@ class UnionSize12Alignment4 final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid);
   union {
     ::std::array<uint8_t, 6> variant_;
   };
@@ -391,10 +412,14 @@ class UnionSize24Alignment8 final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const {
+    return tag_ ==
+           ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant;
+  }
 
   ::fidl::test::unionsandwich::StructSize16Alignment8& variant() {
-    EnsureStorageInitialized(Tag::kVariant);
+    EnsureStorageInitialized(
+        ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant);
     return variant_;
   }
 
@@ -405,7 +430,9 @@ class UnionSize24Alignment8 final {
   UnionSize24Alignment8& set_variant(
       ::fidl::test::unionsandwich::StructSize16Alignment8 value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag Which() const {
+    return ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -417,7 +444,8 @@ class UnionSize24Alignment8 final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid);
   union {
     ::fidl::test::unionsandwich::StructSize16Alignment8 variant_;
   };

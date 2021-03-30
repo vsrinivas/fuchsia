@@ -161,7 +161,10 @@ extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
 
 class ExampleXUnion {
  public:
-  ExampleXUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+  ExampleXUnion()
+      : ordinal_(::fidl_test_placementofattributes::wire::ExampleXUnion::
+                     Ordinal::Invalid),
+        envelope_{} {}
 
   ExampleXUnion(ExampleXUnion&&) = default;
   ExampleXUnion& operator=(ExampleXUnion&&) = default;
@@ -171,9 +174,15 @@ class ExampleXUnion {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleXUnion::
+                           Ordinal::Invalid;
+  }
 
-  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
+  bool is_variant() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleXUnion::
+                           Ordinal::kVariant;
+  }
 
   static ExampleXUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
     ExampleXUnion result;
@@ -191,27 +200,31 @@ class ExampleXUnion {
   }
 
   void set_variant(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = Ordinal::kVariant;
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
+        kVariant;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
   void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kVariant;
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
+        kVariant;
     set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleXUnion::Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& variant() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleXUnion::Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
-  Tag which() const;
+  ::fidl_test_placementofattributes::wire::ExampleXUnion::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_placementofattributes_ExampleXUnionTable;
@@ -227,7 +240,7 @@ class ExampleXUnion {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
+  ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
@@ -236,7 +249,10 @@ extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
 
 class ExampleUnion {
  public:
-  ExampleUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+  ExampleUnion()
+      : ordinal_(::fidl_test_placementofattributes::wire::ExampleUnion::
+                     Ordinal::Invalid),
+        envelope_{} {}
 
   ExampleUnion(ExampleUnion&&) = default;
   ExampleUnion& operator=(ExampleUnion&&) = default;
@@ -245,9 +261,15 @@ class ExampleUnion {
     kVariant = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleUnion::
+                           Ordinal::Invalid;
+  }
 
-  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
+  bool is_variant() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleUnion::
+                           Ordinal::kVariant;
+  }
 
   static ExampleUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
     ExampleUnion result;
@@ -265,29 +287,34 @@ class ExampleUnion {
   }
 
   void set_variant(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = Ordinal::kVariant;
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
+        kVariant;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
   void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kVariant;
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
+        kVariant;
     set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleUnion::Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& variant() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleUnion::Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
-  Tag which() const {
+  ::fidl_test_placementofattributes::wire::ExampleUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<
+        ::fidl_test_placementofattributes::wire::ExampleUnion::Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
@@ -304,7 +331,7 @@ class ExampleUnion {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
+  ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };

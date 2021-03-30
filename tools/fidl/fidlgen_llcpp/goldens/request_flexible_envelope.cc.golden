@@ -12,14 +12,17 @@ void ::fidl_test_requestflexibleenvelope::wire::StrictFoo::
                 offsetof(fidl_xunion_t, envelope));
 }
 auto ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::which() const
-    -> Tag {
+    -> ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kS:
-    case Ordinal::kI:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS:
+    case ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI:
+      return static_cast<
+          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Tag>(
+          ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Tag::
+          kUnknown;
   }
 }
 

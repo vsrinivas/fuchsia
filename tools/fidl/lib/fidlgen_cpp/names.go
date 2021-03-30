@@ -173,6 +173,18 @@ func (dn NameVariants) Name() string {
 	panic("not reached")
 }
 
+func (dn NameVariants) Self() string {
+	switch currentVariant {
+	case noVariant:
+		fidlgen.TemplateFatalf("Called NameVariants.Self() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+	case naturalVariant:
+		return dn.Natural.Self()
+	case wireVariant:
+		return dn.Wire.Self()
+	}
+	panic("not reached")
+}
+
 func (dn NameVariants) Namespace() Namespace {
 	switch currentVariant {
 	case noVariant:
@@ -212,6 +224,14 @@ func (dn NameVariants) AppendNamespace(c string) NameVariants {
 		Natural: dn.Natural.AppendNamespace(c),
 		Unified: dn.Unified.AppendNamespace(c),
 		Wire:    dn.Wire.AppendNamespace(c),
+	}
+}
+
+// Nest returns a new name for a class nested inside the existing name.
+func (dn NameVariants) Nest(c string) NameVariants {
+	return NameVariants{
+		Natural: dn.Natural.Nest(c),
+		Wire:    dn.Wire.Nest(c),
 	}
 }
 

@@ -76,15 +76,19 @@ WithErrorSyntax_ResponseAsStruct_Result::
         WithErrorSyntax_ResponseAsStruct_Result&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kResponse:
       new (&response_)::fidl::test::protocols::
           WithErrorSyntax_ResponseAsStruct_Response();
       response_ = std::move(other.response_);
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kErr:
       err_ = std::move(other.err_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+            Invalid):
       break;
   }
 }
@@ -96,15 +100,19 @@ WithErrorSyntax_ResponseAsStruct_Result::operator=(
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+          Tag::kResponse:
         new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ResponseAsStruct_Response();
         response_ = std::move(other.response_);
         break;
-      case Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+          Tag::kErr:
         err_ = std::move(other.err_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+              Tag::Invalid):
         break;
     }
   }
@@ -134,7 +142,8 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kResponse: {
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kResponse: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<
                          ::fidl::test::protocols::
@@ -143,7 +152,8 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
-    case Tag::kErr: {
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kErr: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &err_, envelope_offset);
@@ -172,8 +182,9 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+            Invalid));
     return;
   }
 
@@ -182,12 +193,14 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kResponse:
       new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ResponseAsStruct_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kErr:
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
     default:
@@ -200,13 +213,16 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Result::Clone(
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        Invalid:
       return ZX_OK;
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kResponse:
       new (&result->response_)::fidl::test::protocols::
           WithErrorSyntax_ResponseAsStruct_Response();
       return ::fidl::Clone(response_, &result->response_);
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kErr:
       return ::fidl::Clone(err_, &result->err_);
     default:
       return ZX_OK;
@@ -216,30 +232,38 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Result::Clone(
 WithErrorSyntax_ResponseAsStruct_Result&
 WithErrorSyntax_ResponseAsStruct_Result::set_response(
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response value) {
-  EnsureStorageInitialized(Tag::kResponse);
+  EnsureStorageInitialized(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+          kResponse);
   response_ = std::move(value);
   return *this;
 }
 
 WithErrorSyntax_ResponseAsStruct_Result&
 WithErrorSyntax_ResponseAsStruct_Result::set_err(uint32_t value) {
-  EnsureStorageInitialized(Tag::kErr);
+  EnsureStorageInitialized(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+          kErr);
   err_ = std::move(value);
   return *this;
 }
 
 void WithErrorSyntax_ResponseAsStruct_Result::Destroy() {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kResponse:
       response_.~decltype(response_)();
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        kErr:
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+          Invalid);
 }
 
 void WithErrorSyntax_ResponseAsStruct_Result::EnsureStorageInitialized(
@@ -248,13 +272,17 @@ void WithErrorSyntax_ResponseAsStruct_Result::EnsureStorageInitialized(
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+              Tag::Invalid):
         break;
-      case Tag::kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+          Tag::kResponse:
         new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ResponseAsStruct_Response();
         break;
-      case Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+          Tag::kErr:
         new (&err_) uint32_t();
         break;
       default:
@@ -320,15 +348,19 @@ WithErrorSyntax_ErrorAsPrimitive_Result::
         WithErrorSyntax_ErrorAsPrimitive_Result&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kResponse:
       new (&response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsPrimitive_Response();
       response_ = std::move(other.response_);
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kErr:
       err_ = std::move(other.err_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+            Invalid):
       break;
   }
 }
@@ -340,15 +372,19 @@ WithErrorSyntax_ErrorAsPrimitive_Result::operator=(
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+          Tag::kResponse:
         new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ErrorAsPrimitive_Response();
         response_ = std::move(other.response_);
         break;
-      case Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+          Tag::kErr:
         err_ = std::move(other.err_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+              Tag::Invalid):
         break;
     }
   }
@@ -378,7 +414,8 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kResponse: {
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kResponse: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<
                          ::fidl::test::protocols::
@@ -387,7 +424,8 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
-    case Tag::kErr: {
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kErr: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &err_, envelope_offset);
@@ -416,8 +454,9 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+            Invalid));
     return;
   }
 
@@ -426,12 +465,14 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kResponse:
       new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsPrimitive_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kErr:
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
     default:
@@ -444,13 +485,16 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Result::Clone(
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        Invalid:
       return ZX_OK;
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kResponse:
       new (&result->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsPrimitive_Response();
       return ::fidl::Clone(response_, &result->response_);
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kErr:
       return ::fidl::Clone(err_, &result->err_);
     default:
       return ZX_OK;
@@ -460,30 +504,38 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Result::Clone(
 WithErrorSyntax_ErrorAsPrimitive_Result&
 WithErrorSyntax_ErrorAsPrimitive_Result::set_response(
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response value) {
-  EnsureStorageInitialized(Tag::kResponse);
+  EnsureStorageInitialized(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+          kResponse);
   response_ = std::move(value);
   return *this;
 }
 
 WithErrorSyntax_ErrorAsPrimitive_Result&
 WithErrorSyntax_ErrorAsPrimitive_Result::set_err(uint32_t value) {
-  EnsureStorageInitialized(Tag::kErr);
+  EnsureStorageInitialized(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+          kErr);
   err_ = std::move(value);
   return *this;
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kResponse:
       response_.~decltype(response_)();
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        kErr:
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+          Invalid);
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::EnsureStorageInitialized(
@@ -492,13 +544,17 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::EnsureStorageInitialized(
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+              Tag::Invalid):
         break;
-      case Tag::kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+          Tag::kResponse:
         new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ErrorAsPrimitive_Response();
         break;
-      case Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+          Tag::kErr:
         new (&err_) uint32_t();
         break;
       default:
@@ -559,16 +615,19 @@ WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result(
     WithErrorSyntax_ErrorAsEnum_Result&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        kResponse:
       new (&response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsEnum_Response();
       response_ = std::move(other.response_);
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
       new (&err_)::fidl::test::protocols::ErrorEnun();
       err_ = std::move(other.err_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+            Invalid):
       break;
   }
 }
@@ -580,16 +639,20 @@ WithErrorSyntax_ErrorAsEnum_Result::operator=(
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          kResponse:
         new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ErrorAsEnum_Response();
         response_ = std::move(other.response_);
         break;
-      case Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          kErr:
         new (&err_)::fidl::test::protocols::ErrorEnun();
         err_ = std::move(other.err_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+              Invalid):
         break;
     }
   }
@@ -619,7 +682,8 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kResponse: {
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        kResponse: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<
               ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response,
@@ -627,7 +691,8 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
-    case Tag::kErr: {
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        kErr: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::fidl::test::protocols::ErrorEnun,
                                      ::fidl::Encoder>(encoder));
@@ -657,8 +722,9 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+            Invalid));
     return;
   }
 
@@ -667,12 +733,13 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        kResponse:
       new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsEnum_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
       new (&value->err_)::fidl::test::protocols::ErrorEnun();
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
@@ -686,13 +753,15 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Result::Clone(
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        Invalid:
       return ZX_OK;
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        kResponse:
       new (&result->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsEnum_Response();
       return ::fidl::Clone(response_, &result->response_);
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
       new (&result->err_)::fidl::test::protocols::ErrorEnun();
       return ::fidl::Clone(err_, &result->err_);
     default:
@@ -703,31 +772,37 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Result::Clone(
 WithErrorSyntax_ErrorAsEnum_Result&
 WithErrorSyntax_ErrorAsEnum_Result::set_response(
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response value) {
-  EnsureStorageInitialized(Tag::kResponse);
+  EnsureStorageInitialized(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          kResponse);
   response_ = std::move(value);
   return *this;
 }
 
 WithErrorSyntax_ErrorAsEnum_Result& WithErrorSyntax_ErrorAsEnum_Result::set_err(
     ::fidl::test::protocols::ErrorEnun value) {
-  EnsureStorageInitialized(Tag::kErr);
+  EnsureStorageInitialized(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr);
   err_ = std::move(value);
   return *this;
 }
 
 void WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        kResponse:
       response_.~decltype(response_)();
       break;
-    case Tag::kErr:
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
       err_.~decltype(err_)();
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          Invalid);
 }
 
 void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
@@ -736,13 +811,17 @@ void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+              Invalid):
         break;
-      case Tag::kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          kResponse:
         new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ErrorAsEnum_Response();
         break;
-      case Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          kErr:
         new (&err_)::fidl::test::protocols::ErrorEnun();
         break;
       default:

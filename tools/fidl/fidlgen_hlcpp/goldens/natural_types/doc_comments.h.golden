@@ -478,13 +478,16 @@ class StrictUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_Field() const { return tag_ == Tag::kField; }
+  bool is_Field() const {
+    return tag_ == ::fidl::test::doccomments::StrictUnion::Tag::kField;
+  }
 
   /// union member comment #1
   ///
   /// union member comment #3
   int32_t& Field() {
-    EnsureStorageInitialized(Tag::kField);
+    EnsureStorageInitialized(
+        ::fidl::test::doccomments::StrictUnion::Tag::kField);
     return Field_;
   }
 
@@ -497,7 +500,9 @@ class StrictUnion final {
   }
   StrictUnion& set_Field(int32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::doccomments::StrictUnion::Tag Which() const {
+    return ::fidl::test::doccomments::StrictUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -509,7 +514,8 @@ class StrictUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::doccomments::StrictUnion::Tag::Invalid);
   union {
     int32_t Field_;
   };
@@ -598,13 +604,16 @@ class FlexibleUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_Field() const { return tag_ == Tag::kField; }
+  bool is_Field() const {
+    return tag_ == ::fidl::test::doccomments::FlexibleUnion::Tag::kField;
+  }
 
   /// union member comment #1
   ///
   /// union member comment #3
   int32_t& Field() {
-    EnsureStorageInitialized(Tag::kField);
+    EnsureStorageInitialized(
+        ::fidl::test::doccomments::FlexibleUnion::Tag::kField);
     return Field_;
   }
 
@@ -619,13 +628,13 @@ class FlexibleUnion final {
   FlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
                                 std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::doccomments::FlexibleUnion::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kField:
-        return Tag(tag_);
+      case ::fidl::test::doccomments::FlexibleUnion::Tag::Invalid:
+      case ::fidl::test::doccomments::FlexibleUnion::Tag::kField:
+        return ::fidl::test::doccomments::FlexibleUnion::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::doccomments::FlexibleUnion::Tag::kUnknown;
     }
   }
 
@@ -633,7 +642,7 @@ class FlexibleUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != ::fidl::test::doccomments::FlexibleUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -645,7 +654,8 @@ class FlexibleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::doccomments::FlexibleUnion::Tag::Invalid);
   union {
     int32_t Field_;
     std::vector<uint8_t> unknown_data_;

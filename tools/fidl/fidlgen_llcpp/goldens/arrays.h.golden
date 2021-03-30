@@ -54,7 +54,9 @@ extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray {
  public:
-  UnionSmallArray() : ordinal_(Ordinal::Invalid), envelope_{} {}
+  UnionSmallArray()
+      : ordinal_(::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
+        envelope_{} {}
 
   UnionSmallArray(UnionSmallArray&&) = default;
   UnionSmallArray& operator=(UnionSmallArray&&) = default;
@@ -63,9 +65,14 @@ class UnionSmallArray {
     kA = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid;
+  }
 
-  bool is_a() const { return ordinal_ == Ordinal::kA; }
+  bool is_a() const {
+    return ordinal_ == ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
+  }
 
   static UnionSmallArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
@@ -84,29 +91,32 @@ class UnionSmallArray {
   }
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
-    ordinal_ = Ordinal::kA;
+    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
   void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kA;
+    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
         allocator, std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint32_t, 2>& mutable_a() {
-    ZX_ASSERT(ordinal_ == Ordinal::kA);
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
     return *static_cast<::fidl::Array<uint32_t, 2>*>(envelope_.data.get());
   }
   const ::fidl::Array<uint32_t, 2>& a() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kA);
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
     return *static_cast<::fidl::Array<uint32_t, 2>*>(envelope_.data.get());
   }
-  Tag which() const {
+  ::fidl_test_arrays::wire::UnionSmallArray::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<::fidl_test_arrays::wire::UnionSmallArray::Tag>(
+        ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
@@ -123,7 +133,7 @@ class UnionSmallArray {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
+  ::fidl_test_arrays::wire::UnionSmallArray::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
@@ -132,7 +142,9 @@ extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
 
 class UnionLargeArray {
  public:
-  UnionLargeArray() : ordinal_(Ordinal::Invalid), envelope_{} {}
+  UnionLargeArray()
+      : ordinal_(::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
+        envelope_{} {}
 
   UnionLargeArray(UnionLargeArray&&) = default;
   UnionLargeArray& operator=(UnionLargeArray&&) = default;
@@ -141,9 +153,14 @@ class UnionLargeArray {
     kA = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid;
+  }
 
-  bool is_a() const { return ordinal_ == Ordinal::kA; }
+  bool is_a() const {
+    return ordinal_ == ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
+  }
 
   static UnionLargeArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
@@ -162,29 +179,32 @@ class UnionLargeArray {
   }
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
-    ordinal_ = Ordinal::kA;
+    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
   void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kA;
+    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
         allocator, std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint32_t, 100>& mutable_a() {
-    ZX_ASSERT(ordinal_ == Ordinal::kA);
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
     return *static_cast<::fidl::Array<uint32_t, 100>*>(envelope_.data.get());
   }
   const ::fidl::Array<uint32_t, 100>& a() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kA);
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
     return *static_cast<::fidl::Array<uint32_t, 100>*>(envelope_.data.get());
   }
-  Tag which() const {
+  ::fidl_test_arrays::wire::UnionLargeArray::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<::fidl_test_arrays::wire::UnionLargeArray::Tag>(
+        ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
@@ -201,7 +221,7 @@ class UnionLargeArray {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
+  ::fidl_test_arrays::wire::UnionLargeArray::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };

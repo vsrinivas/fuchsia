@@ -69,14 +69,16 @@ void ::fidl_test_union::wire::PizzaOrPasta::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(PizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::fidl_test_union::wire::FlexiblePizzaOrPasta::which() const -> Tag {
+auto ::fidl_test_union::wire::FlexiblePizzaOrPasta::which() const
+    -> ::fidl_test_union::wire::FlexiblePizzaOrPasta::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kPizza:
-    case Ordinal::kPasta:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPizza:
+    case ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta:
+      return static_cast<::fidl_test_union::wire::FlexiblePizzaOrPasta::Tag>(
+          ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::FlexiblePizzaOrPasta::Tag::kUnknown;
   }
 }
 
@@ -97,14 +99,16 @@ void ::fidl_test_union::wire::ExplicitPizzaOrPasta::
   static_assert(offsetof(ExplicitPizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::fidl_test_union::wire::OlderSimpleUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::OlderSimpleUnion::which() const
+    -> ::fidl_test_union::wire::OlderSimpleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kI:
-    case Ordinal::kF:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kI:
+    case ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF:
+      return static_cast<::fidl_test_union::wire::OlderSimpleUnion::Tag>(
+          ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::OlderSimpleUnion::Tag::kUnknown;
   }
 }
 
@@ -643,15 +647,17 @@ void ::fidl_test_union::TestProtocol::
 #ifdef __Fuchsia__
 #endif
 
-auto ::fidl_test_union::wire::NewerSimpleUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::NewerSimpleUnion::which() const
+    -> ::fidl_test_union::wire::NewerSimpleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kI:
-    case Ordinal::kS:
-    case Ordinal::kV:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kI:
+    case ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kS:
+    case ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kV:
+      return static_cast<::fidl_test_union::wire::NewerSimpleUnion::Tag>(
+          ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::NewerSimpleUnion::Tag::kUnknown;
   }
 }
 
@@ -662,15 +668,18 @@ void ::fidl_test_union::wire::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(NewerSimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::fidl_test_union::wire::FlexibleUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::FlexibleUnion::which() const
+    -> ::fidl_test_union::wire::FlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kPrimitive:
-    case Ordinal::kStringNeedsConstructor:
-    case Ordinal::kVectorStringAlsoNeedsConstructor:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive:
+    case ::fidl_test_union::wire::FlexibleUnion::Ordinal::
+        kStringNeedsConstructor:
+    case ::fidl_test_union::wire::FlexibleUnion::Ordinal::
+        kVectorStringAlsoNeedsConstructor:
+      return static_cast<::fidl_test_union::wire::FlexibleUnion::Tag>(ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::FlexibleUnion::Tag::kUnknown;
   }
 }
 
@@ -681,14 +690,15 @@ void ::fidl_test_union::wire::FlexibleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(FlexibleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::fidl_test_union::wire::FlexibleFoo::which() const -> Tag {
+auto ::fidl_test_union::wire::FlexibleFoo::which() const
+    -> ::fidl_test_union::wire::FlexibleFoo::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kS:
-    case Ordinal::kI:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::FlexibleFoo::Ordinal::kS:
+    case ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI:
+      return static_cast<::fidl_test_union::wire::FlexibleFoo::Tag>(ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::FlexibleFoo::Tag::kUnknown;
   }
 }
 
@@ -707,14 +717,16 @@ void ::fidl_test_union::wire::FieldCollision::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(FieldCollision, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::fidl_test_union::wire::ExplicitXUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::ExplicitXUnion::which() const
+    -> ::fidl_test_union::wire::ExplicitXUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kI:
-    case Ordinal::kF:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kI:
+    case ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF:
+      return static_cast<::fidl_test_union::wire::ExplicitXUnion::Tag>(
+          ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::ExplicitXUnion::Tag::kUnknown;
   }
 }
 
@@ -742,14 +754,15 @@ void ::fidl_test_union::wire::ExplicitStrictFoo::
   static_assert(offsetof(ExplicitStrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::fidl_test_union::wire::ExplicitFoo::which() const -> Tag {
+auto ::fidl_test_union::wire::ExplicitFoo::which() const
+    -> ::fidl_test_union::wire::ExplicitFoo::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kS:
-    case Ordinal::kI:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::ExplicitFoo::Ordinal::kS:
+    case ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI:
+      return static_cast<::fidl_test_union::wire::ExplicitFoo::Tag>(ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::ExplicitFoo::Tag::kUnknown;
   }
 }
 
@@ -762,13 +775,15 @@ void ::fidl_test_union::wire::ExplicitFoo::SizeAndOffsetAssertionHelper() {
 }
 
 auto ::fidl_test_union::wire::XUnionContainingEmptyStruct::which() const
-    -> Tag {
+    -> ::fidl_test_union::wire::XUnionContainingEmptyStruct::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kEmpty:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty:
+      return static_cast<
+          ::fidl_test_union::wire::XUnionContainingEmptyStruct::Tag>(ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_union::wire::XUnionContainingEmptyStruct::Tag::
+          kUnknown;
   }
 }
 

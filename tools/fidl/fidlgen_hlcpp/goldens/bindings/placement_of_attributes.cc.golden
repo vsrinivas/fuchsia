@@ -20,10 +20,11 @@ ExampleXUnion::~ExampleXUnion() { Destroy(); }
 
 ExampleXUnion::ExampleXUnion(ExampleXUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant:
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -37,10 +38,11 @@ ExampleXUnion& ExampleXUnion::operator=(ExampleXUnion&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kVariant:
+      case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant:
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -66,13 +68,13 @@ void ExampleXUnion::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kVariant: {
+    case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &variant_, envelope_offset);
       break;
     }
-    case Tag::kUnknown:
+    case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kUnknown:
       envelope_offset = encoder->Alloc(unknown_data_.size());
       ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
                                          envelope_offset);
@@ -99,8 +101,8 @@ void ExampleXUnion::Decode(::fidl::Decoder* decoder, ExampleXUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid));
     return;
   }
 
@@ -109,7 +111,7 @@ void ExampleXUnion::Decode(::fidl::Decoder* decoder, ExampleXUnion* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant:
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
     default:
@@ -125,9 +127,9 @@ zx_status_t ExampleXUnion::Clone(ExampleXUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid:
       return ZX_OK;
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant:
       return ::fidl::Clone(variant_, &result->variant_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
@@ -137,7 +139,8 @@ zx_status_t ExampleXUnion::Clone(ExampleXUnion* result) const {
 }
 
 ExampleXUnion& ExampleXUnion::set_variant(uint32_t value) {
-  EnsureStorageInitialized(Tag::kVariant);
+  EnsureStorageInitialized(
+      ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
@@ -150,16 +153,18 @@ ExampleXUnion& ExampleXUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
 
 void ExampleXUnion::Destroy() {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant:
       break;
 
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid);
 }
 
 void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -167,9 +172,10 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid):
         break;
-      case Tag::kVariant:
+      case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant:
         new (&variant_) uint32_t();
         break;
       default:
@@ -189,10 +195,11 @@ ExampleUnion::~ExampleUnion() { Destroy(); }
 
 ExampleUnion::ExampleUnion(ExampleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant:
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::placementofattributes::ExampleUnion::Tag::Invalid):
       break;
   }
 }
@@ -202,10 +209,11 @@ ExampleUnion& ExampleUnion::operator=(ExampleUnion&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kVariant:
+      case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant:
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::placementofattributes::ExampleUnion::Tag::Invalid):
         break;
     }
   }
@@ -227,7 +235,7 @@ void ExampleUnion::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kVariant: {
+    case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &variant_, envelope_offset);
@@ -255,8 +263,8 @@ void ExampleUnion::Decode(::fidl::Decoder* decoder, ExampleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::placementofattributes::ExampleUnion::Tag::Invalid));
     return;
   }
 
@@ -265,7 +273,7 @@ void ExampleUnion::Decode(::fidl::Decoder* decoder, ExampleUnion* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant:
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
     default:
@@ -277,9 +285,9 @@ zx_status_t ExampleUnion::Clone(ExampleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::placementofattributes::ExampleUnion::Tag::Invalid:
       return ZX_OK;
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant:
       return ::fidl::Clone(variant_, &result->variant_);
     default:
       return ZX_OK;
@@ -287,20 +295,22 @@ zx_status_t ExampleUnion::Clone(ExampleUnion* result) const {
 }
 
 ExampleUnion& ExampleUnion::set_variant(uint32_t value) {
-  EnsureStorageInitialized(Tag::kVariant);
+  EnsureStorageInitialized(
+      ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
 
 void ExampleUnion::Destroy() {
   switch (tag_) {
-    case Tag::kVariant:
+    case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant:
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::placementofattributes::ExampleUnion::Tag::Invalid);
 }
 
 void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -308,9 +318,10 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::placementofattributes::ExampleUnion::Tag::Invalid):
         break;
-      case Tag::kVariant:
+      case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant:
         new (&variant_) uint32_t();
         break;
       default:

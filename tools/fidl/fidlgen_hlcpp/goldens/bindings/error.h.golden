@@ -86,10 +86,13 @@ class Example_foo_Result final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const {
+    return tag_ == ::fidl::test::error::Example_foo_Result::Tag::kResponse;
+  }
 
   ::fidl::test::error::Example_foo_Response& response() {
-    EnsureStorageInitialized(Tag::kResponse);
+    EnsureStorageInitialized(
+        ::fidl::test::error::Example_foo_Result::Tag::kResponse);
     return response_;
   }
 
@@ -100,10 +103,13 @@ class Example_foo_Result final {
   Example_foo_Result& set_response(
       ::fidl::test::error::Example_foo_Response value);
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const {
+    return tag_ == ::fidl::test::error::Example_foo_Result::Tag::kErr;
+  }
 
   uint32_t& err() {
-    EnsureStorageInitialized(Tag::kErr);
+    EnsureStorageInitialized(
+        ::fidl::test::error::Example_foo_Result::Tag::kErr);
     return err_;
   }
 
@@ -113,7 +119,9 @@ class Example_foo_Result final {
   }
   Example_foo_Result& set_err(uint32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::error::Example_foo_Result::Tag Which() const {
+    return ::fidl::test::error::Example_foo_Result::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -145,7 +153,8 @@ class Example_foo_Result final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::error::Example_foo_Result::Tag::Invalid);
   union {
     ::fidl::test::error::Example_foo_Response response_;
     uint32_t err_;

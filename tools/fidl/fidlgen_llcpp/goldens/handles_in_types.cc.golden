@@ -5,13 +5,15 @@
 #include <memory>
 
 #ifdef __Fuchsia__
-auto ::fidl_test_handlesintypes::wire::UnionWithHandle::which() const -> Tag {
+auto ::fidl_test_handlesintypes::wire::UnionWithHandle::which() const
+    -> ::fidl_test_handlesintypes::wire::UnionWithHandle::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case Ordinal::kH:
-      return static_cast<Tag>(ordinal_);
+    case ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH:
+      return static_cast<
+          ::fidl_test_handlesintypes::wire::UnionWithHandle::Tag>(ordinal_);
     default:
-      return Tag::kUnknown;
+      return ::fidl_test_handlesintypes::wire::UnionWithHandle::Tag::kUnknown;
   }
 }
 
@@ -25,7 +27,7 @@ void ::fidl_test_handlesintypes::wire::UnionWithHandle::
 }
 void ::fidl_test_handlesintypes::wire::UnionWithHandle::_CloseHandles() {
   switch (ordinal_) {
-    case Ordinal::kH: {
+    case ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH: {
       mutable_h().reset();
       break;
     }

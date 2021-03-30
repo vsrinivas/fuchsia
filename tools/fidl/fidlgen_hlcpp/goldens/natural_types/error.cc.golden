@@ -53,14 +53,15 @@ Example_foo_Result::~Example_foo_Result() { Destroy(); }
 Example_foo_Result::Example_foo_Result(Example_foo_Result&& other)
     : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
       new (&response_)::fidl::test::error::Example_foo_Response();
       response_ = std::move(other.response_);
       break;
-    case Tag::kErr:
+    case ::fidl::test::error::Example_foo_Result::Tag::kErr:
       err_ = std::move(other.err_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::error::Example_foo_Result::Tag::Invalid):
       break;
   }
 }
@@ -70,14 +71,15 @@ Example_foo_Result& Example_foo_Result::operator=(Example_foo_Result&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kResponse:
+      case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
         new (&response_)::fidl::test::error::Example_foo_Response();
         response_ = std::move(other.response_);
         break;
-      case Tag::kErr:
+      case ::fidl::test::error::Example_foo_Result::Tag::kErr:
         err_ = std::move(other.err_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::error::Example_foo_Result::Tag::Invalid):
         break;
     }
   }
@@ -105,14 +107,14 @@ void Example_foo_Result::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kResponse: {
+    case ::fidl::test::error::Example_foo_Result::Tag::kResponse: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::fidl::test::error::Example_foo_Response,
                                      ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
-    case Tag::kErr: {
+    case ::fidl::test::error::Example_foo_Result::Tag::kErr: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &err_, envelope_offset);
@@ -140,8 +142,8 @@ void Example_foo_Result::Decode(::fidl::Decoder* decoder,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::error::Example_foo_Result::Tag::Invalid));
     return;
   }
 
@@ -150,11 +152,11 @@ void Example_foo_Result::Decode(::fidl::Decoder* decoder,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
       new (&value->response_)::fidl::test::error::Example_foo_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
-    case Tag::kErr:
+    case ::fidl::test::error::Example_foo_Result::Tag::kErr:
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
     default:
@@ -166,12 +168,12 @@ zx_status_t Example_foo_Result::Clone(Example_foo_Result* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::error::Example_foo_Result::Tag::Invalid:
       return ZX_OK;
-    case Tag::kResponse:
+    case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
       new (&result->response_)::fidl::test::error::Example_foo_Response();
       return ::fidl::Clone(response_, &result->response_);
-    case Tag::kErr:
+    case ::fidl::test::error::Example_foo_Result::Tag::kErr:
       return ::fidl::Clone(err_, &result->err_);
     default:
       return ZX_OK;
@@ -180,29 +182,31 @@ zx_status_t Example_foo_Result::Clone(Example_foo_Result* result) const {
 
 Example_foo_Result& Example_foo_Result::set_response(
     ::fidl::test::error::Example_foo_Response value) {
-  EnsureStorageInitialized(Tag::kResponse);
+  EnsureStorageInitialized(
+      ::fidl::test::error::Example_foo_Result::Tag::kResponse);
   response_ = std::move(value);
   return *this;
 }
 
 Example_foo_Result& Example_foo_Result::set_err(uint32_t value) {
-  EnsureStorageInitialized(Tag::kErr);
+  EnsureStorageInitialized(::fidl::test::error::Example_foo_Result::Tag::kErr);
   err_ = std::move(value);
   return *this;
 }
 
 void Example_foo_Result::Destroy() {
   switch (tag_) {
-    case Tag::kResponse:
+    case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
       response_.~decltype(response_)();
       break;
-    case Tag::kErr:
+    case ::fidl::test::error::Example_foo_Result::Tag::kErr:
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::error::Example_foo_Result::Tag::Invalid);
 }
 
 void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -210,12 +214,13 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::error::Example_foo_Result::Tag::Invalid):
         break;
-      case Tag::kResponse:
+      case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
         new (&response_)::fidl::test::error::Example_foo_Response();
         break;
-      case Tag::kErr:
+      case ::fidl::test::error::Example_foo_Result::Tag::kErr:
         new (&err_) uint32_t();
         break;
       default:

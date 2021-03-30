@@ -22,11 +22,12 @@ UnionWithHandle::~UnionWithHandle() { Destroy(); }
 
 UnionWithHandle::UnionWithHandle(UnionWithHandle&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kH:
+    case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
       new (&h_)::zx::vmo();
       h_ = std::move(other.h_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -40,11 +41,12 @@ UnionWithHandle& UnionWithHandle::operator=(UnionWithHandle&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kH:
+      case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
         new (&h_)::zx::vmo();
         h_ = std::move(other.h_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -70,7 +72,7 @@ void UnionWithHandle::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kH: {
+    case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &h_, envelope_offset,
@@ -80,7 +82,7 @@ void UnionWithHandle::Encode(
                      });
       break;
     }
-    case Tag::kUnknown:
+    case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kUnknown:
       envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
       ::fidl::EncodeUnknownDataContents(encoder, &unknown_data_,
                                         envelope_offset);
@@ -107,8 +109,8 @@ void UnionWithHandle::Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid));
     return;
   }
 
@@ -117,7 +119,7 @@ void UnionWithHandle::Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kH:
+    case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
       new (&value->h_)::zx::vmo();
       ::fidl::Decode(decoder, &value->h_, envelope_offset);
       break;
@@ -135,9 +137,9 @@ zx_status_t UnionWithHandle::Clone(UnionWithHandle* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid:
       return ZX_OK;
-    case Tag::kH:
+    case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
       new (&result->h_)::zx::vmo();
       return ::fidl::Clone(h_, &result->h_);
     default:
@@ -148,7 +150,8 @@ zx_status_t UnionWithHandle::Clone(UnionWithHandle* result) const {
 }
 
 UnionWithHandle& UnionWithHandle::set_h(::zx::vmo value) {
-  EnsureStorageInitialized(Tag::kH);
+  EnsureStorageInitialized(
+      ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH);
   h_ = std::move(value);
   return *this;
 }
@@ -163,17 +166,19 @@ UnionWithHandle& UnionWithHandle::SetUnknownData(
 
 void UnionWithHandle::Destroy() {
   switch (tag_) {
-    case Tag::kH:
+    case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
       h_.~decltype(h_)();
       break;
 
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid);
 }
 
 void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -181,9 +186,10 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::handlesintypes::UnionWithHandle::Tag::Invalid):
         break;
-      case Tag::kH:
+      case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
         new (&h_)::zx::vmo();
         break;
       default:

@@ -262,13 +262,14 @@ SimpleUnion::~SimpleUnion() { Destroy(); }
 
 SimpleUnion::SimpleUnion(SimpleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kA:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kA:
       a_ = std::move(other.a_);
       break;
-    case Tag::kB:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kB:
       b_ = std::move(other.b_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::nullable::SimpleUnion::Tag::Invalid):
       break;
   }
 }
@@ -278,13 +279,14 @@ SimpleUnion& SimpleUnion::operator=(SimpleUnion&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kA:
+      case ::fidl::test::nullable::SimpleUnion::Tag::kA:
         a_ = std::move(other.a_);
         break;
-      case Tag::kB:
+      case ::fidl::test::nullable::SimpleUnion::Tag::kB:
         b_ = std::move(other.b_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::nullable::SimpleUnion::Tag::Invalid):
         break;
     }
   }
@@ -311,13 +313,13 @@ void SimpleUnion::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kA: {
+    case ::fidl::test::nullable::SimpleUnion::Tag::kA: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &a_, envelope_offset);
       break;
     }
-    case Tag::kB: {
+    case ::fidl::test::nullable::SimpleUnion::Tag::kB: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<float, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &b_, envelope_offset);
@@ -345,8 +347,8 @@ void SimpleUnion::Decode(::fidl::Decoder* decoder, SimpleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::nullable::SimpleUnion::Tag::Invalid));
     return;
   }
 
@@ -355,10 +357,10 @@ void SimpleUnion::Decode(::fidl::Decoder* decoder, SimpleUnion* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kA:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kA:
       ::fidl::Decode(decoder, &value->a_, envelope_offset);
       break;
-    case Tag::kB:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kB:
       ::fidl::Decode(decoder, &value->b_, envelope_offset);
       break;
     default:
@@ -370,11 +372,11 @@ zx_status_t SimpleUnion::Clone(SimpleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::nullable::SimpleUnion::Tag::Invalid:
       return ZX_OK;
-    case Tag::kA:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kA:
       return ::fidl::Clone(a_, &result->a_);
-    case Tag::kB:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kB:
       return ::fidl::Clone(b_, &result->b_);
     default:
       return ZX_OK;
@@ -382,28 +384,29 @@ zx_status_t SimpleUnion::Clone(SimpleUnion* result) const {
 }
 
 SimpleUnion& SimpleUnion::set_a(int32_t value) {
-  EnsureStorageInitialized(Tag::kA);
+  EnsureStorageInitialized(::fidl::test::nullable::SimpleUnion::Tag::kA);
   a_ = std::move(value);
   return *this;
 }
 
 SimpleUnion& SimpleUnion::set_b(float value) {
-  EnsureStorageInitialized(Tag::kB);
+  EnsureStorageInitialized(::fidl::test::nullable::SimpleUnion::Tag::kB);
   b_ = std::move(value);
   return *this;
 }
 
 void SimpleUnion::Destroy() {
   switch (tag_) {
-    case Tag::kA:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kA:
       break;
-    case Tag::kB:
+    case ::fidl::test::nullable::SimpleUnion::Tag::kB:
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::nullable::SimpleUnion::Tag::Invalid);
 }
 
 void SimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -411,12 +414,13 @@ void SimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::nullable::SimpleUnion::Tag::Invalid):
         break;
-      case Tag::kA:
+      case ::fidl::test::nullable::SimpleUnion::Tag::kA:
         new (&a_) int32_t();
         break;
-      case Tag::kB:
+      case ::fidl::test::nullable::SimpleUnion::Tag::kB:
         new (&b_) float();
         break;
       default:

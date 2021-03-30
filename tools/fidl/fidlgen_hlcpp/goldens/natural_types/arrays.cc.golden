@@ -20,11 +20,12 @@ UnionSmallArray::~UnionSmallArray() { Destroy(); }
 
 UnionSmallArray::UnionSmallArray(UnionSmallArray&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
       new (&a_)::std::array<uint32_t, 2>();
       a_ = std::move(other.a_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::arrays::UnionSmallArray::Tag::Invalid):
       break;
   }
 }
@@ -34,11 +35,12 @@ UnionSmallArray& UnionSmallArray::operator=(UnionSmallArray&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kA:
+      case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
         new (&a_)::std::array<uint32_t, 2>();
         a_ = std::move(other.a_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::arrays::UnionSmallArray::Tag::Invalid):
         break;
     }
   }
@@ -60,7 +62,7 @@ void UnionSmallArray::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kA: {
+    case ::fidl::test::arrays::UnionSmallArray::Tag::kA: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
                                                     ::fidl::Encoder>(encoder));
@@ -89,8 +91,8 @@ void UnionSmallArray::Decode(::fidl::Decoder* decoder, UnionSmallArray* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::arrays::UnionSmallArray::Tag::Invalid));
     return;
   }
 
@@ -99,7 +101,7 @@ void UnionSmallArray::Decode(::fidl::Decoder* decoder, UnionSmallArray* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
       new (&value->a_)::std::array<uint32_t, 2>();
       ::fidl::Decode(decoder, &value->a_, envelope_offset);
       break;
@@ -112,9 +114,9 @@ zx_status_t UnionSmallArray::Clone(UnionSmallArray* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::arrays::UnionSmallArray::Tag::Invalid:
       return ZX_OK;
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
       new (&result->a_)::std::array<uint32_t, 2>();
       return ::fidl::Clone(a_, &result->a_);
     default:
@@ -123,21 +125,22 @@ zx_status_t UnionSmallArray::Clone(UnionSmallArray* result) const {
 }
 
 UnionSmallArray& UnionSmallArray::set_a(::std::array<uint32_t, 2> value) {
-  EnsureStorageInitialized(Tag::kA);
+  EnsureStorageInitialized(::fidl::test::arrays::UnionSmallArray::Tag::kA);
   a_ = std::move(value);
   return *this;
 }
 
 void UnionSmallArray::Destroy() {
   switch (tag_) {
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
       a_.~decltype(a_)();
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::arrays::UnionSmallArray::Tag::Invalid);
 }
 
 void UnionSmallArray::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -145,9 +148,10 @@ void UnionSmallArray::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::arrays::UnionSmallArray::Tag::Invalid):
         break;
-      case Tag::kA:
+      case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
         new (&a_)::std::array<uint32_t, 2>();
         break;
       default:
@@ -166,11 +170,12 @@ UnionLargeArray::~UnionLargeArray() { Destroy(); }
 
 UnionLargeArray::UnionLargeArray(UnionLargeArray&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
       new (&a_)::std::array<uint32_t, 100>();
       a_ = std::move(other.a_);
       break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::arrays::UnionLargeArray::Tag::Invalid):
       break;
   }
 }
@@ -180,11 +185,12 @@ UnionLargeArray& UnionLargeArray::operator=(UnionLargeArray&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kA:
+      case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
         new (&a_)::std::array<uint32_t, 100>();
         a_ = std::move(other.a_);
         break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::arrays::UnionLargeArray::Tag::Invalid):
         break;
     }
   }
@@ -206,7 +212,7 @@ void UnionLargeArray::Encode(
   size_t envelope_offset = 0;
 
   switch (Which()) {
-    case Tag::kA: {
+    case ::fidl::test::arrays::UnionLargeArray::Tag::kA: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
                                                     ::fidl::Encoder>(encoder));
@@ -235,8 +241,8 @@ void UnionLargeArray::Decode(::fidl::Decoder* decoder, UnionLargeArray* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::arrays::UnionLargeArray::Tag::Invalid));
     return;
   }
 
@@ -245,7 +251,7 @@ void UnionLargeArray::Decode(::fidl::Decoder* decoder, UnionLargeArray* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
       new (&value->a_)::std::array<uint32_t, 100>();
       ::fidl::Decode(decoder, &value->a_, envelope_offset);
       break;
@@ -258,9 +264,9 @@ zx_status_t UnionLargeArray::Clone(UnionLargeArray* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case ::fidl::test::arrays::UnionLargeArray::Tag::Invalid:
       return ZX_OK;
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
       new (&result->a_)::std::array<uint32_t, 100>();
       return ::fidl::Clone(a_, &result->a_);
     default:
@@ -269,21 +275,22 @@ zx_status_t UnionLargeArray::Clone(UnionLargeArray* result) const {
 }
 
 UnionLargeArray& UnionLargeArray::set_a(::std::array<uint32_t, 100> value) {
-  EnsureStorageInitialized(Tag::kA);
+  EnsureStorageInitialized(::fidl::test::arrays::UnionLargeArray::Tag::kA);
   a_ = std::move(value);
   return *this;
 }
 
 void UnionLargeArray::Destroy() {
   switch (tag_) {
-    case Tag::kA:
+    case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
       a_.~decltype(a_)();
       break;
 
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::arrays::UnionLargeArray::Tag::Invalid);
 }
 
 void UnionLargeArray::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -291,9 +298,10 @@ void UnionLargeArray::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::arrays::UnionLargeArray::Tag::Invalid):
         break;
-      case Tag::kA:
+      case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
         new (&a_)::std::array<uint32_t, 100>();
         break;
       default:

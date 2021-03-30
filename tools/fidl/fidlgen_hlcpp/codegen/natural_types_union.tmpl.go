@@ -60,14 +60,14 @@ class {{ .Name }} final {
         * UnknownHandles() will return a pointer to a valid std::vector<zx::handle> with the unknown handles.
     */ -}}
 
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  enum __attribute__((enum_extensibility(closed))) {{ .TagEnum.Self }} : fidl_xunion_tag_t {
   {{ if .IsFlexible -}}
-    kUnknown = 0,
+    {{ .TagUnknown.Self }} = 0,
     {{- /* TODO(fxbug.dev/8050): Remove the Empty tag below. */}}
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+    Empty = {{ .TagUnknown.Self }},  // DEPRECATED: use kUnknown instead.
   {{ end -}}
   {{- range .Members }}
-    {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
+    {{ .TagName.Self }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
@@ -85,12 +85,12 @@ class {{ .Name }} final {
 
   {{- range .Members }}
 
-  bool is_{{ .Name }}() const { return tag_ == Tag::{{ .TagName }}; }
+  bool is_{{ .Name }}() const { return tag_ == {{ .TagName }}; }
   {{ range .DocComments }}
   ///{{ . }}
   {{- end }}
   {{ .Type }}& {{ .Name }}() {
-    EnsureStorageInitialized(Tag::{{ .TagName }});
+    EnsureStorageInitialized({{ .TagName }});
     return {{ .StorageName }};
   }
   {{ range .DocComments }}
@@ -107,19 +107,19 @@ class {{ .Name }} final {
   {{ .Name }}& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }});
   {{- end }}
 
-  Tag Which() const {
+  {{ .TagEnum }} Which() const {
     {{ if .IsFlexible }}
     switch (tag_) {
-      case Tag::Invalid:
+      case {{ .TagInvalid }}:
       {{- range .Members }}
-      case Tag::{{ .TagName }}:
+      case {{ .TagName }}:
       {{- end }}
-        return Tag(tag_);
+        return {{ .TagEnum }}(tag_);
       default:
-        return Tag::kUnknown;
+        return {{ .TagUnknown }};
     }
     {{ else }}
-    return Tag(tag_);
+    return {{ .TagEnum }}(tag_);
     {{ end }}
   }
 
@@ -131,7 +131,7 @@ class {{ .Name }} final {
 
 {{- if .IsFlexible }}
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() != {{ .TagUnknown }}) {
       return nullptr;
     }
   {{- if .IsResourceType }}
@@ -143,7 +143,7 @@ class {{ .Name }} final {
 
   {{- if .IsResourceType }}
   const std::vector<zx::handle>* UnknownHandles() const { 
-    if (Which() != Tag::kUnknown) {
+    if (Which() != {{ .TagUnknown }}) {
       return nullptr;
     }
     return &unknown_data_.handles;
@@ -189,7 +189,7 @@ class {{ .Name }} final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>({{ .TagInvalid }});
   union {
   {{- range .Members }}
     {{ .Type }} {{ .StorageName }};
@@ -231,14 +231,14 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType }};
 {{ .Name }}::{{ .Name }}({{ .Name }}&& other) : tag_(other.tag_) {
   switch (tag_) {
   {{- range .Members }}
-    case Tag::{{ .TagName }}:
+    case {{ .TagName }}:
     {{- if .Type.NeedsDtor }}
       new (&{{ .StorageName }}) {{ .Type }}();
     {{- end }}
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
       break;
   {{- end }}
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}):
       break;
   {{- if .IsFlexible }}
     default:
@@ -255,14 +255,14 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType }};
     tag_ = other.tag_;
     switch (tag_) {
     {{- range .Members }}
-      case Tag::{{ .TagName }}:
+      case {{ .TagName }}:
         {{- if .Type.NeedsDtor }}
         new (&{{ .StorageName }}) {{ .Type }}();
         {{- end }}
         {{ .StorageName }} = std::move(other.{{ .StorageName }});
         break;
     {{- end }}
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}):
         break;
     {{- if .IsFlexible }}
       default:
@@ -292,7 +292,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
 
   switch (Which()) {
     {{- range .Members }}
-    case Tag::{{ .TagName }}: {
+    case {{ .TagName }}: {
       envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type }}, ::fidl::Encoder>(encoder));      
       {{- if .HandleInformation }}
       ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset, ::fidl::HandleInformation {
@@ -306,7 +306,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
     }
     {{- end }}
     {{- if .IsFlexible }}
-    case Tag::kUnknown:
+    case {{ .TagUnknown }}:
       {{- if .IsResourceType }}
       envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
       ::fidl::EncodeUnknownDataContents(encoder, &unknown_data_, envelope_offset);
@@ -339,7 +339,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}));
     return;
   }
 
@@ -350,7 +350,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 
   switch (value->tag_) {
   {{- range .Members }}
-    case Tag::{{ .TagName }}:
+    case {{ .TagName }}:
       {{- if .Type.NeedsDtor }}
       new (&value->{{ .StorageName }}) {{ .Type }}();
       {{- end }}
@@ -377,10 +377,10 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::Invalid:
+    case {{ .TagInvalid }}:
       return ZX_OK;
     {{- range .Members }}
-    case Tag::{{ .TagName }}:
+    case {{ .TagName }}:
       {{- if .Type.NeedsDtor }}
       new (&result->{{ .StorageName }}) {{ .Type }}();
       {{- end }}
@@ -398,7 +398,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- range $member := .Members }}
 
 {{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type }} value) {
-  EnsureStorageInitialized(Tag::{{ .TagName }});
+  EnsureStorageInitialized({{ .TagName }});
   {{ .StorageName }} = std::move(value);
   return *this;
 }
@@ -421,14 +421,14 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 void {{ .Name }}::Destroy() {
   switch (tag_) {
   {{- range .Members }}
-    case Tag::{{ .TagName }}:
+    case {{ .TagName }}:
       {{- if .Type.NeedsDtor }}
       {{ .StorageName }}.~decltype({{ .StorageName }})();
       {{- end }}
       break;
   {{- end }}
   {{ if .IsFlexible }}
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
@@ -438,7 +438,7 @@ void {{ .Name }}::Destroy() {
       break;
   {{ end }}
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>({{ .TagInvalid }});
 }
 
 void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -446,10 +446,10 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}):
         break;
       {{- range .Members }}
-      case Tag::{{ .TagName }}:
+      case {{ .TagName }}:
         new (&{{ .StorageName }}) {{ .Type }}();
         break;
       {{- end }}
@@ -522,10 +522,10 @@ struct Equality<{{ . }}> {
 
     {{ with $xunion := . -}}
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>({{ $xunion }}::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}):
         return true;
     {{- range .Members }}
-      case {{ $xunion }}::Tag::{{ .TagName }}:
+      case {{ .TagName }}:
         return ::fidl::Equals(_lhs.{{ .StorageName }}, _rhs.{{ .StorageName }});
       {{- end }}
       {{ if .IsFlexible -}}

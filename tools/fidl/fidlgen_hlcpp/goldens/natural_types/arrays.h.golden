@@ -53,10 +53,12 @@ class UnionSmallArray final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_a() const { return tag_ == Tag::kA; }
+  bool is_a() const {
+    return tag_ == ::fidl::test::arrays::UnionSmallArray::Tag::kA;
+  }
 
   ::std::array<uint32_t, 2>& a() {
-    EnsureStorageInitialized(Tag::kA);
+    EnsureStorageInitialized(::fidl::test::arrays::UnionSmallArray::Tag::kA);
     return a_;
   }
 
@@ -66,7 +68,9 @@ class UnionSmallArray final {
   }
   UnionSmallArray& set_a(::std::array<uint32_t, 2> value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::arrays::UnionSmallArray::Tag Which() const {
+    return ::fidl::test::arrays::UnionSmallArray::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -78,7 +82,8 @@ class UnionSmallArray final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::arrays::UnionSmallArray::Tag::Invalid);
   union {
     ::std::array<uint32_t, 2> a_;
   };
@@ -122,10 +127,12 @@ class UnionLargeArray final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_a() const { return tag_ == Tag::kA; }
+  bool is_a() const {
+    return tag_ == ::fidl::test::arrays::UnionLargeArray::Tag::kA;
+  }
 
   ::std::array<uint32_t, 100>& a() {
-    EnsureStorageInitialized(Tag::kA);
+    EnsureStorageInitialized(::fidl::test::arrays::UnionLargeArray::Tag::kA);
     return a_;
   }
 
@@ -135,7 +142,9 @@ class UnionLargeArray final {
   }
   UnionLargeArray& set_a(::std::array<uint32_t, 100> value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::arrays::UnionLargeArray::Tag Which() const {
+    return ::fidl::test::arrays::UnionLargeArray::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -147,7 +156,8 @@ class UnionLargeArray final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::arrays::UnionLargeArray::Tag::Invalid);
   union {
     ::std::array<uint32_t, 100> a_;
   };

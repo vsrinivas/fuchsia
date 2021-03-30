@@ -51,10 +51,13 @@ class StrictFoo final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const {
+    return tag_ == ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kS;
+  }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(
+        ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kS);
     return s_;
   }
 
@@ -64,10 +67,13 @@ class StrictFoo final {
   }
   StrictFoo& set_s(::std::string value);
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kI;
+  }
 
   int32_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(
+        ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kI);
     return i_;
   }
 
@@ -77,7 +83,9 @@ class StrictFoo final {
   }
   StrictFoo& set_i(int32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::requestflexibleenvelope::StrictFoo::Tag Which() const {
+    return ::fidl::test::requestflexibleenvelope::StrictFoo::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -89,7 +97,8 @@ class StrictFoo final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::Invalid);
   union {
     ::std::string s_;
     int32_t i_;
@@ -139,10 +148,13 @@ class FlexibleFoo final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_s() const { return tag_ == Tag::kS; }
+  bool is_s() const {
+    return tag_ == ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kS;
+  }
 
   ::std::string& s() {
-    EnsureStorageInitialized(Tag::kS);
+    EnsureStorageInitialized(
+        ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kS);
     return s_;
   }
 
@@ -152,10 +164,13 @@ class FlexibleFoo final {
   }
   FlexibleFoo& set_s(::std::string value);
 
-  bool is_i() const { return tag_ == Tag::kI; }
+  bool is_i() const {
+    return tag_ == ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kI;
+  }
 
   int32_t& i() {
-    EnsureStorageInitialized(Tag::kI);
+    EnsureStorageInitialized(
+        ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kI);
     return i_;
   }
 
@@ -167,14 +182,15 @@ class FlexibleFoo final {
   FlexibleFoo& SetUnknownData(fidl_xunion_tag_t ordinal,
                               std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kS:
-      case Tag::kI:
-        return Tag(tag_);
+      case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid:
+      case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kS:
+      case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kI:
+        return ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::
+            kUnknown;
     }
   }
 
@@ -182,7 +198,8 @@ class FlexibleFoo final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() !=
+        ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -194,7 +211,8 @@ class FlexibleFoo final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid);
   union {
     ::std::string s_;
     int32_t i_;

@@ -134,10 +134,14 @@ class ExampleXUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const {
+    return tag_ ==
+           ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant;
+  }
 
   uint32_t& variant() {
-    EnsureStorageInitialized(Tag::kVariant);
+    EnsureStorageInitialized(
+        ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant);
     return variant_;
   }
 
@@ -149,13 +153,14 @@ class ExampleXUnion final {
   ExampleXUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
                                 std::vector<uint8_t> bytes);
 
-  Tag Which() const {
+  ::fidl::test::placementofattributes::ExampleXUnion::Tag Which() const {
     switch (tag_) {
-      case Tag::Invalid:
-      case Tag::kVariant:
-        return Tag(tag_);
+      case ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid:
+      case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant:
+        return ::fidl::test::placementofattributes::ExampleXUnion::Tag(tag_);
       default:
-        return Tag::kUnknown;
+        return ::fidl::test::placementofattributes::ExampleXUnion::Tag::
+            kUnknown;
     }
   }
 
@@ -163,7 +168,8 @@ class ExampleXUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != Tag::kUnknown) {
+    if (Which() !=
+        ::fidl::test::placementofattributes::ExampleXUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -175,7 +181,8 @@ class ExampleXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::placementofattributes::ExampleXUnion::Tag::Invalid);
   union {
     uint32_t variant_;
     std::vector<uint8_t> unknown_data_;
@@ -221,10 +228,14 @@ class ExampleUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const {
+    return tag_ ==
+           ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant;
+  }
 
   uint32_t& variant() {
-    EnsureStorageInitialized(Tag::kVariant);
+    EnsureStorageInitialized(
+        ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant);
     return variant_;
   }
 
@@ -234,7 +245,9 @@ class ExampleUnion final {
   }
   ExampleUnion& set_variant(uint32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::placementofattributes::ExampleUnion::Tag Which() const {
+    return ::fidl::test::placementofattributes::ExampleUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -246,7 +259,8 @@ class ExampleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::placementofattributes::ExampleUnion::Tag::Invalid);
   union {
     uint32_t variant_;
   };

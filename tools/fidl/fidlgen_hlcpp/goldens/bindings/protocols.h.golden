@@ -151,11 +151,16 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const {
+    return tag_ == ::fidl::test::protocols::
+                       WithErrorSyntax_ResponseAsStruct_Result::Tag::kResponse;
+  }
 
   ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
   response() {
-    EnsureStorageInitialized(Tag::kResponse);
+    EnsureStorageInitialized(
+        ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+            kResponse);
     return response_;
   }
 
@@ -167,10 +172,15 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   WithErrorSyntax_ResponseAsStruct_Result& set_response(
       ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response value);
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const {
+    return tag_ == ::fidl::test::protocols::
+                       WithErrorSyntax_ResponseAsStruct_Result::Tag::kErr;
+  }
 
   uint32_t& err() {
-    EnsureStorageInitialized(Tag::kErr);
+    EnsureStorageInitialized(
+        ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+            kErr);
     return err_;
   }
 
@@ -180,7 +190,11 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   }
   WithErrorSyntax_ResponseAsStruct_Result& set_err(uint32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag Which()
+      const {
+    return ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+        Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -219,7 +233,9 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+          Invalid);
   union {
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response
         response_;
@@ -313,11 +329,16 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const {
+    return tag_ == ::fidl::test::protocols::
+                       WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kResponse;
+  }
 
   ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
   response() {
-    EnsureStorageInitialized(Tag::kResponse);
+    EnsureStorageInitialized(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+            kResponse);
     return response_;
   }
 
@@ -329,10 +350,15 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   WithErrorSyntax_ErrorAsPrimitive_Result& set_response(
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response value);
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const {
+    return tag_ == ::fidl::test::protocols::
+                       WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kErr;
+  }
 
   uint32_t& err() {
-    EnsureStorageInitialized(Tag::kErr);
+    EnsureStorageInitialized(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+            kErr);
     return err_;
   }
 
@@ -342,7 +368,11 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   }
   WithErrorSyntax_ErrorAsPrimitive_Result& set_err(uint32_t value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag Which()
+      const {
+    return ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+        Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -377,7 +407,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+          Invalid);
   union {
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response
         response_;
@@ -920,10 +952,15 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const {
+    return tag_ == ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::
+                       Tag::kResponse;
+  }
 
   ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& response() {
-    EnsureStorageInitialized(Tag::kResponse);
+    EnsureStorageInitialized(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+            kResponse);
     return response_;
   }
 
@@ -935,10 +972,14 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   WithErrorSyntax_ErrorAsEnum_Result& set_response(
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response value);
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const {
+    return tag_ == ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::
+                       Tag::kErr;
+  }
 
   ::fidl::test::protocols::ErrorEnun& err() {
-    EnsureStorageInitialized(Tag::kErr);
+    EnsureStorageInitialized(
+        ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr);
     return err_;
   }
 
@@ -949,7 +990,11 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   WithErrorSyntax_ErrorAsEnum_Result& set_err(
       ::fidl::test::protocols::ErrorEnun value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag Which()
+      const {
+    return ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag(
+        tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -987,7 +1032,9 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          Invalid);
   union {
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response response_;
     ::fidl::test::protocols::ErrorEnun err_;

@@ -24,25 +24,25 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 {{- end }}
 class {{ .Name }} {
   public:
-  {{ .Name }}() : ordinal_(Ordinal::Invalid), envelope_{} {}
+  {{ .Name }}() : ordinal_({{ .WireInvalidOrdinal }}), envelope_{} {}
 
   {{ .Name }}({{ .Name }}&&) = default;
   {{ .Name }}& operator=({{ .Name }}&&) = default;
 
-  enum class Tag : fidl_xunion_tag_t {
+  enum class {{ .TagEnum.Self }} : fidl_xunion_tag_t {
   {{- range .Members }}
-    {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
+    {{ .TagName.Self }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
   {{- if .IsFlexible }}
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    {{ .TagUnknown.Self }} = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   {{- end }}
   };
 
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == {{ .WireInvalidOrdinal }}; }
 
   {{- range $index, $member := .Members }}
 
-  bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
+  bool is_{{ .Name }}() const { return ordinal_ == {{ .WireOrdinalName }}; }
 
   static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::ObjectView<{{ .Type }}> val) {
     {{ $.Name }} result;
@@ -62,13 +62,13 @@ class {{ .Name }} {
   //{{ . }}
   {{- end }}
   void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
-    ordinal_ = Ordinal::{{ .TagName }};
+    ordinal_ = {{ .WireOrdinalName }};
     envelope_.data = ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
   void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::{{ .TagName }};
+    ordinal_ = {{ .WireOrdinalName }};
     set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...));
   }
 {{ "" }}
@@ -76,21 +76,21 @@ class {{ .Name }} {
   //{{ . }}
   {{- end }}
   {{ .Type }}& mutable_{{ .Name }}() {
-    ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
+    ZX_ASSERT(ordinal_ == {{ .WireOrdinalName }});
     return *static_cast<{{ .Type }}*>(envelope_.data.get());
   }
   const {{ .Type }}& {{ .Name }}() const {
-    ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
+    ZX_ASSERT(ordinal_ == {{ .WireOrdinalName }});
     return *static_cast<{{ .Type }}*>(envelope_.data.get());
   }
   {{- end }}
 
   {{- if .IsFlexible }}
-  Tag which() const;
+  {{ .TagEnum }} which() const;
   {{- else }}
-  Tag which() const {
+  {{ .TagEnum }} which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<{{ .TagEnum }}>(ordinal_);
   }
   {{- end }}
 
@@ -107,17 +107,17 @@ class {{ .Name }} {
   {{- end }}
 
  private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
+  enum class {{ .WireOrdinalEnum.Self }} : fidl_xunion_tag_t {
+    {{ .WireInvalidOrdinal.Self }} = 0,
   {{- range .Members }}
-    {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
+    {{ .WireOrdinalName.Self }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
   };
 
   static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
-  Ordinal ordinal_;
+  {{ .WireOrdinalEnum }} ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
@@ -136,15 +136,15 @@ class {{ .Name }} {
 {{- PushNamespace }}
 {{- end }}
 {{- if .IsFlexible }}
-auto {{ . }}::which() const -> Tag {
+auto {{ . }}::which() const -> {{ .TagEnum }} {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
   {{- range .Members }}
-  case Ordinal::{{ .TagName }}:
+  case {{ .WireOrdinalName }}:
   {{- end }}
-    return static_cast<Tag>(ordinal_);
+    return static_cast<{{ .TagEnum }}>(ordinal_);
   default:
-    return Tag::kUnknown;
+    return {{ .TagUnknown }};
   }
 }
 {{- end }}
@@ -160,7 +160,7 @@ void {{ . }}::_CloseHandles() {
   switch (ordinal_) {
   {{- range .Members }}
     {{- if .Type.IsResource }}
-      case Ordinal::{{ .TagName }}: {
+      case {{ .WireOrdinalName }}: {
         {{- CloseHandles . false true }}
         break;
       }

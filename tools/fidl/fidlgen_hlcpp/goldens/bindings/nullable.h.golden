@@ -304,10 +304,12 @@ class SimpleUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_a() const { return tag_ == Tag::kA; }
+  bool is_a() const {
+    return tag_ == ::fidl::test::nullable::SimpleUnion::Tag::kA;
+  }
 
   int32_t& a() {
-    EnsureStorageInitialized(Tag::kA);
+    EnsureStorageInitialized(::fidl::test::nullable::SimpleUnion::Tag::kA);
     return a_;
   }
 
@@ -317,10 +319,12 @@ class SimpleUnion final {
   }
   SimpleUnion& set_a(int32_t value);
 
-  bool is_b() const { return tag_ == Tag::kB; }
+  bool is_b() const {
+    return tag_ == ::fidl::test::nullable::SimpleUnion::Tag::kB;
+  }
 
   float& b() {
-    EnsureStorageInitialized(Tag::kB);
+    EnsureStorageInitialized(::fidl::test::nullable::SimpleUnion::Tag::kB);
     return b_;
   }
 
@@ -330,7 +334,9 @@ class SimpleUnion final {
   }
   SimpleUnion& set_b(float value);
 
-  Tag Which() const { return Tag(tag_); }
+  ::fidl::test::nullable::SimpleUnion::Tag Which() const {
+    return ::fidl::test::nullable::SimpleUnion::Tag(tag_);
+  }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
@@ -342,7 +348,8 @@ class SimpleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::nullable::SimpleUnion::Tag::Invalid);
   union {
     int32_t a_;
     float b_;
