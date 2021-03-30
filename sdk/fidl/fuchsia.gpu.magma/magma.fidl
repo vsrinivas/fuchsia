@@ -79,8 +79,8 @@ protocol Device {
     GetUnitTestStatus() -> (zx.status status);
 };
 
-/// Primary declarations.
-const uint32 kReceiveBufferSize = 2048;
+/// The batch size used to send multiple immediate commands in a single message.
+const uint32 MAX_IMMEDIATE_COMMANDS_DATA_SIZE = 2048;
 
 struct Resource {
     zx.koid buffer;
@@ -136,14 +136,14 @@ protocol Primary {
     ExecuteCommandBufferWithResources(
         uint32 context_id,
         CommandBuffer command_buffer,
-        vector<Resource> resources,
-        vector<zx.koid> wait_semaphores,
-        vector<zx.koid> signal_semaphores);
+        vector<Resource>:MAX resources,
+        vector<zx.koid>:MAX wait_semaphores,
+        vector<zx.koid>:MAX signal_semaphores);
 
     /// Submits a series of commands for execution on the GPU without using a command buffer.
     ExecuteImmediateCommands(uint32 context_id,
-                             bytes:kReceiveBufferSize command_data,
-                             vector<zx.koid> semaphores);
+                             bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE command_data,
+                             vector<zx.koid>:MAX semaphores);
 
     /// Retrieve the current magma error status.
     GetError() -> (int32 magma_status);
