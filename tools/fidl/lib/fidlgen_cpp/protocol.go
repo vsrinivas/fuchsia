@@ -101,15 +101,16 @@ type unifiedMessagingDetails struct {
 // These correspond to templated classes forward-declared in
 // /zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
 var (
-	WireSyncClient          = fidlNs.Member("WireSyncClient")
-	WireClient              = fidlNs.Member("WireClient")
-	WireSyncEventHandler    = fidlNs.Member("WireSyncEventHandler")
-	WireAsyncEventHandler   = fidlNs.Member("WireAsyncEventHandler")
-	WireInterface           = fidlNs.Member("WireInterface")
-	WireRawChannelInterface = fidlNs.Member("WireRawChannelInterface")
-	WireEventSender         = fidlNs.Member("WireEventSender")
-	WireWeakEventSender     = internalNs.Member("WireWeakEventSender")
-	WireClientImpl          = internalNs.Member("WireClientImpl")
+	WireSyncClient            = fidlNs.Member("WireSyncClient")
+	WireClient                = fidlNs.Member("WireClient")
+	WireEventHandlerInterface = internalNs.Member("WireEventHandlerInterface")
+	WireSyncEventHandler      = fidlNs.Member("WireSyncEventHandler")
+	WireAsyncEventHandler     = fidlNs.Member("WireAsyncEventHandler")
+	WireInterface             = fidlNs.Member("WireInterface")
+	WireRawChannelInterface   = fidlNs.Member("WireRawChannelInterface")
+	WireEventSender           = fidlNs.Member("WireEventSender")
+	WireWeakEventSender       = internalNs.Member("WireWeakEventSender")
+	WireClientImpl            = internalNs.Member("WireClientImpl")
 )
 
 type wireTypeNames struct {
@@ -117,31 +118,33 @@ type wireTypeNames struct {
 	// related to this protocol.
 	// TODO(fxbug.dev/72798): Golang template should use this instead of the
 	// NameVariants embedded in Protocol.
-	WireProtocolMarker      Name
-	WireSyncClient          Name
-	WireClient              Name
-	WireSyncEventHandler    Name
-	WireAsyncEventHandler   Name
-	WireInterface           Name
-	WireRawChannelInterface Name
-	WireEventSender         Name
-	WireWeakEventSender     Name
-	WireClientImpl          Name
+	WireProtocolMarker        Name
+	WireSyncClient            Name
+	WireClient                Name
+	WireEventHandlerInterface Name
+	WireSyncEventHandler      Name
+	WireAsyncEventHandler     Name
+	WireInterface             Name
+	WireRawChannelInterface   Name
+	WireEventSender           Name
+	WireWeakEventSender       Name
+	WireClientImpl            Name
 }
 
 func newWireTypeNames(protocolVariants NameVariants) wireTypeNames {
 	p := protocolVariants.Wire
 	return wireTypeNames{
-		WireProtocolMarker:      p,
-		WireSyncClient:          WireSyncClient.Template(p),
-		WireClient:              WireClient.Template(p),
-		WireSyncEventHandler:    WireSyncEventHandler.Template(p),
-		WireAsyncEventHandler:   WireAsyncEventHandler.Template(p),
-		WireInterface:           WireInterface.Template(p),
-		WireRawChannelInterface: WireRawChannelInterface.Template(p),
-		WireEventSender:         WireEventSender.Template(p),
-		WireWeakEventSender:     WireWeakEventSender.Template(p),
-		WireClientImpl:          WireClientImpl.Template(p),
+		WireProtocolMarker:        p,
+		WireSyncClient:            WireSyncClient.Template(p),
+		WireClient:                WireClient.Template(p),
+		WireEventHandlerInterface: WireEventHandlerInterface.Template(p),
+		WireSyncEventHandler:      WireSyncEventHandler.Template(p),
+		WireAsyncEventHandler:     WireAsyncEventHandler.Template(p),
+		WireInterface:             WireInterface.Template(p),
+		WireRawChannelInterface:   WireRawChannelInterface.Template(p),
+		WireEventSender:           WireEventSender.Template(p),
+		WireWeakEventSender:       WireWeakEventSender.Template(p),
+		WireClientImpl:            WireClientImpl.Template(p),
 	}
 }
 
@@ -192,9 +195,6 @@ type Protocol struct {
 	Events []*Method
 
 	// Templated names for wire helper types.
-
-	// Synchronous event handler for wire types.
-	WireSyncEventHandler Name
 }
 
 func (Protocol) Kind() declKind {
@@ -233,12 +233,11 @@ func newProtocol(inner protocolInner) Protocol {
 	}
 
 	return Protocol{
-		protocolInner:        inner,
-		OneWayMethods:        filterBy(kinds{oneWayMethod}),
-		TwoWayMethods:        filterBy(kinds{twoWayMethod}),
-		ClientMethods:        filterBy(kinds{oneWayMethod, twoWayMethod}),
-		Events:               filterBy(kinds{eventMethod}),
-		WireSyncEventHandler: inner.NameVariants.Wire.Nest("SyncEventHandler"),
+		protocolInner: inner,
+		OneWayMethods: filterBy(kinds{oneWayMethod}),
+		TwoWayMethods: filterBy(kinds{twoWayMethod}),
+		ClientMethods: filterBy(kinds{oneWayMethod, twoWayMethod}),
+		Events:        filterBy(kinds{eventMethod}),
 	}
 }
 

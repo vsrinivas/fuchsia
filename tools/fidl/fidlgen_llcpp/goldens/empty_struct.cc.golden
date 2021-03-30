@@ -277,10 +277,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif
 
-namespace fidl_test_emptystruct {
-::fidl::Result EmptyProtocol::SyncEventHandler::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
-        client_end) {
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
+    HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
+            client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
@@ -350,6 +351,7 @@ namespace fidl_test_emptystruct {
   }
 }
 
+namespace fidl_test_emptystruct {
 #ifdef __Fuchsia__
 namespace methods {
 
@@ -400,7 +402,9 @@ namespace entries {
                                    sizeof(::fidl::internal::MethodEntry));
 }
 #endif
+}  // namespace fidl_test_emptystruct
 
+namespace fidl_test_emptystruct {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult EmptyProtocol::Dispatch(Interface* impl,
                                                fidl_incoming_msg_t* msg,
@@ -420,7 +424,7 @@ fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
   return ::fidl_test_emptystruct::EmptyProtocol::Dispatch(this, msg, txn);
 }
 #endif
-namespace fidl_test_emptystruct {}  // namespace fidl_test_emptystruct
+
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
     SendAndReceiveCompleterBase::Reply(::fidl_test_emptystruct::wire::Empty e) {

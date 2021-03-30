@@ -51,6 +51,9 @@ class WireWeakEventSender;
 template <typename FidlProtocol>
 class WireClientImpl;
 
+template <typename FidlProtocol>
+class WireEventHandlerInterface;
+
 }  // namespace internal
 
 }  // namespace fidl

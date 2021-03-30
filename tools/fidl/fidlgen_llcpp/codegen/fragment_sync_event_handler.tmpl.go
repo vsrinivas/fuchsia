@@ -6,8 +6,8 @@ package codegen
 
 const fragmentSyncEventHandlerTmpl = `
 {{- define "EventHandlerHandleOneEventMethodDefinition" }}
-{{ EnsureNamespace . }}
-::fidl::Result {{ .Name }}::SyncEventHandler::HandleOneEvent(
+{{ EnsureNamespace "" }}
+::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::fidl::UnownedClientEnd<{{ . }}> client_end) {
   zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                                       ::zx::time::infinite(),

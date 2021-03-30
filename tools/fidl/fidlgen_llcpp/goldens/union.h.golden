@@ -3704,12 +3704,6 @@ class TestProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
-  class EventHandlerInterface {
-   public:
-    EventHandlerInterface() = default;
-    virtual ~EventHandlerInterface() = default;
-  };
-
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -4084,6 +4078,33 @@ class TestProtocol final {
       ::fidl::internal::WireWeakEventSender<::fidl_test_union::TestProtocol>;
 };
 }  // namespace fidl_test_union
+
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_union::TestProtocol> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_union::TestProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_union::TestProtocol> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> client_end);
+};
+
 template <>
 class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
  public:
@@ -4710,12 +4731,14 @@ namespace fidl_test_union {
 }  // namespace fidl_test_union
 template <>
 class ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>
-    : public ::fidl_test_union::TestProtocol::EventHandlerInterface {
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_union::TestProtocol> {
  public:
   WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+
 namespace fidl_test_union {
 
 class ::fidl_test_union::TestProtocol::

@@ -185,12 +185,6 @@ class SecondProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
-  class EventHandlerInterface {
-   public:
-    EventHandlerInterface() = default;
-    virtual ~EventHandlerInterface() = default;
-  };
-
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -297,6 +291,33 @@ class SecondProtocol final {
       ::fidl_test_service::SecondProtocol>;
 };
 }  // namespace fidl_test_service
+
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_service::SecondProtocol> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_service::SecondProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_service::SecondProtocol> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> client_end);
+};
+
 template <>
 class ::fidl::WireSyncClient<::fidl_test_service::SecondProtocol> final {
  public:
@@ -492,12 +513,6 @@ class FirstProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
-  class EventHandlerInterface {
-   public:
-    EventHandlerInterface() = default;
-    virtual ~EventHandlerInterface() = default;
-  };
-
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -601,6 +616,33 @@ class FirstProtocol final {
       ::fidl::internal::WireWeakEventSender<::fidl_test_service::FirstProtocol>;
 };
 }  // namespace fidl_test_service
+
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_service::FirstProtocol> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_service::FirstProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_service::FirstProtocol> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> client_end);
+};
+
 template <>
 class ::fidl::WireSyncClient<::fidl_test_service::FirstProtocol> final {
  public:
@@ -1044,12 +1086,14 @@ namespace fidl_test_service {
 }  // namespace fidl_test_service
 template <>
 class ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>
-    : public ::fidl_test_service::SecondProtocol::EventHandlerInterface {
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_service::SecondProtocol> {
  public:
   WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+
 namespace fidl_test_service {}  // namespace fidl_test_service
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
@@ -1143,12 +1187,14 @@ namespace fidl_test_service {
 }  // namespace fidl_test_service
 template <>
 class ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>
-    : public ::fidl_test_service::FirstProtocol::EventHandlerInterface {
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_service::FirstProtocol> {
  public:
   WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+
 namespace fidl_test_service {}  // namespace fidl_test_service
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final

@@ -1060,33 +1060,10 @@ class Interface final {
    private:
     void _InitHeader();
   };
-
-  class EventHandlerInterface {
-   public:
-    EventHandlerInterface() = default;
-    virtual ~EventHandlerInterface() = default;
-    // event comment #1
-    //
-    // event comment #3
-    virtual void OnEvent(
-        ::fidl_test_doccomments::Interface::OnEventResponse* event) {}
-  };
-
-  class SyncEventHandler : public EventHandlerInterface {
-   public:
-    SyncEventHandler() = default;
-
-    // Method called when an unknown event is found. This methods gives the
-    // status which, in this case, is returned by HandleOneEvent.
-    virtual zx_status_t Unknown() = 0;
-
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method.
-    ::fidl::Result HandleOneEvent(
-        ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>
-            client_end);
-  };
+  using EventHandlerInterface = ::fidl::internal::WireEventHandlerInterface<
+      ::fidl_test_doccomments::Interface>;
+  using SyncEventHandler =
+      ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>;
 
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
@@ -1192,6 +1169,38 @@ class Interface final {
       ::fidl::internal::WireWeakEventSender<::fidl_test_doccomments::Interface>;
 };
 }  // namespace fidl_test_doccomments
+
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_doccomments::Interface> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+  // event comment #1
+  //
+  // event comment #3
+  virtual void OnEvent(
+      ::fidl_test_doccomments::Interface::OnEventResponse* event) {}
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_doccomments::Interface> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end);
+};
+
 template <>
 class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
  public:
@@ -1232,7 +1241,8 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
   // status of the handler function is folded with any transport-level errors
   // and returned.
   ::fidl::Result HandleOneEvent(
-      ::fidl_test_doccomments::Interface::SyncEventHandler& event_handler) {
+      ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>&
+          event_handler) {
     return event_handler.HandleOneEvent(client_end_);
   }
 
@@ -1441,12 +1451,14 @@ namespace fidl_test_doccomments {
 }  // namespace fidl_test_doccomments
 template <>
 class ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>
-    : public ::fidl_test_doccomments::Interface::EventHandlerInterface {
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_doccomments::Interface> {
  public:
   WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+
 namespace fidl_test_doccomments {}  // namespace fidl_test_doccomments
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final

@@ -199,12 +199,6 @@ class Parent final {
     void _InitHeader(zx_txid_t _txid);
   };
 
-  class EventHandlerInterface {
-   public:
-    EventHandlerInterface() = default;
-    virtual ~EventHandlerInterface() = default;
-  };
-
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -334,6 +328,35 @@ class Parent final {
       ::fidl_test_inheritancewithrecursivedecl::Parent>;
 };
 }  // namespace fidl_test_inheritancewithrecursivedecl
+
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_inheritancewithrecursivedecl::Parent> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Parent> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          client_end);
+};
+
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
     final {
@@ -723,12 +746,6 @@ class Child final {
     void _InitHeader(zx_txid_t _txid);
   };
 
-  class EventHandlerInterface {
-   public:
-    EventHandlerInterface() = default;
-    virtual ~EventHandlerInterface() = default;
-  };
-
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -915,6 +932,35 @@ class Child final {
       ::fidl_test_inheritancewithrecursivedecl::Child>;
 };
 }  // namespace fidl_test_inheritancewithrecursivedecl
+
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_inheritancewithrecursivedecl::Child> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Child> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          client_end);
+};
+
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
     final {
@@ -1075,13 +1121,14 @@ namespace fidl_test_inheritancewithrecursivedecl {
 template <>
 class ::fidl::WireAsyncEventHandler<
     ::fidl_test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl_test_inheritancewithrecursivedecl::Parent::
-          EventHandlerInterface {
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Parent> {
  public:
   WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+
 namespace fidl_test_inheritancewithrecursivedecl {
 }  // namespace fidl_test_inheritancewithrecursivedecl
 template <>
@@ -1191,13 +1238,14 @@ namespace fidl_test_inheritancewithrecursivedecl {
 template <>
 class ::fidl::WireAsyncEventHandler<
     ::fidl_test_inheritancewithrecursivedecl::Child>
-    : public ::fidl_test_inheritancewithrecursivedecl::Child::
-          EventHandlerInterface {
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Child> {
  public:
   WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+
 namespace fidl_test_inheritancewithrecursivedecl {
 }  // namespace fidl_test_inheritancewithrecursivedecl
 template <>

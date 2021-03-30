@@ -85,8 +85,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif
 
-namespace fidl_test_doccomments {
-::fidl::Result Interface::SyncEventHandler::HandleOneEvent(
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
@@ -155,6 +155,7 @@ namespace fidl_test_doccomments {
   }
 }
 
+namespace fidl_test_doccomments {
 #ifdef __Fuchsia__
 namespace methods {
 
@@ -187,7 +188,9 @@ namespace entries {
           sizeof(entries::Interface) / sizeof(::fidl::internal::MethodEntry));
 }
 #endif
+}  // namespace fidl_test_doccomments
 
+namespace fidl_test_doccomments {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Interface::Dispatch(Interface* impl,
                                            fidl_incoming_msg_t* msg,
@@ -207,7 +210,6 @@ fidl::WireInterface<::fidl_test_doccomments::Interface>::dispatch_message(
   return ::fidl_test_doccomments::Interface::Dispatch(this, msg, txn);
 }
 #endif
-namespace fidl_test_doccomments {
 
 void ::fidl_test_doccomments::Interface::MethodRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -220,7 +222,6 @@ void ::fidl_test_doccomments::Interface::OnEventResponse::_InitHeader() {
                        ::fidl_test_doccomments::kInterface_OnEvent_Ordinal);
 }
 
-}  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
 zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
     const {

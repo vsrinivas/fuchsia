@@ -278,8 +278,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif
 
-namespace fidl_test_protocols {
-::fidl::Result Transitional::SyncEventHandler::HandleOneEvent(
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
@@ -348,6 +348,7 @@ namespace fidl_test_protocols {
   }
 }
 
+namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 namespace methods {
 
@@ -397,7 +398,9 @@ namespace entries {
                                   sizeof(::fidl::internal::MethodEntry));
 }
 #endif
+}  // namespace fidl_test_protocols
 
+namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Transitional::Dispatch(Interface* impl,
                                               fidl_incoming_msg_t* msg,
@@ -417,7 +420,7 @@ fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
   return ::fidl_test_protocols::Transitional::Dispatch(this, msg, txn);
 }
 #endif
-namespace fidl_test_protocols {}  // namespace fidl_test_protocols
+
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::Transitional>::
     RequestCompleterBase::Reply(int64_t y) {
@@ -1047,10 +1050,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif
 
-namespace fidl_test_protocols {
-::fidl::Result ChannelProtocol::SyncEventHandler::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
-        client_end) {
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
+    HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
+            client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
@@ -1119,6 +1123,7 @@ namespace fidl_test_protocols {
   }
 }
 
+namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 namespace methods {
 
@@ -1198,7 +1203,9 @@ namespace entries {
                                      sizeof(::fidl::internal::MethodEntry));
 }
 #endif
+}  // namespace fidl_test_protocols
 
+namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult ChannelProtocol::Dispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
@@ -1218,7 +1225,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
   return ::fidl_test_protocols::ChannelProtocol::Dispatch(this, msg, txn);
 }
 #endif
-namespace fidl_test_protocols {}  // namespace fidl_test_protocols
+
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
     MethodBCompleterBase::Reply(int64_t result) {
@@ -2240,11 +2247,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif
 
-namespace fidl_test_protocols {
-::fidl::Result WithAndWithoutRequestResponse::SyncEventHandler::HandleOneEvent(
-    ::fidl::UnownedClientEnd<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse>
-        client_end) {
+::fidl::Result fidl::WireSyncEventHandler<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+    HandleOneEvent(::fidl::UnownedClientEnd<
+                   ::fidl_test_protocols::WithAndWithoutRequestResponse>
+                       client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
@@ -2337,6 +2344,7 @@ namespace fidl_test_protocols {
   }
 }
 
+namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 namespace methods {
 
@@ -2457,7 +2465,9 @@ namespace entries {
               sizeof(::fidl::internal::MethodEntry));
 }
 #endif
+}  // namespace fidl_test_protocols
 
+namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult WithAndWithoutRequestResponse::Dispatch(
     Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
@@ -2477,7 +2487,7 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       this, msg, txn);
 }
 #endif
-namespace fidl_test_protocols {}  // namespace fidl_test_protocols
+
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::

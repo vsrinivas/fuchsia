@@ -21,14 +21,14 @@ const fragmentClientTmpl = `
 {{ PushNamespace }}
 {{- EnsureNamespace "" }}
 template<>
-class {{ .WireAsyncEventHandler }} : public {{ . }}::EventHandlerInterface {
+class {{ .WireAsyncEventHandler }} : public {{ .WireEventHandlerInterface }} {
  public:
-  WireAsyncEventHandler() = default;
+ {{ .WireAsyncEventHandler.Self }}() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
-{{- EnsureNamespace . }}
+{{ EnsureNamespace . }}
 {{- range .TwoWayMethods }}
 {{ "" }}
 class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
