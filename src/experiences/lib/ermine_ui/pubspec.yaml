@@ -9,3 +9,6 @@ flutter:
     - family: MaterialIcons
       fonts:
         - asset: fonts/MaterialIcons-Regular.otf
+    - family:  ErmineIcons
+      fonts:
+        - asset: fonts/ErmineIcons-Regular.ttf
