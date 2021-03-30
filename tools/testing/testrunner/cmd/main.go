@@ -205,7 +205,7 @@ func loadTests(path string) ([]testsharder.Test, error) {
 type tester interface {
 	Test(context.Context, testsharder.Test, io.Writer, io.Writer, string) (runtests.DataSinkReference, error)
 	Close() error
-	EnsureSinks(context.Context, []runtests.DataSinkReference) error
+	EnsureSinks(context.Context, []runtests.DataSinkReference, *testOutputs) error
 	RunSnapshot(context.Context, string) error
 }
 
@@ -290,7 +290,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 				// return this error. Log it so we can keep track of it, but don't fail.
 				logger.Errorf(ctx, err.Error())
 			}
-			if err := t.EnsureSinks(ctx, sinks); err != nil {
+			if err := t.EnsureSinks(ctx, sinks, outputs); err != nil {
 				return err
 			}
 		}

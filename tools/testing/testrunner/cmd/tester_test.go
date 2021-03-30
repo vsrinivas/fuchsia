@@ -184,7 +184,7 @@ func TestSubprocessTester(t *testing.T) {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
 			}
 
-			sinks := runtests.DataSinkMap(ref)
+			sinks := ref.Sinks
 			if !reflect.DeepEqual(sinks, c.wantDataSinks) {
 				t.Fatalf("expected: %#v;\nactual: %#v", c.wantDataSinks, sinks)
 			}
@@ -194,10 +194,12 @@ func TestSubprocessTester(t *testing.T) {
 
 type fakeDataSinkCopier struct {
 	reconnectCalls int
+	remoteDir      string
 }
 
-func (*fakeDataSinkCopier) GetReference() (runtests.DataSinkReference, error) {
-	return runtests.DataSinkReference{}, nil
+func (c *fakeDataSinkCopier) GetReferences(remoteDir string) (map[string]runtests.DataSinkReference, error) {
+	c.remoteDir = remoteDir
+	return map[string]runtests.DataSinkReference{}, nil
 }
 
 func (*fakeDataSinkCopier) Copy(_ []runtests.DataSinkReference, _ string) (runtests.DataSinkMap, error) {
@@ -222,6 +224,8 @@ func TestSSHTester(t *testing.T) {
 		wantErr         bool
 		wantConnErr     bool
 		runSnapshot     bool
+		useRuntests     bool
+		runV2           bool
 	}{
 		{
 			name:    "success",
@@ -265,6 +269,17 @@ func TestSSHTester(t *testing.T) {
 			wantConnErr: false,
 			runSnapshot: true,
 		},
+		{
+			name:        "get data sinks for v1 tests",
+			runErrs:     []error{nil},
+			useRuntests: true,
+		},
+		{
+			name:        "get data sinks for v2 tests",
+			runErrs:     []error{nil},
+			useRuntests: true,
+			runV2:       true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -279,6 +294,7 @@ func TestSSHTester(t *testing.T) {
 				copier:                      copier,
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
 				serialSocket:                serialSocket,
+				useRuntests:                 c.useRuntests,
 			}
 			defer func() {
 				if err := tester.Close(); err != nil {
@@ -292,7 +308,10 @@ func TestSSHTester(t *testing.T) {
 				Runs:         1,
 				RunAlgorithm: testsharder.StopOnSuccess,
 			}
-			_, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
+			if c.runV2 {
+				test.Test = build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"}
+			}
+			sinks, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
 			if err == nil {
 				if c.wantErr {
 					t.Errorf("tester.Test got nil error, want non-nil error")
@@ -310,6 +329,11 @@ func TestSSHTester(t *testing.T) {
 				p := filepath.Join(t.TempDir(), "testrunner-cmd-test")
 				if err = tester.RunSnapshot(context.Background(), p); err != nil {
 					t.Errorf("failed to run snapshot: %v", err)
+				}
+			}
+			if c.runV2 {
+				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &testOutputs{}); err != nil {
+					t.Errorf("failed to collect v2 sinks: %v", err)
 				}
 			}
 
@@ -341,35 +365,18 @@ func TestSSHTester(t *testing.T) {
 			} else if serialSocket.runCalls > 0 {
 				t.Errorf("unexpectedly called RunSerialDiagnostics()")
 			}
+
+			if c.useRuntests {
+				expectedRemoteDir := dataOutputDir
+				if c.runV2 {
+					expectedRemoteDir = dataOutputDirV2
+				}
+				if copier.remoteDir != expectedRemoteDir {
+					t.Errorf("expected sinks in dir: %s, but got: %s", expectedRemoteDir, copier.remoteDir)
+				}
+			}
+
 		})
-	}
-}
-
-// test that v2 tests are skipped when runtests binary is used.
-func TestRunTestsWithV2Tests(t *testing.T) {
-
-	tester := fuchsiaSSHTester{
-		client: &fakeSSHClient{
-			runErrs: []error{nil},
-		},
-		copier:                      &fakeDataSinkCopier{},
-		connectionErrorRetryBackoff: &retry.ZeroBackoff{},
-		useRuntests:                 true,
-	}
-	defer func() {
-		if err := tester.Close(); err != nil {
-			t.Errorf("Close returned error: %v", err)
-		}
-	}()
-
-	test := testsharder.Test{
-		Test:         build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"},
-		Runs:         1,
-		RunAlgorithm: testsharder.StopOnSuccess,
-	}
-	_, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
-	if !isTestSkippedErr(err) {
-		t.Errorf("expected test to be skipped, got %v", err)
 	}
 }
 

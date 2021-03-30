@@ -43,14 +43,14 @@ func (t *fakeTester) Test(_ context.Context, test testsharder.Test, stdout, stde
 	if t.runTest != nil {
 		t.runTest(test, stdout, stderr)
 	}
-	return nil, t.testErr
+	return runtests.DataSinkReference{}, t.testErr
 }
 
 func (t *fakeTester) Close() error {
 	return nil
 }
 
-func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference) error {
+func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testOutputs) error {
 	t.funcCalls = append(t.funcCalls, copySinksFunc)
 	return nil
 }

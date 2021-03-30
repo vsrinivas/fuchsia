@@ -56,7 +56,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		Cases:          result.Cases,
 		StartTime:      result.StartTime,
 		DurationMillis: duration.Milliseconds(),
-		DataSinks:      runtests.DataSinkMap(result.DataSinks),
+		DataSinks:      result.DataSinks.Sinks,
 	})
 
 	desc := fmt.Sprintf("%s (%v)", result.Name, duration)
@@ -74,6 +74,28 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		}
 	}
 	return nil
+}
+
+// UpdateDataSinks updates the DataSinks field of the tests in the summary with
+// the provided `newSinks`. If the sinks were copied to a subdirectory within
+// o.outDir, that path should be provided as the `insertPrefixPath` which will
+// get prepended to the sink file paths so that they point to the correct paths
+// relative to o.outDir.
+func (o *testOutputs) updateDataSinks(newSinks map[string]runtests.DataSinkReference, insertPrefixPath string) {
+	for i, test := range o.summary.Tests {
+		if sinkRef, ok := newSinks[test.Name]; ok {
+			if test.DataSinks == nil {
+				test.DataSinks = runtests.DataSinkMap{}
+			}
+			for name, sinks := range sinkRef.Sinks {
+				for _, sink := range sinks {
+					sink.File = filepath.Join(insertPrefixPath, sink.File)
+					test.DataSinks[name] = append(test.DataSinks[name], sink)
+				}
+			}
+			o.summary.Tests[i] = test
+		}
+	}
 }
 
 // Close stops the recording of test outputs; it must be called to finalize them.

@@ -34,6 +34,8 @@ import (
 const (
 	// A test output directory within persistent storage.
 	dataOutputDir = "/data/infra/testrunner"
+	// The output data directory for component v2 tests.
+	dataOutputDirV2 = "/tmp/r/sys/fuchsia.com:component_manager_for_test:0#meta:component_manager_for_test.cmx/debug_data"
 
 	// Various tools for running tests.
 	runtestsName         = "runtests"
@@ -81,7 +83,7 @@ type sshClient interface {
 
 // For testability
 type dataSinkCopier interface {
-	GetReference() (runtests.DataSinkReference, error)
+	GetReferences(remoteDir string) (map[string]runtests.DataSinkReference, error)
 	Copy(sinks []runtests.DataSinkReference, localDir string) (runtests.DataSinkMap, error)
 	Reconnect() error
 	Close() error
@@ -130,12 +132,13 @@ func newSubprocessTester(dir string, env []string, localOutputDir string, perTes
 }
 
 func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+	sinkRef := runtests.DataSinkReference{}
 	if test.Path == "" {
-		return nil, fmt.Errorf("test %q has no `path` set", test.Name)
+		return sinkRef, fmt.Errorf("test %q has no `path` set", test.Name)
 	}
 	// Some tests read testOutDirEnvKey so ensure they get their own output dir.
 	if err := os.MkdirAll(outDir, 0770); err != nil {
-		return nil, err
+		return sinkRef, err
 	}
 
 	// Might as well emit any profiles directly to the output directory.
@@ -176,7 +179,7 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		var buildIDs []string
 		buildIDs, profileErr = t.getModuleBuildIDs(test.Path)
 		if profileErr == nil {
-			return runtests.DataSinkReference{
+			sinkRef.Sinks = runtests.DataSinkMap{
 				llvmProfileSinkType: []runtests.DataSink{
 					{
 						Name:     filepath.Base(profileRel),
@@ -184,21 +187,21 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 						BuildIDs: buildIDs,
 					},
 				},
-			}, err
+			}
 		} else {
 			logger.Warningf(ctx, "failed to read module build IDs from %q", test.Path)
 		}
 	}
-	return nil, err
+	return sinkRef, err
 }
 
-func (t *subprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference) error {
+func (t *subprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, _ *testOutputs) error {
 	// Nothing to actually copy; if any profiles were emitted, they would have
 	// been written directly to the output directory. We verify here that all
 	// recorded data sinks are actually present.
 	numSinks := 0
 	for _, ref := range sinkRefs {
-		for _, sinks := range ref {
+		for _, sinks := range ref.Sinks {
 			for _, sink := range sinks {
 				abs := filepath.Join(t.localOutputDir, sink.File)
 				exists, err := osmisc.FileExists(abs)
@@ -280,7 +283,7 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish an SSH connection: %w", err)
 	}
-	copier, err := runtests.NewDataSinkCopier(client, dataOutputDir)
+	copier, err := runtests.NewDataSinkCopier(client)
 	if err != nil {
 		return nil, err
 	}
@@ -353,13 +356,10 @@ func isTestSkippedErr(err error) bool {
 
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
-	// runtests doesn't support v2 coverage data. fxbug.dev/61180 tracks an alternative for v2.
-	if t.useRuntests && strings.HasSuffix(test.PackageURL, componentV2Suffix) {
-		return nil, &TestSkippedError{}
-	}
+	sinks := runtests.DataSinkReference{}
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	if err != nil {
-		return nil, err
+		return sinks, err
 	}
 	testErr := t.runSSHCommandWithRetry(ctx, command, stdout, stderr)
 
@@ -367,7 +367,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		if err := t.serialSocket.runDiagnostics(ctx); err != nil {
 			logger.Warningf(ctx, "failed to run serial diagnostics: %v", err)
 		}
-		return nil, testErr
+		return sinks, testErr
 	}
 
 	if t.isTimeoutError(test, testErr) {
@@ -375,11 +375,13 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 
 	var sinkErr error
-	var sinks runtests.DataSinkReference
-	if t.useRuntests {
+	if t.useRuntests && !strings.HasSuffix(test.PackageURL, componentV2Suffix) {
 		startTime := time.Now()
-		if sinks, sinkErr = t.copier.GetReference(); sinkErr != nil {
+		var sinksPerTest map[string]runtests.DataSinkReference
+		if sinksPerTest, sinkErr = t.copier.GetReferences(dataOutputDir); sinkErr != nil {
 			logger.Errorf(ctx, "failed to determine data sinks for test %q: %v", test.Name, sinkErr)
+		} else {
+			sinks = sinksPerTest[test.Name]
 		}
 		duration := time.Now().Sub(startTime)
 		if sinks.Size() > 0 {
@@ -393,14 +395,35 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	return sinks, testErr
 }
 
-func (t *fuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference) error {
+func (t *fuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, outputs *testOutputs) error {
+	// Collect v2 references.
+	v2Sinks, err := t.copier.GetReferences(dataOutputDirV2)
+	if err != nil {
+		// If we fail to get v2 sinks, just log the error but continue to copy v1 sinks.
+		logger.Errorf(ctx, "failed to determine data sinks for v2 tests: %v", err)
+	}
+	var v2SinkRefs []runtests.DataSinkReference
+	for _, ref := range v2Sinks {
+		v2SinkRefs = append(v2SinkRefs, ref)
+	}
+	if len(v2SinkRefs) > 0 {
+		if err := t.copySinks(ctx, v2SinkRefs, filepath.Join(t.localOutputDir, "v2")); err != nil {
+			return err
+		}
+		outputs.updateDataSinks(v2Sinks, "v2")
+	}
+	return t.copySinks(ctx, sinkRefs, t.localOutputDir)
+}
+
+func (t *fuchsiaSSHTester) copySinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, localOutputDir string) error {
 	startTime := time.Now()
-	sinkMap, err := t.copier.Copy(sinkRefs, t.localOutputDir)
+	sinkMap, err := t.copier.Copy(sinkRefs, localOutputDir)
 	if err != nil {
 		return fmt.Errorf("failed to copy data sinks off target: %v", err)
 	}
 	copyDuration := time.Now().Sub(startTime)
-	numSinks := runtests.DataSinkReference(sinkMap).Size()
+	sinkRef := runtests.DataSinkReference{Sinks: sinkMap}
+	numSinks := sinkRef.Size()
 	if numSinks > 0 {
 		logger.Debugf(ctx, "copied %d data sinks in %v", numSinks, copyDuration)
 	}
@@ -469,9 +492,11 @@ func (w *lastWriteSaver) Write(p []byte) (int, error) {
 }
 
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
+	// We don't collect data sinks for serial tests. Just return an empty DataSinkReference.
+	sinks := runtests.DataSinkReference{}
 	command, err := commandForTest(&test, true, "", t.perTestTimeout)
 	if err != nil {
-		return nil, err
+		return sinks, err
 	}
 	logger.Debugf(ctx, "starting: %v", command)
 
@@ -482,7 +507,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	startedReader := iomisc.NewMatchingReader(io.TeeReader(t.socket, lastWrite), [][]byte{[]byte(runtests.StartedSignature + test.Name)})
 	for ctx.Err() == nil {
 		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{command, 0}}); err != nil {
-			return nil, fmt.Errorf("failed to write to serial socket: %v", err)
+			return sinks, fmt.Errorf("failed to write to serial socket: %v", err)
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
 		_, err := iomisc.ReadUntilMatch(startedCtx, startedReader)
@@ -494,7 +519,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	}
 
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		return sinks, ctx.Err()
 	}
 
 	success, err := runtests.TestPassed(ctx, io.TeeReader(
@@ -505,14 +530,14 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		test.Name)
 
 	if err != nil {
-		return nil, err
+		return sinks, err
 	} else if !success {
-		return nil, fmt.Errorf("test failed")
+		return sinks, fmt.Errorf("test failed")
 	}
-	return nil, nil
+	return sinks, nil
 }
 
-func (t *fuchsiaSerialTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference) error {
+func (t *fuchsiaSerialTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testOutputs) error {
 	return nil
 }
 
@@ -528,7 +553,8 @@ func (t *fuchsiaSerialTester) Close() error {
 
 func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) ([]string, error) {
 	command := []string{}
-	if useRuntests {
+	// For v2 coverage data, use run-test-suite instead of runtests and collect the data from the designated dataOutputDirV2 directory.
+	if useRuntests && !strings.HasSuffix(test.PackageURL, componentV2Suffix) {
 		command = []string{runtestsName}
 		if remoteOutputDir != "" {
 			command = append(command, "--output", remoteOutputDir)

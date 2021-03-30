@@ -31,16 +31,17 @@ func TestRecordingOfOutputs(t *testing.T) {
 			StartTime: start,
 			EndTime:   start.Add(5 * time.Millisecond),
 			DataSinks: runtests.DataSinkReference{
-				"sinks": []runtests.DataSink{
-					{
-						Name: "SINK_A1",
-						File: "sink_a1.txt",
-					},
-					{
-						Name: "SINK_A2",
-						File: "sink_a2.txt",
-					},
-				},
+				Sinks: runtests.DataSinkMap{
+					"sinks": []runtests.DataSink{
+						{
+							Name: "SINK_A1",
+							File: "sink_a1.txt",
+						},
+						{
+							Name: "SINK_A2",
+							File: "sink_a2.txt",
+						},
+					}},
 			},
 			Stdio: []byte("STDOUT_A"),
 		},
@@ -50,15 +51,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 			Result:    runtests.TestSuccess,
 			StartTime: start,
 			EndTime:   start.Add(10 * time.Millisecond),
-			DataSinks: runtests.DataSinkReference{
-				"sinks": []runtests.DataSink{
-					{
-						Name: "SINK_B",
-						File: "sink_b.txt",
-					},
-				},
-			},
-			Stdio: []byte("STDERR_B"),
+			Stdio:     []byte("STDERR_B"),
 		},
 	}
 
@@ -103,11 +96,12 @@ func TestRecordingOfOutputs(t *testing.T) {
 			Result:         runtests.TestSuccess,
 			StartTime:      start,
 			DurationMillis: 10,
+			// The data sinks will be added through a call to updateDataSinks().
 			DataSinks: runtests.DataSinkMap{
 				"sinks": []runtests.DataSink{
 					{
 						Name: "SINK_B",
-						File: "sink_b.txt",
+						File: "other_dir/sink_b.txt",
 					},
 				},
 			},
@@ -149,6 +143,17 @@ func TestRecordingOfOutputs(t *testing.T) {
 			t.Fatalf("failed to record result of %q: %v", result.Name, err)
 		}
 	}
+	o.updateDataSinks(map[string]runtests.DataSinkReference{
+		"test_b": {
+			Sinks: runtests.DataSinkMap{
+				"sinks": []runtests.DataSink{
+					{
+						Name: "SINK_B",
+						File: "sink_b.txt",
+					},
+				}},
+		},
+	}, "other_dir")
 	o.Close()
 
 	// Verify that the summary as expected.
