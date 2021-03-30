@@ -139,9 +139,10 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::AttributeList, *element);
     TreeVisitor::OnAttributeList(element);
   }
-  void OnTypeConstructor(std::unique_ptr<fidl::raw::TypeConstructorOld> const& element) override {
+  void OnTypeConstructorOld(
+      std::unique_ptr<fidl::raw::TypeConstructorOld> const& element) override {
     CheckSpanOfType(ElementType::TypeConstructor, *element);
-    TreeVisitor::OnTypeConstructor(element);
+    TreeVisitor::OnTypeConstructorOld(element);
   }
   void OnUsing(std::unique_ptr<fidl::raw::Using> const& element) override {
     CheckSpanOfType(ElementType::Using, *element);

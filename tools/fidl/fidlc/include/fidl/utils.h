@@ -29,6 +29,19 @@ enum struct Syntax {
   kNew,
 };
 
+template <class>
+inline constexpr bool always_false_v = false;
+
+// Helper object for creating a callable argument to std::visit by passing in
+// lambdas for handling each variant (code comes from
+// https://en.cppreference.com/w/cpp/utility/variant/visit)
+template <class... Ts>
+struct matchers : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts>
+matchers(Ts...) -> matchers<Ts...>;
+
 using reporter::Reporter;
 
 constexpr char kWhitespaceChars[] = " \t\n\v\f\r";

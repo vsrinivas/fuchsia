@@ -215,11 +215,11 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnUnionMember(element);
   }
 
-  void OnTypeConstructor(std::unique_ptr<TypeConstructorOld> const& element) override {
+  void OnTypeConstructorOld(std::unique_ptr<TypeConstructorOld> const& element) override {
     ScopedIncrement si(nested_type_depth_);
     ScopedBool before_colon(blank_space_before_colon_, is_enum_or_bits_or_resource_decl_);
     ScopedBool after_colon(blank_space_after_colon_, is_enum_or_bits_or_resource_decl_);
-    TreeVisitor::OnTypeConstructor(element);
+    TreeVisitor::OnTypeConstructorOld(element);
   }
 
   void OnFile(std::unique_ptr<File> const& element) override;

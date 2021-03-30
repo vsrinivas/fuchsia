@@ -808,7 +808,7 @@ Linter::Linter()
         linter.CheckRepeatedName("union member", element.maybe_used->identifier);
       });
   // clang-format off
-  callbacks_.OnTypeConstructor(
+  callbacks_.OnTypeConstructorOld(
       [& linter = *this,
        string_bounds_check = DefineCheck("string-bounds-not-specified",
                                          "Specify bounds for string"),

@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "fidl/attributes.h"
+#include "fidl/diagnostic_types.h"
 #include "fidl/diagnostics.h"
 #include "fidl/experimental_flags.h"
 #include "fidl/lexer.h"
@@ -1482,7 +1483,6 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
 }
 
 bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> raw_type_ctor,
-                                        SourceSpan span, fidl::utils::Syntax syntax,
                                         std::unique_ptr<TypeConstructor>* out_type_ctor) {
   auto name = CompileCompoundIdentifier(raw_type_ctor->identifier.get());
   if (!name)
@@ -1490,7 +1490,7 @@ bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld>
 
   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
   if (raw_type_ctor->maybe_arg_type_ctor != nullptr) {
-    if (!ConsumeTypeConstructorOld(std::move(raw_type_ctor->maybe_arg_type_ctor), span, syntax,
+    if (!ConsumeTypeConstructorOld(std::move(raw_type_ctor->maybe_arg_type_ctor),
                                    &maybe_arg_type_ctor))
       return false;
   }
@@ -1515,7 +1515,8 @@ bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld>
 
   *out_type_ctor = std::make_unique<TypeConstructor>(
       std::move(name.value()), std::move(maybe_arg_type_ctor), std::move(handle_subtype_identifier),
-      std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability, syntax);
+      std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability,
+      fidl::utils::Syntax::kOld);
   return true;
 }
 
@@ -1557,22 +1558,13 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive,
 
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration,
                                fidl::utils::Syntax syntax) {
-  assert(alias_declaration->alias &&
-         (alias_declaration->type_ctor || alias_declaration->type_ctor_new));
+  assert(alias_declaration->alias && IsTypeConstructorDefined(alias_declaration->type_ctor));
 
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
   std::unique_ptr<TypeConstructor> type_ctor_;
 
-  // TODO(fxbug.dev/70247): Remove conditional once we're fully on the new syntax.
-  if (alias_declaration->IsNew()) {
-    type_ctor_ = ConsumeTypeConstructorNew(std::move(alias_declaration->type_ctor_new), alias_name);
-    if (type_ctor_ == nullptr)
-      return false;
-  } else {
-    if (!ConsumeTypeConstructorOld(std::move(alias_declaration->type_ctor),
-                                   alias_declaration->span(), syntax, &type_ctor_))
-      return false;
-  }
+  if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_name, &type_ctor_))
+    return false;
 
   return RegisterDecl(std::make_unique<TypeAlias>(std::move(alias_declaration->attributes),
                                                   std::move(alias_name), std::move(type_ctor_),
@@ -1587,8 +1579,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive,
   auto span = using_directive->using_path->components[0]->span();
   auto alias_name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> partial_type_ctor_;
-  if (!ConsumeTypeConstructorOld(std::move(using_directive->maybe_type_ctor), span,
-                                 fidl::utils::Syntax::kOld, &partial_type_ctor_))
+  if (!ConsumeTypeConstructorOld(std::move(using_directive->maybe_type_ctor), &partial_type_ctor_))
     return false;
   return RegisterDecl(std::make_unique<TypeAlias>(
       std::move(using_directive->attributes), std::move(alias_name), std::move(partial_type_ctor_),
@@ -1610,8 +1601,7 @@ void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
 
   std::unique_ptr<TypeConstructor> type_ctor;
   if (bits_declaration->maybe_type_ctor) {
-    if (!ConsumeTypeConstructorOld(std::move(bits_declaration->maybe_type_ctor),
-                                   bits_declaration->span(), fidl::utils::Syntax::kOld, &type_ctor))
+    if (!ConsumeTypeConstructorOld(std::move(bits_declaration->maybe_type_ctor), &type_ctor))
       return;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
@@ -1628,8 +1618,7 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> type_ctor;
-  if (!ConsumeTypeConstructorOld(std::move(const_declaration->type_ctor), span,
-                                 fidl::utils::Syntax::kOld, &type_ctor))
+  if (!ConsumeTypeConstructorOld(std::move(const_declaration->type_ctor), &type_ctor))
     return;
 
   std::unique_ptr<Constant> constant;
@@ -1655,8 +1644,7 @@ void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 
   std::unique_ptr<TypeConstructor> type_ctor;
   if (enum_declaration->maybe_type_ctor) {
-    if (!ConsumeTypeConstructorOld(std::move(enum_declaration->maybe_type_ctor),
-                                   enum_declaration->span(), fidl::utils::Syntax::kOld, &type_ctor))
+    if (!ConsumeTypeConstructorOld(std::move(enum_declaration->maybe_type_ctor), &type_ctor))
       return;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
@@ -1672,10 +1660,8 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
                                  raw::ProtocolMethod* method, Struct* in_response,
                                  fidl::utils::Syntax syntax, Struct** out_response) {
   // Compile the error type.
-  auto error_span = method->maybe_error_ctor->span();
   std::unique_ptr<TypeConstructor> error_type_ctor;
-  if (!ConsumeTypeConstructorOld(std::move(method->maybe_error_ctor), error_span, syntax,
-                                 &error_type_ctor))
+  if (!ConsumeTypeConstructorOld(std::move(method->maybe_error_ctor), &error_type_ctor))
     return false;
 
   // Make the Result union containing the response struct and the
@@ -1801,8 +1787,7 @@ bool Library::ConsumeResourceDeclaration(
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    auto span = property->identifier->span();
-    if (!ConsumeTypeConstructorOld(std::move(property->type_ctor), span, syntax, &type_ctor))
+    if (!ConsumeTypeConstructorOld(std::move(property->type_ctor), &type_ctor))
       return false;
     auto attributes = std::move(property->attributes);
     properties.emplace_back(std::move(type_ctor), property->identifier->span(),
@@ -1811,8 +1796,7 @@ bool Library::ConsumeResourceDeclaration(
 
   std::unique_ptr<TypeConstructor> type_ctor;
   if (resource_declaration->maybe_type_ctor) {
-    if (!ConsumeTypeConstructorOld(std::move(resource_declaration->maybe_type_ctor),
-                                   resource_declaration->span(), syntax, &type_ctor))
+    if (!ConsumeTypeConstructorOld(std::move(resource_declaration->maybe_type_ctor), &type_ctor))
       return false;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
@@ -1838,14 +1822,13 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
                                    Struct** out_struct_decl) {
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
-    const SourceSpan name = parameter->identifier->span();
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructorOld(std::move(parameter->type_ctor), name, syntax, &type_ctor))
+    if (!ConsumeTypeConstructorOld(std::move(parameter->type_ctor), &type_ctor))
       return false;
     ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember,
                                 parameter->attributes.get());
-    members.emplace_back(std::move(type_ctor), name, nullptr /* maybe_default_value */,
-                         std::move(parameter->attributes));
+    members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
+                         nullptr /* maybe_default_value */, std::move(parameter->attributes));
   }
 
   if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
@@ -1864,8 +1847,7 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    auto span = member->identifier->span();
-    if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), span, syntax, &type_ctor))
+    if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), &type_ctor))
       return;
     members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(member->attributes));
@@ -1882,9 +1864,7 @@ void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
   std::vector<Struct::Member> members;
   for (auto& member : struct_declaration->members) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    auto span = member->identifier->span();
-    if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), span, fidl::utils::Syntax::kOld,
-                                   &type_ctor))
+    if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), &type_ctor))
       return;
     std::unique_ptr<Constant> maybe_default_value;
     if (member->maybe_default_value != nullptr) {
@@ -1910,8 +1890,7 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
 
     if (member->maybe_used) {
       std::unique_ptr<TypeConstructor> type_ctor;
-      if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), member->span(),
-                                     fidl::utils::Syntax::kOld, &type_ctor))
+      if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
         return;
       std::unique_ptr<Constant> maybe_default_value;
       if (member->maybe_used->maybe_default_value) {
@@ -1948,10 +1927,8 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     auto explicit_ordinal = std::move(member->ordinal);
 
     if (member->maybe_used) {
-      auto span = member->maybe_used->identifier->span();
       std::unique_ptr<TypeConstructor> type_ctor;
-      if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), span,
-                                     fidl::utils::Syntax::kOld, &type_ctor))
+      if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
         return;
       if (member->maybe_used->maybe_default_value) {
         const auto default_value = member->maybe_used->maybe_default_value.get();
@@ -1962,7 +1939,8 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
         return;
       }
 
-      members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor), span,
+      members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor),
+                           member->maybe_used->identifier->span(),
                            std::move(member->maybe_used->attributes));
     } else {
       members.emplace_back(std::move(explicit_ordinal), member->span());
@@ -1993,10 +1971,8 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name
 
   std::unique_ptr<TypeConstructor> subtype_ctor;
   if (layout->subtype_ctor != nullptr) {
-    subtype_ctor = ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context);
-    if (subtype_ctor == nullptr) {
+    if (!ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context, &subtype_ctor))
       return false;
-    }
   } else {
     subtype_ctor = TypeConstructor::CreateSizeType();
   }
@@ -2021,11 +1997,10 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
         this, member->span(),
         std::string(context.decl_name()) +
             utils::to_upper_camel_case(std::string(member->identifier->span().data())));
-    auto type_ctor =
-        ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout);
-    if (type_ctor == nullptr) {
+    std::unique_ptr<TypeConstructor> type_ctor;
+    if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
+                                   &type_ctor))
       return false;
-    }
     if (type_ctor->nullability != types::Nullability::kNonnullable) {
       // TODO(fxbug.dev/65978): This error message could be more specific.  We
       //  may want to just pass the specific error message as a template arg, or
@@ -2053,11 +2028,10 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
         std::string(context.decl_name()) +
             utils::to_upper_camel_case(std::string(member->identifier->span().data())));
 
-    auto type_ctor =
-        ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout);
-    if (type_ctor == nullptr) {
+    std::unique_ptr<TypeConstructor> type_ctor;
+    if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
+                                   &type_ctor))
       return false;
-    }
 
     std::unique_ptr<Constant> default_value;
     if (member->default_value != nullptr) {
@@ -2103,9 +2077,9 @@ bool Library::IsOptionalConstraint(std::unique_ptr<TypeConstructor>& type_ctor,
   return false;
 }
 
-std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
-    std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor, const Name& context) {
-  std::unique_ptr<TypeConstructor> type_ctor;
+bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
+                                        const Name& context,
+                                        std::unique_ptr<TypeConstructor>* out_type) {
   auto params = std::move(raw_type_ctor->parameters);
   auto constraints = std::move(raw_type_ctor->constraints);
   size_t num_constraints = constraints == nullptr ? 0 : constraints->items.size();
@@ -2115,9 +2089,9 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
            "anonymous layouts cannot have type parameters");
     auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->type_ref.get());
     if (!ConsumeLayout(std::move(inline_ref->layout), context)) {
-      return nullptr;
+      return false;
     }
-    type_ctor = std::make_unique<TypeConstructor>(
+    auto type_ctor = std::make_unique<TypeConstructor>(
         context,
         /*maybe_arg_type_ctor=*/nullptr,
         /*handle_subtype_identifier=*/std::nullopt,
@@ -2135,10 +2109,12 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
       } else {
         Fail(ErrConstraintOptionalMisspelled, type_ctor->name,
              constraints->items[0]->span().data());
-        return nullptr;
+        return false;
       }
     }
-    return type_ctor;
+    if (out_type)
+      *out_type = std::move(type_ctor);
+    return true;
   }
 
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->type_ref.get());
@@ -2146,12 +2122,12 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
   auto last_name_component = named_ref->identifier->components.back()->span().data();
   auto name = CompileCompoundIdentifier(named_ref->identifier.get());
   if (!name)
-    return nullptr;
+    return false;
 
   // Initialize the typector with just a name. The other parameters are filled in below.
-  type_ctor = std::make_unique<TypeConstructor>(std::move(name.value()), nullptr, std::nullopt,
-                                                nullptr, nullptr, types::Nullability::kNonnullable,
-                                                fidl::utils::Syntax::kNew);
+  auto type_ctor = std::make_unique<TypeConstructor>(
+      std::move(name.value()), nullptr, std::nullopt, nullptr, nullptr,
+      types::Nullability::kNonnullable, fidl::utils::Syntax::kNew);
 
   // TODO(fxbug.dev/71536): this mess will get fixed once the new flat AST lands.
   // Are there type parameters?
@@ -2174,8 +2150,9 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
         switch (param->kind) {
           case raw::TypeParameter::Kind::kType: {
             auto type_param = static_cast<raw::TypeTypeParameter*>(param.get());
-            type_ctor->maybe_arg_type_ctor =
-                ConsumeTypeConstructorNew(std::move(type_param->type_ctor), name);
+            if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), name,
+                                           &type_ctor->maybe_arg_type_ctor))
+              return false;
             break;
           }
           case raw::TypeParameter::Kind::kAmbiguous: {
@@ -2241,7 +2218,7 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
     // not do so to their aliases.  We replicate that behavior here.
     if (num_constraints > 3) {
       Fail(ErrConstraintsOverflow, type_ctor->name, size_t(3), num_constraints);
-      return nullptr;
+      return false;
     }
     if (num_constraints == 1) {
       // The lone constraint MUST be either one of a subtype OR an "optional."
@@ -2259,7 +2236,7 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
       if (IsOptionalConstraint(type_ctor, constraints->items[1])) {
         type_ctor->nullability = types::Nullability::kNullable;
       } else if (!ConsumeConstant(std::move(constraints->items[1]), &type_ctor->handle_rights)) {
-        return nullptr;
+        return false;
       }
     } else if (num_constraints == 3) {
       // The first constraint MUST be a subtype, the second MUST be a handle
@@ -2267,14 +2244,14 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
       type_ctor->handle_subtype_identifier =
           Name::CreateSourced(this, constraints->items[0]->span());
       if (!ConsumeConstant(std::move(constraints->items[1]), &type_ctor->handle_rights)) {
-        return nullptr;
+        return false;
       }
       if (IsOptionalConstraint(type_ctor, constraints->items[2])) {
         type_ctor->nullability = types::Nullability::kNullable;
       } else {
         Fail(ErrConstraintOptionalMisspelled, type_ctor->name,
              constraints->items[2]->span().data());
-        return nullptr;
+        return false;
       }
     }
   } else {
@@ -2282,32 +2259,47 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
     // [SIZE, OPTIONAL] format.
     if (num_constraints > 2) {
       Fail(ErrConstraintsOverflow, type_ctor->name, size_t(2), num_constraints);
-      return nullptr;
+      return false;
     }
     if (num_constraints == 1) {
       // The lone constraint MUST be either one of a size OR an "optional."
       if (IsOptionalConstraint(type_ctor, constraints->items[0])) {
         type_ctor->nullability = types::Nullability::kNullable;
       } else if (!ConsumeConstant(std::move(constraints->items[0]), &type_ctor->maybe_size)) {
-        return nullptr;
+        return false;
       }
     } else if (num_constraints == 2) {
       // The first constraint MUST be a size, the second MUST be "optional."
       if (!ConsumeConstant(std::move(constraints->items[0]), &type_ctor->maybe_size)) {
-        return nullptr;
+        return false;
       }
       if (IsOptionalConstraint(type_ctor, constraints->items[1])) {
         type_ctor->nullability = types::Nullability::kNullable;
       } else {
         Fail(ErrConstraintOptionalMisspelled, type_ctor->name,
              constraints->items[1]->span().data());
-        return nullptr;
+        return false;
       }
       type_ctor->nullability = types::Nullability::kNullable;
     }
   }
 
-  return type_ctor;
+  if (out_type)
+    *out_type = std::move(type_ctor);
+  return true;
+}
+
+bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
+                                     std::unique_ptr<TypeConstructor>* out_type) {
+  return std::visit(fidl::utils::matchers{
+                        [&, this](std::unique_ptr<raw::TypeConstructorOld> e) -> bool {
+                          return ConsumeTypeConstructorOld(std::move(e), out_type);
+                        },
+                        [&, this](std::unique_ptr<raw::TypeConstructorNew> e) -> bool {
+                          return ConsumeTypeConstructorNew(std::move(e), context, out_type);
+                        },
+                    },
+                    std::move(raw_type_ctor));
 }
 
 void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
@@ -2319,7 +2311,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
     return;
   }
 
-  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), name);
+  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), name, nullptr);
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {

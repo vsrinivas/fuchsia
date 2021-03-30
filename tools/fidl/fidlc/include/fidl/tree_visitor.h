@@ -109,7 +109,20 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnTypeConstructor(std::unique_ptr<TypeConstructorOld> const& element) {
+  void OnTypeConstructor(TypeConstructor const& element) {
+    std::visit(
+        fidl::utils::matchers{
+            [this](const std::unique_ptr<TypeConstructorOld>& e) { OnTypeConstructorOld(e); },
+            [this](const std::unique_ptr<TypeConstructorNew>& e) { OnTypeConstructorNew(e); },
+        },
+        element);
+  }
+
+  virtual void OnTypeConstructorOld(std::unique_ptr<TypeConstructorOld> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnTypeConstructorNew(std::unique_ptr<TypeConstructorNew> const& element) {
     element->Accept(this);
   }
 

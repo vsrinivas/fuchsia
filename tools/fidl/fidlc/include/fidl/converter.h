@@ -87,7 +87,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override;
 
   // Types.
-  void OnTypeConstructor(std::unique_ptr<raw::TypeConstructorOld> const& element) override;
+  void OnTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> const& element) override;
 
   // Unions.
   void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override;

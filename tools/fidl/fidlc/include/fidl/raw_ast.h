@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "source_span.h"
@@ -254,6 +255,15 @@ class AttributeList final : public SourceElement {
   std::vector<Attribute> attributes;
 };
 
+// TODO(fxbug.dev/70247): Remove the two type constructor versions and remove
+// the New suffix.
+class TypeConstructorOld;
+class TypeConstructorNew;
+using TypeConstructor =
+    std::variant<std::unique_ptr<TypeConstructorNew>, std::unique_ptr<TypeConstructorOld>>;
+
+bool IsTypeConstructorDefined(const raw::TypeConstructor& maybe_type_ctor);
+
 class TypeConstructorOld final : public SourceElement {
  public:
   TypeConstructorOld(SourceElement const& element, std::unique_ptr<CompoundIdentifier> identifier,
@@ -277,6 +287,27 @@ class TypeConstructorOld final : public SourceElement {
   std::unique_ptr<Constant> handle_rights;
   std::unique_ptr<Constant> maybe_size;
   types::Nullability nullability;
+};
+
+class LayoutReference;
+class TypeParameterList;
+class TypeConstraints;
+
+class TypeConstructorNew final : public SourceElement {
+ public:
+  TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> type_ref,
+                     std::unique_ptr<TypeParameterList> parameters,
+                     std::unique_ptr<TypeConstraints> constraints)
+      : SourceElement(element),
+        type_ref(std::move(type_ref)),
+        parameters(std::move(parameters)),
+        constraints(std::move(constraints)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<LayoutReference> type_ref;
+  std::unique_ptr<TypeParameterList> parameters;
+  std::unique_ptr<TypeConstraints> constraints;
 };
 
 class BitsMember final : public SourceElement {
@@ -319,46 +350,20 @@ class BitsDeclaration final : public SourceElement {
   const types::Strictness strictness;
 };
 
-class TypeConstructorNew;
-
 class AliasDeclaration final : public SourceElement {
-  enum Kind {
-    kNew,
-    kOld,
-  };
-
  public:
   AliasDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                   std::unique_ptr<Identifier> alias, std::unique_ptr<TypeConstructorOld> type_ctor)
+                   std::unique_ptr<Identifier> alias, TypeConstructor type_ctor)
       : SourceElement(element),
-        kind(Kind::kOld),
         attributes(std::move(attributes)),
         alias(std::move(alias)),
-        type_ctor(std::move(type_ctor)),
-        type_ctor_new(nullptr) {}
-
-  // TODO(fxbug.dev/70247): This will eventually be the only constructor.
-  AliasDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                   std::unique_ptr<Identifier> alias,
-                   std::unique_ptr<TypeConstructorNew> type_ctor_new)
-      : SourceElement(element),
-        kind(Kind::kNew),
-        attributes(std::move(attributes)),
-        alias(std::move(alias)),
-        type_ctor(nullptr),
-        type_ctor_new(std::move(type_ctor_new)) {}
+        type_ctor(std::move(type_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  // TODO(fxbug.dev/70247): Remove once we're fully on the new syntax.
-  bool IsNew() const { return kind == Kind::kNew; }
-
-  // TODO(fxbug.dev/70247): Remove once we're fully on the new syntax.
-  const Kind kind;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> alias;
-  std::unique_ptr<TypeConstructorOld> type_ctor;
-  std::unique_ptr<TypeConstructorNew> type_ctor_new;
+  TypeConstructor type_ctor;
 };
 
 class Using final : public SourceElement {
@@ -961,22 +966,6 @@ class TypeConstraints final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::vector<std::unique_ptr<raw::Constant>> items;
-};
-
-// TODO(fxbug.dev/65978): remove the "New" suffix once new syntax is fully implemented.
-class TypeConstructorNew final : public SourceElement {
- public:
-  TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> type_ref,
-                     std::unique_ptr<TypeParameterList> parameters,
-                     std::unique_ptr<TypeConstraints> constraints)
-      : SourceElement(element),
-        type_ref(std::move(type_ref)),
-        parameters(std::move(parameters)),
-        constraints(std::move(constraints)) {}
-
-  std::unique_ptr<LayoutReference> type_ref;
-  std::unique_ptr<TypeParameterList> parameters;
-  std::unique_ptr<TypeConstraints> constraints;
 };
 
 class TypeDecl final : public SourceElement {

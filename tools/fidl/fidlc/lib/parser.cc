@@ -457,29 +457,6 @@ std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(
                                                  std::move(alias), std::move(type_ctor));
 }
 
-std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclarationNew(
-    std::unique_ptr<raw::AttributeList> attributes) {
-  ASTScope scope(this);
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kAlias));
-  if (!Ok())
-    return Fail();
-
-  auto alias = ParseIdentifier();
-  if (!Ok())
-    return Fail();
-
-  ConsumeToken(OfKind(Token::Kind::kEqual));
-  if (!Ok())
-    return Fail();
-
-  auto type_ctor = ParseTypeConstructorNew();
-  if (!Ok())
-    return Fail();
-
-  return std::make_unique<raw::AliasDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                 std::move(alias), std::move(type_ctor));
-}
-
 std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeList> attributes,
                                                ASTScope& scope, const Modifiers& modifiers) {
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
@@ -2037,6 +2014,12 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
                                                    std::move(parameters), std::move(constraints));
 }
 
+raw::TypeConstructor Parser::ParseTypeConstructor() {
+  if (syntax_ == fidl::utils::Syntax::kNew)
+    return ParseTypeConstructorNew();
+  return ParseTypeConstructorOld();
+}
+
 std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(ASTScope& scope) {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kType));
   assert(Ok() && "caller should check first token");
@@ -2099,7 +2082,8 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
 
       case CASE_IDENTIFIER(Token::Subkind::kAlias): {
         done_with_library_imports = true;
-        add(&alias_list, [&] { return ParseAliasDeclarationNew(std::move(attributes)); });
+        add(&alias_list,
+            [&] { return ParseAliasDeclaration(std::move(attributes), scope, Modifiers()); });
         return More;
       }
 

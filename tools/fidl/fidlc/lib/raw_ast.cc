@@ -15,6 +15,15 @@
 namespace fidl {
 namespace raw {
 
+bool IsTypeConstructorDefined(const raw::TypeConstructor& maybe_type_ctor) {
+  return std::visit(
+      fidl::utils::matchers{
+          [](const std::unique_ptr<raw::TypeConstructorOld>& e) -> bool { return e != nullptr; },
+          [](const std::unique_ptr<raw::TypeConstructorNew>& e) -> bool { return e != nullptr; },
+      },
+      maybe_type_ctor);
+}
+
 SourceElementMark::SourceElementMark(TreeVisitor* tv, const SourceElement& element)
     : tv_(tv), element_(element) {
   tv_->OnSourceElementStart(element_);
@@ -71,7 +80,7 @@ void TypeConstructorOld::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   visitor->OnCompoundIdentifier(identifier);
   if (maybe_arg_type_ctor != nullptr)
-    visitor->OnTypeConstructor(maybe_arg_type_ctor);
+    visitor->OnTypeConstructorOld(maybe_arg_type_ctor);
   if (handle_subtype_identifier)
     visitor->OnIdentifier(handle_subtype_identifier);
   if (handle_rights != nullptr)
@@ -79,6 +88,10 @@ void TypeConstructorOld::Accept(TreeVisitor* visitor) const {
   if (maybe_size != nullptr)
     visitor->OnConstant(maybe_size);
   visitor->OnNullability(nullability);
+}
+
+void TypeConstructorNew::Accept(TreeVisitor* visitor) const {
+  // TODO(fxbug.dev/73108): add the rest of the nodes
 }
 
 void Using::Accept(TreeVisitor* visitor) const {
@@ -91,7 +104,7 @@ void Using::Accept(TreeVisitor* visitor) const {
     visitor->OnIdentifier(maybe_alias);
   }
   if (maybe_type_ctor != nullptr) {
-    visitor->OnTypeConstructor(maybe_type_ctor);
+    visitor->OnTypeConstructorOld(maybe_type_ctor);
   }
 }
 
@@ -120,7 +133,7 @@ void BitsDeclaration::Accept(TreeVisitor* visitor) const {
   }
   visitor->OnIdentifier(identifier);
   if (maybe_type_ctor != nullptr) {
-    visitor->OnTypeConstructor(maybe_type_ctor);
+    visitor->OnTypeConstructorOld(maybe_type_ctor);
   }
   for (auto member = members.begin(); member != members.end(); ++member) {
     visitor->OnBitsMember(*member);
@@ -132,7 +145,7 @@ void ConstDeclaration::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructor(type_ctor);
+  visitor->OnTypeConstructorOld(type_ctor);
   visitor->OnIdentifier(identifier);
   visitor->OnConstant(constant);
 }
@@ -153,7 +166,7 @@ void EnumDeclaration::Accept(TreeVisitor* visitor) const {
   }
   visitor->OnIdentifier(identifier);
   if (maybe_type_ctor != nullptr) {
-    visitor->OnTypeConstructor(maybe_type_ctor);
+    visitor->OnTypeConstructorOld(maybe_type_ctor);
   }
   for (auto member = members.begin(); member != members.end(); ++member) {
     visitor->OnEnumMember(*member);
@@ -165,7 +178,7 @@ void Parameter::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructor(type_ctor);
+  visitor->OnTypeConstructorOld(type_ctor);
   visitor->OnIdentifier(identifier);
 }
 
@@ -189,7 +202,7 @@ void ProtocolMethod::Accept(TreeVisitor* visitor) const {
     visitor->OnParameterList(maybe_response);
   }
   if (maybe_error_ctor != nullptr) {
-    visitor->OnTypeConstructor(maybe_error_ctor);
+    visitor->OnTypeConstructorOld(maybe_error_ctor);
   }
 }
 
@@ -218,7 +231,7 @@ void ResourceProperty::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructor(type_ctor);
+  visitor->OnTypeConstructorOld(type_ctor);
   visitor->OnIdentifier(identifier);
 }
 
@@ -229,7 +242,7 @@ void ResourceDeclaration::Accept(TreeVisitor* visitor) const {
   }
   visitor->OnIdentifier(identifier);
   if (maybe_type_ctor != nullptr) {
-    visitor->OnTypeConstructor(maybe_type_ctor);
+    visitor->OnTypeConstructorOld(maybe_type_ctor);
   }
   for (auto property = properties.begin(); property != properties.end(); ++property) {
     visitor->OnResourceProperty(*property);
@@ -241,7 +254,7 @@ void ServiceMember::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructor(type_ctor);
+  visitor->OnTypeConstructorOld(type_ctor);
   visitor->OnIdentifier(identifier);
 }
 
@@ -261,7 +274,7 @@ void StructMember::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructor(type_ctor);
+  visitor->OnTypeConstructorOld(type_ctor);
   visitor->OnIdentifier(identifier);
   if (maybe_default_value != nullptr) {
     visitor->OnConstant(maybe_default_value);
@@ -288,7 +301,7 @@ void TableMember::Accept(TreeVisitor* visitor) const {
   }
   visitor->OnOrdinal64(*ordinal);
   if (maybe_used != nullptr) {
-    visitor->OnTypeConstructor(maybe_used->type_ctor);
+    visitor->OnTypeConstructorOld(maybe_used->type_ctor);
     visitor->OnIdentifier(maybe_used->identifier);
     if (maybe_used->maybe_default_value != nullptr) {
       visitor->OnConstant(maybe_used->maybe_default_value);
@@ -316,7 +329,7 @@ void UnionMember::Accept(TreeVisitor* visitor) const {
   }
   visitor->OnOrdinal64(*ordinal);
   if (maybe_used != nullptr) {
-    visitor->OnTypeConstructor(maybe_used->type_ctor);
+    visitor->OnTypeConstructorOld(maybe_used->type_ctor);
     visitor->OnIdentifier(maybe_used->identifier);
     if (maybe_used->maybe_default_value != nullptr) {
       visitor->OnConstant(maybe_used->maybe_default_value);

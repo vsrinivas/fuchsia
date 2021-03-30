@@ -824,7 +824,6 @@ class Library {
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   bool ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> raw_type_ctor,
-                                 SourceSpan span, fidl::utils::Syntax syntax,
                                  std::unique_ptr<TypeConstructor>* out_type);
 
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive, fidl::utils::Syntax syntax);
@@ -851,8 +850,10 @@ class Library {
 
   // start new syntax
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
-  std::unique_ptr<TypeConstructor> ConsumeTypeConstructorNew(
-      std::unique_ptr<raw::TypeConstructorNew>, const Name&);
+  bool ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
+                                 const Name& context, std::unique_ptr<TypeConstructor>* out_type);
+  bool ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
+                              std::unique_ptr<TypeConstructor>* out_type);
 
   // Here, T is expected to be an ordinal-carrying flat AST class (ie, Table or
   // Union), while M is its "Member" sub-class.

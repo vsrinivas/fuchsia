@@ -252,7 +252,7 @@ void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember
   }
 }
 
-void ConvertingTreeVisitor::OnTypeConstructor(
+void ConvertingTreeVisitor::OnTypeConstructorOld(
     const std::unique_ptr<raw::TypeConstructorOld>& element) {
   std::optional<UnderlyingType> underlying_type = resolve(element);
 
@@ -265,7 +265,7 @@ void ConvertingTreeVisitor::OnTypeConstructor(
   std::unique_ptr<Conversion> conv =
       std::make_unique<TypeConversion>(element, underlying_type.value());
   Converting converting(this, std::move(conv), element->start_, element->end_);
-  TreeVisitor::OnTypeConstructor(element);
+  TreeVisitor::OnTypeConstructorOld(element);
 }
 
 void ConvertingTreeVisitor::OnUnionDeclaration(

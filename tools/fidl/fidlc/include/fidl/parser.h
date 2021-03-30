@@ -284,8 +284,6 @@ class Parser {
 
   std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclaration(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
-  std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclarationNew(
-      std::unique_ptr<raw::AttributeList> attributes);
   std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&,
                                          const Modifiers&);
 
@@ -361,6 +359,7 @@ class Parser {
                                            const Modifiers&);
   std::unique_ptr<raw::LayoutReference> ParseLayoutReference();
   std::unique_ptr<raw::TypeConstructorNew> ParseTypeConstructorNew();
+  raw::TypeConstructor ParseTypeConstructor();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
   std::unique_ptr<raw::File> ParseFileNewSyntax(
       ASTScope&, std::unique_ptr<raw::AttributeList> library_attributes,

@@ -178,11 +178,11 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       }
       ProcessGapText(element->end_);
     }
-    void OnTypeConstructor(std::unique_ptr<raw::TypeConstructorOld> const& element) override {
+    void OnTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> const& element) override {
       for (auto& callback : callbacks_.type_constructor_callbacks_) {
         callback(*element.get());
       }
-      DeclarationOrderTreeVisitor::OnTypeConstructor(element);
+      DeclarationOrderTreeVisitor::OnTypeConstructorOld(element);
     }
     void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override {
       ProcessGapText(element->start_);
