@@ -119,7 +119,7 @@ impl VDLFiles {
   horizontal_resolution: {}
   vertical_resolution: {}
   vm_heap: 192
-  ram: 4096
+  ram: 8192
   cache: 32
   screen_density: 240
 }}
