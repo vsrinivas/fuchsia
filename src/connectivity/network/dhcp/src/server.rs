@@ -391,9 +391,24 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                 *self.params.server_ips.first().ok_or(ServerError::ServerMissingIpAddr)?,
             ))
         } else {
-            let () = self.validate_requested_addr_with_client(&req, &requested_ip)?;
-            let dest = self.get_destination(&req, requested_ip);
-            Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
+            self.build_response(req, requested_ip)
+        }
+    }
+
+    fn build_response(
+        &mut self,
+        req: Message,
+        requested_ip: Ipv4Addr,
+    ) -> Result<ServerAction, ServerError> {
+        match self.validate_requested_addr_with_client(&req, &requested_ip) {
+            Ok(()) => {
+                let dest = self.get_destination(&req, requested_ip);
+                Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
+            }
+            Err(e) => {
+                let (nak, dest) = self.build_nak(req, NakReason::ClientValidationFailure(e))?;
+                Ok(ServerAction::SendResponse(nak, dest))
+            }
         }
     }
 
@@ -441,36 +456,21 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
 
     fn handle_request_init_reboot(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let requested_ip =
-            get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
+            *get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
         if !is_in_subnet(&req, &self.params) {
-            let error_msg = "client and server are in different subnets";
-            let (nak, dest) = self.build_nak(req, error_msg)?;
+            let (nak, dest) = self.build_nak(req, NakReason::DifferentSubnets)?;
             return Ok(ServerAction::SendResponse(nak, dest));
         }
         let client_id = ClientIdentifier::from(&req);
         if !self.cache.contains_key(&client_id) {
             return Err(ServerError::UnknownClientId(client_id));
         }
-        let validated = self.validate_requested_addr_with_client(&req, requested_ip);
-        match validated {
-            Ok(()) => {
-                let requested_ip = *requested_ip;
-                let dest = self.get_destination(&req, requested_ip);
-                Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
-            }
-            Err(e) => {
-                let (nak, dest) =
-                    self.build_nak(req, format!("requested ip is not assigned to client: {}", e))?;
-                Ok(ServerAction::SendResponse(nak, dest))
-            }
-        }
+        self.build_response(req, requested_ip)
     }
 
     fn handle_request_renewing(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let client_ip = req.ciaddr;
-        let () = self.validate_requested_addr_with_client(&req, &client_ip)?;
-        let dest = self.get_destination(&req, client_ip);
-        Ok(ServerAction::SendResponse(self.build_ack(req, client_ip)?, dest))
+        self.build_response(req, client_ip)
     }
 
     // RFC 2131 provides limited guidance for implementation of DHCPDECLINE handling. From
@@ -648,12 +648,12 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     fn build_nak(
         &self,
         req: Message,
-        error: impl std::convert::Into<String>,
+        reason: NakReason,
     ) -> Result<(Message, ResponseTarget), ServerError> {
         let options = vec![
             DhcpOption::DhcpMessageType(MessageType::DHCPNAK),
             DhcpOption::ServerIdentifier(self.get_server_ip(&req)?),
-            DhcpOption::Message(error.into()),
+            DhcpOption::Message(format!("{}", reason)),
         ];
         let mut nak = Message {
             op: OpCode::BOOTREPLY,
@@ -1324,6 +1324,24 @@ fn get_requested_ip_addr(req: &Message) -> Option<&Ipv4Addr> {
         .next()
 }
 
+enum NakReason {
+    ClientValidationFailure(ServerError),
+    DifferentSubnets,
+}
+
+impl std::fmt::Display for NakReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ClientValidationFailure(e) => {
+                write!(f, "requested ip is not assigned to client: {}", e)
+            }
+            Self::DifferentSubnets => {
+                write!(f, "client and server are in different subnets")
+            }
+        }
+    }
+}
+
 pub fn get_server_id_from(req: &Message) -> Option<Ipv4Addr> {
     req.options.iter().find_map(|opt| match opt {
         DhcpOption::ServerIdentifier(addr) => Some(*addr),
@@ -1343,8 +1361,8 @@ pub mod tests {
     };
     use crate::server::{
         get_client_state, validate_discover, AddressPool, AddressPoolError, CachedConfig,
-        ClientIdentifier, ClientState, DataStore, ResponseTarget, ServerAction, ServerDispatcher,
-        ServerError, ServerParameters, SystemTimeSource,
+        ClientIdentifier, ClientState, DataStore, NakReason, ResponseTarget, ServerAction,
+        ServerDispatcher, ServerError, ServerParameters, SystemTimeSource,
     };
     use anyhow::{Context as _, Error};
     use datastore::{ActionRecordingDataStore, DataStoreAction};
@@ -1717,9 +1735,13 @@ pub mod tests {
         new_server_message_with_lease(MessageType::DHCPACK, req, server)
     }
 
-    fn new_test_nak<DS: DataStore>(req: &Message, server: &Server<DS>, error: String) -> Message {
+    fn new_test_nak<DS: DataStore>(
+        req: &Message,
+        server: &Server<DS>,
+        reason: NakReason,
+    ) -> Message {
         let mut nak = new_server_message(MessageType::DHCPNAK, req, server);
-        nak.options.push(DhcpOption::Message(error));
+        nak.options.push(DhcpOption::Message(format!("{}", reason)));
         nak
     }
 
@@ -2360,7 +2382,7 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_unknown_client_mac_returns_error_maintains_server_invariants(
+    async fn test_dispatch_with_selecting_request_unknown_client_mac_returns_nak_maintains_server_invariants(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
         let requested_ip = random_ipv4_generator();
@@ -2368,14 +2390,22 @@ pub mod tests {
 
         let client_id = ClientIdentifier::from(&req);
 
-        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientId(client_id.clone())));
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::UnknownClientId(client_id.clone())),
+        );
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
+        );
         assert!(!server.cache.contains_key(&client_id));
         assert!(!server.pool.addr_is_allocated(&requested_ip));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_mismatched_requested_addr_returns_error(
+    async fn test_dispatch_with_selecting_request_mismatched_requested_addr_returns_nak(
     ) -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let client_requested_ip = random_ipv4_generator();
@@ -2395,15 +2425,23 @@ pub mod tests {
             )?,
         );
 
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::RequestedIpOfferIpMismatch(
+                client_requested_ip,
+                server_offered_ip,
+            )),
+        );
         assert_eq!(
             server.dispatch(req),
-            Err(ServerError::RequestedIpOfferIpMismatch(client_requested_ip, server_offered_ip,),)
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_expired_client_binding_returns_error(
+    async fn test_dispatch_with_selecting_request_expired_client_binding_returns_nak(
     ) -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let requested_ip = random_ipv4_generator();
@@ -2416,13 +2454,21 @@ pub mod tests {
             CachedConfig::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
         );
 
-        assert_eq!(server.dispatch(req), Err(ServerError::ExpiredClientConfig));
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::ExpiredClientConfig),
+        );
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
+        );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_no_reserved_addr_returns_error(
-    ) -> Result<(), Error> {
+    async fn test_dispatch_with_selecting_request_no_reserved_addr_returns_nak() -> Result<(), Error>
+    {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
@@ -2432,7 +2478,15 @@ pub mod tests {
             CachedConfig::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
         );
 
-        assert_eq!(server.dispatch(req), Err(ServerError::UnidentifiedRequestedIp(requested_ip)));
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::UnidentifiedRequestedIp(requested_ip)),
+        );
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
+        );
         Ok(())
     }
 
@@ -2510,8 +2564,7 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(random_ipv4_generator()));
 
         // The returned nak should be from this recipient server.
-        let expected_nak =
-            new_test_nak(&req, &server, "client and server are in different subnets".to_owned());
+        let expected_nak = new_test_nak(&req, &server, NakReason::DifferentSubnets);
         assert_eq!(
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
@@ -2578,10 +2631,10 @@ pub mod tests {
         let expected_nak = new_test_nak(
             &req,
             &server,
-            format!(
-                "requested ip is not assigned to client: {}",
-                ServerError::RequestedIpOfferIpMismatch(init_reboot_client_ip, server_cached_ip)
-            ),
+            NakReason::ClientValidationFailure(ServerError::RequestedIpOfferIpMismatch(
+                init_reboot_client_ip,
+                server_cached_ip,
+            )),
         );
         assert_eq!(
             server.dispatch(req),
@@ -2615,7 +2668,7 @@ pub mod tests {
         let expected_nak = new_test_nak(
             &req,
             &server,
-            format!("requested ip is not assigned to client: {}", ServerError::ExpiredClientConfig),
+            NakReason::ClientValidationFailure(ServerError::ExpiredClientConfig),
         );
 
         assert_eq!(
@@ -2648,10 +2701,9 @@ pub mod tests {
         let expected_nak = new_test_nak(
             &req,
             &server,
-            format!(
-                "requested ip is not assigned to client: {}",
-                ServerError::UnidentifiedRequestedIp(init_reboot_client_ip)
-            ),
+            NakReason::ClientValidationFailure(ServerError::UnidentifiedRequestedIp(
+                init_reboot_client_ip,
+            )),
         );
 
         assert_eq!(
@@ -2711,7 +2763,7 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_unknown_client_mac_returns_error(
+    async fn test_dispatch_with_renewing_request_unknown_client_mac_returns_nak(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
         let mut req = new_test_request();
@@ -2721,12 +2773,20 @@ pub mod tests {
 
         req.ciaddr = bound_client_ip;
 
-        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientId(client_id)));
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::UnknownClientId(client_id)),
+        );
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
+        );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_mismatched_requested_addr_returns_error(
+    async fn test_dispatch_with_renewing_request_mismatched_requested_addr_returns_nak(
     ) -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let mut req = new_test_request();
@@ -2742,15 +2802,23 @@ pub mod tests {
             CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
         );
 
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::RequestedIpOfferIpMismatch(
+                client_renewal_ip,
+                bound_client_ip,
+            )),
+        );
         assert_eq!(
             server.dispatch(req),
-            Err(ServerError::RequestedIpOfferIpMismatch(client_renewal_ip, bound_client_ip))
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_expired_client_binding_returns_error(
+    async fn test_dispatch_with_renewing_request_expired_client_binding_returns_nak(
     ) -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let mut req = new_test_request();
@@ -2765,13 +2833,21 @@ pub mod tests {
             CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
         );
 
-        assert_eq!(server.dispatch(req), Err(ServerError::ExpiredClientConfig));
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::ExpiredClientConfig),
+        );
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
+        );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_no_reserved_addr_returns_error(
-    ) -> Result<(), Error> {
+    async fn test_dispatch_with_renewing_request_no_reserved_addr_returns_nak() -> Result<(), Error>
+    {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let mut req = new_test_request();
 
@@ -2783,9 +2859,16 @@ pub mod tests {
             CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
         );
 
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            NakReason::ClientValidationFailure(ServerError::UnidentifiedRequestedIp(
+                bound_client_ip,
+            )),
+        );
         assert_eq!(
             server.dispatch(req),
-            Err(ServerError::UnidentifiedRequestedIp(bound_client_ip))
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         Ok(())
     }
