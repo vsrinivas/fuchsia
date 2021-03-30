@@ -116,6 +116,26 @@ func TestRunNinja(t *testing.T) {
                 output line 2
             `,
 		},
+		{
+			name: "graph error",
+			fail: true,
+			stdout: `
+				ninja: Entering directory /foo
+				ninja: error: bar.ninja: multiple rules generate baz
+            `,
+			expectedFailureMessage: `
+				ninja: error: bar.ninja: multiple rules generate baz
+            `,
+		},
+		{
+			name: "unrecognized failure",
+			fail: true,
+			stdout: `
+				ninja: Entering directory /foo
+				...something went wrong...
+            `,
+			expectedFailureMessage: unrecognizedFailureMsg,
+		},
 	}
 
 	for _, tc := range testCases {

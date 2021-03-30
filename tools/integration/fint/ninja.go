@@ -7,7 +7,6 @@ package fint
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -20,6 +19,11 @@ var (
 	// e.g. "[56/1234] CXX host_x64/foo.o"
 	ruleRegex = regexp.MustCompile(`^\s*\[\d+/\d+\] \S+`)
 
+	// errorRegex matches a single-line error message that Ninja prints at the
+	// end of its output if it encounters an error that prevents it from even
+	// starting the build (e.g. multiple rules generating the same target file).
+	errorRegex = regexp.MustCompile(`^\s*ninja: error: .+`)
+
 	// failureStartRegex matches the first line of a failure message, e.g.
 	// "FAILED: foo.o"
 	failureStartRegex = regexp.MustCompile(`^\s*FAILED: .*`)
@@ -27,6 +31,12 @@ var (
 	// failureEndRegex indicates the end of Ninja's execution as a result of a
 	// build failure. When present, it will be the last line of stdout.
 	failureEndRegex = regexp.MustCompile(`^\s*ninja: build stopped:.*`)
+)
+
+const (
+	// unrecognizedFailureMsg is the message we'll output if ninja fails but its
+	// output doesn't match any of the known failure modes.
+	unrecognizedFailureMsg = "Unrecognized failures, please check the original stdout instead."
 )
 
 // ninjaParser is a container for tracking the stdout of a ninja subprocess and
@@ -77,16 +87,20 @@ func (p *ninjaParser) parseLine(line string) {
 	} else if failureStartRegex.MatchString(line) {
 		// We found a line that indicates the start of a build failure error
 		// message. Start recording information about this failure.
-		// TODO(olivernewman): Handle the case where the build doesn't even
-		// start due to some irreconcilable error, e.g. multiple rules
-		// generating the same target. These lines start with `ninja: error:`.
 		p.processingFailure = true
 		p.failureOutputLines = append(p.failureOutputLines, p.previousLine, line)
+	} else if errorRegex.MatchString(line) {
+		// An "error" log comes at the end of the output and should only be one
+		// line.
+		p.failureOutputLines = append(p.failureOutputLines, line)
 	}
 	p.previousLine = line
 }
 
 func (p *ninjaParser) failureMessage() string {
+	if len(p.failureOutputLines) == 0 {
+		return unrecognizedFailureMsg
+	}
 	// Add a blank line at the end to ensure a trailing newline.
 	lines := append(p.failureOutputLines, "")
 	return strings.Join(lines, "\n")
@@ -123,7 +137,10 @@ func runNinja(
 		return "", parserErr
 	}
 
-	fmt.Println(parser.failureMessage())
+	if ninjaErr != nil {
+		return parser.failureMessage(), ninjaErr
+	}
 
-	return parser.failureMessage(), ninjaErr
+	// No failure message necessary if Ninja succeeded.
+	return "", nil
 }
