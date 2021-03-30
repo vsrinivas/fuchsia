@@ -11,11 +11,13 @@ namespace fidl {
 namespace test {
 namespace service {
 #ifdef __Fuchsia__
+
 class SecondProtocol;
 using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class FirstProtocol;
 using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
 #endif  // __Fuchsia__
@@ -37,6 +39,7 @@ class EmptyService;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
@@ -65,6 +68,7 @@ class SecondProtocol_ResponseEncoder {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
@@ -100,6 +104,7 @@ class FirstProtocol_ResponseEncoder {
 namespace test {
 namespace service {
 #ifdef __Fuchsia__
+
 using SecondProtocolPtr = ::fidl::InterfacePtr<SecondProtocol>;
 class SecondProtocol_Proxy;
 class SecondProtocol_Stub;
@@ -111,11 +116,11 @@ class SecondProtocol_SyncProxy;
 namespace internal {
 constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
     0x54ea6448c1555a29lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 using FirstProtocolPtr = ::fidl::InterfacePtr<FirstProtocol>;
 class FirstProtocol_Proxy;
 class FirstProtocol_Stub;
@@ -126,7 +131,6 @@ class FirstProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x5b76bb4db7c2bba4lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -145,7 +149,9 @@ class MultiHeterogeneousMemberService;
 #ifdef __Fuchsia__
 class EmptyService;
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class SecondProtocol {
  public:
   using Proxy_ = ::fidl::test::service::SecondProtocol_Proxy;
@@ -230,7 +236,9 @@ class SecondProtocol_SyncProxy
   friend class ::fidl::SynchronousInterfacePtr<SecondProtocol>;
 };
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class FirstProtocol {
  public:
   using Proxy_ = ::fidl::test::service::FirstProtocol_Proxy;
@@ -521,6 +529,7 @@ class EmptyService::Handler final {
  private:
 };
 #endif  // __Fuchsia__
+
 }  // namespace service
 }  // namespace test
 }  // namespace fidl

@@ -15,6 +15,7 @@ class Example_foo_Response;
 class Example_foo_Result;
 
 #ifdef __Fuchsia__
+
 class Example;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
 #endif  // __Fuchsia__
@@ -169,6 +170,7 @@ inline zx_status_t Clone(const ::fidl::test::error::Example_foo_Result& value,
 using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
@@ -316,6 +318,7 @@ struct Equality<::fidl::test::error::Example_foo_Result> {
 namespace test {
 namespace error {
 #ifdef __Fuchsia__
+
 using ExamplePtr = ::fidl::InterfacePtr<Example>;
 class Example_Proxy;
 class Example_Stub;
@@ -326,10 +329,11 @@ class Example_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kExample_foo_Ordinal = 0x57e41804562237aelu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class Example {
  public:
   using Proxy_ = ::fidl::test::error::Example_Proxy;
@@ -413,6 +417,7 @@ class Example_SyncProxy : public ::fidl::test::error::Example_Sync {
   friend class ::fidl::SynchronousInterfacePtr<Example>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace error
 }  // namespace test
 }  // namespace fidl

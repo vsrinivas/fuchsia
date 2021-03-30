@@ -51,6 +51,7 @@ enum class obj_type : uint32_t {
 struct ExampleOfUseOfAliases;
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_typealiases_ExampleOfUseOfAliasesTable;
 
 struct ExampleOfUseOfAliases {
@@ -95,9 +96,7 @@ struct ExampleOfUseOfAliases {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -119,9 +118,7 @@ struct ExampleOfUseOfAliases {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -179,6 +176,7 @@ struct IsFidlType<::fidl_test_typealiases::wire::obj_type>
     : public std::true_type {};
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_typealiases::wire::ExampleOfUseOfAliases>
     : public std::true_type {};

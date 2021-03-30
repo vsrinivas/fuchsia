@@ -15,6 +15,7 @@ class StrictFoo;
 class FlexibleFoo;
 
 #ifdef __Fuchsia__
+
 class Protocol;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
 #endif  // __Fuchsia__
@@ -229,6 +230,7 @@ inline zx_status_t Clone(
 using FlexibleFooPtr = ::std::unique_ptr<FlexibleFoo>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
@@ -467,6 +469,7 @@ struct Equality<::fidl::test::requestflexibleenvelope::FlexibleFoo> {
 namespace test {
 namespace requestflexibleenvelope {
 #ifdef __Fuchsia__
+
 using ProtocolPtr = ::fidl::InterfacePtr<Protocol>;
 class Protocol_Proxy;
 class Protocol_Stub;
@@ -480,10 +483,11 @@ constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal =
     0x3c5330c58686011alu;
 constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
     0x3cb49d8f6e204f76lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class Protocol {
  public:
   using Proxy_ = ::fidl::test::requestflexibleenvelope::Protocol_Proxy;
@@ -601,6 +605,7 @@ class Protocol_SyncProxy
   friend class ::fidl::SynchronousInterfacePtr<Protocol>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace requestflexibleenvelope
 }  // namespace test
 }  // namespace fidl

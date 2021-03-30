@@ -97,6 +97,7 @@ inline zx_status_t Clone(
 }
 
 #ifdef __Fuchsia__
+
 class ExampleProtocol;
 using ExampleProtocolHandle = ::fidl::InterfaceHandle<ExampleProtocol>;
 #endif  // __Fuchsia__
@@ -409,6 +410,7 @@ using ExampleStructPtr = ::std::unique_ptr<ExampleStruct>;
 constexpr uint32_t EXAMPLE_CONST = 0u;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
@@ -721,6 +723,7 @@ struct Equality<::fidl::test::placementofattributes::ExampleBits> {
 namespace test {
 namespace placementofattributes {
 #ifdef __Fuchsia__
+
 using ExampleProtocolPtr = ::fidl::InterfacePtr<ExampleProtocol>;
 class ExampleProtocol_Proxy;
 class ExampleProtocol_Stub;
@@ -731,10 +734,11 @@ class ExampleProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x207d2f81c0ddb184lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class ExampleProtocol {
  public:
   using Proxy_ = ::fidl::test::placementofattributes::ExampleProtocol_Proxy;
@@ -825,6 +829,7 @@ class ExampleProtocol_SyncProxy
   friend class ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace placementofattributes
 }  // namespace test
 }  // namespace fidl

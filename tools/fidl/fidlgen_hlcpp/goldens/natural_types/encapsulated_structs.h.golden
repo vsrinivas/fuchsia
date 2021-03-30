@@ -25,6 +25,7 @@ class StructPaddingTestStruct;
 class TopLevelStruct;
 
 #ifdef __Fuchsia__
+
 class NonInlineStructTestStruct final {
  public:
   static const fidl_type_t* FidlType;
@@ -168,6 +169,7 @@ inline zx_status_t Clone(
 using StructPaddingTestStructPtr = ::std::unique_ptr<StructPaddingTestStruct>;
 
 #ifdef __Fuchsia__
+
 class TopLevelStruct final {
  public:
   static const fidl_type_t* FidlType;
@@ -200,6 +202,7 @@ using TopLevelStructPtr = ::std::unique_ptr<TopLevelStruct>;
 }  // namespace encapsulatedstructs
 }  // namespace test
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<
     ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
@@ -396,6 +399,7 @@ struct Equality<::fidl::test::encapsulatedstructs::StructPaddingTestStruct> {
   }
 };
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::encapsulatedstructs::TopLevelStruct>
     : public EncodableCodingTraits<

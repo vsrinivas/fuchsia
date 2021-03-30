@@ -620,7 +620,7 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -643,7 +643,7 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -717,7 +717,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -740,7 +740,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -814,7 +814,7 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -836,7 +836,7 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -941,19 +941,17 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -973,21 +971,19 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -1072,19 +1068,17 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -1103,21 +1097,19 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -1200,19 +1192,17 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -1231,21 +1221,19 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -1324,19 +1312,17 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -1356,21 +1342,19 @@ class Transitional final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -1593,13 +1577,11 @@ class Transitional final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocols::Transitional>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>;
   class RequestResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>;
-#endif
 
   using Interface = ::fidl::WireInterface<::fidl_test_protocols::Transitional>;
 
@@ -1628,9 +1610,7 @@ class Transitional final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocols::Transitional>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -1868,19 +1848,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -1899,21 +1877,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<32> bytes_;
       UnownedEncodedMessage message_;
@@ -1998,19 +1974,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -2030,21 +2004,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<32> bytes_;
       UnownedEncodedMessage message_;
@@ -2128,19 +2100,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -2160,21 +2130,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -2262,19 +2230,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -2293,21 +2259,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<32> bytes_;
       UnownedEncodedMessage message_;
@@ -2388,19 +2352,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -2419,21 +2381,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -2521,19 +2481,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       zx_handle_disposition_t
           handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
@@ -2554,21 +2512,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -2661,19 +2617,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       zx_handle_disposition_t
           handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
@@ -2696,21 +2650,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -2805,19 +2757,17 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       zx_handle_disposition_t
           handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
@@ -2838,21 +2788,19 @@ class ChannelProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -3320,7 +3268,6 @@ class ChannelProtocol final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>;
   class MethodBResponseContext;
@@ -3328,7 +3275,6 @@ class ChannelProtocol final {
   class MutateSocketResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>;
-#endif
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>;
@@ -3358,9 +3304,7 @@ class ChannelProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -3696,19 +3640,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -3727,21 +3669,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -3820,19 +3760,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -3852,21 +3790,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -3951,19 +3887,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -3982,21 +3916,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -4082,19 +4014,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -4115,21 +4045,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -4216,19 +4144,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -4247,21 +4173,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -4350,19 +4274,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -4382,21 +4304,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -4475,19 +4395,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -4507,21 +4425,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -4613,19 +4529,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -4645,21 +4559,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -4745,19 +4657,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -4778,21 +4688,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -4886,19 +4794,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -4918,21 +4824,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -5011,19 +4915,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -5043,21 +4945,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -5145,19 +5045,17 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -5178,21 +5076,19 @@ class WithAndWithoutRequestResponse final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -5874,7 +5770,6 @@ class WithAndWithoutRequestResponse final {
   using SyncClient = fidl::WireSyncClient<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
   class NoRequestEmptyResponseResponseContext;
@@ -5883,7 +5778,6 @@ class WithAndWithoutRequestResponse final {
   class WithRequestWithResponseResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-#endif
 
   using Interface = ::fidl::WireInterface<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
@@ -5913,9 +5807,7 @@ class WithAndWithoutRequestResponse final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender = ::fidl::WireEventSender<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -6311,19 +6203,17 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -6346,21 +6236,19 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<64> bytes_;
       UnownedEncodedMessage message_;
@@ -6445,19 +6333,17 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -6476,21 +6362,19 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -6582,19 +6466,17 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -6617,21 +6499,19 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
       UnownedEncodedMessage message_;
@@ -6716,19 +6596,17 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -6747,21 +6625,19 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -6852,19 +6728,17 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -6886,21 +6760,19 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
       UnownedEncodedMessage message_;
@@ -6983,19 +6855,17 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -7014,21 +6884,19 @@ class WithErrorSyntax final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -7420,7 +7288,6 @@ class WithErrorSyntax final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>;
   class ResponseAsStructResponseContext;
@@ -7428,7 +7295,6 @@ class WithErrorSyntax final {
   class ErrorAsEnumResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>;
-#endif
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>;
@@ -7458,9 +7324,7 @@ class WithErrorSyntax final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocols::WithErrorSyntax>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -8287,7 +8151,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
       event_handler_;
 };
 namespace fidl_test_protocols {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -8359,7 +8223,7 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl::internal::AsyncServerBinding<::fidl_test_protocols::Transitional>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 
@@ -8542,7 +8406,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
       event_handler_;
 };
 namespace fidl_test_protocols {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -8615,7 +8479,7 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocols::ChannelProtocol>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 
@@ -8857,7 +8721,7 @@ class ::fidl::internal::WireClientImpl<
       event_handler_;
 };
 namespace fidl_test_protocols {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -8947,7 +8811,7 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 
@@ -9115,7 +8979,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
       event_handler_;
 };
 namespace fidl_test_protocols {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -9167,4 +9031,4 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocols::WithErrorSyntax>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__

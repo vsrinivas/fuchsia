@@ -42,7 +42,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::UnownedResultOf::
@@ -61,7 +61,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
@@ -77,7 +77,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::
       GetFoo(::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::UnownedResultOf::
@@ -97,7 +97,7 @@ fidl::internal::WireClientImpl<
       UnownedResultOf::GetFoo(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
@@ -162,7 +162,7 @@ void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
       OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -172,7 +172,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
@@ -208,10 +208,8 @@ namespace entries {
       entries::Top +
           sizeof(entries::Top) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+#endif  // __Fuchsia__
 
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Top::Dispatch(Interface* impl, fidl_incoming_msg_t* msg,
                                      ::fidl::Transaction* txn) {
@@ -230,8 +228,10 @@ fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
   return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::Dispatch(
       this, msg, txn);
 }
-#endif
+namespace fidl_test_foreigntypeinresponseusedthroughcompose {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
@@ -243,7 +243,7 @@ fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       GetFooCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -254,7 +254,7 @@ fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest::
     _InitHeader(zx_txid_t _txid) {
@@ -271,4 +271,5 @@ void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse::
 }
 
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

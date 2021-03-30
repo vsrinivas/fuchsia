@@ -11,7 +11,7 @@ Reply({{ .ResponseArgs | Params }})
 
 {{- define "ReplyManagedMethodDefinition" }}
 {{ EnsureNamespace "" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::Result
 {{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedMethodSignature" . }} {
@@ -20,7 +20,7 @@ Reply({{ .ResponseArgs | Params }})
   };
   return {{ .WireCompleterBase }}::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "ReplyManagedResultSuccessMethodSignature" -}}
@@ -29,7 +29,7 @@ ReplySuccess({{ .Result.ValueMembers | Params }})
 
 {{- define "ReplyManagedResultSuccessMethodDefinition" }}
 {{ EnsureNamespace "" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::Result
 {{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedResultSuccessMethodSignature" . }} {
@@ -41,7 +41,7 @@ ReplySuccess({{ .Result.ValueMembers | Params }})
   return Reply({{ .Result.ResultDecl }}::WithResponse(
       ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&_response)));
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "ReplyManagedResultErrorMethodSignature" -}}
@@ -50,13 +50,13 @@ ReplyError({{ .Result.ErrorDecl }} error)
 
 {{- define "ReplyManagedResultErrorMethodDefinition" }}
 {{ EnsureNamespace "" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::Result
 {{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedResultErrorMethodSignature" . }} {
   return Reply({{ .Result.ResultDecl }}::WithErr(
       ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 `

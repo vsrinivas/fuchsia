@@ -86,7 +86,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
@@ -107,7 +107,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
@@ -142,7 +142,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
@@ -163,7 +163,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_requestflexibleenvelope
 #ifdef __Fuchsia__
@@ -185,7 +185,7 @@ extern "C" const fidl_type_t
       RequestStrictResponseFlexible(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
@@ -209,7 +209,7 @@ extern "C" const fidl_type_t
       RequestStrictResponseFlexible(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::
@@ -282,7 +282,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
           _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
@@ -303,7 +303,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
       RequestFlexibleResponseStrict(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
@@ -327,7 +327,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
       RequestFlexibleResponseStrict(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_requestflexibleenvelope::Protocol::
@@ -400,7 +400,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
           _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo>
@@ -410,7 +410,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_requestflexibleenvelope {
 #ifdef __Fuchsia__
@@ -467,10 +467,8 @@ namespace entries {
       entries::Protocol +
           sizeof(entries::Protocol) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_requestflexibleenvelope
+#endif  // __Fuchsia__
 
-namespace fidl_test_requestflexibleenvelope {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Protocol::Dispatch(Interface* impl,
                                           fidl_incoming_msg_t* msg,
@@ -490,8 +488,10 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
   return ::fidl_test_requestflexibleenvelope::Protocol::Dispatch(this, msg,
                                                                  txn);
 }
-#endif
+namespace fidl_test_requestflexibleenvelope {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_requestflexibleenvelope
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
@@ -504,7 +504,7 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
       RequestStrictResponseFlexibleCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -517,7 +517,7 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
           _buffer.data, _buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -531,7 +531,7 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
       RequestFlexibleResponseStrictCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -544,7 +544,7 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
           _buffer.data, _buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_requestflexibleenvelope::Protocol::
     RequestStrictResponseFlexibleRequest::_InitHeader(zx_txid_t _txid) {
@@ -575,4 +575,5 @@ void ::fidl_test_requestflexibleenvelope::Protocol::
 }
 
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

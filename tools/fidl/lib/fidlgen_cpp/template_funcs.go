@@ -84,24 +84,38 @@ func EnsureNamespace(arg interface{}) string {
 	return strings.Join(lines, "\n")
 }
 
-// During template processing this holds the stack of pushed & popped templates
+// During template processing this holds the stack of namespaces.
+// When a template calls IfdefFuchsia the current namespace is pushed onto the
+// stack. When a template calls EndifFuchsia a namespace is popped off the
+// stack and C++ code needed to go from the current namespace to the popped
+// namespace is generated.
+// This allows templates to maintain a consistent C++ namespace as they enter
+// and leave #ifdef __Fuchsia__ blocks.
 var namespaceStack = []Namespace{}
 
-func PushNamespace() string {
+func IfdefFuchsia() string {
 	namespaceStack = append(namespaceStack, currentNamespace)
+
+	if len(namespaceStack) == 1 {
+		return "\n#ifdef __Fuchsia__\n"
+	}
 	return ""
 }
 
-func PopNamespace() string {
+func EndifFuchsia() string {
 	last := len(namespaceStack) - 1
 	ns := namespaceStack[last]
 	namespaceStack = namespaceStack[:last]
-	return EnsureNamespace(ns)
+	s := EnsureNamespace(ns)
+	if len(namespaceStack) == 0 {
+		return s + "\n#endif  // __Fuchsia__\n"
+	}
+	return s
 }
 
 func EndOfFile() string {
 	if len(namespaceStack) != 0 {
-		panic("The namespace stack isn't empty, there's a PopNamespace missing somewhere")
+		panic("The namespace stack isn't empty, there's a EndifFuchsia missing somewhere")
 	}
 	return EnsureNamespace("::")
 }

@@ -26,7 +26,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 {{ .Protocol }}::UnownedResultOf::{{ .Name }}::{{ .Name }}(
   ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
   {{- if .RequestArgs -}}
@@ -55,6 +55,6 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 `

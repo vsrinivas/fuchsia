@@ -15,8 +15,7 @@ class {{ .Name }};
 {{- define "TableDeclaration" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 {{- range .DocComments }}
 ///{{ . }}
@@ -141,8 +140,7 @@ class {{ .Name }} final {
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 
 {{- end }}
@@ -150,8 +148,7 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- define "TableDefinition" }}
 {{ EnsureNamespace . }}
 {{- if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 extern "C" const fidl_type_t {{ .CodingTableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType }};
@@ -324,16 +321,14 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 
 {{- end }}
 
 {{- define "TableTraits" }}
 {{- if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 template <>
 struct CodingTraits<{{ . }}>
@@ -362,8 +357,7 @@ struct Equality<{{ . }}> {
   }
 };
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 
 {{- end }}

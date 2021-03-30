@@ -54,6 +54,7 @@ class TableWithHandle;
 struct HandlesInTypes;
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle {
@@ -230,9 +231,7 @@ class TableWithHandle final {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -254,9 +253,7 @@ class TableWithHandle final {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -332,6 +329,7 @@ class TableWithHandle final {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
 
 struct HandlesInTypes {
@@ -371,9 +369,7 @@ struct HandlesInTypes {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -395,9 +391,7 @@ struct HandlesInTypes {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -455,6 +449,7 @@ struct IsFidlType<::fidl_test_handlesintypes::wire::obj_type>
     : public std::true_type {};
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_handlesintypes::wire::UnionWithHandle>
     : public std::true_type {};
@@ -466,6 +461,7 @@ static_assert(std::is_standard_layout_v<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_handlesintypes::wire::TableWithHandle>
     : public std::true_type {};
@@ -477,6 +473,7 @@ static_assert(std::is_standard_layout_v<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_handlesintypes::wire::HandlesInTypes>
     : public std::true_type {};

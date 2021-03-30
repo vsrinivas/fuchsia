@@ -39,6 +39,7 @@ class ExplicitPizzaOrPasta;
 class OlderSimpleUnion;
 
 #ifdef __Fuchsia__
+
 class TestProtocol;
 using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
 #endif  // __Fuchsia__
@@ -1241,6 +1242,7 @@ inline zx_status_t Clone(const ::fidl::test::union_::OlderSimpleUnion& value,
 using OlderSimpleUnionPtr = ::std::unique_ptr<OlderSimpleUnion>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
@@ -3826,6 +3828,7 @@ struct Equality<::fidl::test::union_::XUnionContainingEmptyStruct> {
 namespace test {
 namespace union_ {
 #ifdef __Fuchsia__
+
 using TestProtocolPtr = ::fidl::InterfacePtr<TestProtocol>;
 class TestProtocol_Proxy;
 class TestProtocol_Stub;
@@ -3841,10 +3844,11 @@ constexpr uint64_t
 constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
         0x57615a25c2a785d2lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class TestProtocol {
  public:
   using Proxy_ = ::fidl::test::union_::TestProtocol_Proxy;
@@ -3949,6 +3953,7 @@ class TestProtocol_SyncProxy : public ::fidl::test::union_::TestProtocol_Sync {
   friend class ::fidl::SynchronousInterfacePtr<TestProtocol>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace union_
 }  // namespace test
 }  // namespace fidl

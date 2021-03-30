@@ -127,9 +127,9 @@ var (
 			n, t := member.NameAndType()
 			return closeHandles(n, n, t, t.WirePointer, t.WirePointer, access, mutableAccess)
 		},
+		"IfdefFuchsia":    cpp.IfdefFuchsia,
+		"EndifFuchsia":    cpp.EndifFuchsia,
 		"EnsureNamespace": cpp.EnsureNamespace,
-		"PushNamespace":   cpp.PushNamespace,
-		"PopNamespace":    cpp.PopNamespace,
 		"EndOfFile":       cpp.EndOfFile,
 		"UseNatural":      cpp.UseNatural,
 		"UseWire":         cpp.UseWire,

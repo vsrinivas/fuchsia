@@ -24,8 +24,8 @@ var (
 		"Kinds":           func() interface{} { return cpp.Kinds },
 		"Eq":              func(a interface{}, b interface{}) bool { return a == b },
 		"EnsureNamespace": cpp.EnsureNamespace,
-		"PushNamespace":   cpp.PushNamespace,
-		"PopNamespace":    cpp.PopNamespace,
+		"IfdefFuchsia":    cpp.IfdefFuchsia,
+		"EndifFuchsia":    cpp.EndifFuchsia,
 		"EndOfFile":       cpp.EndOfFile,
 	}
 )

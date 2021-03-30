@@ -17,6 +17,7 @@ class Struct;
 class StrictUnion;
 
 #ifdef __Fuchsia__
+
 /// interface comment #1
 ///
 /// interface comment #3
@@ -529,6 +530,7 @@ inline zx_status_t Clone(const ::fidl::test::doccomments::StrictUnion& value,
 using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
 

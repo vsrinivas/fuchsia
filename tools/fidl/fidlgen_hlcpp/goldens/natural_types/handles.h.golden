@@ -85,11 +85,13 @@ inline zx_status_t Clone(::fidl::test::handles::obj_type value,
 class Handles;
 
 #ifdef __Fuchsia__
+
 class SomeProtocol;
 using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class Handles final {
  public:
   static const fidl_type_t* FidlType;
@@ -227,6 +229,7 @@ struct Equality<::fidl::test::handles::obj_type> {
 };
 
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::handles::Handles>
     : public EncodableCodingTraits<::fidl::test::handles::Handles, 132> {};

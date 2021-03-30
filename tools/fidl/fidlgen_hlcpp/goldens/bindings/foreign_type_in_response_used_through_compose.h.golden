@@ -14,11 +14,13 @@ namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
+
 class Top;
 using TopHandle = ::fidl::InterfaceHandle<Top>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
@@ -73,6 +75,7 @@ class Top_ResponseEncoder {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
+
 using TopPtr = ::fidl::InterfacePtr<Top>;
 class Top_Proxy;
 class Top_Stub;
@@ -83,10 +86,11 @@ class Top_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kTop_GetFoo_Ordinal = 0x6ae8d19bc98f3d92lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class Top {
  public:
   using Proxy_ =
@@ -180,6 +184,7 @@ class Top_SyncProxy
   friend class ::fidl::SynchronousInterfacePtr<Top>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace foreigntypeinresponseusedthroughcompose
 }  // namespace test
 }  // namespace fidl

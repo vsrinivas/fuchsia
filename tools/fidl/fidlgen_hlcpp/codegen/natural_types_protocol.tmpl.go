@@ -7,15 +7,13 @@ package codegen
 const protocolTemplateNaturalTypes = `
 {{- define "ProtocolForwardDeclaration/NaturalTypes" }}
 {{ EnsureNamespace . }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- range .DocComments }}
 ///{{ . }}
 {{- end }}
 class {{ .Name }};
 using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "PointerParams" -}}
@@ -26,8 +24,7 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 
 {{- define "ProtocolDeclaration/NaturalTypes" }}
 {{ EnsureNamespace . }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -102,7 +99,6 @@ class {{ .ResponseEncoder.Name }} {
   {{- end }}
 };
 
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 `

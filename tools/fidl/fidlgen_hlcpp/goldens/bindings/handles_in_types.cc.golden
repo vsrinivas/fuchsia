@@ -12,6 +12,7 @@ namespace test {
 namespace handlesintypes {
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
 const fidl_type_t* UnionWithHandle::FidlType =
     &fidl_test_handlesintypes_UnionWithHandleTable;
@@ -201,6 +202,7 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_handlesintypes_TableWithHandleTable;
 const fidl_type_t* TableWithHandle::FidlType =
     &fidl_test_handlesintypes_TableWithHandleTable;
@@ -351,6 +353,7 @@ zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
 const fidl_type_t* HandlesInTypes::FidlType =
     &fidl_test_handlesintypes_HandlesInTypesTable;

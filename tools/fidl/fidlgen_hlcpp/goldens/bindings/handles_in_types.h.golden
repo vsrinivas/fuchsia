@@ -31,6 +31,7 @@ class TableWithHandle;
 class HandlesInTypes;
 
 #ifdef __Fuchsia__
+
 class UnionWithHandle final {
  public:
   static const fidl_type_t* FidlType;
@@ -135,6 +136,7 @@ using UnionWithHandlePtr = ::std::unique_ptr<UnionWithHandle>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class TableWithHandle final {
  public:
   static const fidl_type_t* FidlType;
@@ -243,6 +245,7 @@ using TableWithHandlePtr = ::std::unique_ptr<TableWithHandle>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class HandlesInTypes final {
  public:
   static const fidl_type_t* FidlType;
@@ -318,6 +321,7 @@ struct Equality<::fidl::test::handlesintypes::obj_type> {
 };
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlXUnion<::fidl::test::handlesintypes::UnionWithHandle>
     : public std::true_type {};
@@ -389,6 +393,7 @@ struct Equality<::fidl::test::handlesintypes::UnionWithHandle> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::handlesintypes::TableWithHandle>
     : public EncodableCodingTraits<
@@ -420,6 +425,7 @@ struct Equality<::fidl::test::handlesintypes::TableWithHandle> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::handlesintypes::HandlesInTypes>
     : public EncodableCodingTraits<::fidl::test::handlesintypes::HandlesInTypes,

@@ -11,11 +11,13 @@ namespace fidl {
 namespace test {
 namespace service {
 #ifdef __Fuchsia__
+
 class SecondProtocol;
 using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class FirstProtocol;
 using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
 #endif  // __Fuchsia__
@@ -37,6 +39,7 @@ class EmptyService;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
@@ -65,6 +68,7 @@ class SecondProtocol_ResponseEncoder {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstRequestTable;

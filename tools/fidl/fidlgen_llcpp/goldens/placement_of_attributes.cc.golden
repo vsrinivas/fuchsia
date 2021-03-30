@@ -58,7 +58,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_placementofattributes::ExampleProtocol::UnownedResultOf::Method::
@@ -74,7 +74,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_placementofattributes
 #ifdef __Fuchsia__
@@ -92,7 +92,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
@@ -109,7 +109,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -119,7 +119,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_placementofattributes {
 #ifdef __Fuchsia__
@@ -157,10 +157,8 @@ namespace entries {
       entries::ExampleProtocol + sizeof(entries::ExampleProtocol) /
                                      sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_placementofattributes
+#endif  // __Fuchsia__
 
-namespace fidl_test_placementofattributes {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult ExampleProtocol::Dispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
@@ -180,7 +178,8 @@ fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>::
   return ::fidl_test_placementofattributes::ExampleProtocol::Dispatch(this, msg,
                                                                       txn);
 }
-#endif
+namespace fidl_test_placementofattributes {
+#endif  // __Fuchsia__
 
 void ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest::
     _InitHeader(zx_txid_t _txid) {
@@ -189,5 +188,7 @@ void ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest::
       ::fidl_test_placementofattributes::kExampleProtocol_Method_Ordinal);
 }
 
+}  // namespace fidl_test_placementofattributes
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

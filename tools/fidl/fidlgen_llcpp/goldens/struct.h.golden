@@ -69,7 +69,7 @@ struct Simple {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -91,7 +91,7 @@ struct Simple {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -162,7 +162,7 @@ struct BasicStruct {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -184,7 +184,7 @@ struct BasicStruct {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 

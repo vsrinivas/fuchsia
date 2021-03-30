@@ -8,7 +8,7 @@ const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestCallerAllocateMethodDefinition" }}
 {{ EnsureNamespace "" }}
   {{- if .HasResponse }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 {{ .WireUnownedResultOf }}
 {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
@@ -24,9 +24,9 @@ const fragmentClientSyncMethodsTmpl = `
   return {{ .WireUnownedResultOf }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+{{- EndifFuchsia -}}
   {{- else }}{{ if .RequestArgs }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -40,7 +40,7 @@ const fragmentClientSyncMethodsTmpl = `
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+{{- EndifFuchsia -}}
   {{- end }}{{ end }}
 {{- end }}
 
@@ -48,7 +48,7 @@ const fragmentClientSyncMethodsTmpl = `
 {{ EnsureNamespace "" }}
 
   {{- if .HasResponse }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 {{ .WireResultOf }}
 {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ .RequestArgs | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -60,9 +60,9 @@ const fragmentClientSyncMethodsTmpl = `
   return {{ .WireResultOf }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+{{- EndifFuchsia -}}
   {{- else }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ .RequestArgs | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = {{ .WireResultOf }}(
@@ -73,7 +73,7 @@ const fragmentClientSyncMethodsTmpl = `
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+{{- EndifFuchsia -}}
   {{- end }}
 {{- end }}
 `

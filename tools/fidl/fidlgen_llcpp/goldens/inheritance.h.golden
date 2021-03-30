@@ -88,19 +88,17 @@ class super final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -120,21 +118,19 @@ class super final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -217,19 +213,17 @@ class super final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -248,21 +242,19 @@ class super final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -425,13 +417,11 @@ class super final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::super>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::super>;
   class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super>;
-#endif
 
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::super>;
 
@@ -460,9 +450,7 @@ class super final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender = ::fidl::WireEventSender<::fidl_test_inheritance::super>;
   using WeakEventSender =
       ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::super>;
@@ -626,19 +614,17 @@ class sub final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -658,21 +644,19 @@ class sub final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -755,19 +739,17 @@ class sub final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -786,21 +768,19 @@ class sub final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedMessage message_;
@@ -963,13 +943,11 @@ class sub final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::sub>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::sub>;
   class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>;
-#endif
 
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::sub>;
 
@@ -998,9 +976,7 @@ class sub final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender = ::fidl::WireEventSender<::fidl_test_inheritance::sub>;
   using WeakEventSender =
       ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::sub>;
@@ -1241,7 +1217,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super> final
       event_handler_;
 };
 namespace fidl_test_inheritance {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
@@ -1291,7 +1267,7 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::super> {
       ::fidl::internal::AsyncServerBinding<::fidl_test_inheritance::super>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_inheritance {
 
@@ -1373,7 +1349,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub> final
       event_handler_;
 };
 namespace fidl_test_inheritance {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
@@ -1423,4 +1399,4 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::sub> {
       ::fidl::internal::AsyncServerBinding<::fidl_test_inheritance::sub>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__

@@ -35,16 +35,19 @@ class WithErrorSyntax_ErrorAsPrimitive_Result;
 class WithErrorSyntax_ErrorAsEnum_Response;
 
 #ifdef __Fuchsia__
+
 class Transitional;
 using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class ChannelProtocol;
 using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class WithAndWithoutRequestResponse;
 using WithAndWithoutRequestResponseHandle =
     ::fidl::InterfaceHandle<WithAndWithoutRequestResponse>;
@@ -66,6 +69,7 @@ inline zx_status_t Clone(::fidl::test::protocols::ErrorEnun value,
 class WithErrorSyntax_ErrorAsEnum_Result;
 
 #ifdef __Fuchsia__
+
 class WithErrorSyntax;
 using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
 #endif  // __Fuchsia__
@@ -462,6 +466,7 @@ using WithErrorSyntax_ErrorAsEnum_ResponsePtr =
     ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Response>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestRequestTable;
@@ -539,6 +544,7 @@ class Transitional_ResponseEncoder {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodARequestTable;
@@ -700,6 +706,7 @@ class ChannelProtocol_ResponseEncoder {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
@@ -1051,6 +1058,7 @@ using WithErrorSyntax_ErrorAsEnum_ResultPtr =
     ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Result>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;

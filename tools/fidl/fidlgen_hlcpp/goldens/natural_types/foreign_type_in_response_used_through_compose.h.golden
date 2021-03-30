@@ -14,11 +14,13 @@ namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
+
 class Top;
 using TopHandle = ::fidl::InterfaceHandle<Top>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;

@@ -85,11 +85,13 @@ inline zx_status_t Clone(::fidl::test::handles::obj_type value,
 class Handles;
 
 #ifdef __Fuchsia__
+
 class SomeProtocol;
 using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class Handles final {
  public:
   static const fidl_type_t* FidlType;
@@ -227,6 +229,7 @@ struct Equality<::fidl::test::handles::obj_type> {
 };
 
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::handles::Handles>
     : public EncodableCodingTraits<::fidl::test::handles::Handles, 132> {};
@@ -390,6 +393,7 @@ struct Equality<::fidl::test::handles::Handles> {
 namespace test {
 namespace handles {
 #ifdef __Fuchsia__
+
 using SomeProtocolPtr = ::fidl::InterfacePtr<SomeProtocol>;
 class SomeProtocol_Proxy;
 class SomeProtocol_Stub;
@@ -399,7 +403,9 @@ using SomeProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SomeProtocol>;
 class SomeProtocol_SyncProxy;
 
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class SomeProtocol {
  public:
   using Proxy_ = ::fidl::test::handles::SomeProtocol_Proxy;
@@ -476,6 +482,7 @@ class SomeProtocol_SyncProxy : public ::fidl::test::handles::SomeProtocol_Sync {
   friend class ::fidl::SynchronousInterfacePtr<SomeProtocol>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace handles
 }  // namespace test
 }  // namespace fidl

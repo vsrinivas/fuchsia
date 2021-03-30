@@ -42,7 +42,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::UnownedResultOf::Send::Send(
@@ -56,7 +56,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::ResultOf::SendAndReceive::
@@ -88,7 +88,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::UnownedResultOf::SendAndReceive::
@@ -108,7 +108,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_emptystruct
 #ifdef __Fuchsia__
@@ -124,7 +124,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::Send(
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -140,7 +140,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::Send(
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::ResultOf::SendAndReceive
@@ -155,7 +155,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
   return ::fidl_test_emptystruct::EmptyProtocol::ResultOf::SendAndReceive(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::UnownedResultOf::SendAndReceive
@@ -175,7 +175,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
       SendAndReceive(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
@@ -242,7 +242,7 @@ void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
           _request_buffer.data, _request_buffer.capacity, _context->Txid(), e);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -275,7 +275,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
@@ -401,10 +401,8 @@ namespace entries {
       entries::EmptyProtocol + sizeof(entries::EmptyProtocol) /
                                    sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_emptystruct
+#endif  // __Fuchsia__
 
-namespace fidl_test_emptystruct {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult EmptyProtocol::Dispatch(Interface* impl,
                                                fidl_incoming_msg_t* msg,
@@ -423,8 +421,10 @@ fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_emptystruct::EmptyProtocol::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_emptystruct {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_emptystruct
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
     SendAndReceiveCompleterBase::Reply(::fidl_test_emptystruct::wire::Empty e) {
@@ -434,7 +434,7 @@ fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
       SendAndReceiveCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
@@ -444,7 +444,7 @@ fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, e);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_emptystruct::EmptyProtocol::SendRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -471,6 +471,7 @@ void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse::
 }
 
 #ifdef __Fuchsia__
+
 zx_status_t
 fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
     ::fidl_test_emptystruct::wire::Empty e) const {
@@ -491,4 +492,4 @@ fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
   return _response.status();
 }
 
-#endif
+#endif  // __Fuchsia__

@@ -50,7 +50,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_handles {
 #ifdef __Fuchsia__
@@ -67,10 +67,8 @@ namespace entries {
                                                  ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
-#endif
-}  // namespace fidl_test_handles
+#endif  // __Fuchsia__
 
-namespace fidl_test_handles {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl,
                                               fidl_incoming_msg_t* msg,
@@ -86,7 +84,10 @@ fidl::WireInterface<::fidl_test_handles::SomeProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_handles::SomeProtocol::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_handles {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_handles
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

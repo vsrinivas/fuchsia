@@ -136,6 +136,7 @@ class SomeProtocol;
 namespace wire {
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
 
 struct Handles {
@@ -227,9 +228,7 @@ struct Handles {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -251,9 +250,7 @@ struct Handles {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -334,12 +331,10 @@ class SomeProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_handles::SomeProtocol>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_handles::SomeProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol>;
-#endif
 
   using Interface = ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>;
 
@@ -368,9 +363,7 @@ class SomeProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_handles::SomeProtocol>;
   using WeakEventSender =
@@ -458,6 +451,7 @@ struct IsFidlType<::fidl_test_handles::wire::obj_type> : public std::true_type {
 };
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_handles::wire::Handles> : public std::true_type {
 };
@@ -518,6 +512,7 @@ static_assert(offsetof(::fidl_test_handles::wire::Handles,
 static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
               ::fidl_test_handles::wire::Handles::PrimarySize);
 #endif  // __Fuchsia__
+
 }  // namespace fidl
 namespace fidl_test_handles {
 
@@ -562,7 +557,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol> final
       event_handler_;
 };
 namespace fidl_test_handles {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_handles
 #ifdef __Fuchsia__
@@ -613,4 +608,4 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_handles::SomeProtocol> {
       ::fidl::internal::AsyncServerBinding<::fidl_test_handles::SomeProtocol>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__

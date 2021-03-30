@@ -15,8 +15,7 @@ struct {{ .Name }};
 {{- define "StructDeclaration" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ range .DocComments }}
@@ -61,9 +60,9 @@ struct {{ .Name }} {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
     const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -86,9 +85,9 @@ struct {{ .Name }} {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
     const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -133,8 +132,7 @@ struct {{ .Name }} {
   };
 };
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 
@@ -143,15 +141,13 @@ struct {{ .Name }} {
 {{- define "StructDefinition" }}
 {{ EnsureNamespace "::" }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 void {{ . }}::_CloseHandles() {
   {{- range .Members }}
     {{- CloseHandles . false false }}
   {{- end }}
 }
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 
@@ -159,8 +155,7 @@ void {{ . }}::_CloseHandles() {
      emulated handles for C++. */}}
 {{- define "StructTraits" }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
@@ -173,8 +168,7 @@ static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .Offset }});
 {{- end }}
 static_assert(sizeof({{ . }}) == {{ . }}::PrimarySize);
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 `

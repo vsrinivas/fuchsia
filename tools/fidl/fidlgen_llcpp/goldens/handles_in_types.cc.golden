@@ -5,6 +5,7 @@
 #include <memory>
 
 #ifdef __Fuchsia__
+
 auto ::fidl_test_handlesintypes::wire::UnionWithHandle::which() const
     -> ::fidl_test_handlesintypes::wire::UnionWithHandle::Tag {
   ZX_ASSERT(!has_invalid_tag());

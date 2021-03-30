@@ -162,7 +162,7 @@ class SimpleTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -184,7 +184,7 @@ class SimpleTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -405,7 +405,7 @@ class ReverseOrdinalTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -427,7 +427,7 @@ class ReverseOrdinalTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -582,7 +582,7 @@ class OlderSimpleTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -604,7 +604,7 @@ class OlderSimpleTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -819,7 +819,7 @@ class NewerSimpleTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -841,7 +841,7 @@ class NewerSimpleTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -966,7 +966,7 @@ class EmptyTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -988,7 +988,7 @@ class EmptyTable final {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 

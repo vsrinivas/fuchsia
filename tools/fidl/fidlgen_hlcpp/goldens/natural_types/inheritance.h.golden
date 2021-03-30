@@ -11,16 +11,19 @@ namespace fidl {
 namespace test {
 namespace inheritance {
 #ifdef __Fuchsia__
+
 class super;
 using superHandle = ::fidl::InterfaceHandle<super>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class sub;
 using subHandle = ::fidl::InterfaceHandle<sub>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 
@@ -65,6 +68,7 @@ class super_ResponseEncoder {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 

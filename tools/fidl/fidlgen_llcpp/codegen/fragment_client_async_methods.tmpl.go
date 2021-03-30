@@ -27,7 +27,7 @@ The request and callback are allocated on the heap.
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 {{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()
     : ::fidl::internal::ResponseContext({{ .WireResponse }}::Type, {{ .OrdinalName }}) {}
 
@@ -77,6 +77,6 @@ void {{ .WireResponseContext }}::OnReply(uint8_t* reply) {
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 `

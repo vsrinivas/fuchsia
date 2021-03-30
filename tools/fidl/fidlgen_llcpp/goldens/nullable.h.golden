@@ -212,7 +212,7 @@ struct StructWithNullableVector {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -234,7 +234,7 @@ struct StructWithNullableVector {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -305,7 +305,7 @@ struct StructWithNullableUnion {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -327,7 +327,7 @@ struct StructWithNullableUnion {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -398,7 +398,7 @@ struct StructWithNullableStruct {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -420,7 +420,7 @@ struct StructWithNullableStruct {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -491,7 +491,7 @@ struct StructWithNullableString {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -513,7 +513,7 @@ struct StructWithNullableString {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -557,6 +557,7 @@ struct StructWithNullableString {
 };
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
 
 struct StructWithNullableRequest {
@@ -586,9 +587,7 @@ struct StructWithNullableRequest {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -610,9 +609,7 @@ struct StructWithNullableRequest {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -662,6 +659,7 @@ struct StructWithNullableRequest {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
 
 struct StructWithNullableProtocol {
@@ -691,9 +689,7 @@ struct StructWithNullableProtocol {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -715,9 +711,7 @@ struct StructWithNullableProtocol {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -767,6 +761,7 @@ struct StructWithNullableProtocol {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
 
 struct StructWithNullableHandle {
@@ -795,9 +790,7 @@ struct StructWithNullableHandle {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -819,9 +812,7 @@ struct StructWithNullableHandle {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -919,19 +910,17 @@ class SimpleProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -951,21 +940,19 @@ class SimpleProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -1049,19 +1036,17 @@ class SimpleProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -1080,21 +1065,19 @@ class SimpleProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedMessage message_;
@@ -1266,13 +1249,11 @@ class SimpleProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_nullable::SimpleProtocol>;
   class AddResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>;
-#endif
 
   using Interface = ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>;
 
@@ -1301,9 +1282,7 @@ class SimpleProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_nullable::SimpleProtocol>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -1456,7 +1435,7 @@ struct Int32Wrapper {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -1478,7 +1457,7 @@ struct Int32Wrapper {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -1581,6 +1560,7 @@ static_assert(
     ::fidl_test_nullable::wire::StructWithNullableString::PrimarySize);
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
@@ -1597,6 +1577,7 @@ static_assert(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
@@ -1613,6 +1594,7 @@ static_assert(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};
@@ -1759,7 +1741,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
       event_handler_;
 };
 namespace fidl_test_nullable {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_nullable
 #ifdef __Fuchsia__
@@ -1811,4 +1793,4 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl_test_nullable::SimpleProtocol>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__

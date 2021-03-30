@@ -11,16 +11,19 @@ namespace fidl {
 namespace test {
 namespace protocolrequest {
 #ifdef __Fuchsia__
+
 class Parent;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class Child;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestTable;
@@ -154,6 +157,7 @@ class Child_ResponseEncoder {
 namespace test {
 namespace protocolrequest {
 #ifdef __Fuchsia__
+
 using ParentPtr = ::fidl::InterfacePtr<Parent>;
 class Parent_Proxy;
 class Parent_Stub;
@@ -167,11 +171,11 @@ constexpr uint64_t kParent_GetChild_Ordinal = 0x6e0c789be8dbb77elu;
 constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x193e7d6949a9df98lu;
 constexpr uint64_t kParent_TakeChild_Ordinal = 0x5311bd7214c0f6elu;
 constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x15dae312bad5a9cclu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 using ChildPtr = ::fidl::InterfacePtr<Child>;
 class Child_Proxy;
 class Child_Stub;
@@ -181,7 +185,9 @@ using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
 
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class Parent {
  public:
   using Proxy_ = ::fidl::test::protocolrequest::Parent_Proxy;
@@ -308,7 +314,9 @@ class Parent_SyncProxy : public ::fidl::test::protocolrequest::Parent_Sync {
   friend class ::fidl::SynchronousInterfacePtr<Parent>;
 };
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class Child {
  public:
   using Proxy_ = ::fidl::test::protocolrequest::Child_Proxy;
@@ -384,6 +392,7 @@ class Child_SyncProxy : public ::fidl::test::protocolrequest::Child_Sync {
   friend class ::fidl::SynchronousInterfacePtr<Child>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace protocolrequest
 }  // namespace test
 }  // namespace fidl

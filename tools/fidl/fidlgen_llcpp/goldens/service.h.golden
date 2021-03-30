@@ -100,19 +100,17 @@ class SecondProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -131,21 +129,19 @@ class SecondProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -248,12 +244,10 @@ class SecondProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_service::SecondProtocol>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>;
-#endif
 
   using Interface = ::fidl::WireInterface<::fidl_test_service::SecondProtocol>;
 
@@ -282,9 +276,7 @@ class SecondProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_service::SecondProtocol>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -428,19 +420,17 @@ class FirstProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -459,21 +449,19 @@ class FirstProtocol final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -573,12 +561,10 @@ class FirstProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_service::FirstProtocol>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol>;
-#endif
 
   using Interface = ::fidl::WireInterface<::fidl_test_service::FirstProtocol>;
 
@@ -607,9 +593,7 @@ class FirstProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_service::FirstProtocol>;
   using WeakEventSender =
@@ -1127,7 +1111,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
       event_handler_;
 };
 namespace fidl_test_service {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
@@ -1179,7 +1163,7 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl::internal::AsyncServerBinding<::fidl_test_service::SecondProtocol>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_service {
 
@@ -1228,7 +1212,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final
       event_handler_;
 };
 namespace fidl_test_service {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
@@ -1280,4 +1264,4 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl::internal::AsyncServerBinding<::fidl_test_service::FirstProtocol>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__

@@ -15,8 +15,7 @@ class {{ .Name }};
 {{- define "TableDeclaration" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 
 extern "C" const fidl_type_t {{ .CodingTableType }};
@@ -119,9 +118,9 @@ public:
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
     const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -144,9 +143,9 @@ public:
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
     const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -225,8 +224,7 @@ public:
 };
 
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 {{- end }}
 
@@ -235,8 +233,7 @@ public:
 {{- define "TableDefinition" }}
 {{ if .IsResourceType }}
 {{ EnsureNamespace "::" }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 void {{ . }}::_CloseHandles() {
   {{- range .Members }}
     {{- if .Type.IsResource }}
@@ -246,8 +243,7 @@ void {{ . }}::_CloseHandles() {
     {{- end }}
   {{- end }}
 }
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 
@@ -255,8 +251,7 @@ void {{ . }}::_CloseHandles() {
      emulated handles for C++. */}}
 {{- define "TableTraits" }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
@@ -264,8 +259,7 @@ template <>
 struct IsTable<{{ . }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 `

@@ -26,7 +26,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritancewithrecursivedecl::Parent::UnownedResultOf::First::First(
@@ -42,7 +42,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
@@ -61,7 +61,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
@@ -80,7 +80,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -90,7 +90,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
@@ -127,10 +127,8 @@ namespace entries {
       entries::Parent +
           sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_inheritancewithrecursivedecl
+#endif  // __Fuchsia__
 
-namespace fidl_test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Parent::Dispatch(Interface* impl,
                                         fidl_incoming_msg_t* msg,
@@ -150,7 +148,8 @@ fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>::
   return ::fidl_test_inheritancewithrecursivedecl::Parent::Dispatch(this, msg,
                                                                     txn);
 }
-#endif
+namespace fidl_test_inheritancewithrecursivedecl {
+#endif  // __Fuchsia__
 
 void ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest::
     _InitHeader(zx_txid_t _txid) {
@@ -164,8 +163,10 @@ void ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest::
   request.reset();
 }
 
+}  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_inheritancewithrecursivedecl {
 [[maybe_unused]] constexpr uint64_t kChild_First_Ordinal =
@@ -198,7 +199,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::First::First(
@@ -214,7 +215,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::Second::Second(
@@ -229,7 +230,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::Second::
@@ -246,7 +247,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
@@ -265,7 +266,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
@@ -284,7 +285,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
@@ -302,7 +303,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
@@ -321,7 +322,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -331,7 +332,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
@@ -382,10 +383,8 @@ namespace entries {
       entries::Child +
           sizeof(entries::Child) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_inheritancewithrecursivedecl
+#endif  // __Fuchsia__
 
-namespace fidl_test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Child::Dispatch(Interface* impl,
                                        fidl_incoming_msg_t* msg,
@@ -405,7 +404,8 @@ fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::
   return ::fidl_test_inheritancewithrecursivedecl::Child::Dispatch(this, msg,
                                                                    txn);
 }
-#endif
+namespace fidl_test_inheritancewithrecursivedecl {
+#endif  // __Fuchsia__
 
 void ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -431,5 +431,7 @@ void ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest::
   request.reset();
 }
 
+}  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

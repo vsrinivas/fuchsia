@@ -74,7 +74,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::Transitional::UnownedResultOf::Request::Request(
@@ -91,7 +91,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::Transitional::ResultOf::OneWay::OneWay(
@@ -104,7 +104,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::Transitional::UnownedResultOf::OneWay::OneWay(
@@ -117,7 +117,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -133,7 +133,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_protocols::Transitional::ResultOf::Request(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::Transitional::UnownedResultOf::Request fidl::internal::
@@ -150,7 +150,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_protocols::Transitional::UnownedResultOf::Request(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::Transitional::RequestResponseContext::
@@ -214,7 +214,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
                x);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
@@ -228,7 +228,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -243,7 +243,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::OneWay(
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -276,7 +276,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
@@ -397,10 +397,8 @@ namespace entries {
       entries::Transitional + sizeof(entries::Transitional) /
                                   sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Transitional::Dispatch(Interface* impl,
                                               fidl_incoming_msg_t* msg,
@@ -419,8 +417,10 @@ fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_protocols::Transitional::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::Transitional>::
     RequestCompleterBase::Reply(int64_t y) {
@@ -430,7 +430,7 @@ fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
       RequestCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::Transitional>::
@@ -439,7 +439,7 @@ fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
       _response(_buffer.data, _buffer.capacity, y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_protocols::Transitional::RequestRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -464,6 +464,7 @@ void ::fidl_test_protocols::Transitional::EventResponse::_InitHeader() {
 }
 
 #ifdef __Fuchsia__
+
 zx_status_t fidl::WireEventSender<::fidl_test_protocols::Transitional>::Event(
     int64_t x) const {
   ::fidl::OwnedEncodedMessage<
@@ -482,7 +483,7 @@ zx_status_t fidl::WireEventSender<::fidl_test_protocols::Transitional>::Event(
   return _response.status();
 }
 
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodA_Ordinal =
@@ -540,7 +541,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodA::MethodA(
@@ -554,7 +555,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodB::MethodB(
@@ -582,7 +583,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodB::MethodB(
@@ -599,7 +600,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::ResultOf::TakeHandle::TakeHandle(
@@ -627,7 +628,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::TakeHandle::TakeHandle(
@@ -644,7 +645,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::ResultOf::MutateSocket::MutateSocket(
@@ -672,7 +673,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MutateSocket::
@@ -692,7 +693,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -707,7 +708,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -723,7 +724,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodA(
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodB
@@ -739,7 +740,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodB(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodB
@@ -756,7 +757,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
   return ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodB(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext::
@@ -819,7 +820,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
                a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::ResultOf::TakeHandle
@@ -834,7 +835,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_protocols::ChannelProtocol::ResultOf::TakeHandle(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::TakeHandle
@@ -851,7 +852,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
   return ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::TakeHandle(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext::
@@ -915,7 +916,7 @@ void ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext::OnReply(
           _request_buffer.data, _request_buffer.capacity, _context->Txid(), h);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::ResultOf::MutateSocket
@@ -930,7 +931,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_protocols::ChannelProtocol::ResultOf::MutateSocket(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MutateSocket
@@ -948,7 +949,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
   return ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MutateSocket(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext::
@@ -1015,7 +1016,7 @@ void ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext::
           _request_buffer.data, _request_buffer.capacity, _context->Txid(), a);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -1048,7 +1049,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
@@ -1202,10 +1203,8 @@ namespace entries {
       entries::ChannelProtocol + sizeof(entries::ChannelProtocol) /
                                      sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult ChannelProtocol::Dispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
@@ -1224,8 +1223,10 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_protocols::ChannelProtocol::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
     MethodBCompleterBase::Reply(int64_t result) {
@@ -1235,7 +1236,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
       MethodBCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
@@ -1244,7 +1245,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
       _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<
@@ -1255,7 +1256,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
       TakeHandleCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
@@ -1266,7 +1267,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
       MutateSocketCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
@@ -1276,7 +1277,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, b);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_protocols::ChannelProtocol::MethodARequest::_InitHeader(
     zx_txid_t _txid) {
@@ -1340,6 +1341,7 @@ void ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse::
 }
 
 #ifdef __Fuchsia__
+
 zx_status_t
 fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>::EventA(
     int64_t a, int64_t b) const {
@@ -1360,7 +1362,7 @@ fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>::EventA(
   return _response.status();
 }
 
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 [[maybe_unused]] constexpr uint64_t
@@ -1456,7 +1458,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1493,7 +1495,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1530,7 +1532,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
@@ -1551,7 +1553,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1568,7 +1570,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
@@ -1586,7 +1588,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1624,7 +1626,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
@@ -1647,7 +1649,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1685,7 +1687,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
@@ -1708,7 +1710,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -1725,7 +1727,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1744,7 +1746,7 @@ extern "C" const fidl_type_t
       NoRequestEmptyResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1815,7 +1817,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
           _context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1834,7 +1836,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
       NoRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
@@ -1854,7 +1856,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
       NoRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1923,7 +1925,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
           _context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
@@ -1940,7 +1942,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
@@ -1958,7 +1960,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -1978,7 +1980,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
       WithRequestEmptyResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
@@ -2001,7 +2003,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
       WithRequestEmptyResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2076,7 +2078,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
           arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
@@ -2096,7 +2098,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
       WithRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
@@ -2119,7 +2121,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
       WithRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2193,7 +2195,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
           arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -2245,7 +2247,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 ::fidl::Result fidl::WireSyncEventHandler<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -2464,10 +2466,8 @@ namespace entries {
           sizeof(entries::WithAndWithoutRequestResponse) /
               sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult WithAndWithoutRequestResponse::Dispatch(
     Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
@@ -2486,8 +2486,10 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
   return ::fidl_test_protocols::WithAndWithoutRequestResponse::Dispatch(
       this, msg, txn);
 }
-#endif
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -2501,7 +2503,7 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       NoRequestEmptyResponseCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -2516,7 +2518,7 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       NoRequestWithResponseCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -2528,7 +2530,7 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
           _buffer.data, _buffer.capacity, ret);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -2543,7 +2545,7 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       WithRequestEmptyResponseCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -2558,7 +2560,7 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       WithRequestWithResponseCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -2570,7 +2572,7 @@ fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
           _buffer.data, _buffer.capacity, ret);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     NoRequestNoResponseRequest::_InitHeader(zx_txid_t _txid) {
@@ -2669,6 +2671,7 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
 }
 
 #ifdef __Fuchsia__
+
 zx_status_t fidl::WireEventSender<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse()
     const {
@@ -2702,7 +2705,7 @@ fidl::WireEventSender<::fidl_test_protocols::WithAndWithoutRequestResponse>::
   return _response.status();
 }
 
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
     SizeAndOffsetAssertionHelper() {
@@ -2770,7 +2773,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ResponseAsStruct::
@@ -2788,7 +2791,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive::
@@ -2819,7 +2822,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::
@@ -2837,7 +2840,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(
@@ -2864,7 +2867,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum::
@@ -2881,7 +2884,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -2896,7 +2899,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_protocols::WithErrorSyntax::ResultOf::ResponseAsStruct(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ResponseAsStruct
@@ -2913,7 +2916,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
       ResponseAsStruct(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext::
@@ -2978,7 +2981,7 @@ void ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext::
       OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive
@@ -2992,7 +2995,7 @@ fidl::internal::WireClientImpl<
   return ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
@@ -3009,7 +3012,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
       ErrorAsPrimitive(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext::
@@ -3074,7 +3077,7 @@ void ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext::
       OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsEnum fidl::internal::
@@ -3087,7 +3090,7 @@ void ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext::
   return ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsEnum(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum
@@ -3102,7 +3105,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   return ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
@@ -3163,7 +3166,7 @@ void ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
       OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -3173,7 +3176,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 #ifdef __Fuchsia__
@@ -3232,10 +3235,8 @@ namespace entries {
       entries::WithErrorSyntax + sizeof(entries::WithErrorSyntax) /
                                      sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult WithErrorSyntax::Dispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
@@ -3254,8 +3255,10 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_protocols::WithErrorSyntax::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStructCompleterBase::Reply(
@@ -3267,7 +3270,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
       ResponseAsStructCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3286,7 +3289,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                            WithErrorSyntax_ResponseAsStruct_Response>::
                            FromExternal(&_response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3295,7 +3298,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result::
           WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3307,7 +3310,8 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStructCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer,
@@ -3327,7 +3331,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                            WithErrorSyntax_ResponseAsStruct_Response>::
                            FromExternal(&response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3340,7 +3344,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
       ErrorAsPrimitiveCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3355,7 +3359,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                            WithErrorSyntax_ErrorAsPrimitive_Response>::
                            FromExternal(&_response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3364,7 +3368,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result::
           WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3376,7 +3380,8 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsPrimitiveCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer) {
@@ -3391,7 +3396,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                            WithErrorSyntax_ErrorAsPrimitive_Response>::
                            FromExternal(&response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3404,7 +3409,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
       ErrorAsEnumCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3418,7 +3423,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                                      WithErrorSyntax_ErrorAsEnum_Response>::
                   FromExternal(&_response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3429,7 +3434,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
           ::fidl::ObjectView<
               ::fidl_test_protocols::wire::ErrorEnun>::FromExternal(&error)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
@@ -3441,7 +3446,8 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnumCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer) {
@@ -3455,7 +3461,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                                      WithErrorSyntax_ErrorAsEnum_Response>::
                   FromExternal(&response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructRequest::
     _InitHeader(zx_txid_t _txid) {
@@ -3499,4 +3505,5 @@ void ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse::
 }
 
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

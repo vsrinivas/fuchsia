@@ -15,8 +15,7 @@ class {{ .Name }};
 {{- define "UnionDeclaration" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 {{- range .DocComments }}
 ///{{ . }}
@@ -207,8 +206,7 @@ inline zx_status_t Clone(const {{ . }}& value,
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 
 {{- end }}
@@ -216,8 +214,7 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- define "UnionDefinition" }}
 {{ EnsureNamespace . }}
 {{- if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 extern "C" const fidl_type_t {{ .CodingTableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType }};
@@ -462,16 +459,14 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 
 {{- end }}
 
 {{- define "UnionTraits" }}
 {{- if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 template <>
 struct IsFidlXUnion<{{ . }}> : public std::true_type {};
@@ -540,8 +535,7 @@ struct Equality<{{ . }}> {
   }
 };
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 
 {{- end }}

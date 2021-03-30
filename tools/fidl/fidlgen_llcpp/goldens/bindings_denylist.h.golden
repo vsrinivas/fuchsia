@@ -184,19 +184,17 @@ class OnlyLibfuzzerAndDeps final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -216,21 +214,19 @@ class OnlyLibfuzzerAndDeps final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -317,19 +313,17 @@ class OnlyLibfuzzerAndDeps final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::OutgoingMessage message_;
     };
@@ -349,21 +343,19 @@ class OnlyLibfuzzerAndDeps final {
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
       const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
-
 #ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
-#endif
-
+#endif  // __Fuchsia__
      private:
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedMessage message_;
@@ -558,13 +550,11 @@ class OnlyLibfuzzerAndDeps final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
   class LibfuzzerNeedsNonemptyProtocolResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-#endif
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
@@ -594,9 +584,7 @@ class OnlyLibfuzzerAndDeps final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender = ::fidl::WireEventSender<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -752,12 +740,10 @@ class OnlyCppAndDeps final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 
-#ifdef __Fuchsia__
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-#endif
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
@@ -787,9 +773,7 @@ class OnlyCppAndDeps final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-#endif
-
+#endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
@@ -1004,7 +988,7 @@ class ::fidl::internal::WireClientImpl<
       event_handler_;
 };
 namespace fidl_test_bindingsdenylist {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
@@ -1061,7 +1045,7 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_bindingsdenylist {
 
@@ -1107,7 +1091,7 @@ class ::fidl::internal::WireClientImpl<
       event_handler_;
 };
 namespace fidl_test_bindingsdenylist {
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
@@ -1162,4 +1146,4 @@ class ::fidl::internal::WireWeakEventSender<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>
       binding_;
 };
-#endif
+#endif  // __Fuchsia__

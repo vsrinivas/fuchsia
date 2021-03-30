@@ -15,6 +15,7 @@ class StrictFoo;
 class FlexibleFoo;
 
 #ifdef __Fuchsia__
+
 class Protocol;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
 #endif  // __Fuchsia__
@@ -229,6 +230,7 @@ inline zx_status_t Clone(
 using FlexibleFooPtr = ::std::unique_ptr<FlexibleFoo>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;

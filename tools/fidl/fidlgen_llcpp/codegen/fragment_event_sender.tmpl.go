@@ -15,7 +15,7 @@ const fragmentEventSenderTmpl = `
 
 {{- define "EventSenderDeclaration" }}
 {{ EnsureNamespace "::" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 // |EventSender| owns a server endpoint of a channel speaking
 // the {{ .Name }} protocol, and can send events in that protocol.
 template<>
@@ -96,12 +96,12 @@ class {{ .WireWeakEventSender }} {
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<{{ . }}>> binding_;
 };
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "EventSenderDefinition" }}
 {{ EnsureNamespace "" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
   {{- range .Events }}
     {{- /* Managed */}}
 zx_status_t {{ $.WireEventSender.NoLeading }}::
@@ -127,6 +127,6 @@ zx_status_t {{ $.WireEventSender.NoLeading }}::
     {{- end }}
 {{ "" }}
   {{- end }}
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 `

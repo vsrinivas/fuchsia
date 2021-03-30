@@ -11,6 +11,7 @@ namespace fidl {
 namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
+
 class OnlyLibfuzzerAndDeps;
 using OnlyLibfuzzerAndDepsHandle =
     ::fidl::InterfaceHandle<OnlyLibfuzzerAndDeps>;
@@ -21,11 +22,13 @@ class OnlyHlcpp;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class OnlyCppAndDeps;
 using OnlyCppAndDepsHandle = ::fidl::InterfaceHandle<OnlyCppAndDeps>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;

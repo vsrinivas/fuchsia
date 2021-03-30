@@ -11,7 +11,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .ResponseArgs }}, {{ end }}
 {{- end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::Result {{ .WireCompleterBase.NoLeading }}::
 {{- template "ReplyCallerAllocateMethodSignature" . }} {
   {{ .WireResponse }}::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
@@ -19,7 +19,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .ResponseArgs }}, {{ end }}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodSignature" -}}
@@ -28,7 +28,7 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::Result {{ .WireCompleterBase.NoLeading }}::
 {{- template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
   {{ .Result.ValueStructDecl }} response;
@@ -41,6 +41,6 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
       {{ .Result.ResultDecl }}::WithResponse(
           ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&response)));
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 `

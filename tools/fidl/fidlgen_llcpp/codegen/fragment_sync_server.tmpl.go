@@ -16,9 +16,8 @@ const fragmentSyncServerTmpl = `
 {{- end }}
 
 {{- define "SyncServerTryDispatchMethodDefinition" }}
-{{ PushNamespace }}
 {{ EnsureNamespace . }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 namespace methods {
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -59,14 +58,12 @@ namespace entries {
     return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }
-#endif
-{{ PopNamespace }}
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "SyncServerDispatchMethodDefinition" }}
-{{ PushNamespace }}
 {{ EnsureNamespace . }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 ::fidl::DispatchResult {{ .Name }}::Dispatch{{ template "SyncServerDispatchMethodSignature" }} {
   {{- if .ClientMethods }}
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -87,8 +84,7 @@ namespace entries {
                                                          ::fidl::Transaction* txn) {
   return {{ . }}::Dispatch(this, msg, txn);
 }
-#endif
-{{ PopNamespace }}
+{{- EndifFuchsia -}}
 
 {{- end }}
 `

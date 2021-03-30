@@ -7,15 +7,14 @@ package codegen
 const serviceTemplate = `
 {{- define "ServiceForwardDeclaration" }}
 {{ EnsureNamespace . }}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 class {{ .Name }};
-#endif // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "ServiceDeclaration" }}
 {{ EnsureNamespace . }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{ range .DocComments }}
 ///{{ . }}
 {{- end }}
@@ -69,7 +68,6 @@ class {{ .Name }}::Handler final {
   ::fidl::ServiceHandlerBase* const service_;
   {{- end }}
 };
-{{- PopNamespace }}
-#endif // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 `

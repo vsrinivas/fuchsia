@@ -42,7 +42,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_error::Example::UnownedResultOf::foo::foo(
@@ -58,7 +58,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_error
 #ifdef __Fuchsia__
@@ -73,7 +73,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
   return ::fidl_test_error::Example::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_error::Example::UnownedResultOf::foo
@@ -90,7 +90,7 @@ fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo_Sync(
   return ::fidl_test_error::Example::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_error::Example::fooResponseContext::fooResponseContext()
@@ -143,7 +143,7 @@ void ::fidl_test_error::Example::fooResponseContext::OnReply(uint8_t* reply) {
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -152,7 +152,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_error {
 #ifdef __Fuchsia__
@@ -187,10 +187,8 @@ namespace entries {
       entries::Example +
           sizeof(entries::Example) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_error
+#endif  // __Fuchsia__
 
-namespace fidl_test_error {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Example::Dispatch(Interface* impl,
                                          fidl_incoming_msg_t* msg,
@@ -209,8 +207,10 @@ fidl::WireInterface<::fidl_test_error::Example>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_error::Example::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_error {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_error
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
@@ -220,7 +220,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
   return ::fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<
@@ -232,7 +232,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
       ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response>::
           FromExternal(&_response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<
@@ -240,7 +240,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
   return Reply(::fidl_test_error::wire::Example_foo_Result::WithErr(
       ::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -251,7 +251,8 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::ReplySuccess(
@@ -265,7 +266,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::ReplySuccess(
           ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response>::
               FromExternal(&response)));
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_error::Example::fooRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, ::fidl_test_error::kExample_foo_Ordinal);
@@ -276,4 +277,5 @@ void ::fidl_test_error::Example::fooResponse::_InitHeader() {
 }
 
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

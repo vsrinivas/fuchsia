@@ -13,6 +13,7 @@ namespace emptystruct {
 class Empty;
 
 #ifdef __Fuchsia__
+
 class EmptyProtocol;
 using EmptyProtocolHandle = ::fidl::InterfaceHandle<EmptyProtocol>;
 #endif  // __Fuchsia__
@@ -42,6 +43,7 @@ inline zx_status_t Clone(const ::fidl::test::emptystruct::Empty& _value,
 using EmptyPtr = ::std::unique_ptr<Empty>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendRequestTable;

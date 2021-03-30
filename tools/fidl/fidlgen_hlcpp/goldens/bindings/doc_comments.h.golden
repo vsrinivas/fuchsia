@@ -17,6 +17,7 @@ class Struct;
 class StrictUnion;
 
 #ifdef __Fuchsia__
+
 /// interface comment #1
 ///
 /// interface comment #3
@@ -529,6 +530,7 @@ inline zx_status_t Clone(const ::fidl::test::doccomments::StrictUnion& value,
 using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
 
@@ -1008,6 +1010,7 @@ struct Equality<::fidl::test::doccomments::FlexibleUnion> {
 namespace test {
 namespace doccomments {
 #ifdef __Fuchsia__
+
 /// interface comment #1
 ///
 /// interface comment #3
@@ -1022,14 +1025,15 @@ class Interface_SyncProxy;
 namespace internal {
 constexpr uint64_t kInterface_Method_Ordinal = 0x5c492542705b4265lu;
 constexpr uint64_t kInterface_OnEvent_Ordinal = 0x37812b697096f6falu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 class Service;
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 /// interface comment #1
 ///
 /// interface comment #3
@@ -1171,6 +1175,7 @@ class Service::Handler final {
   ::fidl::ServiceHandlerBase* const service_;
 };
 #endif  // __Fuchsia__
+
 }  // namespace doccomments
 }  // namespace test
 }  // namespace fidl

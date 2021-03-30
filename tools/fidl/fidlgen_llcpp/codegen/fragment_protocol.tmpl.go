@@ -129,18 +129,18 @@ class {{ .Name }} final {
       UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
-#endif
+{{- EndifFuchsia -}}
 
      private:
       {{- if gt .Response.MaxHandles 0 }}
@@ -162,18 +162,18 @@ class {{ .Name }} final {
       OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
-#endif
+{{- EndifFuchsia -}}
 
      private:
       {{ .Response.ServerAllocation.ByteBufferType }} bytes_;
@@ -294,18 +294,18 @@ class {{ .Name }} final {
       UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
-#endif
+{{- EndifFuchsia -}}
 
      private:
       {{- if gt .Request.MaxHandles 0 }}
@@ -328,18 +328,18 @@ class {{ .Name }} final {
       OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       const char* status_string() const { return message_.status_string(); }
-#endif
+{{- EndifFuchsia -}}
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
-#endif
+{{- EndifFuchsia -}}
 
      private:
       {{ .Request.ClientAllocation.ByteBufferType }} bytes_;
@@ -394,7 +394,7 @@ class {{ .Name }} final {
 {{ "" }}
   {{- end }}
 
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -586,7 +586,7 @@ class {{ .Name }} final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-#endif
+{{- EndifFuchsia -}}
 
   using EventSender = {{ .WireEventSender }};
   using WeakEventSender = {{ .WireWeakEventSender }};

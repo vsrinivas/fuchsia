@@ -36,7 +36,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
@@ -50,7 +50,7 @@ fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -83,7 +83,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
@@ -187,10 +187,8 @@ namespace entries {
       entries::Interface +
           sizeof(entries::Interface) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_doccomments
+#endif  // __Fuchsia__
 
-namespace fidl_test_doccomments {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Interface::Dispatch(Interface* impl,
                                            fidl_incoming_msg_t* msg,
@@ -209,7 +207,8 @@ fidl::WireInterface<::fidl_test_doccomments::Interface>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_doccomments::Interface::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_doccomments {
+#endif  // __Fuchsia__
 
 void ::fidl_test_doccomments::Interface::MethodRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -222,7 +221,9 @@ void ::fidl_test_doccomments::Interface::OnEventResponse::_InitHeader() {
                        ::fidl_test_doccomments::kInterface_OnEvent_Ordinal);
 }
 
+}  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
+
 zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
     const {
   ::fidl::OwnedEncodedMessage<
@@ -232,7 +233,8 @@ zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
   return _response.status();
 }
 
-#endif
+#endif  // __Fuchsia__
+
 auto ::fidl_test_doccomments::wire::FlexibleUnion::which() const
     -> ::fidl_test_doccomments::wire::FlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());

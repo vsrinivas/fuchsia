@@ -53,6 +53,7 @@ struct StructPaddingTestStruct;
 struct TopLevelStruct;
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
 
@@ -86,9 +87,7 @@ struct NonInlineStructTestStruct {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -110,9 +109,7 @@ struct NonInlineStructTestStruct {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -189,7 +186,7 @@ struct Int8Int32 {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -211,7 +208,7 @@ struct Int8Int32 {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -282,7 +279,7 @@ struct Int16Int8 {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -304,7 +301,7 @@ struct Int16Int8 {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -374,7 +371,7 @@ struct ArrayInt16Int8 {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -396,7 +393,7 @@ struct ArrayInt16Int8 {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -472,7 +469,7 @@ struct StructPaddingTestStruct {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -494,7 +491,7 @@ struct StructPaddingTestStruct {
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
+#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -538,6 +535,7 @@ struct StructPaddingTestStruct {
 };
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
 
 struct TopLevelStruct {
@@ -568,9 +566,7 @@ struct TopLevelStruct {
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -592,9 +588,7 @@ struct TopLevelStruct {
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -648,6 +642,7 @@ struct TopLevelStruct {
 namespace fidl {
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<
     ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct>
@@ -739,6 +734,7 @@ static_assert(
         PrimarySize);
 
 #ifdef __Fuchsia__
+
 template <>
 struct IsFidlType<::fidl_test_encapsulatedstructs::wire::TopLevelStruct>
     : public std::true_type {};

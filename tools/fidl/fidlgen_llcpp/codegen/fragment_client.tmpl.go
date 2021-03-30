@@ -7,18 +7,17 @@ package codegen
 const fragmentClientTmpl = `
 {{- define "ClientForwardDeclaration" }}
 
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
   using AsyncEventHandler = {{ .WireAsyncEventHandler }};
   {{- range .TwoWayMethods }}
   class {{ .WireResponseContext.Self }};
   {{- end }}
   using ClientImpl = {{ .WireClientImpl }};
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "ClientDeclaration" }}
-#ifdef __Fuchsia__
-{{ PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireAsyncEventHandler }} : public {{ .WireEventHandlerInterface }} {
@@ -144,13 +143,12 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 
   std::shared_ptr<{{ .WireAsyncEventHandler }}> event_handler_;
 };
-{{ PopNamespace }}
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "ClientDispatchDefinition" }}
 {{ EnsureNamespace ""}}
-#ifdef __Fuchsia__
+{{- IfdefFuchsia -}}
 std::optional<::fidl::UnbindInfo> {{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl_incoming_msg_t* msg) {
   {{- if .Events }}
   if (event_handler_ != nullptr) {
@@ -177,6 +175,6 @@ std::optional<::fidl::UnbindInfo> {{ .WireClientImpl.NoLeading }}::DispatchEvent
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+{{- EndifFuchsia -}}
 {{- end }}
 `

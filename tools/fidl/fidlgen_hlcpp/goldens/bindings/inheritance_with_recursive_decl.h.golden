@@ -11,16 +11,19 @@ namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
+
 class Parent;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class Child;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
@@ -53,6 +56,7 @@ class Parent_ResponseEncoder {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
@@ -113,6 +117,7 @@ class Child_ResponseEncoder {
 namespace test {
 namespace inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
+
 using ParentPtr = ::fidl::InterfacePtr<Parent>;
 class Parent_Proxy;
 class Parent_Stub;
@@ -123,11 +128,11 @@ class Parent_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kParent_First_Ordinal = 0x2a592d0a81dac39blu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 using ChildPtr = ::fidl::InterfacePtr<Child>;
 class Child_Proxy;
 class Child_Stub;
@@ -139,10 +144,11 @@ class Child_SyncProxy;
 namespace internal {
 constexpr uint64_t kChild_First_Ordinal = 0x2a592d0a81dac39blu;
 constexpr uint64_t kChild_Second_Ordinal = 0x6cba5c5e01fee86lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class Parent {
  public:
   using Proxy_ = ::fidl::test::inheritancewithrecursivedecl::Parent_Proxy;
@@ -238,7 +244,9 @@ class Parent_SyncProxy
   friend class ::fidl::SynchronousInterfacePtr<Parent>;
 };
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class Child {
  public:
   using Proxy_ = ::fidl::test::inheritancewithrecursivedecl::Child_Proxy;
@@ -350,6 +358,7 @@ class Child_SyncProxy
   friend class ::fidl::SynchronousInterfacePtr<Child>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
 }  // namespace fidl

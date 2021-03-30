@@ -11,6 +11,7 @@ namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
 const fidl_type_t* NonInlineStructTestStruct::FidlType =
@@ -200,6 +201,7 @@ zx_status_t StructPaddingTestStruct::Clone(
 }
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
 const fidl_type_t* TopLevelStruct::FidlType =
     &fidl_test_encapsulatedstructs_TopLevelStructTable;

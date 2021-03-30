@@ -15,6 +15,7 @@ class Example_foo_Response;
 class Example_foo_Result;
 
 #ifdef __Fuchsia__
+
 class Example;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
 #endif  // __Fuchsia__
@@ -169,6 +170,7 @@ inline zx_status_t Clone(const ::fidl::test::error::Example_foo_Result& value,
 using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 

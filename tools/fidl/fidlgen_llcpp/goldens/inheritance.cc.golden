@@ -34,7 +34,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritance::super::UnownedResultOf::foo::foo(
@@ -51,7 +51,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
@@ -66,7 +66,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
   return ::fidl_test_inheritance::super::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritance::super::UnownedResultOf::foo
@@ -83,7 +83,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::super>::foo_Sync(
   return ::fidl_test_inheritance::super::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritance::super::fooResponseContext::fooResponseContext()
@@ -141,7 +141,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::super>::foo(
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -150,7 +150,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_inheritance {
 #ifdef __Fuchsia__
@@ -185,10 +185,8 @@ namespace entries {
       entries::super +
           sizeof(entries::super) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_inheritance
+#endif  // __Fuchsia__
 
-namespace fidl_test_inheritance {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult super::Dispatch(Interface* impl,
                                        fidl_incoming_msg_t* msg,
@@ -207,8 +205,10 @@ fidl::WireInterface<::fidl_test_inheritance::super>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_inheritance::super::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_inheritance {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<
     ::fidl_test_inheritance::super>::fooCompleterBase::Reply(int64_t y) {
@@ -217,7 +217,7 @@ fidl::WireInterface<::fidl_test_inheritance::super>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_inheritance::super>::
       fooCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -227,7 +227,7 @@ fidl::WireInterface<::fidl_test_inheritance::super>::fooCompleterBase::Reply(
       _buffer.data, _buffer.capacity, y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_inheritance::super::fooRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid,
@@ -239,7 +239,8 @@ void ::fidl_test_inheritance::super::fooResponse::_InitHeader() {
 }
 
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_inheritance {
 [[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 4999045011615110827lu;
@@ -269,7 +270,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritance::sub::UnownedResultOf::foo::foo(
@@ -285,7 +286,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
@@ -300,7 +301,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
   return ::fidl_test_inheritance::sub::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritance::sub::UnownedResultOf::foo
@@ -317,7 +318,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>::foo_Sync(
   return ::fidl_test_inheritance::sub::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl_test_inheritance::sub::fooResponseContext::fooResponseContext()
@@ -372,7 +373,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>::foo(
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -381,7 +382,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_inheritance {
 #ifdef __Fuchsia__
@@ -415,10 +416,8 @@ namespace entries {
       entries::sub +
           sizeof(entries::sub) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_inheritance
+#endif  // __Fuchsia__
 
-namespace fidl_test_inheritance {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult sub::Dispatch(Interface* impl, fidl_incoming_msg_t* msg,
                                      ::fidl::Transaction* txn) {
@@ -436,8 +435,10 @@ fidl::WireInterface<::fidl_test_inheritance::sub>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_inheritance::sub::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_inheritance {
+#endif  // __Fuchsia__
 
+}  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<
     ::fidl_test_inheritance::sub>::fooCompleterBase::Reply(int64_t y) {
@@ -446,7 +447,7 @@ fidl::WireInterface<::fidl_test_inheritance::sub>::dispatch_message(
   return ::fidl::WireInterface<::fidl_test_inheritance::sub>::fooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result
@@ -456,7 +457,7 @@ fidl::WireInterface<::fidl_test_inheritance::sub>::fooCompleterBase::Reply(
       _buffer.data, _buffer.capacity, y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif
+#endif  // __Fuchsia__
 
 void ::fidl_test_inheritance::sub::fooRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, ::fidl_test_inheritance::ksub_foo_Ordinal);
@@ -467,4 +468,5 @@ void ::fidl_test_inheritance::sub::fooResponse::_InitHeader() {
 }
 
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__

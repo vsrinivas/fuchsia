@@ -11,16 +11,19 @@ namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
+
 class Parent;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class Child;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
@@ -53,6 +56,7 @@ class Parent_ResponseEncoder {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;

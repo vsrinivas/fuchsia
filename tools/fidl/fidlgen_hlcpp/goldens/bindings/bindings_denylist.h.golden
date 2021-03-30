@@ -11,6 +11,7 @@ namespace fidl {
 namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
+
 class OnlyLibfuzzerAndDeps;
 using OnlyLibfuzzerAndDepsHandle =
     ::fidl::InterfaceHandle<OnlyLibfuzzerAndDeps>;
@@ -21,11 +22,13 @@ class OnlyHlcpp;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class OnlyCppAndDeps;
 using OnlyCppAndDepsHandle = ::fidl::InterfaceHandle<OnlyCppAndDeps>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
@@ -93,6 +96,7 @@ constexpr uint32_t AllBindings = 0u;
 namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
+
 using OnlyLibfuzzerAndDepsPtr = ::fidl::InterfacePtr<OnlyLibfuzzerAndDeps>;
 class OnlyLibfuzzerAndDeps_Proxy;
 class OnlyLibfuzzerAndDeps_Stub;
@@ -106,7 +110,6 @@ namespace internal {
 constexpr uint64_t
     kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal =
         0x1c84a24d8d4e3d28lu;
-
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -115,6 +118,7 @@ class OnlyHlcpp;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 using OnlyCppAndDepsPtr = ::fidl::InterfacePtr<OnlyCppAndDeps>;
 class OnlyCppAndDeps_Proxy;
 class OnlyCppAndDeps_Stub;
@@ -124,7 +128,9 @@ using OnlyCppAndDepsSyncPtr = ::fidl::SynchronousInterfacePtr<OnlyCppAndDeps>;
 class OnlyCppAndDeps_SyncProxy;
 
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class OnlyLibfuzzerAndDeps {
  public:
   using Proxy_ = ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy;
@@ -247,7 +253,9 @@ class OnlyHlcpp::Handler final {
  private:
 };
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
+
 class OnlyCppAndDeps {
  public:
   using Proxy_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Proxy;
@@ -330,6 +338,7 @@ class OnlyCppAndDeps_SyncProxy
   friend class ::fidl::SynchronousInterfacePtr<OnlyCppAndDeps>;
 };
 #endif  // __Fuchsia__
+
 }  // namespace bindingsdenylist
 }  // namespace test
 }  // namespace fidl

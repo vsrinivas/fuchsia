@@ -29,8 +29,7 @@ const fileHeaderTmpl = `
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/optional.h>
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
@@ -45,8 +44,7 @@ const fileHeaderTmpl = `
 {{ range .HandleTypes -}}
 #include <lib/zx/{{ . }}.h>
 {{ end -}}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 #include <zircon/fidl.h>
 {{ if .Headers -}}
 {{ "" }}

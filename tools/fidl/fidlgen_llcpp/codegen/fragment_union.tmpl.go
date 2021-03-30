@@ -15,8 +15,7 @@ class {{ .Name }};
 {{- define "UnionDeclaration" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ range .DocComments }}
@@ -123,8 +122,7 @@ class {{ .Name }} {
 };
 
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 
@@ -132,8 +130,7 @@ class {{ .Name }} {
      emulated handles for C++. */}}
 {{- define "UnionDefinition" }}
 {{- if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 {{- if .IsFlexible }}
 auto {{ . }}::which() const -> {{ .TagEnum }} {
@@ -173,8 +170,7 @@ void {{ . }}::_CloseHandles() {
 {{- end }}
 
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 
@@ -182,8 +178,7 @@ void {{ . }}::_CloseHandles() {
      emulated handles for C++. */}}
 {{- define "UnionTraits" }}
 {{ if .IsResourceType }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- end }}
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
@@ -191,8 +186,7 @@ template <>
 struct IsUnion<{{ . }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- if .IsResourceType }}
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 `

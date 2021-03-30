@@ -27,6 +27,7 @@ class StructWithNullableProtocol;
 class StructWithNullableHandle;
 
 #ifdef __Fuchsia__
+
 class SimpleProtocol;
 using SimpleProtocolHandle = ::fidl::InterfaceHandle<SimpleProtocol>;
 #endif  // __Fuchsia__
@@ -140,6 +141,7 @@ inline zx_status_t Clone(
 using StructWithNullableStringPtr = ::std::unique_ptr<StructWithNullableString>;
 
 #ifdef __Fuchsia__
+
 class StructWithNullableRequest final {
  public:
   static const fidl_type_t* FidlType;
@@ -169,6 +171,7 @@ using StructWithNullableRequestPtr =
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class StructWithNullableProtocol final {
  public:
   static const fidl_type_t* FidlType;
@@ -198,6 +201,7 @@ using StructWithNullableProtocolPtr =
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 class StructWithNullableHandle final {
  public:
   static const fidl_type_t* FidlType;
@@ -226,6 +230,7 @@ using StructWithNullableHandlePtr = ::std::unique_ptr<StructWithNullableHandle>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
 
@@ -526,6 +531,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableString> {
   }
 };
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableRequest>
     : public EncodableCodingTraits<
@@ -559,6 +565,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableRequest> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableProtocol>
     : public EncodableCodingTraits<
@@ -592,6 +599,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableProtocol> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableHandle>
     : public EncodableCodingTraits<

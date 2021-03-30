@@ -7,8 +7,7 @@ package codegen
 const protocolTemplateProxiesAndStubs = `
 {{- define "ProtocolForwardDeclaration/ProxiesAndStubs" }}
 {{ EnsureNamespace . }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 {{- range .DocComments }}
 ///{{ . }}
 {{- end }}
@@ -25,8 +24,7 @@ class {{ .SyncProxy.Name }};
 constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal | printf "%#x" }}lu;
 {{- end }}
 
-{{ PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "Params" -}}
@@ -68,8 +66,7 @@ constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal | printf "%#x" }}lu;
 {{ end -}}
 
 {{- define "ProtocolDeclaration/ProxiesAndStubs" }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 
 {{- range .DocComments }}
 ///{{ . }}
@@ -213,13 +210,11 @@ class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
   friend class ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 };
 
-{{- PopNamespace }}
-#endif  // __Fuchsia__
+{{- EndifFuchsia -}}
 {{- end }}
 
 {{- define "ProtocolDefinition" }}
-#ifdef __Fuchsia__
-{{- PushNamespace }}
+{{- IfdefFuchsia -}}
 
 {{- range .Methods }}
 {{ if .HasRequest }}
@@ -503,7 +498,6 @@ zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }
   {{- end }}
 {{- end }}
 
-{{- PopNamespace }}
-#endif // __Fuchsia__
+{{- EndifFuchsia -}}
 {{ end }}
 `

@@ -23,7 +23,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
@@ -37,7 +37,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -47,7 +47,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_service {
 #ifdef __Fuchsia__
@@ -81,10 +81,8 @@ namespace entries {
       entries::SecondProtocol + sizeof(entries::SecondProtocol) /
                                     sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_service
+#endif  // __Fuchsia__
 
-namespace fidl_test_service {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult SecondProtocol::Dispatch(Interface* impl,
                                                 fidl_incoming_msg_t* msg,
@@ -103,7 +101,8 @@ fidl::WireInterface<::fidl_test_service::SecondProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_service::SecondProtocol::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_service {
+#endif  // __Fuchsia__
 
 void ::fidl_test_service::SecondProtocol::MethodOnSecondRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -112,8 +111,10 @@ void ::fidl_test_service::SecondProtocol::MethodOnSecondRequest::_InitHeader(
       ::fidl_test_service::kSecondProtocol_MethodOnSecond_Ordinal);
 }
 
+}  // namespace fidl_test_service
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_service {
 [[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal =
@@ -134,7 +135,7 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
-#endif
+#endif  // __Fuchsia__
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
@@ -148,7 +149,7 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
-#endif
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
@@ -158,7 +159,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl_test_service {
 #ifdef __Fuchsia__
@@ -192,10 +193,8 @@ namespace entries {
       entries::FirstProtocol + sizeof(entries::FirstProtocol) /
                                    sizeof(::fidl::internal::MethodEntry));
 }
-#endif
-}  // namespace fidl_test_service
+#endif  // __Fuchsia__
 
-namespace fidl_test_service {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult FirstProtocol::Dispatch(Interface* impl,
                                                fidl_incoming_msg_t* msg,
@@ -214,7 +213,8 @@ fidl::WireInterface<::fidl_test_service::FirstProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl_test_service::FirstProtocol::Dispatch(this, msg, txn);
 }
-#endif
+namespace fidl_test_service {
+#endif  // __Fuchsia__
 
 void ::fidl_test_service::FirstProtocol::MethodOnFirstRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -222,5 +222,7 @@ void ::fidl_test_service::FirstProtocol::MethodOnFirstRequest::_InitHeader(
       &_hdr, _txid, ::fidl_test_service::kFirstProtocol_MethodOnFirst_Ordinal);
 }
 
+}  // namespace fidl_test_service
 #ifdef __Fuchsia__
-#endif
+
+#endif  // __Fuchsia__
