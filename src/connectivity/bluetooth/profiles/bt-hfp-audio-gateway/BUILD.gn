@@ -49,6 +49,7 @@ rustc_binary("bin") {
     "src/peer.rs",
     "src/peer/calls.rs",
     "src/peer/gain_control.rs",
+    "src/peer/ringer.rs",
     "src/peer/service_level_connection.rs",
     "src/peer/task.rs",
     "src/procedure.rs",
