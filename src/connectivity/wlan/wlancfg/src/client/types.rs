@@ -16,12 +16,14 @@ use {
 pub(crate) use crate::regulatory_manager::REGION_CODE_LEN;
 
 pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
+pub type SecurityTypeDetailed = fidl_sme::Protection;
 pub type SecurityType = fidl_policy::SecurityType;
 pub type ConnectionState = fidl_policy::ConnectionState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
 pub type WlanChan = fidl_common::WlanChan;
 pub type Bssid = [u8; 6];
+pub type Ssid = Vec<u8>;
 pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;
 pub type ConnectReason = PolicyConnectionAttemptMetricDimensionReason;
 

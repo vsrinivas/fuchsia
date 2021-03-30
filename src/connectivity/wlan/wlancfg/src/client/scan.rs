@@ -30,8 +30,8 @@ const SCAN_RETRY_DELAY_MS: i64 = 100;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct SmeNetworkIdentifier {
-    ssid: Vec<u8>,
-    protection: fidl_sme::Protection,
+    ssid: types::Ssid,
+    protection: types::SecurityTypeDetailed,
 }
 
 /// Allows for consumption of updated scan results.
@@ -118,7 +118,7 @@ pub(crate) async fn perform_scan<F>(
     mut location_sensor_updater: impl ScanResultUpdate,
     active_scan_decider: F,
 ) where
-    F: FnOnce(&Vec<types::ScanResult>) -> Option<Vec<types::NetworkIdentifier>>,
+    F: FnOnce(&Vec<types::Ssid>) -> Option<Vec<types::NetworkIdentifier>>,
 {
     let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
 
@@ -164,9 +164,8 @@ pub(crate) async fn perform_scan<F>(
     };
 
     // Determine which active scans to perform by asking the active_scan_decider()
-    if let Some(requested_active_scan_ids) =
-        active_scan_decider(&network_bss_map_to_scan_result(&bss_by_network, wpa3_supported))
-    {
+    let observed_ssid_list = bss_by_network.iter().map(|(id, _)| id.ssid.clone()).collect();
+    if let Some(requested_active_scan_ids) = active_scan_decider(&observed_ssid_list) {
         let requested_active_scan_ssids =
             requested_active_scan_ids.iter().map(|id| id.ssid.clone()).collect();
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -1313,7 +1312,8 @@ mod tests {
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let expected_passive_results = passive_internal_aps.clone();
+        let expected_passive_results: Vec<types::Ssid> =
+            passive_internal_aps.iter().map(|result| result.id.ssid.clone()).collect();
         let active_ssid = b"foo active ssid".to_vec();
         let scan_fut = perform_scan(
             client,
@@ -1322,7 +1322,7 @@ mod tests {
             network_selector,
             location_sensor,
             |passive_results| {
-                assert_eq!(*passive_results, expected_passive_results);
+                assert_eq!(passive_results.clone().sort(), expected_passive_results.clone().sort());
                 Some(vec![
                     types::NetworkIdentifier {
                         ssid: active_ssid.clone(),
@@ -1561,7 +1561,8 @@ mod tests {
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let expected_passive_results = passive_internal_aps.clone();
+        let expected_passive_results: Vec<types::Ssid> =
+            passive_internal_aps.iter().map(|result| result.id.ssid.clone()).collect();
         let active_ssid = b"foo active ssid".to_vec();
         let scan_fut = perform_scan(
             client,
@@ -1570,7 +1571,7 @@ mod tests {
             network_selector,
             location_sensor,
             |passive_results| {
-                assert_eq!(*passive_results, expected_passive_results);
+                assert_eq!(passive_results.clone().sort(), expected_passive_results.clone().sort());
                 Some(vec![types::NetworkIdentifier {
                     ssid: active_ssid.clone(),
                     type_: types::SecurityType::Wpa,
@@ -1900,6 +1901,8 @@ mod tests {
         );
         pin_mut!(scan_fut0);
         let active_ssid = b"foo active ssid".to_vec();
+        let expected_passive_results: Vec<types::Ssid> =
+            passive_internal_aps.iter().map(|result| result.id.ssid.clone()).collect();
         let scan_fut1 = perform_scan(
             client.clone(),
             saved_networks_manager,
@@ -1907,7 +1910,7 @@ mod tests {
             network_selector2,
             location_sensor2,
             |passive_results| {
-                assert_eq!(*passive_results, passive_internal_aps);
+                assert_eq!(passive_results.clone().sort(), expected_passive_results.clone().sort());
                 Some(vec![types::NetworkIdentifier {
                     ssid: active_ssid.clone(),
                     type_: types::SecurityType::Wpa3,
