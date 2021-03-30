@@ -18,7 +18,7 @@ import (
 func TestParseSummary(t *testing.T) {
 	const testCount = 10
 	summary := createTestSummary(testCount)
-	testResults := SummaryToResultSink(summary, "")
+	testResults := SummaryToResultSink(summary, []*resultpb.StringPair{}, "")
 	if len(testResults) != testCount {
 		t.Errorf(
 			"Parsed incorrect number of resultdb tests in TestSummary, got %d, want %d",
@@ -42,7 +42,10 @@ func TestParseSummary(t *testing.T) {
 
 func TestSetTestDetailsToResultSink(t *testing.T) {
 	detail := createTestDetailWithTestCase(5)
-	result, err := testDetailsToResultSink(detail, "")
+	extraTags := []*resultpb.StringPair{
+		{Key: "key1", Value: "value1"},
+	}
+	result, err := testDetailsToResultSink(extraTags, detail, "")
 	if err != nil {
 		t.Fatalf("Cannot parse test detail. got %s", err)
 	}
@@ -50,6 +53,22 @@ func TestSetTestDetailsToResultSink(t *testing.T) {
 	tags := make(map[string]string)
 	for _, tag := range result.Tags {
 		tags[tag.Key] = tag.Value
+	}
+
+	if len(extraTags) != 1 {
+		t.Errorf("extraTags(%v) got mutated, this value should not be changed.", extraTags)
+	}
+	// We only expect 3 tags
+	// 1. gn_label:value
+	// 2. test_case_count:value
+	// 3. key1:value1
+	if len(tags) != 3 {
+		t.Errorf("tags(%v) contains unexpected values.", tags)
+	}
+	if extra, ok := tags["key1"]; !ok {
+		t.Error("Did not find key1 in tags")
+	} else if extra != "value1" {
+		t.Errorf("Found incorrect key value tag, got %s, want value1", extra)
 	}
 
 	if testCaseCount, ok := tags["test_case_count"]; !ok {

@@ -37,7 +37,7 @@ func ParseSummary(filePath string) (*runtests.TestSummary, error) {
 }
 
 // SummaryToResultSink converts runtests.TestSummary data into an array of result_sink TestResult.
-func SummaryToResultSink(s *runtests.TestSummary, outputRoot string) []*sinkpb.TestResult {
+func SummaryToResultSink(s *runtests.TestSummary, tags []*resultpb.StringPair, outputRoot string) []*sinkpb.TestResult {
 	if len(outputRoot) == 0 {
 		outputRoot, _ = os.Getwd()
 	}
@@ -45,10 +45,10 @@ func SummaryToResultSink(s *runtests.TestSummary, outputRoot string) []*sinkpb.T
 	var r []*sinkpb.TestResult
 	for _, test := range s.Tests {
 		if len(test.Cases) > 0 {
-			testCases := testCaseToResultSink(test.Cases, &test)
+			testCases := testCaseToResultSink(test.Cases, tags, &test)
 			r = append(r, testCases...)
 		}
-		if testResult, err := testDetailsToResultSink(&test, rootPath); err == nil {
+		if testResult, err := testDetailsToResultSink(tags, &test, rootPath); err == nil {
 			r = append(r, testResult)
 		}
 	}
@@ -85,7 +85,7 @@ func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
 // testCaseToResultSink converts TestCaseResult defined in //tools/testing/testparser/result.go
 // to ResultSink's TestResult. A testcase will not be converted if test result cannot be
 // mapped to result_sink.Status.
-func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *runtests.TestDetails) []*sinkpb.TestResult {
+func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultpb.StringPair, testDetail *runtests.TestDetails) []*sinkpb.TestResult {
 	var testResult []*sinkpb.TestResult
 
 	// Ignore error, testStatus will be set to resultpb.TestStatus_STATUS_UNSPECIFIED if error != nil.
@@ -96,7 +96,7 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 		testID := fmt.Sprintf("%s/%s:%s", testDetail.Name, testCase.SuiteName, testCase.CaseName)
 		r := sinkpb.TestResult{
 			TestId: testID,
-			Tags:   []*resultpb.StringPair{{Key: "format", Value: testCase.Format}},
+			Tags:   append([]*resultpb.StringPair{{Key: "format", Value: testCase.Format}}, tags...),
 		}
 		testCaseStatus, err := testCaseStatusToResultDBStatus(testCase.Status)
 		if err != nil {
@@ -117,13 +117,13 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 // testDetailsToResultSink converts TestDetail defined in /tools/testing/runtests/runtests.go
 // to ResultSink's TestResult. Returns (nil, error) if a test result cannot be mapped to
 // result_sink.Status
-func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, error) {
+func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, error) {
 	r := sinkpb.TestResult{
 		TestId: testDetail.Name,
-		Tags: []*resultpb.StringPair{
+		Tags: append([]*resultpb.StringPair{
 			{Key: "gn_label", Value: testDetail.GNLabel},
 			{Key: "test_case_count", Value: strconv.Itoa(len(testDetail.Cases))},
-		},
+		}, tags...),
 	}
 	testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
 	if err != nil {

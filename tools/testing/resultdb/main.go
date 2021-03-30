@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 
+	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"golang.org/x/sync/errgroup"
@@ -21,6 +22,7 @@ import (
 
 var (
 	summaries  flagmisc.StringsValue
+	tags       flagmisc.StringsValue
 	outputRoot string
 )
 
@@ -32,19 +34,26 @@ func main() {
 }
 
 func mainImpl() error {
-	flag.Var(&summaries, "summary", "summary.json file location.")
+	flag.Var(&summaries, "summary", "Repeated flag, file location to summary.json."+
+		" To pass in multiple files do '--summary file1.json --sumary file2.json'")
+	flag.Var(&tags, "tag", "Repeated flag, add tag to all test case and test suites."+
+		" Uses the format key:value. To pass in multiple tags do '--tag key1:val1 --tag key2:val2'")
 	flag.StringVar(&outputRoot, "output", "",
 		"Output root path to be joined with 'output_file' field in summary.json. If not set, current directory will be used.")
 
 	flag.Parse()
 
 	var requests []*sinkpb.ReportTestResultsRequest
+	tagPairs, err := convertTags(tags)
+	if err != nil {
+		return err
+	}
 	for _, summaryFile := range summaries {
 		summary, err := ParseSummary(summaryFile)
 		if err != nil {
 			return err
 		}
-		testResults := SummaryToResultSink(summary, outputRoot)
+		testResults := SummaryToResultSink(summary, tagPairs, outputRoot)
 		// Group 500 testResults per ReportTestResultsRequest. This reduces the number of HTTP calls
 		// we make to result_sink. 500 is the maximum number of testResults allowed.
 		requests = append(requests, createTestResultsRequests(testResults, 500)...)
@@ -147,4 +156,25 @@ func resultSinkCtx() (*ResultSinkContext, error) {
 		return nil, err
 	}
 	return &ctx.ResultSink, nil
+}
+
+func convertTags(tags []string) ([]*resultpb.StringPair, error) {
+	t := []*resultpb.StringPair{}
+	for _, tag := range tags {
+		pair, err := stringPairFromString(tag)
+		if err != nil {
+			return nil, err
+		}
+		t = append(t, pair)
+	}
+	return t, nil
+}
+
+// stringPairFromString creates a pb.StringPair from the given key:val string.
+func stringPairFromString(s string) (*resultpb.StringPair, error) {
+	p := strings.SplitN(s, ":", 2)
+	if len(p) != 2 {
+		return nil, fmt.Errorf("cannot match tag content %s in the format key:value", s)
+	}
+	return &resultpb.StringPair{Key: strings.TrimSpace(p[0]), Value: strings.TrimSpace(p[1])}, nil
 }
