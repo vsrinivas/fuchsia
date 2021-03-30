@@ -15,7 +15,7 @@ use {
         },
     },
     anyhow::{Context, Error},
-    cm_rust::{self, ComponentDecl, UseDecl, UseProtocolDecl},
+    cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, Proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_runner as fcrunner,
@@ -136,13 +136,23 @@ impl IncomingNamespace {
                     )?;
                 }
                 cm_rust::UseDecl::Protocol(s) => {
-                    Self::add_service_use(&mut svc_dirs, s, component.clone())?;
+                    Self::add_service_or_protocol_use(
+                        &mut svc_dirs,
+                        UseDecl::Protocol(s.clone()),
+                        &s.target_path,
+                        component.clone(),
+                    )?;
                     if s.source_name.0 == LogSinkMarker::NAME {
                         log_sink_decl = Some(s.clone());
                     }
                 }
-                cm_rust::UseDecl::Service(_) => {
-                    return Err(ModelError::unsupported("Service capability"));
+                cm_rust::UseDecl::Service(s) => {
+                    Self::add_service_or_protocol_use(
+                        &mut svc_dirs,
+                        UseDecl::Service(s.clone()),
+                        &s.target_path,
+                        component.clone(),
+                    )?;
                 }
                 cm_rust::UseDecl::Storage(_) => {
                     Self::add_storage_use(
@@ -375,13 +385,13 @@ impl IncomingNamespace {
             };
 
             if let Err(e) = res {
-                let cap = ComponentCapability::Use(use_);
-                let execution = target.lock_execution().await;
-                let logger = match &execution.runtime {
-                    Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
-                    _ => None,
-                };
-                routing::report_routing_failure(&target.abs_moniker, &cap, &e, server_end, logger);
+                routing::report_routing_failure(
+                    &target,
+                    &ComponentCapability::Use(use_),
+                    &e,
+                    server_end,
+                )
+                .await;
             }
         };
 
@@ -418,20 +428,19 @@ impl IncomingNamespace {
 
     /// Adds a service broker in `svc_dirs` for service described by `use_`. The service will be
     /// proxied to the outgoing directory of the source component.
-    fn add_service_use(
+    fn add_service_or_protocol_use(
         svc_dirs: &mut HashMap<String, Directory>,
-        use_: &cm_rust::UseProtocolDecl,
+        use_: UseDecl,
+        capability_path: &CapabilityPath,
         component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
-        let use_clone = use_.clone();
-        // Used later to attach a not found handler to namespace directories.
         let not_found_component_copy = component.clone();
         let route_open_fn = Box::new(
             move |flags: u32,
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
-                let use_ = use_clone.clone();
+                let use_ = use_.clone();
                 let component = component.clone();
                 fasync::Task::spawn(async move {
                     let target = match component.upgrade() {
@@ -446,7 +455,11 @@ impl IncomingNamespace {
                         }
                     };
                     let mut server_end = server_end.into_channel();
-                    let res = routing::route_protocol(use_.clone(), &target).await;
+                    let res: Result<_, ModelError> = match &use_ {
+                        UseDecl::Service(service) => routing::route_service(service.clone(), &target).await.map_err(|err| err.into()),
+                        UseDecl::Protocol(protocol) => routing::route_protocol(protocol.clone(), &target).await,
+                        _ => panic!("add_service_or_protocol_use called with non-service or protocol capability"),
+                    };
                     let res = match res {
                         Ok(source) => {
                             routing::open_capability_at_source(
@@ -462,67 +475,28 @@ impl IncomingNamespace {
                         Err(err) => Err(err),
                     };
                     if let Err(e) = res {
-                        let cap = ComponentCapability::Use(UseDecl::Protocol(use_));
-                        let execution = target.lock_execution().await;
-                        let logger = match &execution.runtime {
-                            Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
-                            _ => None,
-                        };
-
                         routing::report_routing_failure(
-                            &target.abs_moniker,
-                            &cap,
+                            &target,
+                            &ComponentCapability::Use(use_),
                             &e,
                             server_end,
-                            logger,
-                        );
+                        ).await;
                     }
                 })
                 .detach();
             },
         );
 
-        let service_dir = svc_dirs.entry(use_.target_path.dirname.clone()).or_insert_with(|| {
-            let new_dir = pfs::simple();
-            // Grab a copy of the directory path, it will be needed if we log a
-            // failed open request.
-            let dir_path = use_.target_path.dirname.clone();
-            new_dir.clone().set_not_found_handler(Box::new(move |path| {
-                // Clone the component pointer and pass the copy into the logger.
-                let component_for_logger = not_found_component_copy.clone();
-                let requested_path = format!("{}/{}", dir_path, path);
-
-                // Spawn a task which logs the error. It would be nicer to not
-                // spawn a task, but locking the component is async and this
-                // closure is not.
-                fasync::Task::spawn(async move {
-                    match component_for_logger.upgrade() {
-                        Ok(target) => {
-                            let execution = target.lock_execution().await;
-                            let logger = match &execution.runtime {
-                                Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
-                                _ => &MODEL_LOGGER,
-                            };
-                            logger.log(
-                                Level::Warn,
-                                format_args!(
-                                    "No capability available at path {} for component {}, \
-                                     verify the component has the proper `use` declaration.",
-                                    requested_path, target.abs_moniker
-                                ),
-                            );
-                        }
-                        Err(_) => {}
-                    }
-                })
-                .detach();
-            }));
-            new_dir
+        let service_dir = svc_dirs.entry(capability_path.dirname.clone()).or_insert_with(|| {
+            make_dir_with_not_found_logging(
+                capability_path.dirname.clone(),
+                not_found_component_copy,
+            )
         });
         service_dir
             .clone()
             .add_entry(
-                &use_.target_path.basename,
+                &capability_path.basename,
                 directory_broker::DirectoryBroker::new(route_open_fn),
             )
             .expect("could not add service to directory");
@@ -579,6 +553,46 @@ impl IncomingNamespace {
             Ok(remainder)
         }
     }
+}
+
+fn make_dir_with_not_found_logging(
+    root_path: String,
+    component_for_logger: WeakComponentInstance,
+) -> Arc<pfs::Simple> {
+    let new_dir = pfs::simple();
+    // Grab a copy of the directory path, it will be needed if we log a
+    // failed open request.
+    new_dir.clone().set_not_found_handler(Box::new(move |path| {
+        // Clone the component pointer and pass the copy into the logger.
+        let component_for_logger = component_for_logger.clone();
+        let requested_path = format!("{}/{}", &root_path, path);
+
+        // Spawn a task which logs the error. It would be nicer to not
+        // spawn a task, but locking the component is async and this
+        // closure is not.
+        fasync::Task::spawn(async move {
+            match component_for_logger.upgrade() {
+                Ok(target) => {
+                    let execution = target.lock_execution().await;
+                    let logger = match &execution.runtime {
+                        Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
+                        _ => &MODEL_LOGGER,
+                    };
+                    logger.log(
+                        Level::Warn,
+                        format_args!(
+                            "No capability available at path {} for component {}, \
+                                verify the component has the proper `use` declaration.",
+                            requested_path, target.abs_moniker
+                        ),
+                    );
+                }
+                Err(_) => {}
+            }
+        })
+        .detach();
+    }));
+    new_dir
 }
 
 /// Instantiate a NamespaceLogger by connecting to the provided path within

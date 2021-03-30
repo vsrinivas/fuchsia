@@ -3,17 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_instance::{
-        ComponentInstanceInterface, TopInstanceInterface, WeakComponentInstanceInterface,
-        WeakExtendedInstanceInterface,
+    crate::{
+        component_instance::{
+            ComponentInstanceInterface, TopInstanceInterface, WeakComponentInstanceInterface,
+            WeakExtendedInstanceInterface,
+        },
+        error::RoutingError,
     },
+    async_trait::async_trait,
     cm_rust::{
         CapabilityName, CapabilityPath, CapabilityTypeName, DirectoryDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl,
-        ExposeSource, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
-        OfferResolverDecl, OfferRunnerDecl, OfferSource, OfferStorageDecl, ProtocolDecl,
-        RegistrationSource, ResolverDecl, RunnerDecl, StorageDecl, UseDecl, UseDirectoryDecl,
-        UseEventDecl, UseProtocolDecl, UseSource, UseStorageDecl,
+        ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
+        OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource,
+        OfferStorageDecl, ProtocolDecl, RegistrationSource, ResolverDecl, RunnerDecl, ServiceDecl,
+        StorageDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl,
+        UseSource, UseStorageDecl,
     },
     from_enum::FromEnum,
     std::{fmt, sync::Weak},
@@ -50,6 +55,13 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface, T: TopInstance
         source_capability: ComponentCapability,
         component: WeakComponentInstanceInterface<C>,
     },
+    /// This capability is an aggregate of capabilities provided by components in a collection.
+    Collection {
+        collection_name: String,
+        source_name: CapabilityName,
+        capability_provider: Box<dyn CollectionCapabilityProvider<C, T>>,
+        component: WeakComponentInstanceInterface<C>,
+    },
 }
 
 impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInterface<C, T> {
@@ -62,6 +74,7 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInt
             Self::Builtin { capability, .. } => capability.can_be_in_namespace(),
             Self::Namespace { capability, .. } => capability.can_be_in_namespace(),
             Self::Capability { .. } => true,
+            Self::Collection { .. } => false,
         }
     }
 
@@ -72,6 +85,7 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInt
             Self::Builtin { capability, .. } => Some(capability.source_name()),
             Self::Namespace { capability, .. } => capability.source_name(),
             Self::Capability { .. } => None,
+            Self::Collection { source_name, .. } => Some(source_name),
         }
     }
 
@@ -82,6 +96,7 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInt
             Self::Builtin { capability, .. } => capability.type_name(),
             Self::Namespace { capability, .. } => capability.type_name(),
             Self::Capability { source_capability, .. } => source_capability.type_name(),
+            Self::Collection { .. } => CapabilityTypeName::Service,
         }
     }
 
@@ -89,7 +104,8 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInt
         match self {
             Self::Component { component, .. }
             | Self::Framework { component, .. }
-            | Self::Capability { component, .. } => {
+            | Self::Capability { component, .. }
+            | Self::Collection { component, .. } => {
                 WeakExtendedInstanceInterface::Component(component.clone())
             }
             Self::Builtin { top_instance, .. } | Self::Namespace { top_instance, .. } => {
@@ -115,6 +131,20 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> fmt::Display
                 CapabilitySourceInterface::Namespace { capability, .. } => capability.to_string(),
                 CapabilitySourceInterface::Capability { source_capability, .. } =>
                     format!("{}", source_capability),
+                CapabilitySourceInterface::Collection {
+                    collection_name,
+                    source_name,
+                    component,
+                    ..
+                } => {
+                    format!(
+                        "{} '{}' from collection '#{}' of component '{}'",
+                        self.type_name(),
+                        source_name,
+                        collection_name,
+                        &component.moniker
+                    )
+                }
             }
         )
     }
@@ -155,7 +185,52 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> Clone
                     component: component.clone(),
                 }
             }
+            CapabilitySourceInterface::Collection {
+                collection_name,
+                source_name,
+                capability_provider,
+                component,
+            } => CapabilitySourceInterface::Collection {
+                collection_name: collection_name.clone(),
+                source_name: source_name.clone(),
+                capability_provider: capability_provider.clone(),
+                component: component.clone(),
+            },
         }
+    }
+}
+
+/// A provider of a capability whose source originates from zero or more components
+/// of a collection. This trait type-erases the capability type, so it can be handled
+/// and hosted generically.
+#[async_trait]
+pub trait CollectionCapabilityProvider<C: ComponentInstanceInterface, T: TopInstanceInterface>:
+    Send + Sync
+{
+    /// Lists the instances of the capability within the collection.
+    async fn list_instances(&self) -> Result<Vec<String>, RoutingError>;
+
+    /// Route the capability to its source within the component `instance` of the collection.
+    async fn route_instance(
+        &self,
+        instance: &str,
+    ) -> Result<CapabilitySourceInterface<C, T>, RoutingError>;
+
+    /// Trait-object compatible clone.
+    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C, T>>;
+}
+
+impl<C: ComponentInstanceInterface, T: TopInstanceInterface> Clone
+    for Box<dyn CollectionCapabilityProvider<C, T>>
+{
+    fn clone(&self) -> Self {
+        self.clone_boxed()
+    }
+}
+
+impl<C, T> fmt::Debug for Box<dyn CollectionCapabilityProvider<C, T>> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Box<dyn CollectionCapabilityProvider>").finish()
     }
 }
 
@@ -234,6 +309,7 @@ pub enum ComponentCapability {
     Storage(StorageDecl),
     Runner(RunnerDecl),
     Resolver(ResolverDecl),
+    Service(ServiceDecl),
 }
 
 impl ComponentCapability {
@@ -253,7 +329,9 @@ impl ComponentCapability {
                 offer,
                 OfferDecl::Protocol(_) | OfferDecl::Directory(_) | OfferDecl::Service(_)
             ),
-            ComponentCapability::Protocol(_) | ComponentCapability::Directory(_) => true,
+            ComponentCapability::Protocol(_)
+            | ComponentCapability::Directory(_)
+            | ComponentCapability::Service(_) => true,
             _ => false,
         }
     }
@@ -295,6 +373,7 @@ impl ComponentCapability {
             ComponentCapability::Storage(_) => CapabilityTypeName::Storage,
             ComponentCapability::Runner(_) => CapabilityTypeName::Runner,
             ComponentCapability::Resolver(_) => CapabilityTypeName::Resolver,
+            ComponentCapability::Service(_) => CapabilityTypeName::Service,
         }
     }
 
@@ -306,6 +385,7 @@ impl ComponentCapability {
             ComponentCapability::Directory(directory) => Some(&directory.source_path),
             ComponentCapability::Runner(runner) => Some(&runner.source_path),
             ComponentCapability::Resolver(resolver) => Some(&resolver.source_path),
+            ComponentCapability::Service(service) => Some(&service.source_path),
             _ => None,
         }
     }
@@ -318,11 +398,13 @@ impl ComponentCapability {
             ComponentCapability::Directory(directory) => Some(&directory.name),
             ComponentCapability::Runner(runner) => Some(&runner.name),
             ComponentCapability::Resolver(resolver) => Some(&resolver.name),
+            ComponentCapability::Service(service) => Some(&service.name),
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Protocol(UseProtocolDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Directory(UseDirectoryDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Event(UseEventDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Storage(UseStorageDecl { source_name, .. }) => Some(source_name),
+                UseDecl::Service(UseServiceDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             ComponentCapability::Environment(env_cap) => match env_cap {
@@ -335,7 +417,11 @@ impl ComponentCapability {
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_name, .. }) => Some(source_name),
                 ExposeDecl::Runner(ExposeRunnerDecl { source_name, .. }) => Some(source_name),
                 ExposeDecl::Resolver(ExposeResolverDecl { source_name, .. }) => Some(source_name),
-                _ => None,
+                ExposeDecl::Service(ExposeServiceDecl { sources, .. }) => {
+                    // NOTE: The cm_rust transformation guarantees there is at least one source.
+                    // TODO(fxbug.dev/71881): Generalize to many sources.
+                    Some(&sources[0].source_name)
+                }
             },
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Protocol(OfferProtocolDecl { source_name, .. }) => Some(source_name),
@@ -344,7 +430,11 @@ impl ComponentCapability {
                 OfferDecl::Event(OfferEventDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Storage(OfferStorageDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Resolver(OfferResolverDecl { source_name, .. }) => Some(source_name),
-                _ => None,
+                OfferDecl::Service(OfferServiceDecl { sources, .. }) => {
+                    // NOTE: The cm_rust transformation guarantees there is at least one source.
+                    // TODO(fxbug.dev/71881): Generalize to many sources.
+                    Some(&sources[0].source_name)
+                }
             },
         }
     }

@@ -116,7 +116,7 @@ impl GlobalPolicyChecker {
 
     fn get_policy_key<'a>(
         capability_source: &'a CapabilitySource,
-    ) -> Result<CapabilityAllowlistKey, ModelError> {
+    ) -> Result<CapabilityAllowlistKey, PolicyError> {
         Ok(match &capability_source {
             CapabilitySource::Namespace { capability, .. } => CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentManager,
@@ -150,9 +150,7 @@ impl GlobalPolicyChecker {
             },
             CapabilitySource::Capability { source_capability, component } => {
                 CapabilityAllowlistKey {
-                    source_moniker: ExtendedMoniker::ComponentInstance(
-                        component.upgrade()?.abs_moniker.clone(),
-                    ),
+                    source_moniker: ExtendedMoniker::ComponentInstance(component.moniker.clone()),
                     source_name: source_capability
                         .source_name()
                         .ok_or(PolicyError::InvalidCapabilitySource)?
@@ -161,6 +159,12 @@ impl GlobalPolicyChecker {
                     capability: source_capability.type_name(),
                 }
             }
+            CapabilitySource::Collection { source_name, component, .. } => CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(component.moniker.clone()),
+                source_name: source_name.clone(),
+                source: CapabilityAllowlistSource::Self_,
+                capability: cm_rust::CapabilityTypeName::Service,
+            },
         })
     }
 

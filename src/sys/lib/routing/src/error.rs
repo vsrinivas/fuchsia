@@ -200,6 +200,19 @@ pub enum RoutingError {
     },
 
     #[error(
+        "An `offer from #{}` declaration was found at `{}` for `{}`, but no matching collection \
+        was found",
+        collection,
+        moniker,
+        capability
+    )]
+    OfferFromCollectionNotFound {
+        collection: String,
+        moniker: AbsoluteMoniker,
+        capability: CapabilityName,
+    },
+
+    #[error(
         "An `offer from #{}` declaration was found at `{}` for `{}`, but no matching `expose` \
         declaration was found in the child",
         child_moniker,
@@ -263,6 +276,19 @@ pub enum RoutingError {
         child_moniker: PartialMoniker,
         moniker: AbsoluteMoniker,
         capability_id: String,
+    },
+
+    #[error(
+        "An `expose from #{}` declaration was found at `{}` for `{}`, but no matching collection \
+        was found",
+        collection,
+        moniker,
+        capability
+    )]
+    ExposeFromCollectionNotFound {
+        collection: String,
+        moniker: AbsoluteMoniker,
+        capability: CapabilityName,
     },
 
     #[error(

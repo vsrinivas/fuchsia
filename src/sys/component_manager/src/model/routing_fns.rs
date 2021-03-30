@@ -6,7 +6,7 @@ use {
     crate::{
         capability::ComponentCapability,
         model::{
-            component::{Runtime, WeakComponentInstance},
+            component::WeakComponentInstance,
             routing::{
                 self, route_and_open_namespace_capability,
                 route_and_open_namespace_capability_from_expose,
@@ -51,19 +51,13 @@ pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingF
                 )
                 .await;
                 if let Err(e) = res {
-                    let cap = ComponentCapability::Use(use_);
-                    let execution = component.lock_execution().await;
-                    let logger = match &execution.runtime {
-                        Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
-                        _ => None,
-                    };
                     routing::report_routing_failure(
-                        &component.abs_moniker,
-                        &cap,
+                        &component,
+                        &ComponentCapability::Use(use_),
                         &e,
                         server_end,
-                        logger,
-                    );
+                    )
+                    .await;
                 }
             })
             .detach();
@@ -101,19 +95,13 @@ pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> 
                 )
                 .await;
                 if let Err(e) = res {
-                    let cap = ComponentCapability::Expose(expose);
-                    let execution = component.lock_execution().await;
-                    let logger = match &execution.runtime {
-                        Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
-                        _ => None,
-                    };
                     routing::report_routing_failure(
-                        &component.abs_moniker,
-                        &cap,
+                        &component,
+                        &ComponentCapability::Expose(expose),
                         &e,
                         server_end,
-                        logger,
-                    );
+                    )
+                    .await;
                 }
             })
             .detach();

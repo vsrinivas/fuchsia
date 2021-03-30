@@ -69,6 +69,12 @@ pub enum CheckUse {
         path: CapabilityPath,
         expected_res: ExpectedResult,
     },
+    Service {
+        path: CapabilityPath,
+        instance: String,
+        member: String,
+        expected_res: ExpectedResult,
+    },
     Directory {
         path: CapabilityPath,
         file: PathBuf,
@@ -343,7 +349,7 @@ impl RoutingTest {
         &'a self,
         moniker: AbsoluteMoniker,
         collection: &'a str,
-        decl: ChildDecl,
+        decl: impl Into<ChildDecl>,
     ) {
         let component_name =
             self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
@@ -353,7 +359,7 @@ impl RoutingTest {
             .mock_runner
             .get_namespace(&component_resolved_url)
             .expect("could not find child namespace");
-        capability_util::call_create_child(&namespace, collection, decl).await;
+        capability_util::call_create_child(&namespace, collection, decl.into()).await;
     }
 
     /// Deletes a dynamic child `child_decl` in `moniker`'s `collection`, waiting for destruction
@@ -396,6 +402,16 @@ impl RoutingTest {
         match check {
             CheckUse::Protocol { path, expected_res } => {
                 capability_util::call_echo_svc_from_namespace(&namespace, path, expected_res).await;
+            }
+            CheckUse::Service { path, instance, member, expected_res } => {
+                capability_util::call_service_instance_echo_svc_from_namespace(
+                    &namespace,
+                    path,
+                    instance,
+                    member,
+                    expected_res,
+                )
+                .await;
             }
             CheckUse::Directory { path, file, expected_res } => {
                 capability_util::read_data_from_namespace(&namespace, path, &file, expected_res)
@@ -563,6 +579,17 @@ impl RoutingTest {
                 )
                 .await;
             }
+            CheckUse::Service { path, instance, member, expected_res } => {
+                capability_util::call_service_instance_echo_svc_from_exposed_dir(
+                    path,
+                    instance,
+                    member,
+                    &moniker,
+                    &self.model,
+                    expected_res,
+                )
+                .await;
+            }
             CheckUse::Directory { path, file, expected_res } => {
                 capability_util::read_data_from_exposed_dir(
                     path,
@@ -644,7 +671,7 @@ impl RoutingTest {
             .into_iter()
             .filter_map(|u| match u {
                 UseDecl::Directory(d) => Some(d.target_path.to_string()),
-                UseDecl::Service(s) => Some(s.target_path.to_string()),
+                UseDecl::Service(s) => Some(s.target_path.dirname),
                 UseDecl::Protocol(s) => Some(s.target_path.dirname),
                 UseDecl::Storage(s) => Some(s.target_path.to_string()),
                 UseDecl::Event(_) | UseDecl::EventStream(_) => None,
@@ -708,18 +735,6 @@ impl RoutingTest {
     ) -> OutDir {
         // if this decl is offering/exposing something from `Self`, let's host it
         let mut out_dir = OutDir::new();
-        for expose in decl.exposes.iter() {
-            match expose {
-                ExposeDecl::Service(_) => panic!("service capability unsupported"),
-                _ => (),
-            }
-        }
-        for offer in decl.offers.iter() {
-            match offer {
-                OfferDecl::Service(_) => panic!("service capability unsupported"),
-                _ => (),
-            }
-        }
         for capability in decl.capabilities.iter() {
             match capability {
                 CapabilityDecl::Protocol(_) => {
@@ -1018,6 +1033,40 @@ pub mod capability_util {
         client_end.into_proxy().unwrap()
     }
 
+    pub async fn connect_to_instance_svc_in_namespace<T: ServiceMarker>(
+        namespace: &ManagedNamespace,
+        path: &CapabilityPath,
+        instance: &str,
+        member: &str,
+    ) -> T::Proxy {
+        let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
+        let service_dir = io_util::directory::open_directory(
+            &dir_proxy,
+            &path.basename,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("failed to open service dir");
+        let instance_dir = io_util::directory::open_directory(
+            &service_dir,
+            instance,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("failed to open instance dir");
+        let member_proxy = io_util::directory::open_node_no_describe(
+            &instance_dir,
+            member,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open member node");
+        add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
+        let client_end =
+            ClientEnd::<T>::new(member_proxy.into_channel().unwrap().into_zx_channel());
+        client_end.into_proxy().unwrap()
+    }
+
     /// Verifies that it's possible to subscribe to the given `events` by connecting to an
     /// `EventSource` on the given `namespace`. Used to test eventcapability routing.
     /// Testing of usage of the stream lives in the integration tests in:
@@ -1078,8 +1127,30 @@ pub mod capability_util {
         expected_res: ExpectedResult,
     ) {
         let echo_proxy = connect_to_svc_in_namespace::<echo::EchoMarker>(namespace, &path).await;
-        let res = echo_proxy.echo_string(Some("hippos")).await;
+        call_echo_and_validate_result(echo_proxy, expected_res).await;
+    }
 
+    /// Looks up `resolved_url` in the namespace, and attempts to use `instance` at `path`. Expects the service
+    /// to be fidl.examples.echo.Echo.
+    pub async fn call_service_instance_echo_svc_from_namespace(
+        namespace: &ManagedNamespace,
+        path: CapabilityPath,
+        instance: String,
+        member: String,
+        expected_res: ExpectedResult,
+    ) {
+        let echo_proxy = connect_to_instance_svc_in_namespace::<echo::EchoMarker>(
+            namespace, &path, &instance, &member,
+        )
+        .await;
+        call_echo_and_validate_result(echo_proxy, expected_res).await;
+    }
+
+    async fn call_echo_and_validate_result(
+        echo_proxy: echo::EchoProxy,
+        expected_res: ExpectedResult,
+    ) {
+        let res = echo_proxy.echo_string(Some("hippos")).await;
         match expected_res {
             ExpectedResult::Ok => {
                 assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
@@ -1179,28 +1250,36 @@ pub mod capability_util {
         let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
         open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_SERVICE, server_end).await;
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
-        let res = echo_proxy.echo_string(Some("hippos")).await;
-        match expected_res {
-            ExpectedResult::Ok => {
-                assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
-            }
-            ExpectedResult::Err(s) => {
-                let err = res.expect_err("used echo service successfully when it should fail");
-                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
-                let epitaph = echo_proxy.take_event_stream().next().await.expect("no epitaph");
-                assert_matches!(
-                    epitaph,
-                    Err(fidl::Error::ClientChannelClosed {
-                        status, ..
-                    }) if status == s
-                );
-            }
-            ExpectedResult::ErrWithNoEpitaph => {
-                let err = res.expect_err("used echo service successfully when it should fail");
-                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
-                assert_matches!(echo_proxy.take_event_stream().next().await, None);
-            }
-        }
+        call_echo_and_validate_result(echo_proxy, expected_res).await;
+    }
+
+    pub async fn call_service_instance_echo_svc_from_exposed_dir(
+        path: CapabilityPath,
+        instance: String,
+        member: String,
+        abs_moniker: &AbsoluteMoniker,
+        model: &Arc<Model>,
+        expected_res: ExpectedResult,
+    ) {
+        let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
+        open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_SERVICE, server_end).await;
+        let service_dir = DirectoryProxy::from_channel(node_proxy.into_channel().unwrap());
+        let instance_dir = io_util::directory::open_directory(
+            &service_dir,
+            &instance,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("failed to open instance");
+        let member_node = io_util::directory::open_node_no_describe(
+            &instance_dir,
+            &member,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open member node");
+        let echo_proxy = echo::EchoProxy::new(member_node.into_channel().unwrap());
+        call_echo_and_validate_result(echo_proxy, expected_res).await;
     }
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service

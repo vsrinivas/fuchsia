@@ -8,6 +8,7 @@ pub use error::RoutingError;
 
 #[macro_use]
 mod router;
+mod service;
 
 use {
     crate::{
@@ -22,11 +23,13 @@ use {
             error::ModelError,
             events::{filter::EventFilter, mode_set::EventModeSet},
             hooks::{Event, EventPayload},
-            logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
             rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
-            routing::router::{
-                AllowedSourcesBuilder, CapabilityVisitor, ErrorNotFoundFromParent,
-                ErrorNotFoundInChild, ExposeVisitor, OfferVisitor, RoutingStrategy,
+            routing::{
+                router::{
+                    AllowedSourcesBuilder, CapabilityVisitor, ErrorNotFoundFromParent,
+                    ErrorNotFoundInChild, ExposeVisitor, OfferVisitor, RoutingStrategy,
+                },
+                service::serve_collection,
             },
             storage,
             walk_state::WalkState,
@@ -37,12 +40,12 @@ use {
     async_trait::async_trait,
     cm_rust::{
         self, CapabilityName, CapabilityPath, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeSource, OfferDirectoryDecl,
-        OfferEventDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl, OfferSource,
-        OfferStorageDecl, ProtocolDecl, RegistrationDeclCommon, RegistrationSource, ResolverDecl,
-        ResolverRegistration, RunnerDecl, RunnerRegistration, SourceName, StorageDecl,
-        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
-        UseSource, UseStorageDecl,
+        ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource,
+        OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl,
+        OfferServiceDecl, OfferSource, OfferStorageDecl, ProtocolDecl, RegistrationDeclCommon,
+        RegistrationSource, ResolverDecl, ResolverRegistration, RunnerDecl, RunnerRegistration,
+        ServiceDecl, SourceName, StorageDecl, StorageDirectorySource, UseDecl, UseDirectoryDecl,
+        UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
     },
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
@@ -78,6 +81,18 @@ pub(super) async fn route_and_open_namespace_capability(
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
     match use_decl {
+        UseDecl::Service(use_service_decl) => {
+            let source = route_service(use_service_decl, target).await?;
+            open_capability_at_source(
+                flags,
+                open_mode,
+                PathBuf::from(relative_path),
+                source,
+                target,
+                server_chan,
+            )
+            .await
+        }
         UseDecl::Protocol(use_protocol_decl) => {
             let source = route_protocol(use_protocol_decl, target).await?;
             open_capability_at_source(flags, open_mode, PathBuf::new(), source, target, server_chan)
@@ -107,7 +122,6 @@ pub(super) async fn route_and_open_namespace_capability(
             )
             .await
         }
-        UseDecl::Service(_) => Err(ModelError::unsupported("service routing")),
         UseDecl::Event(_) | UseDecl::EventStream(_) => {
             // These capabilities are not representable on a VFS.
             Err(ModelError::unsupported(
@@ -137,7 +151,10 @@ pub(super) async fn route_and_open_namespace_capability_from_expose(
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
     let (capability_source, relative_path) = match expose_decl {
-        ExposeDecl::Service(_) => panic!("not supported yet"),
+        ExposeDecl::Service(expose_service_decl) => (
+            route_service_from_expose(expose_service_decl, target).await?,
+            PathBuf::from(relative_path),
+        ),
         ExposeDecl::Protocol(expose_protocol_decl) => {
             (route_protocol_from_expose(expose_protocol_decl, target).await?, PathBuf::new())
         }
@@ -246,7 +263,8 @@ fn get_default_provider(
         CapabilitySource::Framework { .. }
         | CapabilitySource::Capability { .. }
         | CapabilitySource::Builtin { .. }
-        | CapabilitySource::Namespace { .. } => {
+        | CapabilitySource::Namespace { .. }
+        | CapabilitySource::Collection { .. } => {
             // There is no default provider for a framework or builtin capability
             None
         }
@@ -271,6 +289,26 @@ pub async fn open_capability_at_source(
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
     target.try_get_context()?.policy().can_route_capability(&source, &target.abs_moniker)?;
+
+    // When serving a collection, routing hasn't reached the source. The CapabilityRouted event
+    // should not fire, nor should hooks be able to modify the provider (which is hosted by
+    // component_manager). Once a component is routed to from the collection, CapabilityRouted will
+    // fire as usual.
+    match source {
+        CapabilitySource::Collection { capability_provider, component, .. } => {
+            return serve_collection(
+                target.as_weak(),
+                &component.upgrade()?,
+                capability_provider,
+                flags,
+                open_mode,
+                relative_path,
+                server_chan,
+            )
+            .await;
+        }
+        _ => {}
+    }
 
     let capability_provider = Arc::new(Mutex::new(get_default_provider(target.as_weak(), &source)));
 
@@ -352,6 +390,9 @@ pub async fn open_capability_at_source(
                     ));
                 }
             },
+            CapabilitySource::Collection { .. } => {
+                return Err(ModelError::unsupported("collections"));
+            }
         };
         let namespace_path = namespace_path.to_path_buf().attach(relative_path);
         let namespace_path = namespace_path
@@ -367,30 +408,29 @@ pub async fn open_capability_at_source(
 /// Sets an epitaph on `server_end` for a capability routing failure, and logs the error. Logs a
 /// failure to route a capability. Formats `err` as a `String`, but elides the type if the error is
 /// a `RoutingError`, the common case.
-pub(super) fn report_routing_failure(
-    target_moniker: &AbsoluteMoniker,
+pub(super) async fn report_routing_failure(
+    target: &Arc<ComponentInstance>,
     cap: &ComponentCapability,
     err: &ModelError,
     server_end: zx::Channel,
-    logger: Option<&dyn FmtArgsLogger>,
 ) {
     let _ = server_end.close_with_epitaph(err.as_zx_status());
     let err_str = match err {
-        ModelError::RoutingError { err } => format!("{}", err),
-        _ => format!("{}", err),
+        ModelError::RoutingError { err } => err.to_string(),
+        _ => err.to_string(),
     };
-    let log_msg = format!(
-        "Failed to route {} `{}` with target component `{}`: {}",
-        cap.type_name(),
-        cap.source_id(),
-        target_moniker,
-        err_str
-    );
-    if let Some(l) = logger {
-        l.log(Level::Error, format_args!("{}", log_msg));
-    } else {
-        MODEL_LOGGER.log(Level::Error, format_args!("{}", log_msg))
-    }
+    target
+        .log(
+            Level::Error,
+            format!(
+                "Failed to route {} `{}` with target component `{}`: {}",
+                cap.type_name(),
+                cap.source_id(),
+                &target.abs_moniker,
+                &err_str
+            ),
+        )
+        .await
 }
 
 make_noop_visitor!(ProtocolVisitor, {
@@ -504,7 +544,40 @@ pub async fn route_protocol_from_expose(
         .await
 }
 
+make_noop_visitor!(ServiceVisitor, {
+    OfferDecl => OfferServiceDecl,
+    ExposeDecl => ExposeServiceDecl,
+    CapabilityDecl => ServiceDecl,
+});
+
+pub async fn route_service(
+    use_decl: UseServiceDecl,
+    target: &Arc<ComponentInstance>,
+) -> Result<CapabilitySource, RoutingError> {
+    let allowed_sources = AllowedSourcesBuilder::new().component().collection();
+    RoutingStrategy::new()
+        .use_::<UseServiceDecl>()
+        .offer::<OfferServiceDecl>()
+        .expose::<ExposeServiceDecl>()
+        .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor)
+        .await
+}
+
+async fn route_service_from_expose(
+    expose_decl: ExposeServiceDecl,
+    target: &Arc<ComponentInstance>,
+) -> Result<CapabilitySource, RoutingError> {
+    let allowed_sources = AllowedSourcesBuilder::new().component().collection();
+    RoutingStrategy::new()
+        .use_::<UseServiceDecl>()
+        .offer::<OfferServiceDecl>()
+        .expose::<ExposeServiceDecl>()
+        .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut ServiceVisitor)
+        .await
+}
+
 /// The accumulated state of routing a Directory capability.
+#[derive(Clone)]
 pub struct DirectoryState {
     rights: WalkState<Rights>,
     subdir: PathBuf,
@@ -979,6 +1052,52 @@ impl ErrorNotFoundInChild for OfferProtocolDecl {
 }
 
 impl ErrorNotFoundInChild for ExposeProtocolDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: PartialMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::ExposeFromChildExposeNotFound {
+            moniker,
+            child_moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
+impl ErrorNotFoundFromParent for UseServiceDecl {
+    fn error_not_found_from_parent(
+        moniker: AbsoluteMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::UseFromParentNotFound { moniker, capability_id: capability_name.into() }
+    }
+}
+
+impl ErrorNotFoundFromParent for OfferServiceDecl {
+    fn error_not_found_from_parent(
+        moniker: AbsoluteMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
+    }
+}
+
+impl ErrorNotFoundInChild for OfferServiceDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: PartialMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::OfferFromChildExposeNotFound {
+            moniker,
+            child_moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
+impl ErrorNotFoundInChild for ExposeServiceDecl {
     fn error_not_found_in_child(
         moniker: AbsoluteMoniker,
         child_moniker: PartialMoniker,

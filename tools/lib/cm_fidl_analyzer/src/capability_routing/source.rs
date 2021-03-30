@@ -38,6 +38,7 @@ impl From<&ExposeSource> for CapabilitySourceType {
             ExposeSource::Child(name) => Self::Child(name.to_string()),
             ExposeSource::Framework => Self::Framework,
             ExposeSource::Capability(name) => Self::Capability(name.to_string()),
+            ExposeSource::Collection(_) => panic!("no"),
         }
     }
 }
@@ -50,6 +51,7 @@ impl From<&OfferSource> for CapabilitySourceType {
             OfferSource::Child(name) => Self::Child(name.to_string()),
             OfferSource::Self_ => Self::Self_,
             OfferSource::Capability(name) => Self::Capability(name.to_string()),
+            OfferSource::Collection(_) => panic!("no"),
         }
     }
 }

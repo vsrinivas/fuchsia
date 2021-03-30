@@ -2,12 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod collection;
+
 use {
     crate::{
         capability::{CapabilitySource, ComponentCapability, InternalCapability},
         model::{
             component::{ComponentInstance, ExtendedInstance},
-            routing::error::RoutingError,
+            routing::{
+                error::RoutingError,
+                router::collection::{RouteExposeFromCollection, RouteOfferFromCollection},
+            },
         },
     },
     ::routing::component_instance::ComponentInstanceInterface,
@@ -32,7 +37,6 @@ use {
 ///     .offer::<OfferProtocolDecl>()
 ///     .expose::<ExposeProtocolDecl>();
 /// ```
-#[derive(Copy, Clone)]
 pub struct RoutingStrategy<Start = (), Offer = (), Expose = ()>(
     PhantomData<(Start, Offer, Expose)>,
 );
@@ -55,6 +59,14 @@ impl RoutingStrategy {
         RoutingStrategy(PhantomData)
     }
 }
+
+impl<S, O, E> Clone for RoutingStrategy<S, O, E> {
+    fn clone(&self) -> Self {
+        RoutingStrategy(PhantomData)
+    }
+}
+
+impl<S, O, E> Copy for RoutingStrategy<S, O, E> {}
 
 impl<U> RoutingStrategy<Use<U>, (), ()> {
     /// Configure the `Router` to route from a `Use` declaration to a matching `Offer`
@@ -137,6 +149,11 @@ where
                 // that this kind of declaration cannot exist.
                 unreachable!("found offer from child but capability cannot be exposed")
             }
+            OfferResult::OfferFromCollection(_, _, _) => {
+                // This condition should not happen since cm_fidl_validator ensures
+                // that this kind of declaration cannot exist.
+                unreachable!("found offer from collection but capability cannot be exposed")
+            }
         }
     }
 }
@@ -145,14 +162,20 @@ where
 // strategy.
 impl<U, O, E> RoutingStrategy<Use<U>, Offer<O>, Expose<E>>
 where
-    U: UseDeclCommon + ErrorNotFoundFromParent + Into<UseDecl>,
+    U: UseDeclCommon + ErrorNotFoundFromParent + Into<UseDecl> + 'static,
     O: OfferDeclCommon
         + ErrorNotFoundFromParent
         + ErrorNotFoundInChild
         + FromEnum<OfferDecl>
         + Into<OfferDecl>
-        + Clone,
-    E: ExposeDeclCommon + ErrorNotFoundInChild + FromEnum<ExposeDecl> + Into<ExposeDecl> + Clone,
+        + Clone
+        + 'static,
+    E: ExposeDeclCommon
+        + ErrorNotFoundInChild
+        + FromEnum<ExposeDecl>
+        + Into<ExposeDecl>
+        + Clone
+        + 'static,
 {
     /// Routes a capability from its `Use` declaration to its source by following `Offer` and
     /// `Expose` declarations.
@@ -168,10 +191,11 @@ where
         visitor: &mut V,
     ) -> Result<CapabilitySource, RoutingError>
     where
-        S: Sources,
+        S: Sources + 'static,
         V: OfferVisitor<OfferDecl = O>,
         V: ExposeVisitor<ExposeDecl = E>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
     {
         match Use::route(use_decl, use_target, &sources, visitor).await? {
             UseResult::Source(source) => return Ok(source),
@@ -186,14 +210,20 @@ where
 // to route capabilities registered in environments.
 impl<R, O, E> RoutingStrategy<Registration<R>, Offer<O>, Expose<E>>
 where
-    R: RegistrationDeclCommon + ErrorNotFoundFromParent + ErrorNotFoundInChild,
+    R: RegistrationDeclCommon + ErrorNotFoundFromParent + ErrorNotFoundInChild + 'static,
     O: OfferDeclCommon
         + ErrorNotFoundFromParent
         + ErrorNotFoundInChild
         + FromEnum<OfferDecl>
         + Into<OfferDecl>
-        + Clone,
-    E: ExposeDeclCommon + ErrorNotFoundInChild + FromEnum<ExposeDecl> + Into<ExposeDecl> + Clone,
+        + Clone
+        + 'static,
+    E: ExposeDeclCommon
+        + ErrorNotFoundInChild
+        + FromEnum<ExposeDecl>
+        + Into<ExposeDecl>
+        + Clone
+        + 'static,
 {
     /// Routes a capability from its environment `Registration` declaration to its source by
     /// following `Offer` and `Expose` declarations.
@@ -209,10 +239,11 @@ where
         visitor: &mut V,
     ) -> Result<CapabilitySource, RoutingError>
     where
-        S: Sources,
+        S: Sources + 'static,
         V: OfferVisitor<OfferDecl = O>,
         V: ExposeVisitor<ExposeDecl = E>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
     {
         match Registration::route(registration_decl, registration_target, &sources, visitor).await?
         {
@@ -227,16 +258,23 @@ where
     }
 }
 
-// Common offer and expose routing shared between Registration and Use routing.
+// Common offer routing shared between Registration and Use routing.
 impl<B, O, E> RoutingStrategy<B, Offer<O>, Expose<E>>
 where
+    B: Send + Sync + 'static,
     O: OfferDeclCommon
         + ErrorNotFoundFromParent
         + ErrorNotFoundInChild
         + FromEnum<OfferDecl>
         + Into<OfferDecl>
-        + Clone,
-    E: ExposeDeclCommon + ErrorNotFoundInChild + FromEnum<ExposeDecl> + Into<ExposeDecl> + Clone,
+        + Clone
+        + 'static,
+    E: ExposeDeclCommon
+        + ErrorNotFoundInChild
+        + FromEnum<ExposeDecl>
+        + Into<ExposeDecl>
+        + Clone
+        + 'static,
 {
     /// Routes a capability from its `Offer` declaration to its source by following `Offer` and
     /// `Expose` declarations.
@@ -252,10 +290,11 @@ where
         visitor: &mut V,
     ) -> Result<CapabilitySource, RoutingError>
     where
-        S: Sources,
+        S: Sources + 'static,
         V: OfferVisitor<OfferDecl = O>,
         V: ExposeVisitor<ExposeDecl = E>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
     {
         match Offer::route(offer_decl, offer_target, &sources, visitor).await? {
             OfferResult::Source(source) => return Ok(source),
@@ -263,9 +302,37 @@ where
                 let (expose, component) = change_directions(offer, component).await?;
                 self.route_from_expose(expose, component, sources, visitor).await
             }
+            OfferResult::OfferFromCollection(offer_decl, collection_component, collection_name) => {
+                Ok(CapabilitySource::Collection {
+                    collection_name: collection_name.clone(),
+                    source_name: offer_decl.source_name().clone(),
+                    capability_provider: Box::new(RouteOfferFromCollection {
+                        router: self,
+                        collection_name,
+                        collection_component: collection_component.as_weak(),
+                        offer_decl,
+                        sources: sources.clone(),
+                        visitor: visitor.clone(),
+                    }),
+                    component: collection_component.as_weak(),
+                })
+            }
         }
     }
+}
 
+// Common expose routing shared between Registration and Use routing.
+impl<B, O, E> RoutingStrategy<B, O, Expose<E>>
+where
+    B: Send + Sync + 'static,
+    O: Send + Sync + 'static,
+    E: ExposeDeclCommon
+        + ErrorNotFoundInChild
+        + FromEnum<ExposeDecl>
+        + Into<ExposeDecl>
+        + Clone
+        + 'static,
+{
     /// Routes a capability from its `Expose` declaration to its source by following `Expose`
     /// declarations.
     /// `sources` defines what are the valid sources of the capability.
@@ -280,18 +347,36 @@ where
         visitor: &mut V,
     ) -> Result<CapabilitySource, RoutingError>
     where
-        S: Sources,
+        S: Sources + 'static,
         V: ExposeVisitor<ExposeDecl = E>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
     {
-        let ExposeResult::Source(source) =
-            Expose::route(expose_decl, expose_target, &sources, visitor).await?;
-        Ok(source)
+        match Expose::route(expose_decl, expose_target, &sources, visitor).await? {
+            ExposeResult::Source(source) => Ok(source),
+            ExposeResult::ExposeFromCollection(
+                expose_decl,
+                collection_component,
+                collection_name,
+            ) => Ok(CapabilitySource::Collection {
+                collection_name: collection_name.clone(),
+                source_name: expose_decl.source_name().clone(),
+                capability_provider: Box::new(RouteExposeFromCollection {
+                    router: self,
+                    collection_name,
+                    collection_component: collection_component.as_weak(),
+                    expose_decl,
+                    sources: sources.clone(),
+                    visitor: visitor.clone(),
+                }),
+                component: collection_component.as_weak(),
+            }),
+        }
     }
 }
 
 /// A trait for extracting the source of a capability.
-pub trait Sources {
+pub trait Sources: Clone + Send + Sync {
     /// The supported capability declaration type for namespace and component sources.
     /// Can be `()` if namespace and component sources are not supported.
     type CapabilityDecl;
@@ -307,6 +392,10 @@ pub trait Sources {
     /// Checks whether capability sources are supported, returning [`RoutingError::UnsupportedRouteSource`]
     /// if they are not.
     fn capability_source(&self) -> Result<(), RoutingError>;
+
+    /// Checks whether collection sources are supported, returning [`ModelError::Unsupported`]
+    /// if they are not.
+    fn collection_source(&self) -> Result<(), RoutingError>;
 
     /// Checks whether namespace capability sources are supported.
     fn is_namespace_supported(&self) -> bool;
@@ -343,9 +432,24 @@ pub struct AllowedSourcesBuilder<CapabilityDecl = ()> {
     framework: Option<fn(CapabilityName) -> InternalCapability>,
     builtin: Option<fn(CapabilityName) -> InternalCapability>,
     capability: bool,
+    collection: bool,
     namespace: bool,
     component: bool,
     _decl: PhantomData<CapabilityDecl>,
+}
+
+impl<C> Clone for AllowedSourcesBuilder<C> {
+    fn clone(&self) -> Self {
+        Self {
+            framework: self.framework.clone(),
+            builtin: self.builtin.clone(),
+            capability: self.capability.clone(),
+            collection: self.collection.clone(),
+            namespace: self.namespace.clone(),
+            component: self.component.clone(),
+            _decl: self._decl.clone(),
+        }
+    }
 }
 
 impl<C> AllowedSourcesBuilder<C> {
@@ -355,6 +459,7 @@ impl<C> AllowedSourcesBuilder<C> {
             framework: None,
             builtin: None,
             capability: false,
+            collection: false,
             namespace: false,
             component: false,
             _decl: PhantomData,
@@ -376,6 +481,11 @@ impl<C> AllowedSourcesBuilder<C> {
     /// `CML`).
     pub fn capability(self) -> Self {
         Self { capability: true, ..self }
+    }
+
+    /// Allows capability sources to originate from a collection.
+    pub fn collection(self) -> Self {
+        Self { collection: true, ..self }
     }
 }
 
@@ -423,6 +533,14 @@ impl Sources for AllowedSourcesBuilder<()> {
             Ok(())
         } else {
             Err(RoutingError::unsupported_route_source("capability"))
+        }
+    }
+
+    fn collection_source(&self) -> Result<(), RoutingError> {
+        if self.collection {
+            Ok(())
+        } else {
+            Err(RoutingError::unsupported_route_source("collection"))
         }
     }
 
@@ -482,6 +600,14 @@ where
             Ok(())
         } else {
             Err(RoutingError::unsupported_route_source("capability"))
+        }
+    }
+
+    fn collection_source(&self) -> Result<(), RoutingError> {
+        if self.collection {
+            Ok(())
+        } else {
+            Err(RoutingError::unsupported_route_source("collection"))
         }
     }
 
@@ -768,6 +894,8 @@ enum OfferResult<O> {
     /// The Offer led to an Offer-from-child declaration.
     /// Not all capabilities can be exposed, so let the caller decide how to handle this.
     OfferFromChild(O, Arc<ComponentInstance>),
+    /// Offer from collection.
+    OfferFromCollection(O, Arc<ComponentInstance>, String),
 }
 
 impl<O> Offer<O>
@@ -866,6 +994,23 @@ where
                 OfferSource::Child(_) => {
                     return Ok(OfferResult::OfferFromChild(offer, target));
                 }
+                OfferSource::Collection(name) => {
+                    sources.collection_source()?;
+                    {
+                        let state = target.lock_resolved_state().await.map_err(|err| {
+                            RoutingError::resolve_failed(&target.abs_moniker, err)
+                        })?;
+                        state.decl().collections.iter().find(|c| &c.name == name).ok_or_else(
+                            || RoutingError::OfferFromCollectionNotFound {
+                                collection: name.clone(),
+                                moniker: target.abs_moniker.clone(),
+                                capability: offer.source_name().clone(),
+                            },
+                        )?;
+                    }
+                    let name = name.clone();
+                    return Ok(OfferResult::OfferFromCollection(offer, target, name));
+                }
             }
         }
     }
@@ -925,10 +1070,11 @@ where
 pub struct Expose<E>(PhantomData<E>);
 
 /// The result of routing an Expose declaration to the next phase.
-
-enum ExposeResult {
+enum ExposeResult<E> {
     /// The source of the Expose was found (Framework, Component, etc.).
     Source(CapabilitySource),
+    /// The source of the Expose comes from a collection.
+    ExposeFromCollection(E, Arc<ComponentInstance>, String),
 }
 
 impl<E> Expose<E>
@@ -942,7 +1088,7 @@ where
         mut target: Arc<ComponentInstance>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<ExposeResult, RoutingError>
+    ) -> Result<ExposeResult<E>, RoutingError>
     where
         S: Sources,
         V: ExposeVisitor<ExposeDecl = E>,
@@ -1014,6 +1160,23 @@ where
                     };
                     expose = child_expose;
                     target = child_component;
+                }
+                ExposeSource::Collection(name) => {
+                    sources.collection_source()?;
+                    {
+                        let state = target.lock_resolved_state().await.map_err(|err| {
+                            RoutingError::resolve_failed(&target.abs_moniker, err)
+                        })?;
+                        state.decl().collections.iter().find(|c| &c.name == name).ok_or_else(
+                            || RoutingError::ExposeFromCollectionNotFound {
+                                collection: name.clone(),
+                                moniker: target.abs_moniker.clone(),
+                                capability: expose.source_name().clone(),
+                            },
+                        )?;
+                    }
+                    let name = name.clone();
+                    return Ok(ExposeResult::ExposeFromCollection(expose, target, name));
                 }
             }
         }
@@ -1114,6 +1277,7 @@ macro_rules! make_noop_visitor {
         $(ExposeDecl => $expose_decl:ty,)*
         $(CapabilityDecl => $cap_decl:ty,)*
     }) => {
+        #[derive(Clone)]
         struct $name;
 
         $(

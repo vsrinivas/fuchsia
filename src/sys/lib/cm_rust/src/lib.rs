@@ -484,6 +484,30 @@ pub struct OfferServiceDecl {
     pub target_name: CapabilityName,
 }
 
+impl SourceName for OfferServiceDecl {
+    fn source_name(&self) -> &CapabilityName {
+        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
+        // TODO(fxbug.dev/71881): Generalize to all sources.
+        &self.sources[0].source_name
+    }
+}
+
+impl OfferDeclCommon for OfferServiceDecl {
+    fn source(&self) -> &OfferSource {
+        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
+        // TODO(fxbug.dev/71881): Generalize to all sources.
+        &self.sources[0].source
+    }
+
+    fn target(&self) -> &OfferTarget {
+        &self.target
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+}
+
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferProtocolDecl")]
 pub struct OfferProtocolDecl {
@@ -560,6 +584,30 @@ pub struct ExposeServiceDecl {
     pub target_name: CapabilityName,
 }
 
+impl SourceName for ExposeServiceDecl {
+    fn source_name(&self) -> &CapabilityName {
+        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
+        // TODO(fxbug.dev/71881): Generalize to all sources.
+        &self.sources[0].source_name
+    }
+}
+
+impl ExposeDeclCommon for ExposeServiceDecl {
+    fn source(&self) -> &ExposeSource {
+        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
+        // TODO(fxbug.dev/71881): Generalize to all sources.
+        &self.sources[0].source
+    }
+
+    fn target(&self) -> &ExposeTarget {
+        &self.target
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+}
+
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ExposeProtocolDecl")]
 pub struct ExposeProtocolDecl {
@@ -609,7 +657,7 @@ pub enum CapabilityDecl {
     Resolver(ResolverDecl),
 }
 
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ServiceDecl")]
 pub struct ServiceDecl {
     pub name: CapabilityName,
@@ -903,33 +951,33 @@ pub trait SourceName {
 }
 
 /// The common properties of a [Use](fsys2::UseDecl) declaration.
-pub trait UseDeclCommon: SourceName {
+pub trait UseDeclCommon: SourceName + Send + Sync {
     fn source(&self) -> &UseSource;
 }
 
 /// The common properties of a Registration-with-environment declaration.
-pub trait RegistrationDeclCommon: SourceName {
+pub trait RegistrationDeclCommon: SourceName + Send + Sync {
     /// The name of the registration type, for error messages.
     const TYPE: &'static str;
     fn source(&self) -> &RegistrationSource;
 }
 
 /// The common properties of an [Offer](fsys2::OfferDecl) declaration.
-pub trait OfferDeclCommon: SourceName {
+pub trait OfferDeclCommon: SourceName + Send + Sync {
     fn target_name(&self) -> &CapabilityName;
     fn target(&self) -> &OfferTarget;
     fn source(&self) -> &OfferSource;
 }
 
 /// The common properties of an [Expose](fsys2::ExposeDecl) declaration.
-pub trait ExposeDeclCommon: SourceName {
+pub trait ExposeDeclCommon: SourceName + Send + Sync {
     fn target_name(&self) -> &CapabilityName;
     fn target(&self) -> &ExposeTarget;
     fn source(&self) -> &ExposeSource;
 }
 
 /// The common properties of a [Capability](fsys2::CapabilityDecl) declaration.
-pub trait CapabilityDeclCommon {
+pub trait CapabilityDeclCommon: Send + Sync {
     fn name(&self) -> &CapabilityName;
 }
 
@@ -1139,6 +1187,7 @@ pub enum OfferSource {
     Framework,
     Parent,
     Child(String),
+    Collection(String),
     Self_,
     Capability(CapabilityName),
 }
@@ -1149,6 +1198,7 @@ impl FidlIntoNative<OfferSource> for fsys::Ref {
             fsys::Ref::Parent(_) => OfferSource::Parent,
             fsys::Ref::Self_(_) => OfferSource::Self_,
             fsys::Ref::Child(c) => OfferSource::Child(c.name),
+            fsys::Ref::Collection(c) => OfferSource::Collection(c.name),
             fsys::Ref::Framework(_) => OfferSource::Framework,
             fsys::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
             _ => panic!("invalid OfferSource variant"),
@@ -1164,6 +1214,7 @@ impl NativeIntoFidl<fsys::Ref> for OfferSource {
             OfferSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
+            OfferSource::Collection(name) => fsys::Ref::Collection(fsys::CollectionRef { name }),
             OfferSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             OfferSource::Capability(name) => {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
@@ -1176,6 +1227,7 @@ impl NativeIntoFidl<fsys::Ref> for OfferSource {
 pub enum ExposeSource {
     Self_,
     Child(String),
+    Collection(String),
     Framework,
     Capability(CapabilityName),
 }
@@ -1185,6 +1237,7 @@ impl FidlIntoNative<ExposeSource> for fsys::Ref {
         match self {
             fsys::Ref::Self_(_) => ExposeSource::Self_,
             fsys::Ref::Child(c) => ExposeSource::Child(c.name),
+            fsys::Ref::Collection(c) => ExposeSource::Collection(c.name),
             fsys::Ref::Framework(_) => ExposeSource::Framework,
             fsys::Ref::Capability(c) => ExposeSource::Capability(c.name.into()),
             _ => panic!("invalid ExposeSource variant"),
@@ -1199,6 +1252,7 @@ impl NativeIntoFidl<fsys::Ref> for ExposeSource {
             ExposeSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
+            ExposeSource::Collection(name) => fsys::Ref::Collection(fsys::CollectionRef { name }),
             ExposeSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             ExposeSource::Capability(name) => {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
@@ -2155,12 +2209,14 @@ mod tests {
                     collection: None,
                 }),
                 fsys::Ref::Framework(fsys::FrameworkRef {}),
+                fsys::Ref::Collection(fsys::CollectionRef { name: "foo".to_string() }),
             ],
             input_type = fsys::Ref,
             result = vec![
                 ExposeSource::Self_,
                 ExposeSource::Child("foo".to_string()),
                 ExposeSource::Framework,
+                ExposeSource::Collection("foo".to_string()),
             ],
             result_type = ExposeSource,
         },
@@ -2174,6 +2230,7 @@ mod tests {
                 fsys::Ref::Framework(fsys::FrameworkRef {}),
                 fsys::Ref::Capability(fsys::CapabilityRef { name: "foo".to_string() }),
                 fsys::Ref::Parent(fsys::ParentRef {}),
+                fsys::Ref::Collection(fsys::CollectionRef { name: "foo".to_string() }),
             ],
             input_type = fsys::Ref,
             result = vec![
@@ -2182,6 +2239,7 @@ mod tests {
                 OfferSource::Framework,
                 OfferSource::Capability(CapabilityName("foo".to_string())),
                 OfferSource::Parent,
+                OfferSource::Collection("foo".to_string()),
             ],
             result_type = OfferSource,
         },

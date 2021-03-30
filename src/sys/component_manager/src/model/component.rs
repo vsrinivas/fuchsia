@@ -18,6 +18,7 @@ use {
             error::ModelError,
             exposed_dir::ExposedDir,
             hooks::{Event, EventPayload, Hooks},
+            logging::LOGGER as MODEL_LOGGER,
             namespace::IncomingNamespace,
             resolver::ResolvedComponent,
             routing::{self, OpenResourceError, RoutingError},
@@ -58,7 +59,7 @@ use {
         sync::{Arc, Weak},
         time::Duration,
     },
-    vfs::path::Path,
+    vfs::{execution_scope::ExecutionScope, path::Path},
 };
 
 pub type WeakComponentInstance = WeakComponentInstanceInterface<ComponentInstance>;
@@ -635,6 +636,18 @@ impl ComponentInstance {
             .map(|ctx| ctx.component_id_index().look_up_moniker(&self.abs_moniker).cloned())
             .unwrap_or(None)
     }
+
+    /// Logs to the `fuchsia.logger.LogSink` capability in the component's incoming namespace,
+    /// or to component manager's logger if the component is not running or has not requested
+    /// `fuchsia.logger.LogSink`.
+    pub async fn log(&self, level: log::Level, message: String) {
+        let execution = self.lock_execution().await;
+        let logger = match &execution.runtime {
+            Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
+            _ => &MODEL_LOGGER,
+        };
+        logger.log(level, format_args!("{}", &message))
+    }
 }
 
 impl ComponentInstanceInterface for ComponentInstance {
@@ -723,6 +736,9 @@ impl fmt::Debug for InstanceState {
 
 /// The mutable state of a resolved component instance.
 pub struct ResolvedInstanceState {
+    /// The ExecutionScope for this component. Pseudo directories should be hosted with this
+    /// scope to tie their life-time to that of the component.
+    execution_scope: ExecutionScope,
     /// The component's declaration.
     decl: ComponentDecl,
     /// All child instances, indexed by instanced moniker.
@@ -739,6 +755,7 @@ pub struct ResolvedInstanceState {
 impl ResolvedInstanceState {
     pub async fn new(component: &Arc<ComponentInstance>, decl: ComponentDecl) -> Self {
         let mut state = Self {
+            execution_scope: ExecutionScope::new(),
             decl: decl.clone(),
             children: HashMap::new(),
             live_children: HashMap::new(),
@@ -754,6 +771,13 @@ impl ResolvedInstanceState {
         &self.decl
     }
 
+    /// This component's `ExecutionScope`.
+    /// Pseudo-directories can be opened with this scope to tie their lifetime
+    /// to this component.
+    pub fn execution_scope(&self) -> &ExecutionScope {
+        &self.execution_scope
+    }
+
     /// Returns an iterator over live children.
     pub fn live_children(
         &self,
@@ -764,6 +788,17 @@ impl ResolvedInstanceState {
     /// Returns a reference to a live child.
     pub fn get_live_child(&self, m: &PartialMoniker) -> Option<Arc<ComponentInstance>> {
         self.live_children.get(m).map(|(_, v)| v.clone())
+    }
+
+    /// Returns an iterator over live children in `collection`.
+    pub fn live_children_in_collection<'a>(
+        &'a self,
+        collection: &'a str,
+    ) -> impl Iterator<Item = (&'a PartialMoniker, &'a Arc<ComponentInstance>)> + 'a {
+        self.live_children().filter(move |(m, _)| match m.collection() {
+            Some(name) if name == collection => true,
+            _ => false,
+        })
     }
 
     /// Return all children that match the `PartialMoniker` regardless of

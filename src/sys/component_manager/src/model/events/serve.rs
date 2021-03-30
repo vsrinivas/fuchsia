@@ -303,6 +303,9 @@ fn maybe_create_capability_routed_payload(
                 ..fsys::AboveRootCapability::EMPTY
             })
         }
+        CapabilitySource::Collection { .. } => {
+            return None;
+        }
     });
 
     let payload = fsys::CapabilityRoutedPayload {

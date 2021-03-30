@@ -296,6 +296,12 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a custom service declaration.
+    pub fn service(mut self, service: cm_rust::ServiceDecl) -> Self {
+        self.result.capabilities.push(cm_rust::CapabilityDecl::Service(service));
+        self
+    }
+
     /// Add an environment declaration.
     pub fn add_environment(mut self, environment: impl Into<cm_rust::EnvironmentDecl>) -> Self {
         self.result.environments.push(environment.into());
