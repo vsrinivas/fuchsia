@@ -6,8 +6,9 @@
 #define SRC_UI_BACKLIGHT_DRIVERS_TI_LP8556_TI_LP8556_H_
 
 #include <fuchsia/hardware/backlight/llcpp/fidl.h>
-#include <lib/device-protocol/i2c-channel.h>
+#include <fuchsia/hardware/power/sensor/llcpp/fidl.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 
@@ -60,6 +61,7 @@ constexpr int kMilliampPerAmp = 1000;
 class Lp8556Device;
 using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::Messageable>;
 namespace FidlBacklight = fuchsia_hardware_backlight;
+namespace FidlPowerSensor = fuchsia_hardware_power_sensor;
 
 class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint32_t> {
  public:
@@ -76,7 +78,8 @@ class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint
 
 class Lp8556Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
-                     public FidlBacklight::Device::Interface {
+                     public FidlBacklight::Device::Interface,
+                     public FidlPowerSensor::Device::Interface {
  public:
   Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::MmioBuffer mmio)
       : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {}
@@ -135,6 +138,8 @@ class Lp8556Device : public DeviceType,
       double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) override;
   void GetNormalizedBrightnessScale(
       GetNormalizedBrightnessScaleCompleter::Sync& completer) override;
+
+  void GetPowerWatts(GetPowerWattsCompleter::Sync& completer) override;
 
  private:
   zx_status_t SetCurrentScale(uint16_t scale);

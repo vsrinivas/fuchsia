@@ -4,6 +4,7 @@
 #include "ti-lp8556.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/device-protocol/pdev.h>
@@ -11,7 +12,6 @@
 
 #include <algorithm>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -249,9 +249,17 @@ void Lp8556Device::GetNormalizedBrightnessScale(
   completer.ReplySuccess(static_cast<double>(scale_) / kBrightnessRegMaxValue);
 }
 
+void Lp8556Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
+  completer.ReplySuccess(backlight_power_);
+}
+
 zx_status_t Lp8556Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  FidlBacklight::Device::Dispatch(this, msg, &transaction);
+  if (FidlBacklight::Device::TryDispatch(this, msg, &transaction) ==
+      ::fidl::DispatchResult::kFound) {
+    return transaction.Status();
+  }
+  FidlPowerSensor::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

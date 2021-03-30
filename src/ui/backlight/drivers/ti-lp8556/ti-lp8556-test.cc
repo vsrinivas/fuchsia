@@ -5,8 +5,10 @@
 #include "ti-lp8556.h"
 
 #include <fuchsia/hardware/backlight/llcpp/fidl.h>
+#include <fuchsia/hardware/power/sensor/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/mock-i2c/mock-i2c.h>
@@ -14,7 +16,6 @@
 
 #include <map>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/span.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
@@ -107,6 +108,10 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
  protected:
   fuchsia_hardware_backlight::Device::SyncClient client() {
     return fuchsia_hardware_backlight::Device::SyncClient(std::move(messenger_.local()));
+  }
+
+  fuchsia_hardware_power_sensor::Device::SyncClient sensorSyncClient() {
+    return fuchsia_hardware_power_sensor::Device::SyncClient(std::move(messenger_.local()));
   }
 
   mock_i2c::MockI2c mock_i2c_;
@@ -414,6 +419,26 @@ TEST_F(Lp8556DeviceTest, GetBackLightPower) {
 
   VerifySetBrightness(true, 1.0);
   EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 0.000144), 0.000001f);
+}
+
+TEST_F(Lp8556DeviceTest, GetPowerWatts) {
+  mock_i2c_.ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kCfgReg})
+      .ExpectReadStop({0x01});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
+
+  VerifySetBrightness(true, 1.0);
+  EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 0.000144), 0.000001f);
+
+  fuchsia_hardware_power_sensor::Device::SyncClient sensor_client(sensorSyncClient());
+  auto result = sensor_client.GetPowerWatts();
+  EXPECT_TRUE(result.ok());
+  EXPECT_FALSE(result.value().result.is_err());
 }
 
 }  // namespace ti
