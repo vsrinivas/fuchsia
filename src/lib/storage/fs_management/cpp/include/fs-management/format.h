@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_MANAGEMENT_FORMAT_H_
-#define FS_MANAGEMENT_FORMAT_H_
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_FORMAT_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_FORMAT_H_
 
 #include <zircon/types.h>
 
@@ -83,4 +83,4 @@ disk_format_t detect_disk_format_log_unknown(int fd);
 
 __END_CDECLS
 
-#endif  // FS_MANAGEMENT_FORMAT_H_
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_FORMAT_H_

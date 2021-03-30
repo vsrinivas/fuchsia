@@ -150,13 +150,13 @@ test("fvm_sparse_image_reader_test") {
   deps = [
     ":fvm-sparse-image",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
     "//src/storage/testing:storage_driver_test_support",
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/utils:fd-io",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/fs-management",
   ]
 }
 

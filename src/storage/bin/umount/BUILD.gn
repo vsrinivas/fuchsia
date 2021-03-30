@@ -11,6 +11,6 @@ executable("umount") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/fs-management",
+    "//src/lib/storage/fs_management",
   ]
 }

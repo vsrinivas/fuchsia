@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FS_MANAGEMENT_ADMIN_H_
-#define ZIRCON_SYSTEM_ULIB_FS_MANAGEMENT_ADMIN_H_
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -29,4 +29,4 @@ zx::status<> FsInit(zx::channel device, disk_format_t df, const init_options_t& 
 
 }  // namespace fs_management
 
-#endif  // ZIRCON_SYSTEM_ULIB_FS_MANAGEMENT_ADMIN_H_
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_

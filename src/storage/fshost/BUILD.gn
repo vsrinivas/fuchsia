@@ -75,13 +75,13 @@ source_set("fshost-registry") {
     "//sdk/lib/fit",
     "//sdk/lib/vfs/cpp",
     "//src/lib/loader_service",
+    "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs-management",
   ]
   deps = [
     "//sdk/lib/fdio",
@@ -177,6 +177,7 @@ source_set("block-watcher") {
     "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/digest",
     "//src/lib/loader_service",
+    "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/gpt",
@@ -187,7 +188,6 @@ source_set("block-watcher") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
@@ -230,10 +230,10 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
+    "//src/lib/storage/fs_management",
     "//src/storage/lib/utils:use_debug_log",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zbi-bootfs",
   ]
@@ -360,6 +360,7 @@ test("fshost_integration_test") {
     "//sdk/fidl/fuchsia.sys2",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//src/lib/testing/predicates",
     "//src/storage/blobfs",
@@ -369,7 +370,6 @@ test("fshost_integration_test") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/ramdevice-client",
   ]
 

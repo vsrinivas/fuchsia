@@ -6,7 +6,7 @@ import("//build/test.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
 
-# Tests for the library at //zircon/system/ulib/fs-management.
+# Tests for the library at //src/lib/storage/fs_management.
 
 isolated_devmgr_component("fs-management-devmgr") {
   args = [
@@ -27,8 +27,8 @@ isolated_devmgr_component("fs-management-devmgr") {
 test("fs-management-test") {
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/storage/fs_management",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/ramdevice-client",
   ]
   sources = [ "format-test.cc" ]

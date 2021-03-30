@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <stdint.h>
-#include <stdlib.h>
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_FVM_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_FVM_H_
 
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <zircon/device/block.h>
 
 __BEGIN_CDECLS
@@ -64,3 +64,5 @@ zx_status_t destroy_partition_with_devfs(int devfs_root_fd, const uint8_t* uniqu
                                          const uint8_t* typeGUID);
 
 __END_CDECLS
+
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_FVM_H_

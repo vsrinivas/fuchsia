@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FS_MANAGEMENT_PATH_H_
-#define ZIRCON_SYSTEM_ULIB_FS_MANAGEMENT_PATH_H_
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_PATH_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_PATH_H_
 
 #include <string>
 
@@ -13,6 +13,6 @@ namespace fs_management {
 // /pkg/bin prefix (for test environments).
 std::string GetBinaryPath(const char* file);
 
-}  // namespce fs_management
+}  // namespace fs_management
 
-#endif  // ZIRCON_SYSTEM_ULIB_FS_MANAGEMENT_PATH_H_
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_PATH_H_

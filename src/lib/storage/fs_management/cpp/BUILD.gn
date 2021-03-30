@@ -1,0 +1,84 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+if (is_fuchsia) {
+  zx_library("fs-management") {
+    sdk = "shared"
+    sdk_headers = [
+      "fs-management/admin.h",
+      "fs-management/format.h",
+      "fs-management/fvm.h",
+      "fs-management/launch.h",
+      "fs-management/mount.h",
+    ]
+    shared = true
+    configs += [ "//build/config:all_source" ]
+    sources = [
+      "admin.cc",
+      "fsck.cc",
+      "fvm.cc",
+      "launch.cc",
+      "mkfs.cc",
+      "mount.cc",
+      "path.cc",
+    ]
+    public_deps = [ "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c" ]
+    deps = [
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+      "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
+      "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//src/lib/digest",
+      "//src/lib/storage/vfs/cpp",
+      "//src/storage/fvm",
+      "//src/storage/gpt",
+      "//third_party/boringssl",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/pretty",
+      "//zircon/public/lib/zx",
+      "//zircon/public/lib/zxc",
+      "//zircon/system/ulib/fdio-caller",
+      "//zircon/system/ulib/fzl",
+    ]
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+    data_deps = [
+      "//src/storage/bin/blobfs",
+      "//src/storage/bin/minfs",
+      "//zircon/third_party/uapp/fsck-msdosfs",
+      "//zircon/third_party/uapp/mkfs-msdosfs",
+    ]
+
+    # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+    # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+    # See linked bug for details.
+    configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+  }
+} else {
+  config("headers_config") {
+    include_dirs = [ "include" ]
+  }
+
+  source_set("fs-management") {
+    public = [
+      "include/fs-management/admin.h",
+      "include/fs-management/format.h",
+      "include/fs-management/fvm.h",
+      "include/fs-management/launch.h",
+      "include/fs-management/mount.h",
+    ]
+
+    public_configs = [ ":headers_config" ]
+
+    # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+    # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+    # See linked bug for details.
+    configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+  }
+}

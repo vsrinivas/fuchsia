@@ -40,6 +40,7 @@ test("minfs_unit") {
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
     "//src/storage/fvm",
     "//src/storage/minfs",
     "//third_party/googletest:gmock",
@@ -53,7 +54,6 @@ test("minfs_unit") {
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/disk_inspector",
-    "//zircon/system/ulib/fs-management",
     "//zircon/third_party/ulib/cksum",
   ]
 }
@@ -70,6 +70,7 @@ test("minfs-integration") {
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//src/devices/tests/sysdev",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
     "//src/storage/fs_test",
     "//src/storage/fvm",
     "//src/storage/minfs",
@@ -84,7 +85,6 @@ test("minfs-integration") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -108,7 +108,6 @@ test("minfs_dirty_cache_integration") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -150,6 +149,7 @@ test("minfs_micro_benchmark") {
     "//sdk/lib/fit",
     "//src/lib/digest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/fs_test",
     "//src/storage/fvm",
@@ -169,7 +169,6 @@ test("minfs_micro_benchmark") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/perftest",
     "//zircon/system/ulib/ramdevice-client",

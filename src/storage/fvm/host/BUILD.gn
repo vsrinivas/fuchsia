@@ -33,10 +33,10 @@ static_library("host") {
   ]
 
   public_deps = [
+    "//src/lib/storage/fs_management",
     "//src/storage/blobfs",
     "//src/storage/fvm",
     "//src/storage/minfs",
-    "//zircon/system/ulib/fs-management",
   ]
   deps = [
     "//sdk/lib/fit",

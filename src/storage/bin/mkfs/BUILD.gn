@@ -11,7 +11,7 @@ executable("mkfs") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/storage/fs_management",
     "//zircon/public/lib/safemath",
-    "//zircon/system/ulib/fs-management",
   ]
 }

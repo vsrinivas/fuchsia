@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_MANAGEMENT_MOUNT_H_
-#define FS_MANAGEMENT_MOUNT_H_
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_MOUNT_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_MOUNT_H_
 
 #include <zircon/compiler.h>
 
@@ -80,4 +80,4 @@ zx_status_t umount(const char* mount_path);
 // 'mount_fd' is used in lieu of the mount_path. It is not consumed.
 zx_status_t fumount(int mount_fd);
 
-#endif  // FS_MANAGEMENT_MOUNT_H_
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_MOUNT_H_

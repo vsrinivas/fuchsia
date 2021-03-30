@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_MANAGEMENT_ADMIN_H_
-#define FS_MANAGEMENT_ADMIN_H_
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_
 
 #include <zircon/types.h>
 
@@ -104,4 +104,4 @@ zx_status_t fs_register(zx_handle_t export_root);
 // |export_root| is never consumed.
 zx_status_t fs_root_handle(zx_handle_t export_root, zx_handle_t* out_root);
 
-#endif  // FS_MANAGEMENT_ADMIN_H_
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_

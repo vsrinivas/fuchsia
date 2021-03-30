@@ -20,6 +20,7 @@ test("zxcrypt") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/digest",
+    "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
     "//src/security/fcrypto",
     "//src/security/kms-stateless",
@@ -35,7 +36,6 @@ test("zxcrypt") {
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
   ]

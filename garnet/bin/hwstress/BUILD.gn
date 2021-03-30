@@ -34,6 +34,7 @@ source_set("lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/storage/fs_management",
     "//src/lib/uuid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
@@ -41,7 +42,6 @@ source_set("lib") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
   ]
 
   # We want to optimize as much as possible for speed, under the assumption

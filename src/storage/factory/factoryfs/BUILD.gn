@@ -60,6 +60,7 @@ test("factoryfs_unit") {
   ]
   deps = [
     ":factoryfs",
+    "//src/lib/storage/fs_management",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
@@ -68,7 +69,6 @@ test("factoryfs_unit") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
@@ -83,9 +83,9 @@ test("integration_test") {
   sources = [ "integration_test.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/fs-management",
   ]
 }
 

@@ -32,11 +32,11 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/lib/fdio",
+    "//src/lib/storage/fs_management",
     "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
   ]
 }
@@ -134,13 +134,13 @@ test("factory_reset_unittests") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
   ]

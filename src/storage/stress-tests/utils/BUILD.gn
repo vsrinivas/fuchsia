@@ -41,5 +41,5 @@ rustc_library("utils") {
     "mod.rs",
   ]
 
-  non_rust_deps = [ "//zircon/system/ulib/fs-management" ]
+  non_rust_deps = [ "//src/lib/storage/fs_management" ]
 }
