@@ -31,8 +31,8 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 
 {{- range .Methods }}
   {{- if .HasRequest }}
-  {{ EnsureNamespace .Request.CodingTable }}
-  extern "C" const fidl_type_t {{ .Request.CodingTable.Name }};
+  {{ EnsureNamespace .Request.HlCodingTable }}
+  extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
   {{- end }}
 {{- end }}
 
@@ -57,7 +57,7 @@ class {{ .RequestEncoder.Name }} {
     {{ end -}}
     {{- end }}
 
-    fidl_trace(DidHLCPPEncode, &{{ .Request.CodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &{{ .Request.HlCodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -68,8 +68,8 @@ class {{ .RequestEncoder.Name }} {
 
 {{- range .Methods }}
   {{- if .HasResponse }}
-  {{ EnsureNamespace .Response.CodingTable }}
-  extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
+  {{ EnsureNamespace .Response.HlCodingTable }}
+  extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
   {{- end }}
 {{- end }}
 
@@ -94,7 +94,7 @@ class {{ .ResponseEncoder.Name }} {
     {{ end -}}
     {{- end }}
 
-    fidl_trace(DidHLCPPEncode, &{{ .Response.CodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &{{ .Response.HlCodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   {{- end }}

@@ -223,12 +223,12 @@ class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
 
 {{- range .Methods }}
 {{ if .HasRequest }}
-{{ EnsureNamespace .Request.CodingTable }}
-extern "C" const fidl_type_t {{ .Request.CodingTable.Name }};
+{{ EnsureNamespace .Request.HlCodingTable }}
+extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
 {{- end }}
 {{- if .HasResponse }}
-{{ EnsureNamespace .Response.CodingTable }}
-extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
+{{ EnsureNamespace .Response.HlCodingTable }}
+extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
 {{- end }}
 {{- end }}
 
@@ -249,7 +249,7 @@ const fidl_type_t* {{ .RequestDecoder }}::GetType(uint64_t ordinal, bool* out_ne
         {{- else }}
       *out_needs_response = false;
         {{- end }}
-      return &{{ .Request.CodingTable }};
+      return &{{ .Request.HlCodingTable }};
       {{- end }}
     {{- end }}
     default:
@@ -263,7 +263,7 @@ const fidl_type_t* {{ .ResponseDecoder.Name }}::GetType(uint64_t ordinal) {
     {{- range .Methods }}
       {{- if .HasResponse }}
     case {{ .OrdinalName }}:
-      return &{{ .Response.CodingTable }};
+      return &{{ .Response.HlCodingTable }};
       {{- end }}
     {{- end }}
     default:
@@ -295,9 +295,9 @@ zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&{{ .Response.CodingTable }}, &error_msg);
+      status = message.Decode(&{{ .Response.HlCodingTable }}, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &{{ .Response.CodingTable }}, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &{{ .Response.HlCodingTable }}, error_msg);
         break;
       }
         {{- if .ResponseArgs }}
@@ -343,14 +343,14 @@ namespace {
       {{- end -}}
         );
         return ZX_OK;
-      }, &{{ .Response.CodingTable }});
+      }, &{{ .Response.HlCodingTable }});
 }
 
 }  // namespace
 {{- end }}
 void {{ $.Proxy.Name }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::Encoder _encoder({{ .OrdinalName }});
-  controller_->Send(&{{ .Request.CodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
+  controller_->Send(&{{ .Request.HlCodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -383,7 +383,7 @@ class {{ .ResponderType }} final {
 
   void operator()({{ template "Params" .ResponseArgs }}) {
     ::fidl::Encoder _encoder({{ .OrdinalName }});
-    response_.Send(&{{ .Response.CodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
+    response_.Send(&{{ .Response.HlCodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -455,7 +455,7 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
     {{- if .HasResponse }}
 void {{ $.Stub.Name }}::{{ template "EventMethodSignature" . }} {
   ::fidl::Encoder _encoder({{ .OrdinalName }});
-  sender_()->Send(&{{ .Response.CodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
+  sender_()->Send(&{{ .Response.HlCodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -478,7 +478,7 @@ zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }
     {{- if .HasResponse }}
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .Request.CodingTable }}, &{{ .Response.CodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
+  zx_status_t status_ = proxy_.Call(&{{ .Request.HlCodingTable }}, &{{ .Response.HlCodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -493,7 +493,7 @@ zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .Request.CodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
+  return proxy_.Send(&{{ .Request.HlCodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}

@@ -34,6 +34,7 @@ go_library("cpp_test") {
     "//tools/fidl/lib/fidlgentest",
   ]
   sources = [
+    "ir_test.go",
     "names_test.go",
     "namespaced_enum_test.go",
     "protocol_test.go",

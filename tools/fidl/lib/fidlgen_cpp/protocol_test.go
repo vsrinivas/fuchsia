@@ -5,6 +5,7 @@
 package fidlgen_cpp
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -12,33 +13,38 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
-var exampleName = NameVariants{
-	Natural: MakeName("fidl::test::Protocol"),
-	Wire:    MakeName("fidl_test::Protocol"),
+func onlyProtocol(t *testing.T, root Root) Protocol {
+	var protocols []Protocol
+	for _, decl := range root.Decls {
+		if p, ok := decl.(Protocol); ok {
+			protocols = append(protocols, p)
+		}
+	}
+	if len(protocols) != 1 {
+		t.Fatal("Must have a single protocol defined")
+	}
+	return protocols[0]
 }
-var exampleProtocol = newProtocol(protocolInner{
-	NameVariants: exampleName,
-	Methods: []Method{
-		newMethod(methodInner{
-			Name:         "OneWay",
-			HasRequest:   true,
-			HasResponse:  false,
-			protocolName: exampleName,
-		}),
-		newMethod(methodInner{
-			Name:         "TwoWay",
-			HasRequest:   true,
-			HasResponse:  true,
-			protocolName: exampleName,
-		}),
-		newMethod(methodInner{
-			Name:         "Event",
-			HasRequest:   false,
-			HasResponse:  true,
-			protocolName: exampleName,
-		}),
-	},
-})
+
+var exampleProtocol = func() func(t *testing.T) Protocol {
+	var once sync.Once
+	var p Protocol
+	return func(t *testing.T) Protocol {
+		once.Do(func() {
+			root := compile(fidlgentest.EndToEndTest{T: t}.Single(`
+library example;
+
+protocol P {
+	OneWay();
+	TwoWay() -> ();
+	-> Event();
+};
+`), HeaderOptions{})
+			p = onlyProtocol(t, root)
+		})
+		return p
+	}
+}()
 
 func toNames(methods []*Method) []string {
 	var s []string
@@ -49,19 +55,19 @@ func toNames(methods []*Method) []string {
 }
 
 func TestMatchOneWayMethods(t *testing.T) {
-	expectEqual(t, toNames(exampleProtocol.OneWayMethods), []string{"OneWay"})
+	expectEqual(t, toNames(exampleProtocol(t).OneWayMethods), []string{"OneWay"})
 }
 
 func TestMatchTwoWayMethods(t *testing.T) {
-	expectEqual(t, toNames(exampleProtocol.TwoWayMethods), []string{"TwoWay"})
+	expectEqual(t, toNames(exampleProtocol(t).TwoWayMethods), []string{"TwoWay"})
 }
 
 func TestMatchClientMethods(t *testing.T) {
-	expectEqual(t, toNames(exampleProtocol.ClientMethods), []string{"OneWay", "TwoWay"})
+	expectEqual(t, toNames(exampleProtocol(t).ClientMethods), []string{"OneWay", "TwoWay"})
 }
 
 func TestMatchEvents(t *testing.T) {
-	expectEqual(t, toNames(exampleProtocol.Events), []string{"Event"})
+	expectEqual(t, toNames(exampleProtocol(t).Events), []string{"Event"})
 }
 
 //
@@ -226,6 +232,10 @@ func TestWireBindingsAllocation(t *testing.T) {
 	}
 }
 
+//
+// Test protocol associated declaration names
+//
+
 func TestHlMessagingProtocolAssociatedNames(t *testing.T) {
 	fidl := `
 library fuchsia.foobar;
@@ -247,4 +257,26 @@ protocol P {};
 	assertEqual(t, messaging.RequestDecoder.String(), "::fuchsia::foobar::P_RequestDecoder")
 	assertEqual(t, messaging.ResponseEncoder.String(), "::fuchsia::foobar::P_ResponseEncoder")
 	assertEqual(t, messaging.ResponseDecoder.String(), "::fuchsia::foobar::P_ResponseDecoder")
+}
+
+func TestWireMessagingProtocolAssociatedNames(t *testing.T) {
+	fidl := `
+library fuchsia.foobar;
+
+// Regular protocol
+protocol P {};
+`
+	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl), HeaderOptions{})
+
+	messaging := root.Decls[0].(Protocol).wireTypeNames
+	assertEqual(t, messaging.WireProtocolMarker.String(), "::fuchsia_foobar::P")
+	assertEqual(t, messaging.WireSyncClient.String(), "::fidl::WireSyncClient<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireClient.String(), "::fidl::WireClient<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireSyncEventHandler.String(), "::fidl::WireSyncEventHandler<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireAsyncEventHandler.String(), "::fidl::WireAsyncEventHandler<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireInterface.String(), "::fidl::WireInterface<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireRawChannelInterface.String(), "::fidl::WireRawChannelInterface<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireEventSender.String(), "::fidl::WireEventSender<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireWeakEventSender.String(), "::fidl::internal::WireWeakEventSender<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireClientImpl.String(), "::fidl::internal::WireClientImpl<::fuchsia_foobar::P>")
 }

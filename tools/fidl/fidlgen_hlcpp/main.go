@@ -29,7 +29,7 @@ var generatorsUnused = flag.String("generators", "",
 var clangFormatPath = flag.String("clang-format-path", "",
 	"path to the clang-format tool.")
 
-// These options support only generating the domain objects and using them in LLCPP.
+// These options support only generating the domain objects and using them in the unified bindings.
 var splitGenerationDomainObjects = flag.Bool("experimental-split-generation-domain-objects", false,
 	"[optional] only generate the domain object definitions for the data types in this library.")
 

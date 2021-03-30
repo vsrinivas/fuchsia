@@ -300,6 +300,7 @@ func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) Na
 		return NameVariants{
 			Natural: naturalNamespace(ci.Library).Member(name),
 			Wire:    wireNamespace(ci.Library).Member(name),
+			Unified: unifiedNamespace(ci.Library).Member(name),
 		}
 	case fidlgen.ProtocolDeclType, fidlgen.ServiceDeclType:
 		// TODO(yifeit): Protocols and services should not have DeclName.
@@ -307,6 +308,11 @@ func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) Na
 		return NameVariants{
 			Natural: naturalNamespace(ci.Library).Member(name),
 			Wire:    unifiedNamespace(ci.Library).Member(name),
+			// Intentionally using the natural namespace, since we would like the unified bindings
+			// to transparently accept natural types, which may certainly contain protocol endpoints.
+			// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and underscore namespace when
+			// corresponding endpoint types can easily convert into each other.
+			Unified: naturalNamespace(ci.Library).Member(name),
 		}
 	}
 	panic("Unknown decl type: " + string(declType))
@@ -326,8 +332,15 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	switch val.Kind {
 	case fidlgen.ArrayType:
 		t := c.compileType(*val.ElementType)
-		r.NameVariants.Natural = MakeName("std::array").ArrayTemplate(t.Natural, *val.ElementCount)
-		r.NameVariants.Wire = MakeName("fidl::Array").ArrayTemplate(t.Wire, *val.ElementCount)
+		// Because the unified bindings alias types from the natural domain objects,
+		// the name _transformation_ would be identical between natural and unified,
+		// here and below. We reserve the flexibility to specify different names
+		// in the future.
+		r.NameVariants = NameVariants{
+			Natural: MakeName("std::array").ArrayTemplate(t.Natural, *val.ElementCount),
+			Unified: MakeName("std::array").ArrayTemplate(t.Unified, *val.ElementCount),
+			Wire:    MakeName("fidl::Array").ArrayTemplate(t.Wire, *val.ElementCount),
+		}
 		r.WirePointer = t.WirePointer
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
@@ -339,8 +352,10 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		t := c.compileType(*val.ElementType)
 		if val.Nullable {
 			r.NameVariants.Natural = MakeName("fidl::VectorPtr").Template(t.Natural)
+			r.NameVariants.Unified = MakeName("fidl::VectorPtr").Template(t.Unified)
 		} else {
 			r.NameVariants.Natural = MakeName("std::vector").Template(t.Natural)
+			r.NameVariants.Unified = MakeName("std::vector").Template(t.Unified)
 		}
 		r.NameVariants.Wire = MakeName("fidl::VectorView").Template(t.Wire)
 		r.WireFamily = FamilyKinds.Vector
@@ -350,13 +365,14 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 	case fidlgen.StringType:
-		r.Wire = MakeName("fidl::StringView")
-		r.WireFamily = FamilyKinds.String
 		if val.Nullable {
 			r.Natural = MakeName("fidl::StringPtr")
 		} else {
 			r.Natural = MakeName("std::string")
 		}
+		r.Unified = r.Natural
+		r.Wire = MakeName("fidl::StringView")
+		r.WireFamily = FamilyKinds.String
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.String
 	case fidlgen.HandleType:
@@ -370,6 +386,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		p := c.compileNameVariants(val.RequestSubtype)
 		r.NameVariants = NameVariants{
 			Natural: MakeName("fidl::InterfaceRequest").Template(p.Natural),
+			Unified: MakeName("fidl::InterfaceRequest").Template(p.Unified),
 			Wire:    MakeName("fidl::ServerEnd").Template(p.Wire),
 		}
 		r.WireFamily = FamilyKinds.Reference
@@ -388,8 +405,11 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		}
 		declType := declInfo.Type
 		if declType == fidlgen.ProtocolDeclType {
-			r.NameVariants.Natural = MakeName("fidl::InterfaceHandle").Template(name.Natural)
-			r.NameVariants.Wire = MakeName("fidl::ClientEnd").Template(name.Wire)
+			r.NameVariants = NameVariants{
+				Natural: MakeName("fidl::InterfaceHandle").Template(name.Natural),
+				Unified: MakeName("fidl::InterfaceHandle").Template(name.Unified),
+				Wire:    MakeName("fidl::ClientEnd").Template(name.Wire),
+			}
 			r.WireFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol
@@ -428,6 +448,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 
 			if val.Nullable {
 				r.NameVariants.Natural = MakeName("std::unique_ptr").Template(name.Natural)
+				r.NameVariants.Unified = MakeName("std::unique_ptr").Template(name.Unified)
 				if declType == fidlgen.UnionDeclType {
 					r.NameVariants.Wire = name.Wire
 				} else {

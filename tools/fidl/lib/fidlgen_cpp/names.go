@@ -6,8 +6,6 @@ package fidlgen_cpp
 
 import (
 	"fmt"
-	"os"
-	"runtime/debug"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -17,21 +15,40 @@ var zxNs Namespace = NewNamespace("zx")
 var fidlNs Namespace = NewNamespace("fidl")
 var internalNs Namespace = fidlNs.Append("internal")
 
+// variant controls how we refer to domain object declarations.
 type variant string
 
 const (
 	noVariant      variant = ""
 	naturalVariant variant = "natural"
+	unifiedVariant variant = "unified"
 	wireVariant    variant = "wire"
 )
 
 var currentVariant = noVariant
 
+// UseNatural sets the template engine to default to the "natural" domain object
+// namespace, when printing NameVariants.
+//
+// Example of Natural type name: "fuchsia::library::MyType".
 func UseNatural() string {
 	currentVariant = naturalVariant
 	return ""
 }
 
+// UseUnified sets the template engine to default to the "unified" domain object
+// namespace, when printing NameVariants.
+//
+// Example of Unified type name: "fuchsia_library::MyType".
+func UseUnified() string {
+	currentVariant = unifiedVariant
+	return ""
+}
+
+// UseWire sets the template engine to default to the "wire" domain object
+// namespace, when printing NameVariants.
+//
+// Example of Wire type name: "fuchsia_library::wire::MyType".
 func UseWire() string {
 	currentVariant = wireVariant
 	return ""
@@ -85,15 +102,43 @@ func (ns Namespace) Member(name string) Name {
 	return Name{name: stringNamePart(name), ns: ns}
 }
 
+// NameVariants is the name of a type or a template used in the various C++ bindings.
+//
+// Names are more general than FIDL declarations. All declarations have a corresponding
+// type name, but some types are not declared in the generated code (e.g. zx::vmo),
+// or are non-nominal (e.g. std::vector<FooBarDecl>).
 type NameVariants struct {
 	Natural Name
-	Wire    Name
+
+	// Unified is like Natural, except it consists of type aliases, declared in
+	// the unified bindings, to natural types. For example, the Natural name
+	//
+	//     fuchsia::my::lib::FooStruct
+	//
+	// would be aliased to the Unified name
+	//
+	//     fuchsia_my_lib::FooStruct.
+	//
+	// Similarly, if Natural is
+	//
+	//     std::array<std::unique_ptr<fuchsia::my::lib::FooStruct>, 5>
+	//
+	// then Unified would use the alias in the template argument:
+	//
+	//     std::array<std::unique_ptr<fuchsia_my_lib::FooStruct>, 5>.
+	//
+	// In case of client and server protocol endpoints, there is no alias,
+	// and Unified is the same as Natural.
+	Unified Name
+
+	Wire Name
 }
 
 // CommonNameVariants returns a NameVariants with the same Name for both Wire and Natural variants.
 func CommonNameVariants(decl Name) NameVariants {
 	return NameVariants{
 		Natural: decl,
+		Unified: decl,
 		Wire:    decl,
 	}
 }
@@ -101,11 +146,12 @@ func CommonNameVariants(decl Name) NameVariants {
 func (dn NameVariants) String() string {
 	switch currentVariant {
 	case noVariant:
-		fmt.Printf("Called NameVariants.String() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
-		debug.PrintStack()
-		os.Exit(1)
+		fidlgen.TemplateFatalf("Called NameVariants.String() on %s/%s when currentVariant isn't set.\n",
+			dn.Natural, dn.Wire)
 	case naturalVariant:
 		return dn.Natural.String()
+	case unifiedVariant:
+		return dn.Unified.String()
 	case wireVariant:
 		return dn.Wire.String()
 	}
@@ -115,11 +161,12 @@ func (dn NameVariants) String() string {
 func (dn NameVariants) Name() string {
 	switch currentVariant {
 	case noVariant:
-		fmt.Printf("Called NameVariants.Name() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
-		debug.PrintStack()
-		os.Exit(1)
+		fidlgen.TemplateFatalf("Called NameVariants.Name() on %s/%s when currentVariant isn't set.\n",
+			dn.Natural, dn.Wire)
 	case naturalVariant:
 		return dn.Natural.Name()
+	case unifiedVariant:
+		return dn.Unified.Name()
 	case wireVariant:
 		return dn.Wire.Name()
 	}
@@ -129,11 +176,12 @@ func (dn NameVariants) Name() string {
 func (dn NameVariants) Namespace() Namespace {
 	switch currentVariant {
 	case noVariant:
-		fmt.Printf("Called NameVariants.Namespace() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
-		debug.PrintStack()
-		os.Exit(1)
+		fidlgen.TemplateFatalf("Called NameVariants.Namespace() on %s/%s when currentVariant isn't set.\n",
+			dn.Natural, dn.Wire)
 	case naturalVariant:
 		return dn.Natural.Namespace()
+	case unifiedVariant:
+		return dn.Unified.Namespace()
 	case wireVariant:
 		return dn.Wire.Namespace()
 	}
@@ -144,6 +192,7 @@ func (dn NameVariants) Namespace() Namespace {
 func (dn NameVariants) AppendName(suffix string) NameVariants {
 	return NameVariants{
 		Natural: dn.Natural.AppendName(suffix),
+		Unified: dn.Unified.AppendName(suffix),
 		Wire:    dn.Wire.AppendName(suffix),
 	}
 }
@@ -152,6 +201,7 @@ func (dn NameVariants) AppendName(suffix string) NameVariants {
 func (dn NameVariants) PrependName(prefix string) NameVariants {
 	return NameVariants{
 		Natural: dn.Natural.PrependName(prefix),
+		Unified: dn.Unified.PrependName(prefix),
 		Wire:    dn.Wire.PrependName(prefix),
 	}
 }
@@ -160,6 +210,7 @@ func (dn NameVariants) PrependName(prefix string) NameVariants {
 func (dn NameVariants) AppendNamespace(c string) NameVariants {
 	return NameVariants{
 		Natural: dn.Natural.AppendNamespace(c),
+		Unified: dn.Unified.AppendNamespace(c),
 		Wire:    dn.Wire.AppendNamespace(c),
 	}
 }

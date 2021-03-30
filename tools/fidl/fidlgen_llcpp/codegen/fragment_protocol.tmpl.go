@@ -40,10 +40,10 @@ class {{ .Name }};
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
-{{ EnsureNamespace .Request.CodingTable }}
-extern "C" const fidl_type_t {{ .Request.CodingTable.Name }};
-{{ EnsureNamespace .Response.CodingTable }}
-extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
+{{ EnsureNamespace .Request.WireCodingTable }}
+extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
+{{ EnsureNamespace .Response.WireCodingTable }}
+extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
   {{- end }}
 {{ "" }}
 {{ EnsureNamespace . }}
@@ -81,7 +81,7 @@ class {{ .Name }} final {
 
     static constexpr const fidl_type_t* Type =
     {{- if .ResponseArgs }}
-      &{{ .Response.CodingTable }};
+      &{{ .Response.WireCodingTable }};
     {{- else }}
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
@@ -240,7 +240,7 @@ class {{ .Name }} final {
 
     static constexpr const fidl_type_t* Type =
     {{- if .RequestArgs }}
-      &{{ .Request.CodingTable }};
+      &{{ .Request.WireCodingTable }};
     {{- else }}
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
@@ -831,10 +831,10 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{ EnsureNamespace .OrdinalName }}
 [[maybe_unused]]
 constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal }}lu;
-{{ EnsureNamespace .Request.CodingTable }}
-extern "C" const fidl_type_t {{ .Request.CodingTable.Name }};
-{{ EnsureNamespace .Response.CodingTable }}
-extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
+{{ EnsureNamespace .Request.WireCodingTable }}
+extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
+{{ EnsureNamespace .Response.WireCodingTable }}
+extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- end }}
 
 {{- /* Client-calling functions do not apply to events. */}}
