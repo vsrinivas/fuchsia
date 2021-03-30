@@ -8,6 +8,7 @@ ALLOWED_CTS_DEPS = [
   "//sdk/cts/tests/tools/package_manager:pm_test_package_gather_deps",
   "//src/sys/pkg/bin/pm:host",
   "//zircon/public/lib/zxtest:zxtest",
+  "//zircon/system/ulib/fbl:fbl",
 ]
 
 # All targets in these directories and their subdirectories are approved for use in CTS.

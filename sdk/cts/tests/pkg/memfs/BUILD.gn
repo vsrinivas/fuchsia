@@ -8,6 +8,7 @@ cts_source_set("memfs-source-set") {
   testonly = true
   deps = [
     "//sdk/lib/fdio",
+    "//zircon/system/ulib/fbl:fbl",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
