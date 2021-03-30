@@ -704,6 +704,72 @@ pub fn match_moniker_against_component_selectors(
         .collect::<Result<Vec<Arc<ComponentSelector>>, Error>>()
 }
 
+/// Format a |Selector| as a string.
+///
+/// Returns the formatted |Selector|, or an error if the |Selector| is invalid.
+///
+/// Note that the output will always include both a component and tree selector. If your input is
+/// simply "moniker" you will likely see "moniker:root" as many clients implicitly append "root" if
+/// it is not present (e.g. iquery).
+pub fn selector_to_string(selector: Selector) -> Result<String, Error> {
+    validate_selector(&selector)?;
+
+    let component_selector =
+        selector.component_selector.ok_or_else(|| format_err!("component selector missing"))?;
+    let (node_path, maybe_property_selector) = match selector
+        .tree_selector
+        .ok_or_else(|| format_err!("tree selector missing"))?
+    {
+        TreeSelector::SubtreeSelector(SubtreeSelector { node_path, .. }) => (node_path, None),
+        TreeSelector::PropertySelector(PropertySelector {
+            node_path, target_properties, ..
+        }) => (node_path, Some(target_properties)),
+        _ => return Err(format_err!("unknown tree selector type")),
+    };
+
+    let mut segments = vec![];
+
+    let escape_special_chars = |val: &str| {
+        let mut ret = String::with_capacity(val.len());
+        for c in val.chars() {
+            if is_special_character(c) {
+                ret.push('\\');
+            }
+            ret.push(c);
+        }
+        ret
+    };
+
+    let process_string_selector_vector = |v: Vec<StringSelector>| -> Result<String, Error> {
+        Ok(v.into_iter()
+            .map(|segment| match segment {
+                StringSelector::StringPattern(s) => Ok(s),
+                StringSelector::ExactMatch(s) => Ok(escape_special_chars(&s)),
+                _ => {
+                    return Err(format_err!("Unknown string selector type"));
+                }
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("/"))
+    };
+
+    // Create the component moniker
+    segments.push(process_string_selector_vector(
+        component_selector
+            .moniker_segments
+            .ok_or_else(|| format_err!("component selector missing moniker"))?,
+    )?);
+
+    // Create the node selector
+    segments.push(process_string_selector_vector(node_path)?);
+
+    if let Some(property_selector) = maybe_property_selector {
+        segments.push(process_string_selector_vector(vec![property_selector])?);
+    }
+
+    Ok(segments.join(":"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1306,5 +1372,61 @@ mod tests {
                 .expect("test moniker is parsable."),
             vec!["a", "realm1", "b", "account_handler.cmx"]
         );
+    }
+
+    #[test]
+    fn selector_to_string_test() {
+        // Check that parsing and formatting these selectors results in output identical to the
+        // original selector.
+        let cases = vec![
+            r#"moniker:root"#,
+            r#"my/component:root"#,
+            r#"my/component:root:a"#,
+            r#"a/b/c\*ff:root:a"#,
+            r#"a/child*:root:a"#,
+            r#"a/child:root/a/b/c"#,
+            r#"a/child:root/a/b/c:d"#,
+            r#"a/child:root/a/b/c*/d"#,
+            r#"a/child:root/a/b/c\*/d"#,
+            r#"a/child:root/a/b/c:d*"#,
+            r#"a/child:root/a/b/c:*d*"#,
+            r#"a/child:root/a/b/c:\*d*"#,
+            r#"a/child:root/a/b/c:\*d\:\*\\"#,
+        ];
+
+        for input in cases {
+            let selector = parse_selector(input)
+                .unwrap_or_else(|e| panic!("Failed to parse '{}': {}", input, e));
+            let output = selector_to_string(selector).unwrap_or_else(|e| {
+                panic!("Failed to format parsed selector for '{}': {}", input, e)
+            });
+            assert_eq!(output, input);
+        }
+    }
+
+    #[test]
+    fn exact_match_selector_to_string() {
+        let selector = Selector {
+            component_selector: Some(ComponentSelector {
+                moniker_segments: Some(vec![StringSelector::ExactMatch("a*:".to_string())]),
+                ..ComponentSelector::EMPTY
+            }),
+            tree_selector: Some(TreeSelector::SubtreeSelector(SubtreeSelector {
+                node_path: vec![StringSelector::ExactMatch("a*:".to_string())],
+            })),
+            ..Selector::EMPTY
+        };
+
+        // Check we generate the expected string with escaping.
+        let selector_string = selector_to_string(selector).unwrap();
+        assert_eq!(r#"a\*\::a\*\:"#, selector_string);
+
+        // Parse the resultant selector, and check that it matches a moniker it is supposed to.
+        let parsed = parse_selector(&selector_string).unwrap();
+        assert!(match_moniker_against_component_selector(
+            &["a*:"],
+            parsed.component_selector.as_ref().unwrap()
+        )
+        .unwrap());
     }
 }
