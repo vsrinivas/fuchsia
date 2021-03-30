@@ -30,8 +30,12 @@ if (is_host) {
   _testdata_path = "$target_gen_dir/testdata"
 
   host_test_data("testdata") {
-    sources = [ "//tools/build/ninjago/test_data" ]
-    outputs = [ _testdata_path ]
+    sources = [
+      "//tools/build/ninjago/test_data/compdb.json.gz",
+      "//tools/build/ninjago/test_data/graph.dot.gz",
+      "//tools/build/ninjago/test_data/ninja_log.gz",
+    ]
+    outputs = [ "${_testdata_path}/{{source_file_part}}" ]
   }
 
   go_test("buildstats_tests") {

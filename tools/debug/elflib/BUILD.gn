@@ -17,19 +17,29 @@ go_library("elflib") {
   ]
 }
 
-_testdata_path = "$target_gen_dir/testdata"
+if (is_host) {
+  _testdata_path = "$target_gen_dir/testdata"
 
-go_test("elflib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/elflib" ]
-  args = [
-    "--test_data_dir",
-    rebase_path(_testdata_path, root_build_dir),
-  ]
-  deps = [ ":elflib" ]
-  non_go_deps = [ ":testdata" ]
-}
+  go_test("elflib_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/elflib" ]
+    args = [
+      "--test_data_dir",
+      rebase_path(_testdata_path, root_build_dir),
+    ]
+    deps = [ ":elflib" ]
+    non_go_deps = [ ":testdata" ]
+  }
 
-host_test_data("testdata") {
-  sources = [ "testdata" ]
-  outputs = [ _testdata_path ]
+  host_test_data("testdata") {
+    sources = [
+      "testdata/cycle.elf",
+      "testdata/libc.elf.section-only",
+      "testdata/libc.elf.stripped",
+      "testdata/libc.yaml",
+      "testdata/libc.yaml.section-only",
+      "testdata/pe-x64.efi",
+      "testdata/pe-x64.yaml",
+    ]
+    outputs = [ "${_testdata_path}/{{source_file_part}}" ]
+  }
 }

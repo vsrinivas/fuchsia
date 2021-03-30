@@ -55,7 +55,14 @@ if (is_host) {
   }
 
   host_test_data("testdata") {
-    sources = [ "testdata" ]
-    outputs = [ _testdata_path ]
+    sources = [
+      "testdata/lucictx.json",
+      "testdata/serial_log.txt",
+      "testdata/summary.json",
+      "testdata/summary2.json",
+      "testdata/syslog.txt",
+      "testdata/test_output.txt",
+    ]
+    outputs = [ "${_testdata_path}/{{source_file_part}}" ]
   }
 }
