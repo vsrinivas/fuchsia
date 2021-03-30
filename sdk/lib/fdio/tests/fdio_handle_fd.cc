@@ -113,9 +113,11 @@ void ppoll_test_handler(struct timespec* timeout) {
 TEST(HandleFDTest, PPollNull) { ppoll_test_handler(NULL); }
 
 TEST(HandleFDTest, Overflow) {
-  unsigned int nanoseconds_in_seconds = 1000000000;
-  struct timespec timeout_ts = {UINT64_MAX / nanoseconds_in_seconds,
-                                UINT64_MAX % nanoseconds_in_seconds};
+  constexpr unsigned int nanoseconds_in_seconds = 1000000000;
+  struct timespec timeout_ts = {
+      .tv_sec = UINT64_MAX / nanoseconds_in_seconds,
+      .tv_nsec = UINT64_MAX % nanoseconds_in_seconds,
+  };
   ppoll_test_handler(&timeout_ts);
 }
 

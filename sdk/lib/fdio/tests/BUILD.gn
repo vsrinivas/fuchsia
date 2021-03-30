@@ -62,16 +62,16 @@ test("fdio") {
     "fdio_fd.cc",
     "fdio_fdio.cc",
     "fdio_get_vmo.cc",
-    "fdio_handle_fd.c",
+    "fdio_handle_fd.cc",
     "fdio_inotify.cc",
     "fdio_io.cc",
     "fdio_memfd.cc",
     "fdio_null_namespace.cc",
-    "fdio_open_max.c",
-    "fdio_path_canonicalize.c",
+    "fdio_open_max.cc",
+    "fdio_path_canonicalize.cc",
     "fdio_poll.cc",
     "fdio_pty.cc",
-    "fdio_root.c",
+    "fdio_root.cc",
     "fdio_select.cc",
     "fdio_socket.cc",
     "fdio_socket_cleanup.cc",
@@ -141,7 +141,7 @@ executable("null-namespace-child") {
   visibility = [ ":*" ]
 
   testonly = true
-  sources = [ "fdio_null_namespace_child.c" ]
+  sources = [ "fdio_null_namespace_child.cc" ]
   deps = [
     "//sdk/lib/fdio",
     "//src/zircon/lib/zircon",
