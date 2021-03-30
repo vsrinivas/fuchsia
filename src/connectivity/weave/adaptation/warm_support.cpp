@@ -28,6 +28,8 @@ using namespace ::nl;
 using namespace ::nl::Weave;
 using namespace ::nl::Weave::Warm;
 
+using fuchsia::net::stack::Error;
+
 constexpr char kTunInterfaceName[] = "weav-tun0";
 constexpr uint8_t kSubnetPrefixLen = 48;
 
@@ -41,6 +43,11 @@ bool GetInterfaceName(InterfaceType interface_type, std::string *interface_name)
     case kInterfaceTypeTunnel:
       *interface_name = kTunInterfaceName;
       return true;
+    case kInterfaceTypeWiFi: {
+      auto wifi_iface_name = ConnectivityMgrImpl().GetWiFiInterfaceName();
+      *interface_name = wifi_iface_name.value_or("");
+      return wifi_iface_name.has_value();
+    }
     default:
       return false;
   }
