@@ -18,15 +18,26 @@ use {
 
 const ALLOCATOR_OBJECT_ID: u64 = 1;
 
-pub struct FakeAllocator(Mutex<u64>);
+#[derive(Debug)]
+struct Inner {
+    next_offset: u64,
+    alloc_bytes: usize,
+    dealloc_bytes: usize,
+}
+
+pub struct FakeAllocator(Mutex<Inner>);
 
 impl FakeAllocator {
     pub fn new() -> Self {
-        FakeAllocator(Mutex::new(0))
+        FakeAllocator(Mutex::new(Inner { next_offset: 0, alloc_bytes: 0, dealloc_bytes: 0 }))
     }
 
-    pub fn allocated(&self) -> u64 {
-        *self.0.lock().unwrap()
+    pub fn allocated(&self) -> usize {
+        self.0.lock().unwrap().alloc_bytes
+    }
+
+    pub fn deallocated(&self) -> usize {
+        self.0.lock().unwrap().dealloc_bytes
     }
 }
 
@@ -41,21 +52,28 @@ impl Allocator for FakeAllocator {
         _transaction: &mut Transaction,
         len: u64,
     ) -> Result<Range<u64>, Error> {
-        let mut last_end = self.0.lock().unwrap();
-        let result = *last_end..*last_end + len;
-        *last_end = result.end;
+        let mut inner = self.0.lock().unwrap();
+        let result = inner.next_offset..inner.next_offset + len;
+        inner.next_offset = result.end;
+        inner.alloc_bytes += len as usize;
         Ok(result)
     }
 
-    async fn deallocate(&self, _transaction: &mut Transaction, _device_range: Range<u64>) {}
+    async fn deallocate(&self, _transaction: &mut Transaction, device_range: Range<u64>) {
+        let mut inner = self.0.lock().unwrap();
+        assert!(device_range.end <= inner.next_offset);
+        let len = device_range.end - device_range.start;
+        inner.dealloc_bytes += len as usize;
+        assert!(inner.dealloc_bytes <= inner.alloc_bytes);
+    }
 
     async fn flush(&self, _force: bool) -> Result<(), Error> {
         Ok(())
     }
 
     async fn reserve(&self, _transaction: &mut Transaction, device_range: Range<u64>) {
-        let mut last_end = self.0.lock().unwrap();
-        *last_end = std::cmp::max(device_range.end, *last_end);
+        let mut inner = self.0.lock().unwrap();
+        inner.next_offset = std::cmp::max(device_range.end, inner.next_offset);
     }
 
     fn as_apply_mutations(self: Arc<Self>) -> Arc<dyn ApplyMutations> {

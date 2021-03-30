@@ -465,8 +465,11 @@ impl StoreObjectHandle {
                 },
             );
         }
-        self.delete_old_extents(transaction, &ExtentKey::new(self.attribute_id, aligned.clone()))
-            .await?;
+        self.deallocate_old_extents(
+            transaction,
+            &ExtentKey::new(self.attribute_id, aligned.clone()),
+        )
+        .await?;
         let allocator = self.store.allocator();
         while buf_offset < buf.len() {
             let device_range = allocator.allocate(transaction, aligned.end - aligned.start).await?;
@@ -574,7 +577,7 @@ impl StoreObjectHandle {
         Ok(())
     }
 
-    async fn delete_old_extents(
+    async fn deallocate_old_extents(
         &self,
         transaction: &mut Transaction,
         key: &ExtentKey,
@@ -763,19 +766,31 @@ impl ObjectHandle for StoreObjectHandle {
 
     async fn truncate(&self, length: u64) -> Result<(), Error> {
         let mut transaction = Transaction::new(); // TODO(csuter): transaction too big?
-        let old_size = *self.size.lock().unwrap();
-        if length < old_size {
+        let old_length = *self.size.lock().unwrap();
+        if length == old_length {
+            return Ok(());
+        }
+        if length < old_length {
             let deleted_range =
-                round_up(length, self.block_size)..round_up(old_size, self.block_size);
+                round_up(length, self.block_size)..round_up(old_length, self.block_size);
             transaction.add(
                 self.store.store_object_id,
                 Mutation::ReplaceExtent {
                     item: ObjectItem {
-                        key: ObjectKey::extent(self.object_id, self.attribute_id, deleted_range),
+                        key: ObjectKey::extent(
+                            self.object_id,
+                            self.attribute_id,
+                            deleted_range.clone(),
+                        ),
                         value: ObjectValue::deleted_extent(),
                     },
                 },
             );
+            self.deallocate_old_extents(
+                &mut transaction,
+                &ExtentKey::new(self.attribute_id, deleted_range),
+            )
+            .await?;
             let to_zero = round_up(length, self.block_size) - length;
             if to_zero > 0 {
                 assert!(to_zero < self.block_size);
@@ -1098,7 +1113,7 @@ mod tests {
         fs.commit_transaction(transaction).await;
         // Check that it didn't reallocate the space for the existing extent
         let allocated_after = allocator.allocated();
-        assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as u64);
+        assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as usize);
 
         // Reopen the object in overwrite mode.
         let object = object
@@ -1182,6 +1197,24 @@ mod tests {
         buf.as_mut_slice().fill(67);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         assert_eq!(buf.as_slice(), [123; 5 * TEST_DEVICE_BLOCK_SIZE as usize]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_truncate_deallocates_old_extents() {
+        let (_fs, allocator, object) = test_filesystem_and_object().await;
+        let mut buf = object.allocate_buffer(5 * TEST_DEVICE_BLOCK_SIZE as usize);
+        buf.as_mut_slice().fill(0xaa);
+        object.write(0, buf.as_ref()).await.expect("write failed");
+
+        let deallocated_before = allocator.deallocated();
+        object.truncate(TEST_DEVICE_BLOCK_SIZE as u64).await.expect("truncate failed");
+        let deallocated_after = allocator.deallocated();
+        assert!(
+            deallocated_before < deallocated_after,
+            "before = {} after = {}",
+            deallocated_before,
+            deallocated_after
+        );
     }
 }
 
