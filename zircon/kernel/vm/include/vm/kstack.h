@@ -39,31 +39,36 @@ class KernelStack {
   // Returns the stack to its pre-Init() state.
   zx_status_t Teardown();
 
-  vaddr_t base() const { return base_; }
-  size_t size() const { return size_; }
-  vaddr_t top() const { return base_ + size_; }
+  vaddr_t base() const { return main_map_.base_; }
+  size_t size() const { return main_map_.size_; }
+  vaddr_t top() const { return main_map_.top(); }
 #if __has_feature(safe_stack)
-  vaddr_t unsafe_base() const { return unsafe_base_; }
-  vaddr_t unsafe_top() const { return unsafe_base_ + size_; }
+  vaddr_t unsafe_base() const { return unsafe_map_.base_; }
+  vaddr_t unsafe_top() const { return unsafe_map_.top(); }
 #endif
 #if __has_feature(shadow_call_stack)
-  vaddr_t shadow_call_base() const { return shadow_call_base_; }
-  vaddr_t shadow_call_top() const { return shadow_call_base_ + size_; }
+  vaddr_t shadow_call_base() const { return shadow_call_map_.base_; }
+  vaddr_t shadow_call_top() const { return shadow_call_map_.top(); }
 #endif
+
+  // Holds the relevant metadata and pointers for an individual mapping
+  struct Mapping {
+    vaddr_t base_ = 0;
+    size_t size_ = 0;
+    fbl::RefPtr<VmAddressRegion> vmar_;
+
+    vaddr_t top() const { return base_ + size_; }
+  };
 
  private:
-  vaddr_t base_ = 0;
-  size_t size_ = 0;
-  fbl::RefPtr<VmAddressRegion> vmar_;
+  Mapping main_map_;
 
 #if __has_feature(safe_stack)
-  vaddr_t unsafe_base_ = 0;
-  fbl::RefPtr<VmAddressRegion> unsafe_vmar_;
+  Mapping unsafe_map_;
 #endif
 
 #if __has_feature(shadow_call_stack)
-  vaddr_t shadow_call_base_ = 0;
-  fbl::RefPtr<VmAddressRegion> shadow_call_vmar_;
+  Mapping shadow_call_map_;
 #endif
 };
 

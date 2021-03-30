@@ -43,12 +43,13 @@ constexpr StackType kUnsafe = {"kernel-unsafe-stack", DEFAULT_STACK_SIZE};
 constexpr StackType kShadowCall = {"kernel-shadow-call-stack", ZX_PAGE_SIZE};
 #endif
 
-}  // namespace
-
 // Allocates and maps a kernel stack with one page of padding before and after the mapping.
-static zx_status_t allocate_vmar(const StackType& type, fbl::RefPtr<VmMapping>* out_kstack_mapping,
-                                 fbl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
+zx_status_t allocate_map(const StackType& type, KernelStack::Mapping* map) {
   LTRACEF("allocating %s\n", type.name);
+
+  // assert that this mapping hasn't already be created
+  DEBUG_ASSERT(map->base_ == 0);
+  DEBUG_ASSERT(map->size_ == 0);
 
   // get a handle to the root vmar
   auto vmar = VmAspace::kernel_aspace()->RootVmar()->as_vm_address_region();
@@ -56,8 +57,7 @@ static zx_status_t allocate_vmar(const StackType& type, fbl::RefPtr<VmMapping>* 
 
   // Create a VMO for our stack
   fbl::RefPtr<VmObjectPaged> stack_vmo;
-  zx_status_t status =
-      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, DEFAULT_STACK_SIZE, &stack_vmo);
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, type.size, &stack_vmo);
   if (status != ZX_OK) {
     TRACEF("error allocating %s for thread\n", type.name);
     return status;
@@ -103,56 +103,53 @@ static zx_status_t allocate_vmar(const StackType& type, fbl::RefPtr<VmMapping>* 
   // Cancel the cleanup handler on the vmar since we're about to save a
   // reference to it.
   vmar_cleanup.cancel();
-  *out_kstack_mapping = ktl::move(kstack_mapping);
-  *out_kstack_vmar = ktl::move(kstack_vmar);
+
+  // save the relevant bits
+  map->vmar_ = ktl::move(kstack_vmar);
+  map->base_ = kstack_mapping->base();
+  map->size_ = type.size;
 
   return ZX_OK;
 }
 
-zx_status_t KernelStack::Init() {
-  DEBUG_ASSERT(size_ == 0);
-  DEBUG_ASSERT(base_ == 0);
+}  // namespace
 
-  fbl::RefPtr<VmMapping> mapping;
-  zx_status_t status = allocate_vmar(kSafe, &mapping, &vmar_);
+zx_status_t KernelStack::Init() {
+  zx_status_t status = allocate_map(kSafe, &main_map_);
   if (status != ZX_OK) {
     return status;
   }
-
-  base_ = mapping->base();
-  size_ = mapping->size();
-  DEBUG_ASSERT(size_ == DEFAULT_STACK_SIZE);
 
 #if __has_feature(safe_stack)
-  DEBUG_ASSERT(unsafe_base_ == 0);
-  status = allocate_vmar(kUnsafe, &mapping, &unsafe_vmar_);
+  DEBUG_ASSERT(unsafe_map_.base_ == 0);
+  status = allocate_map(kUnsafe, &unsafe_map_);
   if (status != ZX_OK) {
     return status;
   }
-  unsafe_base_ = mapping->base();
 #endif
 
 #if __has_feature(shadow_call_stack)
-  DEBUG_ASSERT(shadow_call_base_ == 0);
-  status = allocate_vmar(kShadowCall, &mapping, &shadow_call_vmar_);
+  DEBUG_ASSERT(shadow_call_map_.base_ == 0);
+  status = allocate_map(kShadowCall, &shadow_call_map_);
   if (status != ZX_OK) {
     return status;
   }
-  shadow_call_base_ = mapping->base();
 #endif
   return ZX_OK;
 }
 
 void KernelStack::DumpInfo(int debug_level) {
-  dprintf(debug_level, "\tstack.base 0x%lx, stack.vmar %p, stack.size %zu\n", base_, vmar_.get(),
-          size_);
+  auto map_dump = [debug_level](const KernelStack::Mapping& map, const char* tag) {
+    dprintf(debug_level, "\t%s base %#" PRIxPTR ", size %#zx, vmar %p\n", tag, map.base_, map.size_,
+            map.vmar_.get());
+  };
+
+  map_dump(main_map_, "stack");
 #if __has_feature(safe_stack)
-  dprintf(debug_level, "\tstack.unsafe_base 0x%lx, stack.unsafe_vmar %p\n", unsafe_base_,
-          unsafe_vmar_.get());
+  map_dump(unsafe_map_, "unsafe_stack");
 #endif
 #if __has_feature(shadow_call_stack)
-  dprintf(debug_level, "\tstack.shadow_call_base 0x%lx, stack.shadow_call_vmar %p\n",
-          shadow_call_base_, shadow_call_vmar_.get());
+  map_dump(shadow_call_map_, "shadow_call_stack");
 #endif
 }
 
@@ -162,39 +159,40 @@ KernelStack::~KernelStack() {
 }
 
 zx_status_t KernelStack::Teardown() {
-  base_ = 0;
-  size_ = 0;
-
-  if (vmar_) {
-    LTRACEF("removing vmar at at %#" PRIxPTR "\n", vmar_->base());
-    zx_status_t status = vmar_->Destroy();
+  if (main_map_.vmar_) {
+    LTRACEF("removing vmar at at %#" PRIxPTR "\n", main_map_.vmar_->base());
+    zx_status_t status = main_map_.vmar_->Destroy();
     if (status != ZX_OK) {
       return status;
     }
-    vmar_.reset();
+    main_map_.vmar_.reset();
+    main_map_.base_ = 0;
+    main_map_.size_ = 0;
     vm_kernel_stack_bytes.Add(-static_cast<int64_t>(kSafe.size));
   }
 #if __has_feature(safe_stack)
-  unsafe_base_ = 0;
-  if (unsafe_vmar_) {
-    LTRACEF("removing unsafe vmar at at %#" PRIxPTR "\n", unsafe_vmar_->base());
-    zx_status_t status = unsafe_vmar_->Destroy();
+  if (unsafe_map_.vmar_) {
+    LTRACEF("removing unsafe vmar at at %#" PRIxPTR "\n", unsafe_map_.vmar_->base());
+    zx_status_t status = unsafe_map_.vmar_->Destroy();
     if (status != ZX_OK) {
       return status;
     }
-    unsafe_vmar_.reset();
+    unsafe_map_.vmar_.reset();
+    unsafe_map_.base_ = 0;
+    unsafe_map_.size_ = 0;
     vm_kernel_stack_bytes.Add(-static_cast<int64_t>(kUnsafe.size));
   }
 #endif
 #if __has_feature(shadow_call_stack)
-  shadow_call_base_ = 0;
-  if (shadow_call_vmar_) {
-    LTRACEF("removing shadow call vmar at at %#" PRIxPTR "\n", shadow_call_vmar_->base());
-    zx_status_t status = shadow_call_vmar_->Destroy();
+  if (shadow_call_map_.vmar_) {
+    LTRACEF("removing shadow call vmar at at %#" PRIxPTR "\n", shadow_call_map_.vmar_->base());
+    zx_status_t status = shadow_call_map_.vmar_->Destroy();
     if (status != ZX_OK) {
       return status;
     }
-    shadow_call_vmar_.reset();
+    shadow_call_map_.vmar_.reset();
+    shadow_call_map_.base_ = 0;
+    shadow_call_map_.size_ = 0;
     vm_kernel_stack_bytes.Add(-static_cast<int64_t>(kShadowCall.size));
   }
 #endif
