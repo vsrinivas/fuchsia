@@ -3,7 +3,7 @@
 You can have a driver send log messages to the
 [syslog](/docs/development/diagnostics/logs/recording.md) through the use of the
 `zxlogf(<log_level>,...)` macro, which is defined in
-[ddk/debug.h](/src/lib/ddk/include/ddk/debug.h).
+[lib/ddk/debug.h](/src/lib/ddk/include/lib/ddk/debug.h).
 
 Depending on the type of log level, by default, log messages are sent to the
 following logs:

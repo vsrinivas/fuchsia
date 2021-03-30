@@ -30,7 +30,7 @@ section, allowing it to be inspected by the Device Coordinator without needing
 to fully load the driver into its process.
 
 The second parameter to `ZIRCON_DRIVER` is a `zx_driver_ops_t` structure pointer
-(defined by [`ddk/driver.h`](/src/lib/ddk/include/ddk/driver.h), which
+(defined by [`lib/ddk/driver.h`](/src/lib/ddk/include/lib/ddk/driver.h), which
 defines the init, bind, create, and release methods.
 
 `init()` is invoked when a driver is loaded into a Driver Host process and allows for
@@ -56,7 +56,7 @@ Within a Driver Host process, devices exist as a tree of `zx_device_t` structure
 which are opaque to the driver. These are created with `device_add()`, which the
 driver provides a `zx_protocol_device_t` structure to. The methods defined by the
 function pointers in this structure are the "[device ops](device-ops.md)". The
-various structures and functions are defined in [`device.h`](/src/lib/ddk/include/ddk/device.h)
+various structures and functions are defined in [`device.h`](/src/lib/ddk/include/lib/ddk/device.h)
 
 The `device_add()` function creates a new device, adding it as a child to the
 provided parent device. That parent device **must** be either the device passed

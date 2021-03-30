@@ -12,7 +12,7 @@ areas as specified in the
 [source code layout](/docs/concepts/source_code/layout.md) document. Most
 Fuchsia drivers are found under [//src/devices/](/src/devices). They are grouped
 based on the protocols they implement. The driver protocols are defined in
-[ddk/include/ddk/protodefs.h](/src/lib/ddk/include/ddk/protodefs.h). For
+[ddk/include/lib/ddk/protodefs.h](/src/lib/ddk/include/lib/ddk/protodefs.h). For
 example, a USB ethernet driver goes in
 [//src/connectivity/ethernet/drivers/](/src/connectivity/ethernet/drivers/)
 rather than [//src/devices/usb/drivers/](/src/devices/usb/drivers) because it
@@ -119,7 +119,7 @@ zx_device_prop_t device_props[] = {
 ```
 
 For now, binding variables and macros are defined in
-[ddk/binding.h](/src/lib/ddk/include/ddk/binding.h). In the near future, all
+[lib/ddk/binding.h](/src/lib/ddk/include/lib/ddk/binding.h). In the near future, all
 bind properties will be defined by bind libraries like the `fuchsia.pci` library
 imported above. If you are introducing a new device class, you may need to
 introduce new bind properties to the binding header as well as the
@@ -159,9 +159,9 @@ call `device_init_reply()` once initialization is complete.
 `device_init_reply()` does not necessarily need to be called from the `init()`
 hook. For example, it may be called from another worker thread. The device is
 also guaranteed not to be removed until the reply is received. See `init()` in
-[src/lib/ddk/include/ddk/device.h](/src/lib/ddk/include/ddk/device.h) and
+[src/lib/ddk/include/lib/ddk/device.h](/src/lib/ddk/include/lib/ddk/device.h) and
 `device_init_reply()` in
-[src/lib/ddk/include/ddk/driver.h](/src/lib/ddk/include/ddk/driver.h).
+[src/lib/ddk/include/lib/ddk/driver.h](/src/lib/ddk/include/lib/ddk/driver.h).
 
 There are generally four outcomes from `bind()`:
 

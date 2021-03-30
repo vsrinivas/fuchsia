@@ -26,4 +26,4 @@ hook to be called, even if the auto suspend is configured. It is not supported t
 suspend a device when auto suspend is configured.
 
 
-[device]: /src/lib/ddk/include/ddk/device.h
+[device]: /src/lib/ddk/include/lib/ddk/device.h

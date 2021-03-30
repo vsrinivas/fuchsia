@@ -37,7 +37,7 @@ Deprecated Mixin class      | Function             | Purpose
 `ddk::UnbindableDeprecated` | **DdkUnbindDeprecated()**   | called when this device is being removed
 
 These mixins correspond to the functions defined in the
-[`zx_protocol_device_t`](/src/lib/ddk/include/ddk/device.h#74) struct
+[`zx_protocol_device_t`](/src/lib/ddk/include/lib/ddk/device.h#74) struct
 that is used in the [simple, C-based drivers](/docs/development/drivers/developer_guide/simple.md).
 
 When defining the class for your device, you specify which functions it will

@@ -26,23 +26,6 @@ library_headers("ddk-headers") {
     "lib/ddk/hw/arch_ops.h",
     "lib/ddk/hw/inout.h",
     "lib/ddk/hw/reg.h",
-
-    # TODO(fxbug.dev/64649): do not use. These will be removed
-    # after the soft transition is completed.
-    "ddk/trace/event.h",
-    "ddk/binding_priv.h",
-    "ddk/debug.h",
-    "ddk/device.h",
-    "ddk/driver.h",
-    "ddk/fragment-device.h",
-    "ddk/io-buffer.h",
-    "ddk/metadata.h",
-    "ddk/mmio-buffer.h",
-    "ddk/phys-iter.h",
-    "ddk/protodefs.h",
-    "hw/arch_ops.h",
-    "hw/inout.h",
-    "hw/reg.h",
   ]
   public_deps = [
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
@@ -104,10 +87,7 @@ library_headers("ddk-metadata-headers") {
 }
 
 library_headers("ddk-deprecated-binding-headers") {
-  headers = [
-    "ddk/binding.h",
-    "lib/ddk/binding.h",
-  ]
+  headers = [ "lib/ddk/binding.h" ]
   public_deps = [ ":ddk" ]
   visibility = [
     "//src/connectivity/bluetooth/core/bt-host:*",

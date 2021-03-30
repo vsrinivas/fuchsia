@@ -18,7 +18,7 @@ Not all drivers use this form of bind rules but a migration is under way to conv
 
 One thing to note about this stage of the migration is that there is no support for defining device
 property keys in bind libraries (see below). Instead, the keys from the old driver binding system
-([ddk/binding.h](/src/lib/ddk/include/ddk/binding.h)) are available to be extended.
+([lib/ddk/binding.h](/src/lib/ddk/include/lib/ddk/binding.h)) are available to be extended.
 These keys are hardcoded into the bind compiler and are available under the `fuchsia` namespace.
 For example, the PCI vendor ID key is `fuchsia.BIND_PCI_VID`. Eventually the hardcoded keys will be
 removed from this namespace and all bind property keys will be defined in bind libraries.

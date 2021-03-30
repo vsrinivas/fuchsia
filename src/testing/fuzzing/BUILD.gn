@@ -7,12 +7,14 @@ group("fuzzing") {
   deps = [
     ":tests",
     "go",
-    "syzkaller",
+
+    # TODO(fxbug.dev/72439): syzkaller needs to update ddk include paths.
+    # "syzkaller",
   ]
 }
 
 group("tests") {
   testonly = true
-
-  deps = [ "syzkaller:tests" ]
+  # TODO(fxbug.dev/72439): syzkaller needs to update ddk include paths.
+  # deps = [ "syzkaller:tests" ]
 }
