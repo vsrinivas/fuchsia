@@ -73,7 +73,7 @@ command { AT+CHLD=? }
 
 # Standard Call hold read response.
 # HFP 1.8 4.34.2
-response { +CHLD: commands: List<String>}
+response { +CHLD: (commands: List<String>)}
 
 # Standard Event Reporting command
 # HFP 1.8 4.34.2
