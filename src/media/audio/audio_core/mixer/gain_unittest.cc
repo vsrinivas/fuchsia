@@ -221,6 +221,7 @@ TEST_F(RampTest, SetRampWithDurationDoesntChangeGain) {
 TEST_F(RampTest, RampingUpIsNeverSilent) {
   gain_.SetSourceGain(-150.0f);
   gain_.SetDestGain(-22.0f);
+  EXPECT_TRUE(gain_.IsSilent());
 
   gain_.SetSourceGainWithRamp(+22.0f, zx::sec(1));
 
@@ -282,6 +283,22 @@ TEST_F(RampTest, AdvanceChangesGain) {
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_TRUE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
+}
+
+TEST_F(RampTest, SetSourceGainCancelsRamp) {
+  gain_.SetSourceGain(-60.0f);
+  gain_.SetDestGain(-20.0f);
+  EXPECT_FLOAT_EQ(gain_.GetGainDb(), -80.0f);
+
+  gain_.SetSourceGainWithRamp(-20.0f, zx::sec(1));
+  EXPECT_TRUE(gain_.IsRamping());
+  // Advance halfway through the ramp -- 500 msec (500 frames@1kHz).
+  gain_.Advance(500, rate_1khz_output_);
+  EXPECT_TRUE(gain_.IsRamping());
+
+  gain_.SetSourceGain(0.0f);
+  EXPECT_FALSE(gain_.IsRamping());
+  EXPECT_FLOAT_EQ(gain_.GetGainDb(), -20.0f);
 }
 
 // ScaleArray-related tests

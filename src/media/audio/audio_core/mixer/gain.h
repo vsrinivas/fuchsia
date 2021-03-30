@@ -95,6 +95,7 @@ class Gain {
   // the range [-inf, 24.0]. Callers must guarantee single-threaded semantics
   // for each Gain instance.
   void SetSourceGain(float gain_db) {
+    source_ramp_duration_ = zx::nsec(0);
     target_source_gain_db_ = gain_db;
     if constexpr (kVerboseGainDebug) {
       FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
@@ -162,7 +163,7 @@ class Gain {
   // implementation caches values and recomputes the result only as needed.
   AScale GetGainScale(float source_gain_db, float dest_gain_db);
 
-  // Used internally only -- the instananeous gain state
+  // Used internally only -- reflects the instananeous gain state
   bool IsSilentNow() {
     return (target_source_gain_db_ <= kMinGainDb) || (target_dest_gain_db_ <= kMinGainDb) ||
            (target_source_gain_db_ + target_dest_gain_db_ <= kMinGainDb);
