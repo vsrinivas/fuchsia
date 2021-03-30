@@ -21,7 +21,7 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   options.writability = Writability::ReadOnlyFilesystem;
   options.metrics = false;
 
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), options);
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), nullptr, options);
   return blobfs_or.status_value();
 }
 
@@ -232,7 +232,7 @@ TEST(FormatFilesystemTest, DeviceNotWritableAutoConvertReadonly) {
   mount_options.writability = Writability::Writable;
   mount_options.metrics = false;
 
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), mount_options);
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), nullptr, mount_options);
   ASSERT_EQ(blobfs_or.status_value(), ZX_ERR_ACCESS_DENIED);
 }
 
@@ -250,7 +250,7 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   options.writability = Writability::Writable;
   options.metrics = false;
 
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), options);
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), nullptr, options);
   ASSERT_EQ(blobfs_or.status_value(), ZX_ERR_ACCESS_DENIED);
 }
 

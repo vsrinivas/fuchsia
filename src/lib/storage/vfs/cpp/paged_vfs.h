@@ -31,6 +31,7 @@ class PagedVfs : public ManagedVfs {
 
   // Creates the pager and worker threads. If any of these fail, this class should no be used.
   zx::status<> Init();
+  bool is_initialized() const { return pager_.is_valid(); }
 
   // Called in response to a successful PagedVnode::VmoRead() request, this supplies paged data from
   // aux_vmo to the PagedVnode's VMO to the kernel. See zx_pager_supply_pages() documentation for

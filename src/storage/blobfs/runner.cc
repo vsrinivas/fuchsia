@@ -19,18 +19,22 @@ zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
                                                    std::unique_ptr<BlockDevice> device,
                                                    const MountOptions& options,
                                                    zx::resource vmex_resource) {
-  auto blobfs_or =
-      Blobfs::Create(loop->dispatcher(), std::move(device), options, std::move(vmex_resource));
+  // The runner owns the blobfs, but the runner needs to be created first because it is the Vfs
+  // object that Blobfs uses.
+  std::unique_ptr<Runner> runner(new Runner(loop));
+
+  auto blobfs_or = Blobfs::Create(loop->dispatcher(), std::move(device), runner.get(), options,
+                                  std::move(vmex_resource));
   if (blobfs_or.is_error())
     return blobfs_or.take_error();
-  return zx::ok(std::unique_ptr<Runner>(new Runner(loop, std::move(blobfs_or.value()))));
+
+  runner->blobfs_ = std::move(blobfs_or.value());
+  runner->SetReadonly(runner->blobfs_->writability() != Writability::Writable);
+
+  return zx::ok(std::move(runner));
 }
 
-Runner::Runner(async::Loop* loop, std::unique_ptr<Blobfs> fs)
-    : VfsType(loop->dispatcher()), loop_(loop), blobfs_(std::move(fs)) {
-  SetReadonly(blobfs_->writability() != Writability::Writable);
-  blobfs_->set_vfs(this);
-}
+Runner::Runner(async::Loop* loop) : VfsType(loop->dispatcher()), loop_(loop) {}
 
 Runner::~Runner() = default;
 

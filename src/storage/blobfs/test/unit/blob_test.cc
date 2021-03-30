@@ -56,7 +56,7 @@ class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, Comp
     MountOptions mount_options{.compression_settings = {
                                    .compression_algorithm = std::get<1>(GetParam()),
                                }};
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), mount_options);
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, mount_options);
     ASSERT_TRUE(blobfs_or.is_ok());
     fs_ = std::move(blobfs_or.value());
   }
@@ -134,7 +134,8 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  auto blobfs_or =
+      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
   ASSERT_TRUE(blobfs_or.is_ok());
   fs_ = std::move(blobfs_or.value());
 
@@ -177,7 +178,8 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   // Remount and try and read the blob.
-  auto remounted_blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), options);
+  auto remounted_blobfs_or =
+      Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, options);
   ASSERT_TRUE(remounted_blobfs_or.is_ok());
   fs_ = std::move(remounted_blobfs_or.value());
 
@@ -252,7 +254,8 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  auto blobfs_or =
+      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
   ASSERT_TRUE(blobfs_or.is_ok());
   fs_ = std::move(blobfs_or.value());
 
@@ -278,7 +281,7 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
 
   // Remount to avoid caching.
   auto remounted_blobfs_or =
-      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
   ASSERT_TRUE(remounted_blobfs_or.is_ok());
   fs_ = std::move(remounted_blobfs_or.value());
 
@@ -398,7 +401,8 @@ TEST_P(BlobTest, BlobPrepareWriteFailure) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  auto blobfs_or =
+      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
   ASSERT_TRUE(blobfs_or.is_ok());
   fs_ = std::move(blobfs_or.value());
 

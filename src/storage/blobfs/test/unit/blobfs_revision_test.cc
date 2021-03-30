@@ -51,7 +51,7 @@ class BlobfsTestAtMinorVersion : public testing::Test {
 
   void Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options) {
     ASSERT_EQ(fs_, nullptr);
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), options);
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, options);
     ASSERT_TRUE(blobfs_or.is_ok());
     fs_ = std::move(blobfs_or.value());
   }

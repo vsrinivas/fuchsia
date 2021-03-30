@@ -35,6 +35,10 @@ class PagedVnode : public Vnode {
   // process.
   //
   // Note that offset + length will be page-aligned so can extend beyond the end of the file.
+  //
+  // Since pager registration and unregistration is not synchronized between this class and the
+  // PagedVfs, this function can be called after the VMO has been unregistered and possibly
+  // destroyed. The implementation should be prepared to fail in these cases.
   virtual void VmoRead(uint64_t offset, uint64_t length) = 0;
 
  protected:

@@ -114,7 +114,7 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
 
 zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatcher,
                                                    std::unique_ptr<BlockDevice> device,
-                                                   const MountOptions& options,
+                                                   VfsType* vfs, const MountOptions& options,
                                                    zx::resource vmex_resource) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
 
@@ -149,9 +149,9 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(
-      dispatcher, std::move(device), superblock, options.writability, options.compression_settings,
-      std::move(vmex_resource), options.pager_backed_cache_policy, options.collector_factory,
-      options.metrics_flush_time));
+      dispatcher, std::move(device), vfs, superblock, options.writability,
+      options.compression_settings, std::move(vmex_resource), options.pager_backed_cache_policy,
+      options.collector_factory, options.metrics_flush_time));
   fs->block_info_ = block_info;
 
   auto fs_ptr = fs.get();
@@ -807,20 +807,29 @@ bool Blobfs::StreamingWritesEnabled() {
 #endif  // __Fuchsia__
 }
 
-Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, VfsType* vfs,
                const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
                std::optional<CachePolicy> pager_backed_cache_policy,
                std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
                zx::duration metrics_flush_time)
-    : info_(*info),
+    : vfs_(vfs),
+      info_(*info),
       dispatcher_(dispatcher),
       block_device_(std::move(device)),
       writability_(writable),
       write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)),
       metrics_(CreateMetrics(std::move(collector_factory), metrics_flush_time)),
-      pager_backed_cache_policy_(pager_backed_cache_policy) {}
+      pager_backed_cache_policy_(pager_backed_cache_policy) {
+#if ENABLE_BLOBFS_NEW_PAGER
+  ZX_ASSERT(vfs_);
+
+  // It's easy to forget to initialize the PagedVfs in tests which will cause mysterious failures
+  // later.
+  ZX_ASSERT(vfs_->is_initialized());
+#endif
+}
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // XXX This function relies on very subtle orderings and assumptions about the state of the

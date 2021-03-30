@@ -15,15 +15,43 @@ PagedVfs::PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads) : Mana
 }
 
 PagedVfs::~PagedVfs() {
-  // TODO(fxbug.dev/51111) need to detach from PagedVnodes that have back-references to this class.
-  // The vnodes are reference counted and can outlive this class.
+  // We potentially have owning references to many vnodes in the form of the ones registered as
+  // page watchers. Letting the registered node map go out of scope naturally will destroy those
+  // nodes which will try to unregister from us, reentering this class from the middle of the
+  // implicit member destruction.
+  //
+  // Furthermore, unregistering from this class and the Vfs' live vnode map each requires a lock so
+  // releasing them all implicitly will cause a lot of unnecessary locking.
+  //
+  // This implementation removes the Vfs backpointer in the Vnode and unregisters from the Vfs'
+  // live node set from within one lock, avoiding the reentrant unregisteration.
+  std::map<uint64_t, fbl::RefPtr<PagedVnode>> local_nodes;
+  {
+    std::lock_guard<std::mutex> lock(vfs_lock_);
+
+    local_nodes = std::move(paged_nodes_);
+    for (auto& [id, node] : local_nodes)
+      UnregisterVnodeLocked(node.get());
+  }
+
+  // Notify the nodes of the detach outside the lock. After this loop the vnodes will not call back
+  // into this class during destruction.
+  for (auto& [id, node] : local_nodes)
+    node->WillDestroyVfs();
+
+  // The local_nodes will now release its references which will normally delete the Vnode objects.
 }
 
 zx::status<> PagedVfs::Init() {
   if (zx_status_t status = zx::pager::create(0, &pager_); status != ZX_OK)
     return zx::error(status);
 
-  return pager_pool_->Init();
+  if (auto pool_result = pager_pool_->Init(); pool_result.is_error()) {
+    pager_.reset();  // Don't leave half-initialized for the is_initialized() function to work.
+    return pool_result;
+  }
+
+  return zx::ok();
 }
 
 zx::status<> PagedVfs::SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,

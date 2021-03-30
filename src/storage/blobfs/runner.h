@@ -42,17 +42,14 @@ class Runner : public VfsType {
                                                     zx::resource vmex_resource);
 
   // fs::ManagedVfs interface.
-
   void Shutdown(fs::Vfs::ShutdownCallback closure) final;
-
-  // Other methods.
 
   // Serves the root directory of the filesystem using |root| as the server-end
   // of an IPC connection.
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout);
 
  private:
-  Runner(async::Loop* loop, std::unique_ptr<Blobfs> fs);
+  explicit Runner(async::Loop* loop);
 
   // Check if filesystem is readonly.
   bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);

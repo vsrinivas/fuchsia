@@ -594,7 +594,10 @@ void Vfs::RegisterVnode(Vnode* vnode) {
 
 void Vfs::UnregisterVnode(Vnode* vnode) {
   std::lock_guard<std::mutex> lock(vfs_lock_);
+  UnregisterVnodeLocked(vnode);
+}
 
+void Vfs::UnregisterVnodeLocked(Vnode* vnode) {
   auto found = live_nodes_.find(vnode);
   ZX_DEBUG_ASSERT(found != live_nodes_.end());  // Should always be registered first.
   live_nodes_.erase(found);

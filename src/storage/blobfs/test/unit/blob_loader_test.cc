@@ -20,6 +20,7 @@
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/digest/node-digest.h"
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blobfs.h"
@@ -73,10 +74,13 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     }
     ASSERT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
 
+    vfs_ = std::make_unique<fs::PagedVfs>(loop_.dispatcher(), 1);
+    ASSERT_TRUE(vfs_->Init().is_ok());
+
     options_ = {.compression_settings = {
                     .compression_algorithm = compression_algorithm,
                 }};
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), options_);
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), vfs_.get(), options_);
     ASSERT_TRUE(blobfs_or.is_ok());
     fs_ = std::move(blobfs_or.value());
 
@@ -89,7 +93,15 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 
   // Remounts the filesystem, which ensures writes are flushed and caches are wiped.
   zx_status_t Remount() {
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options_);
+    auto block_device = Blobfs::Destroy(std::move(fs_));
+    fs_.reset();
+
+    vfs_ = std::make_unique<fs::PagedVfs>(loop_.dispatcher(), 1);
+    if (auto init_result = vfs_->Init(); init_result.is_error())
+      return init_result.error_value();
+
+    auto blobfs_or =
+        Blobfs::Create(loop_.dispatcher(), std::move(block_device), vfs_.get(), options_);
     if (blobfs_or.is_error())
       return blobfs_or.error_value();
     fs_ = std::move(blobfs_or.value());
@@ -190,6 +202,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
  protected:
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
 
+  std::unique_ptr<fs::PagedVfs> vfs_;
   std::unique_ptr<Blobfs> fs_;
   MountOptions options_;
   BlobLayoutFormat blob_layout_format_;

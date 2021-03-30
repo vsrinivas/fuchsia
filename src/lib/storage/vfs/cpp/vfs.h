@@ -198,6 +198,10 @@ class Vfs {
   // Whether this file system is read-only.
   bool ReadonlyLocked() const FS_TA_REQUIRES(vfs_lock_) { return readonly_; }
 
+  // Derived classes may want to unregister vnodes differently than this one. This function removes
+  // the vnode from the live node map.
+  void UnregisterVnodeLocked(Vnode* vnode) FS_TA_REQUIRES(vfs_lock_);
+
   // A lock which should be used to protect lookup and walk operations
   mutable std::mutex vfs_lock_;
 

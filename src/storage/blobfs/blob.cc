@@ -952,7 +952,8 @@ void Blob::ActivateLowMemory() {
   ZX_ASSERT(!has_clones());
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
-  FreeVmo();
+  if (vmo())
+    FreeVmo();
 #else
   page_watcher_.reset();
 #endif

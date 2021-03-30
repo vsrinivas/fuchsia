@@ -31,7 +31,7 @@ class HealthCheckServiceTest : public testing::Test {
     auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions{});
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, MountOptions{});
     ASSERT_TRUE(blobfs_or.is_ok());
     fs_ = std::move(blobfs_or.value());
 
@@ -91,7 +91,7 @@ class HealthCheckServiceTest : public testing::Test {
 
     // Remount and try and read the blob.
     auto remounted_blobfs_or =
-        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions{});
+        Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, MountOptions{});
     ASSERT_TRUE(remounted_blobfs_or.is_ok());
     fs_ = std::move(remounted_blobfs_or.value());
     svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *fs_);

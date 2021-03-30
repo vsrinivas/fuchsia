@@ -82,7 +82,8 @@ class BlobfsTestAtRevision : public testing::Test {
     device_ = device.get();
     loop_.StartThread();
 
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), GetMountOptions());
+    auto blobfs_or =
+        Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, GetMountOptions());
     ASSERT_TRUE(blobfs_or.is_ok());
     fs_ = std::move(blobfs_or.value());
 
@@ -226,7 +227,8 @@ TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
                               .compression_algorithm = CompressionAlgorithm::LZ4,
                           }};
 
-  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  auto blobfs_or =
+      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
   EXPECT_EQ(blobfs_or.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
@@ -492,7 +494,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
   ASSERT_TRUE(device);
   loop.StartThread();
 
-  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), mount_options);
+  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), nullptr, mount_options);
   ASSERT_TRUE(blobfs_or.is_ok());
   std::unique_ptr<Blobfs> fs = std::move(blobfs_or.value());
 

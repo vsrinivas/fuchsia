@@ -74,9 +74,12 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   //
   // The dispatcher should be for the current thread that blobfs is running on.
   //
+  // The vfs is required for paging but can be null in host configurations.
+  //
   // The optional root VM resource is needed to create executable blobs. See vmex_resource() getter.
   static zx::status<std::unique_ptr<Blobfs>> Create(async_dispatcher_t* dispatcher,
                                                     std::unique_ptr<BlockDevice> device,
+                                                    VfsType* vfs = nullptr,
                                                     const MountOptions& options = MountOptions(),
                                                     zx::resource vmex_resource = zx::resource());
 
@@ -86,11 +89,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // The Vfs object associated with this Blobfs instance, if any. The Vfs will exist only when
   // running on the target and will be null otherwise.
-  //
-  // The setter is necessary because it needs to be set after construction due to the order of the
-  // Blobfs/Runner creation.
   VfsType* vfs() const { return vfs_; }
-  void set_vfs(VfsType* vfs) { vfs_ = vfs; }
 
   pager::UserPager* pager() const { return pager_.get(); }
 
@@ -246,7 +245,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   friend class BlobfsChecker;
   FidlBlobCorruptionNotifier blob_corruption_notifier_;
 
-  Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+  Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, VfsType* vfs,
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
          std::optional<CachePolicy> pager_backed_cache_policy,
