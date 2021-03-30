@@ -222,7 +222,7 @@ mod tests {
     use super::*;
     use {
         fidl::endpoints::Proxy as _, fidl_fuchsia_netemul as fnetemul,
-        fidl_fuchsia_netemul_test::CounterMarker, fuchsia_zircon as zx, std::convert::TryFrom,
+        fidl_fuchsia_netemul_test::CounterMarker, fuchsia_zircon as zx, std::convert::TryFrom as _,
     };
 
     // We can't just use a counter for the sandbox identifier, as we do in `main`, because tests
@@ -558,21 +558,6 @@ mod tests {
         .await
     }
 
-    async fn get_inspect_data(
-        component_selector: Vec<String>,
-    ) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
-        diagnostics_reader::ArchiveReader::new()
-            .add_selector(diagnostics_reader::ComponentSelector::new(component_selector))
-            .snapshot::<diagnostics_reader::Inspect>()
-            .await
-            .context("failed to get inspect data")?
-            .into_iter()
-            .next()
-            .ok_or_else(|| anyhow::anyhow!("failed to find inspect data"))?
-            .payload
-            .ok_or_else(|| anyhow::anyhow!("empty inspect payload"))
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn inspect() {
         with_sandbox("inspect", |sandbox| async move {
@@ -598,31 +583,57 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
             for (i, realm) in realms.iter().enumerate() {
+                let i = u32::try_from(i).unwrap();
                 let counter = realm.connect_to_service::<CounterMarker>();
                 for j in 1..=i {
                     assert_eq!(
-                        counter
-                            .increment()
-                            .await
-                            .expect("fuchsia.netemul.test/Counter.increment call failed"),
-                        u32::try_from(j).unwrap(),
-                        "unexpected counter value",
+                        counter.increment().await.expect(&format!(
+                            "fuchsia.netemul.test/Counter.increment call failed on realm {}",
+                            i
+                        )),
+                        j,
                     );
                 }
                 let TestRealm { realm } = realm;
                 let selector = vec![
-                    realm
-                        .get_moniker()
-                        .await
-                        .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
+                    realm.get_moniker().await.expect(&format!(
+                        "fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}",
+                        i
+                    )),
                     COUNTER_COMPONENT_NAME.into(),
                 ];
-                let data = get_inspect_data(selector).await.expect("get_inspect_data failed");
-                fuchsia_inspect::assert_inspect_tree!(data, root: {
-                    counter: {
-                        count: u64::try_from(i).unwrap(),
-                    }
-                });
+                let data = diagnostics_reader::ArchiveReader::new()
+                    .add_selector(diagnostics_reader::ComponentSelector::new(selector))
+                    .snapshot::<diagnostics_reader::Inspect>()
+                    .await
+                    .expect(&format!("failed to get inspect data in realm {}", i))
+                    .into_iter()
+                    .map(
+                        |diagnostics_data::InspectData {
+                             data_source: _,
+                             metadata: _,
+                             moniker: _,
+                             payload,
+                             version: _,
+                         }| payload,
+                    )
+                    .collect::<Vec<_>>();
+                match &data[..] {
+                    [datum] => match datum {
+                        None => panic!("empty inspect payload in realm {}", i),
+                        Some(data) => {
+                            fuchsia_inspect::assert_inspect_tree!(data, root: {
+                                counter: {
+                                    count: u64::from(i),
+                                }
+                            });
+                        }
+                    },
+                    data => panic!(
+                        "there should be exactly one matching inspect node in realm {}; got {:?}",
+                        i, data
+                    ),
+                }
             }
         })
         .await
