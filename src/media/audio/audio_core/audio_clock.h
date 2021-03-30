@@ -104,8 +104,13 @@ class AudioClock {
   // The return value is the PPM value of any micro-SRC that should subsequently be applied.
   static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
                                    zx::time monotonic_time, zx::duration source_pos_error);
+
+  // Depending on the sync mode for these clocks, reset rate-adjustment appropriately.
+  static void ResetRateAdjustments(AudioClock& source_clock, AudioClock& dest_clock,
+                                   zx::time reset_time);
+
   // For debugging purposes, dump the sync mode and current clock/micro-src rates.
-  static void DisplaySyncInfo(AudioClock& source_clock, AudioClock& dest_clock);
+  static std::string SyncInfo(AudioClock& source_clock, AudioClock& dest_clock);
 
   // Clear internal running state and restart the feedback loop at the given time.
   void ResetRateAdjustment(zx::time reset_time);

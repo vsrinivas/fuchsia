@@ -95,8 +95,9 @@ static constexpr int32_t kAdjustableMixCountSettledVerificationPeriod = 20;
 static constexpr auto kMicroSrcLimitSettledErr = zx::duration(15);
 static constexpr auto kAdjustableLimitSettledErr = zx::duration(100);
 
-// When tuning a new set of PID coefficients, set this to enable additional logging.
+// When tuning a new set of PID coefficients, set this to enable additional results logging.
 constexpr bool kDisplayForPidCoefficientsTuning = false;
+// Verbose logging of the shape/timing of clock convergence.
 constexpr bool kTraceClockSyncConvergence = false;
 
 class MixStageClockTest : public testing::ThreadingModelFixture {
@@ -372,7 +373,7 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
     }
 
     if constexpr (kTraceClockSyncConvergence) {
-      FX_LOGS(INFO) << std::setw(5) << rate_adjust_ppm << ": [" << std::right << std::setw(3)
+      FX_LOGS(INFO) << "Testing " << rate_adjust_ppm << " PPM: [" << std::right << std::setw(3)
                     << mix_count << "], error " << std::setw(5) << mix_info.source_pos_error.get();
     }
   }

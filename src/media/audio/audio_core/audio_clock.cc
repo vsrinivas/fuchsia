@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <iomanip>
+#include <sstream>
 #include <string>
 
 #include "src/media/audio/audio_core/audio_clock_coefficients.h"
@@ -16,6 +17,9 @@
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
+
+// Log clock synchronization adjustments.
+constexpr bool kLogClockTuning = false;
 
 //
 // static methods
@@ -83,6 +87,21 @@ AudioClock::SyncMode AudioClock::SyncModeForClocks(AudioClock& source_clock,
   }
 
   return SyncMode::MicroSrc;
+}
+
+void AudioClock::ResetRateAdjustments(AudioClock& source_clock, AudioClock& dest_clock,
+                                      zx::time reset_time) {
+  auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
+  if (sync_mode == SyncMode::AdjustSourceClock) {
+    source_clock.ResetRateAdjustment(reset_time);
+  }
+  if (sync_mode == SyncMode::AdjustDestClock) {
+    dest_clock.ResetRateAdjustment(reset_time);
+  }
+  if (sync_mode == SyncMode::MicroSrc) {
+    auto& client_clock = source_clock.is_client_clock() ? source_clock : dest_clock;
+    client_clock.ResetRateAdjustment(reset_time);
+  }
 }
 
 // Based on policy separately defined above, synchronize two clocks. Returns the ppm value of any
@@ -162,7 +181,7 @@ std::string AudioClock::SyncModeToString(SyncMode mode) {
   // No default: clause, so newly-added enums get caught and added here.
 }
 
-void AudioClock::DisplaySyncInfo(AudioClock& source_clock, AudioClock& dest_clock) {
+std::string AudioClock::SyncInfo(AudioClock& source_clock, AudioClock& dest_clock) {
   auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
 
   auto mono_to_source_ref = source_clock.ref_clock_to_clock_mono().Inverse();
@@ -182,13 +201,12 @@ void AudioClock::DisplaySyncInfo(AudioClock& source_clock, AudioClock& dest_cloc
     micro_src_str += " Latest micro-src " + std::to_string(micro_src_ppm) + " ppm.";
   }
 
-  FX_LOGS(INFO) << "Sync mode " << SyncModeToString(sync_mode) << " ("
-                << static_cast<size_t>(sync_mode) <<
-      // sync_mode <<
-      //
-      "). Source (" << (source_clock.is_client_clock() ? "client" : "device") << ") " << source_ppm
-                << " ppm. Dest (" << (dest_clock.is_client_clock() ? "client" : "device") << ") "
-                << dest_ppm << " ppm." << micro_src_str;
+  std::stringstream sync_stream;
+  sync_stream << "Mode " << SyncModeToString(sync_mode) << " (" << static_cast<size_t>(sync_mode)
+              << "). Source (" << (source_clock.is_client_clock() ? "cli" : "dev") << ") "
+              << source_ppm << " ppm. Dest (" << (dest_clock.is_client_clock() ? "cli" : "dev")
+              << ") " << dest_ppm << " ppm." << micro_src_str;
+  return sync_stream.str();
 }
 
 //
@@ -279,18 +297,26 @@ int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration source_po
   double rate_adjustment = feedback_control_.Read();
   int32_t rate_adjust_ppm = ClampPpm(round(rate_adjustment * 1'000'000.0));
 
-  if (rate_adjust_ppm != previous_adjustment_ppm_) {
-    FX_LOGS(DEBUG) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
-                   << (is_adjustable() ? "Adjustable" : "Fixed") << " clock changed from (ppm) "
-                   << std::setw(5) << previous_adjustment_ppm_ << " to " << std::setw(5)
-                   << rate_adjust_ppm << "; source_pos_err " << std::setw(6)
-                   << source_pos_error.get();
+  if constexpr (kLogClockTuning) {
+    constexpr int64_t kLoggingThresholdNs = 50;
 
-  } else {
-    FX_LOGS(TRACE) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
-                   << (is_adjustable() ? "Adjustable" : "Fixed") << " adjust_ppm remains (ppm) "
-                   << std::setw(5) << previous_adjustment_ppm_ << " for the source pos error "
-                   << std::setw(6) << source_pos_error.get();
+    if (rate_adjust_ppm != previous_adjustment_ppm_) {
+      std::stringstream logging;
+      logging << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
+              << (is_adjustable() ? "Adjustable" : "Fixed") << " change from (ppm) " << std::setw(4)
+              << previous_adjustment_ppm_ << " to " << std::setw(4) << rate_adjust_ppm
+              << "; src_pos_err " << std::setw(5) << source_pos_error.get() << " ns";
+      if (std::abs(source_pos_error.get()) >= kLoggingThresholdNs) {
+        FX_LOGS(INFO) << logging.str();
+      } else {
+        FX_LOGS(DEBUG) << logging.str();
+      }
+    } else {
+      FX_LOGS(TRACE) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
+                     << (is_adjustable() ? "Adjustable" : "Fixed") << " adjust_ppm remains  (ppm) "
+                     << std::setw(4) << previous_adjustment_ppm_ << "; src_pos_err " << std::setw(5)
+                     << source_pos_error.get() << " ns";
+    }
   }
 
   AdjustClock(rate_adjust_ppm);

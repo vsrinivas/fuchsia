@@ -39,10 +39,18 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 
 }  // namespace
 
+// Worst-case logging can approach 100+ lines/sec.
+constexpr bool kLogJamSyncs = false;
+// For now, allow dest position to move back by up to 29 frames before triggering a position reset.
+// TODO(fxbug.dev/73306): Stop allowing this (change tolerance to 0 and/or remove this altogether),
+// once the system correctly moves position only forward.
+constexpr bool kAllowPositionRollback = true;
+constexpr int64_t kDestPosRollbackTolerance = 29;
+
 // If source position error becomes greater than this, we stop trying to smoothly synchronize and
 // instead 'snap' to the expected pos (sometimes referred to as "jam sync"). This will surface as a
 // discontinuity (if jumping backward) or a dropout (if jumping forward), for this source stream.
-constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(5);
+constexpr zx::duration kMaxErrorThresholdDuration = zx::usec(500);
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock)
@@ -371,12 +379,12 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   // If the packet's first frame comes after the filter window's positive edge,
   // then we should skip some frames in the destination buffer before starting to produce data.
   if (source_for_first_packet_frame > source_pos_edge_first_mix_frame) {
-    const TimelineRate& dest_to_raw_source = info.dest_frames_to_frac_source_frames.rate();
+    const TimelineRate& dest_to_frac_source = info.dest_frames_to_frac_source_frames.rate();
     // The dest_buffer offset is based on the distance from mix job start to packet start (measured
     // in frac_frames), converted into frames in the destination timeline. As we scale the source
     // frac_frame delta into dest frames, we want to "round up" any subframes that are present; any
     // source subframes should push our dest frame up to the next integer. Because we entered this
-    // IF in the first place, we have at least some fractional source delta, thus dest_offset_64 is
+    // IF in the first place, we have a non-zero fractional source delta, thus dest_offset is
     // guaranteed to become greater than zero.
     //
     // When a position is round-trip converted to another timeline and back again, there is no
@@ -385,31 +393,29 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // backward), we "round up" when translating from source (fractional) to dest (integral).
     auto first_source_mix_point =
         Fixed(source_for_first_packet_frame - source_pos_edge_first_mix_frame);
-    dest_offset = dest_to_raw_source.Inverse().Scale(first_source_mix_point.raw_value(),
-                                                     TimelineRate::RoundingMode::Ceiling);
-    source_offset += Fixed::FromRaw(dest_to_raw_source.Scale(dest_offset));
+    dest_offset = dest_to_frac_source.Inverse().Scale(first_source_mix_point.raw_value(),
+                                                      TimelineRate::RoundingMode::Ceiling);
+    FX_CHECK(dest_offset > 0);
+
+    source_offset += Fixed::FromRaw(dest_to_frac_source.Scale(dest_offset));
 
     // Packet is within the mix window but starts after mix start. MixStream breaks mix jobs into
     // multiple pieces so that each packet gets its own ProcessMix call; this means there was no
     // contiguous packet immediately before this one. For now we don't report this as a problem;
     // eventually (when we can rely on clients to accurately set STREAM_PACKET_FLAG_DISCONTINUITY),
     // we should report this as a minor discontinuity if that flag is NOT set -- via something like
-    //    stream.ReportPartialUnderflow(raw_source_offset,dest_offset_64)
+    //    stream.ReportPartialUnderflow(frac_source_offset,dest_offset);
     //
     // TODO(mpuryear): move packet discontinuity (gap/overlap) detection up into the
     // Renderer/PacketQueue, and remove PartialUnderflow reporting and the metric altogether.
   }
 
-  FX_DCHECK(dest_offset >= 0);
-  FX_DCHECK(dest_offset <= dest_frames_left);
-
   // Looks like we are ready to go. Mix.
-  FX_DCHECK(source_offset + mixer.pos_filter_width() >= Fixed(0));
   bool consumed_source;
   if (dest_offset >= dest_frames_left) {
     // We initially needed to source frames from this packet in order to finish this mix. After
     // realigning our sampling point to the nearest dest frame, that dest frame is now at or beyond
-    // the end of this mix job. We have no need to mix any source material now, just exit.
+    // the end of this mix job. We have no need to mix any source material now, so just exit.
     consumed_source = false;
   } else if (source_offset + mixer.pos_filter_width() >= source_buffer.length()) {
     // This packet was initially within our mix window. After realigning our sampling point to the
@@ -536,57 +542,51 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // Compose our transformation from destination frames to source fractional frames.
   info.dest_frames_to_frac_source_frames =
       info.clock_mono_to_frac_source_frames * dest_frames_to_clock_mono;
-  FX_LOGS(TRACE) << clock::TimelineRateToString(info.dest_frames_to_frac_source_frames.rate(),
-                                                "dest-to-frac-source (with clocks)");
+  FX_LOGS(TRACE) << clock::TimelineFunctionToString(info.dest_frames_to_frac_source_frames,
+                                                    "dest-to-frac-src (with clocks)");
 
   // ComputeFrameRateConversionRatio
   //
   // Calculate the TimelineRate for step_size. No clock effects are included; any "micro-SRC" is
   // applied separately as a subsequent correction factor.
-  TimelineRate raw_source_frames_per_dest_frame = TimelineRate::Product(
+  TimelineRate frac_source_frames_per_dest_frame = TimelineRate::Product(
       dest_frames_to_dest_ref.rate(), info.source_ref_clock_to_frac_source_frames.rate());
-  FX_LOGS(TRACE) << clock::TimelineRateToString(raw_source_frames_per_dest_frame,
+  FX_LOGS(TRACE) << clock::TimelineRateToString(frac_source_frames_per_dest_frame,
                                                 "dest-to-frac-source rate (no clock effects)");
 
-  // Check for dest position discontinuity. If so, reset positions and rate adjustments.
   auto dest_frame = cur_mix_job_.dest_start_frame;
   auto mono_now_from_dest = zx::time{dest_frames_to_clock_mono.Apply(dest_frame)};
 
-  // TODO(fxbug.dev/63750): pass through a signal if we expect discontinuity (Play, Pause, packet
-  // discontinuity bit); use it to log (or report to inspect) only unexpected discontinuities.
-  // Add a test to validate that we log discontinuities only when we should.
-  if (!info.initial_position_is_set || info.next_dest_frame != dest_frame) {
-    // These are only needed for the FX_LOG
-    auto prev_running_dest_frame = info.next_dest_frame;
-    auto prev_running_source_frame = info.next_source_frame;
-    auto position_was_set = info.initial_position_is_set;
-
-    // Set new running positions, based on the E2E clock (not just from step_size)
-    info.ResetPositions(dest_frame, bookkeeping);
-
-    if (position_was_set) {
-      FX_LOGS(DEBUG) << "Dest discontinuity ["
-                     << (dest_clock.is_client_clock() ? "Client" : "Device")
-                     << (dest_clock.is_adjustable() ? "Adjustable" : "Fixed") << "] of "
-                     << dest_frame - prev_running_dest_frame << " frames (expect "
-                     << prev_running_dest_frame << ", actual " << dest_frame << ")";
-      FX_LOGS(DEBUG) << "Updated source [" << (source_clock.is_client_clock() ? "Client" : "Device")
-                     << (source_clock.is_adjustable() ? "Adjustable" : "Fixed")
-                     << "] position from " << ffl::String::DecRational << prev_running_source_frame
-                     << " to " << info.next_source_frame;
-    }
-
-    // If source/dest clocks are the same, they're always in-sync, but above we will still reset our
-    // dest offset (if we have not previously established this, or if there was a discontinuity).
-    if (source_clock != dest_clock) {
-      source_clock.ResetRateAdjustment(mono_now_from_dest);
-      dest_clock.ResetRateAdjustment(mono_now_from_dest);
-    }
-
-    SetStepSize(info, bookkeeping, raw_source_frames_per_dest_frame);
+  // Set the position relationship of the source and dest clocks, if one has not yet been set.
+  if (!info.initial_position_is_set) {
+    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest);
+    SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
 
+  if constexpr (kAllowPositionRollback) {
+    // If mix_job starts at a dest position before the prev one ended (within tolerance), roll pos
+    // back using step_size, so that this is not treated as a dest position discontinuity.
+    if (dest_frame < info.next_dest_frame &&
+        dest_frame + kDestPosRollbackTolerance >= info.next_dest_frame) {
+      info.AdvanceRunningPositionsTo(dest_frame, bookkeeping);
+    }
+  }
+
+  // Check for dest position discontinuity. If so, reset positions and rate adjustments.
+  if (dest_frame != info.next_dest_frame) {
+    // Set new running positions, based on E2E clock (not just step_size).
+    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest);
+    SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
+    return;
+  }
+  // TODO(fxbug.dev/63750): pass through a signal if we expect discontinuity (Play, Pause, packet
+  // discontinuity bit); use it to log (or report to inspect) only unexpected discontinuities.
+  // Add a test to validate that we log discontinuities only when we should.
+
+  // Project dest and source positions (cur_mix_job_.dest_start_frame, info.next_source_frame)
+  // into monotonic time (mono_now_from_dest, mono_now_from_source). Record the difference between
+  // them (in ns) as source position error.
   auto mono_now_from_source = zx::time{
       info.clock_mono_to_frac_source_frames.ApplyInverse(info.next_source_frame.raw_value())};
 
@@ -596,63 +596,101 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
 
   // Convert both positions to monotonic time and get the delta -- this is source position error
   info.source_pos_error = mono_now_from_source - mono_now_from_dest;
-  FX_LOGS(TRACE) << "mono_now_from_source " << mono_now_from_source.get() << ", mono_now_from_dest "
-                 << mono_now_from_dest.get() << ", source_pos_err " << info.source_pos_error.get();
 
-  // For start dest frame, measure [predicted - actual] error (in monotonic) since last mix,
-  // even if clocks are same on both sides. This allows us to perform an initial sync-up between
-  // running position accounting and the initial clock transforms -- even those with offsets.
-  auto abs_pos_err = std::abs(info.source_pos_error.get());
-  if (abs_pos_err > kMaxErrorThresholdDuration.get()) {
+  // If source error exceeds our threshold, allow a discontinuity and reset position and rates.
+  if (std::abs(info.source_pos_error.get()) > kMaxErrorThresholdDuration.get()) {
     Reporter::Singleton().MixerClockSkewDiscontinuity(info.source_pos_error);
 
-    FX_LOGS(INFO) << "Stream " << static_cast<void*>(&stream) << " is out of sync by "
-                  << (static_cast<double>(info.source_pos_error.get()) / ZX_MSEC(1))
-                  << " msec (limit: "
-                  << (static_cast<double>(kMaxErrorThresholdDuration.get()) / ZX_MSEC(1))
-                  << " msec); resetting stream position.";
-    AudioClock::DisplaySyncInfo(source_clock, dest_clock);
-
-    // Source error exceeds our threshold; reset rate adjustment altogether; allow a discontinuity
-    auto new_source_pos = Fixed::FromRaw(info.dest_frames_to_frac_source_frames(dest_frame));
-    info.next_source_frame = new_source_pos;
-    info.source_pos_error = zx::duration(0);
-
-    // Reset PID controls in the relevant clocks.
-    source_clock.ResetRateAdjustment(mono_now_from_dest);
-    dest_clock.ResetRateAdjustment(mono_now_from_dest);
-
-    SetStepSize(info, bookkeeping, raw_source_frames_per_dest_frame);
+    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest);
+    SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
 
+  // Allow the clocks to self-synchronize to eliminate the position error. A non-zero return value
+  // indicates that they cannot, and we should apply a rate-conversion factor in software.
   auto micro_src_ppm = AudioClock::SynchronizeClocks(source_clock, dest_clock, mono_now_from_dest,
                                                      info.source_pos_error);
 
+  // Incorporate the adjustment into frac_source_frames_per_dest_frame (which determines step size).
   if (micro_src_ppm) {
     TimelineRate micro_src_factor{static_cast<uint64_t>(1'000'000 + micro_src_ppm), 1'000'000};
 
-    // Result might exceed uint64/uint64; allow reduction. step_size can be an approximation, since
-    // clocks (not SRC/step_size) determines a stream absolute position. SRC just chases position.
-    raw_source_frames_per_dest_frame =
-        TimelineRate::Product(raw_source_frames_per_dest_frame, micro_src_factor,
+    // Product may exceed uint64/uint64: allow reduction. step_size can be approximate, as clocks
+    // (not SRC/step_size) determine a stream absolute position -- SRC just chases the position.
+    frac_source_frames_per_dest_frame =
+        TimelineRate::Product(frac_source_frames_per_dest_frame, micro_src_factor,
                               false /* don't require exact precision */);
   }
 
-  SetStepSize(info, bookkeeping, raw_source_frames_per_dest_frame);
+  SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
+}
+
+// Establish specific running position values rather than adjusting clock rates, to bring source and
+// dest positions together. We do this when setting the initial position relationship, when dest
+// running position jumps unexpectedly, and when the error in source position exceeds our threshold.
+void MixStage::JamSyncPositions(AudioClock& source_clock, AudioClock& dest_clock,
+                                Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
+                                int64_t dest_frame, zx::time mono_now_from_dest) {
+  auto prev_running_dest_frame = info.next_dest_frame;
+  auto prev_running_source_frame = info.next_source_frame;
+  auto initial_position_was_set = info.initial_position_is_set;
+
+  info.ResetPositions(dest_frame, bookkeeping);
+
+  // Reset accumulated rate adjustment feedback, in the relevant clocks.
+  AudioClock::ResetRateAdjustments(source_clock, dest_clock, mono_now_from_dest);
+
+  if constexpr (kLogJamSyncs) {
+    std::stringstream common_stream, dest_stream, source_stream;
+    common_stream << "MixStage " << static_cast<void*>(this) << ", SourceInfo "
+                  << static_cast<void*>(&info) << ", dest_clk " << static_cast<void*>(&dest_clock)
+                  << ", source_clk " << static_cast<void*>(&source_clock) << "; "
+                  << AudioClock::SyncInfo(source_clock, dest_clock);
+    std::string common_logging = common_stream.str();
+    dest_stream << "dest " << (dest_clock.is_client_clock() ? "Client" : "Device")
+                << (dest_clock.is_adjustable() ? "Adjustable" : "Fixed") << "["
+                << static_cast<void*>(&dest_clock) << "]: " << ffl::String::DecRational
+                << info.next_dest_frame;
+    std::string dest_logging = dest_stream.str();
+    source_stream << "; src " << (source_clock.is_client_clock() ? "Client" : "Device")
+                  << (source_clock.is_adjustable() ? "Adjustable" : "Fixed") << "["
+                  << static_cast<void*>(&source_clock) << "]: " << ffl::String::DecRational
+                  << info.next_source_frame;
+    std::string source_logging = source_stream.str();
+
+    if (!initial_position_was_set) {
+      FX_LOGS(DEBUG) << common_logging;
+      FX_LOGS(DEBUG) << "Setting initial positions: " << dest_logging << source_logging;
+    } else if (prev_running_dest_frame != dest_frame) {
+      FX_LOGS(WARNING) << common_logging;
+      FX_LOGS(WARNING) << "Dest position discontinuity: " << dest_frame - prev_running_dest_frame
+                       << " frames; " << dest_logging << " (expect " << prev_running_dest_frame
+                       << ")" << source_logging << " (was " << prev_running_source_frame.raw_value()
+                       << ")";
+    } else {
+      FX_LOGS(WARNING) << common_logging;
+      FX_LOGS(WARNING) << "Stream out-of-sync by "
+                       << (static_cast<double>(info.source_pos_error.get()) / ZX_USEC(1))
+                       << " us (limit "
+                       << (static_cast<double>(kMaxErrorThresholdDuration.get()) / ZX_USEC(1))
+                       << " us) at dest " << mono_now_from_dest.get() << "; " << dest_logging
+                       << source_logging << " (expect " << prev_running_source_frame.raw_value()
+                       << ")";
+    }
+  }
 }
 
 // From a TimelineRate, calculate the [step_size, denominator, rate_modulo] used by Mixer::Mix()
 void MixStage::SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                           TimelineRate& raw_source_frames_per_dest_frame) {
-  bookkeeping.step_size = Fixed::FromRaw(raw_source_frames_per_dest_frame.Scale(1));
+                           TimelineRate& frac_source_frames_per_dest_frame) {
+  bookkeeping.step_size = Fixed::FromRaw(frac_source_frames_per_dest_frame.Scale(1));
 
   // Now that we have a new step_size, generate new rate_modulo and denominator values to
   // account for step_size's limitations.
   auto new_rate_modulo =
-      raw_source_frames_per_dest_frame.subject_delta() -
-      (raw_source_frames_per_dest_frame.reference_delta() * bookkeeping.step_size.raw_value());
-  auto new_denominator = raw_source_frames_per_dest_frame.reference_delta();
+      frac_source_frames_per_dest_frame.subject_delta() -
+      (frac_source_frames_per_dest_frame.reference_delta() * bookkeeping.step_size.raw_value());
+  auto new_denominator = frac_source_frames_per_dest_frame.reference_delta();
 
   // Reduce this fraction before setting it.
   TimelineRate reduced_rate{new_rate_modulo, new_denominator};
