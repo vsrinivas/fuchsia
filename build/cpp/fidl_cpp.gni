@@ -7,7 +7,7 @@ import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
-template("_fidl_hlcpp_codegen_impl") {
+template("_fidl_cpp_codegen_impl") {
   generation_target_name = "${target_name}_generate"
   fidl_target_name = invoker.fidl_target_name
 
@@ -53,33 +53,18 @@ template("_fidl_hlcpp_codegen_impl") {
     if (!defined(experimental_split_generation_domain_objects)) {
       experimental_split_generation_domain_objects = false
     }
-
+    if (!defined(generates_decoder_encoders)) {
+      generates_decoder_encoders = false
+    }
     visibility = generation_visibility
 
     tool = invoker.fidlgen_tool
 
     inputs = [ json_representation ]
 
-    outputs = [
-      "${file_stem}.h",
-      "${file_stem}.cc",
-    ]
-
-    if (generates_test_base_header) {
-      outputs += [ "${file_stem}_test_base.h" ]
-    }
-    if (generates_decoder_encoders) {
-      outputs += [
-        "${file_stem}_decode_encode.cc",
-        "${file_stem}_decode_encode.h",
-      ]
-    }
-
     args = [
       "--json",
       rebase_path(json_representation, root_build_dir),
-      "--output-base",
-      rebase_path(file_stem, root_build_dir),
       "--include-base",
       rebase_path("$fidl_target_gen_dir/$fidl_target_name", root_build_dir),
       "--include-stem",
@@ -88,7 +73,43 @@ template("_fidl_hlcpp_codegen_impl") {
       rebase_path("${clang_prefix}/clang-format", "", root_build_dir),
     ]
 
-    # ${file_stem}_test_base.h is omitted when only generating domain objects.
+    header_file = "${file_stem}.h"
+    source_file = "${file_stem}.cc"
+    outputs = [
+      header_file,
+      source_file,
+    ]
+    args += [
+      "--header",
+      rebase_path(header_file, root_build_dir),
+      "--source",
+      rebase_path(source_file, root_build_dir),
+    ]
+
+    if (generates_test_base_header) {
+      test_base_file = "${file_stem}_test_base.h"
+      outputs += [ test_base_file ]
+      args += [
+        "--test-base",
+        rebase_path(test_base_file, root_build_dir),
+      ]
+    }
+    if (generates_decoder_encoders) {
+      decoder_encoder_header_file = "${file_stem}_decode_encode.h"
+      decoder_encoder_source_file = "${file_stem}_decode_encode.cc"
+      outputs += [
+        decoder_encoder_header_file,
+        decoder_encoder_source_file,
+      ]
+      args += [
+        "--decoder-encoder-header",
+        rebase_path(decoder_encoder_header_file, root_build_dir),
+        "--decoder-encoder-source",
+        rebase_path(decoder_encoder_source_file, root_build_dir),
+      ]
+    }
+
+    # test base header is omitted when only generating domain objects.
     if (experimental_split_generation_domain_objects) {
       assert(!generates_test_base_header)
       args += [ "--experimental-split-generation-domain-objects" ]
@@ -102,11 +123,9 @@ template("_fidl_hlcpp_codegen_impl") {
   }
 }
 
-# Generates high-level C++ bindings, or natural domain objects,
-# or the fuzzer header library, for a given FIDL library.
-#
-# fidl_hlcpp_codegen accepts tools taking the "--output-base" command line flag.
-# Tools that take "--header" and "--source" should use fidl_cpp_codegen.
+# Generates C++ code for a given FIDL library: low-level C++ bindings,
+# high-level C++ bindings, natural domain objects, unified C++ bindings,
+# or the fuzzer header library.
 #
 # Parameters
 #
@@ -137,111 +156,9 @@ template("_fidl_hlcpp_codegen_impl") {
 #     parameter must be false, as only protocols require a test base.
 #     This is required to support hermetic actions.
 #
-template("fidl_hlcpp_codegen") {
-  if (current_toolchain == fidl_toolchain) {
-    _fidl_hlcpp_codegen_impl(target_name) {
-      forward_variables_from(invoker, "*")
-    }
-  } else {
-    # Code generation only happens under the FIDL toolchain.
-    not_needed([ "target_name" ])
-    not_needed(invoker, "*")
-  }
-}
-
-template("_fidl_cpp_codegen_impl") {
-  generation_target_name = "${target_name}_generate"
-  generation_visibility = [
-    ":$target_name",
-    "${invoker.fidlgen_tool}:*",
-  ]
-
-  library_name = invoker.library_name
-  fidl_target_name = invoker.fidl_target_name
-  fidl_target_gen_dir =
-      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
-  json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
-
-  include_stem =
-      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
-  file_stem = "$fidl_target_gen_dir/$fidl_target_name/$include_stem"
-
-  compiled_action(generation_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "generates_test_base_header",
-                           ])
-
-    visibility = generation_visibility
-
-    tool = invoker.fidlgen_tool
-
-    inputs = [ json_representation ]
-
-    outputs = [
-      "${file_stem}.h",
-      "${file_stem}.cc",
-    ]
-
-    if (generates_test_base_header) {
-      outputs += [ "${file_stem}_test_base.h" ]
-    }
-
-    args = [
-      "--json",
-      rebase_path(json_representation, root_build_dir),
-      "--header",
-      rebase_path("${file_stem}.h", root_build_dir),
-      "--source",
-      rebase_path("${file_stem}.cc", root_build_dir),
-      "--include-base",
-      rebase_path("$fidl_target_gen_dir/$fidl_target_name", root_build_dir),
-      "--include-stem",
-      invoker.output_stem,
-      "--clang-format-path",
-      rebase_path("${clang_prefix}/clang-format", "", root_build_dir),
-    ]
-
-    if (invoker.generates_test_base_header) {
-      args += [
-        "--test-base",
-        rebase_path("${file_stem}_test_base.h", root_build_dir),
-      ]
-    }
-
-    deps = [ ":$fidl_target_name($fidl_toolchain)" ]
-
-    metadata = {
-      generated_sources = rebase_path(outputs, root_build_dir)
-    }
-  }
-}
-
-# Generates low-level or unified C++ bindings for a FIDL library.
-#
-# fidl_cpp_codegen accepts tools taking the "--header" and "--source"
-# command line flags.
-# Tools that take "--output-base" should use fidl_hlcpp_codegen.
-#
-# Parameters
-#
-#  library_name (required)
-#    Name of the FIDL library.
-#
-#  fidl_target_name (required)
-#    Name of the GN target corresponding to the FIDL library.
-#
-#   output_stem (required)
-#     A suffix to name generated files, after library path, and before
-#     any file extension.
-#
-#   fidlgen_tool (required)
-#     The code generation tool to use, as an absolute GN label.
-#
-#   generates_test_base_header (required)
-#     Specifies if the tool will generate a test base header.
-#     This is required to support hermetic actions.
+#   generates_decoder_encoders (optional)
+#     Specifies if the tool will generate fuzzer decoder encoder
+#     wrapper implementations.
 #
 template("fidl_cpp_codegen") {
   if (current_toolchain == fidl_toolchain) {
@@ -483,7 +400,7 @@ template("fidl_cpp_family") {
 
   # Define C++ natural types target.
   # They are generated using the HLCPP backend.
-  fidl_hlcpp_codegen("${target_name}_cpp_natural_types") {
+  fidl_cpp_codegen("${target_name}_cpp_natural_types") {
     forward_variables_from(common_options, "*")
     output_stem = "cpp/natural_types"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
@@ -507,7 +424,7 @@ template("fidl_cpp_family") {
   # TODO(fxbug.dev/64093): Currently the HLCPP generated code embeds the
   # natural types inline. Change this to depend on the dedicated natural types
   # target when the unified bindings and HLCPP are used in one program.
-  fidl_hlcpp_codegen("${target_name}_hlcpp") {
+  fidl_cpp_codegen("${target_name}_hlcpp") {
     forward_variables_from(common_options, "*")
     output_stem = "cpp/fidl"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
@@ -606,7 +523,7 @@ template("fidl_cpp_family") {
   #
 
   # Define fuzzer targets.
-  fidl_hlcpp_codegen("${target_name}_libfuzzer") {
+  fidl_cpp_codegen("${target_name}_libfuzzer") {
     forward_variables_from(invoker, [ "fuzzers" ])
     forward_variables_from(common_options, "*")
     output_stem = "cpp/libfuzzer"
