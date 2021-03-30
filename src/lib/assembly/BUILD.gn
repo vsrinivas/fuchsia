@@ -4,4 +4,5 @@
 
 group("tests") {
   testonly = true
+  deps = [ "vbmeta:tests" ]
 }
