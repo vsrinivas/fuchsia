@@ -218,6 +218,7 @@ hyper-rustls = { version = "0.20.0", default-features = false, features = ["rust
 indoc = "0.3.3"
 nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
 parking = "2"
+pem = "0.8.3"
 petgraph = "0.5.1"
 proc-macro2 = "1.0.24"
 polling = "2.0.2"

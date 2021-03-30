@@ -1,12 +1,12 @@
-use crate::{tables, Config, PAD_BYTE};
+use crate::{tables, Config};
 
 #[cfg(any(feature = "alloc", feature = "std", test))]
 use crate::STANDARD;
 #[cfg(any(feature = "alloc", feature = "std", test))]
 use alloc::vec::Vec;
-use core::fmt;
 #[cfg(any(feature = "std", test))]
 use std::error;
+use core::fmt;
 
 // decode logic operates on chunks of 8 input bytes without padding
 const INPUT_CHUNK_LEN: usize = 8;
@@ -29,10 +29,6 @@ pub enum DecodeError {
     /// An invalid byte was found in the input. The offset and offending byte are provided.
     InvalidByte(usize, u8),
     /// The length of the input is invalid.
-    /// A typical cause of this is stray trailing whitespace or other separator bytes.
-    /// In the case where excess trailing bytes have produced an invalid length *and* the last byte
-    /// is also an invalid base64 symbol (as would be the case for whitespace, etc), `InvalidByte`
-    /// will be emitted instead of `InvalidLength` to make the issue easier to debug.
     InvalidLength,
     /// The last non-padding input symbol's encoded 6 bits have nonzero bits that will be discarded.
     /// This is indicative of corrupted or truncated Base64.
@@ -85,7 +81,7 @@ impl error::Error for DecodeError {
 ///}
 ///```
 #[cfg(any(feature = "alloc", feature = "std", test))]
-pub fn decode<T: AsRef<[u8]>>(input: T) -> Result<Vec<u8>, DecodeError> {
+pub fn decode<T: ?Sized + AsRef<[u8]>>(input: &T) -> Result<Vec<u8>, DecodeError> {
     decode_config(input, STANDARD)
 }
 
@@ -106,7 +102,10 @@ pub fn decode<T: AsRef<[u8]>>(input: T) -> Result<Vec<u8>, DecodeError> {
 ///}
 ///```
 #[cfg(any(feature = "alloc", feature = "std", test))]
-pub fn decode_config<T: AsRef<[u8]>>(input: T, config: Config) -> Result<Vec<u8>, DecodeError> {
+pub fn decode_config<T: ?Sized + AsRef<[u8]>>(
+    input: &T,
+    config: Config,
+) -> Result<Vec<u8>, DecodeError> {
     let mut buffer = Vec::<u8>::with_capacity(input.as_ref().len() * 4 / 3);
 
     decode_config_buf(input, config, &mut buffer).map(|_| buffer)
@@ -134,8 +133,8 @@ pub fn decode_config<T: AsRef<[u8]>>(input: T, config: Config) -> Result<Vec<u8>
 ///}
 ///```
 #[cfg(any(feature = "alloc", feature = "std", test))]
-pub fn decode_config_buf<T: AsRef<[u8]>>(
-    input: T,
+pub fn decode_config_buf<T: ?Sized + AsRef<[u8]>>(
+    input: &T,
     config: Config,
     buffer: &mut Vec<u8>,
 ) -> Result<(), DecodeError> {
@@ -170,8 +169,8 @@ pub fn decode_config_buf<T: AsRef<[u8]>>(
 /// input, rounded up, or in other words `(input_len + 3) / 4 * 3`.
 ///
 /// If the slice is not large enough, this will panic.
-pub fn decode_config_slice<T: AsRef<[u8]>>(
-    input: T,
+pub fn decode_config_slice<T: ?Sized + AsRef<[u8]>>(
+    input: &T,
     config: Config,
     output: &mut [u8],
 ) -> Result<usize, DecodeError> {
@@ -215,17 +214,7 @@ fn decode_helper(
         // and the fast decode logic cannot handle padding
         0 => INPUT_CHUNK_LEN,
         // 1 and 5 trailing bytes are illegal: can't decode 6 bits of input into a byte
-        1 | 5 => {
-            // trailing whitespace is so common that it's worth it to check the last byte to
-            // possibly return a better error message
-            if let Some(b) = input.last() {
-                if *b != PAD_BYTE && decode_table[*b as usize] == tables::INVALID_VALUE {
-                    return Err(DecodeError::InvalidByte(input.len() - 1, *b));
-                }
-            }
-
-            return Err(DecodeError::InvalidLength);
-        }
+        1 | 5 => return Err(DecodeError::InvalidLength),
         // This will decode to one output byte, which isn't enough to overwrite the 2 extra bytes
         // written by the fast decode loop. So, we have to ignore both these 2 bytes and the
         // previous chunk.
@@ -343,7 +332,7 @@ fn decode_helper(
     let start_of_leftovers = input_index;
     for (i, b) in input[start_of_leftovers..].iter().enumerate() {
         // '=' padding
-        if *b == PAD_BYTE {
+        if *b == 0x3D {
             // There can be bad padding in a few ways:
             // 1 - Padding with non-padding characters after it
             // 2 - Padding after zero or one non-padding characters before it
@@ -384,7 +373,7 @@ fn decode_helper(
         if padding_bytes > 0 {
             return Err(DecodeError::InvalidByte(
                 start_of_leftovers + first_padding_index,
-                PAD_BYTE,
+                0x3D,
             ));
         }
         last_symbol = *b;
@@ -819,7 +808,7 @@ mod tests {
                 symbols[1] = s2;
                 for &s3 in STANDARD.char_set.encode_table().iter() {
                     symbols[2] = s3;
-                    symbols[3] = PAD_BYTE;
+                    symbols[3] = b'=';
 
                     match base64_to_bytes.get(&symbols[..]) {
                         Some(bytes) => {
@@ -855,8 +844,8 @@ mod tests {
             symbols[0] = s1;
             for &s2 in STANDARD.char_set.encode_table().iter() {
                 symbols[1] = s2;
-                symbols[2] = PAD_BYTE;
-                symbols[3] = PAD_BYTE;
+                symbols[2] = b'=';
+                symbols[3] = b'=';
 
                 match base64_to_bytes.get(&symbols[..]) {
                     Some(bytes) => {

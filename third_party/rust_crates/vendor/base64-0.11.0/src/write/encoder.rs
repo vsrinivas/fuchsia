@@ -25,24 +25,27 @@ const MIN_ENCODE_CHUNK_SIZE: usize = 3;
 /// use std::io::Write;
 ///
 /// // use a vec as the simplest possible `Write` -- in real code this is probably a file, etc.
-/// let mut enc = base64::write::EncoderWriter::new(Vec::new(), base64::STANDARD);
+/// let mut wrapped_writer = Vec::new();
+/// {
+///     let mut enc = base64::write::EncoderWriter::new(
+///         &mut wrapped_writer, base64::STANDARD);
 ///
-/// // handle errors as you normally would
-/// enc.write_all(b"asdf").unwrap();
+///     // handle errors as you normally would
+///     enc.write_all(b"asdf").unwrap();
+///     // could leave this out to be called by Drop, if you don't care
+///     // about handling errors
+///     enc.finish().unwrap();
 ///
-/// // could leave this out to be called by Drop, if you don't care
-/// // about handling errors or getting the delegate writer back
-/// let delegate = enc.finish().unwrap();
+/// }
 ///
 /// // base64 was written to the writer
-/// assert_eq!(b"YXNkZg==", &delegate[..]);
+/// assert_eq!(b"YXNkZg==", &wrapped_writer[..]);
 ///
 /// ```
 ///
 /// # Panics
 ///
-/// Calling `write()` (or related methods) or `finish()` after `finish()` has completed without
-/// error is invalid and will panic.
+/// Calling `write()` after `finish()` is invalid and will panic.
 ///
 /// # Errors
 ///
@@ -53,12 +56,10 @@ const MIN_ENCODE_CHUNK_SIZE: usize = 3;
 ///
 /// It has some minor performance loss compared to encoding slices (a couple percent).
 /// It does not do any heap allocation.
-pub struct EncoderWriter<W: Write> {
+pub struct EncoderWriter<'a, W: 'a + Write> {
     config: Config,
-    /// Where encoded data is written to. It's an Option as it's None immediately before Drop is
-    /// called so that finish() can return the underlying writer. None implies that finish() has
-    /// been called successfully.
-    delegate: Option<W>,
+    /// Where encoded data is written to
+    w: &'a mut W,
     /// Holds a partial chunk, if any, after the last `write()`, so that we may then fill the chunk
     /// with the next `write()`, encode it, then proceed with the rest of the input normally.
     extra_input: [u8; MIN_ENCODE_CHUNK_SIZE],
@@ -69,11 +70,13 @@ pub struct EncoderWriter<W: Write> {
     output: [u8; BUF_SIZE],
     /// How much of `output` is occupied with encoded data that couldn't be written last time
     output_occupied_len: usize,
+    /// True iff padding / partial last chunk has been written.
+    finished: bool,
     /// panic safety: don't write again in destructor if writer panicked while we were writing to it
     panicked: bool,
 }
 
-impl<W: Write> fmt::Debug for EncoderWriter<W> {
+impl<'a, W: Write> fmt::Debug for EncoderWriter<'a, W> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -86,16 +89,17 @@ impl<W: Write> fmt::Debug for EncoderWriter<W> {
     }
 }
 
-impl<W: Write> EncoderWriter<W> {
+impl<'a, W: Write> EncoderWriter<'a, W> {
     /// Create a new encoder that will write to the provided delegate writer `w`.
-    pub fn new(w: W, config: Config) -> EncoderWriter<W> {
+    pub fn new(w: &'a mut W, config: Config) -> EncoderWriter<'a, W> {
         EncoderWriter {
             config,
-            delegate: Some(w),
+            w,
             extra_input: [0u8; MIN_ENCODE_CHUNK_SIZE],
             extra_input_occupied_len: 0,
             output: [0u8; BUF_SIZE],
             output_occupied_len: 0,
+            finished: false,
             panicked: false,
         }
     }
@@ -103,40 +107,19 @@ impl<W: Write> EncoderWriter<W> {
     /// Encode all remaining buffered data and write it, including any trailing incomplete input
     /// triples and associated padding.
     ///
-    /// Once this succeeds, no further writes or calls to this method are allowed.
+    /// Once this succeeds, no further writes can be performed, as that would produce invalid
+    /// base64.
     ///
-    /// This may write to the delegate writer multiple times if the delegate writer does not accept
-    /// all input provided to its `write` each invocation.
-    ///
-    /// If you don't care about error handling, it is not necessary to call this function, as the
-    /// equivalent finalization is done by the Drop impl.
-    ///
-    /// Returns the writer that this was constructed around.
+    /// This may write to the delegate writer multiple times if the delegate writer does not accept all input provided
+    /// to its `write` each invocation.
     ///
     /// # Errors
     ///
-    /// The first error that is not of `ErrorKind::Interrupted` will be returned.
-    pub fn finish(&mut self) -> Result<W> {
-        // If we could consume self in finish(), we wouldn't have to worry about this case, but
-        // finish() is retryable in the face of I/O errors, so we can't consume here.
-        if self.delegate.is_none() {
-            panic!("Encoder has already had finish() called")
-        };
-
-        self.write_final_leftovers()?;
-
-        let writer = self.delegate.take().expect("Writer must be present");
-
-        Ok(writer)
-    }
-
-    /// Write any remaining buffered data to the delegate writer.
-    fn write_final_leftovers(&mut self) -> Result<()> {
-        if self.delegate.is_none() {
-            // finish() has already successfully called this, and we are now in drop() with a None
-            // writer, so just no-op
+    /// The first error that is not of [`ErrorKind::Interrupted`] will be returned.
+    pub fn finish(&mut self) -> Result<()> {
+        if self.finished {
             return Ok(());
-        }
+        };
 
         self.write_all_encoded_output()?;
 
@@ -155,6 +138,7 @@ impl<W: Write> EncoderWriter<W> {
             self.extra_input_occupied_len = 0;
         }
 
+        self.finished = true;
         Ok(())
     }
 
@@ -168,11 +152,7 @@ impl<W: Write> EncoderWriter<W> {
     /// that no write took place.
     fn write_to_delegate(&mut self, current_output_len: usize) -> Result<()> {
         self.panicked = true;
-        let res = self
-            .delegate
-            .as_mut()
-            .expect("Writer must be present")
-            .write(&self.output[..current_output_len]);
+        let res = self.w.write(&self.output[..current_output_len]);
         self.panicked = false;
 
         res.map(|consumed| {
@@ -217,7 +197,7 @@ impl<W: Write> EncoderWriter<W> {
     }
 }
 
-impl<W: Write> Write for EncoderWriter<W> {
+impl<'a, W: Write> Write for EncoderWriter<'a, W> {
     /// Encode input and then write to the delegate writer.
     ///
     /// Under non-error circumstances, this returns `Ok` with the value being the number of bytes
@@ -235,7 +215,7 @@ impl<W: Write> Write for EncoderWriter<W> {
     ///
     /// Any errors emitted by the delegate writer are returned.
     fn write(&mut self, input: &[u8]) -> Result<usize> {
-        if self.delegate.is_none() {
+        if self.finished {
             panic!("Cannot write more after calling finish()");
         }
 
@@ -359,23 +339,17 @@ impl<W: Write> Write for EncoderWriter<W> {
 
     /// Because this is usually treated as OK to call multiple times, it will *not* flush any
     /// incomplete chunks of input or write padding.
-    /// # Errors
-    ///
-    /// The first error that is not of [`ErrorKind::Interrupted`] will be returned.
     fn flush(&mut self) -> Result<()> {
         self.write_all_encoded_output()?;
-        self.delegate
-            .as_mut()
-            .expect("Writer must be present")
-            .flush()
+        self.w.flush()
     }
 }
 
-impl<W: Write> Drop for EncoderWriter<W> {
+impl<'a, W: Write> Drop for EncoderWriter<'a, W> {
     fn drop(&mut self) {
         if !self.panicked {
             // like `BufWriter`, ignore errors during drop
-            let _ = self.write_final_leftovers();
+            let _ = self.finish();
         }
     }
 }

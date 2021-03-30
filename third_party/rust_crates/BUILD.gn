@@ -420,6 +420,12 @@ group("paste") {
   deps = [ ":paste-v1_0_0($host_toolchain)" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("pem") {
+    deps = [ ":pem-v0_8_3" ]
+  }
+}
+
 group("percent-encoding") {
   deps = [ ":percent-encoding-v2_1_0" ]
 }
@@ -1567,7 +1573,7 @@ rust_library("backtrace-sys-v0_1_32") {
 
 rust_library("base64-v0_11_0") {
   crate_name = "base64"
-  crate_root = "//third_party/rust_crates/vendor/base64/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/base64-0.11.0/src/lib.rs"
   output_name = "base64-ba233daa82312979"
   configs -= [
     "//build/config:rust_edition_2018",
@@ -1583,6 +1589,29 @@ rust_library("base64-v0_11_0") {
     "--edition=2018",
     "-Cmetadata=ba233daa82312979",
     "-Cextra-filename=-ba233daa82312979",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("base64-v0_13_0") {
+  crate_name = "base64"
+  crate_root = "//third_party/rust_crates/vendor/base64/src/lib.rs"
+  output_name = "base64-5335de7b20fd4c04"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=5335de7b20fd4c04",
+    "-Cextra-filename=-5335de7b20fd4c04",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -5885,6 +5914,30 @@ rust_proc_macro("paste-v1_0_0") {
     "--edition=2018",
     "-Cmetadata=467ce9508308aa2b",
     "-Cextra-filename=-467ce9508308aa2b",
+  ]
+}
+
+rust_library("pem-v0_8_3") {
+  crate_name = "pem"
+  crate_root = "//third_party/rust_crates/vendor/pem/src/lib.rs"
+  output_name = "pem-cdefa2bfba638b2c"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":base64-v0_13_0" ]
+  deps += [ ":once_cell-v1_5_2" ]
+  deps += [ ":regex-v1_3_5" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=cdefa2bfba638b2c",
+    "-Cextra-filename=-cdefa2bfba638b2c",
   ]
 }
 
