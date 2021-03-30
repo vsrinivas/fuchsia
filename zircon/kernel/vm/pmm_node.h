@@ -123,17 +123,17 @@ class PmmNode {
   void SetMemAvailStateLocked(uint8_t mem_avail_state) TA_REQ(lock_);
 
   void IncrementFreeCountLocked(uint64_t amount) TA_REQ(lock_) {
-    free_count_ += amount;
+    free_count_.fetch_add(amount, ktl::memory_order_relaxed);
 
-    if (unlikely(free_count_ >= mem_avail_state_upper_bound_)) {
+    if (unlikely(free_count_.load(ktl::memory_order_relaxed) >= mem_avail_state_upper_bound_)) {
       UpdateMemAvailStateLocked();
     }
   }
   void DecrementFreeCountLocked(uint64_t amount) TA_REQ(lock_) {
-    DEBUG_ASSERT(free_count_ >= amount);
-    free_count_ -= amount;
+    DEBUG_ASSERT(free_count_.load(ktl::memory_order_relaxed) >= amount);
+    free_count_.fetch_sub(amount, ktl::memory_order_relaxed);
 
-    if (unlikely(free_count_ <= mem_avail_state_lower_bound_)) {
+    if (unlikely(free_count_.load(ktl::memory_order_relaxed) <= mem_avail_state_lower_bound_)) {
       UpdateMemAvailStateLocked();
     }
   }
@@ -151,7 +151,10 @@ class PmmNode {
   mutable DECLARE_MUTEX(PmmNode) lock_;
 
   uint64_t arena_cumulative_size_ TA_GUARDED(lock_) = 0;
-  uint64_t free_count_ TA_GUARDED(lock_) = 0;
+  // This is both an atomic and guarded by lock_ as we would like modifications to require the lock,
+  // as logic in the system relies on the free_count_ not changing whilst the lock is held, but also
+  // be an atomic so it can be correctly read without the lock.
+  ktl::atomic<uint64_t> free_count_ TA_GUARDED(lock_) = 0;
 
   fbl::SizedDoublyLinkedList<PmmArena*> arena_list_ TA_GUARDED(lock_);
 

@@ -168,7 +168,7 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT(free_count_);
   free_pages_evt_.Signal();
 
-  LTRACEF("free count now %" PRIu64 "\n", free_count_);
+  LTRACEF("free count now %" PRIu64 "\n", free_count_.load(ktl::memory_order_relaxed));
 }
 
 void PmmNode::FillFreePagesAndArm() {
@@ -288,7 +288,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
   AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
-  if (unlikely(count > free_count_)) {
+  if (unlikely(count > free_count_.load(ktl::memory_order_relaxed))) {
     return fail_with(ZX_ERR_NO_MEMORY);
   }
 
@@ -600,7 +600,9 @@ void PmmNode::ProcessPendingRequests() {
   }
 }
 
-uint64_t PmmNode::CountFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS { return free_count_; }
+uint64_t PmmNode::CountFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS {
+  return free_count_.load(ktl::memory_order_relaxed);
+}
 
 uint64_t PmmNode::CountTotalBytes() const TA_NO_THREAD_SAFETY_ANALYSIS {
   return arena_cumulative_size_;
@@ -614,8 +616,9 @@ void PmmNode::DumpFree() const TA_NO_THREAD_SAFETY_ANALYSIS {
 void PmmNode::Dump(bool is_panic) const {
   // No lock analysis here, as we want to just go for it in the panic case without the lock.
   auto dump = [this]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    printf("pmm node %p: free_count %zu (%zu bytes), total size %zu\n", this, free_count_,
-           free_count_ * PAGE_SIZE, arena_cumulative_size_);
+    printf("pmm node %p: free_count %zu (%zu bytes), total size %zu\n", this,
+           free_count_.load(ktl::memory_order_relaxed), free_count_ * PAGE_SIZE,
+           arena_cumulative_size_);
     for (auto& a : arena_list_) {
       a.Dump(false, false);
     }
@@ -682,7 +685,7 @@ void PmmNode::UpdateMemAvailStateLocked() {
   // Find the smallest watermark which is greater than the number of free pages.
   uint8_t target = mem_avail_state_watermark_count_;
   for (uint8_t i = 0; i < mem_avail_state_watermark_count_; i++) {
-    if (mem_avail_state_watermarks_[i] > free_count_) {
+    if (mem_avail_state_watermarks_[i] > free_count_.load(ktl::memory_order_relaxed)) {
       target = i;
       break;
     }
