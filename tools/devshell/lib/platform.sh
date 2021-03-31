@@ -22,6 +22,16 @@ case "$(uname -m)" in
   aarch64)
     readonly HOST_CPU="arm64"
     ;;
+  arm64)
+    # Redirect mac-arm64 to mac-x64 binaries until prebuilt
+    # arm64 binaries are available.
+    # fxb/73385
+    if [ "$HOST_OS" == "mac" ]; then
+      readonly HOST_CPU="x64"
+    else
+      readonly HOST_CPU="arm64"
+    fi
+    ;;
   *)
     echo >&2 "Unknown architecture: $(uname -m)."
     exit 1
