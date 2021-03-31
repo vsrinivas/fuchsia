@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+if (is_host) {
+  python_host_test("csa_helper_test") {
+    main_source = "main_test.py"
+    sources = [
+      "helper.py",
+      "main.py",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":csa_helper_test($host_toolchain)" ]
+}
