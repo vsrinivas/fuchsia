@@ -46,7 +46,15 @@ EOF
   cat > "${_FUCHSIA_DIR}/tools/devshell/lib/platform.sh.mock_side_effects" <<EOF
     readonly PREBUILT_GN="\${FUCHSIA_DIR}/${MOCKED_GN}"
 EOF
+  local build_dir="$_FUCHSIA_DIR/out/default"
   cat > "${_FUCHSIA_DIR}/${MOCKED_GN}.mock_side_effects" <<EOF
+    # The mocked GN executable needs to produce an 'fx.config' file in the output
+    # directory, or else 'fx-change-build-dir' will fail.
+    mkdir -p "$build_dir"
+    touch "${build_dir}/fx.config"
+
+    # Print the GN command line so that tests can inspect stdout to see what
+    # arguments 'fx set' passed to GN.
     echo "\$@"
 EOF
 }
@@ -54,7 +62,7 @@ EOF
 # ensure that "fx set product.board" calls gn with the expected args
 TEST_fx-set() {
   local output
-  output="$(${fx} set myproduct.myboard --no-goma)"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma)"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -66,7 +74,7 @@ TEST_fx-set() {
 # ensure that "fx set product.board --with ..." calls gn with the expected args
 TEST_fx-set-with() {
   local output
-  output="$(${fx} set myproduct.myboard --no-goma --with "//bundles:tests")"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -78,7 +86,7 @@ TEST_fx-set-with() {
 # ensure that "fx set product.board --with-base ..." calls gn with the expected args
 TEST_fx-set-with-base() {
   local output
-  output="$(${fx} set myproduct.myboard --no-goma --with-base "//bundles:tests")"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with-base "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=["//bundles:tests"'
@@ -90,7 +98,7 @@ TEST_fx-set-with-base() {
 # ensure that "fx set product.board --with-cache ..." calls gn with the expected args
 TEST_fx-set-with-cache() {
   local output
-  output="$(${fx} set myproduct.myboard --no-goma --with-cache "//bundles:tests")"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with-cache "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -102,7 +110,7 @@ TEST_fx-set-with-cache() {
 # ensure that "fx set product.board --with-host ..." calls gn with the expected args
 TEST_fx-set-with-host() {
   local output
-  output="$(${fx} set myproduct.myboard --no-goma --with-host "//bundles:tests")"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with-host "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -114,7 +122,7 @@ TEST_fx-set-with-host() {
 # ensure that "fx set product.board --fuzz-with ..." calls gn with the expected args
 TEST_fx-set-fuzz-with() {
   local output
-  output="$(${fx} set myproduct.myboard --no-goma --fuzz-with foosan)"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --fuzz-with foosan)"
   local select_variant='select_variant=\['
   select_variant+='{variant="foosan-fuzzer" target_type=\["fuzzed_executable"\]},'
   select_variant+='{variant="foosan" label=\["//sdk/lib/fdio"\]},'
