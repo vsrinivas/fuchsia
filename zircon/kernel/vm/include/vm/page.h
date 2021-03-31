@@ -18,9 +18,10 @@
 #include <vm/page_state.h>
 
 // core per page structure allocated at pmm arena creation time
-typedef struct vm_page {
+struct vm_page {
   struct list_node queue_node;
   paddr_t paddr_priv;  // use paddr() accessor
+
   // offset 0x18
 
   union {
@@ -31,14 +32,39 @@ typedef struct vm_page {
       // the page queue lock) whilst a page is in a page queue.
       // Field should be modified by the setters and getters to allow for future encoding changes.
       void* object_priv;
+
+      // offset 0x20
+
       // When object is valid, this is the offset in the vmo that contains this page.
       // Field should be modified by the setters and getters to allow for future encoding changes.
       uint64_t page_offset_priv;
 
-      void* get_object() { return object_priv; }
+      // offset 0x28
+
+      // The rotation generation where the page would be in the oldest pager-backed queue when
+      // merging occurs. It is only significant for pages in pager-backed queues to determine which
+      // page counter to update after a rotation.
+      uint32_t pager_queue_merge_rotation_priv;
+
+      // offset 0x2c
+
+      // Identifies which queue this page was last added to. This value might be incorrect for pages
+      // that are in the oldest pager-backed queue when queue merging occurrs. This can be detected
+      // by comparing the page's merge rotation to the current rotation generation.
+      uint8_t page_queue_priv;
+
+      // offset 0x2d
+
+      void* get_object() const { return object_priv; }
       void set_object(void* object) { object_priv = object; }
-      uint64_t get_page_offset() { return page_offset_priv; }
+      uint64_t get_page_offset() const { return page_offset_priv; }
       void set_page_offset(uint64_t page_offset) { page_offset_priv = page_offset; }
+      uint32_t get_pager_queue_merge_rotation() const { return pager_queue_merge_rotation_priv; }
+      void set_pager_queue_merge_rotation(uint32_t pager_queue_merge_rotation) {
+        pager_queue_merge_rotation_priv = pager_queue_merge_rotation;
+      }
+      uint8_t get_page_queue() const { return page_queue_priv; }
+      void set_page_queue(uint8_t page_queue) { page_queue_priv = page_queue; }
 
 #define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
 #define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
@@ -62,16 +88,16 @@ typedef struct vm_page {
     } __PACKED object;  // attached to a vm object
   };
 
-  // offset 0x29
+  // offset 0x2e
 
   // logically private; use |state()| and |set_state()|
   ktl::atomic<vm_page_state> state_priv;
 
-  // offset 0x2a
+  // offset 0x2f
 
   // This padding is inserted here to make sizeof(vm_page) a multiple of 8 and help validate that
   // all commented offsets were indeed correct.
-  char padding[6];
+  char padding;
 
   // helper routines
   bool is_free() const { return state() == vm_page_state::FREE; }
@@ -95,8 +121,10 @@ typedef struct vm_page {
   //
   // Should be used when first constructing pages.
   static void add_to_initial_count(vm_page_state state, uint64_t n);
+};
 
-} vm_page_t;
+// Provide a type alias using modern syntax to avoid clang-tidy warnings.
+using vm_page_t = vm_page;
 
 // assert that the page structure isn't growing uncontrollably
 static_assert(sizeof(vm_page) == 0x30);

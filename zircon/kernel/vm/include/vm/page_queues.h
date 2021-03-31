@@ -7,8 +7,10 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
 
+#include <sys/types.h>
 #include <zircon/listnode.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
@@ -37,6 +39,9 @@ class PageQueues {
   // For now 4 queues are chosen to stretch out that middle group such that the distinction between
   // slightly old and very old is more pronounced.
   static constexpr size_t kNumPagerBacked = 4;
+
+  static_assert(fbl::is_pow2(kNumPagerBacked), "kNumPagerBacked must be a power of 2!");
+  static_assert(kNumPagerBacked > 2, "kNumPagerBacked must be greater than 2!");
 
   PageQueues();
   ~PageQueues();
@@ -161,9 +166,65 @@ class PageQueues {
   bool DebugPageIsWired(const vm_page_t* page) const;
 
  private:
+  static constexpr size_t kNewestIndex = 0;
+  static constexpr size_t kOldestIndex = kNumPagerBacked - 1;
+  static constexpr size_t kPagerQueueIndexMask = kNumPagerBacked - 1;
+
+  // Specifies the indices of the page queue counters.
+  enum PageQueue : uint8_t {
+    PageQueueNone = 0,
+    PageQueueUnswappable,
+    PageQueueWired,
+    PageQueueUnswappableZeroFork,
+    PageQueuePagerBackedInactive,
+    PageQueuePagerBackedBase,
+    PageQueueEntries = PageQueuePagerBackedBase + kNumPagerBacked,
+  };
+
+  // Ensure that the pager-backed queue counts are always at the end.
+  static_assert(PageQueuePagerBackedBase + kNumPagerBacked == PageQueueEntries);
+
+  static constexpr bool is_pager_backed(PageQueue value) {
+    return value >= PageQueuePagerBackedBase;
+  }
+  static constexpr bool is_pager_backed(uint8_t value) {
+    return is_pager_backed(static_cast<PageQueue>(value));
+  }
+
+  // Returns the pager queue index adjusted for the current rotation.
+  inline size_t rotated_index(size_t index) const TA_REQ(lock_);
+
+  // Returns the PageQueue index for the pager queue index adjusted for the current rotation.
+  inline PageQueue GetPagerBackedQueueLocked(size_t index) const TA_REQ(lock_);
+
+  // Returns the list node for the pager queue index adjusted for the current rotation.
+  inline list_node_t* GetPagerBackedQueueHeadLocked(size_t index) TA_REQ(lock_);
+  inline const list_node_t* GetPagerBackedQueueHeadLocked(size_t index) const TA_REQ(lock_);
+
+  // Returns a reference to the page count for the pager queue adjusted for the current rotation.
+  inline ssize_t& GetPagerBackedQueueCountLocked(size_t index) TA_REQ(lock_);
+  inline ssize_t GetPagerBackedQueueCountLocked(size_t index) const TA_REQ(lock_);
+
+  // Updates the source and destination counters of the given page and records the destination queue
+  // in the page.
+  inline void UpdateCountsLocked(vm_page_t* page, PageQueue destination) TA_REQ(lock_);
+
   DECLARE_CRITICAL_MUTEX(PageQueues) mutable lock_;
   // pager_backed_ denotes pages that both have a user level pager associated with them, and could
   // be evicted such that the pager could re-create the page.
+  //
+  // Pages in these queues are periodically aged by circularly rotating which entries represent the
+  // newest, intermediate, and oldest pages. When performing a rotation, the list in the current
+  // oldest entry is appended to the next oldest list, preserving the chronological order of the
+  // pages and emptying the list that will become the new earliest list.
+  //
+  //    Oldest        Newest       Newest  Oldest                Newest  Oldest
+  //         |        |                 |  |                          |  |
+  //         |        |                 |  |                          |  V
+  //         |        |                 |  V                          |  a
+  //         V        V    Rotation     V  a          Rotation        V  b
+  //        [a][b][c][d]  ---------->  [ ][b][c][d]  ---------->  [e][ ][c][d]
+  //
   list_node_t pager_backed_[kNumPagerBacked] TA_GUARDED(lock_) = {LIST_INITIAL_CLEARED_VALUE};
   // tracks pager backed pages that are inactive, kept separate from pager_backed_ to opt out of
   // page queue rotations. Pages are moved into this queue explicitly when they need to be marked
@@ -180,6 +241,22 @@ class PageQueues {
   // in this list is purely a hint, and it is correct for pages to at any point be moved between the
   // unswappable_ and unswappabe_zero_fork_ lists.
   list_node_t unswappable_zero_fork_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
+
+  // Offset to apply to the pager-backed queues and corresponding subset of the page count array
+  // when rotating pager-backed queues. Rotation happens once every 10 seconds, resulting integer
+  // overflow in about 1,360 years.
+  uint32_t pager_queue_rotation_ TA_GUARDED(lock_) = 0;
+
+  // Tracks the counts of pages in each queue in O(1) time complexity. As pages are moved between
+  // queues, the corresponding source and destination counts are decremented and incremented,
+  // respectively.
+  //
+  // The first entry of the array is special: it logically represents pages not in any queue.
+  // For simplicity, it is initialized to zero rather than the total number of pages in the system.
+  // Consequently, the value of this entry is a negative number with absolute value equal to the
+  // total number of pages in all queues. This approach avoids unnecessary branches when updating
+  // counts.
+  ktl::array<ssize_t, PageQueueEntries> page_queue_counts_ TA_GUARDED(lock_) = {};
 
   void RemoveLocked(vm_page_t* page) TA_REQ(lock_);
 
