@@ -415,7 +415,11 @@ fuchsia_test_package("fshost-tests") {
     ":fshost-metrics-test",
     ":fshost-loader-service-test",
   ]
-  deps = [ ":test-fshost" ]
+  deps = [
+    ":test-fshost",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+  ]
 }
 
 component_manifest_resources("meta") {

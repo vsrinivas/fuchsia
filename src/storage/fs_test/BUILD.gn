@@ -580,6 +580,12 @@ fuchsia_test_package("fs-tests") {
     ":unlink-tests",
     ":watcher-tests",
   ]
+  deps = [
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+    "//zircon/third_party/uapp/fsck-msdosfs",
+    "//zircon/third_party/uapp/mkfs-msdosfs",
+  ]
 }
 
 test("directory_large_tests") {

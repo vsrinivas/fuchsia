@@ -98,7 +98,11 @@ fuchsia_component("fvm_unit_test_component") {
 
   manifest = "fvm_unit_test.cmx"
 
-  deps = [ ":fvm_unit" ]
+  deps = [
+    ":fvm_unit",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+  ]
 }
 
 fuchsia_test_package("test_package") {
