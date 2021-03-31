@@ -347,7 +347,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild) {
     EXPECT_EQ("false", entries[1].value->str());
 
     fdf::NodePtr root_node;
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     fdf::NodeControllerPtr node_controller;
@@ -379,7 +379,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("false", entries[1].value->str());
 
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()),
@@ -415,7 +415,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
     EXPECT_EQ("false", entries[1].value->str());
 
     fdf::NodePtr root_node;
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_symbols()->emplace_back(
@@ -460,7 +460,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     });
 
     fdf::NodePtr root_node;
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_offers()->emplace_back("fuchsia.package.Protocol");
@@ -523,7 +523,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     });
 
     fdf::NodePtr root_node;
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_offers()->emplace_back("fuchsia.package.Protocol");
@@ -600,7 +600,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
     });
 
     fdf::NodePtr root_node;
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.mutable_properties()->emplace_back(
         std::move(fdf::NodeProperty().set_key(0x1985).set_value(0x2301)));
@@ -646,7 +646,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
     EXPECT_EQ("false", entries[1].value->str());
 
     fdf::NodePtr root_node;
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("unknown-node");
     fdf::NodeControllerPtr node_controller;
@@ -674,7 +674,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });
 
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     fdf::NodeControllerPtr node_controller;
@@ -684,12 +684,11 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
   ASSERT_TRUE(root_driver.is_ok());
 
   fdf::NodePtr second_node;
-  driver_host().SetStartHandler(
-      [this, &second_node](fdf::DriverStartArgs start_args, auto request) {
-        Emplace(std::move(request));
-        EXPECT_EQ(ZX_OK,
-                  second_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
-      });
+  driver_host().SetStartHandler([this, &second_node](fdf::DriverStartArgs start_args,
+                                                     auto request) {
+    Emplace(std::move(request));
+    EXPECT_EQ(ZX_OK, second_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+  });
 
   StartDriverHost("driver_hosts", "driver_host-3");
   zx::channel second_driver =
@@ -724,7 +723,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });
 
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     fdf::NodeControllerPtr node_controller;
@@ -735,12 +734,11 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
 
   fdf::NodePtr second_node;
   fidl::InterfaceRequest<fdf::Driver> second_request;
-  driver_host().SetStartHandler(
-      [this, &second_node, &second_request](fdf::DriverStartArgs start_args, auto request) {
-        second_request = std::move(request);
-        EXPECT_EQ(ZX_OK,
-                  second_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
-      });
+  driver_host().SetStartHandler([this, &second_node, &second_request](
+                                    fdf::DriverStartArgs start_args, auto request) {
+    second_request = std::move(request);
+    EXPECT_EQ(ZX_OK, second_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+  });
 
   StartDriverHost("driver_hosts", "driver_host-3");
   zx::channel second_driver =
@@ -782,7 +780,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });
 
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("node-0");
     fdf::NodeControllerPtr node_controller;
@@ -803,7 +801,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
       });
 
       auto& node = nodes.emplace_back();
-      EXPECT_EQ(ZX_OK, node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+      EXPECT_EQ(ZX_OK, node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
       // Only add a node that a driver will be bound to.
       if (i != kMaxNodes) {
         fdf::NodeAddArgs args;
@@ -852,7 +850,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });
 
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     fdf::NodeControllerPtr node_controller;
@@ -862,12 +860,11 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   ASSERT_TRUE(root_driver.is_ok());
 
   fdf::NodePtr second_node;
-  driver_host().SetStartHandler(
-      [this, &second_node](fdf::DriverStartArgs start_args, auto request) {
-        Emplace(std::move(request));
-        EXPECT_EQ(ZX_OK,
-                  second_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
-      });
+  driver_host().SetStartHandler([this, &second_node](fdf::DriverStartArgs start_args,
+                                                     auto request) {
+    Emplace(std::move(request));
+    EXPECT_EQ(ZX_OK, second_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+  });
 
   StartDriverHost("driver_hosts", "driver_host-3");
   zx::channel second_driver =
@@ -905,7 +902,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });
 
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     fdf::NodeControllerPtr node_controller;
@@ -954,7 +951,7 @@ TEST_F(DriverRunnerTest, StartAndInspect) {
     });
 
     fdf::NodePtr root_node;
-    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_offers()->emplace_back("fuchsia.package.ProtocolA");
