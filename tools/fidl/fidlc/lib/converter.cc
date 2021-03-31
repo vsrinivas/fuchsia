@@ -174,10 +174,10 @@ void ConvertingTreeVisitor::OnBitsDeclaration(
 
 void ConvertingTreeVisitor::OnConstDeclaration(
     const std::unique_ptr<raw::ConstDeclaration>& element) {
+  const auto& type_ctor = std::get<std::unique_ptr<raw::TypeConstructorOld>>(element->type_ctor);
   std::unique_ptr<Conversion> conv =
-      std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
-  Converting converting(this, std::move(conv), element->type_ctor->start_,
-                        element->identifier->end_);
+      std::make_unique<NameAndTypeConversion>(element->identifier, type_ctor);
+  Converting converting(this, std::move(conv), type_ctor->start_, element->identifier->end_);
   TreeVisitor::OnConstDeclaration(element);
 }
 
@@ -207,10 +207,10 @@ void ConvertingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
 }
 
 void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter>& element) {
+  const auto& type_ctor = std::get<std::unique_ptr<raw::TypeConstructorOld>>(element->type_ctor);
   std::unique_ptr<Conversion> conv =
-      std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
-  Converting converting(this, std::move(conv), element->type_ctor->start_,
-                        element->identifier->end_);
+      std::make_unique<NameAndTypeConversion>(element->identifier, type_ctor);
+  Converting converting(this, std::move(conv), type_ctor->start_, element->identifier->end_);
   TreeVisitor::OnParameter(element);
 }
 

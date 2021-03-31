@@ -145,7 +145,7 @@ void ConstDeclaration::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructorOld(type_ctor);
+  visitor->OnTypeConstructor(type_ctor);
   visitor->OnIdentifier(identifier);
   visitor->OnConstant(constant);
 }
@@ -178,7 +178,7 @@ void Parameter::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructorOld(type_ctor);
+  visitor->OnTypeConstructor(type_ctor);
   visitor->OnIdentifier(identifier);
 }
 
@@ -231,7 +231,7 @@ void ResourceProperty::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructorOld(type_ctor);
+  visitor->OnTypeConstructor(type_ctor);
   visitor->OnIdentifier(identifier);
 }
 
@@ -241,8 +241,8 @@ void ResourceDeclaration::Accept(TreeVisitor* visitor) const {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(identifier);
-  if (maybe_type_ctor != nullptr) {
-    visitor->OnTypeConstructorOld(maybe_type_ctor);
+  if (IsTypeConstructorDefined(maybe_type_ctor)) {
+    visitor->OnTypeConstructor(maybe_type_ctor);
   }
   for (auto property = properties.begin(); property != properties.end(); ++property) {
     visitor->OnResourceProperty(*property);
@@ -254,7 +254,7 @@ void ServiceMember::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructorOld(type_ctor);
+  visitor->OnTypeConstructor(type_ctor);
   visitor->OnIdentifier(identifier);
 }
 

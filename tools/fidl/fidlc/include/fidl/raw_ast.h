@@ -390,8 +390,8 @@ class Using final : public SourceElement {
 class ConstDeclaration final : public SourceElement {
  public:
   ConstDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                   std::unique_ptr<TypeConstructorOld> type_ctor,
-                   std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> constant)
+                   TypeConstructor type_ctor, std::unique_ptr<Identifier> identifier,
+                   std::unique_ptr<Constant> constant)
       : SourceElement(element),
         attributes(std::move(attributes)),
         type_ctor(std::move(type_ctor)),
@@ -401,7 +401,7 @@ class ConstDeclaration final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<AttributeList> attributes;
-  std::unique_ptr<TypeConstructorOld> type_ctor;
+  TypeConstructor type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<Constant> constant;
 };
@@ -448,7 +448,7 @@ class EnumDeclaration final : public SourceElement {
 
 class Parameter final : public SourceElement {
  public:
-  Parameter(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
+  Parameter(SourceElement const& element, TypeConstructor type_ctor,
             std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
@@ -457,7 +457,7 @@ class Parameter final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructorOld> type_ctor;
+  TypeConstructor type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<AttributeList> attributes;
 };
@@ -533,7 +533,7 @@ class ProtocolDeclaration final : public SourceElement {
 
 class ResourceProperty final : public SourceElement {
  public:
-  ResourceProperty(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
+  ResourceProperty(SourceElement const& element, TypeConstructor type_ctor,
                    std::unique_ptr<Identifier> identifier,
                    std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
@@ -543,7 +543,7 @@ class ResourceProperty final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructorOld> type_ctor;
+  TypeConstructor type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<AttributeList> attributes;
 };
@@ -551,8 +551,7 @@ class ResourceProperty final : public SourceElement {
 class ResourceDeclaration final : public SourceElement {
  public:
   ResourceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                      std::unique_ptr<Identifier> identifier,
-                      std::unique_ptr<TypeConstructorOld> maybe_type_ctor,
+                      std::unique_ptr<Identifier> identifier, TypeConstructor maybe_type_ctor,
                       std::vector<std::unique_ptr<ResourceProperty>> properties)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -564,13 +563,13 @@ class ResourceDeclaration final : public SourceElement {
 
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
+  TypeConstructor maybe_type_ctor;
   std::vector<std::unique_ptr<ResourceProperty>> properties;
 };
 
 class ServiceMember final : public SourceElement {
  public:
-  ServiceMember(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
+  ServiceMember(SourceElement const& element, TypeConstructor type_ctor,
                 std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
@@ -579,7 +578,7 @@ class ServiceMember final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructorOld> type_ctor;
+  TypeConstructor type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<AttributeList> attributes;
 };

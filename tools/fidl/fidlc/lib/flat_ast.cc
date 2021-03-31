@@ -1618,7 +1618,8 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> type_ctor;
-  if (!ConsumeTypeConstructorOld(std::move(const_declaration->type_ctor), &type_ctor))
+  // TODO(fxbug.dev/73285): shouldn't need to care about context here
+  if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), name, &type_ctor))
     return;
 
   std::unique_ptr<Constant> constant;
@@ -1784,10 +1785,15 @@ void Library::ConsumeProtocolDeclaration(
 
 bool Library::ConsumeResourceDeclaration(
     std::unique_ptr<raw::ResourceDeclaration> resource_declaration, fidl::utils::Syntax syntax) {
+  auto name = Name::CreateSourced(this, resource_declaration->identifier->span());
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructorOld(std::move(property->type_ctor), &type_ctor))
+    auto anonymous_resource_name = Name::CreateDerived(
+        this, property->span(),
+        std::string(name.decl_name()) + std::string(property->identifier->span().data()));
+    if (!ConsumeTypeConstructor(std::move(property->type_ctor), anonymous_resource_name,
+                                &type_ctor))
       return false;
     auto attributes = std::move(property->attributes);
     properties.emplace_back(std::move(type_ctor), property->identifier->span(),
@@ -1795,17 +1801,17 @@ bool Library::ConsumeResourceDeclaration(
   }
 
   std::unique_ptr<TypeConstructor> type_ctor;
-  if (resource_declaration->maybe_type_ctor) {
-    if (!ConsumeTypeConstructorOld(std::move(resource_declaration->maybe_type_ctor), &type_ctor))
+  if (raw::IsTypeConstructorDefined(resource_declaration->maybe_type_ctor)) {
+    // TODO(fxbug.dev/73285): shouldn't need to care about the naming context here.
+    if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor), name, &type_ctor))
       return false;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
   }
 
-  return RegisterDecl(std::make_unique<Resource>(
-      std::move(resource_declaration->attributes),
-      Name::CreateSourced(this, resource_declaration->identifier->span()), std::move(type_ctor),
-      std::move(properties)));
+  return RegisterDecl(std::make_unique<Resource>(std::move(resource_declaration->attributes),
+                                                 std::move(name), std::move(type_ctor),
+                                                 std::move(properties)));
 }
 
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl,
@@ -1823,7 +1829,12 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructorOld(std::move(parameter->type_ctor), &type_ctor))
+    // TODO(fxbug.dev/73285): finalize layout naming
+    auto param_name = Name::CreateDerived(
+        this, parameter->span(),
+        std::string(name.decl_name()) +
+            utils::to_upper_camel_case(std::string(parameter->identifier->span().data())));
+    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), param_name, &type_ctor))
       return false;
     ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember,
                                 parameter->attributes.get());
@@ -1847,7 +1858,8 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), &type_ctor))
+    // TODO(fxbug.dev/73285): shouldn't need to care about naming context here.
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor), name, &type_ctor))
       return;
     members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(member->attributes));

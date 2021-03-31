@@ -654,17 +654,17 @@ std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(
   ValidateModifiers</* none */>(modifiers, decl_token.value());
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
+  raw::TypeConstructor type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
@@ -780,17 +780,17 @@ std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
     return Fail();
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
+  raw::TypeConstructor type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
@@ -1014,17 +1014,17 @@ std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration(
     return Fail();
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
+  raw::TypeConstructor type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
@@ -1050,11 +1050,11 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
   if (!Ok())
     return Fail();
 
-  std::unique_ptr<raw::TypeConstructorOld> maybe_type_ctor;
+  raw::TypeConstructor maybe_type_ctor;
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     if (!Ok())
       return Fail();
-    maybe_type_ctor = ParseTypeConstructorOld();
+    maybe_type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
   }
@@ -1125,17 +1125,17 @@ std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
     return Fail();
 
   // TODO(fxbug.dev/70247): remove branching
-  std::unique_ptr<raw::TypeConstructorOld> type_ctor;
+  raw::TypeConstructor type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
   if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
   } else {
-    type_ctor = ParseTypeConstructorOld();
+    type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
     identifier = ParseIdentifier();
