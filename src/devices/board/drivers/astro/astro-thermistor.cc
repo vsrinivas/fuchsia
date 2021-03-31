@@ -99,7 +99,7 @@ zx_status_t Astro::ThermistorInit() {
   thermistor.name = "thermistor";
   thermistor.vid = PDEV_VID_GOOGLE;
   thermistor.pid = PDEV_PID_ASTRO;
-  thermistor.did = PDEV_DID_ASTRO_THERMISTOR;
+  thermistor.did = PDEV_DID_AMLOGIC_THERMISTOR;
   thermistor.mmio_list = saradc_mmios;
   thermistor.mmio_count = countof(saradc_mmios);
   thermistor.irq_list = saradc_irqs;

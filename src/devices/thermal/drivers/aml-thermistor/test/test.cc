@@ -132,7 +132,8 @@ class ThermistorDeviceTest : public zxtest::Test {
 };
 
 TEST_F(ThermistorDeviceTest, GetTemperatureCelsius) {
-  TemperatureClient client(std::move(messenger_.local()));
+  TemperatureClient client(
+      fidl::ClientEnd<fuchsia_hardware_temperature::Device>(std::move(messenger_.local())));
 
   {
     uint32_t ntc_idx = 10;

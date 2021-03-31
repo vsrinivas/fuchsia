@@ -17,17 +17,17 @@
 #include <fbl/ref_counted.h>
 #include <soc/aml-common/aml-g12-saradc.h>
 
-#include "src/devices/thermal/drivers/astro-thermistor/astro-thermistor-bind.h"
+#include "src/devices/thermal/drivers/aml-thermistor/aml-thermistor-bind.h"
 
 namespace thermal {
 
 static constexpr uint32_t kMaxNtcChannels = 4;
 static constexpr uint32_t kMaxAdcChannels = 4;
 
-zx_status_t AstroThermistor::Create(void* ctx, zx_device_t* parent) {
+zx_status_t AmlThermistor::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  std::unique_ptr<AstroThermistor> device(new AstroThermistor(parent));
+  std::unique_ptr<AmlThermistor> device(new AmlThermistor(parent));
 
   if ((status = device->DdkAdd("thermistor-device") != ZX_OK)) {
     zxlogf(ERROR, "%s: DdkAdd failed", __func__);
@@ -38,7 +38,7 @@ zx_status_t AstroThermistor::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t AstroThermistor::InitPdev() {
+zx_status_t AmlThermistor::InitPdev() {
   zx_status_t status;
 
   ddk::PDev pdev(parent());
@@ -70,7 +70,7 @@ zx_status_t AstroThermistor::InitPdev() {
   return ZX_OK;
 }
 
-zx_status_t AstroThermistor::AddThermChannel(NtcChannel ch, NtcInfo info) {
+zx_status_t AmlThermistor::AddThermChannel(NtcChannel ch, NtcInfo info) {
   zx_status_t status;
 
   std::unique_ptr<ThermistorChannel> dev(
@@ -84,7 +84,7 @@ zx_status_t AstroThermistor::AddThermChannel(NtcChannel ch, NtcInfo info) {
   return ZX_OK;
 }
 
-zx_status_t AstroThermistor::AddRawChannel(uint32_t adc_chan) {
+zx_status_t AmlThermistor::AddRawChannel(uint32_t adc_chan) {
   std::unique_ptr<RawChannel> dev(new RawChannel(zxdev(), saradc_, adc_chan));
 
   char name[20];
@@ -99,7 +99,7 @@ zx_status_t AstroThermistor::AddRawChannel(uint32_t adc_chan) {
   return ZX_OK;
 }
 
-void AstroThermistor::DdkInit(ddk::InitTxn txn) {
+void AmlThermistor::DdkInit(ddk::InitTxn txn) {
   zx_status_t status = ZX_OK;
 
   status = InitPdev();
@@ -162,11 +162,11 @@ void AstroThermistor::DdkInit(ddk::InitTxn txn) {
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = AstroThermistor::Create;
+  ops.bind = AmlThermistor::Create;
   return ops;
 }();
 
 }  // namespace thermal
 
 // clang-format off
-ZIRCON_DRIVER(astro-thermistor, thermal::driver_ops, "thermistor", "0.1");
+ZIRCON_DRIVER(aml-thermistor, thermal::driver_ops, "thermistor", "0.1");

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_CHANNEL_H_
-#define SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_CHANNEL_H_
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_CHANNEL_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_CHANNEL_H_
 
 #include <fuchsia/hardware/adc/llcpp/fidl.h>
 #include <fuchsia/hardware/temperature/llcpp/fidl.h>
@@ -70,4 +70,4 @@ class RawChannel : public DeviceType3,
 
 }  // namespace thermal
 
-#endif  // SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_CHANNEL_H_
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_CHANNEL_H_

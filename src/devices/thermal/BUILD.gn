@@ -8,8 +8,8 @@ group("drivers") {
     "drivers/aml-thermal-s905d2g",
     "drivers/aml-thermal-s905d2g-legacy",
     "drivers/aml-thermal-s912",
+    "drivers/aml-thermistor",
     "drivers/as370-thermal",
-    "drivers/astro-thermistor",
     "drivers/mtk-thermal",
     "drivers/vs680-thermal",
   ]

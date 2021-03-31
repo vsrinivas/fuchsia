@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_H_
-#define SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_H_
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_H_
 
 #include <lib/ddk/device.h>
 #include <lib/thermal/ntc.h>
@@ -15,13 +15,13 @@
 
 namespace thermal {
 
-class AstroThermistor;
-using DeviceType = ddk::Device<AstroThermistor, ddk::Initializable, ddk::Unbindable>;
+class AmlThermistor;
+using DeviceType = ddk::Device<AmlThermistor, ddk::Initializable, ddk::Unbindable>;
 
-class AstroThermistor : public DeviceType {
+class AmlThermistor : public DeviceType {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AstroThermistor);
-  AstroThermistor(zx_device_t* device) : DeviceType(device) {}
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlThermistor);
+  AmlThermistor(zx_device_t* device) : DeviceType(device) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
@@ -40,4 +40,4 @@ class AstroThermistor : public DeviceType {
 };
 }  // namespace thermal
 
-#endif  // SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_H_
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_H_

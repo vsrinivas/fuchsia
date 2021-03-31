@@ -1,7 +1,7 @@
 [
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.ASTRO_THERMISTOR",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.THERMISTOR",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE"
         },
@@ -10,7 +10,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.ASTRO_THERMISTOR",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.THERMISTOR",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE"
         },
@@ -19,7 +19,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.ASTRO_THERMISTOR",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.THERMISTOR",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC"
         },
@@ -28,7 +28,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.ASTRO_THERMISTOR",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.THERMISTOR",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.SHERLOCK",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE"
         },

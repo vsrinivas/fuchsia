@@ -6,7 +6,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
-executable("astro-thermistor-test-bin") {
+executable("aml-thermistor-test-bin") {
   configs += [ "//build/config:all_source" ]
   testonly = true
   sources = [
@@ -15,7 +15,7 @@ executable("astro-thermistor-test-bin") {
     "test.cc",
   ]
   deps = [
-    "../:astro-thermistor-bind",
+    "../:aml-thermistor-bind",
     "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc_llcpp",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -33,16 +33,11 @@ executable("astro-thermistor-test-bin") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("test-package") {
-  package_name = "astro-thermistor-test"
-  deps = [ ":astro-thermistor-test-bin" ]
+  package_name = "aml-thermistor-test"
+  deps = [ ":aml-thermistor-test-bin" ]
   test_specs = {
     environments = basic_envs
   }
