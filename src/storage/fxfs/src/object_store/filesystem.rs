@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::{
-        allocator::Allocator,
-        constants::INVALID_OBJECT_ID,
-        journal::JournalCheckpoint,
-        transaction::{Mutation, Transaction},
-        Device, ObjectStore,
+    crate::{
+        device::Device,
+        object_store::{
+            allocator::Allocator,
+            constants::INVALID_OBJECT_ID,
+            journal::{Journal, JournalCheckpoint},
+            transaction::{Mutation, Transaction},
+            ObjectStore,
+        },
     },
+    anyhow::Error,
     async_trait::async_trait,
     std::{
         collections::HashMap,
@@ -212,3 +216,85 @@ pub trait ApplyMutations: Send + Sync {
     /// ObjectManager's apply_mutation method.
     async fn apply_mutation(&self, mutation: Mutation, replay: bool);
 }
+
+#[derive(Default)]
+pub struct SyncOptions {}
+
+pub struct FxFilesystem {
+    device: Arc<dyn Device>,
+    objects: Arc<ObjectManager>,
+    journal: Journal,
+}
+
+impl FxFilesystem {
+    pub async fn new_empty(device: Arc<dyn Device>) -> Result<Arc<FxFilesystem>, Error> {
+        let objects = Arc::new(ObjectManager::new());
+        let journal = Journal::new(objects.clone());
+        let filesystem =
+            Arc::new(FxFilesystem { device: device.clone(), objects: objects.clone(), journal });
+        filesystem.journal.init_empty(filesystem.clone()).await?;
+        Ok(filesystem)
+    }
+
+    pub async fn open(device: Arc<dyn Device>) -> Result<Arc<FxFilesystem>, Error> {
+        let objects = Arc::new(ObjectManager::new());
+        let journal = Journal::new(objects.clone());
+        let filesystem =
+            Arc::new(FxFilesystem { device: device.clone(), objects: objects.clone(), journal });
+        filesystem.journal.replay(filesystem.clone()).await?;
+        Ok(filesystem)
+    }
+
+    pub fn root_parent_store(&self) -> Arc<ObjectStore> {
+        self.objects.root_parent_store()
+    }
+
+    pub fn root_store(&self) -> Arc<ObjectStore> {
+        self.objects.root_store()
+    }
+
+    pub fn store(&self, object_id: u64) -> Option<Arc<ObjectStore>> {
+        self.objects.store(object_id)
+    }
+
+    pub async fn sync(&self, options: SyncOptions) -> Result<(), Error> {
+        self.journal.sync(options).await
+    }
+
+    pub fn volume_info_object_id(&self) -> u64 {
+        self.journal.volume_info_object_id()
+    }
+
+    pub fn set_volume_info_object_id(&self, object_id: u64) {
+        self.journal.set_volume_info_object_id(object_id);
+    }
+}
+
+#[async_trait]
+impl Filesystem for FxFilesystem {
+    async fn commit_transaction(&self, transaction: Transaction) {
+        self.journal.commit(transaction).await;
+    }
+
+    fn register_store(&self, store: &Arc<ObjectStore>) {
+        self.objects.register_store(store);
+    }
+
+    fn begin_object_sync(&self, object_id: u64) -> ObjectSync {
+        self.objects.begin_object_sync(object_id)
+    }
+
+    fn device(&self) -> Arc<dyn Device> {
+        self.device.clone()
+    }
+
+    fn root_store(&self) -> Arc<ObjectStore> {
+        self.objects.root_store()
+    }
+
+    fn allocator(&self) -> Arc<dyn Allocator> {
+        self.objects.allocator()
+    }
+}
+
+// TODO(csuter): How do we ensure sync prior to drop?

@@ -39,12 +39,12 @@ pub struct JournalWriter<OH> {
 }
 
 impl<OH> JournalWriter<OH> {
-    pub fn new(handle: Option<OH>, block_size: usize) -> Self {
+    pub fn new(handle: Option<OH>, block_size: usize, last_checksum: u64) -> Self {
         JournalWriter {
             handle,
             block_size,
             offset: 0,
-            last_checksum: 0,
+            last_checksum,
             buf: Vec::new(),
             reset: false,
         }
@@ -98,10 +98,16 @@ impl<OH> JournalWriter<OH> {
     }
 
     /// Sets the handle, to be used once replay has finished.
-    pub fn set_handle(&mut self, handle: OH, offset: u64, checksum: Checksum, reset: bool) {
+    pub fn set_handle(&mut self, handle: OH) {
+        assert!(self.handle.is_none());
         self.handle = Some(handle);
-        self.offset = offset;
-        self.last_checksum = checksum;
+    }
+
+    /// Seeks to the given offset in the journal file, to be used once replay has finished.
+    pub fn seek_to_checkpoint(&mut self, checkpoint: JournalCheckpoint, reset: bool) {
+        assert!(self.buf.is_empty());
+        self.offset = checkpoint.file_offset;
+        self.last_checksum = checkpoint.checksum;
         self.reset = reset;
     }
 }
@@ -168,7 +174,7 @@ mod tests {
     async fn test_write_single_record_and_pad() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
         let mut writer =
-            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE);
+            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE, 0);
         writer.write_record(&4u32);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
@@ -193,7 +199,7 @@ mod tests {
     async fn test_journal_file_checkpoint() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
         let mut writer =
-            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE);
+            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE, 0);
         writer.write_record(&4u32);
         let checkpoint = writer.journal_file_checkpoint();
         assert_eq!(checkpoint.checksum, 0);
@@ -213,13 +219,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_handle() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
-        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE);
-        writer.set_handle(
-            FakeObjectHandle::new(object.clone()),
-            TEST_BLOCK_SIZE as u64 * 5,
-            12345,
-            false,
-        );
+        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE, 0);
+        writer.set_handle(FakeObjectHandle::new(object.clone()));
+        writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345), false);
         writer.write_record(&12);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
@@ -246,13 +248,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_reset() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
-        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE);
-        writer.set_handle(
-            FakeObjectHandle::new(object.clone()),
-            TEST_BLOCK_SIZE as u64 * 5,
-            12345,
-            true,
-        );
+        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE, 0);
+        writer.set_handle(FakeObjectHandle::new(object.clone()));
+        writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345), true);
         writer.write_record(&12);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");

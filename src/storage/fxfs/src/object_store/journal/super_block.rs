@@ -213,7 +213,7 @@ impl SuperBlock {
     ) -> Result<(), Error> {
         assert_eq!(root_parent_store.store_object_id(), self.root_parent_store_object_id);
 
-        let mut writer = JournalWriter::new(Some(handle), SUPER_BLOCK_BLOCK_SIZE);
+        let mut writer = JournalWriter::new(Some(handle), SUPER_BLOCK_BLOCK_SIZE, 0);
 
         serialize_into(&mut writer, &self)?;
 

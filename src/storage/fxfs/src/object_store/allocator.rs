@@ -150,17 +150,17 @@ impl SimpleAllocator {
         } else {
             let handle = root_store.open_object(self.object_id, HandleOptions::default()).await?;
 
-            let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
-            let info: AllocatorInfo = deserialize_from(&serialized_info[..])?;
-            let mut handles = Vec::new();
-            for object_id in &info.layers {
-                handles.push(root_store.open_object(*object_id, HandleOptions::default()).await?);
+            if handle.get_size() > 0 {
+                let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
+                let info: AllocatorInfo = deserialize_from(&serialized_info[..])?;
+                let mut handles = Vec::new();
+                for object_id in &info.layers {
+                    handles
+                        .push(root_store.open_object(*object_id, HandleOptions::default()).await?);
+                }
+                self.inner.lock().unwrap().info = info;
+                self.tree.set_layers(handles.into_boxed_slice());
             }
-            let mut inner = self.inner.lock().unwrap();
-
-            inner.info = info;
-            self.tree.set_layers(handles.into_boxed_slice());
-            inner.opened = true;
         }
 
         self.inner.lock().unwrap().opened = true;

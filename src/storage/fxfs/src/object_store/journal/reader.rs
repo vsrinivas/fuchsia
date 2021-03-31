@@ -150,7 +150,7 @@ impl<OH: ObjectHandle> JournalReader<OH> {
             // Read the next block's worth, verify its checksum, and append it to |buf|.
             let mut buffer = self.handle.allocate_buffer(bs);
             assert!(self.read_offset % bs as u64 == 0);
-            if self.handle.read(self.read_offset as u64, buffer.as_mut()).await? != bs {
+            if self.handle.read(self.read_offset, buffer.as_mut()).await? != bs {
                 // This shouldn't happen -- it shouldn't be possible to read to the end
                 // of the journal file.
                 bail!("unexpected end of journal file");
@@ -243,7 +243,7 @@ mod tests {
     const TEST_BLOCK_SIZE: u64 = 512;
 
     async fn write_items<T: Serialize>(handle: FakeObjectHandle, items: &[T]) {
-        let mut writer = JournalWriter::new(Some(handle), TEST_BLOCK_SIZE as usize);
+        let mut writer = JournalWriter::new(Some(handle), TEST_BLOCK_SIZE as usize, 0);
         for item in items {
             writer.write_record(item);
         }
@@ -329,6 +329,7 @@ mod tests {
         let mut writer = JournalWriter::new(
             Some(FakeObjectHandle::new(object.clone())),
             TEST_BLOCK_SIZE as usize,
+            0,
         );
         writer.write_record(&4u32);
         writer.pad_to_block().expect("pad_to_block failed");
@@ -374,6 +375,7 @@ mod tests {
         let mut writer = JournalWriter::new(
             Some(FakeObjectHandle::new(object.clone())),
             TEST_BLOCK_SIZE as usize,
+            0,
         );
         // Write one byte so that everything else is misaligned.
         writer.write_record(&4u8);
@@ -425,11 +427,10 @@ mod tests {
             ReadResult::ChecksumMismatch
         );
 
-        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE as usize);
-        writer.set_handle(
-            FakeObjectHandle::new(object.clone()),
-            TEST_BLOCK_SIZE,
-            reader.last_read_checksum(),
+        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE as usize, 0);
+        writer.set_handle(FakeObjectHandle::new(object.clone()));
+        writer.seek_to_checkpoint(
+            JournalCheckpoint::new(TEST_BLOCK_SIZE, reader.last_read_checksum()),
             true,
         );
         writer.write_record(&13u32);

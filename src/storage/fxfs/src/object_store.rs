@@ -12,6 +12,8 @@ mod record;
 mod testing;
 pub mod transaction;
 
+pub use constants::INVALID_OBJECT_ID;
+pub use filesystem::FxFilesystem;
 pub use record::ObjectType;
 
 use {
@@ -244,7 +246,7 @@ impl ObjectStore {
             Mutation::Insert {
                 item: ObjectItem {
                     key: ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID),
-                    value: ObjectValue::attribute(DEFAULT_DATA_ATTRIBUTE_ID),
+                    value: ObjectValue::attribute(0),
                 },
             },
         );
@@ -428,7 +430,7 @@ impl StoreObjectHandle {
             Mutation::ReplaceOrInsert {
                 item: ObjectItem {
                     key: ObjectKey::attribute(self.object_id, self.attribute_id),
-                    value: ObjectValue::attribute(old_size),
+                    value: ObjectValue::attribute(new_size),
                 },
             },
         );
@@ -852,12 +854,15 @@ impl ObjectHandle for StoreObjectHandle {
                                     - extent_key.range.start;
                             file_range.start += device_range.end - device_range.start;
                             ranges.push(device_range);
+                            if file_range.start >= file_range.end {
+                                break 'outer;
+                            }
                             iter.advance_with_hint(&ObjectKey::with_extent_key(
                                 self.object_id,
                                 ExtentKey::new(self.attribute_id, file_range.clone()).search_key(),
                             ))
                             .await?;
-                            continue 'outer;
+                            continue;
                         } else {
                             // There's nothing allocated between file_range.start and the beginning
                             // of this extent.
@@ -905,13 +910,15 @@ impl ObjectHandle for StoreObjectHandle {
         }
         // Update the file size if it changed.
         if file_range.end > *self.size.lock().unwrap() {
+            // TODO(csuter): if the transaction fails, this needs to be rolled back.  In fact a lock
+            // needs to be held until the transaction commits.
             *self.size.lock().unwrap() = file_range.end;
             transaction.add(
                 self.store.store_object_id,
                 Mutation::ReplaceOrInsert {
                     item: ObjectItem {
                         key: ObjectKey::attribute(self.object_id, 0),
-                        value: ObjectValue::attribute(*self.size.lock().unwrap()),
+                        value: ObjectValue::attribute(file_range.end),
                     },
                 },
             );
@@ -1158,6 +1165,21 @@ mod tests {
         let (fs, allocator, object) = test_filesystem_and_object().await;
         object.store().flush(false).await.expect("flush failed");
         test_preallocate_common(&fs, &allocator, object).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_already_preallocated() {
+        let (fs, allocator, object) = test_filesystem_and_object().await;
+        let allocated_before = allocator.allocated();
+        let mut transaction = Transaction::new();
+        let offset = TEST_DATA_OFFSET - TEST_DATA_OFFSET % TEST_DEVICE_BLOCK_SIZE as u64;
+        object
+            .preallocate_range(&mut transaction, offset..offset + 512)
+            .await
+            .expect("preallocate_range failed");
+        fs.commit_transaction(transaction).await;
+        // Check that it didn't reallocate any new space.
+        assert_eq!(allocator.allocated(), allocated_before);
     }
 
     #[fasync::run_singlethreaded(test)]
