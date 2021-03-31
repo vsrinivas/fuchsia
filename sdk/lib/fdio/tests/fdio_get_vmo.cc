@@ -66,10 +66,12 @@ class TestServer final : public fuchsia_io::File::Interface {
       vmofile.vmo = std::move(vmo);
       vmofile.offset = 0;
       vmofile.length = context->content_size;
-      completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofile(fidl::unowned_ptr(&vmofile)));
+      completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofile(
+          fidl::ObjectView<fuchsia_io::wire::Vmofile>::FromExternal(&vmofile)));
     } else {
       fuchsia_io::wire::FileObject fo;
-      completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(fidl::unowned_ptr(&fo)));
+      completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(
+          fidl::ObjectView<fuchsia_io::wire::FileObject>::FromExternal(&fo)));
     }
   }
 
@@ -105,7 +107,7 @@ class TestServer final : public fuchsia_io::File::Interface {
       completer.Reply(status, fidl::VectorView<uint8_t>());
       return;
     }
-    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer), actual));
+    completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {}
@@ -170,7 +172,7 @@ class TestServer final : public fuchsia_io::File::Interface {
     }
 
     buffer.vmo = std::move(result);
-    completer.Reply(ZX_OK, fidl::unowned_ptr(&buffer));
+    completer.Reply(ZX_OK, fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer));
   }
 
  private:

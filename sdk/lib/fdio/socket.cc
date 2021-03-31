@@ -47,7 +47,8 @@ struct SocketAddress {
           return ZX_ERR_INVALID_ARGS;
         }
         const auto* s = reinterpret_cast<const struct sockaddr_in*>(addr);
-        address.set_ipv4(fidl::unowned_ptr(&storage.ipv4));
+        address.set_ipv4(
+            fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&storage.ipv4));
         std::copy_n(reinterpret_cast<const uint8_t*>(&s->sin_addr.s_addr),
                     decltype(storage.ipv4.address.addr)::size(), storage.ipv4.address.addr.begin());
         storage.ipv4.port = ntohs(s->sin_port);
@@ -58,7 +59,8 @@ struct SocketAddress {
           return ZX_ERR_INVALID_ARGS;
         }
         const auto* s = reinterpret_cast<const struct sockaddr_in6*>(addr);
-        address.set_ipv6(fidl::unowned_ptr(&storage.ipv6));
+        address.set_ipv6(
+            fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&storage.ipv6));
         std::copy(std::begin(s->sin6_addr.s6_addr), std::end(s->sin6_addr.s6_addr),
                   storage.ipv6.address.addr.begin());
         storage.ipv6.port = ntohs(s->sin6_port);
@@ -327,10 +329,10 @@ struct BaseSocket {
 
   zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
                          int16_t* out_code) {
-    auto response = client().SetSockOpt(
-        static_cast<int16_t>(level), static_cast<int16_t>(optname),
-        fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(const_cast<void*>(optval))),
-                         optlen));
+    auto response =
+        client().SetSockOpt(static_cast<int16_t>(level), static_cast<int16_t>(optname),
+                            fidl::VectorView<uint8_t>::FromExternal(
+                                static_cast<uint8_t*>(const_cast<void*>(optval)), optlen));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -734,7 +736,8 @@ struct datagram_socket : public zxio {
       }
       case 1: {
         auto const& iov = *msg->msg_iov;
-        vec = fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(iov.iov_base)), iov.iov_len);
+        vec = fidl::VectorView<uint8_t>::FromExternal(static_cast<uint8_t*>(iov.iov_base),
+                                                      iov.iov_len);
         break;
       }
       default: {
@@ -745,7 +748,7 @@ struct datagram_socket : public zxio {
           std::copy_n(static_cast<const uint8_t*>(iov.iov_base), iov.iov_len,
                       std::back_inserter(data));
         }
-        vec = fidl::unowned_vec(data);
+        vec = fidl::VectorView<uint8_t>::FromExternal(data);
       }
     }
     // TODO(fxbug.dev/21106): Support control messages.

@@ -155,7 +155,8 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
 
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  status = fio::Directory::Call::Open(vn->Remote(), flags, mode, fidl::unowned_str(path, length),
+  status = fio::Directory::Call::Open(vn->Remote(), flags, mode,
+                                      fidl::StringView::FromExternal(path, length),
                                       std::move(endpoints->server))
                .status();
   if (status != ZX_OK) {

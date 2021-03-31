@@ -33,7 +33,8 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
   }
   uint32_t flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE;
   return fio::Directory::Call::Open(directory, flags, FDIO_CONNECT_MODE,
-                                    fidl::unowned_str(path, length), std::move(request))
+                                    fidl::StringView::FromExternal(path, length),
+                                    std::move(request))
       .status();
 }
 
@@ -97,7 +98,8 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
   }
 
   return fio::Directory::Call::Open(directory, flags, FDIO_CONNECT_MODE,
-                                    fidl::unowned_str(path, length), std::move(request))
+                                    fidl::StringView::FromExternal(path, length),
+                                    std::move(request))
       .status();
 }
 

@@ -33,8 +33,9 @@ class Server final : public fuchsia_io::testing::Directory_TestBase {
   void Close(Interface::CloseCompleter::Sync& completer) override { completer.Reply(ZX_OK); }
 
   void Describe(Interface::DescribeCompleter::Sync& completer) override {
-    fidl::aligned<fuchsia_io::wire::DirectoryObject> directory;
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(fidl::unowned_ptr(&directory)));
+    fuchsia_io::wire::DirectoryObject directory;
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(
+        fidl::ObjectView<fuchsia_io::wire::DirectoryObject>::FromExternal(&directory)));
   }
 
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,

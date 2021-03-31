@@ -149,7 +149,7 @@ static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_
     return ZX_ERR_INTERNAL;
   }
 
-  auto response = resolver.Resolve(fidl::unowned_str(name, name_len));
+  auto response = resolver.Resolve(fidl::StringView::FromExternal(name, name_len));
 
   status = response.status();
   if (status != ZX_OK) {
@@ -470,7 +470,10 @@ static zx_status_t send_handles(fprocess::Launcher::SyncClient* launcher, size_t
 
   ZX_DEBUG_ASSERT(h <= handle_capacity);
 
-  status = launcher->AddHandles(fidl::VectorView(fidl::unowned_ptr(handle_infos), h)).status();
+  status =
+      launcher
+          ->AddHandles(fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(handle_infos, h))
+          .status();
 
   if (status != ZX_OK)
     report_error(err_msg, "failed to send handles: %d", status);
@@ -509,7 +512,7 @@ static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size
     while (n < flat->count) {
       auto* name = &names[n];
       auto path = flat->path[n];
-      name->path = fidl::unowned_str(path, strlen(path));
+      name->path = fidl::StringView::FromExternal(path);
       name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(flat->handle[n]));
       flat->handle[n] = ZX_HANDLE_INVALID;
       n++;
@@ -520,7 +523,7 @@ static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size
     if (actions[i].action == FDIO_SPAWN_ACTION_ADD_NS_ENTRY) {
       auto* name = &names[n];
       auto path = actions[i].ns.prefix;
-      name->path = fidl::unowned_str(path, strlen(path));
+      name->path = fidl::StringView::FromExternal(path);
       name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(actions[i].ns.handle));
       n++;
     }
@@ -528,7 +531,9 @@ static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size
 
   ZX_DEBUG_ASSERT(n == name_count);
 
-  zx_status_t status = launcher->AddNames(fidl::VectorView(fidl::unowned_ptr(names), n)).status();
+  zx_status_t status =
+      launcher->AddNames(fidl::VectorView<fprocess::wire::NameInfo>::FromExternal(names, n))
+          .status();
 
   if (status != ZX_OK)
     report_error(err_msg, "failed send namespace: %d", status);
@@ -773,14 +778,15 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     args.reserve(capacity);
     for (const auto& arg : extra_args) {
       auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(arg.data()));
-      args.emplace_back(fidl::unowned_ptr(ptr), arg.length());
+      args.emplace_back(fidl::VectorView<uint8_t>::FromExternal(ptr, arg.length()));
     }
     for (auto it = argv; *it; ++it) {
       auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
-      args.emplace_back(fidl::unowned_ptr(ptr), strlen(*it));
+      args.emplace_back(fidl::VectorView<uint8_t>::FromExternal(ptr, strlen(*it)));
     }
 
-    status = launcher.AddArgs(fidl::unowned_vec(args)).status();
+    status =
+        launcher.AddArgs(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(args)).status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send argument vector: %d", status);
       goto cleanup;
@@ -796,9 +802,10 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     env.reserve(capacity);
     for (auto it = explicit_environ; *it; ++it) {
       auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
-      env.emplace_back(fidl::unowned_ptr(ptr), strlen(*it));
+      env.emplace_back(fidl::VectorView<uint8_t>::FromExternal(ptr, strlen(*it)));
     }
-    status = launcher.AddEnvirons(fidl::unowned_vec(env)).status();
+    status = launcher.AddEnvirons(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(env))
+                 .status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment: %d", status);
       goto cleanup;
@@ -812,9 +819,10 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     env.reserve(capacity);
     for (auto it = environ; *it; ++it) {
       auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
-      env.emplace_back(fidl::unowned_ptr(ptr), strlen(*it));
+      env.emplace_back(fidl::VectorView<uint8_t>::FromExternal(ptr, strlen(*it)));
     }
-    status = launcher.AddEnvirons(fidl::unowned_vec(env)).status();
+    status = launcher.AddEnvirons(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(env))
+                 .status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment clone with FDIO_SPAWN_CLONE_ENVIRON: %d",
                    status);
@@ -859,7 +867,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   if (process_name_size >= ZX_MAX_NAME_LEN)
     process_name_size = ZX_MAX_NAME_LEN - 1;
 
-  launch_info.name = fidl::unowned_str(process_name, process_name_size);
+  launch_info.name = fidl::StringView::FromExternal(process_name, process_name_size);
   status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, launch_info.job.reset_and_get_address());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to duplicate job handle: %d", status);
