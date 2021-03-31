@@ -153,6 +153,24 @@ func TestRecognizeLinks(t *testing.T) {
 				"[toc]",
 			},
 		},
+		{
+			input: `
+[this is a valid link][link label]
+
+[link label]: http://google.com`,
+			xrefUses: []string{
+				"[link label]",
+			},
+			xrefDefs: []xrefDef{
+				{"[link label]", "http://google.com"},
+			},
+		},
+		{
+			input: "Linux:  [`/proc/[pid]/stat`](https://man7.org/linux/man-pages/man5/procfs.5.html)",
+			hrefUses: []string{
+				"(https://man7.org/linux/man-pages/man5/procfs.5.html)",
+			},
+		},
 	}
 	for inputNum, ex := range cases {
 		t.Run(fmt.Sprintf("input #%d", inputNum), func(t *testing.T) {

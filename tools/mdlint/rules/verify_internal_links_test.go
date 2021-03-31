@@ -29,6 +29,17 @@ func TestVerifyInternalLinks_duplicateXref(t *testing.T) {
 	}.runOverEvents(t, newVerifyInternalLinks)
 }
 
+func TestVerifyInternalLinks_validLinkLabel(t *testing.T) {
+	ruleTestCase{
+		files: map[string]string{
+			"example.md": `
+[this is a valid link][link label]
+
+[link label]: http://google.com`,
+		},
+	}.runOverEvents(t, newVerifyInternalLinks)
+}
+
 // TODO(fxbug.dev/62964): Improve verifyInternalLinks rule.
 func Ignore_TestVerifyInternalLinks_unknownFile(t *testing.T) {
 	ruleTestCase{

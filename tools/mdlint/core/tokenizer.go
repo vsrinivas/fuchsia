@@ -270,7 +270,24 @@ func (t *tokenizer) next() (Token, error) {
 			return t.newToken(Newline), nil
 		}
 		if r == '[' {
-			if err := t.readUntil(true, func(r rune) bool { return r != ']' }); err != nil {
+			// TODO(fxbug.dev/62964): Consider unifying code span handling here
+			// with top-level code span + fenced code block handling below.
+			// Precedence rules and handling of HTML tags will make that
+			// particularly important, see
+			// https://spec.commonmark.org/0.29/#code-span.
+			var inCodeSpan bool
+			if err := t.readUntil(true, func(r rune) bool {
+				if inCodeSpan {
+					if r == '`' {
+						inCodeSpan = false
+					}
+					return true
+				}
+				if r == '`' {
+					inCodeSpan = true
+				}
+				return r != ']'
+			}); err != nil {
 				return Token{}, err
 			}
 			return t.newToken(Link), nil
@@ -302,6 +319,9 @@ func (t *tokenizer) next() (Token, error) {
 			}
 			return t.newToken(Anchor), nil
 		}
+		// TODO(fxbug.dev/62964): We need to handle more than three backticks,
+		// and possibly tildes (~). See
+		// https://spec.commonmark.org/0.29/#fenced-code-blocks.
 		if r == '`' {
 			peek, err := t.doc.peekRune(2)
 			if err != nil {

@@ -152,6 +152,9 @@ func (r *recognizer) OnNext(tok Token) {
 		}
 	case s_Newline_Link:
 		switch tok.Kind {
+		case Link:
+			r.rule.OnLinkByXref(tok)
+			r.resetState()
 		case Text:
 			if tok.Content == ":" {
 				r.state = s_Newline_Link_TextIsColon
