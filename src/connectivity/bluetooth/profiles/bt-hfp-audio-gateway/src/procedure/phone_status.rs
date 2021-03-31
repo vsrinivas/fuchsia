@@ -7,52 +7,6 @@ use at_commands as at;
 use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 use crate::peer::service_level_connection::SlcState;
 
-/// The supported phone status update indicators.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum PhoneStatus {
-    Service(u8),
-    Call(u8),
-    CallSetup(u8),
-    CallHeld(u8),
-    Signal(u8),
-    Roam(u8),
-    BatteryLevel(u8),
-}
-
-impl From<PhoneStatus> for at::Response {
-    fn from(src: PhoneStatus) -> at::Response {
-        match src {
-            PhoneStatus::Service(v) => {
-                at::Response::Success(at::Success::Ciev { ind: 1, value: v as i64 })
-            }
-            PhoneStatus::Call(v) => {
-                at::Response::Success(at::Success::Ciev { ind: 2, value: v as i64 })
-            }
-            PhoneStatus::CallSetup(v) => {
-                at::Response::Success(at::Success::Ciev { ind: 3, value: v as i64 })
-            }
-            PhoneStatus::CallHeld(v) => {
-                at::Response::Success(at::Success::Ciev { ind: 4, value: v as i64 })
-            }
-            PhoneStatus::Signal(v) => {
-                at::Response::Success(at::Success::Ciev { ind: 5, value: v as i64 })
-            }
-            PhoneStatus::Roam(v) => {
-                at::Response::Success(at::Success::Ciev { ind: 6, value: v as i64 })
-            }
-            PhoneStatus::BatteryLevel(v) => {
-                at::Response::Success(at::Success::Ciev { ind: 7, value: v as i64 })
-            }
-        }
-    }
-}
-
-impl From<PhoneStatus> for AgUpdate {
-    fn from(src: PhoneStatus) -> Self {
-        Self::PhoneStatusIndicator(src)
-    }
-}
-
 /// Represents the Transfer of Phone Status Indication procedures as defined in
 /// HFP v1.8 Section 4.4 - 4.7.
 /// Note: All four procedures use the same underlying AT command (CIEV) with differing
@@ -108,6 +62,7 @@ impl Procedure for PhoneStatusProcedure {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::protocol::indicators::Indicator;
     use matches::assert_matches;
 
     #[test]
@@ -147,7 +102,7 @@ mod tests {
 
         assert!(!procedure.is_terminated());
 
-        let status = PhoneStatus::Signal(4);
+        let status = Indicator::Signal(4);
         let update = AgUpdate::PhoneStatusIndicator(status);
         let expected_messages = vec![at::Response::Success(at::Success::Ciev { ind: 5, value: 4 })];
         assert_matches!(procedure.ag_update(update, &mut state), ProcedureRequest::SendMessages(m) if m == expected_messages);
@@ -160,7 +115,7 @@ mod tests {
         let mut state = SlcState { indicator_events_reporting: false, ..SlcState::default() };
         assert!(!procedure.is_terminated());
 
-        let status = AgUpdate::PhoneStatusIndicator(PhoneStatus::Signal(4));
+        let status = AgUpdate::PhoneStatusIndicator(Indicator::Signal(4));
         // Because indicator events reporting is disabled, we expect the procedure to not
         // request to send anything.
         assert_matches!(procedure.ag_update(status, &mut state), ProcedureRequest::None);

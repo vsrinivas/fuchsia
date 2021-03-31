@@ -30,9 +30,9 @@ use super::{
 use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
-    procedure::{phone_status::PhoneStatus, InformationRequest, ProcedureMarker},
+    procedure::{InformationRequest, ProcedureMarker},
     profile::ProfileEvent,
-    protocol::indicators::Indicators,
+    protocol::indicators::{Indicator, Indicators},
 };
 
 pub(super) struct PeerTask {
@@ -300,7 +300,7 @@ impl PeerTask {
 
     /// Request to send the phone `status` by initiating the Phone Status Indicator
     /// procedure.
-    async fn phone_status_update(&mut self, status: PhoneStatus) {
+    async fn phone_status_update(&mut self, status: Indicator) {
         self.connection.receive_ag_request(ProcedureMarker::PhoneStatus, status.into()).await;
     }
 
@@ -309,19 +309,19 @@ impl PeerTask {
     async fn handle_network_update(&mut self, update: NetworkInformation) {
         if update_table_entry(&mut self.network.service_available, &update.service_available) {
             if self.connection.initialized() {
-                let status = PhoneStatus::Service(self.network.service_available.unwrap() as u8);
+                let status = Indicator::Service(self.network.service_available.unwrap() as u8);
                 self.phone_status_update(status).await;
             }
         }
         if update_table_entry(&mut self.network.signal_strength, &update.signal_strength) {
             if self.connection.initialized() {
-                let status = PhoneStatus::Signal(self.network.signal_strength.unwrap() as u8);
+                let status = Indicator::Signal(self.network.signal_strength.unwrap() as u8);
                 self.phone_status_update(status).await;
             }
         }
         if update_table_entry(&mut self.network.roaming, &update.roaming) {
             if self.connection.initialized() {
-                let status = PhoneStatus::Roam(self.network.roaming.unwrap() as u8);
+                let status = Indicator::Roam(self.network.roaming.unwrap() as u8);
                 self.phone_status_update(status).await;
             }
         }
@@ -553,7 +553,7 @@ mod tests {
             ..NetworkInformation::EMPTY
         };
         // Expect to send the Signal and Roam indicators to the peer.
-        let expected_data1 = vec![PhoneStatus::Signal(3).into(), PhoneStatus::Roam(0).into()];
+        let expected_data1 = vec![Indicator::Signal(3).into(), Indicator::Roam(0).into()];
 
         let network_update_2 = NetworkInformation {
             service_available: Some(true),
@@ -561,7 +561,7 @@ mod tests {
             ..NetworkInformation::EMPTY
         };
         // Expect to send the Service and Roam indicators to the peer.
-        let expected_data2 = vec![PhoneStatus::Service(1).into(), PhoneStatus::Roam(1).into()];
+        let expected_data2 = vec![Indicator::Service(1).into(), Indicator::Roam(1).into()];
 
         // The value after the updates are applied is expected to be the following
         let expected_network = NetworkInformation {

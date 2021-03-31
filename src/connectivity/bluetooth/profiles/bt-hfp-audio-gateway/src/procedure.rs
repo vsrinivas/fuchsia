@@ -14,7 +14,10 @@ use crate::{
         gain_control::Gain,
         service_level_connection::{Command, SlcState},
     },
-    protocol::{features::AgFeatures, indicators::Indicators},
+    protocol::{
+        features::AgFeatures,
+        indicators::{Indicator, Indicators},
+    },
 };
 
 /// Defines the implementation of the DTMF Procedure.
@@ -55,7 +58,7 @@ use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
 use extended_errors::ExtendedErrorsProcedure;
 use nrec::NrecProcedure;
-use phone_status::{PhoneStatus, PhoneStatusProcedure};
+use phone_status::PhoneStatusProcedure;
 use query_current_calls::{build_clcc_response, QueryCurrentCallsProcedure};
 use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
@@ -370,7 +373,7 @@ pub enum AgUpdate {
     /// The name of the network operator
     NetworkOperatorName(at::NetworkOperatorNameFormat, String),
     /// Phone status indicator
-    PhoneStatusIndicator(PhoneStatus),
+    PhoneStatusIndicator(Indicator),
     /// The AG's network subscriber number(s).
     SubscriberNumbers(Vec<String>),
     /// The list of ongoing calls.

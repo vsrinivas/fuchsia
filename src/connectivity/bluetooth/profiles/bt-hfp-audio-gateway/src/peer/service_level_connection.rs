@@ -582,8 +582,11 @@ pub(crate) mod tests {
     use {
         super::*,
         crate::{
-            procedure::{phone_status::PhoneStatus, InformationRequest},
-            protocol::features::{AgFeatures, HfFeatures},
+            procedure::InformationRequest,
+            protocol::{
+                features::{AgFeatures, HfFeatures},
+                indicators::Indicator,
+            },
         },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
@@ -845,7 +848,7 @@ pub(crate) mod tests {
 
         // Local device wants to initiate a phone status update.
         let expected_marker = ProcedureMarker::PhoneStatus;
-        let status = PhoneStatus::BatteryLevel(2);
+        let status = Indicator::BatteryLevel(2);
         slc.receive_ag_request(expected_marker, status.into()).await;
         // We expect the PhoneStatus Procedure to be initiated and an outgoing message to the peer
         // with the status update. Battery Level has Index 7.
