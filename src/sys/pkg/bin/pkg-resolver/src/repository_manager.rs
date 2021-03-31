@@ -4,7 +4,10 @@
 
 use {
     crate::{
-        cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus},
+        cache::{
+            BlobFetcher, CacheError, MerkleForError, PackageCache, PackageOpenError,
+            ToResolveStatus,
+        },
         experiment::Experiments,
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
@@ -16,6 +19,7 @@ use {
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
+    fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::Status,
@@ -242,7 +246,7 @@ impl RepositoryManager {
         url: &'a PkgUrl,
         cache: &'a PackageCache,
         blob_fetcher: &'a BlobFetcher,
-    ) -> LocalBoxFuture<'a, Result<BlobId, GetPackageError>> {
+    ) -> LocalBoxFuture<'a, Result<(BlobId, PackageDirectory), GetPackageError>> {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
@@ -790,6 +794,9 @@ pub enum GetPackageError {
 
     #[error("while caching the package")]
     Cache(#[from] CacheError),
+
+    #[error("while opening the package")]
+    OpenPackage(#[from] PackageOpenError),
 }
 
 #[derive(Debug, Error)]
@@ -812,6 +819,7 @@ impl ToResolveStatus for GetPackageError {
             GetPackageError::RepoNotFound(_) => Status::BAD_STATE,
             GetPackageError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageError::Cache(err) => err.to_resolve_status(),
+            GetPackageError::OpenPackage(err) => err.into(),
         }
     }
 }

@@ -5,8 +5,8 @@
 use {
     crate::{
         cache::{
-            BasePackageIndex, BlobFetcher, CacheError::*, MerkleForError, MerkleForError::*,
-            PackageCache, ToResolveStatus as _,
+            BasePackageIndex, BlobFetcher, CacheError, CacheError::*, MerkleForError,
+            MerkleForError::*, PackageCache, ToResolveStatus as _,
         },
         font_package_manager::FontPackageManager,
         queue,
@@ -24,7 +24,7 @@ use {
     },
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_pkg::PackagePath,
+    fuchsia_pkg::{PackageDirectory, PackagePath},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_url::pkg_url::{ParseError, PkgUrl},
@@ -39,7 +39,7 @@ use {
 mod inspect;
 pub use inspect::ResolverService as ResolverServiceInspectState;
 
-pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<BlobId, Status>>;
+pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<PackageDirectory, Status>>;
 
 pub fn make_package_fetch_queue(
     cache: PackageCache,
@@ -78,7 +78,6 @@ pub fn make_package_fetch_queue(
 }
 
 pub async fn run_resolver_service(
-    cache: PackageCache,
     repo_manager: Arc<RwLock<RepositoryManager>>,
     rewriter: Arc<RwLock<RewriteManager>>,
     package_fetcher: Arc<PackageFetcher>,
@@ -105,7 +104,7 @@ pub async fn run_resolver_service(
                             fx_log_warn!("resolve does not support selectors yet");
                         }
                         let start_time = Instant::now();
-                        let response = resolve(&cache, &package_fetcher, package_url.clone(), dir).await;
+                        let response = resolve(&package_fetcher, package_url.clone(), dir).await;
 
                         cobalt_sender.log_event_count(
                             metrics::RESOLVE_METRIC_ID,
@@ -199,6 +198,11 @@ fn missing_cache_package_disk_fallback(
     possible_fallback
 }
 
+enum PackageSource<TufError> {
+    Tuf(BlobId, PackageDirectory),
+    SystemImageCachePackages(BlobId, PackageDirectory, TufError),
+}
+
 enum HashSource<TufError> {
     Tuf(BlobId),
     SystemImageCachePackages(BlobId, TufError),
@@ -290,11 +294,16 @@ async fn package_from_base_or_repo_or_cache(
     cache: PackageCache,
     blob_fetcher: BlobFetcher,
     inspect: &ResolverServiceInspectState,
-) -> Result<BlobId, Status> {
+) -> Result<PackageDirectory, Status> {
     let package_inspect = inspect.resolve(pkg_url);
     if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
         fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
-        return Ok(blob);
+        let dir = cache.open(blob, &[]).await.map_err(|e| {
+            let status = Status::from(&e);
+            fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(e));
+            status
+        })?;
+        return Ok(dir);
     }
 
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
@@ -315,11 +324,11 @@ async fn package_from_base_or_repo_or_cache(
         status
     })
     .map(|hash| match hash {
-        HashSource::Tuf(blob) => {
+        PackageSource::Tuf(blob, pkg) => {
             fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
-            blob
+            pkg
         }
-        HashSource::SystemImageCachePackages(blob, tuf_err) => {
+        PackageSource::SystemImageCachePackages(blob, pkg, tuf_err) => {
             fx_log_info!(
                 "resolved {} as {} to {} with cache_packages due to {:#}",
                 pkg_url,
@@ -327,7 +336,7 @@ async fn package_from_base_or_repo_or_cache(
                 blob,
                 anyhow!(tuf_err)
             );
-            blob
+            pkg
         }
     })
 }
@@ -340,13 +349,13 @@ async fn package_from_repo_or_cache(
     cache: PackageCache,
     blob_fetcher: BlobFetcher,
     inspect_state: &ResolverServiceInspectState,
-) -> Result<HashSource<GetPackageError>, GetPackageError> {
+) -> Result<PackageSource<GetPackageError>, GetPackageError> {
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
     // statement, so the following two lines should not be combined.
     let fut = repo_manager.read().get_package(&rewritten_url, &cache, &blob_fetcher);
     match fut.await {
-        Ok(b) => Ok(HashSource::Tuf(b)),
+        Ok((b, dir)) => Ok(PackageSource::Tuf(b, dir)),
         Err(e @ Cache(MerkleFor(NotFound))) => {
             // If we can get metadata but the repo doesn't know about the package,
             // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
@@ -357,7 +366,10 @@ async fn package_from_repo_or_cache(
                 system_cache_list,
                 inspect_state,
             ) {
-                Some(blob) => Ok(HashSource::SystemImageCachePackages(blob, e)),
+                Some(blob) => {
+                    let dir = cache.open(blob, &[]).await?;
+                    Ok(PackageSource::SystemImageCachePackages(blob, dir, e))
+                }
                 None => Err(e),
             }
         }
@@ -373,11 +385,17 @@ async fn package_from_repo_or_cache(
             // system/data/cache_packages (not to be confused with pkg-cache). The cache_packages
             // manifest pkg URLs are for fuchsia.com, so do not use the rewritten URL.
             match hash_from_cache_packages_manifest(&pkg_url, system_cache_list) {
-                Some(blob) => Ok(HashSource::SystemImageCachePackages(blob, e)),
+                Some(blob) => {
+                    let dir = cache.open(blob, &[]).await?;
+                    Ok(PackageSource::SystemImageCachePackages(blob, dir, e))
+                }
                 None => Err(e),
             }
         }
-        Err(e @ Cache(FetchContentBlob(..))) | Err(e @ Cache(FetchMetaFar(..))) => {
+        Err(e @ GetPackageError::OpenPackage(..))
+        | Err(e @ Cache(FetchContentBlob(..)))
+        | Err(e @ Cache(FetchMetaFar(..)))
+        | Err(e @ Cache(CacheError::OpenPackage(..))) => {
             // We could talk to TUF and we know there's a new version of this package,
             // but we coldn't retrieve its blobs for some reason. Refuse to fall back to
             // cache_packages and instead return an error for the resolve, which is consistent with
@@ -462,7 +480,6 @@ async fn get_hash(
 }
 
 async fn resolve(
-    cache: &PackageCache,
     package_fetcher: &PackageFetcher,
     url: String,
     dir_request: ServerEnd<DirectoryMarker>,
@@ -477,20 +494,19 @@ async fn resolve(
     }
 
     let queued_fetch = package_fetcher.push(pkg_url.clone(), ());
-    let merkle_or_status = queued_fetch.await.expect("expected queue to be open");
-    trace::duration_end!("app", "resolve", "status" => merkle_or_status.err().unwrap_or(Status::OK).to_string().as_str());
-    let merkle = merkle_or_status?;
-    let selectors = vec![];
-    cache
-        .open(merkle, &selectors, dir_request)
-        .await
-        .map_err(|err| handle_bad_package_open(err, &url))
+    let pkg_or_status = queued_fetch.await.expect("expected queue to be open");
+    trace::duration_end!("app", "resolve", "status" => pkg_or_status.as_ref().err().cloned().unwrap_or(Status::OK).to_string().as_str());
+    let pkg = pkg_or_status?;
+
+    pkg.reopen(dir_request).map_err(|clone_err| {
+        fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(clone_err));
+        Status::INTERNAL
+    })
 }
 
 /// Run a service that only resolves registered font packages.
 pub async fn run_font_resolver_service(
     font_package_manager: Arc<FontPackageManager>,
-    cache: PackageCache,
     package_fetcher: Arc<PackageFetcher>,
     stream: FontResolverRequestStream,
     cobalt_sender: CobaltSender,
@@ -503,7 +519,6 @@ pub async fn run_font_resolver_service(
             let start_time = Instant::now();
             let response = resolve_font(
                 &font_package_manager,
-                &cache,
                 &package_fetcher,
                 package_url,
                 directory_request,
@@ -538,7 +553,6 @@ pub async fn run_font_resolver_service(
 /// Resolve a single font package.
 async fn resolve_font<'a>(
     font_package_manager: &'a Arc<FontPackageManager>,
-    cache: &'a PackageCache,
     package_fetcher: &'a Arc<PackageFetcher>,
     package_url: String,
     directory_request: ServerEnd<DirectoryMarker>,
@@ -558,7 +572,7 @@ async fn resolve_font<'a>(
         1,
     );
     if is_font_package {
-        resolve(&cache, &package_fetcher, package_url, directory_request).await
+        resolve(&package_fetcher, package_url, directory_request).await
     } else {
         fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
         Err(Status::NOT_FOUND)
@@ -568,12 +582,6 @@ async fn resolve_font<'a>(
 fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
     fx_log_err!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
     Status::INVALID_ARGS
-}
-
-fn handle_bad_package_open(open_error: crate::cache::PackageOpenError, pkg_url: &str) -> Status {
-    let status = (&open_error).into();
-    fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(open_error));
-    status
 }
 
 fn resolve_result_to_resolve_duration_code(

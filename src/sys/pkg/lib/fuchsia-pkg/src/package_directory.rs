@@ -50,7 +50,7 @@ pub enum LoadMetaContentsError {
 }
 
 /// An open package directory
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PackageDirectory {
     proxy: DirectoryProxy,
 }

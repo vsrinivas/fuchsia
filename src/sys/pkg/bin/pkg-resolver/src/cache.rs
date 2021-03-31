@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_pkg::{LocalMirrorProxy, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
     fuchsia_cobalt::CobaltSender,
+    fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_trace as trace,
     fuchsia_url::pkg_url::PkgUrl,
@@ -135,7 +136,7 @@ impl PackageCache {
 
     /// Open the requested package by merkle root using the given selectors, serving the package
     /// directory on the given directory request on success.
-    pub async fn open(
+    pub async fn open_onto(
         &self,
         merkle: BlobId,
         selectors: &[String],
@@ -153,15 +154,16 @@ impl PackageCache {
         }
     }
 
-    /// Check to see if a package with the given merkle root exists and is readable.
-    pub async fn package_exists(&self, merkle: BlobId) -> Result<bool, PackageOpenError> {
-        let (_dir, server_end) = fidl::endpoints::create_proxy()?;
-        let selectors = vec![];
-        match self.open(merkle, &selectors, server_end).await {
-            Ok(()) => Ok(true),
-            Err(PackageOpenError::NotFound) => Ok(false),
-            Err(e) => Err(e),
-        }
+    /// Open the requested package by merkle root using the given selectors, returning the package
+    /// directory client on success.
+    pub async fn open(
+        &self,
+        merkle: BlobId,
+        selectors: &[String],
+    ) -> Result<PackageDirectory, PackageOpenError> {
+        let (dir, dir_request) = PackageDirectory::create_request()?;
+        let () = self.open_onto(merkle, selectors, dir_request).await?;
+        Ok(dir)
     }
 
     /// Loads the base package index from pkg-cache.
@@ -229,7 +231,7 @@ pub async fn cache_package<'a>(
     cache: &'a PackageCache,
     blob_fetcher: &'a BlobFetcher,
     cobalt_sender: CobaltSender,
-) -> Result<BlobId, CacheError> {
+) -> Result<(BlobId, PackageDirectory), CacheError> {
     let (merkle, size) =
         merkle_for_url(repo, url, cobalt_sender).await.map_err(CacheError::MerkleFor)?;
     // If a merkle pin was specified, use it, but only after having verified that the name and
@@ -243,15 +245,16 @@ pub async fn cache_package<'a>(
     };
 
     // If the package already exists, we are done.
-    if cache.package_exists(merkle).await.unwrap_or_else(|e| {
-        fx_log_err!(
-            "unable to check if {} is already cached, assuming it isn't: {:#}",
-            url,
-            anyhow!(e)
-        );
-        false
-    }) {
-        return Ok(merkle);
+    match cache.open(merkle, &[]).await {
+        Ok(dir) => return Ok((merkle, dir)),
+        Err(PackageOpenError::NotFound) => {}
+        Err(e) => {
+            fx_log_err!(
+                "unable to check if {} is already cached, assuming it isn't: {:#}",
+                url,
+                anyhow!(e)
+            );
+        }
     }
 
     let mirrors = config.mirrors().to_vec().into();
@@ -296,7 +299,8 @@ pub async fn cache_package<'a>(
         })
         .await?;
 
-    Ok(merkle)
+    let dir = cache.open(merkle, &[]).await.map_err(CacheError::OpenPackage)?;
+    Ok((merkle, dir))
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -315,6 +319,9 @@ pub enum CacheError {
 
     #[error("while fetching content blob for meta.far {1}")]
     FetchContentBlob(#[source] Arc<FetchError>, BlobId),
+
+    #[error("while opening the package after caching it")]
+    OpenPackage(#[source] PackageOpenError),
 }
 
 pub(crate) trait ToResolveStatus {
@@ -335,6 +342,7 @@ impl ToResolveStatus for CacheError {
             CacheError::ListNeeds(err) => err.to_resolve_status(),
             CacheError::FetchMetaFar(err, ..) => err.to_resolve_status(),
             CacheError::FetchContentBlob(err, _) => err.to_resolve_status(),
+            CacheError::OpenPackage(err) => err.into(),
         }
     }
 }

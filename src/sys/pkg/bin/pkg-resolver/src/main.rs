@@ -207,7 +207,6 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let package_fetcher = Arc::new(package_fetcher);
 
     let resolver_cb = {
-        let cache = cache.clone();
         let repo_manager = Arc::clone(&repo_manager);
         let rewrite_manager = Arc::clone(&rewrite_manager);
         let package_fetcher = Arc::clone(&package_fetcher);
@@ -218,7 +217,6 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         move |stream| {
             fasync::Task::local(
                 resolver_service::run_resolver_service(
-                    cache.clone(),
                     Arc::clone(&repo_manager),
                     Arc::clone(&rewrite_manager),
                     Arc::clone(&package_fetcher),
@@ -235,14 +233,12 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     };
 
     let font_resolver_fb = {
-        let cache = cache.clone();
         let package_fetcher = Arc::clone(&package_fetcher);
         let cobalt_sender = cobalt_sender.clone();
         move |stream| {
             fasync::Task::local(
                 resolver_service::run_font_resolver_service(
                     Arc::clone(&font_package_manager),
-                    cache.clone(),
                     Arc::clone(&package_fetcher),
                     stream,
                     cobalt_sender.clone(),
