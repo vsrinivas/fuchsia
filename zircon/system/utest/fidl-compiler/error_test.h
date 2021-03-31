@@ -21,9 +21,9 @@
 #define ASSERT_ERRORED(library, error)            \
   {                                               \
     TestLibrary& library_ref = (library);         \
-    EXPECT_FALSE(library_ref.Compile());          \
-    EXPECT_EQ(library_ref.errors().size(), 1u);   \
-    ASSERT_ERR(library_ref.errors()[0], (error)); \
+    ASSERT_FALSE(library_ref.Compile());          \
+    ASSERT_EQ(library_ref.errors().size(), 1u);   \
+    EXPECT_ERR(library_ref.errors()[0], (error)); \
   }
 
 #define ASSERT_COMPILED_AND_CONVERT(library)        \

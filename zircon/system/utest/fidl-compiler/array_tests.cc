@@ -17,10 +17,10 @@ struct S {
     array<uint8>:1 arr;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(ArrayTests, BadZeroSizeArray) {
+TEST(ArrayTests, BadZeroSizeArrayOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -33,7 +33,21 @@ struct S {
   ASSERT_ERR(errors[0], fidl::ErrMustHaveNonZeroSize);
 }
 
-TEST(ArrayTests, BadNoSizeArray) {
+TEST(ArrayTests, BadZeroSizeArray) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type S = struct {
+    arr array<uint8,0>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED(library, fidl::ErrMustHaveNonZeroSize);
+}
+
+TEST(ArrayTests, BadNoSizeArrayOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -46,7 +60,21 @@ struct S {
   ASSERT_ERR(errors[0], fidl::ErrMustHaveSize);
 }
 
-TEST(ArrayTests, BadNonParameterizedArray) {
+TEST(ArrayTests, BadNoSizeArray) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type S = struct {
+    arr array<uint8>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED(library, fidl::ErrMustHaveSize);
+}
+
+TEST(ArrayTests, BadNonParameterizedArrayOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -57,6 +85,20 @@ struct S {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
+}
+
+TEST(ArrayTests, BadNonParameterizedArray) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type S = struct {
+    arr array;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED(library, fidl::ErrMustBeParameterized);
 }
 
 }  // namespace
