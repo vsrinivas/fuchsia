@@ -265,7 +265,14 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
 void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
                     fidl::ServerEnd<fdf::Node> node, AddChildCompleter::Sync& completer) {
   auto name = args.has_name() ? std::move(args.name()) : fidl::StringView();
-
+  for (auto& child : children_) {
+    if (child.name() == name.get()) {
+      LOGF(ERROR, "Failed to add Node '%.*s', names must be unique among siblings", name.size(),
+           name.data());
+      completer.Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+  }
   auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name.get());
 
   if (args.has_offers()) {

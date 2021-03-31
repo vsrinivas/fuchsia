@@ -389,7 +389,38 @@ TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
 
   node_controller->Remove();
   loop().RunUntilIdle();
-  ASSERT_FALSE(second_node.is_bound());
+  EXPECT_FALSE(second_node.is_bound());
+}
+
+// Start the root driver, and add two duplicate child nodes.
+TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild_DuplicateNodes) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  DriverRunner driver_runner(ConnectToRealm(), std::move(driver_index_client.value()), inspector(),
+                             loop().dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  fdf::NodePtr root_node, second_node, invalid_node;
+  driver_host().SetStartHandler([this, &root_node, &second_node, &invalid_node](
+                                    fdf::DriverStartArgs start_args, auto request) {
+    Emplace(std::move(request));
+
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("second");
+    fdf::NodeControllerPtr second_controller;
+    root_node->AddChild(std::move(args), second_controller.NewRequest(loop().dispatcher()),
+                        second_node.NewRequest(loop().dispatcher()));
+    args.set_name("second");
+    fdf::NodeControllerPtr invalid_controller;
+    root_node->AddChild(std::move(args), invalid_controller.NewRequest(loop().dispatcher()),
+                        invalid_node.NewRequest(loop().dispatcher()));
+  });
+  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", &driver_runner).is_ok());
+
+  loop().RunUntilIdle();
+  EXPECT_FALSE(invalid_node.is_bound());
 }
 
 // Start the root driver, and add a child node with duplicate symbols. The child
