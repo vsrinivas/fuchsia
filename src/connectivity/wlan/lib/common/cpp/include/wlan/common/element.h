@@ -183,8 +183,6 @@ struct MeshConfiguration {
   MeshCapability mesh_capability;
 } __PACKED;
 
-constexpr size_t kMaxMeshIdLen = 32;
-
 // IEEE Std 802.11-2016, 9.4.2.113, Figure 9-478
 struct PreqFlags : public common::BitField<uint8_t> {
   WLAN_BIT_FIELD(gate_announcement, 0, 1)

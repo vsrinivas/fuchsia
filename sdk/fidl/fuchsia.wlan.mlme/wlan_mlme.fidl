@@ -344,7 +344,7 @@ struct StartRequest {
     // See also dot11MultiDomainCapabilityActivated.
     Country country;
 
-    bytes:32 mesh_id;
+    bytes:ieee80211.MAX_MESH_ID_BYTE_LEN mesh_id;
 
     // TODO(hahnr): Add additional elements.
 

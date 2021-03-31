@@ -85,7 +85,7 @@ const MeshConfiguration* ParseMeshConfiguration(fbl::Span<const uint8_t> raw_bod
 }
 
 std::optional<fbl::Span<const uint8_t>> ParseMeshId(fbl::Span<const uint8_t> raw_body) {
-  if (raw_body.size() > kMaxMeshIdLen) {
+  if (raw_body.size() > wlan_ieee80211::MAX_MESH_ID_BYTE_LEN) {
     return {};
   }
   return {raw_body};

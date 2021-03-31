@@ -11,3 +11,6 @@ library fuchsia.wlan.ieee80211;
 /// name of this constant to emphasize the importance that it not be applied
 /// to the length of a UTF-8 encoded string.
 const uint8 MAX_SSID_BYTE_LEN = 32;
+
+/// IEEE Std 802.11-2016, 9.4.2.99
+const uint8 MAX_MESH_ID_BYTE_LEN = 32;
