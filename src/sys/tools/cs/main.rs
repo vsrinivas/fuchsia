@@ -90,6 +90,7 @@ async fn main() -> Result<(), Error> {
             println!("{}", log_stats);
         }
         Opt::Info { filter } => {
+            println!("'cs info' is deprecated. Please use 'ffx component show' instead!");
             if let Some(hub_dir) = validate_hub_directory() {
                 let component = V2Component::explore(hub_dir, Subcommand::Show).await;
                 component.print_details(&filter).map_err(|e| {
@@ -98,12 +99,14 @@ async fn main() -> Result<(), Error> {
             }
         }
         Opt::Select { capability } => {
+            println!("'cs select' is deprecated. Please use 'ffx component select' instead!");
             if let Some(hub_dir) = validate_hub_directory() {
                 let component = V2Component::explore(hub_dir, Subcommand::Select).await;
                 component.print_components_exposing_capability(&capability);
             }
         }
         Opt::Tree { component_type, verbose } => {
+            println!("'cs tree' is deprecated. Please use 'ffx component list' instead!");
             if let Some(hub_dir) = validate_hub_directory() {
                 let component = V2Component::explore(hub_dir, Subcommand::List).await;
                 if let Some(component_type) = component_type {
