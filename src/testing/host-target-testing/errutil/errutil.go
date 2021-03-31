@@ -20,7 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
-// HandleError printsd backtraces on the device for certain errors.
+// HandleError prints backtraces on the device for certain errors.
 func HandleError(ctx context.Context, serialSocketPath string, err error) error {
 	if !shouldPrintThreads(err) {
 		return nil

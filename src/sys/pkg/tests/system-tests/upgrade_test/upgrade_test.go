@@ -121,6 +121,9 @@ func doTest(ctx context.Context) error {
 		ch <- rpcClient
 		return err
 	}); err != nil {
+		if e := errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err); e != nil {
+			logger.Errorf(ctx, "failed to dump process back traces: %v", e)
+		}
 		return fmt.Errorf("device failed to initialize: %w", err)
 	}
 
