@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Supported Weave commands.
 pub enum WeaveMethod {
     GetPairingCode,
-    GetQrCode,
     GetPairingState,
+    GetQrCode,
+    ResetConfig,
 }
 
 impl std::str::FromStr for WeaveMethod {
@@ -19,6 +20,7 @@ impl std::str::FromStr for WeaveMethod {
             "GetPairingCode" => Ok(WeaveMethod::GetPairingCode),
             "GetPairingState" => Ok(WeaveMethod::GetPairingState),
             "GetQrCode" => Ok(WeaveMethod::GetQrCode),
+            "ResetConfig" => Ok(WeaveMethod::ResetConfig),
             _ => return Err(format_err!("invalid Weave FIDL method: {}", method)),
         }
     }
@@ -37,6 +39,18 @@ pub struct PairingState {
     pub is_fabric_provisioned: Option<bool>,
     /// Has the service been provisioned? Defaults to false.
     pub is_service_provisioned: Option<bool>,
+}
+
+#[derive(Deserialize, PartialEq, Copy, Clone, Debug)]
+pub struct ResetConfig {
+    /// Reset network configuration information.
+    pub network_config: Option<bool>,
+    /// Reset fabric configuration information.
+    pub fabric_config: Option<bool>,
+    /// Reset service configuration information.
+    pub service_config: Option<bool>,
+    /// Reset device operational credentials.
+    pub operational_credentials: Option<bool>,
 }
 
 impl From<PairingState> for fidl_fuchsia_weave::PairingState {
@@ -61,5 +75,29 @@ impl From<fidl_fuchsia_weave::PairingState> for PairingState {
             is_fabric_provisioned: item.is_fabric_provisioned,
             is_service_provisioned: item.is_service_provisioned,
         }
+    }
+}
+
+impl From<ResetConfig> for fidl_fuchsia_weave::ResetConfigFlags {
+    fn from(item: ResetConfig) -> Self {
+        let mut flags: fidl_fuchsia_weave::ResetConfigFlags =
+            fidl_fuchsia_weave::ResetConfigFlags::empty();
+        flags.set(
+            fidl_fuchsia_weave::ResetConfigFlags::NetworkConfig,
+            item.network_config.unwrap_or(false),
+        );
+        flags.set(
+            fidl_fuchsia_weave::ResetConfigFlags::FabricConfig,
+            item.fabric_config.unwrap_or(false),
+        );
+        flags.set(
+            fidl_fuchsia_weave::ResetConfigFlags::ServiceConfig,
+            item.service_config.unwrap_or(false),
+        );
+        flags.set(
+            fidl_fuchsia_weave::ResetConfigFlags::OperationalCredentials,
+            item.operational_credentials.unwrap_or(false),
+        );
+        flags
     }
 }

@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use crate::common_utils::common::get_proxy_or_connect;
-use crate::weave::types::PairingState;
+use crate::weave::types::{PairingState, ResetConfig};
 use anyhow::Error;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_weave::{
     ErrorCode, FactoryDataManagerMarker, FactoryDataManagerProxy, PairingStateWatcherMarker,
-    PairingStateWatcherProxy, StackMarker, StackProxy,
+    PairingStateWatcherProxy, ResetConfigFlags, StackMarker, StackProxy,
 };
 use parking_lot::RwLock;
+use serde_json::Value;
 use std::convert::From;
 
 /// Perform Weave FIDL operations.
@@ -75,6 +76,29 @@ impl WeaveFacade {
         let watch = self.pairing_state_watcher()?.watch_pairing_state().await;
         watch.map(|pairing_state| pairing_state.into()).map_err(anyhow::Error::from)
     }
+
+    /// Resets Weave state by wiping the provided configurations.
+    ///
+    /// # Arguments
+    /// * `args`: The JSON indicating the configurations to reset, in the form of a list of bytes.
+    ///
+    /// # JSON Format
+    /// All fields are optional. Fields set to 'true' reset the corresponding configuration in
+    /// weave, and fields left unset default to 'false'.
+    ///
+    /// {
+    ///   network_config: true,
+    ///   fabric_config: false,
+    ///   service_config: true,
+    ///   operational_credentials: false
+    /// }
+    pub async fn reset_config(&self, args: Value) -> Result<(), Error> {
+        let flags: ResetConfig = serde_json::from_value(args)?;
+        self.stack()?
+            .reset_config(ResetConfigFlags::from(flags))
+            .await?
+            .map_err(|e| self.map_weave_err(e))
+    }
 }
 
 #[cfg(test)]
@@ -83,12 +107,14 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_weave::{
         FactoryDataManagerGetPairingCodeResult, FactoryDataManagerRequest,
-        PairingStateWatcherRequest, QrCode, StackGetQrCodeResult, StackRequest,
+        PairingStateWatcherRequest, QrCode, ResetConfigFlags, StackGetQrCodeResult, StackRequest,
+        StackResetConfigResult,
     };
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use lazy_static::lazy_static;
     use matches::assert_matches;
+    use serde_json::{json, Value};
 
     lazy_static! {
         static ref PAIRING_CODE: Vec<u8> = b"ABC1234".to_vec();
@@ -100,6 +126,12 @@ mod tests {
             is_weave_fully_provisioned: Some(false),
             is_thread_provisioned: Some(true)
         };
+        static ref RESET_CONFIG: Value = json!({
+            "network_config": true,
+            // "fabric_config" unset
+            "service_config": true,
+            // "operational_credentials" unset
+        });
     }
 
     struct MockStackBuilder {
@@ -137,6 +169,20 @@ mod tests {
                 PairingStateWatcherRequest::WatchPairingState { responder } => {
                     responder.send(fidl_fuchsia_weave::PairingState::from(result)).unwrap();
                 }
+            })
+        }
+
+        fn expect_reset_config(
+            self,
+            _expected_flags: fidl_fuchsia_weave::ResetConfigFlags,
+            mut result: StackResetConfigResult,
+        ) -> Self {
+            self.push_stack(move |req| match req {
+                StackRequest::ResetConfig { responder, flags } => {
+                    assert_matches!(flags, _expected_flags);
+                    responder.send(&mut result).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
             })
         }
 
@@ -269,5 +315,18 @@ mod tests {
         };
 
         future::join(facade_fut, pairing_state_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_reset_config() {
+        let flags: ResetConfigFlags = fidl_fuchsia_weave::ResetConfigFlags::NetworkConfig
+            | fidl_fuchsia_weave::ResetConfigFlags::ServiceConfig;
+        let (facade, reset_config_fut) =
+            MockStackBuilder::new().expect_reset_config(flags, Ok(())).build_stack();
+
+        let facade_fut =
+            async move { assert_eq!(facade.reset_config(RESET_CONFIG.clone()).await.unwrap(), ()) };
+
+        future::join(facade_fut, reset_config_fut).await;
     }
 }
