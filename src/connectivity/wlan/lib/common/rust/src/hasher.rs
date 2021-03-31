@@ -3,17 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::format::{MacFmt, SsidFmt},
+    boringssl_sys::SHA256_DIGEST_LENGTH,
     mundane::{
         hash::{Digest, Sha256},
         hmac::hmac,
     },
+    static_assertions::const_assert,
 };
+
+const HASH_KEY_LEN: usize = 8;
 
 #[derive(Debug, Clone)]
 /// Hasher used to hash sensitive information, preserving user privacy.
 pub struct WlanHasher {
-    hash_key: [u8; 8],
+    hash_key: [u8; HASH_KEY_LEN],
 }
 
 impl WlanHasher {
@@ -21,17 +24,30 @@ impl WlanHasher {
         Self { hash_key }
     }
 
-    pub fn hash(&self, bytes: &[u8]) -> String {
-        hex::encode(hmac::<Sha256>(&self.hash_key, bytes).bytes())
+    pub fn hash(&self, bytes: &[u8]) -> [u8; SHA256_DIGEST_LENGTH as usize] {
+        hmac::<Sha256>(&self.hash_key, bytes).bytes()
     }
 
-    pub fn hash_mac_addr(&self, mac_addr: &impl MacFmt) -> String {
-        mac_addr.to_mac_str_partial_hashed(|bytes| self.hash(bytes))
+    pub fn hash_mac_addr(&self, mac_addr: &[u8; 6]) -> String {
+        format!(
+            "{:02x}:{:02x}:{:02x}:{}",
+            mac_addr[0],
+            mac_addr[1],
+            mac_addr[2],
+            hex::encode(truncate_sha256_digest_to_8_bytes(&self.hash(&mac_addr[3..6])))
+        )
     }
 
-    pub fn hash_ssid(&self, ssid: impl SsidFmt) -> String {
-        ssid.to_ssid_str_hashed(|bytes| self.hash(bytes))
+    pub fn hash_ssid(&self, ssid: &[u8]) -> String {
+        hex::encode(truncate_sha256_digest_to_8_bytes(&self.hash(ssid)))
     }
+}
+
+fn truncate_sha256_digest_to_8_bytes(digest: &[u8; SHA256_DIGEST_LENGTH as usize]) -> [u8; 8] {
+    const_assert!(8 <= SHA256_DIGEST_LENGTH);
+    let mut res = [0u8; 8];
+    res.copy_from_slice(&digest[..8]);
+    res
 }
 
 #[cfg(test)]
@@ -78,5 +94,12 @@ mod tests {
 
         // Verify that `&[u8]` argument is accepted.
         assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo[..]));
+    }
+
+    #[test]
+    fn test_truncate_sha256_digest_to_8_bytes() {
+        let sha256_digest = hmac::<Sha256>(&[0u8; HASH_KEY_LEN], &[0u8]).bytes();
+        let truncated_digest = truncate_sha256_digest_to_8_bytes(&sha256_digest);
+        assert_eq!(truncated_digest.len(), 8);
     }
 }

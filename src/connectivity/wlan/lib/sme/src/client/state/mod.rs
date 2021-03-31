@@ -1021,7 +1021,7 @@ impl ClientState {
             bssid: cmd.bss.bssid.to_mac_str(),
             bssid_hash: context.inspect.hasher.hash_mac_addr(&cmd.bss.bssid),
             ssid: cmd.bss.ssid().to_ssid_str(),
-            ssid_hash: context.inspect.hasher.hash(cmd.bss.ssid()),
+            ssid_hash: context.inspect.hasher.hash_ssid(cmd.bss.ssid()),
         });
         let state = Self::new(cfg.clone());
         match state {

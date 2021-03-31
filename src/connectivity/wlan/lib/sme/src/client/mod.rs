@@ -663,7 +663,7 @@ fn inspect_log_join_scan(
             bssid: bss.bssid.to_mac_str(),
             bssid_hash: ctx.inspect.hasher.hash_mac_addr(&bss.bssid),
             ssid: bss.ssid().to_ssid_str(),
-            ssid_hash: ctx.inspect.hasher.hash(bss.ssid()),
+            ssid_hash: ctx.inspect.hasher.hash_ssid(bss.ssid()),
             channel: InspectWlanChan(&bss.chan),
             rssi_dbm: bss.rssi_dbm,
         });
