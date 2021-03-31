@@ -13,14 +13,17 @@ use euclid::{default::Transform2D, point2, size2, vec2};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, Time, TimeoutExt};
+use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Duration};
-use futures::TryFutureExt;
+use futures::{TryFutureExt, TryStreamExt};
 use input_synthesis::{keymaps::QWERTY_MAP, usages::input3_key_to_hid_usage};
+use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use std::{
     collections::{HashMap, HashSet},
-    fs::{self, DirEntry},
+    fs::{self},
     hash::{Hash, Hasher},
     iter::FromIterator,
+    path::{Path, PathBuf},
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
@@ -370,13 +373,13 @@ fn device_id_for_event(event: &fidl_fuchsia_ui_input::PointerEvent) -> DeviceId 
     DeviceId(format!("{}-{}", id_string, event.device_id))
 }
 
-async fn listen_to_entry(
-    entry: &DirEntry,
+async fn listen_to_path(
+    device_path: &Path,
     view_key: ViewKey,
     internal_sender: &InternalSender,
 ) -> Result<(), Error> {
     let (client, server) = zx::Channel::create()?;
-    fdio::service_connect(entry.path().to_str().expect("bad path"), server)?;
+    fdio::service_connect(device_path.to_str().expect("bad path"), server)?;
     let client = fasync::Channel::from_channel(client)?;
     let device = hid_input_report::InputDeviceProxy::new(client);
     let descriptor = device
@@ -386,7 +389,7 @@ async fn listen_to_entry(
             Err(format_err!("FIDL timeout on get_descriptor"))
         })
         .await?;
-    let device_id = entry.file_name().to_string_lossy().to_string();
+    let device_id = device_path.file_name().expect("file_name").to_string_lossy().to_string();
     internal_sender
         .unbounded_send(MessageInternal::RegisterDevice(DeviceId(device_id.clone()), descriptor))
         .expect("unbounded_send");
@@ -412,10 +415,12 @@ async fn listen_to_entry(
                     }
                     Err(err) => {
                         eprintln!("Error report from read_input_reports: {}: {}", device_id, err);
+                        break;
                     }
                 },
                 Err(err) => {
                     eprintln!("Error report from read_input_reports: {}: {}", device_id, err);
+                    break;
                 }
             }
         }
@@ -429,17 +434,39 @@ pub(crate) async fn listen_for_user_input(
     internal_sender: InternalSender,
 ) -> Result<(), Error> {
     let input_devices_directory = "/dev/class/input-report";
+    let watcher_sender = internal_sender.clone();
     let path = std::path::Path::new(input_devices_directory);
     let entries = fs::read_dir(path)?;
     for entry in entries {
         let entry = entry?;
-        match listen_to_entry(&entry, view_key, &internal_sender).await {
+        match listen_to_path(&entry.path(), view_key, &internal_sender).await {
             Err(err) => {
                 eprintln!("Error: {}: {}", entry.file_name().to_string_lossy().to_string(), err)
             }
             _ => (),
         }
     }
+    let dir_proxy = open_directory_in_namespace(input_devices_directory, OPEN_RIGHT_READABLE)?;
+    let mut watcher = vfs_watcher::Watcher::new(dir_proxy).await?;
+    fasync::Task::local(async move {
+        let input_devices_directory_path = PathBuf::from("/dev/class/input-report");
+        while let Some(msg) = (watcher.try_next()).await.expect("msg") {
+            match msg.event {
+                vfs_watcher::WatchEvent::ADD_FILE => {
+                    let device_path = input_devices_directory_path.join(msg.filename);
+                    match listen_to_path(&device_path, view_key, &watcher_sender).await {
+                        Err(err) => {
+                            eprintln!("Error: {:?}: {}", device_path, err)
+                        }
+                        _ => (),
+                    };
+                }
+                _ => (),
+            }
+        }
+    })
+    .detach();
+
     Ok(())
 }
 
