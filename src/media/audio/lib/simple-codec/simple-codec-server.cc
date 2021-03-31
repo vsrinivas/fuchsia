@@ -17,6 +17,10 @@ namespace audio {
 namespace audio_fidl = ::fuchsia::hardware::audio;
 
 zx_status_t SimpleCodecServer::CreateInternal() {
+  simple_codec_ = inspect_.GetRoot().CreateChild("simple_codec");
+  state_ = simple_codec_.CreateString("state", "created");
+  start_time_ = simple_codec_.CreateInt("start_time", 0);
+
   auto res = Initialize();
   if (res.is_error()) {
     return res.error_value();
@@ -24,19 +28,26 @@ zx_status_t SimpleCodecServer::CreateInternal() {
   loop_.StartThread();
   driver_ids_ = res.value();
   Info info = GetInfo();
+  simple_codec_.CreateString("manufacturer", info.manufacturer.c_str(), &inspect_);
+  simple_codec_.CreateString("product", info.product_name.c_str(), &inspect_);
+  simple_codec_.CreateString("unique_id", info.unique_id.c_str(), &inspect_);
   if (driver_ids_.instance_count != 0) {
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, driver_ids_.vendor_id},
         {BIND_PLATFORM_DEV_DID, 0, driver_ids_.device_id},
         {BIND_CODEC_INSTANCE, 0, driver_ids_.instance_count},
     };
-    return DdkAdd(ddk::DeviceAddArgs(info.product_name.c_str()).set_props(props));
+    return DdkAdd(ddk::DeviceAddArgs(info.product_name.c_str())
+                      .set_props(props)
+                      .set_inspect_vmo(inspect_.DuplicateVmo()));
   }
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, driver_ids_.vendor_id},
       {BIND_PLATFORM_DEV_DID, 0, driver_ids_.device_id},
   };
-  return DdkAdd(ddk::DeviceAddArgs(info.product_name.c_str()).set_props(props));
+  return DdkAdd(ddk::DeviceAddArgs(info.product_name.c_str())
+                    .set_props(props)
+                    .set_inspect_vmo(inspect_.DuplicateVmo()));
 }
 
 zx_status_t SimpleCodecServer::CodecConnect(zx::channel channel) {
@@ -64,6 +75,7 @@ void SimpleCodecServerInternal<T>::Stop(StopCallback callback) {
   if (status != ZX_OK) {
     static_cast<T*>(this)->binding_->Unbind();
   }
+  static_cast<T*>(this)->state_.Set("stopped");
   callback();
 }
 
@@ -73,6 +85,8 @@ void SimpleCodecServerInternal<T>::Start(StartCallback callback) {
   if (status != ZX_OK) {
     static_cast<T*>(this)->binding_->Unbind();
   }
+  static_cast<T*>(this)->state_.Set("started");
+  static_cast<T*>(this)->start_time_.Set(zx::clock::get_monotonic().get());
   callback();
 }
 

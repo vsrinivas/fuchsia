@@ -10,6 +10,7 @@ test("simple-codec-unittest-bin") {
   sources = [ "test.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.audio",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",

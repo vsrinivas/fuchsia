@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/simple-codec/simple-codec-server-internal.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -57,6 +58,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   void DdkRelease() {
     loop_.Shutdown();
     Shutdown();
+    state_.Set("released");
     delete this;
   }
 
@@ -94,6 +96,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
  protected:
   explicit SimpleCodecServer(zx_device_t* parent)
       : SimpleCodecServerDeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  inspect::Inspector& inspect() { return inspect_; }
 
  private:
   // Internal implementaions have the same name but different signatures.
@@ -115,6 +118,11 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   DriverIds driver_ids_;
   std::optional<fidl::Binding<::fuchsia::hardware::audio::Codec>> binding_;
   async::Loop loop_;
+
+  inspect::Inspector inspect_;
+  inspect::Node simple_codec_;
+  inspect::StringProperty state_;
+  inspect::IntProperty start_time_;
 };
 
 }  // namespace audio

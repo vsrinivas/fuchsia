@@ -7,6 +7,7 @@
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/sync/completion.h>
 
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -17,6 +18,16 @@ static const char* kTestProduct = "test prod";
 namespace audio {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
+
+class SimpleCodecTest : public inspect::InspectTestHelper, public zxtest::Test {
+ public:
+  void SetUp() override {}
+
+  void TearDown() override {}
+
+ protected:
+  fake_ddk::Bind ddk_;
+};
 
 // Server tests.
 struct TestCodec : public SimpleCodecServer {
@@ -42,10 +53,10 @@ struct TestCodec : public SimpleCodecServer {
   GainState GetGainState() override { return {}; }
   void SetGainState(GainState state) override {}
   codec_protocol_t proto_ = {};
+  inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
 };
 
-TEST(SimpleCodecTest, ChannelConnection) {
-  fake_ddk::Bind tester;
+TEST_F(SimpleCodecTest, ChannelConnection) {
   auto codec = SimpleCodecServer::Create<TestCodec>();
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -59,12 +70,11 @@ TEST(SimpleCodecTest, ChannelConnection) {
   ASSERT_EQ(info->product_name.compare(kTestProduct), 0);
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
-TEST(SimpleCodecTest, GainState) {
-  fake_ddk::Bind tester;
+TEST_F(SimpleCodecTest, GainState) {
   auto codec = SimpleCodecServer::Create<TestCodec>();
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -102,12 +112,11 @@ TEST(SimpleCodecTest, GainState) {
   }
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
-TEST(SimpleCodecTest, PlugState) {
-  fake_ddk::Bind tester;
+TEST_F(SimpleCodecTest, PlugState) {
   auto codec = SimpleCodecServer::Create<TestCodec>();
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -130,7 +139,34 @@ TEST(SimpleCodecTest, PlugState) {
   ASSERT_GT(out_plug_state.plug_state_time(), 0);
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
+TEST_F(SimpleCodecTest, Inspect) {
+  auto codec = SimpleCodecServer::Create<TestCodec>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  audio_fidl::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  // Check inspect state.
+  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
+  ASSERT_TRUE(simple_codec);
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
