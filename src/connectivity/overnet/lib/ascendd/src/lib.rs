@@ -7,7 +7,7 @@ mod serial;
 use crate::serial::run_serial_link_handlers;
 use anyhow::{bail, format_err, Error};
 use argh::FromArgs;
-use async_std::os::unix::net::{UnixListener, UnixStream};
+use async_net::unix::{UnixListener, UnixStream};
 use fuchsia_async::Task;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
@@ -83,7 +83,7 @@ async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result
     log::info!("starting ascendd on {} with node id {:?}", sockpath, hoist().node().node_id());
 
     let incoming = loop {
-        match UnixListener::bind(sockpath).await {
+        match UnixListener::bind(sockpath) {
             Ok(listener) => {
                 break listener;
             }

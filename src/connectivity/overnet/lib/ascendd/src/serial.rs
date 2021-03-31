@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{bail, Error};
-use async_std::{
-    fs::{File, OpenOptions},
-    io::{stdin, stdout},
-};
+use async_fs::{File, OpenOptions};
+use blocking::Unblock;
 use futures::{
     lock::{Mutex, MutexGuard, MutexLockFuture},
     prelude::*,
@@ -16,6 +14,7 @@ use serial_link::{
     descriptor::{CharacterWidth, Config, Descriptor, FlowControl, Parity, StopWidth},
     run::{run, Role},
 };
+use std::io::{stdin, stdout};
 use std::{
     os::unix::io::{AsRawFd, FromRawFd},
     pin::Pin,
@@ -46,8 +45,8 @@ pub async fn run_serial_link_handlers(
                     Descriptor::StdioPipe => {
                         run(
                             Role::Client,
-                            stdin(),
-                            stdout(),
+                            Unblock::new(stdin()),
+                            Unblock::new(stdout()),
                             router,
                             OutputSink::new(output_sink),
                             Some(&desc),
