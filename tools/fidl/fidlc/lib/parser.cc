@@ -1972,27 +1972,16 @@ std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
   if (!Ok())
     return Fail();
 
-  switch (Peek().kind()) {
-    case Token::Kind::kLeftCurly: {
-      auto layout = ParseLayout(scope, std::move(identifier), modifiers);
-      return std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(),
-                                                          std::move(layout));
-    }
-    case Token::Kind::kColon:
-    case Token::Kind::kComma:
-    case Token::Kind::kEqual:
-    case Token::Kind::kLeftAngle:
-    case Token::Kind::kRightAngle:
-    case Token::Kind::kSemicolon: {
-      ValidateModifiers</* none */>(modifiers, identifier->start_);
-
-      return std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
-                                                         std::move(identifier));
-    }
-    default: {
-      return Fail();
-    }
+  if (Peek().kind() == Token::Kind::kLeftCurly) {
+    auto layout = ParseLayout(scope, std::move(identifier), modifiers);
+    return std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(),
+                                                        std::move(layout));
   }
+
+  ValidateModifiers</* none */>(modifiers, identifier->start_);
+
+  return std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+                                                     std::move(identifier));
 }
 
 // [ name | { ... } ][ < ... > ][ : ... ]
