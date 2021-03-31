@@ -682,7 +682,7 @@ if (!use_vboot && custom_signing_script == "") {
   update_manifest += [
     {
       target = "zbi"
-      deps = [ ":fuchsia" ]
+      dep = ":fuchsia"
     },
   ]
 }
@@ -826,7 +826,7 @@ if (custom_signing_script != "" || use_vboot) {
   update_manifest += [
     {
       target = "zbi.signed"
-      deps = [ ":signed" ]
+      dep = ":signed"
     },
   ]
 }
@@ -955,8 +955,8 @@ if (use_vbmeta) {
   update_manifest += [
     {
       target = "fuchsia.vbmeta"
-      sources = [ "$root_build_dir/fuchsia.vbmeta" ]
-      deps = [ ":fuchsia.vbmeta" ]
+      source = "$root_build_dir/fuchsia.vbmeta"
+      dep = ":fuchsia.vbmeta"
     },
   ]
 }
@@ -1435,7 +1435,7 @@ if (target_cpu != "arm64" && !use_vboot) {
   if (!use_vboot && custom_signing_script == "") {
     update_manifest += [
       {
-        deps = [ ":esp" ]
+        dep = ":esp"
         target = "bootloader"
       },
     ]
@@ -1516,8 +1516,8 @@ foreach(firmware, firmware_prebuilts) {
   update_manifest += [
     {
       target = name
-      deps = [ ":$name" ]
-      sources = [ "$root_out_dir/$name.img" ]
+      dep = ":$name"
+      source = "$root_out_dir/$name.img"
     },
   ]
 
@@ -2138,29 +2138,29 @@ action("update.manifest") {
   additional_update_manifest_entries = [
     {
       target = "packages"
-      deps = [ ":update_packages.manifest" ]
+      dep = ":update_packages.manifest"
     },
     {
       target = "packages.json"
-      deps = [ ":update_packages.manifest.json" ]
+      dep = ":update_packages.manifest.json"
     },
     {
       target = "epoch.json"
-      deps = [ ":epoch.json" ]
+      dep = ":epoch.json"
     },
 
     # Add the meta/package JSON file that makes this the "update" package.
     {
       target = "meta/package"
-      sources = [ "update_package.json" ]
+      source = "update_package.json"
     },
     {
       target = "version"
-      sources = [ rebase_path(build_info_files.version, "", root_build_dir) ]
+      source = build_info_files.version
     },
     {
       target = "board"
-      sources = [ board_name_file ]
+      source = board_name_file
     },
   ]
   hermetic_deps = false
@@ -2174,12 +2174,17 @@ action("update.manifest") {
 
   deps = [
     ":recovery_images_list",
-
     # This dep ensures the version file included below is always generated,
     # which is presently significant only really for bringup, as bringup still
     # attempts to build this target.
-    "//build/info:build-info",
+    # "//build/info:build-info",
   ]
+
+  # If the build version is using the latest-commit-date, then include the
+  # generation of that file as one of the dependencies.
+  if (build_info_files.version == build_info_files.latest_commit_date) {
+    deps += [ "//build/info:latest-commit-date" ]
+  }
 
   # Use metadata from recovery labels to create manifest targets
   args += [
@@ -2192,23 +2197,33 @@ action("update.manifest") {
   # manifest.
   foreach(entry, update_manifest + additional_update_manifest_entries) {
     entry_source = ""
-    if (defined(entry.deps)) {
-      deps += entry.deps
+    if (defined(entry.dep)) {
+      deps += [ entry.dep ]
     }
 
-    if (defined(entry.sources)) {
-      # TODO(fxbug.dev/3157): We should only have single source
-      sources = []
-      sources += entry.sources
-      entry_source = sources[0]
-    } else if (defined(entry.deps)) {
-      foreach(label, entry.deps) {
-        # TODO(fxbug.dev/3157): We should only have single output
-        dep_outputs = []
-        dep_outputs += get_target_outputs(label)
-        entry_source = dep_outputs[0]
-      }
+    # Add the appropriate "source" to the update action, based on the entry's
+    # defined source or dep.
+    entry_source = ""
+
+    if (defined(entry.source)) {
+      # If the entry defines sources, those take precedence.
+      entry_source = entry.source
+    } else if (defined(entry.dep)) {
+      # If the entry defines a dep, but not a source, use the first output as
+      # the target's source.
+      dep_outputs = []
+      dep_outputs = get_target_outputs(entry.dep)
+      entry_source = dep_outputs[0]
+    } else {
+      assert("entry for target '${entry.target}' had no source: ${entry}")
     }
+
+    # Add the entry's source to the action's set of source files, for proper
+    # input dependency tracking.
+    sources += [ entry_source ]
+
+    # Rebase the file's path against the root build dir so that it can be passed
+    # to the tool via args.
     entry_source = rebase_path(entry_source, root_build_dir)
     args += [ "--entry=${entry.target}=${entry_source}" ]
   }
