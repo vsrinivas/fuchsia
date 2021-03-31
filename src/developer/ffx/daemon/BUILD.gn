@@ -71,9 +71,6 @@ if (is_host) {
 
     test_deps = [ "//src/developer/fastboot:lib" ]
 
-    # TODO: remove this dep once Overnet is on async-std also.
-    deps += [ "//src/connectivity/overnet/lib/core" ]
-
     sources = [
       "src/constants.rs",
       "src/daemon.rs",
