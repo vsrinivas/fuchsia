@@ -192,7 +192,6 @@ enum StreamingError {
 /// Reports the streaming metrics to Cobalt when streaming has completed.
 struct RunningSinkTask {
     media_task: Option<fasync::Task<()>>,
-    _cobalt_task: fasync::Task<()>,
     result_fut: Shared<fasync::Task<Result<(), MediaTaskError>>>,
 }
 
@@ -213,7 +212,7 @@ impl RunningSinkTask {
         });
         let result_fut = recv_task.shared();
         let cobalt_result = result_fut.clone();
-        let cobalt_task = fasync::Task::spawn(async move {
+        fasync::Task::spawn(async move {
             let start_time = fasync::Time::now();
             trace::instant!("bt-a2dp", "Media:Start", trace::Scope::Thread);
             let _ = cobalt_result.await;
@@ -225,8 +224,9 @@ impl RunningSinkTask {
                 &codec_type,
                 (end_time - start_time).into_seconds(),
             );
-        });
-        Self { media_task: Some(wrapped_media_task), result_fut, _cobalt_task: cobalt_task }
+        })
+        .detach();
+        Self { media_task: Some(wrapped_media_task), result_fut }
     }
 }
 
@@ -412,6 +412,49 @@ mod tests {
             ))) => {}
             x => panic!("Expected a audio consumer request, got {:?}", x),
         };
+    }
+
+    #[test]
+    fn dropped_task_reports_metrics() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (send, mut recv) = fake_cobalt_sender();
+        let (proxy, mut session_requests) =
+            fidl::endpoints::create_proxy_and_stream::<PublisherMarker>().unwrap();
+        let (audio_consumer_factory_proxy, _audio_factory_requests) =
+            create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
+                .expect("proxy pair creation");
+        let builder =
+            SinkTaskBuilder::new(send, proxy, audio_consumer_factory_proxy, "Tests".to_string());
+
+        let sbc_config = MediaCodecConfig::min_sbc();
+        let configured_fut =
+            builder.configure(&PeerId(1), &sbc_config, DataStreamInspect::default());
+        pin_mut!(configured_fut);
+
+        let mut configured_task =
+            exec.run_singlethreaded(&mut configured_fut).expect("ok configure");
+
+        // Should't start session until we start a stream.
+        assert!(exec.run_until_stalled(&mut session_requests.next()).is_pending());
+
+        let (local, _remote) = Channel::create();
+        let local = Arc::new(RwLock::new(local));
+        let stream =
+            MediaStream::new(Arc::new(parking_lot::Mutex::new(true)), Arc::downgrade(&local));
+
+        let mut running_task = configured_task.start(stream).expect("media task should start");
+
+        running_task.stop().expect("task to stop with okay");
+        drop(running_task);
+
+        // Should receive a metrics report.
+        match exec.run_singlethreaded(&mut recv.next()) {
+            Some(CobaltEvent {
+                metric_id: metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
+                ..
+            }) => {}
+            x => panic!("Expected A2DP Duration CobaltEvent, got {:?}", x),
+        }
     }
 
     fn setup_media_stream_test(
