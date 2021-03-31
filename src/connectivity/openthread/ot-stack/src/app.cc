@@ -203,6 +203,10 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint
     fbl::AutoLock lock(&app_.radio_q_mtx_);
     if (app_.radio_inbound_queue_.empty()) {
       sync_completion_reset(&app_.radio_rx_complete_);
+    } else {
+      std::vector<uint8_t> vec = std::move(app_.radio_inbound_queue_.front());
+      app_.radio_inbound_queue_.pop_front();
+      return vec;
     }
   }
   zx_status_t res = sync_completion_wait(&app_.radio_rx_complete_, ZX_USEC(timeout_us));
