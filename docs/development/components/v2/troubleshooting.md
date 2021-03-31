@@ -172,9 +172,6 @@ call on it, if the call is awaited on. For example:
 let res = echo.echo_string(Some("Hippos rule!")).await;
 match res {
     Ok(_) => { info!("Call succeeded!"); }
-    Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {
-        error!("Channel was closed");
-    }
     Err(fidl::Error::ClientChannelClosed { status, service_name } => {
         error!("Channel to service {} was closed with status: {}", service_name, status);
     }
@@ -184,19 +181,19 @@ match res {
 };
 ```
 
-This won't work if the call doesn't return a value, because such calls can't be
-awaited on. However, if your protocol pipelines a call that does return a
-value, you can check that:
+If the call doesn't return a value (i.e. it is a one-way method), you'll only
+get an error if the channel was closed prior to the call. However, if your
+protocol pipelines a call that does return a value, you can also check that:
 
 ```rust
 let (echo_resp, echo_resp_svc) = fidl::endpoints::create_proxy();
-let res = echo_async.echo_string(Some("Hippos rule!"), echo_resp_svc);
+let res = echo_async.echo_string_pipelined(Some("Hippos rule!"), echo_resp_svc);
 match res {
     Ok(_) => {
         info!("EchoString succeeded!");
     }
-    Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {
-        error!("EchoAsync channel was closed");
+    Err(fidl::Error::ClientChannelClosed { status, service_name } => {
+        error!("Channel to service {} was closed with status: {}", service_name, status);
     }
     Err(e) => {
         error!("Unexpected error: {}", e);
@@ -205,9 +202,6 @@ match res {
 let res = echo_resp.get_result().await;
 match res {
     Ok(_) => { info!("GetResult succeeded!"); }
-    Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {
-        error!("EchoResponder channel was closed");
-    }
     Err(fidl::Error::ClientChannelClosed { status, service_name } => {
         error!("Channel to service {} was closed with status: {}", service_name, status);
     }
@@ -226,12 +220,12 @@ namespace.  You can get the epitaph on a closed channel as follows:
 ```rust
 let stream = echo.take_event_stream();
 match stream.next().await {
-    Some(m) => {
-        info!("Received message other than epitaph or peer closed: {:?}", m);
-    }
     Some(Err(fidl::Error::ClientChannelClosed { status, .. })) => {
         info!("Echo channel was closed with epitaph, probably due to \
               failed routing: {}", status);
+    }
+    Some(m) => {
+        info!("Received message other than epitaph or peer closed: {:?}", m);
     }
     None => {
         info!("Component failed to start or Echo channel was closed by server");

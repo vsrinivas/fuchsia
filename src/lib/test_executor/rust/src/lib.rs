@@ -14,7 +14,7 @@ use {
         SuiteProxy,
     },
     fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions, SuiteControllerProxy},
-    fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
+    fuchsia_async as fasync,
     futures::{
         channel::mpsc,
         future::{join_all, try_join},
@@ -740,10 +740,7 @@ impl SuiteInstance {
 
 fn suite_error(err: fidl::Error) -> anyhow::Error {
     match err {
-        // Could get `ClientWrite` or `ClientChannelClosed` error depending on whether the request
-        // was sent before or after the channel was closed.
-        fidl::Error::ClientWrite(zx_status::Status::PEER_CLOSED)
-        | fidl::Error::ClientChannelClosed { .. } => anyhow::anyhow!(
+        fidl::Error::ClientChannelClosed { .. } => anyhow::anyhow!(
             "The test protocol was closed. This may mean `fuchsia.test.Suite` was not \
             configured correctly. Refer to: \
             https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"

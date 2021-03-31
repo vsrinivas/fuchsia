@@ -4,8 +4,8 @@
 
 use {
     fidl, fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client, fuchsia_syslog as syslog, fuchsia_zircon as zx, futures::prelude::*,
-    log::*, matches::assert_matches,
+    fuchsia_component::client, fuchsia_syslog as syslog, fuchsia_zircon as zx, log::*,
+    matches::assert_matches,
 };
 
 #[fasync::run_singlethreaded]
@@ -26,17 +26,8 @@ async fn main() {
     let echo = client::connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
     let err =
         echo.echo_string(Some("Hippos rule!")).await.expect_err("echo_string should have failed");
-    let epitaph = echo.take_event_stream().next().await.expect("no epitaph");
-    info!("Connecting to Echo protocol failed with error \"{}\" and epitaph {:?}", err, epitaph);
-    assert_matches!(
-        err,
-        fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)
-            | fidl::Error::ClientChannelClosed { status: zx::Status::UNAVAILABLE, .. }
-    );
-    assert_matches!(
-        epitaph,
-        Err(fidl::Error::ClientChannelClosed { status: zx::Status::UNAVAILABLE, .. })
-    );
+    info!("Connecting to Echo protocol failed with error \"{}\"", err);
+    assert_matches!(err, fidl::Error::ClientChannelClosed { status: zx::Status::UNAVAILABLE, .. });
 
     // The `echo2` channel should be closed because routing succeeded but the runner failed to
     // start the component. The channel won't have an epitaph set; the runner closes the source
@@ -56,10 +47,5 @@ async fn main() {
     let err =
         echo2.echo_string(Some("Hippos rule!")).await.expect_err("echo_string should have failed");
     info!("Connecting to Echo2 protocol failed with error \"{}\"", err);
-    assert_matches!(
-        err,
-        fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)
-            | fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. }
-    );
-    assert_matches!(echo2.take_event_stream().next().await, None);
+    assert_matches!(err, fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. });
 }

@@ -174,11 +174,13 @@ pub enum Error {
     #[error("A FIDL server encountered an IO error writing an epitaph into a channel: {}", _0)]
     ServerEpitaphWrite(#[source] zx_status::Status),
 
-    /// A FIDL client encountered an IO error reading a response from a channel.
+    /// A FIDL client encountered an IO error reading a response from a channel. For the
+    /// `zx_status::Status::PEER_CLOSED` error, `Error::ClientChannelClosed` is used instead.
     #[error("A FIDL client encountered an IO error reading a response from a channel: {}", _0)]
     ClientRead(#[source] zx_status::Status),
 
-    /// A FIDL client encountered an IO error writing a request to a channel.
+    /// A FIDL client encountered an IO error writing a request to a channel. For the
+    /// `zx_status::Status::PEER_CLOSED` error, `Error::ClientChannelClosed` is used instead.
     #[error("A FIDL client encountered an IO error writing a request into a channel: {}", _0)]
     ClientWrite(#[source] zx_status::Status),
 
