@@ -84,10 +84,11 @@ void AmlPdmDevice::InitRegs() {
   // Setup toddr block
   switch (version_) {
     case metadata::AmlVersion::kS905D2G:
-      audio_mmio_.Write32((0x02 << 13) |    // Right justified 16-bit
-                              (31 << 8) |   // msb position of data out of pdm
-                              (16 << 3) |   // lsb position of data out of pdm
-                              (0x04 << 0),  // select pdm as data source
+      audio_mmio_.Write32((0x30 << 16) |      // Enable interrupts for FIFO errors.
+                              (0x02 << 13) |  // Right justified 16-bit
+                              (31 << 8) |     // msb position of data out of pdm
+                              (16 << 3) |     // lsb position of data out of pdm
+                              (0x04 << 0),    // select pdm as data source
                           GetToddrOffset(TODDR_CTRL0_OFFS));
       audio_mmio_.Write32(((fifo_depth_ / 8 / 2) << 16) |  // trigger ddr when fifo half full
                               (0x02 << 8),                 // STATUS2 source is ddr position
@@ -218,6 +219,12 @@ uint32_t AmlPdmDevice::GetRingPosition() {
   uint32_t base = audio_mmio_.Read32(GetToddrOffset(TODDR_START_ADDR_OFFS));
   return (pos - base);
 }
+
+uint32_t AmlPdmDevice::GetDmaStatus() {
+  return audio_mmio_.Read32(GetToddrOffset(TODDR_STATUS1_OFFS));
+}
+
+uint32_t AmlPdmDevice::GetPdmStatus() { return audio_mmio_.Read32(PDM_STS); }
 
 void AmlPdmDevice::AudioClkEna(uint32_t audio_blk_mask) {
   audio_mmio_.SetBits32(audio_blk_mask, EE_AUDIO_CLK_GATE_EN);

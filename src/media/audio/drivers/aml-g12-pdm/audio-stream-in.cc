@@ -6,15 +6,16 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/clock.h>
 #include <math.h>
+#include <threads.h>
+#include <unistd.h>
 
 #include <numeric>
 #include <optional>
 #include <utility>
-
-#include <lib/ddk/metadata.h>
 
 #include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm_bind.h"
 
@@ -25,6 +26,27 @@ constexpr size_t kMaxSampleRate = 96000;
 
 AudioStreamIn::AudioStreamIn(zx_device_t* parent) : SimpleAudioStream(parent, true /* is input */) {
   frames_per_second_ = kMinSampleRate;
+  status_time_ = inspect().GetRoot().CreateInt("status_time", 0);
+  dma_status_ = inspect().GetRoot().CreateUint("dma_status", 0);
+  pdm_status_ = inspect().GetRoot().CreateUint("pdm_status", 0);
+  ring_buffer_physical_address_ = inspect().GetRoot().CreateUint("ring_buffer_physical_address", 0);
+}
+
+int AudioStreamIn::Thread() {
+  while (1) {
+    zx::time timestamp;
+    irq_.wait(&timestamp);
+    if (!running_.load()) {
+      break;
+    }
+    zxlogf(ERROR, "DMA status: 0x%08X  PDM status: 0x%08X", lib_->GetDmaStatus(),
+           lib_->GetPdmStatus());
+    status_time_.Set(timestamp.get());
+    dma_status_.Set(lib_->GetDmaStatus());
+    pdm_status_.Set(lib_->GetPdmStatus());
+  }
+  zxlogf(INFO, "Exiting interrupt thread");
+  return 0;
 }
 
 zx_status_t AudioStreamIn::Create(void* ctx, zx_device_t* parent) {
@@ -111,6 +133,24 @@ zx_status_t AudioStreamIn::InitPDev() {
     zxlogf(ERROR, "could not map mmio1 %d", status);
     return status;
   }
+  status = pdev2.GetInterrupt(0, 0, &irq_);
+  if (status != ZX_ERR_OUT_OF_RANGE) {  // Not specified in the board file.
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "could not get IRQ %d", status);
+      return status;
+    }
+
+    auto irq_thread = [](void* arg) -> int {
+      return reinterpret_cast<AudioStreamIn*>(arg)->Thread();
+    };
+    running_.store(true);
+    int rc = thrd_create_with_name(&thread_, irq_thread, reinterpret_cast<void*>(this),
+                                   "aml_pdm_irq_thread");
+    if (rc != thrd_success) {
+      zxlogf(ERROR, "could not create thread %d", rc);
+      return status;
+    }
+  }
 
   lib_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL,
                               metadata_.sysClockDivFactor - 1, metadata_.dClockDivFactor - 1,
@@ -132,6 +172,7 @@ zx_status_t AudioStreamIn::InitPDev() {
     zxlogf(ERROR, "failed to set buffer %d", status);
     return status;
   }
+  ring_buffer_physical_address_.Set(pinned_ring_buffer_.region(0).phys_addr);
 
   InitHw();
 
@@ -235,7 +276,14 @@ void AudioStreamIn::ProcessRingNotification() {
   NotifyPosition(resp);
 }
 
-void AudioStreamIn::ShutdownHook() { lib_->Shutdown(); }
+void AudioStreamIn::ShutdownHook() {
+  if (running_.load()) {
+    running_.store(false);
+    irq_.destroy();
+    thrd_join(thread_, NULL);
+  }
+  lib_->Shutdown();
+}
 
 zx_status_t AudioStreamIn::Stop() {
   notify_timer_.Cancel();

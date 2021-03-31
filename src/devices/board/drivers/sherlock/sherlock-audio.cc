@@ -53,6 +53,12 @@ zx_status_t Sherlock::AudioInit() {
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
       },
   };
+  constexpr pbus_irq_t toddr_b_irqs[] = {
+      {
+          .irq = T931_AUDIO_TODDR_B,
+          .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+      },
+  };
 
   pdev_board_info_t board_info = {};
   zx_status_t status = pbus_.GetBoardInfo(&board_info);
@@ -614,6 +620,8 @@ zx_status_t Sherlock::AudioInit() {
     dev_in.mmio_count = countof(pdm_mmios);
     dev_in.bti_list = pdm_btis;
     dev_in.bti_count = countof(pdm_btis);
+    dev_in.irq_list = toddr_b_irqs;
+    dev_in.irq_count = countof(toddr_b_irqs);
     dev_in.metadata_list = pdm_metadata;
     dev_in.metadata_count = countof(pdm_metadata);
 

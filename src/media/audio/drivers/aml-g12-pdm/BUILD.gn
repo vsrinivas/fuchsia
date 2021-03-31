@@ -40,6 +40,7 @@ driver_module("aml-g12-pdm") {
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

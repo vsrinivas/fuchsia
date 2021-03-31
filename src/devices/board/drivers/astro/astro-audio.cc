@@ -45,6 +45,12 @@ constexpr pbus_irq_t frddr_b_irqs[] = {
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
+constexpr pbus_irq_t toddr_b_irqs[] = {
+    {
+        .irq = S905D2_AUDIO_TODDR_B,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
 
 #ifdef ENABLE_BT
 #ifndef ENABLE_DAI_MODE
@@ -538,6 +544,8 @@ zx_status_t Astro::AudioInit() {
     dev_in.mmio_count = countof(pdm_mmios);
     dev_in.bti_list = pdm_btis;
     dev_in.bti_count = countof(pdm_btis);
+    dev_in.irq_list = toddr_b_irqs;
+    dev_in.irq_count = countof(toddr_b_irqs);
     dev_in.metadata_list = pdm_metadata;
     dev_in.metadata_count = countof(pdm_metadata);
 

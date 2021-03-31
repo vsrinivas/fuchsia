@@ -49,6 +49,7 @@ class AudioStreamIn : public SimpleAudioStream {
   void InitHw();
   void ProcessRingNotification();
   virtual bool AllowNonContiguousRingBuffer() { return false; }
+  int Thread();
 
   zx::duration notification_rate_ = {};
   uint32_t frames_per_second_ = 0;
@@ -61,6 +62,14 @@ class AudioStreamIn : public SimpleAudioStream {
   std::unique_ptr<AmlPdmDevice> lib_;
   zx::bti bti_;
   metadata::AmlPdmConfig metadata_ = {};
+
+  zx::interrupt irq_;
+  std::atomic<bool> running_ = false;
+  thrd_t thread_ = {};
+  inspect::IntProperty status_time_;
+  inspect::UintProperty dma_status_;
+  inspect::UintProperty pdm_status_;
+  inspect::UintProperty ring_buffer_physical_address_;
 };
 }  // namespace audio::aml_g12
 

@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/sync/completion.h>
 
-#include <lib/ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <zxtest/zxtest.h>
 
@@ -56,6 +57,7 @@ class TestAudioStreamIn : public AudioStreamIn {
  public:
   explicit TestAudioStreamIn() : AudioStreamIn(fake_ddk::kFakeParent) {}
   bool AllowNonContiguousRingBuffer() override { return true; }
+  inspect::Inspector& inspect() { return AudioStreamIn::inspect(); }
 };
 
 audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
@@ -69,11 +71,14 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   return format;
 }
 
-struct AudioStreamInTest : public zxtest::Test {
+struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Test {
   void SetUp() override {
     pdev_.set_mmio(0, mmio_.mmio_info());
     pdev_.set_mmio(1, mmio_.mmio_info());
     pdev_.UseFakeBti();
+    zx::interrupt irq;
+    ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    pdev_.set_interrupt(0, std::move(irq));
 
     tester_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
   }
@@ -193,6 +198,53 @@ TEST_F(AudioStreamInTest, RingBufferSize5) {
 TEST_F(AudioStreamInTest, RingBufferSize6) {
   TestRingBufferSize(8, 3, 3);
 }  // Rounded to frame size.
+
+TEST_F(AudioStreamInTest, Inspect) {
+  auto metadata = GetDefaultMetadata();
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+  auto server = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
+  ASSERT_NOT_NULL(server);
+
+  audio_fidl::Device::SyncClient client_wrap(tester_.FidlClient<audio_fidl::Device>());
+  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+
+  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+
+  audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, std::move(pcm_format));
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = *std::move(endpoints);
+
+  client.CreateRingBuffer(std::move(format), std::move(remote));
+
+  auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+  ASSERT_OK(props.status());
+
+  // Check inspect state.
+  ASSERT_NO_FATAL_FAILURES(ReadInspect(server->inspect().DuplicateVmo()));
+  auto* simple_audio = hierarchy().GetByPath({"simple_audio_stream"});
+  ASSERT_TRUE(simple_audio);
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_audio->node(), "state", inspect::StringPropertyValue("created")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "dma_status", inspect::UintPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "pdm_status", inspect::UintPropertyValue(0)));
+
+  server->DdkAsyncRemove();
+  EXPECT_TRUE(tester_.Ok());
+  server->DdkRelease();
+}
+
 }  // namespace audio::aml_g12
 
 // Redefine PDevMakeMmioBufferWeak per the recommendation in pdev.h.

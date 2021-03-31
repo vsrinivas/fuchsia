@@ -40,6 +40,16 @@ class AmlPdmDevice {
   uint32_t GetRingPosition();
 
   /*
+      Returns DMA status bits
+  */
+  uint32_t GetDmaStatus();
+
+  /*
+      Returns PDM status bits
+  */
+  uint32_t GetPdmStatus();
+
+  /*
       Resets state of dma mechanisms and starts clocking data
       in from pdm bus with data written to start of ring buffer
   */

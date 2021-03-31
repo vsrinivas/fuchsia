@@ -8,6 +8,7 @@ import("//src/sys/build/fuchsia_unittest_package.gni")
 
 executable("aml-g12-pdm-test-bin") {
   testonly = true
+  configs += [ "//build/config:all_source" ]
   sources = [
     "../audio-stream-in.cc",
     "test.cc",
@@ -16,6 +17,7 @@ executable("aml-g12-pdm-test-bin") {
     "../:aml_g12_pdm_bind",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/lib/amlogic",
@@ -33,6 +35,7 @@ executable("aml-g12-pdm-test-bin") {
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

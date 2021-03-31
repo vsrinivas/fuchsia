@@ -140,6 +140,12 @@ zx_status_t Nelson::AudioInit() {
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
       },
   };
+  constexpr pbus_irq_t toddr_b_irqs[] = {
+      {
+          .irq = S905D3_AUDIO_TODDR_B,
+          .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+      },
+  };
 
   const pbus_mmio_t mmios_in[] = {
       {
@@ -337,6 +343,8 @@ zx_status_t Nelson::AudioInit() {
     dev_in.mmio_count = countof(mmios_in);
     dev_in.bti_list = btis_in;
     dev_in.bti_count = countof(btis_in);
+    dev_in.irq_list = toddr_b_irqs;
+    dev_in.irq_count = countof(toddr_b_irqs);
     dev_in.metadata_list = pdm_metadata;
     dev_in.metadata_count = countof(pdm_metadata);
 
