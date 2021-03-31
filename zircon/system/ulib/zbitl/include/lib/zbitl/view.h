@@ -191,7 +191,8 @@ class View {
 
       // `LowLocality = true`, as we are only reading a single header here.
       if constexpr (T::template CanOneShotRead<zbi_header_t, /*LowLocality=*/true>()) {
-        auto result = Base::template Read<zbi_header_t, true>(storage, payload, sizeof(zbi_header_t));
+        auto result =
+            Base::template Read<zbi_header_t, true>(storage, payload, sizeof(zbi_header_t));
         if (result.is_error()) {
           return result.take_error();
         }
@@ -509,34 +510,9 @@ class View {
     iterator& operator++() {  // prefix
       Assert(__func__);
       view_->StartIteration();
-      ZX_DEBUG_ASSERT(offset_ >= sizeof(zbi_header_t));
-      ZX_DEBUG_ASSERT_MSG(offset_ <= view_->limit_,
-                          "zbitl::View::iterator offset_ %#" PRIx32 " > limit_ %#" PRIx32, offset_,
-                          view_->limit_);
-      ZX_DEBUG_ASSERT(offset_ % ZBI_ALIGNMENT == 0);
-      if (view_->limit_ - offset_ < sizeof(zbi_header_t)) {
-        // Reached the end of the container.
-        if (offset_ != view_->limit_) {
-          Fail("container too short for next item header");
-        }
-        *this = view_->end();
-      } else if (auto header = Traits::Header(view_->storage(), offset_); header.is_error()) {
-        // Failed to read the next header.
-        Fail("cannot read item header", std::move(header.error_value()));
-      } else if (auto header_error = CheckHeader(header.value(), view_->limit_ - offset_);
-                 header_error.is_error()) {
-        Fail(header_error.error_value());
-      } else {
-        value_.header = header_type(header.value());
-        offset_ += static_cast<uint32_t>(sizeof(zbi_header_t));
-        if (auto payload = Traits::Payload(view_->storage(), offset_, value_.header->length);
-            payload.is_error()) {
-          Fail("cannot extract payload view", std::move(payload.error_value()));
-        } else {
-          offset_ += ZBI_ALIGN(value_.header->length);
-          value_.payload = std::move(payload.value());
-        }
-      }
+      const uint32_t next_item_offset =
+          offset_ + sizeof(zbi_header_t) + ZBI_ALIGN(value_.header->length);
+      Update(next_item_offset);
       return *this;
     }
 
@@ -556,13 +532,11 @@ class View {
       return &value_;
     }
 
-    uint32_t item_offset() const {
-      return payload_offset() - static_cast<uint32_t>(sizeof(zbi_header_t));
-    }
+    uint32_t item_offset() const { return offset_; }
 
     uint32_t payload_offset() const {
       Assert(__func__);
-      return offset_ - ZBI_ALIGN(value_.header->length);
+      return offset_ + sizeof(zbi_header_t);
     }
 
     View& view() const {
@@ -586,12 +560,12 @@ class View {
     // nothing but operator==() should ever be called if view_ is nullptr.
     View* view_ = nullptr;
 
-    // The offset into the ZBI of the next item's header.  This is 0 in
+    // The offset into the ZBI of the current item's header.  This is 0 in
     // default-constructed iterators and kEnd_ in end() iterators, where
     // operator*() can never be called.  A valid non-end() iterator holds the
-    // header and payload (references) of the "current" item for operator*() to
-    // return, and its offset_ always looks past to the horizon.  If offset_ as
-    // at the end of the container, then operator++() will yield end().
+    // header and payload (references) of the current item for operator*() to
+    // return. If offset_ is at the end of the container, then operator++()
+    // will yield end().
     uint32_t offset_ = 0;
 
     // end() uses a different offset_ value to distinguish a true end iterator
@@ -605,19 +579,68 @@ class View {
 
     // This is called only by begin() and end().
     friend class View;
-    iterator(View* view, bool is_end)
-        : view_(view), offset_(is_end ? kEnd_ : sizeof(zbi_header_t)) {
+    iterator(View* view, bool is_end) : view_(view) {
       ZX_DEBUG_ASSERT(view_);
-      if (!is_end) {
-        // The initial offset_ points past the container header, to the first
-        // item. The first increment reaches end() or makes the iterator valid.
-        ++*this;
+      if (is_end) {
+        offset_ = kEnd_;
+      } else {
+        Update(sizeof(zbi_header_t));
       }
     }
 
+    // Updates the state of the iterator to reflect a new offset.
+    void Update(uint32_t next_item_offset) {
+      ZX_DEBUG_ASSERT(next_item_offset >= sizeof(zbi_header_t));
+      ZX_DEBUG_ASSERT_MSG(next_item_offset <= view_->limit_,
+                          "zbitl::View::iterator next_item_offset %#" PRIx32 " > limit_ %#" PRIx32,
+                          next_item_offset, view_->limit_);
+      ZX_DEBUG_ASSERT(next_item_offset % ZBI_ALIGNMENT == 0);
+
+      if (next_item_offset == view_->limit_) {
+        // Reached the end.
+        *this = view_->end();
+        return;
+      }
+      if (view_->limit_ < next_item_offset ||
+          view_->limit_ - next_item_offset < sizeof(zbi_header_t)) {
+        Fail("container too short for next item header");
+        return;
+      }
+
+      if (auto header = Traits::Header(view_->storage(), next_item_offset); header.is_error()) {
+        // Failed to read the next header.
+        Fail("cannot read item header", std::move(header.error_value()));
+        return;
+      } else if (auto header_error = CheckHeader(header.value(), view_->limit_ - next_item_offset);
+                 header_error.is_error()) {
+        Fail(header_error.error_value());
+        return;
+      } else {
+        value_.header = header_type(header.value());
+      }
+
+      const uint32_t payload_offset =
+          next_item_offset + static_cast<uint32_t>(sizeof(zbi_header_t));
+      const uint32_t payload_size = ZBI_ALIGN(value_.header->length);
+      if (payload_offset > view_->limit_ || payload_size > view_->limit_ - payload_offset) {
+        Fail("container too short for next item payload");
+        return;
+      }
+
+      if (auto payload = Traits::Payload(view_->storage(), payload_offset, value_.header->length);
+          payload.is_error()) {
+        Fail("cannot extract payload view", std::move(payload.error_value()), payload_offset);
+        return;
+      } else {
+        value_.payload = std::move(payload.value());
+      }
+      offset_ = next_item_offset;
+    }
+
     void Fail(std::string_view sv,
-              std::optional<typename Traits::error_type> storage_error = std::nullopt) {
-      view_->Fail({sv, offset_, std::move(storage_error)});
+              std::optional<typename Traits::error_type> storage_error = std::nullopt,
+              std::optional<uint32_t> offset = std::nullopt) {
+      view_->Fail({sv, offset.value_or(offset_), std::move(storage_error)});
       *this = view_->end();
     }
 

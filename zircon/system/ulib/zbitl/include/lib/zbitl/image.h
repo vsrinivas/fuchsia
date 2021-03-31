@@ -88,7 +88,7 @@ class Image : public View<Storage> {
 
     iterator it;
     it.view_ = this;
-    it.offset_ = new_size;
+    it.offset_ = new_item_offset;
 
     // `header_type` needs to be constructed from the return value of the
     // Header trait, which might be a reference wrapper to the header in memory
