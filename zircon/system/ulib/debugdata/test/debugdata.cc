@@ -101,8 +101,8 @@ TEST(DebugDataTest, LoadConfig) {
 
   const auto path = (directory / filename).string();
 
-  auto result = fuchsia_debugdata::DebugData::Call::LoadConfig(zx::unowned_channel(client),
-                                                               fidl::unowned_str(path));
+  auto result = fuchsia_debugdata::DebugData::Call::LoadConfig(
+      zx::unowned_channel(client), fidl::StringView::FromExternal(path));
   ASSERT_OK(result.status());
   zx::vmo vmo = std::move(result->config);
 

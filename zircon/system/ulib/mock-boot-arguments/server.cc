@@ -48,7 +48,7 @@ void Server::GetString(fidl::StringView view, GetStringCompleter::Sync& complete
   if (ret == arguments.end()) {
     completer.Reply(fidl::StringView{});
   } else {
-    completer.Reply(fidl::unowned_str(ret->second));
+    completer.Reply(fidl::StringView::FromExternal(ret->second));
   }
 }
 
@@ -60,10 +60,10 @@ void Server::GetStrings(fidl::VectorView<fidl::StringView> keys,
     if (ret == arguments.end()) {
       result.emplace_back(fidl::StringView{});
     } else {
-      result.emplace_back(fidl::unowned_str(ret->second));
+      result.emplace_back(fidl::StringView::FromExternal(ret->second));
     }
   }
-  completer.Reply(fidl::unowned_vec(result));
+  completer.Reply(fidl::VectorView<fidl::StringView>::FromExternal(result));
 }
 
 void Server::GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync& completer) {
@@ -77,7 +77,7 @@ void Server::GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair> keys,
   for (uint64_t i = 0; i < keys.count(); i++) {
     ret[i] = StrToBool(keys.data()[i].key, keys.data()[i].defaultval);
   }
-  completer.Reply(fidl::VectorView{fidl::unowned_ptr(ret.get()), keys.count()});
+  completer.Reply(fidl::VectorView<bool>::FromExternal(ret.get(), keys.count()));
 }
 
 void Server::Collect(fidl::StringView prefix, CollectCompleter::Sync& completer) {
@@ -91,9 +91,9 @@ void Server::Collect(fidl::StringView prefix, CollectCompleter::Sync& completer)
   }
   std::vector<fidl::StringView> views;
   for (auto val : result) {
-    views.emplace_back(fidl::unowned_str(val));
+    views.emplace_back(fidl::StringView::FromExternal(val));
   }
-  completer.Reply(fidl::unowned_vec(views));
+  completer.Reply(fidl::VectorView<fidl::StringView>::FromExternal(views));
 }
 
 bool Server::StrToBool(const fidl::StringView& key, bool defaultval) {

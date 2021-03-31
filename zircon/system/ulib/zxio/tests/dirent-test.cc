@@ -86,7 +86,7 @@ class TestServer final : public fio::Directory::RawChannelInterface {
       size_t entry_size = sizeof(dirent) + name_length;
 
       if (actual + entry_size > max_bytes) {
-        completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer_start), actual));
+        completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer_start, actual));
         return;
       }
 
@@ -104,7 +104,7 @@ class TestServer final : public fio::Directory::RawChannelInterface {
 
       actual += entry_size;
     }
-    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer_start), actual));
+    completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer_start, actual));
   }
 
   void Rewind(RewindCompleter::Sync& completer) override {

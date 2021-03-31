@@ -161,7 +161,7 @@ TEST_F(PtyTestCase, Write) {
 
   fuchsia_hardware_pty::Device::SyncClient client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
-  auto result = client.Write(fidl::unowned_vec(kWrittenData));
+  auto result = client.Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
   ASSERT_OK(result.status());
   ASSERT_EQ(result->actual, sizeof(kWrittenData));
 

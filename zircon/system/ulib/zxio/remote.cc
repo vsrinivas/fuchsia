@@ -612,9 +612,9 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio::File::WriteRequest> request_buffer;
         fidl::Buffer<fio::File::WriteResponse> response_buffer;
-        auto result = fio::File::Call::Write(std::move(control), request_buffer.view(),
-                                             fidl::VectorView(fidl::unowned_ptr(buffer), capacity),
-                                             response_buffer.view());
+        auto result = fio::File::Call::Write(
+            std::move(control), request_buffer.view(),
+            fidl::VectorView<uint8_t>::FromExternal(buffer, capacity), response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -648,9 +648,10 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio::File::WriteAtRequest> request_buffer;
         fidl::Buffer<fio::File::WriteAtResponse> response_buffer;
-        auto result = fio::File::Call::WriteAt(
-            std::move(control), request_buffer.view(),
-            fidl::VectorView(fidl::unowned_ptr(buffer), capacity), offset, response_buffer.view());
+        auto result =
+            fio::File::Call::WriteAt(std::move(control), request_buffer.view(),
+                                     fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
+                                     offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -741,13 +742,14 @@ zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, co
                                    size_t path_len, zx_handle_t request) {
   Remote rio(io);
   auto result = fio::Directory::Call::Open(rio.control(), flags, mode,
-                                           fidl::unowned_str(path, path_len), zx::channel(request));
+                                           fidl::StringView::FromExternal(path, path_len),
+                                           zx::channel(request));
   return result.status();
 }
 
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* path) {
   Remote rio(io);
-  auto result = fio::Directory::Call::Unlink(rio.control(), fidl::unowned_str(path, strlen(path)));
+  auto result = fio::Directory::Call::Unlink(rio.control(), fidl::StringView::FromExternal(path));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
@@ -767,18 +769,18 @@ zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {
 zx_status_t zxio_remote_rename(zxio_t* io, const char* src_path, zx_handle_t dst_token,
                                const char* dst_path) {
   Remote rio(io);
-  auto result = fio::Directory::Call::Rename(
-      rio.control(), fidl::unowned_str(src_path, strlen(src_path)), zx::handle(dst_token),
-      fidl::unowned_str(dst_path, strlen(dst_path)));
+  auto result =
+      fio::Directory::Call::Rename(rio.control(), fidl::StringView::FromExternal(src_path),
+                                   zx::handle(dst_token), fidl::StringView::FromExternal(dst_path));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, zx_handle_t dst_token,
                              const char* dst_path) {
   Remote rio(io);
-  auto result = fio::Directory::Call::Link(
-      rio.control(), fidl::unowned_str(src_path, strlen(src_path)), zx::handle(dst_token),
-      fidl::unowned_str(dst_path, strlen(dst_path)));
+  auto result =
+      fio::Directory::Call::Link(rio.control(), fidl::StringView::FromExternal(src_path),
+                                 zx::handle(dst_token), fidl::StringView::FromExternal(dst_path));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 

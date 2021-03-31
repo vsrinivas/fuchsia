@@ -27,11 +27,10 @@ namespace {
 fuchsia_cobalt::wire::CobaltEvent MetricIntoToCobaltEvent(const MetricOptions& metric_info) {
   fuchsia_cobalt::wire::CobaltEvent event;
   event.metric_id = metric_info.metric_id;
-  event.component = fidl::unowned_str(metric_info.component);
+  event.component = fidl::StringView::FromExternal(metric_info.component);
   // Safe to do so, since the request is read only.
-  event.event_codes = fidl::VectorView<uint32_t>(
-      fidl::unowned_ptr(const_cast<uint32_t*>(metric_info.event_codes.data())),
-      metric_info.metric_dimensions);
+  event.event_codes = fidl::VectorView<uint32_t>::FromExternal(
+      const_cast<uint32_t*>(metric_info.event_codes.data()), metric_info.metric_dimensions);
   return event;
 }
 
@@ -78,9 +77,10 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
   // Safe because is read only.
-  auto int_histogram = fidl::VectorView<HistogramBucket>(
-      fidl::unowned_ptr(const_cast<HistogramBucket*>(buckets)), bucket_count);
-  event.payload.set_int_histogram(fidl::unowned_ptr(&int_histogram));
+  auto int_histogram = fidl::VectorView<HistogramBucket>::FromExternal(
+      const_cast<HistogramBucket*>(buckets), bucket_count);
+  event.payload.set_int_histogram(
+      fidl::ObjectView<fidl::VectorView<HistogramBucket>>::FromExternal(&int_histogram));
 
   auto log_result = logger_.LogCobaltEvent(std::move(event));
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
@@ -95,7 +95,8 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
   fuchsia_cobalt::wire::CountEvent event_count{.period_duration_micros = 0, .count = count};
-  event.payload.set_event_count(fidl::unowned_ptr(&event_count));
+  event.payload.set_event_count(
+      fidl::ObjectView<fuchsia_cobalt::wire::CountEvent>::FromExternal(&event_count));
 
   auto log_result = logger_.LogCobaltEvent(std::move(event));
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
@@ -110,13 +111,13 @@ bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::T
   }
 
   auto event = MetricIntoToCobaltEvent(metric_info);
-  event.payload.set_memory_bytes_used(fidl::unowned_ptr(&value));
+  event.payload.set_memory_bytes_used(fidl::ObjectView<RemoteCounter::Type>::FromExternal(&value));
 
   // Cobalt 1.0 does not support integer. The closest to integer is memory
   // usage. So, we use MemoryUsage until we have a better support for integer(in
   // version 1.1).
-  auto log_result = logger_.LogMemoryUsage(event.metric_id, event.event_codes[0],
-                                           fidl::unowned_str(event.component), value);
+  auto log_result =
+      logger_.LogMemoryUsage(event.metric_id, event.event_codes[0], event.component, value);
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }

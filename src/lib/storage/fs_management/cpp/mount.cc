@@ -70,7 +70,7 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   }
   fio::DirectoryAdmin::SyncClient parent_client(std::move(parent));
   auto resp =
-      parent_client.MountAndCreate(std::move(root), fidl::unowned_str(name, strlen(name)), 0);
+      parent_client.MountAndCreate(std::move(root), fidl::StringView::FromExternal(name), 0);
   if (!resp.ok()) {
     return resp.status();
   }

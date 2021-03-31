@@ -5,8 +5,6 @@
 #include "lib/mipi-dsi/mipi-dsi.h"
 
 #include <fuchsia/hardware/dsi/llcpp/fidl.h>
-#include <lib/fidl/llcpp/aligned.h>
-#include <lib/fidl/llcpp/memory.h>
 
 #include <algorithm>
 #include <cstdint>

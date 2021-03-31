@@ -254,7 +254,7 @@ class TestServerChannel final : public TestServerBase {
       completer.ReplyError(status);
       return;
     }
-    completer.ReplySuccess(fidl::VectorView(fidl::unowned_ptr(buffer), actual));
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
@@ -273,7 +273,7 @@ class TestServerChannel final : public TestServerBase {
       completer.ReplyError(status);
       return;
     }
-    completer.ReplySuccess(fidl::VectorView(fidl::unowned_ptr(buffer), actual));
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {

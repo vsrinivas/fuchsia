@@ -126,8 +126,7 @@ zx_status_t MakeFvm(int devfs_root, const char* root_path, const fbl::String& bl
   }
   zx_status_t call_status = ZX_OK;
   auto resp = fuchsia_device::Controller::Call::Bind(
-      zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-      ::fidl::StringView(kFvmDriverLibPath, strlen(kFvmDriverLibPath)));
+      zx::unowned_channel(fdio_unsafe_borrow_channel(io)), ::fidl::StringView(kFvmDriverLibPath));
   result = resp.status();
   if (resp->result.is_err()) {
     call_status = resp->result.err();

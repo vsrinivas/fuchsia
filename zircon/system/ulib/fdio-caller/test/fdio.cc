@@ -25,9 +25,8 @@ void TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
   const char* golden = "foobar";
   auto write_result = fio::File::Call::WriteAt(
       caller.channel(),
-      fidl::VectorView(
-          fidl::unowned_ptr(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden))),
-          strlen(golden)),
+      fidl::VectorView<uint8_t>::FromExternal(
+          const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden)),
       0);
   ASSERT_EQ(write_result.status(), ZX_OK);
   ASSERT_EQ(write_result->s, ZX_OK);

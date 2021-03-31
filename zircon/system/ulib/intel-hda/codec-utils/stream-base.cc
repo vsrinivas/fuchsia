@@ -425,16 +425,16 @@ void IntelHDAStreamBase::GetSupportedFormats(
     // Needs to be alive until the reply is sent.
     FidlCompatibleFormats& src = fidl_compatible_formats[i];
     audio_fidl::wire::PcmSupportedFormats formats;
-    formats.number_of_channels = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.number_of_channels.data()), src.number_of_channels.size());
-    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
-        fidl::unowned_ptr(src.sample_formats.data()), src.sample_formats.size());
-    formats.frame_rates = ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(src.frame_rates.data()),
-                                                       src.frame_rates.size());
-    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.bytes_per_sample.data()), src.bytes_per_sample.size());
-    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.valid_bits_per_sample.data()), src.valid_bits_per_sample.size());
+    formats.number_of_channels = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.number_of_channels.data(), src.number_of_channels.size());
+    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>::FromExternal(
+        src.sample_formats.data(), src.sample_formats.size());
+    formats.frame_rates =
+        ::fidl::VectorView<uint32_t>::FromExternal(src.frame_rates.data(), src.frame_rates.size());
+    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.bytes_per_sample.data(), src.bytes_per_sample.size());
+    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.valid_bits_per_sample.data(), src.valid_bits_per_sample.size());
     fidl_formats[i].Allocate(allocator);
     fidl_formats[i].set_pcm_supported_formats(allocator, std::move(formats));
   }
@@ -702,16 +702,16 @@ void IntelHDAStreamBase::GetProperties(
   audio_proto::GetStringReq req = {};
   req.id = AUDIO_STREAM_STR_ID_PRODUCT;
   OnGetStringLocked(req, &resp_product);
-  fidl::StringView product(fidl::unowned_ptr(reinterpret_cast<char*>(resp_product.str)),
-                           resp_product.strlen);
-  response.set_product(fidl::unowned_ptr(&product));
+  auto product = fidl::StringView::FromExternal(reinterpret_cast<char*>(resp_product.str),
+                                                resp_product.strlen);
+  response.set_product(fidl::ObjectView<fidl::StringView>::FromExternal(&product));
 
   req.id = AUDIO_STREAM_STR_ID_MANUFACTURER;
   audio_proto::GetStringResp resp_manufacturer = {};
   OnGetStringLocked(req, &resp_manufacturer);
-  fidl::StringView manufacturer(fidl::unowned_ptr(reinterpret_cast<char*>(resp_manufacturer.str)),
-                                resp_manufacturer.strlen);
-  response.set_manufacturer(fidl::unowned_ptr(&manufacturer));
+  auto manufacturer = fidl::StringView::FromExternal(reinterpret_cast<char*>(resp_manufacturer.str),
+                                                     resp_manufacturer.strlen);
+  response.set_manufacturer(fidl::ObjectView<fidl::StringView>::FromExternal(&manufacturer));
 
   audio_proto::GetClockDomainResp domain_resp = {};
   OnGetClockDomainLocked(&domain_resp);

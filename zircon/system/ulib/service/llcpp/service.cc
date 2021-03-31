@@ -90,7 +90,7 @@ constexpr uint64_t kMaxPath = (2 * kMaxFilename) + 1;
   path_cursor += service.size();
   *path_cursor++ = '/';
   memcpy(path_cursor, instance.data(), instance.size());
-  return ::zx::ok(::fidl::unowned_str(buffer->data(), path_size));
+  return ::zx::ok(::fidl::StringView::FromExternal(buffer->data(), path_size));
 }
 
 }  // namespace
@@ -112,8 +112,9 @@ namespace internal {
                                   cpp17::string_view service, cpp17::string_view instance,
                                   ::zx::channel remote) {
   ::fidl::Array<char, kMaxPath> path_buffer;
-  ::zx::status<::fidl::StringView> path_result = ValidateAndJoinPath(
-      &path_buffer, ::fidl::unowned_str(service), ::fidl::unowned_str(instance));
+  ::zx::status<::fidl::StringView> path_result =
+      ValidateAndJoinPath(&path_buffer, ::fidl::StringView::FromExternal(service),
+                          ::fidl::StringView::FromExternal(instance));
   if (!path_result.is_ok()) {
     return path_result.take_error();
   }
