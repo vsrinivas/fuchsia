@@ -23,6 +23,7 @@ zx_library("ramdevice-client") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
@@ -64,6 +65,7 @@ zx_library("ramdevice-client-static") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",

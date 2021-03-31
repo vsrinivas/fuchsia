@@ -12,7 +12,6 @@
 // clang-format off
 #include <zircon/types.h>
 #undef VMOID_INVALID
-#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>

@@ -90,7 +90,6 @@ driver_module("ath10k_driver") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
@@ -98,6 +97,8 @@ driver_module("ath10k_driver") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_c" ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }

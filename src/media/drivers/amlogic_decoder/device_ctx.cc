@@ -4,7 +4,7 @@
 
 #include "device_ctx.h"
 
-#include <fuchsia/hardware/mediacodec/c/fidl.h>
+#include <fuchsia/hardware/mediacodec/llcpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/sync/completion.h>
 

@@ -4,7 +4,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>

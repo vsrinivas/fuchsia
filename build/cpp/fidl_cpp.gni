@@ -15,9 +15,11 @@ template("_fidl_cpp_codegen_impl") {
       get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
 
   library_name = invoker.library_name
+  include_base =
+      "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
   include_stem =
       string_replace(library_name, ".", "/") + "/" + invoker.output_stem
-  file_stem = "$fidl_target_gen_dir/$fidl_target_name/$include_stem"
+  file_stem = "$include_base/$include_stem"
 
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
@@ -66,7 +68,7 @@ template("_fidl_cpp_codegen_impl") {
       "--json",
       rebase_path(json_representation, root_build_dir),
       "--include-base",
-      rebase_path("$fidl_target_gen_dir/$fidl_target_name", root_build_dir),
+      rebase_path(include_base, root_build_dir),
       "--include-stem",
       invoker.output_stem,
       "--clang-format-path",
@@ -142,6 +144,11 @@ template("_fidl_cpp_codegen_impl") {
 #   fidlgen_tool (required)
 #     The code generation tool to use, as an absolute GN label.
 #
+#   bindings_flavor (required)
+#    Identifies which kind of library (hlcpp, llcpp, ...).
+#    This should be the same suffix as the one used when instantiating
+#    the fidl_cpp_library template.
+#
 #   fuzzers (optional)
 #     A list of { protocol = ..., methods = ... } scopes declaring which
 #     methods will be fuzzed by a fuzzer.
@@ -176,19 +183,21 @@ template("_fidl_cpp_library_impl") {
   config_target_name = "${target_name}__config"
 
   generation_target_name =
-      "${invoker.fidl_target_name}${invoker.target_suffix}_generate"
+      "${invoker.fidl_target_name}_${invoker.bindings_flavor}_generate"
 
   library_name = invoker.library_name
   fidl_target_name = invoker.fidl_target_name
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
 
+  include_base =
+      "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
   include_stem =
       string_replace(library_name, ".", "/") + "/" + invoker.output_stem
-  file_stem = "$fidl_target_gen_dir/$fidl_target_name/$include_stem"
+  file_stem = "$include_base/$include_stem"
 
   config(config_target_name) {
-    include_dirs = [ "$fidl_target_gen_dir/$fidl_target_name" ]
+    include_dirs = [ include_base ]
   }
 
   source_set(target_name) {
@@ -239,12 +248,12 @@ template("_fidl_cpp_library_impl") {
     ]
 
     # Map FIDL library dependencies to generated library dependencies
-    # of the same type (identified by target_suffix).
-    not_needed(invoker, [ "target_suffix" ])
+    # of the same type (identified by bindings_flavor).
+    not_needed(invoker, [ "bindings_flavor" ])
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {
         label = get_label_info(dep, "label_no_toolchain")
-        public_deps += [ "${label}${invoker.target_suffix}" ]
+        public_deps += [ "${label}_${invoker.bindings_flavor}" ]
       }
     }
 
@@ -269,9 +278,10 @@ template("_fidl_cpp_library_impl") {
 #  fidl_target_name (required)
 #    Name of the GN target corresponding to the FIDL library.
 #
-#  target_suffix (required)
-#    Must begin with an underscore. Identifies which kind of library
-#    (_hlcpp, _llcpp, ...).
+#  bindings_flavor (required)
+#    Identifies which kind of library (hlcpp, llcpp, ...).
+#    This should be the same suffix as the one used when instantiating
+#    the fidl_cpp_codegen template.
 #
 #  header_only (optional)
 #    If true, the generated library only has a header.
@@ -312,8 +322,8 @@ template("_fidl_cpp_fuzzer") {
     library_defines += [ "ALL_METHODS" ]
   }
 
-  target_suffix = "_libfuzzer"
-  fuzzer_lib_name = "${target_name}${target_suffix}${protocol_suffix}"
+  bindings_flavor = "libfuzzer"
+  fuzzer_lib_name = "${target_name}_${bindings_flavor}${protocol_suffix}"
 
   fidl_cpp_library(fuzzer_lib_name) {
     library_name = invoker.library_name
@@ -325,7 +335,7 @@ template("_fidl_cpp_fuzzer") {
                              "fidl_target_name",
                            ])
     output_stem = "cpp/libfuzzer"
-    target_suffix = target_suffix
+    bindings_flavor = bindings_flavor
     additional_public_deps = [ ":${invoker.fidl_target_name}_libfuzzer" ]
     defines = library_defines
     source_only = true
@@ -403,6 +413,7 @@ template("fidl_cpp_family") {
   fidl_cpp_codegen("${target_name}_cpp_natural_types") {
     forward_variables_from(common_options, "*")
     output_stem = "cpp/natural_types"
+    bindings_flavor = "cpp_natural_types"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
     experimental_split_generation_domain_objects = true
     generates_test_base_header = false
@@ -416,7 +427,7 @@ template("fidl_cpp_family") {
                            ])
     forward_variables_from(common_options, "*")
     output_stem = "cpp/natural_types"
-    target_suffix = "_cpp_natural_types"
+    bindings_flavor = "cpp_natural_types"
     additional_public_deps = natural_types_public_deps
   }
 
@@ -427,6 +438,7 @@ template("fidl_cpp_family") {
   fidl_cpp_codegen("${target_name}_hlcpp") {
     forward_variables_from(common_options, "*")
     output_stem = "cpp/fidl"
+    bindings_flavor = "hlcpp"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
     generates_test_base_header = true
     generates_decoder_encoders = false
@@ -439,7 +451,7 @@ template("fidl_cpp_family") {
                            ])
     forward_variables_from(common_options, "*")
     output_stem = "cpp/fidl"
-    target_suffix = "_hlcpp"
+    bindings_flavor = "hlcpp"
     additional_public_deps = hlcpp_public_deps
   }
   if (current_toolchain != fidl_toolchain) {
@@ -469,6 +481,7 @@ template("fidl_cpp_family") {
     fidl_cpp_codegen("${target_name}_llcpp") {
       forward_variables_from(common_options, "*")
       output_stem = "llcpp/fidl"
+      bindings_flavor = "llcpp"
       fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
       generates_test_base_header = true
     }
@@ -480,7 +493,7 @@ template("fidl_cpp_family") {
                              ])
       forward_variables_from(common_options, "*")
       output_stem = "llcpp/fidl"
-      target_suffix = "_llcpp"
+      bindings_flavor = "llcpp"
       additional_public_deps = llcpp_public_deps
     }
   }
@@ -499,6 +512,7 @@ template("fidl_cpp_family") {
     fidl_cpp_codegen("${target_name}_cpp") {
       forward_variables_from(common_options, "*")
       output_stem = "cpp/fidl_v2"
+      bindings_flavor = "cpp"
       fidlgen_tool = "//tools/fidl/fidlgen_cpp"
       generates_test_base_header = false
     }
@@ -510,7 +524,7 @@ template("fidl_cpp_family") {
                              ])
       forward_variables_from(common_options, "*")
       output_stem = "cpp/fidl_v2"
-      target_suffix = "_cpp"
+      bindings_flavor = "cpp"
       additional_public_deps = [
         ":${fidl_target_name}_cpp_natural_types",
         ":${fidl_target_name}_llcpp",
@@ -527,6 +541,7 @@ template("fidl_cpp_family") {
     forward_variables_from(invoker, [ "fuzzers" ])
     forward_variables_from(common_options, "*")
     output_stem = "cpp/libfuzzer"
+    bindings_flavor = "libfuzzer"
     fidlgen_tool = "//tools/fidl/fidlgen_libfuzzer"
     generates_test_base_header = false
 
@@ -543,7 +558,7 @@ template("fidl_cpp_family") {
                            ])
     forward_variables_from(common_options, "*")
     output_stem = "cpp/libfuzzer"
-    target_suffix = "_libfuzzer"
+    bindings_flavor = "libfuzzer"
     additional_public_deps = [
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop:async-loop-cpp",

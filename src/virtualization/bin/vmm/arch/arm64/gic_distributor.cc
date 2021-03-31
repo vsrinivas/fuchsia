@@ -6,7 +6,7 @@
 
 #include <endian.h>
 #include <fcntl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>

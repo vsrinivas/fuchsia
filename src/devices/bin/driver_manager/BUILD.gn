@@ -59,6 +59,7 @@ source_set("lib") {
   public_deps = [
     ":driver_runner",
     "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",

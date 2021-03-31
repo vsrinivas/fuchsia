@@ -56,7 +56,7 @@ golden_test("fidlgen_libfuzzer_golden_tests") {
     if (info.denylist + [ "fidlgen_libfuzzer" ] - [ "fidlgen_libfuzzer" ] ==
         info.denylist) {
       deps += [ "${info.target}_libfuzzer_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
+      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/libfuzzer"
       include_path = string_replace(info.library, ".", "/") + "/cpp"
       entries += [
         {

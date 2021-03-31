@@ -68,7 +68,7 @@ golden_test("fidlgen_llcpp_golden_tests") {
     if (info.denylist + [ "fidlgen_llcpp" ] - [ "fidlgen_llcpp" ] ==
         info.denylist) {
       deps += [ "${info.target}_llcpp_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
+      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/llcpp"
       include_path = string_replace(info.library, ".", "/") + "/llcpp"
       entries += [
         {

@@ -52,7 +52,7 @@ template("fidl_c_target") {
   c_stem = string_replace(library_name, ".", "/") + "/c/fidl"
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
-  generated_binding_dir = "$fidl_target_gen_dir/$target_name"
+  generated_binding_dir = "$fidl_target_gen_dir/$target_name/c"
   c_header = "$generated_binding_dir/$c_stem.h"
   c_file = "$generated_binding_dir/$c_stem.$type.c"
 

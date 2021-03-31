@@ -232,10 +232,13 @@ source_set("decompressor_impl") {
     "compression/decompressor_sandbox/decompressor_impl.cc",
     "compression/decompressor_sandbox/decompressor_impl.h",
   ]
+  public_deps = [
+    # Used by decompressor_impl.h
+    ":fuchsia.blobfs.internal_llcpp",
+  ]
   deps = [
     ":blobfs",
     ":fuchsia.blobfs.internal",
-    ":fuchsia.blobfs.internal_llcpp",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fidl/cpp:cpp",
     "//sdk/lib/sys/cpp:cpp",

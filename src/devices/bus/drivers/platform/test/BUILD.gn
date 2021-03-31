@@ -375,6 +375,7 @@ driver_module("test-composite") {
     "//sdk/banjo/fuchsia.hardware.rpmb",
     "//sdk/banjo/fuchsia.hardware.spi",
     "//sdk/banjo/fuchsia.hardware.vreg",
+    "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

@@ -67,7 +67,7 @@ golden_test("fidlgen_hlcpp_golden_tests") {
     if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
         info.denylist) {
       deps += [ "${info.target}_hlcpp_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
+      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/hlcpp"
       include_path = string_replace(info.library, ".", "/") + "/cpp"
       entries += [
         {
@@ -96,7 +96,7 @@ golden_test("fidlgen_hlcpp_natural_types_golden_tests") {
     if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
         info.denylist) {
       deps += [ "${info.target}_cpp_natural_types_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
+      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp_natural_types"
       include_path = string_replace(info.library, ".", "/") + "/cpp"
       entries += [
         {

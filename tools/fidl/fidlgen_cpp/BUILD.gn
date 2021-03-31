@@ -45,7 +45,7 @@ golden_test("fidlgen_cpp_golden_tests") {
     if (info.denylist + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
         info.denylist) {
       deps += [ "${info.target}_cpp_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
+      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp"
       include_path = string_replace(info.library, ".", "/") + "/cpp"
       entries += [
         {

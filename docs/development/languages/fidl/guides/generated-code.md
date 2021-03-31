@@ -14,31 +14,40 @@ and that the out directory is at the default path (`out/default`).
 
 ### GN build
 
-The root of the FIDL output in the GN build for a library `fuchsia.examples` defined in
-directory `sdk/fidl` is:
+The root of the FIDL output in the GN build for a library with GN target name
+`fuchsia.examples` defined in directory `sdk/fidl` is:
 
     out/default/fidling/gen/sdk/fidl/fuchsia.examples
 
+assuming `out/default` is the build output directory. `fx status` may be used to
+quickly find the current build directory if a non-default one is used.
+
 #### HLCPP, LLCPP, and C {#c-family}
 
-The C family bindings are further generated into a `fuchsia/examples` subdirectory, which comes from the library name. From
-there:
+The C family bindings are generated in different subdirectories following this
+pattern: `[library-name]/[binding-flavor]/fuchsia/examples`. From there,
 
 - HLCPP outputs `cpp/fidl.cc`, `cpp/fidl.h`, and `cpp/fidl_test_base.h`.
-- LLCPP outputs `llcpp/fidl.cc` and `llcpp/fidl.h`.
+- LLCPP outputs `llcpp/fidl.cc`, `llcpp/fidl.h`, and `llcpp/fidl_test_base.h`.
 - C outputs `c/fidl.client.c`, `c/fidl.server.c`, and `fidl.h`.
 
 For example, using `fuchsia.io` with the HLCPP bindings creates the
 following files:
 
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia/io/cpp/fidl.cc
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia/io/cpp/fidl.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia/io/cpp/fidl_test_base.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/hlcpp/fuchsia/io/cpp/fidl.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/hlcpp/fuchsia/io/cpp/fidl.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/hlcpp/fuchsia/io/cpp/fidl_test_base.h
 
 and using `fuchsia.io` with the LLCPP bindings creates the following files:
 
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia/io/llcpp/fidl.cc
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia/io/llcpp/fidl.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fuchsia/io/llcpp/fidl.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fuchsia/io/llcpp/fidl.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fuchsia/io/llcpp/fidl_test_base.h
+
+In the apparent duplication in `fuchsia.io/fuchsia.io`, the first component is
+the FIDL GN target name, while the second component is the FIDL library name.
+In a majority of the cases, we use the FIDL library name as the GN target name,
+but there are use cases where differentiating them becomes necessary.
 
 #### Rust {#rust}
 

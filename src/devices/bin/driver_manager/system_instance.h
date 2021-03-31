@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_INSTANCE_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_INSTANCE_H_
 
-#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/namespace.h>
@@ -18,8 +17,6 @@
 #include "fuchsia/boot/llcpp/fidl.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-
-constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
 zx_status_t wait_for_file(const char* path, zx::time deadline);
 

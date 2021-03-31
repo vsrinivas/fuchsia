@@ -6,8 +6,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "fuchsia/hardware/rtc/c/fidl.h"
-
 namespace rtc {
 
 namespace {
