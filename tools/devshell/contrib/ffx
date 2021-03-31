@@ -13,4 +13,25 @@ if is-remote-workflow-device; then
   "${FUCHSIA_BUILD_DIR}/host-tools/ffx" target add $(get-device-pair)
 fi
 
-exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" --target "$(get-device-pair)" "$@"
+# NOTE: this could be improved if it knew enough about ffx args to
+# short-circuit once it hits a command, but not all global flags take arguments
+# (e.g. -v, --help), so it would be hard to keep those in sync. For now we
+# accept the concession that something other than the global --target flag
+# being spelled exactly --target as an argument is highly unlikely.
+found_target=false
+for arg in "$@"; do
+  if [[ "$arg" == "--target" ]]; then
+    found_target=true
+    break;
+  fi
+done
+
+if ${found_target}; then
+  args=("$@")
+else
+  # Note: the quotes around get-device-pair are critical, if no fx default
+  # device is set, we explicitly want to pass "" here.
+  args=(--target "$(get-device-pair)" "$@")
+fi
+
+exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" "${args[@]}"
