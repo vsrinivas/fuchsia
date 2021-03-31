@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
   // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
-  constexpr uint32_t kMaxRetryCount = 100;
+  constexpr uint32_t kMaxRetryCount = 2;
   for (uint32_t try_ordinal = 0; try_ordinal < kMaxRetryCount; ++try_ordinal) {
     const UseVideoDecoderTestParams test_params{
         .keep_stream_modulo = 4,
