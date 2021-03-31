@@ -219,6 +219,9 @@ impl Error {
 
     #[cfg(target_os = "fuchsia")]
     fn is_closed_impl(&self) -> bool {
+        // The FIDL bindings should never report PEER_CLOSED errors via
+        // ClientWrite or ClientRead; it should always be ClientChannelClosed.
+        // But we keep these two checks in case old code relies on it.
         match self {
             Error::ClientRead(zx_status::Status::PEER_CLOSED)
             | Error::ClientWrite(zx_status::Status::PEER_CLOSED)

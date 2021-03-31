@@ -294,10 +294,7 @@ impl Sl4f {
                         Ok(facades) => proxied_facades.extend(facades.into_iter()),
                         // A PEER_CLOSED error before any facades are read indicates that there was
                         // never a successful connection.
-                        Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
-                        | Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
-                            if proxied_facades.is_empty() =>
-                        {
+                        Err(error) if error.is_closed() && proxied_facades.is_empty() => {
                             break;
                         }
                         Err(error) => {
@@ -309,7 +306,7 @@ impl Sl4f {
                 }
             }
             // The channel's server end was closed due to no `FacadeProvider` instance.
-            Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => (),
+            Err(error) if error.is_closed() => (),
             Err(error) => {
                 fx_log_err!("Failed to get FacadeIterator: {}", error);
                 return Err(error.into());

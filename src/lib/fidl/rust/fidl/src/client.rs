@@ -236,10 +236,20 @@ impl Client {
     /// Send a raw message without expecting a response.
     pub fn send_raw_msg(
         &self,
-        buf: &[u8],
+        bytes: &[u8],
         handles: &mut Vec<HandleDisposition<'_>>,
     ) -> Result<(), Error> {
-        Ok(self.inner.channel.write_etc(buf, handles).map_err(|e| Error::ClientWrite(e.into()))?)
+        match self.inner.channel.write_etc(bytes, handles) {
+            Ok(()) => Ok(()),
+            Err(zx_status::Status::PEER_CLOSED) => {
+                Err(Error::ClientChannelClosed {
+                    // Try to receive the epitaph.
+                    status: self.inner.recv_all()?.unwrap_or(zx_status::Status::PEER_CLOSED),
+                    service_name: self.inner.service_name,
+                })
+            }
+            Err(e) => Err(Error::ClientWrite(e.into())),
+        }
     }
 
     /// Send a raw query and receive a response future.
@@ -254,20 +264,7 @@ impl Client {
         let id = self.inner.register_msg_interest();
         crate::encoding::with_tls_encode_buf(|bytes, handles| {
             msg_from_id(Txid::from_interest_id(id), bytes, handles)?;
-            match self.inner.channel.write_etc(bytes, handles) {
-                Ok(()) => Ok(()),
-                Err(zx_status::Status::PEER_CLOSED) => {
-                    // Try to receive the epitaph
-                    match self.inner.recv_all()? {
-                        Some(epitaph) => Err(Error::ClientChannelClosed {
-                            status: epitaph,
-                            service_name: self.inner.service_name,
-                        }),
-                        None => Err(Error::ClientWrite(zx_status::Status::PEER_CLOSED)),
-                    }
-                }
-                Err(e) => Err(Error::ClientWrite(e.into())),
-            }
+            self.send_raw_msg(bytes, handles)
         })?;
 
         Ok(MessageResponse { id: Txid::from_interest_id(id), client: Some(self.inner.clone()) })
@@ -1186,35 +1183,6 @@ mod tests {
         recv.await;
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn polling_event_receives_epitaph() {
-        let (client_end, server_end) = zx::Channel::create().unwrap();
-        let client_end = fasync::Channel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
-
-        // Send the epitaph from the server
-        let server = fasync::Channel::from_channel(server_end).unwrap();
-        server.close_with_epitaph(zx_status::Status::UNAVAILABLE).expect("failed to write epitaph");
-
-        let mut event_receiver = client.take_event_receiver();
-        let recv = async move {
-            assert_matches!(
-                event_receiver.next().await,
-                Some(Err(crate::Error::ClientChannelClosed {
-                    status: zx_status::Status::UNAVAILABLE,
-                    service_name: "test_service"
-                }))
-            );
-            assert_matches!(event_receiver.next().await, None);
-        };
-
-        // add a timeout to receiver so if test is broken it doesn't take forever
-        let recv =
-            recv.on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
-
-        recv.await;
-    }
-
     #[test]
     fn client_always_wakes_pending_futures() {
         let mut executor = fasync::Executor::new().unwrap();
@@ -1378,25 +1346,85 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn client_reports_epitaph_on_query_write() {
-        let (client_end, server_end) = zx::Channel::create().unwrap();
-        let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+    async fn client_reports_epitaph_from_all_actions() {
+        #[derive(Debug, PartialEq)]
+        enum Action {
+            SendMsg,    // send a one-way message
+            SendQuery,  // send a two-way message and wait for the response
+            CheckQuery, // send a two-way message and just call .check()
+            RecvEvent,  // wait to receive an event
+        }
+        use Action::*;
+        // Test all permutations of two actions. The first one reports an
+        // epitaph, and then second one re-reports the epitaph.
+        for two_actions in &[
+            [SendMsg, SendMsg],
+            [SendMsg, SendQuery],
+            [SendMsg, CheckQuery],
+            [SendMsg, RecvEvent],
+            [SendQuery, SendMsg],
+            [SendQuery, SendQuery],
+            [SendQuery, CheckQuery],
+            [SendQuery, RecvEvent],
+            [CheckQuery, SendMsg],
+            [CheckQuery, SendQuery],
+            [CheckQuery, CheckQuery],
+            [CheckQuery, RecvEvent],
+            [RecvEvent, SendMsg],
+            [RecvEvent, SendQuery],
+            [RecvEvent, CheckQuery],
+            // No [RecvEvent, RecvEvent] because it behaves differently: after
+            // reporting an epitaph, the next call returns None.
+        ] {
+            let (client_end, server_end) = zx::Channel::create().unwrap();
+            let client_end = AsyncChannel::from_channel(client_end).unwrap();
+            let client = Client::new(client_end, "test_service");
 
-        // Immediately close the FIDL channel with an epitaph.
-        let server_end = AsyncChannel::from_channel(server_end).unwrap();
-        server_end
-            .close_with_epitaph(zx_status::Status::UNAVAILABLE)
-            .expect("failed to write epitaph");
+            // Immediately close the FIDL channel with an epitaph.
+            let server_end = AsyncChannel::from_channel(server_end).unwrap();
+            server_end
+                .close_with_epitaph(zx_status::Status::UNAVAILABLE)
+                .expect("failed to write epitaph");
 
-        let result = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL).await;
-        assert_matches!(
-            result,
-            Err(crate::Error::ClientChannelClosed {
-                status: zx_status::Status::UNAVAILABLE,
-                service_name: "test_service"
-            })
-        );
+            let mut event_receiver = client.take_event_receiver();
+
+            // Assert that each action reports the epitaph.
+            for (index, action) in two_actions.iter().enumerate() {
+                let err = match action {
+                    SendMsg => client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).err(),
+                    SendQuery => client
+                        .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
+                        .await
+                        .err(),
+                    CheckQuery => client
+                        .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
+                        .check()
+                        .err(),
+                    RecvEvent => event_receiver.next().await.unwrap().err(),
+                };
+                // TODO(fxbug.dev/72968): Switch to built-in assert_matches once
+                // stabilized, and just provide "index: {:?}, actions: {:?}".
+                match err {
+                    Some(crate::Error::ClientChannelClosed {
+                        status: zx_status::Status::UNAVAILABLE,
+                        service_name: "test_service",
+                    }) => (),
+                    Some(err) => panic!(
+                        "expected epitaph, got {:#?}.\nindex: {:?}, two_actions: {:?}",
+                        err, index, two_actions
+                    ),
+                    None => panic!(
+                        "expected epitaph, but it succeeded unexpectedly.\nindex: {:?}, two_actions: {:?}",
+                        index, two_actions
+                    )
+                }
+            }
+
+            // If we got the epitaph from RecvEvent, the next should return None.
+            if two_actions.contains(&RecvEvent) {
+                assert_matches!(event_receiver.next().await, None);
+            }
+        }
     }
 
     #[test]
