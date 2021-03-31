@@ -23,6 +23,8 @@ class AmlTdmConfigDevice {
 
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len) { return device_->SetBuffer(buf, len); }
   uint32_t GetRingPosition() { return device_->GetRingPosition(); }
+  uint32_t GetDmaStatus() { return device_->GetDmaStatus(); }
+  uint32_t GetTdmStatus() { return device_->GetTdmStatus(); }
   uint64_t Start() { return device_->Start(); }
   void Stop() { device_->Stop(); }
   uint32_t fifo_depth() const { return device_->fifo_depth(); }

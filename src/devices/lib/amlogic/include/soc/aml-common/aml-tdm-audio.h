@@ -49,6 +49,12 @@ class AmlTdmDevice {
   // Returns offset of dma pointer in the ring buffer.
   virtual uint32_t GetRingPosition() = 0;
 
+  // Returns DMA status bits.
+  virtual uint32_t GetDmaStatus() = 0;
+
+  // Returns TDM status bits.
+  virtual uint32_t GetTdmStatus() = 0;
+
   // Resets state of dma mechanisms and starts clocking data
   // onto/from tdm bus with data fetched from beginning of buffer.
   virtual uint64_t Start() = 0;
@@ -104,6 +110,8 @@ class AmlTdmOutDevice : public AmlTdmDevice {  // Not final for unit testing.
   void ConfigTdmSwaps(uint32_t swaps) override;
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len) override;
   uint32_t GetRingPosition() override;
+  uint32_t GetDmaStatus() override;
+  uint32_t GetTdmStatus() override;
   uint64_t Start() override;
   void Stop() override;
   void Sync() override;
@@ -189,6 +197,8 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
   void ConfigTdmSwaps(uint32_t swaps) override;
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len) override;
   uint32_t GetRingPosition() override;
+  uint32_t GetDmaStatus() override;
+  uint32_t GetTdmStatus() override;
   uint64_t Start() override;
   void Stop() override;
   void Sync() override;

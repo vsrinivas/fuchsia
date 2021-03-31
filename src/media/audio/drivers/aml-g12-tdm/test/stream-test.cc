@@ -4,22 +4,22 @@
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/sync/completion.h>
 
-#include <lib/ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <zxtest/zxtest.h>
 
 #include "../audio-stream.h"
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
-namespace audio {
-namespace aml_g12 {
+namespace audio::aml_g12 {
 
 namespace audio_fidl = fuchsia_hardware_audio;
 
@@ -1315,6 +1315,7 @@ class TestAmlG12TdmStream : public AmlG12TdmStream {
   explicit TestAmlG12TdmStream(ddk::PDev pdev, const ddk::GpioProtocolClient enable_gpio)
       : AmlG12TdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {}
   bool AllowNonContiguousRingBuffer() override { return true; }
+  inspect::Inspector& inspect() { return AmlG12TdmStream::inspect(); }
 };
 
 metadata::AmlConfig GetDefaultMetadata() {
@@ -1333,10 +1334,13 @@ metadata::AmlConfig GetDefaultMetadata() {
   return metadata;
 }
 
-struct AmlG12TdmTest : public zxtest::Test {
+struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
   void SetUp() override {
     pdev_.set_mmio(0, mmio_.mmio_info());
     pdev_.UseFakeBti();
+    zx::interrupt irq;
+    ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    pdev_.set_interrupt(0, std::move(irq));
 
     static constexpr size_t kNumBindFragments = 2;
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
@@ -1344,16 +1348,16 @@ struct AmlG12TdmTest : public zxtest::Test {
     fragments[0] = pdev_.fragment();
     fragments[1].protocols.emplace_back(
         fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {nullptr, nullptr}});
-    tester_.SetFragments(std::move(fragments));
+    ddk_.SetFragments(std::move(fragments));
   }
 
   void CreateRingBuffer() {
     auto metadata = GetDefaultMetadata();
-    tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+    ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     ddk::GpioProtocolClient unused_gpio;
     auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
-    auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
+    auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
     audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
     audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
@@ -1367,7 +1371,7 @@ struct AmlG12TdmTest : public zxtest::Test {
     client.CreateRingBuffer(std::move(format), std::move(remote));
 
     stream->DdkAsyncRemove();
-    EXPECT_TRUE(tester_.Ok());
+    EXPECT_TRUE(ddk_.Ok());
     stream->DdkRelease();
   }
 
@@ -1375,11 +1379,11 @@ struct AmlG12TdmTest : public zxtest::Test {
                           uint32_t frames_expected) {
     auto metadata = GetDefaultMetadata();
     metadata.ring_buffer.number_of_channels = number_of_channels;
-    tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+    ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     ddk::GpioProtocolClient unused_gpio;
     auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
-    auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
+    auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
     audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
     audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
@@ -1399,13 +1403,13 @@ struct AmlG12TdmTest : public zxtest::Test {
     ASSERT_EQ(vmo.Unwrap()->result.response().num_frames, frames_expected);
 
     stream->DdkAsyncRemove();
-    EXPECT_TRUE(tester_.Ok());
+    EXPECT_TRUE(ddk_.Ok());
     stream->DdkRelease();
   }
 
   FakeMmio mmio_;
   fake_pdev::FakePDev pdev_;
-  fake_ddk::Bind tester_;
+  fake_ddk::Bind ddk_;
 };
 
 // With 16 bits samples, frame size is 2 x number of channels bytes.
@@ -1427,8 +1431,44 @@ TEST_F(AmlG12TdmTest, Rate) {
   ASSERT_EQ(0xC1807C3F, sclk_ctrl);  // enabled, 24 sdiv, 31 lrduty, 63 lrdiv for 48kHz rate.
 }
 
-}  // namespace aml_g12
-}  // namespace audio
+TEST_F(AmlG12TdmTest, Inspect) {
+  auto metadata = GetDefaultMetadata();
+  ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+  ddk::GpioProtocolClient unused_gpio;
+  auto server = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
+  auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
+  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+  audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = *std::move(endpoints);
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+  client.CreateRingBuffer(std::move(format), std::move(remote));
+
+  // Check inspect state.
+  ASSERT_NO_FATAL_FAILURES(ReadInspect(server->inspect().DuplicateVmo()));
+  auto* simple_audio = hierarchy().GetByPath({"simple_audio_stream"});
+  ASSERT_TRUE(simple_audio);
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_audio->node(), "state", inspect::StringPropertyValue("created")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "dma_status", inspect::UintPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "tdm_status", inspect::UintPropertyValue(0)));
+
+  server->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+  server->DdkRelease();
+}
+
+}  // namespace audio::aml_g12
 
 // Redefine PDevMakeMmioBufferWeak per the recommendation in pdev.h.
 zx_status_t ddk::PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,

@@ -24,7 +24,29 @@ AmlG12TdmStream::AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev p
                                  const ddk::GpioProtocolClient enable_gpio)
     : SimpleAudioStream(parent, is_input),
       pdev_(std::move(pdev)),
-      enable_gpio_(std::move(enable_gpio)) {}
+      enable_gpio_(std::move(enable_gpio)) {
+  status_time_ = inspect().GetRoot().CreateInt("status_time", 0);
+  dma_status_ = inspect().GetRoot().CreateUint("dma_status", 0);
+  tdm_status_ = inspect().GetRoot().CreateUint("tdm_status", 0);
+  ring_buffer_physical_address_ = inspect().GetRoot().CreateUint("ring_buffer_physical_address", 0);
+}
+
+int AmlG12TdmStream::Thread() {
+  while (1) {
+    zx::time timestamp;
+    irq_.wait(&timestamp);
+    if (!running_.load()) {
+      break;
+    }
+    zxlogf(ERROR, "DMA status: 0x%08X  TDM status: 0x%08X", aml_audio_->GetDmaStatus(),
+           aml_audio_->GetTdmStatus());
+    status_time_.Set(timestamp.get());
+    dma_status_.Set(aml_audio_->GetDmaStatus());
+    tdm_status_.Set(aml_audio_->GetTdmStatus());
+  }
+  zxlogf(INFO, "Exiting interrupt thread");
+  return 0;
+}
 
 void AmlG12TdmStream::InitDaiFormats() {
   frame_rate_ =
@@ -98,6 +120,22 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not get mmio %d", status);
     return status;
+  }
+  status = pdev_.GetInterrupt(0, 0, &irq_);
+  if (status != ZX_ERR_OUT_OF_RANGE) {  // Not specified in the board file.
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "could not get IRQ %d", status);
+      return status;
+    }
+    auto irq_thread = [](void* arg) -> int {
+      return reinterpret_cast<AmlG12TdmStream*>(arg)->Thread();
+    };
+    running_.store(true);
+    int rc = thrd_create_with_name(&thread_, irq_thread, this, "aml_tdm_irq_thread");
+    if (rc != thrd_success) {
+      zxlogf(ERROR, "could not create thread %d", rc);
+      return status;
+    }
   }
 
   aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, *std::move(mmio));
@@ -344,6 +382,11 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
 }
 
 void AmlG12TdmStream::ShutdownHook() {
+  if (running_.load()) {
+    running_.store(false);
+    irq_.destroy();
+    thrd_join(thread_, NULL);
+  }
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     // safe the codec so it won't throw clock errors when tdm bus shuts down
     codecs_[i].Stop();
@@ -396,6 +439,8 @@ zx_status_t AmlG12TdmStream::GetBuffer(const audio_proto::RingBufGetBufferReq& r
     zxlogf(ERROR, "failed to set buffer %d", status);
     return status;
   }
+  ring_buffer_physical_address_.Set(pinned_ring_buffer_.region(0).phys_addr);
+
   // This is safe because of the overflow check we made above.
   *out_num_rb_frames = static_cast<uint32_t>(out_frames);
   return ZX_OK;

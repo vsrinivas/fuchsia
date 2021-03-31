@@ -19,6 +19,7 @@ executable("aml-g12-tdm-test-bin") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -40,6 +41,7 @@ executable("aml-g12-tdm-test-bin") {
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

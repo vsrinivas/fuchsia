@@ -5,10 +5,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <string.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/audio.h>
 #include <soc/aml-common/aml-audio.h>
 #include <soc/aml-meson/g12b-clk.h>
@@ -45,6 +45,12 @@ zx_status_t Sherlock::AudioInit() {
       {
           .iommu_index = 0,
           .bti_id = BTI_AUDIO_OUT,
+      },
+  };
+  constexpr pbus_irq_t frddr_b_irqs[] = {
+      {
+          .irq = T931_AUDIO_FRDDR_B,
+          .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
       },
   };
 
@@ -486,6 +492,8 @@ zx_status_t Sherlock::AudioInit() {
   tdm_dev.mmio_count = countof(audio_mmios);
   tdm_dev.bti_list = tdm_btis;
   tdm_dev.bti_count = countof(tdm_btis);
+  tdm_dev.irq_list = frddr_b_irqs;
+  tdm_dev.irq_count = countof(frddr_b_irqs);
   tdm_dev.metadata_list = tdm_metadata;
   tdm_dev.metadata_count = countof(tdm_metadata);
   if (is_sherlock) {

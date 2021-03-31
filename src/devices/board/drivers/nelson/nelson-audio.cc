@@ -6,9 +6,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/audio.h>
 #include <soc/aml-common/aml-audio.h>
 #include <soc/aml-meson/sm1-clk.h>
@@ -134,6 +134,13 @@ zx_status_t Nelson::AudioInit() {
       },
   };
 
+  constexpr pbus_irq_t frddr_b_irqs[] = {
+      {
+          .irq = S905D3_AUDIO_FRDDR_B,
+          .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+      },
+  };
+
   const pbus_mmio_t mmios_in[] = {
       {
           .base = S905D3_EE_PDM_BASE,
@@ -208,6 +215,8 @@ zx_status_t Nelson::AudioInit() {
   controller_out.mmio_count = countof(mmios_out);
   controller_out.bti_list = btis_out;
   controller_out.bti_count = countof(btis_out);
+  controller_out.irq_list = frddr_b_irqs;
+  controller_out.irq_count = countof(frddr_b_irqs);
   controller_out.metadata_list = tdm_metadata;
   controller_out.metadata_count = countof(tdm_metadata);
 

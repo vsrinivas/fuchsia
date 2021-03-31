@@ -52,12 +52,12 @@ void AmlTdmOutDevice::Initialize() {
 
   // Disable the FRDDR Channel
   // Only use one buffer
-  // Interrupts off
+  // Interrupts on for FIFO errors
   // ack delay = 0
   // set destination tdm block and enable that selection
   switch (version_) {
     case metadata::AmlVersion::kS905D2G:
-      mmio_.Write32(tdm_ch_ | (1 << 3), GetFrddrOffset(FRDDR_CTRL0_OFFS));
+      mmio_.Write32(tdm_ch_ | (0x30 << 16) | (1 << 3), GetFrddrOffset(FRDDR_CTRL0_OFFS));
       break;
     case metadata::AmlVersion::kS905D3G:
       mmio_.Write32(tdm_ch_ | (1 << 4), GetFrddrOffset(FRDDR_CTRL2_OFFS_D3G));
@@ -111,12 +111,19 @@ uint32_t AmlTdmOutDevice::GetRingPosition() {
          mmio_.Read32(GetFrddrOffset(FRDDR_START_ADDR_OFFS));
 }
 
+uint32_t AmlTdmOutDevice::GetDmaStatus() {
+  return mmio_.Read32(GetFrddrOffset(FRDDR_STATUS1_OFFS));
+}
+
+uint32_t AmlTdmOutDevice::GetTdmStatus() { return mmio_.Read32(GetTdmOffset(TDMOUT_CTRL0_OFFS)); }
+
 zx_status_t AmlTdmOutDevice::SetBuffer(zx_paddr_t buf, size_t len) {
   // Ensure ring buffer resides in lower memory (dma pointers are 32-bit)
   //    and len is at least 8 (size of each dma operation)
   if (((buf + len - 1) > std::numeric_limits<uint32_t>::max()) || (len < 8)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  mmio_.Write32(buf, GetFrddrOffset(FRDDR_INT_ADDR_OFFS));
 
   // Write32 the start and end pointers.  Each fetch is 64-bits, so end pointer
   //    is pointer to the last 64-bit fetch (inclusive)

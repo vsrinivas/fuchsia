@@ -67,6 +67,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   void UpdateCodecsGainState(GainState state) __TA_REQUIRES(domain_token());
   void UpdateCodecsGainStateFromCurrent() __TA_REQUIRES(domain_token());
   virtual bool AllowNonContiguousRingBuffer() { return false; }
+  int Thread();
 
   uint32_t us_per_notification_ = 0;
   DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};
@@ -84,6 +85,13 @@ class AmlG12TdmStream : public SimpleAudioStream {
   const ddk::GpioProtocolClient enable_gpio_;
   uint64_t channels_to_use_;
   bool override_mute_ = true;
+  zx::interrupt irq_;
+  std::atomic<bool> running_ = false;
+  thrd_t thread_ = {};
+  inspect::IntProperty status_time_;
+  inspect::UintProperty dma_status_;
+  inspect::UintProperty tdm_status_;
+  inspect::UintProperty ring_buffer_physical_address_;
 };
 
 }  // namespace aml_g12

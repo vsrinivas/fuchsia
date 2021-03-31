@@ -58,7 +58,8 @@ void AmlTdmInDevice::Initialize() {
   // set destination tdm block and enable that selection
   switch (version_) {
     case metadata::AmlVersion::kS905D2G:
-      mmio_.Write32((0x00 << 13) |       // Packed.
+      mmio_.Write32((0x30 << 16) |       // Enable interrupts for FIFO errors.
+                        (0x00 << 13) |   // Packed.
                         (31 << 8) |      // MSB position of data.
                         (16 << 3) |      // LSB position of data.
                         (tdm_ch_ << 0),  // select TDM_IN A/B/C as data source.
@@ -112,6 +113,10 @@ uint32_t AmlTdmInDevice::GetRingPosition() {
   return mmio_.Read32(GetToddrOffset(TODDR_STATUS2_OFFS)) -
          mmio_.Read32(GetToddrOffset(TODDR_START_ADDR_OFFS));
 }
+
+uint32_t AmlTdmInDevice::GetDmaStatus() { return mmio_.Read32(GetToddrOffset(TODDR_STATUS1_OFFS)); }
+
+uint32_t AmlTdmInDevice::GetTdmStatus() { return mmio_.Read32(GetTdmOffset(TDMIN_CTRL_OFFS)); }
 
 zx_status_t AmlTdmInDevice::SetBuffer(zx_paddr_t buf, size_t len) {
   // Ensure ring buffer resides in lower memory (dma pointers are 32-bit)

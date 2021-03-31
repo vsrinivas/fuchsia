@@ -6,9 +6,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/audio.h>
 #include <soc/aml-common/aml-audio.h>
 #include <soc/aml-meson/g12a-clk.h>
@@ -38,6 +38,30 @@ constexpr uint32_t kCodecDid = PDEV_DID_TI_TAS2770;
 static const pbus_mmio_t audio_mmios[] = {
     {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
 };
+
+constexpr pbus_irq_t frddr_b_irqs[] = {
+    {
+        .irq = S905D2_AUDIO_FRDDR_B,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+#ifdef ENABLE_BT
+#ifndef ENABLE_DAI_MODE
+constexpr pbus_irq_t frddr_a_irqs[] = {
+    {
+        .irq = S905D2_AUDIO_FRDDR_A,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+constexpr pbus_irq_t toddr_a_irqs[] = {
+    {
+        .irq = S905D2_AUDIO_TODDR_A,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+#endif
+#endif
 
 static const pbus_bti_t tdm_btis[] = {
     {
@@ -243,6 +267,8 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.name = "astro-pcm-audio-out";
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.instance_id = tdm_instance_id++;
+    tdm_dev.irq_list = frddr_a_irqs;
+    tdm_dev.irq_count = countof(frddr_a_irqs);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
                                       countof(tdm_pcm_fragments), UINT32_MAX);
 #endif
@@ -368,6 +394,8 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = tdm_btis;
     tdm_dev.bti_count = countof(tdm_btis);
+    tdm_dev.irq_list = frddr_b_irqs;
+    tdm_dev.irq_count = countof(frddr_b_irqs);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_i2s_fragments),
@@ -431,6 +459,8 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.name = "astro-pcm-audio-in";
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.instance_id = tdm_instance_id++;
+    tdm_dev.irq_list = toddr_a_irqs;
+    tdm_dev.irq_count = countof(toddr_a_irqs);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
                                       countof(tdm_pcm_fragments), UINT32_MAX);
 #endif
