@@ -26,6 +26,10 @@ group("argh") {
   deps = [ ":argh-v0_1_4" ]
 }
 
+group("async-channel") {
+  deps = [ ":async-channel-v1_6_1" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("async-fs") {
     deps = [ ":async-fs-v1_5_0" ]

@@ -1014,6 +1014,7 @@ dependencies = [
  "arbitrary",
  "arc-swap",
  "argh",
+ "async-channel",
  "async-fs",
  "async-io",
  "async-lock",
