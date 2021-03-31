@@ -11,14 +11,21 @@ rustc_library("vbmeta") {
   deps = [
     "//src/lib/mundane",
     "//src/lib/zerocopy",
+    "//third_party/modinv",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:num",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:pem",
     "//third_party/rust_crates:ring",
     "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
     "src/descriptor.rs",
+    "src/key.rs",
     "src/lib.rs",
+    "src/test.rs",
   ]
 }
 
