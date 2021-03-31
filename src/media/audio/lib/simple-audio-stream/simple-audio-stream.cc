@@ -572,16 +572,16 @@ void SimpleAudioStream::GetSupportedFormats(
   for (size_t i = 0; i < fidl_compatible_formats.size(); ++i) {
     FidlCompatibleFormats& src = fidl_compatible_formats[i];
     audio_fidl::wire::PcmSupportedFormats formats;
-    formats.number_of_channels = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.number_of_channels.data()), src.number_of_channels.size());
-    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
-        fidl::unowned_ptr(src.sample_formats.data()), src.sample_formats.size());
-    formats.frame_rates = ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(src.frame_rates.data()),
-                                                       src.frame_rates.size());
-    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.bytes_per_sample.data()), src.bytes_per_sample.size());
-    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.valid_bits_per_sample.data()), src.valid_bits_per_sample.size());
+    formats.number_of_channels = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.number_of_channels.data(), src.number_of_channels.size());
+    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>::FromExternal(
+        src.sample_formats.data(), src.sample_formats.size());
+    formats.frame_rates =
+        ::fidl::VectorView<uint32_t>::FromExternal(src.frame_rates.data(), src.frame_rates.size());
+    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.bytes_per_sample.data(), src.bytes_per_sample.size());
+    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.valid_bits_per_sample.data(), src.valid_bits_per_sample.size());
     fidl_formats[i].Allocate(allocator);
     fidl_formats[i].set_pcm_supported_formats(allocator, std::move(formats));
   }

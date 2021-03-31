@@ -337,16 +337,16 @@ void UsbAudioStream::GetSupportedFormats(
     audio_fidl::wire::SupportedFormats& dst = fidl_formats[i];
 
     audio_fidl::wire::PcmSupportedFormats formats;
-    formats.number_of_channels = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.number_of_channels.data()), src.number_of_channels.size());
-    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
-        fidl::unowned_ptr(src.sample_formats.data()), src.sample_formats.size());
-    formats.frame_rates = ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(src.frame_rates.data()),
-                                                       src.frame_rates.size());
-    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.bytes_per_sample.data()), src.bytes_per_sample.size());
-    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(src.valid_bits_per_sample.data()), src.valid_bits_per_sample.size());
+    formats.number_of_channels = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.number_of_channels.data(), src.number_of_channels.size());
+    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>::FromExternal(
+        src.sample_formats.data(), src.sample_formats.size());
+    formats.frame_rates =
+        ::fidl::VectorView<uint32_t>::FromExternal(src.frame_rates.data(), src.frame_rates.size());
+    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.bytes_per_sample.data(), src.bytes_per_sample.size());
+    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
+        src.valid_bits_per_sample.data(), src.valid_bits_per_sample.size());
 
     dst.Allocate(allocator);
     dst.set_pcm_supported_formats(allocator, std::move(formats));
@@ -623,12 +623,10 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
 
   const auto& path = *(ifc_->path());
 
-  fidl::StringView product(
-      fidl::unowned_ptr(reinterpret_cast<const char*>(parent_.prod_name().begin())),
-      parent_.prod_name().size());
-  fidl::StringView manufacturer(
-      fidl::unowned_ptr(reinterpret_cast<const char*>(parent_.mfr_name().begin())),
-      parent_.mfr_name().size());
+  auto product = fidl::StringView::FromExternal(
+      reinterpret_cast<const char*>(parent_.prod_name().begin()), parent_.prod_name().size());
+  auto manufacturer = fidl::StringView::FromExternal(
+      reinterpret_cast<const char*>(parent_.mfr_name().begin()), parent_.mfr_name().size());
 
   stream_properties.set_is_input(allocator, is_input())
       .set_can_mute(allocator, path.has_mute())

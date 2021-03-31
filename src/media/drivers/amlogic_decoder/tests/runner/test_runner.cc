@@ -67,7 +67,7 @@ class TestDeviceBase {
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have
       // other children that shouldn't be unbound.
       auto res = fuchsia_device::Controller::Call::Bind(zx::unowned_channel(parent_device),
-                                                        fidl::unowned_str(path));
+                                                        fidl::StringView::FromExternal(path));
       EXPECT_EQ(ZX_OK, res.status());
       if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));
