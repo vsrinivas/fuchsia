@@ -6,12 +6,8 @@
 # TODO(fxbug.dev/10680): switch to the standard shebang line when the mocking library
 # is available.
 
-import os
-import sys
 import unittest
-from unittest.mock import patch, MagicMock
-
-from sdk_common import Atom, AtomId, detect_category_violations
+from sdk_common import Atom, detect_category_violations
 
 
 def _atom(name, category):
@@ -21,12 +17,17 @@ def _atom(name, category):
                 'domain': 'foo',
                 'name': name,
             },
+            'meta': {
+                'source': 'foo',
+                'dest': 'bar',
+            },
             'category': category,
             'gn-label': '//hello',
             'deps': [],
             'package-deps': [],
             'files': [],
             'tags': [],
+            'type': 'schema.json'
         })
 
 
