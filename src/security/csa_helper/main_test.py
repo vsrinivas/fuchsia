@@ -56,11 +56,12 @@ def setup_compdb_and_fs(directory, targets, changed):
 class RunCsaHelperTest(unittest.TestCase):
 
   def helper(self, temp_dir, targets, changed):
+    ninja_path = 'tmp/ninja'
     out_dir = os.path.join(temp_dir, 'foo/bar')
 
     # Set up the output directory and compdbs
-    compdb, expected_changed_compdb = \
-      setup_compdb_and_fs(out_dir, targets, changed)
+    compdb, expected_changed_compdb = (setup_compdb_and_fs(
+        out_dir, targets, changed))
 
     # Write the compdb
     input_file = os.path.join(temp_dir, 'compile_commands.json')
@@ -73,7 +74,8 @@ class RunCsaHelperTest(unittest.TestCase):
       mock_run.side_effect = fake_ninja.run
 
       output_file = os.path.join(temp_dir, 'modified_compile_commands.json')
-      args = ['--input', input_file, '--output', output_file]
+      args = ['--input', input_file, '--output', output_file,
+              '--ninja', ninja_path]
 
       # Ensure the script succeeded
       self.assertEqual(0, main.main(args))

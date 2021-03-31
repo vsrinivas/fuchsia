@@ -51,10 +51,17 @@ def main(input_args):
       help=
       'The path to write the output file of an array of paths for modified files in JSON format.'
   )
+  parser.add_argument(
+      '-n',
+      '--ninja',
+      required=True,
+      help=
+      'Path to the prebuilt ninja compiler.'
+  )
   args = parser.parse_args(input_args)
 
   with open(args.input) as compile_commands:
-    res = ninja_build_tu(json.load(compile_commands))
+    res = ninja_build_tu(json.load(compile_commands), args.ninja)
 
     if not res:
       print(color.white('Did not find any changed files.'))
@@ -66,7 +73,7 @@ def main(input_args):
   return 0
 
 
-def ninja_build_tu(compdb):
+def ninja_build_tu(compdb, ninja_path):
   """Find build targets that were modified since last build.
 
   Attemps to build all build targets specified, returning the subset
@@ -76,11 +83,12 @@ def ninja_build_tu(compdb):
   Args:
       compdb: A json-style list containing dictionary-like entries
               for each translation unit.
+      ninja_path: Path to the ninja executable.
 
   Returns:
       A subset of the input compdb, only keeping the translation units
       that correspond to build targets that had been modified by the
-      `fx ninja` call.
+      `ninja` call.
   """
   files = {}
   tus = {}
@@ -108,8 +116,8 @@ def ninja_build_tu(compdb):
         tus[target_path] = []
       tus[target_path].append(tu)
 
-  modified_files = \
-      [process_tu_dir_xargs(directory, files[directory]) for directory in files]
+  modified_files = [process_tu_dir_xargs(directory, files[directory],
+                                         ninja_path) for directory in files]
 
   # Find all TUs that match modified files
   out_tus = []
@@ -122,7 +130,7 @@ def ninja_build_tu(compdb):
   return out_tus
 
 
-def process_tu_dir_xargs(directory, build_targets):
+def process_tu_dir_xargs(directory, build_targets, ninja_path):
   """Find build targets that were rebuilt.
 
   Takes an input directory (corresponding to the -C option in fx ninja) and
@@ -132,9 +140,10 @@ def process_tu_dir_xargs(directory, build_targets):
   Args:
       directory: The string path name correpsonding to the build_targets.
       build_targets: A list of build targets to attempt to build.
+      ninja_path: Path to the ninja executable.
 
   Returns:
-      The subset of build_targets which were modified by `fx ninja`.
+      The subset of build_targets which were modified by `ninja`.
   """
   # Write targets to a temp file
   with tempfile.NamedTemporaryFile(mode='w') as fp:
@@ -145,7 +154,8 @@ def process_tu_dir_xargs(directory, build_targets):
 
     # The argument list may exceed the input buffer, so we use xargs to
     # call fx ninja multiple times, each with a subset of the arguments
-    commands = ['xargs', '-a', filename, 'fx', 'ninja', '-C', directory]
+    # commands = ['xargs', '-a', filename, 'fx', 'ninja', '-C', directory]
+    commands = ['xargs', '-a', filename, ninja_path, '-C', directory]
 
     # Record the time before running fx ninja
     before = time.time()
