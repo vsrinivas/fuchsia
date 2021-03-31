@@ -17,7 +17,6 @@
 #include <fbl/auto_lock.h>
 
 #include "common.h"
-#include "hdmitx-vpu-regs.h"
 
 #define HDMI_COLOR_DEPTH_24B 4
 #define HDMI_COLOR_DEPTH_30B 5

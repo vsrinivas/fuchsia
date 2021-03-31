@@ -4,8 +4,8 @@
 
 #include "aml-hdmitx.h"
 #include "amlogic-display.h"
-#include "hdmitx-hhi-regs.h"
-#include "hdmitx-vpu-regs.h"
+#include "hhi-regs.h"
+#include "vpu-regs.h"
 
 namespace amlogic_display {
 
@@ -40,7 +40,7 @@ void AmlHdmitx::WaitForPllLocked() {
             .WriteTo(&(*hhi_mmio_));
       }
     }
-    DISP_ERROR("pll[0x%x] reset %d times\n", HHI_HDMI_PLL_CNTL, 10000 - cnt);
+    DISP_ERROR("pll[0x%x] reset %d times\n", HHI_HDMI_PLL_CNTL0, 10000 - cnt);
     if (cnt <= 0)
       err = true;
   } while (err);

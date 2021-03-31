@@ -4,11 +4,11 @@
 
 #include "aml-hdmitx.h"
 
-#include "hdmitx-cbus-regs.h"
+#include "cbus-regs.h"
 #include "hdmitx-dwc-regs.h"
-#include "hdmitx-hhi-regs.h"
 #include "hdmitx-top-regs.h"
-#include "hdmitx-vpu-regs.h"
+#include "hhi-regs.h"
+#include "vpu-regs.h"
 
 namespace amlogic_display {
 
@@ -947,7 +947,7 @@ void AmlHdmitx::ShutDown() {
   WRITE32_REG(HHI, HHI_HDMI_PHY_CNTL0, 0);
   WRITE32_REG(HHI, HHI_HDMI_PHY_CNTL3, 0);
   /* Disable HPLL */
-  WRITE32_REG(HHI, HHI_HDMI_PLL_CNTL, 0);
+  WRITE32_REG(HHI, HHI_HDMI_PLL_CNTL0, 0);
 }
 
 zx_status_t AmlHdmitx::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list,
