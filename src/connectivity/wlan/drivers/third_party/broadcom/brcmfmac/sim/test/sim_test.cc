@@ -4,6 +4,10 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
+
 namespace wlan::brcmfmac {
 
 // static
@@ -378,10 +382,10 @@ void SimInterface::StopSoftAp() {
 
   wlanif_stop_req_t stop_req;
 
-  ZX_ASSERT(sizeof(stop_req.ssid.data) == WLAN_MAX_SSID_LEN);
+  ZX_ASSERT(sizeof(stop_req.ssid.data) == wlan_ieee80211::MAX_SSID_BYTE_LEN);
   // Use the ssid from the last call to StartSoftAp
   stop_req.ssid.len = soft_ap_ctx_.ssid.len;
-  memcpy(stop_req.ssid.data, soft_ap_ctx_.ssid.ssid, WLAN_MAX_SSID_LEN);
+  memcpy(stop_req.ssid.data, soft_ap_ctx_.ssid.ssid, wlan_ieee80211::MAX_SSID_BYTE_LEN);
 
   // Send request to driver
   if_impl_ops_->stop_req(if_impl_ctx_, &stop_req);

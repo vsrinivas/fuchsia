@@ -522,7 +522,8 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           iface_tbl_[ifidx].chanspec = join_params->params_le.chanspec_list[0];
           memcpy(assoc_opts->bssid.byte, join_params->params_le.bssid, ETH_ALEN);
           assoc_opts->ssid.len = join_params->ssid_le.SSID_len;
-          memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID, IEEE80211_MAX_SSID_LEN);
+          memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID,
+                 wlan_ieee80211::MAX_SSID_BYTE_LEN);
           AssocInit(std::move(assoc_opts), channel);
 
           BRCMF_DBG(SIM, "Auth start from C_SET_SSID");
@@ -1040,7 +1041,8 @@ void SimFirmware::AuthStart() {
 
     // Set the data values, though driver only cares about the bssid.
     ext_auth_data->ssid.SSID_len = assoc_state_.opts->ssid.len;
-    memcpy(ext_auth_data->ssid.SSID, assoc_state_.opts->ssid.ssid, IEEE80211_MAX_SSID_LEN);
+    memcpy(ext_auth_data->ssid.SSID, assoc_state_.opts->ssid.ssid,
+           wlan_ieee80211::MAX_SSID_BYTE_LEN);
     bssid.CopyTo(ext_auth_data->bssid);
     ext_auth_data->key_mgmt_suite = WPA3_AUTH_SAE_PSK;
     ext_auth_data->status = BRCMF_E_STATUS_SUCCESS;
@@ -1644,11 +1646,11 @@ zx_status_t SimFirmware::HandleJoinRequest(const void* value, size_t value_len) 
 
   // Specify the SSID filter, if applicable
   const struct brcmf_ssid_le* req_ssid = &join_params->ssid_le;
-  ZX_ASSERT(IEEE80211_MAX_SSID_LEN == sizeof(scan_opts->ssid->ssid));
+  ZX_ASSERT(wlan_ieee80211::MAX_SSID_BYTE_LEN == sizeof(scan_opts->ssid->ssid));
   if (req_ssid->SSID_len != 0) {
     wlan_ssid_t ssid;
     ssid.len = req_ssid->SSID_len;
-    std::copy(&req_ssid->SSID[0], &req_ssid->SSID[IEEE80211_MAX_SSID_LEN], ssid.ssid);
+    std::copy(&req_ssid->SSID[0], &req_ssid->SSID[wlan_ieee80211::MAX_SSID_BYTE_LEN], ssid.ssid);
     scan_opts->ssid = ssid;
   }
 

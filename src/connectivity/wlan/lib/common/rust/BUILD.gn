@@ -15,6 +15,7 @@ rustc_library("wlan-common") {
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211-rustc",
     "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",

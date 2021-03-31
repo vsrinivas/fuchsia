@@ -18,7 +18,8 @@ use {
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
     banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
     thiserror::Error,
@@ -155,7 +156,7 @@ impl<'a> BoundScanner<'a> {
         if req.max_channel_time < req.min_channel_time {
             send_scan_end_and_return!(req.txn_id, ScanError::MaxChannelTimeLtMin, self);
         }
-        if req.ssid.len() > banjo_wlan_info::WLAN_MAX_SSID_LEN as usize {
+        if req.ssid.len() > fidl_ieee80211::MAX_SSID_BYTE_LEN as usize {
             send_scan_end_and_return!(req.txn_id, ScanError::SsidTooLong, self);
         }
 
@@ -172,7 +173,7 @@ impl<'a> BoundScanner<'a> {
             };
             let mut channels = [0; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize];
             channels[..channel_list.len()].copy_from_slice(channel_list);
-            let mut ssid = [0; banjo_wlan_info::WLAN_MAX_SSID_LEN as usize];
+            let mut ssid = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
             ssid[..req.ssid.len()].copy_from_slice(&req.ssid[..]);
 
             let config = banjo_wlan_mac::WlanHwScanConfig {
@@ -694,7 +695,7 @@ mod tests {
             channels[..1].copy_from_slice(&[6]);
             assert_eq!(&config.channels[..], &channels[..]);
 
-            let mut ssid = [0; banjo_wlan_info::WLAN_MAX_SSID_LEN as usize];
+            let mut ssid = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
             ssid[..4].copy_from_slice(b"ssid");
             assert_eq!(config.ssid, banjo_wlan_info::WlanSsid { len: 4, ssid });
         }, "HW scan not initiated");

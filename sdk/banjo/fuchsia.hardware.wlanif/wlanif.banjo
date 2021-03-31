@@ -16,8 +16,7 @@ enum WlanScanType : uint8 {
     PASSIVE = 2;
 };
 
-/// IEEE Std 802.11-2016, 9.4.2.2
-const uint32 WLAN_SCAN_MAX_SSIDS = 32;
+const uint32 WLAN_SCAN_MAX_SSIDS_PER_REQUEST = 32;
 
 // LINT.IfChange
 /// WFA WMM v1.2, 2.2.2 Table 5
@@ -28,7 +27,7 @@ const uint32 WLAN_WMM_PARAM_LEN = 18;
 
 struct WlanifSsid {
     uint8 len;
-    array<uint8>:WLAN_MAX_SSID_LEN data;
+    array<uint8>:ddk.hw.wlan.ieee80211.IEEE80211_MAX_SSID_LEN data;
 };
 
 struct WlanifScanReq {
@@ -43,7 +42,7 @@ struct WlanifScanReq {
     uint32 min_channel_time;
     uint32 max_channel_time;
     uint64 num_ssids;
-    array<WlanifSsid>:WLAN_SCAN_MAX_SSIDS ssid_list;
+    array<WlanifSsid>:WLAN_SCAN_MAX_SSIDS_PER_REQUEST ssid_list;
 };
 
 /// IEEE Std 802.11-2016, Table 9-19

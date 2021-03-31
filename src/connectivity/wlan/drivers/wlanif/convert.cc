@@ -4,7 +4,8 @@
 
 #include "convert.h"
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/stats/cpp/fidl.h>
 
 #include <algorithm>
 #include <bitset>
@@ -15,11 +16,10 @@
 #include <wlan/common/ieee80211_codes.h>
 #include <wlan/common/logging.h>
 
-#include "fuchsia/wlan/stats/cpp/fidl.h"
-
 namespace wlanif {
 
 namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
@@ -83,9 +83,9 @@ void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_common::WlanChan& f
 
 void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
   size_t ssid_len = in_ssid.size();
-  if (ssid_len > WLAN_MAX_SSID_LEN) {
-    warnf("wlanif: truncating ssid from %zu to %d\n", ssid_len, WLAN_MAX_SSID_LEN);
-    ssid_len = WLAN_MAX_SSID_LEN;
+  if (ssid_len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
+    warnf("wlanif: truncating ssid from %zu to %d\n", ssid_len, wlan_ieee80211::MAX_SSID_BYTE_LEN);
+    ssid_len = wlan_ieee80211::MAX_SSID_BYTE_LEN;
   }
   std::memcpy(out_ssid->data, in_ssid.data(), ssid_len);
   out_ssid->len = ssid_len;

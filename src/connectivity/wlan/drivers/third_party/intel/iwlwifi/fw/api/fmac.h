@@ -35,6 +35,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_H_
 
+#include <fuchsia/wlan/ieee80211/c/fidl.h>
+
 #define FMAC_GROUP 0x10
 
 /**
@@ -396,7 +398,7 @@ struct iwl_fmac_scan_cmd {
   __le32 flags;
   __le16 rates_24;
   __le16 rates_52;
-  uint8_t ssids[IWL_FMAC_MAX_SSIDS][IEEE80211_MAX_SSID_LEN];
+  uint8_t ssids[IWL_FMAC_MAX_SSIDS][fuchsia_wlan_ieee80211_MAX_SSID_BYTE_LEN];
   uint8_t ssids_lengths[IWL_FMAC_MAX_SSIDS];
   __le16 freqs[IWL_FMAC_MAX_CHANS];
   uint8_t bssid[ETH_ALEN];
@@ -676,7 +678,7 @@ struct iwl_fmac_connect_cmd {
   uint8_t bssid[ETH_ALEN];
   uint8_t reserved1;
   uint8_t ssid_len;
-  uint8_t ssid[IEEE80211_MAX_SSID_LEN];
+  uint8_t ssid[fuchsia_wlan_ieee80211_MAX_SSID_BYTE_LEN];
 
   struct iwl_fmac_crypto crypto;
   uint8_t reserved2[3];

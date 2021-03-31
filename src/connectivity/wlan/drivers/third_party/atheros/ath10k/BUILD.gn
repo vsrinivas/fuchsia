@@ -90,6 +90,7 @@ driver_module("ath10k_driver") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",

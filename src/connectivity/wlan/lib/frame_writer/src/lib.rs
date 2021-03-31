@@ -15,6 +15,7 @@ pub use wlan_frame_writer_macro::write_frame_with_fixed_buf;
 mod tests {
     use {
         super::*,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         std::fmt,
         thiserror::Error,
         wlan_common::{
@@ -159,7 +160,7 @@ mod tests {
     fn write_ssid_max() {
         let buffer_provider = BufferProvider;
         let (buf, bytes_written) = write_frame!(buffer_provider, {
-            ies: { ssid: [2u8; 32] }
+            ies: { ssid: [2u8; (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize)] }
         })
         .expect("frame construction failed");
         assert_eq!(bytes_written, 34);

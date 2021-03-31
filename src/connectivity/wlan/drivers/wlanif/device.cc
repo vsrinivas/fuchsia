@@ -292,9 +292,10 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     ssid_list = std::move(req.ssid_list.value());
   }
   size_t num_ssids = ssid_list.size();
-  if (num_ssids > WLAN_SCAN_MAX_SSIDS) {
-    warnf("wlanif: truncating SSID list from %zu to %d\n", num_ssids, WLAN_SCAN_MAX_SSIDS);
-    num_ssids = WLAN_SCAN_MAX_SSIDS;
+  if (num_ssids > WLAN_SCAN_MAX_SSIDS_PER_REQUEST) {
+    warnf("wlanif: truncating SSID list from %zu to %d\n", num_ssids,
+          WLAN_SCAN_MAX_SSIDS_PER_REQUEST);
+    num_ssids = WLAN_SCAN_MAX_SSIDS_PER_REQUEST;
   }
   for (size_t ndx = 0; ndx < num_ssids; ndx++) {
     CopySSID(ssid_list[ndx], &impl_req.ssid_list[ndx]);

@@ -878,8 +878,9 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   params_le->channel_num = 0;
   params_le->home_time = -1;
 
-  if (request->ssid.len > IEEE80211_MAX_SSID_LEN) {
-    BRCMF_ERR("Scan request SSID too long(no longer than %lu bytes)", IEEE80211_MAX_SSID_LEN);
+  if (request->ssid.len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
+    BRCMF_ERR("Scan request SSID too long(no longer than %hhu bytes)",
+              wlan_ieee80211::MAX_SSID_BYTE_LEN);
     return ZX_ERR_INVALID_ARGS;
   }
   params_le->ssid_le.SSID_len = request->ssid.len;
@@ -911,9 +912,9 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
       offset = roundup(offset, sizeof(uint32_t));
       ptr = (char*)params_le + offset;
       for (i = 0; i < (int32_t)n_ssids; i++) {
-        if (request->ssid_list[i].len > IEEE80211_MAX_SSID_LEN) {
-          BRCMF_ERR("SSID in scan request SSID list too long(no longer than %lu bytes)",
-                    IEEE80211_MAX_SSID_LEN);
+        if (request->ssid_list[i].len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
+          BRCMF_ERR("SSID in scan request SSID list too long(no longer than %hhu bytes)",
+                    wlan_ieee80211::MAX_SSID_BYTE_LEN);
           return ZX_ERR_INVALID_ARGS;
         }
         memset(&ssid_le, 0, sizeof(ssid_le));
@@ -978,9 +979,9 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
   }
 
   // Validate ssid count
-  if (request->num_ssids > WLAN_SCAN_MAX_SSIDS) {
+  if (request->num_ssids > WLAN_SCAN_MAX_SSIDS_PER_REQUEST) {
     BRCMF_ERR("Number of SSIDs in escan request (%zu) exceeds maximum (%d)", request->num_ssids,
-              WLAN_SCAN_MAX_SSIDS);
+              WLAN_SCAN_MAX_SSIDS_PER_REQUEST);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1722,7 +1723,7 @@ std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len) {
     uint8_t length = ie[offset + TLV_LEN_OFF];
     if (type == WLAN_IE_TYPE_SSID) {
       size_t ssid_len = std::min<size_t>(length, ie_len - (offset + TLV_HDR_LEN));
-      ssid_len = std::min<size_t>(ssid_len, WLAN_MAX_SSID_LEN);
+      ssid_len = std::min<size_t>(ssid_len, wlan_ieee80211::MAX_SSID_BYTE_LEN);
       auto start = ie + offset + TLV_HDR_LEN;
       ssid = std::vector<uint8_t>(start, start + ssid_len);
       break;
@@ -5159,7 +5160,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (ssid_ie->len > WLAN_MAX_SSID_LEN) {
+  if (ssid_ie->len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
     BRCMF_ERR("Received ASSOC_IND with invalid SSID IE\n");
     return ZX_ERR_INVALID_ARGS;
   }

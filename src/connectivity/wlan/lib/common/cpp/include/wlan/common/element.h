@@ -30,8 +30,6 @@ struct ElementHeader {
   uint8_t len;
 } __PACKED;
 
-constexpr size_t kMaxSsidLen = 32;
-
 // IEEE 802.11-2016 9.4.2.3.
 // The MSB in a rate indicates "basic rate" and is ignored during comparison.
 // Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.

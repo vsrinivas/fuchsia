@@ -18,6 +18,7 @@ fidl("fuchsia.wlan.policy") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//zircon/vdso/zx",
   ]
 }

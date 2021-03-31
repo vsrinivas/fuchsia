@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/from_bytes.h>
 #include <wlan/common/parse_element.h>
+
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 namespace wlan {
 namespace common {
@@ -20,7 +24,7 @@ const T* ParseFixedSized(fbl::Span<const uint8_t> raw_body) {
 }  // namespace
 
 std::optional<fbl::Span<const uint8_t>> ParseSsid(fbl::Span<const uint8_t> raw_body) {
-  if (raw_body.size() > kMaxSsidLen) {
+  if (raw_body.size() > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
     return {};
   }
   return {raw_body};

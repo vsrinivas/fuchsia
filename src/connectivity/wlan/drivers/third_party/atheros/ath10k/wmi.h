@@ -18,6 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
 
+#include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -2735,7 +2736,7 @@ struct wmi_ie_data {
 
 struct wmi_ssid {
   uint32_t ssid_len;
-  uint8_t ssid[32];
+  uint8_t ssid[fuchsia_wlan_ieee80211_MAX_SSID_BYTE_LEN];
 } __PACKED;
 
 struct wmi_ssid_list {

@@ -308,6 +308,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_mlme::ScanResultCode,
         fidl_fuchsia_wlan_sme::{self as fidl_sme},
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -448,7 +449,8 @@ mod tests {
     fn random_bss_info(rng: &mut ThreadRng) -> BssInfo {
         let mut ies = vec![];
         // SSID
-        let ssid = (0..32).map(|_| rng.gen::<u8>()).collect::<Vec<_>>();
+        let ssid =
+            (0..fidl_ieee80211::MAX_SSID_BYTE_LEN).map(|_| rng.gen::<u8>()).collect::<Vec<_>>();
         ies.extend_from_slice(&[0, 32]);
         ies.extend_from_slice(&ssid[..]);
         // Supported rates

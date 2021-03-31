@@ -4,14 +4,14 @@
 
 use {
     crate::client::types,
-    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_policy as fidl_policy,
+    fuchsia_zircon as zx,
     serde::{Deserialize, Serialize},
     std::{
         collections::VecDeque,
         convert::TryFrom,
         fmt::{self, Debug},
     },
-    wlan_common::ie::SSID_MAX_BYTE_LEN,
 };
 
 /// The maximum number of denied connection reasons we will store for one network at a time.
@@ -366,8 +366,8 @@ fn check_config_errors(
     security_type: &SecurityType,
     credential: &Credential,
 ) -> Result<(), NetworkConfigError> {
-    // Verify SSID has at most 32 characters
-    if ssid.as_ref().len() > SSID_MAX_BYTE_LEN {
+    // Verify SSID has at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
+    if ssid.as_ref().len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
         return Err(NetworkConfigError::SsidLen);
     }
     // Verify that credentials match the security type. This code only inspects the lengths of
@@ -437,7 +437,7 @@ impl Debug for NetworkConfigError {
             NetworkConfigError::PasswordLen => write!(f, "invalid password length"),
             NetworkConfigError::PskLen => write!(f, "invalid PSK length"),
             NetworkConfigError::SsidLen => {
-                write!(f, "SSID has max allowed length of {}", SSID_MAX_BYTE_LEN)
+                write!(f, "SSID has max allowed length of {}", fidl_ieee80211::MAX_SSID_BYTE_LEN)
             }
             NetworkConfigError::MissingPasswordPsk => {
                 write!(f, "no password or PSK provided but required by security type")

@@ -16,6 +16,8 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -24,6 +26,8 @@
 #include "debug.h"
 #include "linuxisms.h"
 #include "netbuf.h"
+
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 #define SSID_PREFIX "<ssid-"
 #define SSID_PREFIX_LEN strlen(SSID_PREFIX)
@@ -416,8 +420,9 @@ std::string brcmu_ssid_format_vector(const std::vector<uint8_t>& ssid) {
 }
 
 std::string brcmu_ssid_format_bytes(uint8_t const ssid_bytes[], size_t ssid_len) {
-  size_t ssid_num_bytes = std::min(IEEE80211_MAX_SSID_LEN, ssid_len);
-  char buf[SSID_PREFIX_LEN + (IEEE80211_MAX_SSID_LEN * 2) + SSID_SUFFIX_LEN + 1];
+  size_t ssid_num_bytes =
+      std::min(static_cast<size_t>(wlan_ieee80211::MAX_SSID_BYTE_LEN), ssid_len);
+  char buf[SSID_PREFIX_LEN + (wlan_ieee80211::MAX_SSID_BYTE_LEN * 2) + SSID_SUFFIX_LEN + 1];
   char* p = buf;
 
   // Write SSID_PREFIX

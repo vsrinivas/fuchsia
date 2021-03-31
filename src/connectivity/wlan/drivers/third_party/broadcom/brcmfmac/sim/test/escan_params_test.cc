@@ -24,7 +24,7 @@ const wlanif_scan_req kDefaultScanReq = {
     .num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS,
     .min_channel_time = SimInterface::kDefaultActiveScanDwellTimeMs,
     .max_channel_time = SimInterface::kDefaultActiveScanDwellTimeMs,
-    .num_ssids = WLAN_SCAN_MAX_SSIDS};
+    .num_ssids = WLAN_SCAN_MAX_SSIDS_PER_REQUEST};
 
 // For this test, we don't want to use the default scan handlers provided by SimInterface
 class EscanArgsIfc : public SimInterface {
@@ -86,7 +86,7 @@ TEST_F(EscanArgsTest, BadScanArgs) {
 
   // More than the allowed number of SSIDs
   req = kDefaultScanReq;
-  req.num_ssids = WLAN_SCAN_MAX_SSIDS + 1;
+  req.num_ssids = WLAN_SCAN_MAX_SSIDS_PER_REQUEST + 1;
   RunScanTest(req);
   EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
 

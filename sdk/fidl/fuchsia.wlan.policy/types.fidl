@@ -4,6 +4,8 @@
 
 library fuchsia.wlan.policy;
 
+using fuchsia.wlan.ieee80211 as ieee80211;
+
 // Basic definitions for wlan APIs.
 
 /// High level protection type for the network.  This does not convey all details needed
@@ -22,7 +24,7 @@ enum SecurityType {
 /// to distinguish between different network protection (or lack thereof) types.
 struct NetworkIdentifier {
     /// Network name, often used by users to choose between networks in the UI.
-    bytes:32 ssid;
+    bytes:ieee80211.MAX_SSID_BYTE_LEN ssid;
 
     /// Protection type (or not) for the network.
     SecurityType type;

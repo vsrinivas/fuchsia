@@ -4,8 +4,7 @@
 
 library fuchsia.wlan.product.deprecatedclient;
 
-/// Maximum allowed SSID length
-const uint8 MAX_SSID_LENGTH = 32;
+using fuchsia.wlan.ieee80211 as ieee80211;
 
 /// Represents the current association state of a client interface if one exists.
 enum State {
@@ -17,7 +16,7 @@ enum State {
 
 /// Encapsulates information associated with the access point to which a WLAN client is associated.
 struct Ap {
-    string:MAX_SSID_LENGTH ssid;
+    string:ieee80211.MAX_SSID_BYTE_LEN ssid;
     int8 rssi_dbm;
 };
 

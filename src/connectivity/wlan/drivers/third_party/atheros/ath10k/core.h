@@ -18,6 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
 
+#include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #define _ALL_SOURCE  // Define to get thrd_create_with_name from threads.h
@@ -710,7 +711,7 @@ struct ath10k_vif {
       uint8_t tim_bitmap[64];
       uint8_t tim_len;
       uint32_t ssid_len;
-      uint8_t ssid[IEEE80211_SSID_LEN_MAX];
+      uint8_t ssid[fuchsia_wlan_ieee80211_MAX_SSID_BYTE_LEN];
       bool hidden_ssid;
       /* P2P_IE with NoA attribute for P2P_GO case */
       uint32_t noa_len;

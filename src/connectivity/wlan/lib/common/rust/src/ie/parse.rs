@@ -9,6 +9,7 @@ use {
         error::{FrameParseError, FrameParseResult},
         organization::Oui,
     },
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     std::mem::size_of,
     zerocopy::{ByteSlice, LayoutVerified},
 };
@@ -22,7 +23,7 @@ macro_rules! validate {
 }
 
 pub fn parse_ssid<B: ByteSlice>(raw_body: B) -> FrameParseResult<B> {
-    validate!(raw_body.len() <= SSID_MAX_BYTE_LEN, "SSID is too long");
+    validate!(raw_body.len() <= (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize), "SSID is too long");
     Ok(raw_body)
 }
 

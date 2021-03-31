@@ -5,6 +5,7 @@
 library fuchsia.wlan.sme;
 
 using fuchsia.wlan.common;
+using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.mesh;
 
@@ -45,7 +46,7 @@ enum UserDisconnectReason {
 
 struct BssInfo {
     array<uint8>:6 bssid;
-    vector<uint8>:32 ssid;
+    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
     int8 rssi_dbm;
     int8 snr_db;
     fuchsia.wlan.common.WlanChan channel;
@@ -82,7 +83,7 @@ struct PassiveScanRequest {
 
 struct ActiveScanRequest {
     // The SSIDs to scan for. Leave empty for a wildcard active scan.
-    vector<vector<uint8>:32>:16 ssids;
+    vector<vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN>:16 ssids;
     // Channels to scan on. Leave empty for all supported channels.
     vector<uint8>:500 channels;
 };
@@ -129,7 +130,7 @@ flexible union Credential {
 };
 
 struct ConnectRequest {
-    vector<uint8>:32 ssid;
+    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
     /// If provided, SME may connect directly to this BSS without a join scan.
     fuchsia.wlan.internal.BssDescription? bss_desc;
     /// Informs SME whether multiple candidates were available, for metrics.
@@ -146,7 +147,7 @@ struct ConnectRequest {
 struct ClientStatusResponse {
     BssInfo? connected_to;
     // If non-empty, this is the SSID we are currently trying to connect to
-    vector<uint8>:32 connecting_to_ssid;
+    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN connecting_to_ssid;
 };
 
 protocol ClientSme {
@@ -158,7 +159,7 @@ protocol ClientSme {
 };
 
 struct ApConfig {
-    vector<uint8>:32 ssid;
+    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
     vector<uint8>:64 password;
     RadioConfig radio_cfg;
 };
@@ -182,7 +183,7 @@ enum StopApResultCode {
 };
 
 struct Ap {
-    vector<uint8>:32 ssid;
+    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
     uint8 channel;
     uint16 num_clients;
 };

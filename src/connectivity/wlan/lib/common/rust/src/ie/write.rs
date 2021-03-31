@@ -10,6 +10,7 @@ use {
         mac::{MacAddr, ReasonCode},
         organization::Oui,
     },
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     std::mem::size_of,
     zerocopy::AsBytes,
 };
@@ -46,9 +47,9 @@ macro_rules! write_ie {
 
 pub fn write_ssid<B: Appendable>(buf: &mut B, ssid: &[u8]) -> Result<(), FrameWriteError> {
     validate!(
-        ssid.len() <= SSID_MAX_BYTE_LEN,
+        ssid.len() <= (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize),
         "SSID is too long (max: {} bytes, got: {})",
-        SSID_MAX_BYTE_LEN,
+        fidl_ieee80211::MAX_SSID_BYTE_LEN,
         ssid.len()
     );
     write_ie!(buf, Id::SSID, ssid)

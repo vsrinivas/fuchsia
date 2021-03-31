@@ -8,6 +8,7 @@ use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::{
     self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, QueryIfaceResponse,
 };
+use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{
@@ -24,7 +25,6 @@ use std::str::FromStr;
 use structopt::StructOpt;
 use wlan_common::{
     channel::{Cbw, Channel, Phy},
-    ie::SSID_MAX_BYTE_LEN,
     RadioConfig, StationMode,
 };
 use wlan_rsn::psk;
@@ -227,12 +227,11 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 
 async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
-    let ssid_byte_len = ssid.as_bytes().len();
-    if ssid_byte_len > SSID_MAX_BYTE_LEN {
+    if ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
         return Err(format_err!(
             "SSID is too long ({} bytes). Max is {}",
-            ssid_byte_len,
-            SSID_MAX_BYTE_LEN
+            ssid.len(),
+            fidl_ieee80211::MAX_SSID_BYTE_LEN
         ));
     }
     let credential = match make_credential(password, psk) {

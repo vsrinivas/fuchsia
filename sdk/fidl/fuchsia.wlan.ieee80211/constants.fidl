@@ -1,0 +1,13 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.ieee80211;
+
+/// IEEE Std 802.11-2016, 9.4.2.2
+/// The maximum length of an SSID is 32 bytes, even when the SSID should be
+/// interpreted using UTF-8 encoding (see Table 9-135). While every length in
+/// the 802.11 standard is byte oriented, the word BYTE is included in the
+/// name of this constant to emphasize the importance that it not be applied
+/// to the length of a UTF-8 encoded string.
+const uint8 MAX_SSID_BYTE_LEN = 32;

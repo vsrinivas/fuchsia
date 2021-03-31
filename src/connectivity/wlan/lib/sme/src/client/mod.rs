@@ -35,7 +35,7 @@ use {
         InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
     anyhow::{bail, format_err, Context as _},
-    fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent, ScanRequest},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure},
@@ -308,7 +308,7 @@ impl ClientSme {
         req: fidl_sme::ConnectRequest,
     ) -> oneshot::Receiver<ConnectResult> {
         let (responder, receiver) = Responder::new();
-        if req.ssid.len() > wlan_common::ie::SSID_MAX_BYTE_LEN {
+        if req.ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
             // TODO(fxbug.dev/42081): Use a more accurate error (InvalidSsidArg) for this error.
             responder.respond(SelectNetworkFailure::NoScanResultWithSsid.into());
             return receiver;

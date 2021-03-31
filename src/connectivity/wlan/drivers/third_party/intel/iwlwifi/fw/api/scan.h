@@ -37,6 +37,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SCAN_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SCAN_H_
 
+#include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <stdint.h>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
@@ -63,7 +64,7 @@
 struct iwl_ssid_ie {
   uint8_t id;
   uint8_t len;
-  uint8_t ssid[IEEE80211_SSID_LEN_MAX];
+  uint8_t ssid[fuchsia_wlan_ieee80211_MAX_SSID_BYTE_LEN];
 } __packed; /* SCAN_DIRECT_SSID_IE_API_S_VER_1 */
 
 /* scan offload */

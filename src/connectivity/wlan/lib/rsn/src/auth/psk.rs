@@ -5,6 +5,7 @@
 use {
     crate::Error,
     anyhow::ensure,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     std::{num::NonZeroU32, str},
 };
 
@@ -19,7 +20,10 @@ pub type Psk = Box<[u8]>;
 
 pub fn compute(passphrase: &[u8], ssid: &[u8]) -> Result<Psk, anyhow::Error> {
     // IEEE Std 802.11-2016, 9.4.2.2
-    ensure!(ssid.len() <= 32, Error::InvalidSsidLen(ssid.len()));
+    ensure!(
+        ssid.len() <= (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize),
+        Error::InvalidSsidLen(ssid.len())
+    );
 
     // IEEE Std 802.11-2016, J.4.1 provides a reference implementation that describes the
     // passphrase as:
