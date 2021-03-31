@@ -483,9 +483,9 @@ void Service::Shutdown(ShutdownCompleter::Sync& completer) {
   // Send the potential errors to the caller.
   std::vector<fidl::StringView> error_view;
   for (const auto& error : errors) {
-    error_view.emplace_back(fidl::unowned_ptr(error.c_str()), error.size());
+    error_view.emplace_back(fidl::StringView::FromExternal(error));
   }
-  completer.Reply(fidl::unowned_vec(error_view));
+  completer.Reply(fidl::VectorView<fidl::StringView>::FromExternal(error_view));
   // Closes the handle which means that if the client sends a request
   // after the shutdown, it will receive a ZX_ERR_PEER_CLOSED.
   // This will also schedule the destruction of this |Service|.

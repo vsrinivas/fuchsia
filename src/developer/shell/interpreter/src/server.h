@@ -194,7 +194,7 @@ class Service final : public fuchsia_shell::Shell::Interface {
                       fidl::VectorView<fuchsia_shell::wire::Location>&& locations,
                       const std::string& error_message) {
     return binding_.value()->OnError(context_id, std::move(locations),
-                                     fidl::unowned_str(error_message));
+                                     fidl::StringView::FromExternal(error_message));
   }
 
   zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
@@ -209,7 +209,8 @@ class Service final : public fuchsia_shell::Shell::Interface {
   }
 
   zx_status_t OnTextResult(uint64_t context_id, const std::string& result, bool partial_result) {
-    return binding_.value()->OnTextResult(context_id, fidl::unowned_str(result), partial_result);
+    return binding_.value()->OnTextResult(context_id, fidl::StringView::FromExternal(result),
+                                          partial_result);
   }
 
   zx_status_t OnResult(uint64_t context_id, fidl::VectorView<fuchsia_shell::wire::Node>&& nodes,
