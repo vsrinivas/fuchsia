@@ -11,9 +11,7 @@ import (
 )
 
 func init() {
-	core.RegisterLintRuleOverTokens(casingOfAnchorsName, func(reporter core.Reporter) core.LintRuleOverTokens {
-		return &casingOfAnchors{reporter: reporter}
-	})
+	core.RegisterLintRuleOverTokens(casingOfAnchorsName, newCasingOfAnchors)
 }
 
 const casingOfAnchorsName = "casing-of-anchors"
@@ -24,6 +22,10 @@ type casingOfAnchors struct {
 }
 
 var _ core.LintRuleOverTokens = (*casingOfAnchors)(nil)
+
+func newCasingOfAnchors(reporter core.Reporter) core.LintRuleOverTokens {
+	return &casingOfAnchors{reporter: reporter}
+}
 
 var casingOfAnchorsRe = regexp.MustCompile("{#[a-zA-Z0-9]+([a-zA-Z0-9-]*[a-zA-Z0-9])?}")
 

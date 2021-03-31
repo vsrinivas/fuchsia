@@ -22,6 +22,7 @@ go_library("gopkg") {
     "rules/bad_lists.go",
     "rules/bad_lists_test.go",
     "rules/casing_of_anchors.go",
+    "rules/casing_of_anchors_test.go",
     "rules/mdhelpers.go",
     "rules/mdhelpers_test.go",
     "rules/no_extra_space_on_right.go",
