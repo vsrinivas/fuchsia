@@ -325,12 +325,13 @@ zx_signals_t BlockWatcher::WaitForWatchMessages(const zx::unowned_channel& watch
       },
       {
           .handle = pause_event_.get(),
-          .waitfor = kSignalWatcherPaused,
+          .waitfor = kSignalWatcherPaused | kSignalWatcherShutDown,
           .pending = 0,
       },
   };
 
-  // We only want to check for kSignalWatcherPaused if finished_startup is true.
+  // We only want to check for kSignalWatcherPaused and kSignalWatcherShutDown if finished_startup
+  // is true.
   size_t wait_item_count = finished_startup ? 2 : 1;
 
   if ((status = zx_object_wait_many(wait_items, wait_item_count, zx::time::infinite().get())) !=
@@ -339,6 +340,9 @@ zx_signals_t BlockWatcher::WaitForWatchMessages(const zx::unowned_channel& watch
     return 0;
   }
 
+  if (wait_items[1].pending & kSignalWatcherShutDown) {
+    return kSignalWatcherShutDown;
+  }
   if (wait_items[1].pending & kSignalWatcherPaused) {
     return kSignalWatcherPaused;
   }

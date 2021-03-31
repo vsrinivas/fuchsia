@@ -49,6 +49,8 @@ FsHostMetrics::~FsHostMetrics() {
   thread_.join();
 }
 
+void FsHostMetrics::Detach() { thread_.detach(); }
+
 void FsHostMetrics::LogMinfsCorruption() {
   counters_[fs_metrics::Event::kDataCorruption]->Increment();
 }
@@ -69,11 +71,11 @@ void FsHostMetrics::Run() {
   for (;;) {
     {
       std::scoped_lock<std::mutex> lock(mutex_);
-      if (shut_down_) {
-        break;
-      }
       while (!flush_ && !shut_down_ &&
              condition_.wait_for(mutex_, timeout_time) != std::cv_status::timeout) {
+      }
+      if (shut_down_) {
+        return;
       }
       flush_ = false;
     }
@@ -83,10 +85,6 @@ void FsHostMetrics::Run() {
       // Sleep for very long time.
       timeout_time = std::chrono::hours(24 * 30);
     }
-  }
-
-  if (!collector_->Flush()) {
-    FX_LOGS(ERROR) << "Failed to flush metrics to cobalt";
   }
 }
 

@@ -48,6 +48,9 @@ class FsHostMetrics {
   // Returns a pointer to the underlying |cobalt_client::Collector| instance.
   cobalt_client::Collector* mutable_collector() { return collector_.get(); }
 
+  // Detach the underlying flush thread.
+  void Detach();
+
  private:
   // Sleep duration between two successive attempts to flush metrics.
   static constexpr std::chrono::nanoseconds kSleepDuration = std::chrono::seconds(10);

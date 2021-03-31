@@ -382,7 +382,11 @@ test("fshost_integration_test") {
 # This is a test version of fshost, not a component with fshost tests.
 fuchsia_component("test-fshost") {
   testonly = true
-  manifest = "meta/fshost.cml"
+
+  # The only difference between test-fshost.cml and the main fshost.cml is that the main one has
+  # main_process_critical, but we can't set that flag in tests.
+  # TODO(fxbug.dev/73189): template the two cml files so they don't fall out of sync.
+  manifest = "meta/test-fshost.cml"
   deps = [
     ":fshost",
     "//src/security/policy/zxcrypt:null",

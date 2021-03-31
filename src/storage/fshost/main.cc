@@ -250,7 +250,9 @@ int Main(bool disable_block_watcher) {
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  FsManager fs_manager(boot_args, MakeMetrics());
+  std::unique_ptr<FsHostMetrics> metrics = MakeMetrics();
+  metrics->Detach();
+  FsManager fs_manager(boot_args, std::move(metrics));
 
   if (config.netboot()) {
     FX_LOGS(INFO) << "disabling automount";

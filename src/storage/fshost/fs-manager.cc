@@ -299,15 +299,33 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   }
   shutdown_called_ = true;
 
-  async::PostTask(global_loop_->dispatcher(), [this, callback = std::move(callback)]() mutable {
-    FX_LOGS(INFO) << "filesystem shutdown initiated";
-    RemoveSystemDrivers([this, callback = std::move(callback)](zx_status_t status) mutable {
-      FX_LOGS(INFO) << "RemoveSystemDrivers returned: " << zx_status_get_string(status);
-
-      status = root_vfs_->UninstallAll(zx::time::infinite());
-      callback(status);
-      sync_completion_signal(&shutdown_);
-      // after this signal, FsManager can be destroyed.
+  FX_LOGS(INFO) << "filesystem shutdown initiated";
+  // Shutting down fshost involves sending asynchronous shutdown signals to several different
+  // systems in order with continuation passing.
+  // 0. Before fshost is told to shut down, almost everything that is running out of the
+  //    filesystems is shut down by component manager.
+  // 1. Shut down drivers that are running out of the system partition. These are hosted out of
+  //    blobfs, and are the last thing in the system with a dependency on the filesystems.
+  // 2. Shut down the outgoing vfs. This hosts the fshost services. The outgoing vfs also has
+  //    handles to the filesystems, but it doesn't own them so it doesn't shut them down.
+  // 3. Shut down the root vfs. This hosts the filesystems, and recursively shuts all of them down.
+  // If at any point we hit an error, we log loudly, but continue with the shutdown procedure.
+  RemoveSystemDrivers([this, callback = std::move(callback)](zx_status_t status) mutable {
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "RemoveSystemDrivers failed: " << zx_status_get_string(status);
+    }
+    outgoing_vfs_.Shutdown([this, callback = std::move(callback)](zx_status_t status) mutable {
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "outgoing_vfs shutdown failed: " << zx_status_get_string(status);
+      }
+      root_vfs_->Shutdown([this, callback = std::move(callback)](zx_status_t status) {
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "root_vfs shutdown failed: " << zx_status_get_string(status);
+        }
+        callback(status);
+        sync_completion_signal(&shutdown_);
+        // after this signal, FsManager can be destroyed.
+      });
     });
   });
 }

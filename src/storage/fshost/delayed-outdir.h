@@ -37,20 +37,21 @@ class DelayedOutdir {
         delayed_vfs_(fs::ManagedVfs(outgoing_dir_delayed_loop_->dispatcher())) {}
 
   ~DelayedOutdir() {
-    if (started_) {
-      // If we've been started, we need to shutdown the VFS before destroying
-      // it, otherwise the VFS might panic.
-      fit::bridge<zx_status_t> bridge;
-      delayed_vfs_.Shutdown(bridge.completer.bind());
-      auto promise_shutdown = bridge.consumer.promise_or(::fit::error());
+    if (!started_) {
+      // if we haven't actually started the async loop yet, we need to so we can tear down any
+      // connections that got created in the mean time.
+      outgoing_dir_delayed_loop_->StartThread("delayed_outgoing_dir");
+    }
+    fit::bridge<zx_status_t> bridge;
+    delayed_vfs_.Shutdown(bridge.completer.bind());
+    auto promise_shutdown = bridge.consumer.promise_or(::fit::error());
 
-      fit::result<zx_status_t, void> result = fit::run_single_threaded(std::move(promise_shutdown));
-      if (!result.is_ok()) {
-        FX_LOGS(ERROR) << "error running fit executor to shutdown delayed outdir vfs";
-      } else if (result.value() != ZX_OK) {
-        FX_LOGS(ERROR) << "error shutting down delayed outdir vfs: "
-                       << zx_status_get_string(result.value());
-      }
+    fit::result<zx_status_t, void> result = fit::run_single_threaded(std::move(promise_shutdown));
+    if (!result.is_ok()) {
+      FX_LOGS(ERROR) << "error running fit executor to shutdown delayed outdir vfs";
+    } else if (result.value() != ZX_OK) {
+      FX_LOGS(ERROR) << "error shutting down delayed outdir vfs: "
+                     << zx_status_get_string(result.value());
     }
   }
 

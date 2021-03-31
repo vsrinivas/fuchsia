@@ -1,7 +1,7 @@
 // The only difference between test-fshost.cml and the main fshost.cml is that the main one has
 // main_process_critical, but we can't set that flag in tests.
 // TODO(fxbug.dev/73189): template the two cml files so they don't fall out of sync.
-// IMPORTANT: this means any changes made here should be made in test-fshost.cml
+// IMPORTANT: this means any changes made here should be made in fshost.cml
 {
     include: [
         "sdk/lib/diagnostics/inspect/client.shard.cml",
@@ -11,7 +11,6 @@
         runner: "elf",
         binary: "bin/fshost",
         lifecycle: { stop_event: "notify" },
-        main_process_critical: "true",
     },
     capabilities: [
         {
