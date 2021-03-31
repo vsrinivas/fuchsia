@@ -6,6 +6,7 @@
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_PDM_AUDIO_H_
 
 #include <assert.h>
+#include <fbl/macros.h>
 #include <lib/mmio/mmio.h>
 
 #include <memory>

@@ -6,8 +6,8 @@
 #define SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_H_
 
 #include <lib/ddk/debug.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/hw/arch_ops.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio-ptr/mmio-ptr.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/resource.h>
@@ -18,8 +18,6 @@
 
 #include <optional>
 #include <utility>
-
-#include <fbl/macros.h>
 
 namespace ddk {
 
@@ -100,7 +98,9 @@ namespace ddk {
 // MmioPinnedBuffer is wrapper around mmio_pinned_buffer_t.
 class MmioPinnedBuffer {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioPinnedBuffer);
+  // DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE
+  MmioPinnedBuffer(const MmioPinnedBuffer&) = delete;
+  MmioPinnedBuffer& operator=(const MmioPinnedBuffer&) = delete;
 
   explicit MmioPinnedBuffer(mmio_pinned_buffer_t pinned) : pinned_(pinned) {
     ZX_ASSERT(pinned_.paddr != 0);
@@ -152,7 +152,9 @@ class MmioView;
 // MmioBuffer is wrapper around mmio_block_t.
 class MmioBuffer {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBuffer);
+  // DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE
+  MmioBuffer(const MmioBuffer&) = delete;
+  MmioBuffer& operator=(const MmioBuffer&) = delete;
 
   MmioBuffer(mmio_buffer_t mmio, const MmioBufferOps* ops = &kDefaultOps, const void* ctx = nullptr)
       : mmio_(mmio), ops_(ops), ctx_(ctx) {

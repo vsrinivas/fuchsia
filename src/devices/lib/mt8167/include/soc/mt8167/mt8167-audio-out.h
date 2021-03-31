@@ -6,6 +6,7 @@
 #define SRC_DEVICES_LIB_MT8167_INCLUDE_SOC_MT8167_MT8167_AUDIO_OUT_H_
 
 #include <assert.h>
+#include <fbl/macros.h>
 #include <lib/mmio/mmio.h>
 
 #include <memory>

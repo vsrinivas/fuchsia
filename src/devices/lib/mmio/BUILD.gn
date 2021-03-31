@@ -9,9 +9,6 @@ zx_library("mmio") {
   sdk_headers = [ "lib/mmio/mmio.h" ]
   sources = []
   public_deps = [
-    # <lib/mmio/mmio.h> has #include <fbl/macros.h>.
-    "//zircon/public/lib/fbl",
-
     # <lib/mmio/mmio.h> has #include <lib/mmio-ptr/mmio-ptr.h>.
     "//zircon/system/ulib/mmio-ptr",
   ]
