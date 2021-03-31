@@ -115,6 +115,9 @@ class Tas27xx : public SimpleCodecServer {
   GainState gain_state_ = {};
   thrd_t thread_;
   metadata::ti::TasConfig metadata_ = {};
+
+  inspect::IntProperty status_time_;
+  inspect::UintProperty codec_status_;
 };
 }  // namespace audio
 

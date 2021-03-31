@@ -6,11 +6,13 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {
@@ -31,10 +33,20 @@ struct Tas27xxCodec : public Tas27xx {
   explicit Tas27xxCodec(ddk::I2cChannel i2c, ddk::GpioProtocolClient fault)
       : Tas27xx(fake_ddk::kFakeParent, std::move(i2c), std::move(fault), true, true) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
+  inspect::Inspector& inspect() { return Tas27xx::inspect(); }
 };
 
-TEST(Tas27xxTest, CodecInitGood) {
-  fake_ddk::Bind tester;
+class Tas27xxTest : public inspect::InspectTestHelper, public zxtest::Test {
+ public:
+  void SetUp() override {}
+
+  void TearDown() override {}
+
+ protected:
+  fake_ddk::Bind ddk_;
+};
+
+TEST_F(Tas27xxTest, CodecInitGood) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -46,14 +58,13 @@ TEST(Tas27xxTest, CodecInitGood) {
   ASSERT_NOT_NULL(codec);
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
 }
 
-TEST(Tas27xxTest, CodecInitBad) {
-  fake_ddk::Bind tester;
+TEST_F(Tas27xxTest, CodecInitBad) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -68,8 +79,7 @@ TEST(Tas27xxTest, CodecInitBad) {
   mock_fault.VerifyAndClear();
 }
 
-TEST(Tas27xxTest, CodecGetInfo) {
-  fake_ddk::Bind tester;
+TEST_F(Tas27xxTest, CodecGetInfo) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -88,14 +98,13 @@ TEST(Tas27xxTest, CodecGetInfo) {
   ASSERT_EQ(info->product_name.compare("TAS2770"), 0);
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
 }
 
-TEST(Tas27xxTest, CodecReset) {
-  fake_ddk::Bind tester;
+TEST_F(Tas27xxTest, CodecReset) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -134,14 +143,13 @@ TEST(Tas27xxTest, CodecReset) {
   ASSERT_OK(client.Reset());
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
 }
 
-TEST(Tas27xxTest, ExternalConfig) {
-  fake_ddk::Bind tester;
+TEST_F(Tas27xxTest, ExternalConfig) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -158,7 +166,7 @@ TEST(Tas27xxTest, ExternalConfig) {
   metadata.init_sequence2[1].value = 0x44;
   metadata.init_sequence2[2].address = 0x55;
   metadata.init_sequence2[2].value = 0x66;
-  tester.SetMetadata(&metadata, sizeof(metadata));
+  ddk_.SetMetadata(&metadata, sizeof(metadata));
 
   mock_i2c::MockI2c mock_i2c;
   // Reset by the call to Reset.
@@ -200,14 +208,13 @@ TEST(Tas27xxTest, ExternalConfig) {
   ASSERT_OK(client.Reset());
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
 }
 
-TEST(Tas27xxTest, CodecBridgedMode) {
-  fake_ddk::Bind tester;
+TEST_F(Tas27xxTest, CodecBridgedMode) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -227,14 +234,13 @@ TEST(Tas27xxTest, CodecBridgedMode) {
   client.SetBridgedMode(false);
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
 }
 
-TEST(Tas27xxTest, CodecDaiFormat) {
-  fake_ddk::Bind tester;
+TEST_F(Tas27xxTest, CodecDaiFormat) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -299,15 +305,31 @@ TEST(Tas27xxTest, CodecDaiFormat) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
+  // Check inspect state.
+  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
+  ASSERT_TRUE(simple_codec);
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(CheckProperty(simple_codec->node(), "manufacturer",
+                                         inspect::StringPropertyValue("Texas Instruments")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "product", inspect::StringPropertyValue("TAS2770")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "codec_status", inspect::UintPropertyValue(0)));
+
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
 }
 
-TEST(Tas27xxTest, CodecGain) {
-  fake_ddk::Bind tester;
+TEST_F(Tas27xxTest, CodecGain) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
 
@@ -357,7 +379,7 @@ TEST(Tas27xxTest, CodecGain) {
   static_cast<void>(unused);
 
   codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
+  ASSERT_TRUE(ddk_.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();

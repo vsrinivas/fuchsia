@@ -47,6 +47,8 @@ Tas27xx::Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClie
   if (status != ZX_OK) {
     zxlogf(DEBUG, "device_get_metadata failed %d", status);
   }
+  status_time_ = inspect().GetRoot().CreateInt("status_time", 0);
+  codec_status_ = inspect().GetRoot().CreateUint("codec_status", 0);
 }
 
 int Tas27xx::Thread() {
@@ -79,6 +81,9 @@ int Tas27xx::Thread() {
     if (ltch0 & INT_MASK0_OVER_TEMP_ERROR) {
       zxlogf(ERROR, "tas27xx: Over temperature error");
     }
+    status_time_.Set(timestamp.get());
+    codec_status_.Set(static_cast<uint64_t>(ltch0) | (static_cast<uint64_t>(ltch1) << 8) |
+                      (static_cast<uint64_t>(ltch2) << 16));
   }
 
   zxlogf(INFO, "tas27xx: Exiting interrupt thread");
