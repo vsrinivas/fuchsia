@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zbitl/checking.h>
 #include <lib/zbitl/view.h>
 
 #include <gtest/gtest.h>
@@ -22,12 +23,14 @@ constexpr uint32_t kKernelType = 1u;
 constexpr uint32_t kBootfsType = 2u;
 constexpr uint32_t kMiscType = 3u;
 
-static constexpr zbi_header_t kValidHeader = {
+static constexpr zbi_header_t kValidItemHeader = {
     .length = ZBI_ALIGNMENT,
     .flags = ZBI_FLAG_VERSION | ZBI_FLAG_CRC32,
     .magic = ZBI_ITEM_MAGIC,
     .crc32 = 123,
 };
+
+static constexpr zbi_header_t kValidContainerHeader = ZBI_CONTAINER_HEADER(0);
 
 inline void CheckTwoItemZbi(uint32_t type1, uint32_t type2, bool expect_ok) {
   constexpr size_t kPayloadSize = ZBI_ALIGNMENT;
@@ -94,37 +97,82 @@ TEST(ZbitlCompletenessTest, KernelAndBootfsMissing) {
   ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kMiscType, kMiscType, false));
 }
 
-TEST(ZbitlHeaderTest, MagicAndFlagsMissing) {
+TEST(ZbitlHeaderTest, ItemMagicAndFlagsMissing) {
   // * Item fits, but magic, required flags and CRC are unset.
   // Expectation: failure.
-  zbi_header_t header = kValidHeader;
+  zbi_header_t header = kValidItemHeader;
   header.flags = 0u;
   header.magic = 0u;
   header.crc32 = 0u;
 
-  EXPECT_IS_ERROR(zbitl::CheckHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckItemHeader(header));
 }
 
-TEST(ZbitlHeaderTest, ValidHeader) {
+TEST(ZbitlHeaderTest, ValidItemHeader) {
   // * Item fits, magic is correct, and required flags and CRC are set.
   // Expectation: success.
-  EXPECT_IS_OK(zbitl::CheckHeader(kValidHeader));
+  EXPECT_IS_OK(zbitl::CheckItemHeader(kValidItemHeader));
 }
 
-TEST(ZbitlHeaderTest, CrcIsMissing) {
+TEST(ZbitlHeaderTest, ItemCrcIsMissing) {
   // * Item fits, magic is correct, required flags are set, and CRC is missing.
   // Expectation: failure.
-  zbi_header_t header = kValidHeader;
+  zbi_header_t header = kValidItemHeader;
   header.flags = ZBI_ITEM_NO_CRC32;
-  EXPECT_IS_OK(zbitl::CheckHeader(header));
+  EXPECT_IS_OK(zbitl::CheckItemHeader(header));
 }
 
-TEST(ZbitlHeaderTest, FlagsMissing) {
+TEST(ZbitlHeaderTest, ItemFlagsMissing) {
   // * Item fits, magic is correct, required flags are missing, and CRC is set.
   // Expectation: failure.
-  zbi_header_t header = kValidHeader;
+  zbi_header_t header = kValidItemHeader;
   header.flags = 0u;
-  EXPECT_IS_ERROR(zbitl::CheckHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckItemHeader(header));
+}
+
+TEST(ZbitlHeaderTest, ValidContainerHeader) {
+  EXPECT_IS_OK(zbitl::CheckContainerHeader(kValidContainerHeader));
+}
+
+TEST(ZbitlHeaderTest, ContainerMagicMissing) {
+  // A container header requires both item and container magic to be set.
+  {
+    zbi_header_t header = kValidContainerHeader;
+    header.magic = 0u;
+    EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
+  }
+  {
+    zbi_header_t header = kValidContainerHeader;
+    header.extra = 0u;  // Holds container magic
+    EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
+  }
+}
+
+TEST(ZbitlHeaderTest, ContainerFlagsMissing) {
+  zbi_header_t header = kValidContainerHeader;
+  header.flags = 0u;
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
+}
+
+TEST(ZbitlHeaderTest, BadContainerType) {
+  // Must be ZBI_TYPE_CONTAINER.
+  zbi_header_t header = kValidContainerHeader;
+  header.type = ZBI_TYPE_IMAGE_ARGS;
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
+}
+
+TEST(ZbitlHeaderTest, ContainerCrc) {
+  // No CRC flag must be set.
+  zbi_header_t header = kValidContainerHeader;
+  header.flags |= ZBI_FLAG_CRC32;
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
+}
+
+TEST(ZbitlHeaderTest, UnalignedContainerLength) {
+  // Must be ZBI_ALIGNMENT-aligned.
+  zbi_header_t header = kValidContainerHeader;
+  header.length = ZBI_ALIGNMENT - 1;
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
 }
 
 }  // namespace

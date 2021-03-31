@@ -611,7 +611,7 @@ class View {
         // Failed to read the next header.
         Fail("cannot read item header", std::move(header.error_value()));
         return;
-      } else if (auto header_error = CheckHeader(header.value()); header_error.is_error()) {
+      } else if (auto header_error = CheckItemHeader(header.value()); header_error.is_error()) {
         Fail(header_error.error_value());
         return;
       } else {
@@ -673,24 +673,9 @@ class View {
     }
 
     const header_type header(std::move(header_error.value()));
-    auto check_error = CheckHeader(*header);
+    auto check_error = CheckContainerHeader(*header);
     if (check_error.is_error()) {
       return fitx::error(Error{check_error.error_value(), 0, {}});
-    }
-
-    if (header->type != ZBI_TYPE_CONTAINER) {
-      return fitx::error(Error{"bad container type", 0, {}});
-    }
-    if (header->extra != ZBI_CONTAINER_MAGIC) {
-      return fitx::error(Error{"bad container magic", 0, {}});
-    }
-
-    if (header->flags & ZBI_FLAG_CRC32) {
-      return fitx::error(Error{"container header has CRC32 flag", 0, {}});
-    }
-
-    if (header->length % ZBI_ALIGNMENT != 0) {
-      return fitx::error(Error{"container header has misaligned length", 0, {}});
     }
 
     if (header->length > capacity - sizeof(*header)) {

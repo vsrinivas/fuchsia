@@ -13,9 +13,11 @@
 
 namespace zbitl {
 
-/// The capacity argument is the maximum space left in the container,
-/// starting from the position of this header (not its payload).
-fitx::result<std::string_view> CheckHeader(const zbi_header_t& header);
+// Validates ZBI item and container headers, returning a description of the
+// failure in that event. The check is agnostic of storage capacity; whether
+// the encoded length is sensible is left to the caller.
+fitx::result<std::string_view> CheckItemHeader(const zbi_header_t& header);
+fitx::result<std::string_view> CheckContainerHeader(const zbi_header_t& header);
 
 // Modify a header so that it passes checks.  This can be used to mint new
 // items from a designated initializer that omits uninteresting bits.
