@@ -9,7 +9,7 @@
     act: {
         mali_hung_today: {
             type: "Snapshot",
-            trigger: "And(Apply(last_24_hours, last_hang_timeout_ns), hang_timeout_count > 0)",
+            trigger: "And(Apply(last_24_hours, [last_hang_timeout_ns]), hang_timeout_count > 0)",
             repeat: "Hours(24)",
             signature: "mali-hung-today",
         },

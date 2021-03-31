@@ -890,9 +890,9 @@ mod test {
 
     #[test]
     fn functional_programming() -> Result<(), Error> {
-        assert_eq!(eval!("Apply(Fn([], 5))"), i(5));
-        assert_eq!(eval!("Apply(Fn([a], a+5), 2)"), i(7));
-        assert_eq!(eval!("Apply(Fn([a, b], a*b+5), 2, 3)"), i(11));
+        assert_eq!(eval!("Apply(Fn([], 5), [])"), i(5));
+        assert_eq!(eval!("Apply(Fn([a], a+5), [2])"), i(7));
+        assert_eq!(eval!("Apply(Fn([a, b], a*b+5), [2, 3])"), i(11));
         assert_eq!(eval!("Map(Fn([a], a*2), [1,2,3])"), v(&[i(2), i(4), i(6)]));
         assert_eq!(
             eval!("Map(Fn([a, b], [a, b]), [1, 2, 3], [4, 5, 6])"),

@@ -11,13 +11,13 @@
     act: {
         protected_failed_today: {
             type: "Snapshot",
-            trigger: "And(Apply(last_24_hours, protected_allocation_failed_timestamp), protected_allocations_failed > 0)",
+            trigger: "And(Apply(last_24_hours, [protected_allocation_failed_timestamp]), protected_allocations_failed > 0)",
             repeat: "Hours(24)",
             signature: "protected-allocations-failed-today",
         },
         contiguous_failed_today: {
             type: "Snapshot",
-            trigger: "And(Apply(last_24_hours, contiguous_allocation_failed_timestamp), contiguous_allocations_failed > 0)",
+            trigger: "And(Apply(last_24_hours, [contiguous_allocation_failed_timestamp]), contiguous_allocations_failed > 0)",
             repeat: "Hours(24)",
             signature: "contiguous-allocations-failed-today",
         },

@@ -38,9 +38,9 @@
         // To count a vector containing Missing, map it through Missing() first because Count won't count vectors containing Missing.
         count_with_missing: "Fn([v], Count(Map(Fn([a], Missing(a)), v)))",
         with_missing_element: "Filter(even, [1, 2, missing, 4, 5])",
-        filter_ok2: "Apply(count_with_missing, with_missing_element) == 3",
+        filter_ok2: "Apply(count_with_missing, [with_missing_element]) == 3",
         only_missing_element: "Filter(Fn([a], Missing(a)), with_missing_element)",
-        filter_ok3: "Apply(count_with_missing, only_missing_element) == 1",
+        filter_ok3: "Apply(count_with_missing, [only_missing_element]) == 1",
         filter_ok4: "Missing(Count(with_missing_element))",
         filter_ok: "And(filter_ok1, filter_ok2, filter_ok3, filter_ok4)",
     },

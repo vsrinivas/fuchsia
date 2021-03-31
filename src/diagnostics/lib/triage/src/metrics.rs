@@ -545,7 +545,19 @@ impl<'a> MetricState<'a> {
             Ok((lambda, arguments)) => (lambda, arguments),
             Err(()) => return missing("Apply needs a function in its first argument."),
         };
-        self.apply_lambda(namespace, &lambda, &arguments.iter().collect::<Vec<_>>())
+        if arguments.len() < 1 {
+            return missing("Apply needs a vector in its second argument.");
+        }
+        if arguments.len() > 1 {
+            return missing("Apply only accepts one vector argument.");
+        }
+
+        match &arguments[0] {
+            MetricValue::Vector(apply_args) => {
+                self.apply_lambda(namespace, &lambda, &apply_args.iter().collect::<Vec<_>>())
+            }
+            _ => return missing("Apply only accepts a vector as an argument."),
+        }
     }
 
     /// This implements the Map() function.

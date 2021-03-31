@@ -98,7 +98,7 @@ Provided functions include:
     *   `Map(function, vector1, vector2, ...)`
     *   `Fold(function, vector, optional_start_value)`
     *   `Filter(function, vector)`
-    *   `Apply(function, arg1, arg2, ...)`
+    *   `Apply(function, [arg1, arg2, ...])`
     *   `Count(vector)`
 *   Time
     *   `Days()`, `Hours()`, `Minutes()`, `Seconds()`, `Millis()`, `Micros()`,
