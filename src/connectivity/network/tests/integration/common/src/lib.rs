@@ -194,7 +194,7 @@ pub async fn get_inspect_data<'a>(
         .connect_to_service::<fidl_fuchsia_diagnostics::ArchiveAccessorMarker>()
         .context("failed to connect to archive accessor")?;
 
-    diagnostics_reader::ArchiveReader::new()
+    let mut data = diagnostics_reader::ArchiveReader::new()
         .with_archive(archive)
         .add_selector(
             diagnostics_reader::ComponentSelector::new(vec![component.into()])
@@ -213,7 +213,7 @@ pub async fn get_inspect_data<'a>(
         .await
         .context("failed to get inspect data")?
         .into_iter()
-        .find_map(
+        .filter_map(
             |diagnostics_data::InspectData {
                  data_source: _,
                  metadata,
@@ -232,8 +232,16 @@ pub async fn get_inspect_data<'a>(
                     None
                 }
             },
-        )
-        .ok_or_else(|| anyhow::anyhow!("failed to find inspect data"))?
+        );
+    let datum = data.next().unwrap_or_else(|| Err(anyhow::anyhow!("failed to find inspect data")));
+    let data: Vec<_> = data.collect();
+    assert!(
+        data.is_empty(),
+        "expected a single inspect entry; got {:?} and also {:?}",
+        datum,
+        data
+    );
+    datum
 }
 
 /// Send Router Advertisement NDP message with router lifetime.
