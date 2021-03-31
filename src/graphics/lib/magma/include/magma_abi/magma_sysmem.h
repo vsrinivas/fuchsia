@@ -23,7 +23,7 @@ void magma_sysmem_connection_release(magma_sysmem_connection_t connection);
 
 // Allocate a buffer.
 magma_status_t magma_sysmem_allocate_buffer(magma_sysmem_connection_t connection, uint32_t flags,
-                                            uint64_t size, uint32_t* buffer_handle_out);
+                                            uint64_t size, magma_handle_t* buffer_handle_out);
 
 void magma_buffer_format_description_release(magma_buffer_format_description_t description);
 
@@ -58,7 +58,8 @@ magma_status_t magma_get_buffer_is_secure(magma_buffer_format_description_t desc
 
 // Import a magma buffer collection from BufferCollectionToken handle. If the
 // handle is ZX_HANDLE_INVALID (0), then a new buffer collection is created.
-magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
+magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection,
+                                              magma_handle_t handle,
                                               magma_buffer_collection_t* collection_out);
 
 void magma_buffer_collection_release(magma_sysmem_connection_t connection,
@@ -115,7 +116,7 @@ magma_status_t magma_sysmem_get_description_from_collection(
 magma_status_t magma_sysmem_get_buffer_handle_from_collection(magma_sysmem_connection_t connection,
                                                               magma_buffer_collection_t collection,
                                                               uint32_t index,
-                                                              uint32_t* buffer_handle_out,
+                                                              magma_handle_t* buffer_handle_out,
                                                               uint32_t* vmo_offset_out);
 
 // Determines which constraint format indices match the buffer description. |format_valid_count| is

@@ -22,7 +22,7 @@ void magma_sysmem_connection_release(magma_sysmem_connection_t connection) {
 }
 
 magma_status_t magma_sysmem_allocate_buffer(magma_sysmem_connection_t connection, uint32_t flags,
-                                            uint64_t size, uint32_t* buffer_handle_out) {
+                                            uint64_t size, magma_handle_t* buffer_handle_out) {
   std::unique_ptr<magma::PlatformBuffer> buffer;
   auto sysmem_connection = reinterpret_cast<magma_sysmem::PlatformSysmemConnection*>(connection);
 
@@ -115,7 +115,8 @@ magma_status_t magma_get_buffer_is_secure(magma_buffer_format_description_t desc
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
+magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection,
+                                              magma_handle_t handle,
                                               magma_buffer_collection_t* collection_out) {
   auto sysmem_connection = reinterpret_cast<magma_sysmem::PlatformSysmemConnection*>(connection);
   if (!handle) {
@@ -217,7 +218,7 @@ magma_status_t magma_sysmem_get_description_from_collection(
 magma_status_t magma_sysmem_get_buffer_handle_from_collection(magma_sysmem_connection_t connection,
                                                               magma_buffer_collection_t collection,
                                                               uint32_t index,
-                                                              uint32_t* buffer_handle_out,
+                                                              magma_handle_t* buffer_handle_out,
                                                               uint32_t* vmo_offset_out) {
   auto buffer_collection = reinterpret_cast<magma_sysmem::PlatformBufferCollection*>(collection);
   return buffer_collection->GetBufferHandle(index, buffer_handle_out, vmo_offset_out).get();
