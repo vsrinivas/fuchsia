@@ -24,7 +24,7 @@ use {
     std::default::Default,
     std::ops::Sub,
     std::sync::Arc,
-    wlan_common::format::MacFmt,
+    wlan_common::format::{MacFmt as _, SsidFmt as _},
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{
@@ -669,8 +669,8 @@ pub fn log_disconnect(
         last_snr: info.last_snr,
         bssid: info.bssid.to_mac_str(),
         bssid_hash: inspect_tree.hasher.hash_mac_addr(&info.bssid),
-        ssid: String::from_utf8_lossy(&info.ssid[..]).to_string(),
-        ssid_hash: inspect_tree.hasher.hash(&info.ssid[..]),
+        ssid: info.ssid.to_ssid_str(),
+        ssid_hash: inspect_tree.hasher.hash_ssid(&info.ssid[..]),
         wsc?: match &info.wsc {
             None => None,
             Some(wsc) => Some(make_inspect_loggable!(
@@ -1255,7 +1255,7 @@ mod tests {
                         connected_duration: 30.seconds().into_nanos(),
                         bssid: "01:01:01:01:01:01",
                         bssid_hash: AnyProperty,
-                        ssid: "foo",
+                        ssid: "<ssid-666f6f>",
                         ssid_hash: AnyProperty,
                         wsc: {
                             device_name: "ASUS Router",
@@ -1311,7 +1311,7 @@ mod tests {
                         connected_duration: 30.seconds().into_nanos(),
                         bssid: "01:01:01:01:01:01",
                         bssid_hash: AnyProperty,
-                        ssid: "foo",
+                        ssid: "<ssid-666f6f>",
                         ssid_hash: AnyProperty,
                         protection: "Open",
                         channel: {
@@ -1362,7 +1362,7 @@ mod tests {
                         connected_duration: 30.seconds().into_nanos(),
                         bssid: "01:01:01:01:01:01",
                         bssid_hash: AnyProperty,
-                        ssid: "foo",
+                        ssid: "<ssid-666f6f>",
                         ssid_hash: AnyProperty,
                         protection: "Open",
                         channel: {

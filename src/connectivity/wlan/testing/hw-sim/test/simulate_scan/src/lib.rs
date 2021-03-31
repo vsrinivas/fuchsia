@@ -76,12 +76,12 @@ async fn simulate_scan() {
     scan_results.sort();
 
     let mut expected_aps = [
-        (String::from_utf8_lossy(SSID_FOO).to_string(), BSS_FOO.0, true, -60),
-        (String::from_utf8_lossy(SSID_FOO).to_string(), BSS_FOO_2.0, true, -60),
-        (String::from_utf8_lossy(SSID_BAR).to_string(), BSS_BAR.0, true, -60),
-        (String::from_utf8_lossy(SSID_BAR).to_string(), BSS_BAR_2.0, true, -40),
-        (String::from_utf8_lossy(SSID_BAZ).to_string(), BSS_BAZ.0, true, -60),
-        (String::from_utf8_lossy(SSID_BAZ).to_string(), BSS_BAZ_2.0, true, -60),
+        (SSID_FOO.to_vec(), BSS_FOO.0, true, -60),
+        (SSID_FOO.to_vec(), BSS_FOO_2.0, true, -60),
+        (SSID_BAR.to_vec(), BSS_BAR.0, true, -60),
+        (SSID_BAR.to_vec(), BSS_BAR_2.0, true, -40),
+        (SSID_BAZ.to_vec(), BSS_BAZ.0, true, -60),
+        (SSID_BAZ.to_vec(), BSS_BAZ_2.0, true, -60),
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &scan_results[..]);

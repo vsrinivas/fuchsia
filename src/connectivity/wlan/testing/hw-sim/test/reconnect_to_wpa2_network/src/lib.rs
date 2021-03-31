@@ -12,6 +12,7 @@ use {
     pin_utils::pin_mut,
     wlan_common::{
         bss::Protection,
+        format::SsidFmt as _,
         mac::{self, Bssid},
     },
     wlan_hw_sim::*,
@@ -162,7 +163,7 @@ async fn reconnect_to_wpa2_network() {
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(SSID), BSSID),
+            format!("connecting to {} ({:02X?})", SSID.to_ssid_str_not_redactable(), BSSID),
             |event| {
                 handle_phy_event(
                     &event,

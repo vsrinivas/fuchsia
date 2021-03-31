@@ -7,7 +7,10 @@ use {
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_zircon::DurationNum,
     pin_utils::pin_mut,
-    wlan_common::mac::{self, Bssid},
+    wlan_common::{
+        format::SsidFmt as _,
+        mac::{self, Bssid},
+    },
     wlan_hw_sim::*,
 };
 
@@ -88,7 +91,7 @@ async fn connect_with_failed_association() {
     let () = helper
         .run_until_complete_or_timeout(
             240.seconds(),
-            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(SSID), BSSID),
+            format!("connecting to {} ({:02X?})", SSID.to_ssid_str_not_redactable(), BSSID),
             build_event_handler(SSID.to_vec(), BSSID, &proxy),
             save_network_fut,
         )

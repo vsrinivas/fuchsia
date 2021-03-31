@@ -13,6 +13,7 @@ use {
     fuchsia_zircon::prelude::*,
     futures::StreamExt,
     log::{debug, info},
+    wlan_common::format::SsidFmt as _,
 };
 
 // Holds basic WLAN network configuration information and allows cloning and conversion to a policy
@@ -235,7 +236,11 @@ pub async fn remove_network(
 ) {
     let network_config = create_network_config(ssid, security_type, password.clone());
 
-    info!("Removing network. SSID: {:?}, Password: {:?}", ssid, password.map(|p| p.to_string()));
+    info!(
+        "Removing network. SSID: {}, Password: {:?}",
+        ssid.to_ssid_str_not_redactable(),
+        password.map(|p| p.to_string())
+    );
     client_controller
         .remove_network(network_config)
         .await

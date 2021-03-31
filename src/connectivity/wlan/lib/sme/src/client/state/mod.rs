@@ -37,7 +37,7 @@ use {
     wlan_common::{
         bss::BssDescription,
         channel::Channel,
-        format::MacFmt,
+        format::{MacFmt as _, SsidFmt as _},
         ie::{self, rsn::cipher},
         mac::Bssid,
         RadioConfig,
@@ -1020,7 +1020,7 @@ impl ClientState {
             ctx: msg,
             bssid: cmd.bss.bssid.to_mac_str(),
             bssid_hash: context.inspect.hasher.hash_mac_addr(&cmd.bss.bssid),
-            ssid: String::from_utf8_lossy(cmd.bss.ssid()).as_ref(),
+            ssid: cmd.bss.ssid().to_ssid_str(),
             ssid_hash: context.inspect.hasher.hash(cmd.bss.ssid()),
         });
         let state = Self::new(cfg.clone());

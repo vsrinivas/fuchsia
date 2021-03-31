@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        format::MacFmt as _,
+        format::{MacFmt as _, SsidFmt as _},
         hasher::WlanHasher,
         ie::{
             self,
@@ -380,6 +380,8 @@ impl BssDescription {
 
     /// Returns an obfuscated string representation of the BssDescriptionExt suitable
     /// for protecting the privacy of an SSID and BSSID.
+    // TODO(fxbug.dev/71906): Hashing SSID and BSSID should be removed once log redaction
+    // retains consistent identifiers across Inspect and syslog.
     pub fn to_string(&self, hasher: &WlanHasher) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
@@ -396,7 +398,7 @@ impl BssDescription {
     pub fn to_non_obfuscated_string(&self) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-            String::from_utf8(self.ssid().to_vec()).unwrap_or_else(|_| hex::encode(self.ssid())),
+            self.ssid().to_ssid_str(),
             self.bssid.to_mac_str(),
             self.protection(),
             self.chan.primary,

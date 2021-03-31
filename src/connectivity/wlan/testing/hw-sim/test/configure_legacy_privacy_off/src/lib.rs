@@ -52,9 +52,9 @@ async fn configure_legacy_privacy_off() {
     scan_results.sort();
 
     let mut expected_aps = [
-        (String::from_utf8_lossy(SSID_WPA1).to_string(), BSS_WPA1.0, false, 0),
-        (String::from_utf8_lossy(SSID_WEP).to_string(), BSS_WEP.0, false, 0),
-        (String::from_utf8_lossy(SSID_MIXED).to_string(), BSS_MIXED.0, true, 0),
+        (SSID_WPA1.to_vec(), BSS_WPA1.0, false, 0),
+        (SSID_WEP.to_vec(), BSS_WEP.0, false, 0),
+        (SSID_MIXED.to_vec(), BSS_MIXED.0, true, 0),
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &scan_results[..]);

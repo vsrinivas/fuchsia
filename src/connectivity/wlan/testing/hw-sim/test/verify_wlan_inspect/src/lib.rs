@@ -16,7 +16,7 @@ use {
     wlan_common::{
         assert_variant,
         bss::Protection,
-        format::MacFmt,
+        format::{MacFmt as _, SsidFmt as _},
         mac::{self, Bssid},
     },
     wlan_hw_sim::*,
@@ -136,7 +136,7 @@ async fn verify_wlan_inspect() {
         let () = helper
             .run_until_complete_or_timeout(
                 240.seconds(),
-                format!("connecting to {} ({:02X?})", String::from_utf8_lossy(SSID), BSSID),
+                format!("connecting to {} ({:02X?})", SSID.to_ssid_str_not_redactable(), BSSID),
                 build_event_handler(SSID.to_vec(), BSSID, &proxy),
                 connect_fut,
             )
@@ -165,7 +165,7 @@ async fn verify_wlan_inspect() {
                     connected_to: contains {
                         bssid: BSSID.0.to_mac_str(),
                         bssid_hash: AnyProperty,
-                        ssid: String::from_utf8_lossy(SSID).to_string(),
+                        ssid: SSID.to_ssid_str(),
                         ssid_hash: AnyProperty,
                         wsc: {
                             device_name: "ASUS Router",
@@ -208,7 +208,7 @@ async fn verify_wlan_inspect() {
                     connected_duration: AnyProperty,
                     bssid: BSSID.0.to_mac_str(),
                     bssid_hash: AnyProperty,
-                    ssid: "open",
+                    ssid: SSID.to_ssid_str(),
                     ssid_hash: AnyProperty,
                     wsc: {
                         device_name: "ASUS Router",
@@ -240,7 +240,7 @@ async fn verify_wlan_inspect() {
                     prev_connected_to: contains {
                         bssid: BSSID.0.to_mac_str(),
                         bssid_hash: AnyProperty,
-                        ssid: String::from_utf8_lossy(SSID).to_string(),
+                        ssid: SSID.to_ssid_str(),
                         ssid_hash: AnyProperty,
                         wsc: {
                             device_name: "ASUS Router",

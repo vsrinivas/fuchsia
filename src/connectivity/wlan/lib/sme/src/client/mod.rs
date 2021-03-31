@@ -50,7 +50,7 @@ use {
     wlan_common::{
         self,
         bss::{BssDescription, Protection as BssProtection},
-        format::MacFmt,
+        format::{MacFmt as _, SsidFmt as _},
         hasher::WlanHasher,
         mac::MacAddr,
         RadioConfig,
@@ -662,7 +662,7 @@ fn inspect_log_join_scan(
         inspect_insert!(node_writer, var key: {
             bssid: bss.bssid.to_mac_str(),
             bssid_hash: ctx.inspect.hasher.hash_mac_addr(&bss.bssid),
-            ssid: String::from_utf8_lossy(bss.ssid()).as_ref(),
+            ssid: bss.ssid().to_ssid_str(),
             ssid_hash: ctx.inspect.hasher.hash(bss.ssid()),
             channel: InspectWlanChan(&bss.chan),
             rssi_dbm: bss.rssi_dbm,

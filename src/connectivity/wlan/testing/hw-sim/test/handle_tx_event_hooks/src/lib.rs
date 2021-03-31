@@ -10,6 +10,7 @@ use {
     wlan_common::{
         assert_variant,
         bss::Protection,
+        format::SsidFmt as _,
         mac::{self, Bssid},
     },
     wlan_hw_sim::*,
@@ -100,7 +101,7 @@ async fn handle_tx_event_hooks() {
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(SSID), BSSID),
+            format!("connecting to {} ({:02X?})", SSID.to_ssid_str_not_redactable(), BSSID),
             |event| {
                 handle_phy_event(
                     &event,

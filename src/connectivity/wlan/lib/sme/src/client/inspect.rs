@@ -12,7 +12,7 @@ use {
     fuchsia_zircon as zx,
     parking_lot::Mutex,
     wlan_common::{
-        format::MacFmt,
+        format::{MacFmt as _, SsidFmt as _},
         hasher::WlanHasher,
         ie::{self, wsc},
     },
@@ -251,7 +251,7 @@ impl BssInfoNode {
     fn new(node: Node, bss_info: &BssInfo, hasher: &WlanHasher) -> Self {
         let bssid = node.create_string("bssid", bss_info.bssid.to_mac_str());
         let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(&bss_info.bssid));
-        let ssid = node.create_string("ssid", String::from_utf8_lossy(&bss_info.ssid[..]));
+        let ssid = node.create_string("ssid", bss_info.ssid.to_ssid_str());
         let ssid_hash = node.create_string("ssid_hash", hasher.hash(&bss_info.ssid[..]));
         let rssi_dbm = node.create_int("rssi_dbm", bss_info.rssi_dbm as i64);
         let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
@@ -291,7 +291,7 @@ impl BssInfoNode {
     fn update(&mut self, bss_info: &BssInfo, hasher: &WlanHasher) {
         self.bssid.set(&bss_info.bssid.to_mac_str());
         self.bssid_hash.set(&hasher.hash_mac_addr(&bss_info.bssid));
-        self.ssid.set(&String::from_utf8_lossy(&bss_info.ssid[..]));
+        self.ssid.set(&bss_info.ssid.to_ssid_str());
         self.ssid_hash.set(&hasher.hash(&bss_info.ssid[..]));
         self.rssi_dbm.set(bss_info.rssi_dbm as i64);
         self.snr_db.set(bss_info.snr_db as i64);
@@ -492,12 +492,12 @@ pub struct ConnectingToNode {
 impl ConnectingToNode {
     fn new(node: Node, ssid: &[u8], hasher: &WlanHasher) -> Self {
         let ssid_hash = node.create_string("ssid_hash", hasher.hash(ssid));
-        let ssid = node.create_string("ssid", String::from_utf8_lossy(ssid));
+        let ssid = node.create_string("ssid", ssid.to_ssid_str());
         Self { _node: node, ssid, ssid_hash }
     }
 
     fn update(&mut self, ssid: &[u8], hasher: &WlanHasher) {
-        self.ssid.set(&String::from_utf8_lossy(ssid));
+        self.ssid.set(&ssid.to_ssid_str());
         self.ssid_hash.set(&hasher.hash(ssid));
     }
 }
@@ -538,7 +538,7 @@ mod tests {
                 last_updated: AnyProperty,
                 status: {
                     status_str: "connecting",
-                    connecting_to: { ssid: "foo", ssid_hash: AnyProperty }
+                    connecting_to: { ssid: "<ssid-666f6f>", ssid_hash: AnyProperty }
                 },
             }
         });
@@ -557,7 +557,7 @@ mod tests {
                 status: {
                     status_str: "connected",
                     connected_to: contains {
-                        ssid: "foo",
+                        ssid: "<ssid-666f6f>",
                         ssid_hash: AnyProperty,
                         bssid: AnyProperty,
                         bssid_hash: AnyProperty,
@@ -578,7 +578,7 @@ mod tests {
                 status: {
                     status_str: "idle",
                     prev_connected_to: contains {
-                        ssid: "foo",
+                        ssid: "<ssid-666f6f>",
                         ssid_hash: AnyProperty,
                         bssid: AnyProperty,
                         bssid_hash: AnyProperty,

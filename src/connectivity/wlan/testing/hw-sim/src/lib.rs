@@ -23,6 +23,7 @@ use {
     wlan_common::{
         bss::Protection,
         data_writer,
+        format::SsidFmt as _,
         ie::{
             rsn::{
                 cipher::{CIPHER_CCMP_128, CIPHER_TKIP},
@@ -710,7 +711,7 @@ where
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ap_ssid), ap_bssid),
+            format!("connecting to {} ({:02X?})", ap_ssid.to_ssid_str_not_redactable(), ap_bssid),
             |event| {
                 handle_connect_events(
                     &event,

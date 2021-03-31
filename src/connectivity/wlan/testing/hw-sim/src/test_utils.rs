@@ -254,7 +254,7 @@ fn phy_event_from_beacons<'a>(
     EventHandlerBuilder::new().on_set_channel(beacon_sequence).build()
 }
 
-pub type ScanResult = (String, [u8; 6], bool, i8);
+pub type ScanResult = (Vec<u8>, [u8; 6], bool, i8);
 
 pub async fn scan_for_networks(
     phy: &Arc<wlantap::WlantapPhyProxy>,
@@ -292,7 +292,7 @@ pub async fn scan_for_networks(
     let mut scan_results = Vec::new();
     for result in scanned_networks {
         let id = result.id.expect("empty network ID");
-        let ssid = String::from_utf8_lossy(&id.ssid).to_string();
+        let ssid = id.ssid;
         let compatibility = result.compatibility.expect("empty compatibility");
 
         for entry in result.entries.expect("empty scan entries") {
