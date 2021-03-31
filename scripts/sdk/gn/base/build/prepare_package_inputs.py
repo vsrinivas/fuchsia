@@ -87,7 +87,8 @@ def _write_build_ids_txt(binary_paths, ids_txt_path):
     with open(ids_txt_path, 'w') as ids_file:
         # Create a set to dedupe stripped binary paths in case both the stripped and
         # unstripped versions of a binary are specified.
-        stripped_binary_paths = set(map(_get_stripped_path, binary_paths))
+        stripped_binary_paths = sorted(
+            set(map(_get_stripped_path, binary_paths)))
         readelf_stdout = subprocess.check_output(
             ['readelf', '-n'] + list(stripped_binary_paths)).decode('utf8')
 
