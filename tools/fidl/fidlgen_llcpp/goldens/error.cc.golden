@@ -21,73 +21,84 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
 extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 #ifdef __Fuchsia__
-::fidl_test_error::Example::ResultOf::foo::foo(
+}  // namespace fidl_test_error
+::fidl::WireResult<::fidl_test_error::Example::foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
     const ::fidl::StringView& s) {
-  ::fidl::OwnedEncodedMessage<::fidl_test_error::Example::fooRequest> _request(
-      zx_txid_t(0), s);
-  _request.GetOutgoingMessage().Call<::fidl_test_error::Example::fooResponse>(
-      _client, bytes_.data(), bytes_.size());
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_error::Example::foo>>
+      _request(zx_txid_t(0), s);
+  _request.GetOutgoingMessage()
+      .Call<::fidl::WireResponse<::fidl_test_error::Example::foo>>(
+          _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
 
-::fidl_test_error::Example::ResultOf::foo::foo(
+::fidl::WireResult<::fidl_test_error::Example::foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
     const ::fidl::StringView& s, zx_time_t _deadline) {
-  ::fidl::OwnedEncodedMessage<::fidl_test_error::Example::fooRequest> _request(
-      zx_txid_t(0), s);
-  _request.GetOutgoingMessage().Call<::fidl_test_error::Example::fooResponse>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_error::Example::foo>>
+      _request(zx_txid_t(0), s);
+  _request.GetOutgoingMessage()
+      .Call<::fidl::WireResponse<::fidl_test_error::Example::foo>>(
+          _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_error {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_error::Example::UnownedResultOf::foo::foo(
+}  // namespace fidl_test_error
+::fidl::WireUnownedResult<::fidl_test_error::Example::foo>::WireUnownedResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
     uint8_t* _request_bytes, uint32_t _request_byte_capacity,
     const ::fidl::StringView& s, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::UnownedEncodedMessage<::fidl_test_error::Example::fooRequest>
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_error::Example::foo>>
       _request(_request_bytes, _request_byte_capacity, 0, s);
-  _request.GetOutgoingMessage().Call<::fidl_test_error::Example::fooResponse>(
-      _client, _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage()
+      .Call<::fidl::WireResponse<::fidl_test_error::Example::foo>>(
+          _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_error {
 #endif  // __Fuchsia__
 
 }  // namespace fidl_test_error
 #ifdef __Fuchsia__
-::fidl_test_error::Example::ResultOf::foo fidl::internal::WireClientImpl<
-    ::fidl_test_error::Example>::foo_Sync(::fidl::StringView s) {
+::fidl::WireResult<::fidl_test_error::Example::foo>
+fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo_Sync(
+    ::fidl::StringView s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ::fidl_test_error::Example::ResultOf::foo(
+    return ::fidl::WireResult<::fidl_test_error::Example::foo>(
         ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
             _channel->handle()),
         s);
   }
-  return ::fidl_test_error::Example::ResultOf::foo(
+  return ::fidl::WireResult<::fidl_test_error::Example::foo>(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_error::Example::UnownedResultOf::foo
+::fidl::WireUnownedResult<::fidl_test_error::Example::foo>
 fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo_Sync(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ::fidl_test_error::Example::UnownedResultOf::foo(
+    return ::fidl::WireUnownedResult<::fidl_test_error::Example::foo>(
         ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ::fidl_test_error::Example::UnownedResultOf::foo(
+  return ::fidl::WireUnownedResult<::fidl_test_error::Example::foo>(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif  // __Fuchsia__
@@ -95,26 +106,31 @@ fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo_Sync(
 #ifdef __Fuchsia__
 ::fidl_test_error::Example::fooResponseContext::fooResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl_test_error::Example::fooResponse::Type,
+          ::fidl::WireResponse<::fidl_test_error::Example::foo>::Type,
           ::fidl_test_error::kExample_foo_Ordinal) {}
 
 void ::fidl_test_error::Example::fooResponseContext::OnReply(uint8_t* reply) {
-  OnReply(reinterpret_cast<::fidl_test_error::Example::fooResponse*>(reply));
+  OnReply(
+      reinterpret_cast<::fidl::WireResponse<::fidl_test_error::Example::foo>*>(
+          reply));
 }
 
 ::fidl::Result fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo(
     ::fidl::StringView s,
-    ::fit::callback<void(::fidl_test_error::Example::fooResponse* response)>
+    ::fit::callback<
+        void(::fidl::WireResponse<::fidl_test_error::Example::foo>* response)>
         _cb) {
   class ResponseContext final
       : public ::fidl_test_error::Example::fooResponseContext {
    public:
     ResponseContext(
-        ::fit::callback<void(::fidl_test_error::Example::fooResponse* response)>
+        ::fit::callback<void(
+            ::fidl::WireResponse<::fidl_test_error::Example::foo>* response)>
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl_test_error::Example::fooResponse* response) override {
+    void OnReply(::fidl::WireResponse<::fidl_test_error::Example::foo>*
+                     response) override {
       cb_(response);
 
       delete this;
@@ -123,14 +139,15 @@ void ::fidl_test_error::Example::fooResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::fidl_test_error::Example::fooResponse* response)>
+    ::fit::callback<void(
+        ::fidl::WireResponse<::fidl_test_error::Example::foo>* response)>
         cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  ::fidl_test_error::Example::fooRequest::OwnedEncodedMessage _request(
-      _context->Txid(), s);
+  ::fidl::WireRequest<::fidl_test_error::Example::foo>::OwnedEncodedMessage
+      _request(_context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -139,8 +156,9 @@ void ::fidl_test_error::Example::fooResponseContext::OnReply(uint8_t* reply) {
     ::fidl_test_error::Example::fooResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  ::fidl_test_error::Example::fooRequest::UnownedEncodedMessage _request(
-      _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
+  ::fidl::WireRequest<::fidl_test_error::Example::foo>::UnownedEncodedMessage
+      _request(_request_buffer.data, _request_buffer.capacity, _context->Txid(),
+               s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif  // __Fuchsia__
@@ -161,7 +179,8 @@ namespace methods {
 void ExampleDispatchfoo(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
   auto message =
-      reinterpret_cast<::fidl_test_error::Example::fooRequest*>(bytes);
+      reinterpret_cast<::fidl::WireRequest<::fidl_test_error::Example::foo>*>(
+          bytes);
   ::fidl::WireInterface<::fidl_test_error::Example>::fooCompleter::Sync
       completer(txn);
   reinterpret_cast<::fidl_test_error::Example::Interface*>(interface)->foo(
@@ -174,7 +193,8 @@ namespace entries {
 
 ::fidl::internal::MethodEntry Example[] = {
     {::fidl_test_error::kExample_foo_Ordinal,
-     ::fidl_test_error::Example::fooRequest::Type, methods::ExampleDispatchfoo},
+     ::fidl::WireRequest<::fidl_test_error::Example::foo>::Type,
+     methods::ExampleDispatchfoo},
 };
 
 }  // namespace entries
@@ -215,7 +235,8 @@ namespace fidl_test_error {
 ::fidl::Result
 fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
     ::fidl_test_error::wire::Example_foo_Result result) {
-  ::fidl::OwnedEncodedMessage<::fidl_test_error::Example::fooResponse>
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_error::Example::foo>>
       _response{result};
   return ::fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
@@ -247,8 +268,8 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
 fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
     ::fidl_test_error::wire::Example_foo_Result result) {
-  ::fidl_test_error::Example::fooResponse::UnownedEncodedMessage _response(
-      _buffer.data, _buffer.capacity, result);
+  ::fidl::WireResponse<::fidl_test_error::Example::foo>::UnownedEncodedMessage
+      _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -268,11 +289,12 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::ReplySuccess(
 }
 #endif  // __Fuchsia__
 
-void ::fidl_test_error::Example::fooRequest::_InitHeader(zx_txid_t _txid) {
+void ::fidl::WireRequest<::fidl_test_error::Example::foo>::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, ::fidl_test_error::kExample_foo_Ordinal);
 }
 
-void ::fidl_test_error::Example::fooResponse::_InitHeader() {
+void ::fidl::WireResponse<::fidl_test_error::Example::foo>::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, ::fidl_test_error::kExample_foo_Ordinal);
 }
 

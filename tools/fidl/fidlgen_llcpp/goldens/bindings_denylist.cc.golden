@@ -15,59 +15,64 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
 #ifdef __Fuchsia__
-::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
-    LibfuzzerNeedsNonemptyProtocol::LibfuzzerNeedsNonemptyProtocol(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-            _client) {
+}  // namespace fidl_test_bindingsdenylist
+::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                       LibfuzzerNeedsNonemptyProtocol>::
+    WireResult(::fidl::UnownedClientEnd<
+               ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+                   _client) {
   ::fidl::OwnedEncodedMessage<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocolRequest>
+      ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
-      .Call<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocolResponse>(_client, bytes_.data(),
-                                                        bytes_.size());
+      .Call<::fidl::WireResponse<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>>(_client, bytes_.data(),
+                                               bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
 
-::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
-    LibfuzzerNeedsNonemptyProtocol::LibfuzzerNeedsNonemptyProtocol(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-            _client,
-        zx_time_t _deadline) {
+::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                       LibfuzzerNeedsNonemptyProtocol>::
+    WireResult(::fidl::UnownedClientEnd<
+                   ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+                   _client,
+               zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocolRequest>
+      ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
-      .Call<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocolResponse>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
+      .Call<::fidl::WireResponse<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>>(_client, bytes_.data(),
+                                               bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_bindingsdenylist {
 #endif  // __Fuchsia__
 
 }  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
-::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
-    LibfuzzerNeedsNonemptyProtocol
-    fidl::internal::WireClientImpl<
-        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-        LibfuzzerNeedsNonemptyProtocol_Sync() {
+::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                       LibfuzzerNeedsNonemptyProtocol>
+fidl::internal::WireClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+    LibfuzzerNeedsNonemptyProtocol_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
-        LibfuzzerNeedsNonemptyProtocol(
-            ::fidl::UnownedClientEnd<
-                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
-                _channel->handle()));
+    return ::fidl::WireResult<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
+            _channel->handle()));
   }
-  return ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
-      LibfuzzerNeedsNonemptyProtocol(
-          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                LibfuzzerNeedsNonemptyProtocol>(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif  // __Fuchsia__
 
@@ -76,37 +81,41 @@ extern "C" const fidl_type_t
     LibfuzzerNeedsNonemptyProtocolResponseContext::
         LibfuzzerNeedsNonemptyProtocolResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocolResponse::Type,
+          ::fidl::WireResponse<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocol>::Type,
           ::fidl_test_bindingsdenylist::
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal) {}
 
 void ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
     LibfuzzerNeedsNonemptyProtocolResponseContext::OnReply(uint8_t* reply) {
-  OnReply(reinterpret_cast<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                               LibfuzzerNeedsNonemptyProtocolResponse*>(reply));
+  OnReply(reinterpret_cast<::fidl::WireResponse<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocol>*>(reply));
 }
 
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
         ::fit::callback<
-            void(::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                     LibfuzzerNeedsNonemptyProtocolResponse* response)>
+            void(::fidl::WireResponse<
+                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                     LibfuzzerNeedsNonemptyProtocol>* response)>
             _cb) {
   class ResponseContext final
       : public ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
             LibfuzzerNeedsNonemptyProtocolResponseContext {
    public:
     ResponseContext(::fit::callback<
-                    void(::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                             LibfuzzerNeedsNonemptyProtocolResponse* response)>
+                    void(::fidl::WireResponse<
+                         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                             LibfuzzerNeedsNonemptyProtocol>* response)>
                         cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(
-        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-            LibfuzzerNeedsNonemptyProtocolResponse* response) override {
+    void OnReply(::fidl::WireResponse<
+                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                     LibfuzzerNeedsNonemptyProtocol>* response) override {
       cb_(response);
 
       delete this;
@@ -115,16 +124,17 @@ void ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                             LibfuzzerNeedsNonemptyProtocolResponse* response)>
+    ::fit::callback<void(::fidl::WireResponse<
+                         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                             LibfuzzerNeedsNonemptyProtocol>* response)>
         cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-      LibfuzzerNeedsNonemptyProtocolRequest::OwnedEncodedMessage _request(
-          _context->Txid());
+  ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                          LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
+      _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -135,9 +145,9 @@ void ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
             LibfuzzerNeedsNonemptyProtocolResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-      LibfuzzerNeedsNonemptyProtocolRequest::OwnedEncodedMessage _request(
-          _context->Txid());
+  ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                          LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
+      _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif  // __Fuchsia__
@@ -172,8 +182,8 @@ namespace entries {
 ::fidl::internal::MethodEntry OnlyLibfuzzerAndDeps[] = {
     {::fidl_test_bindingsdenylist::
          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
-     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-         LibfuzzerNeedsNonemptyProtocolRequest::Type,
+     ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                             LibfuzzerNeedsNonemptyProtocol>::Type,
      methods::OnlyLibfuzzerAndDepsDispatchLibfuzzerNeedsNonemptyProtocol},
 };
 
@@ -216,8 +226,8 @@ namespace fidl_test_bindingsdenylist {
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocolCompleterBase::Reply() {
   ::fidl::OwnedEncodedMessage<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocolResponse>
+      ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                               LibfuzzerNeedsNonemptyProtocol>>
       _response{};
   return ::fidl::WireInterface<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
@@ -226,16 +236,17 @@ fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
 }
 #endif  // __Fuchsia__
 
-void ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-    LibfuzzerNeedsNonemptyProtocolRequest::_InitHeader(zx_txid_t _txid) {
+void ::fidl::WireRequest<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       ::fidl_test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
 }
 
-void ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-    LibfuzzerNeedsNonemptyProtocolResponse::_InitHeader() {
+void ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0,
       ::fidl_test_bindingsdenylist::

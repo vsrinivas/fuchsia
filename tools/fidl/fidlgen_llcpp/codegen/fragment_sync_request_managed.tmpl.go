@@ -7,7 +7,8 @@ package codegen
 const fragmentSyncRequestManagedTmpl = `
 {{- define "SyncRequestManagedMethodDefinition" }}
 {{- IfdefFuchsia -}}
-{{ .Protocol }}::ResultOf::{{ .Name }}::{{ .Name }}(
+{{- EnsureNamespace "" }}
+{{ .WireResult }}::{{ .WireResult.Self }}(
     ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
     {{- .RequestArgs | CommaMessagePrototype }})
    {
@@ -26,7 +27,7 @@ const fragmentSyncRequestManagedTmpl = `
 }
   {{- if .HasResponse }}
 
-{{ .Protocol }}::ResultOf::{{ .Name }}::{{ .Name }}(
+{{ .WireResult }}::{{ .WireResult.Self }}(
     ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
     {{- .RequestArgs | CommaMessagePrototype -}}
     , zx_time_t _deadline)

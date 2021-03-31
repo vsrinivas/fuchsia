@@ -52,174 +52,20 @@ class Parent final {
   Parent() = delete;
 
  public:
-  class First;
-
-  struct FirstRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
-    explicit FirstRequest(
-        zx_txid_t _txid,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-            request)
-        : request(std::move(request)) {
-      _InitHeader(_txid);
-    }
-    explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_inheritancewithrecursivedecl::
-            fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    void _CloseHandles();
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(
-          uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request)
-          : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        FIDL_ALIGNDECL FirstRequest _request(_txid, request);
-        message_.Encode<FirstRequest>(&_request);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            FirstRequest* request)
-          : message_(bytes, byte_size, sizeof(FirstRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        message_.Encode<FirstRequest>(request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      zx_handle_disposition_t
-          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(
-          zx_txid_t _txid,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request)
-          : message_(bytes_.data(), bytes_.size(), _txid, request) {}
-      explicit OwnedEncodedMessage(FirstRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<FirstRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<FirstRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-      ~DecodedMessage() {
-        if (ok() && (PrimaryObject() != nullptr)) {
-          PrimaryObject()->_CloseHandles();
-        }
-      }
-
-      FirstRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<FirstRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
+  class First final {
+    First() = delete;
   };
 
+  using FirstRequest = ::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
    public:
-    class First final : public ::fidl::Result {
-     public:
-      explicit First(
-          ::fidl::UnownedClientEnd<
-              ::fidl_test_inheritancewithrecursivedecl::Parent>
-              _client,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request);
-      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      First(First&&) = delete;
-      First(const First&) = delete;
-      First* operator=(First&&) = delete;
-      First* operator=(const First&) = delete;
-      ~First() = default;
-
-     private:
-    };
+    using First = ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -228,56 +74,16 @@ class Parent final {
     UnownedResultOf() = delete;
 
    public:
-    class First final : public ::fidl::Result {
-     public:
-      explicit First(
-          ::fidl::UnownedClientEnd<
-              ::fidl_test_inheritancewithrecursivedecl::Parent>
-              _client,
-          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request);
-      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      First(First&&) = delete;
-      First(const First&) = delete;
-      First* operator=(First&&) = delete;
-      First* operator=(const First&) = delete;
-      ~First() = default;
-    };
+    using First = ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>|,
   // avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::First First(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_inheritancewithrecursivedecl::Parent>
-            _client_end,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-            request) {
-      return ResultOf::First(_client_end, request);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::First First(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_inheritancewithrecursivedecl::Parent>
-            _client_end,
-        ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-            request) {
-      return UnownedResultOf::First(_client_end, _request_buffer.data,
-                                    _request_buffer.capacity, request);
-    }
-  };
+  using Call =
+      ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Parent>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>;
@@ -322,6 +128,228 @@ class Parent final {
       ::fidl_test_inheritancewithrecursivedecl::Parent>;
 };
 }  // namespace fidl_test_inheritancewithrecursivedecl
+template <>
+struct ::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
+  explicit WireRequest(
+      zx_txid_t _txid,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request)
+      : request(std::move(request)) {
+    _InitHeader(_txid);
+  }
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_inheritancewithrecursivedecl::
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  void _CloseHandles();
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(
+        uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid, request);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    zx_handle_disposition_t
+        handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(
+        zx_txid_t _txid,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
+        : message_(bytes_.data(), bytes_.size(), _txid, request) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+    ~DecodedMessage() {
+      if (ok() && (PrimaryObject() != nullptr)) {
+        PrimaryObject()->_CloseHandles();
+      }
+    }
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+class ::fidl::WireResult<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          _client,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          _client,
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a
+// |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>|, avoiding
+// setting up a client.
+template <>
+class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Parent> final {
+  WireCall() = delete;
+
+ public:
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>
+  First(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          _client_end,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          request) {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(_client_end,
+                                                                 request);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>
+  First(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          _client_end,
+      ::fidl::BufferSpan _request_buffer,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          request) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
+        _client_end, _request_buffer.data, _request_buffer.capacity, request);
+  }
+};
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -380,22 +408,25 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl_test_inheritancewithrecursivedecl::Parent::ResultOf::First First(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request) {
-    return ::fidl_test_inheritancewithrecursivedecl::Parent::ResultOf::First(
+  ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>
+  First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+            request) {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
         this->client_end(), request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_inheritancewithrecursivedecl::Parent::UnownedResultOf::First
+  ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>
   First(::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
-    return ::fidl_test_inheritancewithrecursivedecl::Parent::UnownedResultOf::
-        First(this->client_end(), _request_buffer.data,
-              _request_buffer.capacity, request);
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        request);
   }
 
  private:
@@ -446,335 +477,27 @@ class Child final {
   Child() = delete;
 
  public:
-  class First;
-  class Second;
-
-  struct FirstRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
-    explicit FirstRequest(
-        zx_txid_t _txid,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-            request)
-        : request(std::move(request)) {
-      _InitHeader(_txid);
-    }
-    explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_inheritancewithrecursivedecl::
-            fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    void _CloseHandles();
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(
-          uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request)
-          : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        FIDL_ALIGNDECL FirstRequest _request(_txid, request);
-        message_.Encode<FirstRequest>(&_request);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            FirstRequest* request)
-          : message_(bytes, byte_size, sizeof(FirstRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        message_.Encode<FirstRequest>(request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      zx_handle_disposition_t
-          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(
-          zx_txid_t _txid,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request)
-          : message_(bytes_.data(), bytes_.size(), _txid, request) {}
-      explicit OwnedEncodedMessage(FirstRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<FirstRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<FirstRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-      ~DecodedMessage() {
-        if (ok() && (PrimaryObject() != nullptr)) {
-          PrimaryObject()->_CloseHandles();
-        }
-      }
-
-      FirstRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<FirstRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
+  class First final {
+    First() = delete;
+  };
+  class Second final {
+    Second() = delete;
   };
 
-  struct SecondRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
-    explicit SecondRequest(
-        zx_txid_t _txid,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-            request)
-        : request(std::move(request)) {
-      _InitHeader(_txid);
-    }
-    explicit SecondRequest(zx_txid_t _txid) { _InitHeader(_txid); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_inheritancewithrecursivedecl::
-            fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    void _CloseHandles();
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(
-          uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request)
-          : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        FIDL_ALIGNDECL SecondRequest _request(_txid, request);
-        message_.Encode<SecondRequest>(&_request);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            SecondRequest* request)
-          : message_(bytes, byte_size, sizeof(SecondRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        message_.Encode<SecondRequest>(request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      zx_handle_disposition_t
-          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(
-          zx_txid_t _txid,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request)
-          : message_(bytes_.data(), bytes_.size(), _txid, request) {}
-      explicit OwnedEncodedMessage(SecondRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<SecondRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<SecondRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-      ~DecodedMessage() {
-        if (ok() && (PrimaryObject() != nullptr)) {
-          PrimaryObject()->_CloseHandles();
-        }
-      }
-
-      SecondRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<SecondRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
-  };
-
+  using FirstRequest = ::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>;
+  using SecondRequest = ::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>;
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
    public:
-    class First final : public ::fidl::Result {
-     public:
-      explicit First(
-          ::fidl::UnownedClientEnd<
-              ::fidl_test_inheritancewithrecursivedecl::Child>
-              _client,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request);
-      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      First(First&&) = delete;
-      First(const First&) = delete;
-      First* operator=(First&&) = delete;
-      First* operator=(const First&) = delete;
-      ~First() = default;
-
-     private:
-    };
-    class Second final : public ::fidl::Result {
-     public:
-      explicit Second(
-          ::fidl::UnownedClientEnd<
-              ::fidl_test_inheritancewithrecursivedecl::Child>
-              _client,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request);
-      explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      Second(Second&&) = delete;
-      Second(const Second&) = delete;
-      Second* operator=(Second&&) = delete;
-      Second* operator=(const Second&) = delete;
-      ~Second() = default;
-
-     private:
-    };
+    using First = ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>;
+    using Second = ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>;
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -783,96 +506,18 @@ class Child final {
     UnownedResultOf() = delete;
 
    public:
-    class First final : public ::fidl::Result {
-     public:
-      explicit First(
-          ::fidl::UnownedClientEnd<
-              ::fidl_test_inheritancewithrecursivedecl::Child>
-              _client,
-          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request);
-      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      First(First&&) = delete;
-      First(const First&) = delete;
-      First* operator=(First&&) = delete;
-      First* operator=(const First&) = delete;
-      ~First() = default;
-    };
-    class Second final : public ::fidl::Result {
-     public:
-      explicit Second(
-          ::fidl::UnownedClientEnd<
-              ::fidl_test_inheritancewithrecursivedecl::Child>
-              _client,
-          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-              request);
-      explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      Second(Second&&) = delete;
-      Second(const Second&) = delete;
-      Second* operator=(Second&&) = delete;
-      Second* operator=(const Second&) = delete;
-      ~Second() = default;
-    };
+    using First = ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>;
+    using Second = ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>|,
   // avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::First First(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_inheritancewithrecursivedecl::Child>
-            _client_end,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-            request) {
-      return ResultOf::First(_client_end, request);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::First First(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_inheritancewithrecursivedecl::Child>
-            _client_end,
-        ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-            request) {
-      return UnownedResultOf::First(_client_end, _request_buffer.data,
-                                    _request_buffer.capacity, request);
-    }
-
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::Second Second(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_inheritancewithrecursivedecl::Child>
-            _client_end,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-            request) {
-      return ResultOf::Second(_client_end, request);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::Second Second(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_inheritancewithrecursivedecl::Child>
-            _client_end,
-        ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-            request) {
-      return UnownedResultOf::Second(_client_end, _request_buffer.data,
-                                     _request_buffer.capacity, request);
-    }
-  };
+  using Call =
+      ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>;
@@ -917,6 +562,439 @@ class Child final {
       ::fidl_test_inheritancewithrecursivedecl::Child>;
 };
 }  // namespace fidl_test_inheritancewithrecursivedecl
+template <>
+struct ::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Child::First>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
+  explicit WireRequest(
+      zx_txid_t _txid,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request)
+      : request(std::move(request)) {
+    _InitHeader(_txid);
+  }
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_inheritancewithrecursivedecl::
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  void _CloseHandles();
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(
+        uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid, request);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    zx_handle_disposition_t
+        handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(
+        zx_txid_t _txid,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
+        : message_(bytes_.data(), bytes_.size(), _txid, request) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+    ~DecodedMessage() {
+      if (ok() && (PrimaryObject() != nullptr)) {
+        PrimaryObject()->_CloseHandles();
+      }
+    }
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+struct ::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
+  explicit WireRequest(
+      zx_txid_t _txid,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request)
+      : request(std::move(request)) {
+    _InitHeader(_txid);
+  }
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_inheritancewithrecursivedecl::
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  void _CloseHandles();
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(
+        uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid, request);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    zx_handle_disposition_t
+        handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(
+        zx_txid_t _txid,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
+        : message_(bytes_.data(), bytes_.size(), _txid, request) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+    ~DecodedMessage() {
+      if (ok() && (PrimaryObject() != nullptr)) {
+        PrimaryObject()->_CloseHandles();
+      }
+    }
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+class ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_inheritancewithrecursivedecl::Child::First>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client,
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+template <>
+class ::fidl::WireResult<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client,
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+          request);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a
+// |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>|, avoiding
+// setting up a client.
+template <>
+class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child> final {
+  WireCall() = delete;
+
+ public:
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>
+  First(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client_end,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          request) {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(_client_end,
+                                                                request);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>
+  First(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client_end,
+      ::fidl::BufferSpan _request_buffer,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          request) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(
+        _client_end, _request_buffer.data, _request_buffer.capacity, request);
+  }
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>
+  Second(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client_end,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          request) {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(_client_end,
+                                                                 request);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>
+  Second(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          _client_end,
+      ::fidl::BufferSpan _request_buffer,
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          request) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
+        _client_end, _request_buffer.data, _request_buffer.capacity, request);
+  }
+};
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -975,42 +1053,48 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::First First(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request) {
-    return ::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::First(
+  ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>
+  First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+            request) {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(
         this->client_end(), request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::First First(
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request) {
-    return ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::
-        First(this->client_end(), _request_buffer.data,
-              _request_buffer.capacity, request);
+  ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>
+  First(::fidl::BufferSpan _request_buffer,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+            request) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        request);
   }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::Second Second(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request) {
-    return ::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::Second(
+  ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::Second>
+  Second(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+             request) {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
         this->client_end(), request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::Second
+  ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>
   Second(::fidl::BufferSpan _request_buffer,
          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
              request) {
-    return ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::
-        Second(this->client_end(), _request_buffer.data,
-               _request_buffer.capacity, request);
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        request);
   }
 
  private:
@@ -1054,49 +1138,57 @@ class ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest>
+struct IsFidlType<::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest) ==
-    ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest::
-        PrimarySize);
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_inheritancewithrecursivedecl::Parent::First>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>::PrimarySize);
 static_assert(
-    offsetof(::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest,
-             request) == 16);
-
-template <>
-struct IsFidlType<::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest) ==
-    ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest::PrimarySize);
-static_assert(
-    offsetof(::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest,
+    offsetof(::fidl::WireRequest<
+                 ::fidl_test_inheritancewithrecursivedecl::Parent::First>,
              request) == 16);
 
 template <>
 struct IsFidlType<
-    ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest>
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest>
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest) ==
-    ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest::
-        PrimarySize);
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_inheritancewithrecursivedecl::Child::First>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>::PrimarySize);
 static_assert(
-    offsetof(::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest,
+    offsetof(::fidl::WireRequest<
+                 ::fidl_test_inheritancewithrecursivedecl::Child::First>,
+             request) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_inheritancewithrecursivedecl::Child::Second>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<
+                 ::fidl_test_inheritancewithrecursivedecl::Child::Second>,
              request) == 16);
 }  // namespace fidl
 namespace fidl_test_inheritancewithrecursivedecl {

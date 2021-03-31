@@ -323,11 +323,7 @@ class SomeProtocol final {
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_handles::SomeProtocol>|,
   // avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-  };
+  using Call = ::fidl::WireCall<::fidl_test_handles::SomeProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_handles::SomeProtocol>;
 
@@ -370,6 +366,16 @@ class SomeProtocol final {
       ::fidl::internal::WireWeakEventSender<::fidl_test_handles::SomeProtocol>;
 };
 }  // namespace fidl_test_handles
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_handles::SomeProtocol>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::WireCall<::fidl_test_handles::SomeProtocol> final {
+  WireCall() = delete;
+
+ public:
+};
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

@@ -111,6 +111,12 @@ var (
 	WireEventSender           = fidlNs.Member("WireEventSender")
 	WireWeakEventSender       = internalNs.Member("WireWeakEventSender")
 	WireClientImpl            = internalNs.Member("WireClientImpl")
+
+	WireCall          = fidlNs.Member("WireCall")
+	WireRequest       = fidlNs.Member("WireRequest")
+	WireResponse      = fidlNs.Member("WireResponse")
+	WireResult        = fidlNs.Member("WireResult")
+	WireUnownedResult = fidlNs.Member("WireUnownedResult")
 )
 
 type wireTypeNames struct {
@@ -129,6 +135,7 @@ type wireTypeNames struct {
 	WireEventSender           Name
 	WireWeakEventSender       Name
 	WireClientImpl            Name
+	WireCall                  Name
 }
 
 func newWireTypeNames(protocolVariants NameVariants) wireTypeNames {
@@ -145,6 +152,7 @@ func newWireTypeNames(protocolVariants NameVariants) wireTypeNames {
 		WireEventSender:           WireEventSender.Template(p),
 		WireWeakEventSender:       WireWeakEventSender.Template(p),
 		WireClientImpl:            WireClientImpl.Template(p),
+		WireCall:                  WireCall.Template(p),
 	}
 }
 
@@ -310,23 +318,27 @@ type wireMethod struct {
 	WireCompleter       Name
 	WireCompleterBase   Name
 	WireRequest         Name
+	WireRequestAlias    Name
 	WireResponse        Name
+	WireResponseAlias   Name
 	WireResponseContext Name
-	WireResultOf        Name
-	WireUnownedResultOf Name
+	WireResult          Name
+	WireUnownedResult   Name
 }
 
-func newWireMethod(name string, wireTypes wireTypeNames, marker Name) wireMethod {
-	m := marker.Nest(name)
+func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker Name, methodMarker Name) wireMethod {
+	m := protocolMarker.Nest(name)
 	i := wireTypes.WireInterface.Nest(name)
 	return wireMethod{
 		WireCompleter:       i.AppendName("Completer"),
 		WireCompleterBase:   i.AppendName("CompleterBase"),
-		WireRequest:         m.AppendName("Request"),
-		WireResponse:        m.AppendName("Response"),
+		WireRequest:         WireRequest.Template(methodMarker),
+		WireRequestAlias:    m.AppendName("Request"),
+		WireResponse:        WireResponse.Template(methodMarker),
+		WireResponseAlias:   m.AppendName("Response"),
 		WireResponseContext: m.AppendName("ResponseContext"),
-		WireResultOf:        marker.Nest("ResultOf").Nest(name),
-		WireUnownedResultOf: marker.Nest("UnownedResultOf").Nest(name),
+		WireResult:          WireResult.Template(methodMarker),
+		WireUnownedResult:   WireUnownedResult.Template(methodMarker),
 	}
 }
 
@@ -334,6 +346,7 @@ func newWireMethod(name string, wireTypes wireTypeNames, marker Name) wireMethod
 // the compiler.
 type methodInner struct {
 	protocolName NameVariants
+	Marker       NameVariants
 	wireMethod
 	baseCodingTableName string
 	requestTypeShape    fidlgen.TypeShape
@@ -354,15 +367,12 @@ type methodInner struct {
 type Method struct {
 	methodInner
 	NameInLowerSnakeCase string
-	Marker               NameVariants
 	OrdinalName          NameVariants
 	Request              message
 	Response             message
 	CallbackType         string
 	ResponseHandlerType  string
 	ResponderType        string
-	WireResult           Name
-	WireUnownedResult    Name
 	// Protocol is a reference to the containing protocol, for the
 	// convenience of golang templates.
 	Protocol *Protocol
@@ -419,7 +429,6 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 	m := Method{
 		methodInner:          inner,
 		NameInLowerSnakeCase: fidlgen.ToSnakeCase(inner.Name),
-		Marker:               inner.protocolName.Nest(inner.Name),
 		OrdinalName: NameVariants{
 			Natural: inner.protocolName.Natural.Namespace().Append("internal").Member(ordinalName),
 			Wire:    inner.protocolName.Wire.Namespace().Member(ordinalName),
@@ -437,8 +446,6 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 		CallbackType:        callbackType,
 		ResponseHandlerType: fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName.Natural.Name(), inner.Name),
 		ResponderType:       fmt.Sprintf("%s_%s_Responder", inner.protocolName.Natural.Name(), inner.Name),
-		WireResult:          inner.protocolName.Wire.Nest("ResultOf").Nest(inner.Name),
-		WireUnownedResult:   inner.protocolName.Wire.Nest("UnownedResultOf").Nest(inner.Name),
 		Protocol:            nil,
 	}
 	return m
@@ -508,14 +515,17 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			result = c.resultForUnion[v.Response[0].Type.Identifier]
 		}
 
+		methodMarker := protocolName.Nest(name)
+
 		method := newMethod(methodInner{
 			protocolName: protocolName,
 			// Using the raw identifier v.Name instead of the name after
 			// reserved words logic, since that's the behavior in fidlc.
 			baseCodingTableName: codingTableName + string(v.Name),
+			Marker:              methodMarker,
 			requestTypeShape:    v.RequestTypeShapeV1,
 			responseTypeShape:   v.ResponseTypeShapeV1,
-			wireMethod:          newWireMethod(name, wireTypeNames, protocolName.Wire),
+			wireMethod:          newWireMethod(name, wireTypeNames, protocolName.Wire, methodMarker.Wire),
 			Attributes:          v.Attributes,
 			Name:                name,
 			Ordinal:             v.Ordinal,

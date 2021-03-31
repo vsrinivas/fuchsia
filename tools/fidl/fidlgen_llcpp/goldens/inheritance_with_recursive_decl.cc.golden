@@ -14,34 +14,43 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstResponseTable;
 #ifdef __Fuchsia__
-::fidl_test_inheritancewithrecursivedecl::Parent::ResultOf::First::First(
-    ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-        _client,
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-        request) {
-  ::fidl::OwnedEncodedMessage<
-      ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest>
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>::
+    WireResult(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Parent>
+            _client,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
       _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_inheritancewithrecursivedecl::Parent::UnownedResultOf::First::First(
-    ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-        _client,
-    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-        request) {
-  ::fidl::UnownedEncodedMessage<
-      ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest>
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fidl::WireUnownedResult<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Parent>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request) {
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
       _request(_request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritancewithrecursivedecl
@@ -51,12 +60,12 @@ extern "C" const fidl_type_t
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_inheritancewithrecursivedecl::Parent::ResultOf::First(
-            ::fidl::UnownedClientEnd<
-                ::fidl_test_inheritancewithrecursivedecl::Parent>(
-                _channel->handle()),
-            request);
+    auto _res = ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Parent>(
+            _channel->handle()),
+        request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -70,12 +79,12 @@ extern "C" const fidl_type_t
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_inheritancewithrecursivedecl::Parent::UnownedResultOf::
-            First(::fidl::UnownedClientEnd<
-                      ::fidl_test_inheritancewithrecursivedecl::Parent>(
-                      _channel->handle()),
-                  _request_buffer.data, _request_buffer.capacity, request);
+    auto _res = ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Parent>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -98,8 +107,8 @@ namespace methods {
 
 void ParentDispatchFirst(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest*>(bytes);
+  auto message = reinterpret_cast<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>*>(bytes);
   ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>::
       FirstCompleter::Sync completer(txn);
   reinterpret_cast<
@@ -113,7 +122,8 @@ namespace entries {
 
 ::fidl::internal::MethodEntry Parent[] = {
     {::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
-     ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest::Type,
+     ::fidl::WireRequest<
+         ::fidl_test_inheritancewithrecursivedecl::Parent::First>::Type,
      methods::ParentDispatchFirst},
 };
 
@@ -151,19 +161,20 @@ fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>::
 namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
-void ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest::
-    _InitHeader(zx_txid_t _txid) {
+}  // namespace fidl_test_inheritancewithrecursivedecl
+
+void ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::
+                             First>::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal);
 }
 
-void ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest::
-    _CloseHandles() {
+void ::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>::_CloseHandles() {
   request.reset();
 }
 
-}  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
@@ -187,66 +198,83 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondResponseTable;
 #ifdef __Fuchsia__
-::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::First::First(
-    ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
-        _client,
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-        request) {
-  ::fidl::OwnedEncodedMessage<
-      ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest>
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>::
+    WireResult(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>
+            _client,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>>
       _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::First::First(
-    ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
-        _client,
-    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-        request) {
-  ::fidl::UnownedEncodedMessage<
-      ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest>
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fidl::WireUnownedResult<
+    ::fidl_test_inheritancewithrecursivedecl::Child::First>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request) {
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>>
       _request(_request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::Second::Second(
-    ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
-        _client,
-    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-        request) {
-  ::fidl::OwnedEncodedMessage<
-      ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest>
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::Second>::
+    WireResult(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>
+            _client,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
       _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::Second::
-    Second(::fidl::UnownedClientEnd<
-               ::fidl_test_inheritancewithrecursivedecl::Child>
-               _client,
-           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-           ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
-               request) {
-  ::fidl::UnownedEncodedMessage<
-      ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest>
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fidl::WireUnownedResult<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request) {
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
       _request(_request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl_test_inheritancewithrecursivedecl
@@ -256,12 +284,12 @@ extern "C" const fidl_type_t
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::First(
-            ::fidl::UnownedClientEnd<
-                ::fidl_test_inheritancewithrecursivedecl::Child>(
-                _channel->handle()),
-            request);
+    auto _res = ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
+        request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -275,12 +303,12 @@ extern "C" const fidl_type_t
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::First(
-            ::fidl::UnownedClientEnd<
-                ::fidl_test_inheritancewithrecursivedecl::Child>(
-                _channel->handle()),
-            _request_buffer.data, _request_buffer.capacity, request);
+    auto _res = ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -293,12 +321,12 @@ extern "C" const fidl_type_t
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_inheritancewithrecursivedecl::Child::ResultOf::Second(
-            ::fidl::UnownedClientEnd<
-                ::fidl_test_inheritancewithrecursivedecl::Child>(
-                _channel->handle()),
-            request);
+    auto _res = ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
+        request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -312,12 +340,12 @@ extern "C" const fidl_type_t
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_inheritancewithrecursivedecl::Child::UnownedResultOf::
-            Second(::fidl::UnownedClientEnd<
-                       ::fidl_test_inheritancewithrecursivedecl::Child>(
-                       _channel->handle()),
-                   _request_buffer.data, _request_buffer.capacity, request);
+    auto _res = ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -340,8 +368,8 @@ namespace methods {
 
 void ChildDispatchFirst(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest*>(bytes);
+  auto message = reinterpret_cast<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>*>(bytes);
   ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::
       FirstCompleter::Sync completer(txn);
   reinterpret_cast<::fidl_test_inheritancewithrecursivedecl::Child::Interface*>(
@@ -351,8 +379,8 @@ void ChildDispatchFirst(void* interface, void* bytes,
 
 void ChildDispatchSecond(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest*>(bytes);
+  auto message = reinterpret_cast<::fidl::WireRequest<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>*>(bytes);
   ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::
       SecondCompleter::Sync completer(txn);
   reinterpret_cast<::fidl_test_inheritancewithrecursivedecl::Child::Interface*>(
@@ -366,10 +394,12 @@ namespace entries {
 
 ::fidl::internal::MethodEntry Child[] = {
     {::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
-     ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest::Type,
+     ::fidl::WireRequest<
+         ::fidl_test_inheritancewithrecursivedecl::Child::First>::Type,
      methods::ChildDispatchFirst},
     {::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
-     ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest::Type,
+     ::fidl::WireRequest<
+         ::fidl_test_inheritancewithrecursivedecl::Child::Second>::Type,
      methods::ChildDispatchSecond},
 };
 
@@ -407,31 +437,32 @@ fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::
 namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
-void ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest::_InitHeader(
-    zx_txid_t _txid) {
+}  // namespace fidl_test_inheritancewithrecursivedecl
+
+void ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::
+                             First>::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal);
 }
 
-void ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest::
-    _CloseHandles() {
+void ::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Child::First>::_CloseHandles() {
   request.reset();
 }
 
-void ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::
+                             Second>::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal);
 }
 
-void ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest::
-    _CloseHandles() {
+void ::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>::_CloseHandles() {
   request.reset();
 }
 
-}  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__

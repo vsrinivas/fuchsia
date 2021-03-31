@@ -27,7 +27,8 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
 {{- IfdefFuchsia -}}
-{{ .Protocol }}::UnownedResultOf::{{ .Name }}::{{ .Name }}(
+{{- EnsureNamespace "" }}
+{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}(
   ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
   {{- if .RequestArgs -}}
   , uint8_t* _request_bytes, uint32_t _request_byte_capacity

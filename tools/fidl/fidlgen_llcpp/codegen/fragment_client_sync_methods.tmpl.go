@@ -9,11 +9,11 @@ const fragmentClientSyncMethodsTmpl = `
 {{ EnsureNamespace "" }}
   {{- if .HasResponse }}
 {{- IfdefFuchsia -}}
-{{ .WireUnownedResultOf }}
+{{ .WireUnownedResult }}
 {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return {{ .WireUnownedResultOf }}(
+    return {{ .WireUnownedResult }}(
       ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
     {{- if .RequestArgs -}}
       , _request_buffer.data, _request_buffer.capacity
@@ -21,7 +21,7 @@ const fragmentClientSyncMethodsTmpl = `
       {{- .RequestArgs | CommaParamNames -}},
       _response_buffer.data, _response_buffer.capacity);
   }
-  return {{ .WireUnownedResultOf }}(
+  return {{ .WireUnownedResult }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 {{- EndifFuchsia -}}
@@ -30,7 +30,7 @@ const fragmentClientSyncMethodsTmpl = `
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = {{ .WireUnownedResultOf }}(
+    auto _res = {{ .WireUnownedResult }}(
       ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
     {{- if .RequestArgs -}}
       , _request_buffer.data, _request_buffer.capacity
@@ -49,15 +49,15 @@ const fragmentClientSyncMethodsTmpl = `
 
   {{- if .HasResponse }}
 {{- IfdefFuchsia -}}
-{{ .WireResultOf }}
+{{ .WireResult }}
 {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ .RequestArgs | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return {{ .WireResultOf }}(
+    return {{ .WireResult }}(
       ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
       {{- .RequestArgs | CommaParamNames -}}
     );
   }
-  return {{ .WireResultOf }}(
+  return {{ .WireResult }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 {{- EndifFuchsia -}}
@@ -65,7 +65,7 @@ const fragmentClientSyncMethodsTmpl = `
 {{- IfdefFuchsia -}}
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ .RequestArgs | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = {{ .WireResultOf }}(
+    auto _res = {{ .WireResult }}(
       ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
       {{- .RequestArgs | CommaParamNames -}}
     );

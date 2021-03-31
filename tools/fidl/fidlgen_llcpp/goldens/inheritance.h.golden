@@ -50,299 +50,19 @@ class super final {
   super() = delete;
 
  public:
-  class foo;
-
-  struct fooResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int64_t y;
-    explicit fooResponse(int64_t y) : y(y) { _InitHeader(); }
-    fooResponse() { _InitHeader(); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_inheritance::fidl_test_inheritance_superfooResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
-          : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-        FIDL_ALIGNDECL fooResponse _response{y};
-        message_.Encode<::fidl_test_inheritance::super::fooResponse>(
-            &_response);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            fooResponse* response)
-          : message_(bytes, byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-        message_.Encode<::fidl_test_inheritance::super::fooResponse>(response);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(int64_t y)
-          : message_(bytes_.data(), bytes_.size(), y) {}
-      explicit OwnedEncodedMessage(
-          ::fidl_test_inheritance::super::fooResponse* response)
-          : message_(bytes_.data(), bytes_.size(), response) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<::fidl_test_inheritance::super::fooResponse>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<::fidl_test_inheritance::super::fooResponse>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      fooResponse* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<::fidl_test_inheritance::super::fooResponse*>(
-            bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader();
-  };
-  struct fooRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView s;
-    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
-      _InitHeader(_txid);
-    }
-    explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_inheritance::fidl_test_inheritance_superfooRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ::fidl_test_inheritance::super::fooResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            zx_txid_t _txid, const ::fidl::StringView& s)
-          : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
-        FIDL_ALIGNDECL fooRequest _request(_txid, s);
-        message_.Encode<fooRequest>(&_request);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            fooRequest* request)
-          : message_(bytes, byte_size, sizeof(fooRequest), nullptr, 0, 0) {
-        message_.Encode<fooRequest>(request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(zx_txid_t _txid, const ::fidl::StringView& s)
-          : message_(bytes_.data(), bytes_.size(), _txid, s) {}
-      explicit OwnedEncodedMessage(fooRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<fooRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<fooRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      fooRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<fooRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
+  class foo final {
+    foo() = delete;
   };
 
+  using fooResponse = ::fidl::WireResponse<::fidl_test_inheritance::super::foo>;
+  using fooRequest = ::fidl::WireRequest<::fidl_test_inheritance::super::foo>;
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
    public:
-    class foo final : public ::fidl::Result {
-     public:
-      explicit foo(
-          ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
-          const ::fidl::StringView& s);
-      foo(::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
-          const ::fidl::StringView& s, zx_time_t _deadline);
-      explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      foo(foo&&) = delete;
-      foo(const foo&) = delete;
-      foo* operator=(foo&&) = delete;
-      foo* operator=(const foo&) = delete;
-      ~foo() = default;
-
-      ::fidl_test_inheritance::super::fooResponse* Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<::fidl_test_inheritance::super::fooResponse*>(
-            bytes_.data());
-      }
-      const ::fidl_test_inheritance::super::fooResponse* Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_inheritance::super::fooResponse*>(bytes_.data());
-      }
-
-      ::fidl_test_inheritance::super::fooResponse& value() { return *Unwrap(); }
-      const ::fidl_test_inheritance::super::fooResponse& value() const {
-        return *Unwrap();
-      }
-
-      ::fidl_test_inheritance::super::fooResponse* operator->() {
-        return &value();
-      }
-      const fooResponse* operator->() const { return &value(); }
-
-      fooResponse& operator*() { return value(); }
-      const fooResponse& operator*() const { return value(); }
-
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    };
+    using foo = ::fidl::WireResult<::fidl_test_inheritance::super::foo>;
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -351,71 +71,13 @@ class super final {
     UnownedResultOf() = delete;
 
    public:
-    class foo final : public ::fidl::Result {
-     public:
-      explicit foo(
-          ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
-          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          const ::fidl::StringView& s, uint8_t* _response_bytes,
-          uint32_t _response_byte_capacity);
-      explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      foo(foo&&) = delete;
-      foo(const foo&) = delete;
-      foo* operator=(foo&&) = delete;
-      foo* operator=(const foo&) = delete;
-      ~foo() = default;
-
-      fooResponse* Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<::fidl_test_inheritance::super::fooResponse*>(
-            bytes_);
-      }
-      const fooResponse* Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_inheritance::super::fooResponse*>(bytes_);
-      }
-
-      fooResponse& value() { return *Unwrap(); }
-      const fooResponse& value() const { return *Unwrap(); }
-
-      fooResponse* operator->() { return &value(); }
-      const fooResponse* operator->() const { return &value(); }
-
-      fooResponse& operator*() { return value(); }
-      const fooResponse& operator*() const { return value(); }
-
-     private:
-      uint8_t* bytes_;
-    };
+    using foo = ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo>;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::super>|,
   // avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 24 bytes of response buffer on the stack. Request is
-    // heap-allocated.
-    static ResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client_end,
-        ::fidl::StringView s) {
-      return ResultOf::foo(_client_end, s);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client_end,
-        ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::foo(
-          _client_end, _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-  };
+  using Call = ::fidl::WireCall<::fidl_test_inheritance::super>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::super>;
 
@@ -458,6 +120,398 @@ class super final {
       ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::super>;
 };
 }  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::WireRequest<::fidl_test_inheritance::super::foo> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl::StringView s;
+  explicit WireRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
+    _InitHeader(_txid);
+  }
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_inheritance::fidl_test_inheritance_superfooRequestTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t AltPrimarySize = 32;
+  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType =
+      ::fidl::WireResponse<::fidl_test_inheritance::super::foo>;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+                          const ::fidl::StringView& s)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid, s);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid, const ::fidl::StringView& s)
+        : message_(bytes_.data(), bytes_.size(), _txid, s) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+struct ::fidl::WireResponse<::fidl_test_inheritance::super::foo> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  int64_t y;
+  explicit WireResponse(int64_t y) : y(y) { _InitHeader(); }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_inheritance::fidl_test_inheritance_superfooResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
+        : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireResponse _response{y};
+      message_
+          .Encode<::fidl::WireResponse<::fidl_test_inheritance::super::foo>>(
+              &_response);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireResponse* response)
+        : message_(bytes, byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      message_
+          .Encode<::fidl::WireResponse<::fidl_test_inheritance::super::foo>>(
+              response);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(int64_t y)
+        : message_(bytes_.data(), bytes_.size(), y) {}
+    explicit OwnedEncodedMessage(
+        ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* response)
+        : message_(bytes_.data(), bytes_.size(), response) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<::fidl::WireResponse<::fidl_test_inheritance::super::foo>>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<::fidl::WireResponse<::fidl_test_inheritance::super::foo>>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireResponse* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<
+          ::fidl::WireResponse<::fidl_test_inheritance::super::foo>*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader();
+};
+template <>
+class ::fidl::WireResult<::fidl_test_inheritance::super::foo> final
+    : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
+      const ::fidl::StringView& s);
+  WireResult(::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
+             const ::fidl::StringView& s, zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::fidl_test_inheritance::super::foo>*>(
+        bytes_.data());
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* Unwrap()
+      const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>*>(
+        bytes_.data());
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& value()
+      const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* operator->()
+      const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& operator*()
+      const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo> final
+    : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      const ::fidl::StringView& s, uint8_t* _response_bytes,
+      uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::fidl_test_inheritance::super::foo>*>(bytes_);
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* Unwrap()
+      const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>*>(
+        bytes_);
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& value()
+      const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* operator->()
+      const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::super::foo>& operator*()
+      const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_inheritance::super>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::WireCall<::fidl_test_inheritance::super> final {
+  WireCall() = delete;
+
+ public:
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  static ::fidl::WireResult<::fidl_test_inheritance::super::foo> foo(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client_end,
+      ::fidl::StringView s) {
+    return ::fidl::WireResult<::fidl_test_inheritance::super::foo>(_client_end,
+                                                                   s);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo> foo(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client_end,
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo>(
+        _client_end, _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+};
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -510,16 +564,18 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::super> final {
 
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ::fidl_test_inheritance::super::ResultOf::foo foo(::fidl::StringView s) {
-    return ::fidl_test_inheritance::super::ResultOf::foo(this->client_end(), s);
+  ::fidl::WireResult<::fidl_test_inheritance::super::foo> foo(
+      ::fidl::StringView s) {
+    return ::fidl::WireResult<::fidl_test_inheritance::super::foo>(
+        this->client_end(), s);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_inheritance::super::UnownedResultOf::foo foo(
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo> foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer) {
-    return ::fidl_test_inheritance::super::UnownedResultOf::foo(
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
@@ -579,298 +635,19 @@ class sub final {
   sub() = delete;
 
  public:
-  class foo;
-
-  struct fooResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int64_t y;
-    explicit fooResponse(int64_t y) : y(y) { _InitHeader(); }
-    fooResponse() { _InitHeader(); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_inheritance::fidl_test_inheritance_subfooResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
-          : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-        FIDL_ALIGNDECL fooResponse _response{y};
-        message_.Encode<::fidl_test_inheritance::sub::fooResponse>(&_response);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            fooResponse* response)
-          : message_(bytes, byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-        message_.Encode<::fidl_test_inheritance::sub::fooResponse>(response);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(int64_t y)
-          : message_(bytes_.data(), bytes_.size(), y) {}
-      explicit OwnedEncodedMessage(
-          ::fidl_test_inheritance::sub::fooResponse* response)
-          : message_(bytes_.data(), bytes_.size(), response) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<::fidl_test_inheritance::sub::fooResponse>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<::fidl_test_inheritance::sub::fooResponse>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      fooResponse* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<::fidl_test_inheritance::sub::fooResponse*>(
-            bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader();
-  };
-  struct fooRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView s;
-    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
-      _InitHeader(_txid);
-    }
-    explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_inheritance::fidl_test_inheritance_subfooRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ::fidl_test_inheritance::sub::fooResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            zx_txid_t _txid, const ::fidl::StringView& s)
-          : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
-        FIDL_ALIGNDECL fooRequest _request(_txid, s);
-        message_.Encode<fooRequest>(&_request);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            fooRequest* request)
-          : message_(bytes, byte_size, sizeof(fooRequest), nullptr, 0, 0) {
-        message_.Encode<fooRequest>(request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(zx_txid_t _txid, const ::fidl::StringView& s)
-          : message_(bytes_.data(), bytes_.size(), _txid, s) {}
-      explicit OwnedEncodedMessage(fooRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<fooRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<fooRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      fooRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<fooRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
+  class foo final {
+    foo() = delete;
   };
 
+  using fooResponse = ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>;
+  using fooRequest = ::fidl::WireRequest<::fidl_test_inheritance::sub::foo>;
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
    public:
-    class foo final : public ::fidl::Result {
-     public:
-      explicit foo(
-          ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
-          const ::fidl::StringView& s);
-      foo(::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
-          const ::fidl::StringView& s, zx_time_t _deadline);
-      explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      foo(foo&&) = delete;
-      foo(const foo&) = delete;
-      foo* operator=(foo&&) = delete;
-      foo* operator=(const foo&) = delete;
-      ~foo() = default;
-
-      ::fidl_test_inheritance::sub::fooResponse* Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<::fidl_test_inheritance::sub::fooResponse*>(
-            bytes_.data());
-      }
-      const ::fidl_test_inheritance::sub::fooResponse* Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_inheritance::sub::fooResponse*>(bytes_.data());
-      }
-
-      ::fidl_test_inheritance::sub::fooResponse& value() { return *Unwrap(); }
-      const ::fidl_test_inheritance::sub::fooResponse& value() const {
-        return *Unwrap();
-      }
-
-      ::fidl_test_inheritance::sub::fooResponse* operator->() {
-        return &value();
-      }
-      const fooResponse* operator->() const { return &value(); }
-
-      fooResponse& operator*() { return value(); }
-      const fooResponse& operator*() const { return value(); }
-
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    };
+    using foo = ::fidl::WireResult<::fidl_test_inheritance::sub::foo>;
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -879,71 +656,13 @@ class sub final {
     UnownedResultOf() = delete;
 
    public:
-    class foo final : public ::fidl::Result {
-     public:
-      explicit foo(
-          ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
-          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          const ::fidl::StringView& s, uint8_t* _response_bytes,
-          uint32_t _response_byte_capacity);
-      explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      foo(foo&&) = delete;
-      foo(const foo&) = delete;
-      foo* operator=(foo&&) = delete;
-      foo* operator=(const foo&) = delete;
-      ~foo() = default;
-
-      fooResponse* Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<::fidl_test_inheritance::sub::fooResponse*>(
-            bytes_);
-      }
-      const fooResponse* Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_inheritance::sub::fooResponse*>(bytes_);
-      }
-
-      fooResponse& value() { return *Unwrap(); }
-      const fooResponse& value() const { return *Unwrap(); }
-
-      fooResponse* operator->() { return &value(); }
-      const fooResponse* operator->() const { return &value(); }
-
-      fooResponse& operator*() { return value(); }
-      const fooResponse& operator*() const { return value(); }
-
-     private:
-      uint8_t* bytes_;
-    };
+    using foo = ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo>;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::sub>|,
   // avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 24 bytes of response buffer on the stack. Request is
-    // heap-allocated.
-    static ResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client_end,
-        ::fidl::StringView s) {
-      return ResultOf::foo(_client_end, s);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client_end,
-        ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::foo(
-          _client_end, _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-  };
+  using Call = ::fidl::WireCall<::fidl_test_inheritance::sub>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::sub>;
 
@@ -986,6 +705,392 @@ class sub final {
       ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::sub>;
 };
 }  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::WireRequest<::fidl_test_inheritance::sub::foo> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl::StringView s;
+  explicit WireRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
+    _InitHeader(_txid);
+  }
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_inheritance::fidl_test_inheritance_subfooRequestTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t AltPrimarySize = 32;
+  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType = ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+                          const ::fidl::StringView& s)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid, s);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid, const ::fidl::StringView& s)
+        : message_(bytes_.data(), bytes_.size(), _txid, s) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+struct ::fidl::WireResponse<::fidl_test_inheritance::sub::foo> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  int64_t y;
+  explicit WireResponse(int64_t y) : y(y) { _InitHeader(); }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_inheritance::fidl_test_inheritance_subfooResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
+        : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireResponse _response{y};
+      message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::sub::foo>>(
+          &_response);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireResponse* response)
+        : message_(bytes, byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::sub::foo>>(
+          response);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(int64_t y)
+        : message_(bytes_.data(), bytes_.size(), y) {}
+    explicit OwnedEncodedMessage(
+        ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* response)
+        : message_(bytes_.data(), bytes_.size(), response) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<::fidl::WireResponse<::fidl_test_inheritance::sub::foo>>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<::fidl::WireResponse<::fidl_test_inheritance::sub::foo>>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireResponse* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<
+          ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader();
+};
+template <>
+class ::fidl::WireResult<::fidl_test_inheritance::sub::foo> final
+    : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
+      const ::fidl::StringView& s);
+  WireResult(::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
+             const ::fidl::StringView& s, zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>*>(
+        bytes_.data());
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* Unwrap()
+      const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>*>(
+        bytes_.data());
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* operator->()
+      const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& operator*()
+      const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo> final
+    : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      const ::fidl::StringView& s, uint8_t* _response_bytes,
+      uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>*>(bytes_);
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* Unwrap()
+      const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* operator->()
+      const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>& operator*()
+      const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_inheritance::sub>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::WireCall<::fidl_test_inheritance::sub> final {
+  WireCall() = delete;
+
+ public:
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  static ::fidl::WireResult<::fidl_test_inheritance::sub::foo> foo(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client_end,
+      ::fidl::StringView s) {
+    return ::fidl::WireResult<::fidl_test_inheritance::sub::foo>(_client_end,
+                                                                 s);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo> foo(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client_end,
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo>(
+        _client_end, _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+};
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1038,16 +1143,18 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::sub> final {
 
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ::fidl_test_inheritance::sub::ResultOf::foo foo(::fidl::StringView s) {
-    return ::fidl_test_inheritance::sub::ResultOf::foo(this->client_end(), s);
+  ::fidl::WireResult<::fidl_test_inheritance::sub::foo> foo(
+      ::fidl::StringView s) {
+    return ::fidl::WireResult<::fidl_test_inheritance::sub::foo>(
+        this->client_end(), s);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_inheritance::sub::UnownedResultOf::foo foo(
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo> foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer) {
-    return ::fidl_test_inheritance::sub::UnownedResultOf::foo(
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
@@ -1101,44 +1208,53 @@ class ::fidl::WireInterface<::fidl_test_inheritance::sub>
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_inheritance::super::fooRequest>
+struct IsFidlType<::fidl::WireRequest<::fidl_test_inheritance::super::foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl_test_inheritance::super::fooRequest>
+struct IsFidlMessage<::fidl::WireRequest<::fidl_test_inheritance::super::foo>>
     : public std::true_type {};
-static_assert(sizeof(::fidl_test_inheritance::super::fooRequest) ==
-              ::fidl_test_inheritance::super::fooRequest::PrimarySize);
-static_assert(offsetof(::fidl_test_inheritance::super::fooRequest, s) == 16);
+static_assert(
+    sizeof(::fidl::WireRequest<::fidl_test_inheritance::super::foo>) ==
+    ::fidl::WireRequest<::fidl_test_inheritance::super::foo>::PrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::fidl_test_inheritance::super::foo>,
+                       s) == 16);
 
 template <>
-struct IsFidlType<::fidl_test_inheritance::super::fooResponse>
+struct IsFidlType<::fidl::WireResponse<::fidl_test_inheritance::super::foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl_test_inheritance::super::fooResponse>
+struct IsFidlMessage<::fidl::WireResponse<::fidl_test_inheritance::super::foo>>
     : public std::true_type {};
-static_assert(sizeof(::fidl_test_inheritance::super::fooResponse) ==
-              ::fidl_test_inheritance::super::fooResponse::PrimarySize);
-static_assert(offsetof(::fidl_test_inheritance::super::fooResponse, y) == 16);
+static_assert(
+    sizeof(::fidl::WireResponse<::fidl_test_inheritance::super::foo>) ==
+    ::fidl::WireResponse<::fidl_test_inheritance::super::foo>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<::fidl_test_inheritance::super::foo>, y) ==
+    16);
 
 template <>
-struct IsFidlType<::fidl_test_inheritance::sub::fooRequest>
+struct IsFidlType<::fidl::WireRequest<::fidl_test_inheritance::sub::foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl_test_inheritance::sub::fooRequest>
+struct IsFidlMessage<::fidl::WireRequest<::fidl_test_inheritance::sub::foo>>
     : public std::true_type {};
-static_assert(sizeof(::fidl_test_inheritance::sub::fooRequest) ==
-              ::fidl_test_inheritance::sub::fooRequest::PrimarySize);
-static_assert(offsetof(::fidl_test_inheritance::sub::fooRequest, s) == 16);
+static_assert(
+    sizeof(::fidl::WireRequest<::fidl_test_inheritance::sub::foo>) ==
+    ::fidl::WireRequest<::fidl_test_inheritance::sub::foo>::PrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::fidl_test_inheritance::sub::foo>,
+                       s) == 16);
 
 template <>
-struct IsFidlType<::fidl_test_inheritance::sub::fooResponse>
+struct IsFidlType<::fidl::WireResponse<::fidl_test_inheritance::sub::foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl_test_inheritance::sub::fooResponse>
+struct IsFidlMessage<::fidl::WireResponse<::fidl_test_inheritance::sub::foo>>
     : public std::true_type {};
-static_assert(sizeof(::fidl_test_inheritance::sub::fooResponse) ==
-              ::fidl_test_inheritance::sub::fooResponse::PrimarySize);
-static_assert(offsetof(::fidl_test_inheritance::sub::fooResponse, y) == 16);
+static_assert(
+    sizeof(::fidl::WireResponse<::fidl_test_inheritance::sub::foo>) ==
+    ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>::PrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::fidl_test_inheritance::sub::foo>,
+                       y) == 16);
 }  // namespace fidl
 namespace fidl_test_inheritance {
 
@@ -1162,7 +1278,7 @@ class ::fidl_test_inheritance::super::fooResponseContext
   fooResponseContext();
 
   virtual void OnReply(
-      ::fidl_test_inheritance::super::fooResponse* message) = 0;
+      ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
@@ -1174,10 +1290,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super> final
  public:
   // Asynchronous variant of |super.foo()|.
   // The request and callback are allocated on the heap.
-  ::fidl::Result foo(::fidl::StringView s,
-                     ::fit::callback<void(
-                         ::fidl_test_inheritance::super::fooResponse* response)>
-                         _cb);
+  ::fidl::Result foo(
+      ::fidl::StringView s,
+      ::fit::callback<void(
+          ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* response)>
+          _cb);
 
   // Asynchronous variant of |super.foo()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -1190,12 +1307,13 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super> final
   // Synchronous variant of |super.foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ::fidl_test_inheritance::super::ResultOf::foo foo_Sync(::fidl::StringView s);
+  ::fidl::WireResult<::fidl_test_inheritance::super::foo> foo_Sync(
+      ::fidl::StringView s);
 
   // Synchronous variant of |super.foo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_inheritance::super::UnownedResultOf::foo foo_Sync(
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo> foo_Sync(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
 
@@ -1294,7 +1412,8 @@ class ::fidl_test_inheritance::sub::fooResponseContext
  public:
   fooResponseContext();
 
-  virtual void OnReply(::fidl_test_inheritance::sub::fooResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
@@ -1308,7 +1427,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub> final
   // The request and callback are allocated on the heap.
   ::fidl::Result foo(
       ::fidl::StringView s,
-      ::fit::callback<void(::fidl_test_inheritance::sub::fooResponse* response)>
+      ::fit::callback<void(
+          ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* response)>
           _cb);
 
   // Asynchronous variant of |sub.foo()|.
@@ -1322,12 +1442,13 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub> final
   // Synchronous variant of |sub.foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ::fidl_test_inheritance::sub::ResultOf::foo foo_Sync(::fidl::StringView s);
+  ::fidl::WireResult<::fidl_test_inheritance::sub::foo> foo_Sync(
+      ::fidl::StringView s);
 
   // Synchronous variant of |sub.foo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_inheritance::sub::UnownedResultOf::foo foo_Sync(
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo> foo_Sync(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
 

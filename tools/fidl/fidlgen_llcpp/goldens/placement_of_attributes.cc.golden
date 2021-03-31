@@ -47,33 +47,39 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodResponseTable;
 #ifdef __Fuchsia__
-::fidl_test_placementofattributes::ExampleProtocol::ResultOf::Method::Method(
-    ::fidl::UnownedClientEnd<::fidl_test_placementofattributes::ExampleProtocol>
-        _client,
-    ::exampleusing::wire::Empty& arg) {
-  ::fidl::OwnedEncodedMessage<
-      ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest>
+}  // namespace fidl_test_placementofattributes
+::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>::
+    WireResult(::fidl::UnownedClientEnd<
+                   ::fidl_test_placementofattributes::ExampleProtocol>
+                   _client,
+               ::exampleusing::wire::Empty& arg) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_placementofattributes::ExampleProtocol::UnownedResultOf::Method::
-    Method(::fidl::UnownedClientEnd<
-               ::fidl_test_placementofattributes::ExampleProtocol>
-               _client,
-           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-           ::exampleusing::wire::Empty& arg) {
-  ::fidl::UnownedEncodedMessage<
-      ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest>
+}  // namespace fidl_test_placementofattributes
+::fidl::WireUnownedResult<
+    ::fidl_test_placementofattributes::ExampleProtocol::Method>::
+    WireUnownedResult(::fidl::UnownedClientEnd<
+                          ::fidl_test_placementofattributes::ExampleProtocol>
+                          _client,
+                      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                      ::exampleusing::wire::Empty& arg) {
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(_request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
+namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
 
 }  // namespace fidl_test_placementofattributes
@@ -82,12 +88,12 @@ extern "C" const fidl_type_t
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
         ::exampleusing::wire::Empty arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_placementofattributes::ExampleProtocol::ResultOf::Method(
-            ::fidl::UnownedClientEnd<
-                ::fidl_test_placementofattributes::ExampleProtocol>(
-                _channel->handle()),
-            arg);
+    auto _res = ::fidl::WireResult<
+        ::fidl_test_placementofattributes::ExampleProtocol::Method>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_placementofattributes::ExampleProtocol>(
+            _channel->handle()),
+        arg);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -99,12 +105,12 @@ extern "C" const fidl_type_t
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
         ::fidl::BufferSpan _request_buffer, ::exampleusing::wire::Empty arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        ::fidl_test_placementofattributes::ExampleProtocol::UnownedResultOf::
-            Method(::fidl::UnownedClientEnd<
-                       ::fidl_test_placementofattributes::ExampleProtocol>(
-                       _channel->handle()),
-                   _request_buffer.data, _request_buffer.capacity, arg);
+    auto _res = ::fidl::WireUnownedResult<
+        ::fidl_test_placementofattributes::ExampleProtocol::Method>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_placementofattributes::ExampleProtocol>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, arg);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -127,9 +133,8 @@ namespace methods {
 
 void ExampleProtocolDispatchMethod(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest*>(
-      bytes);
+  auto message = reinterpret_cast<::fidl::WireRequest<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>*>(bytes);
   ::fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>::
       MethodCompleter::Sync completer(txn);
   reinterpret_cast<
@@ -143,7 +148,8 @@ namespace entries {
 
 ::fidl::internal::MethodEntry ExampleProtocol[] = {
     {::fidl_test_placementofattributes::kExampleProtocol_Method_Ordinal,
-     ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest::Type,
+     ::fidl::WireRequest<
+         ::fidl_test_placementofattributes::ExampleProtocol::Method>::Type,
      methods::ExampleProtocolDispatchMethod},
 };
 
@@ -181,14 +187,15 @@ fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>::
 namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
 
-void ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest::
-    _InitHeader(zx_txid_t _txid) {
+}  // namespace fidl_test_placementofattributes
+
+void ::fidl::WireRequest<::fidl_test_placementofattributes::ExampleProtocol::
+                             Method>::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       ::fidl_test_placementofattributes::kExampleProtocol_Method_Ordinal);
 }
 
-}  // namespace fidl_test_placementofattributes
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__

@@ -3127,720 +3127,37 @@ class TestProtocol final {
   TestProtocol() = delete;
 
  public:
-  class StrictXUnionHenceResponseMayBeStackAllocated;
-  class FlexibleXUnionHenceResponseMustBeHeapAllocated;
-
-  struct StrictXUnionHenceResponseMayBeStackAllocatedResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl_test_union::wire::StrictBoundedXUnion xu;
-    explicit StrictXUnionHenceResponseMayBeStackAllocatedResponse(
-        ::fidl_test_union::wire::StrictBoundedXUnion& xu)
-        : xu(std::move(xu)) {
-      _InitHeader();
-    }
-    StrictXUnionHenceResponseMayBeStackAllocatedResponse() { _InitHeader(); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_union::
-            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            ::fidl_test_union::wire::StrictBoundedXUnion& xu)
-          : message_(
-                _bytes, _byte_size,
-                sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
-                nullptr, 0, 0) {
-        FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedResponse
-            _response{xu};
-        message_
-            .Encode<::fidl_test_union::TestProtocol::
-                        StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
-                &_response);
-      }
-      UnownedEncodedMessage(
-          uint8_t* bytes, uint32_t byte_size,
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)
-          : message_(
-                bytes, byte_size,
-                sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
-                nullptr, 0, 0) {
-        message_
-            .Encode<::fidl_test_union::TestProtocol::
-                        StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
-                response);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(
-          ::fidl_test_union::wire::StrictBoundedXUnion& xu)
-          : message_(bytes_.data(), bytes_.size(), xu) {}
-      explicit OwnedEncodedMessage(
-          ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)
-          : message_(bytes_.data(), bytes_.size(), response) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<72> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<::fidl_test_union::TestProtocol::
-                   StrictXUnionHenceResponseMayBeStackAllocatedResponse>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<::fidl_test_union::TestProtocol::
-                   StrictXUnionHenceResponseMayBeStackAllocatedResponse>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            ::fidl_test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader();
+  class StrictXUnionHenceResponseMayBeStackAllocated final {
+    StrictXUnionHenceResponseMayBeStackAllocated() = delete;
   };
-  struct StrictXUnionHenceResponseMayBeStackAllocatedRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    explicit StrictXUnionHenceResponseMayBeStackAllocatedRequest(
-        zx_txid_t _txid) {
-      _InitHeader(_txid);
-    }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 16;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 16;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ::fidl_test_union::TestProtocol::
-        StrictXUnionHenceResponseMayBeStackAllocatedResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            zx_txid_t _txid)
-          : message_(
-                _bytes, _byte_size,
-                sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest),
-                nullptr, 0, 0) {
-        FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedRequest
-            _request(_txid);
-        message_.Encode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(
-            &_request);
-      }
-      UnownedEncodedMessage(
-          uint8_t* bytes, uint32_t byte_size,
-          StrictXUnionHenceResponseMayBeStackAllocatedRequest* request)
-          : message_(
-                bytes, byte_size,
-                sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest),
-                nullptr, 0, 0) {
-        message_.Encode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(
-            request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(zx_txid_t _txid)
-          : message_(bytes_.data(), bytes_.size(), _txid) {}
-      explicit OwnedEncodedMessage(
-          StrictXUnionHenceResponseMayBeStackAllocatedRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<16> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      StrictXUnionHenceResponseMayBeStackAllocatedRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            StrictXUnionHenceResponseMayBeStackAllocatedRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
+  class FlexibleXUnionHenceResponseMustBeHeapAllocated final {
+    FlexibleXUnionHenceResponseMustBeHeapAllocated() = delete;
   };
 
-  struct FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl_test_union::wire::OlderSimpleUnion xu;
-    explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
-        ::fidl_test_union::wire::OlderSimpleUnion& xu)
-        : xu(std::move(xu)) {
-      _InitHeader();
-    }
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse() { _InitHeader(); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_union::
-            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr bool HasFlexibleEnvelope = true;
-    static constexpr bool HasPointer = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            ::fidl_test_union::wire::OlderSimpleUnion& xu)
-          : message_(
-                _bytes, _byte_size,
-                sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
-                nullptr, 0, 0) {
-        FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
-            _response{xu};
-        message_
-            .Encode<::fidl_test_union::TestProtocol::
-                        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
-                &_response);
-      }
-      UnownedEncodedMessage(
-          uint8_t* bytes, uint32_t byte_size,
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)
-          : message_(
-                bytes, byte_size,
-                sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
-                nullptr, 0, 0) {
-        message_
-            .Encode<::fidl_test_union::TestProtocol::
-                        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
-                response);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(
-          ::fidl_test_union::wire::OlderSimpleUnion& xu)
-          : message_(bytes_.data(), bytes_.size(), xu) {}
-      explicit OwnedEncodedMessage(
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)
-          : message_(bytes_.data(), bytes_.size(), response) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<::fidl_test_union::TestProtocol::
-                   FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<::fidl_test_union::TestProtocol::
-                   FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            ::fidl_test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader();
-  };
-  struct FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
-        zx_txid_t _txid) {
-      _InitHeader(_txid);
-    }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 16;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 16;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ::fidl_test_union::TestProtocol::
-        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            zx_txid_t _txid)
-          : message_(
-                _bytes, _byte_size,
-                sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest),
-                nullptr, 0, 0) {
-        FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest
-            _request(_txid);
-        message_.Encode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(
-            &_request);
-      }
-      UnownedEncodedMessage(
-          uint8_t* bytes, uint32_t byte_size,
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest* request)
-          : message_(
-                bytes, byte_size,
-                sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest),
-                nullptr, 0, 0) {
-        message_.Encode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(
-            request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(zx_txid_t _txid)
-          : message_(bytes_.data(), bytes_.size(), _txid) {}
-      explicit OwnedEncodedMessage(
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<16> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
-  };
-
+  using StrictXUnionHenceResponseMayBeStackAllocatedResponse =
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>;
+  using StrictXUnionHenceResponseMayBeStackAllocatedRequest =
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>;
+  using FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse =
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>;
+  using FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest =
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>;
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
    public:
-    class StrictXUnionHenceResponseMayBeStackAllocated final
-        : public ::fidl::Result {
-     public:
-      explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client);
-      StrictXUnionHenceResponseMayBeStackAllocated(
-          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
-          zx_time_t _deadline);
-      explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          const ::fidl::Result& result)
-          : ::fidl::Result(result) {}
-      StrictXUnionHenceResponseMayBeStackAllocated(
-          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
-      StrictXUnionHenceResponseMayBeStackAllocated(
-          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
-      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
-          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
-      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
-          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
-      ~StrictXUnionHenceResponseMayBeStackAllocated() = default;
-
-      ::fidl_test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse*
-          Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            ::fidl_test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
-            bytes_.data());
-      }
-      const ::fidl_test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse*
-          Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
-            bytes_.data());
-      }
-
-      ::fidl_test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse&
-          value() {
-        return *Unwrap();
-      }
-      const ::fidl_test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse&
-          value() const {
-        return *Unwrap();
-      }
-
-      ::fidl_test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse*
-          operator->() {
-        return &value();
-      }
-      const StrictXUnionHenceResponseMayBeStackAllocatedResponse* operator->()
-          const {
-        return &value();
-      }
-
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*() {
-        return value();
-      }
-      const StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*()
-          const {
-        return value();
-      }
-
-     private:
-      ::fidl::internal::InlineMessageBuffer<72> bytes_;
-    };
-    class FlexibleXUnionHenceResponseMustBeHeapAllocated final
-        : public ::fidl::Result {
-     public:
-      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client);
-      FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
-          zx_time_t _deadline);
-      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          const ::fidl::Result& result)
-          : ::fidl::Result(result) {}
-      FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
-          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
-      ~FlexibleXUnionHenceResponseMustBeHeapAllocated() = default;
-
-      ::fidl_test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*
-          Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            ::fidl_test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            bytes_.data());
-      }
-      const ::fidl_test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*
-          Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            bytes_.data());
-      }
-
-      ::fidl_test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&
-          value() {
-        return *Unwrap();
-      }
-      const ::fidl_test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&
-          value() const {
-        return *Unwrap();
-      }
-
-      ::fidl_test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*
-          operator->() {
-        return &value();
-      }
-      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* operator->()
-          const {
-        return &value();
-      }
-
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*() {
-        return value();
-      }
-      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*()
-          const {
-        return value();
-      }
-
-     private:
-      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-    };
+    using StrictXUnionHenceResponseMayBeStackAllocated =
+        ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>;
+    using FlexibleXUnionHenceResponseMustBeHeapAllocated =
+        ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>;
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -3849,175 +3166,20 @@ class TestProtocol final {
     UnownedResultOf() = delete;
 
    public:
-    class StrictXUnionHenceResponseMayBeStackAllocated final
-        : public ::fidl::Result {
-     public:
-      explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
-          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
-      explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          const ::fidl::Result& result)
-          : ::fidl::Result(result) {}
-      StrictXUnionHenceResponseMayBeStackAllocated(
-          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
-      StrictXUnionHenceResponseMayBeStackAllocated(
-          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
-      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
-          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
-      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
-          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
-      ~StrictXUnionHenceResponseMayBeStackAllocated() = default;
-
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
+    using StrictXUnionHenceResponseMayBeStackAllocated =
+        ::fidl::WireUnownedResult<
             ::fidl_test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes_);
-      }
-      const StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap()
-          const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes_);
-      }
-
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse& value() {
-        return *Unwrap();
-      }
-      const StrictXUnionHenceResponseMayBeStackAllocatedResponse& value()
-          const {
-        return *Unwrap();
-      }
-
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse* operator->() {
-        return &value();
-      }
-      const StrictXUnionHenceResponseMayBeStackAllocatedResponse* operator->()
-          const {
-        return &value();
-      }
-
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*() {
-        return value();
-      }
-      const StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*()
-          const {
-        return value();
-      }
-
-     private:
-      uint8_t* bytes_;
-    };
-    class FlexibleXUnionHenceResponseMustBeHeapAllocated final
-        : public ::fidl::Result {
-     public:
-      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
-          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
-      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          const ::fidl::Result& result)
-          : ::fidl::Result(result) {}
-      FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
-          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
-      ~FlexibleXUnionHenceResponseMustBeHeapAllocated() = default;
-
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
+                StrictXUnionHenceResponseMayBeStackAllocated>;
+    using FlexibleXUnionHenceResponseMustBeHeapAllocated =
+        ::fidl::WireUnownedResult<
             ::fidl_test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            bytes_);
-      }
-      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* Unwrap()
-          const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            bytes_);
-      }
-
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value() {
-        return *Unwrap();
-      }
-      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value()
-          const {
-        return *Unwrap();
-      }
-
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* operator->() {
-        return &value();
-      }
-      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* operator->()
-          const {
-        return &value();
-      }
-
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*() {
-        return value();
-      }
-      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*()
-          const {
-        return value();
-      }
-
-     private:
-      uint8_t* bytes_;
-    };
+                FlexibleXUnionHenceResponseMustBeHeapAllocated>;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_union::TestProtocol>|,
   // avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 88 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end) {
-      return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          _client_end);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          _client_end, _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Allocates 16 bytes of request buffer on the stack. Response is
-    // heap-allocated.
-    static ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end) {
-      return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          _client_end);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          _client_end, _response_buffer.data, _response_buffer.capacity);
-    }
-  };
+  using Call = ::fidl::WireCall<::fidl_test_union::TestProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_union::TestProtocol>;
 
@@ -4061,6 +3223,874 @@ class TestProtocol final {
       ::fidl::internal::WireWeakEventSender<::fidl_test_union::TestProtocol>;
 };
 }  // namespace fidl_test_union
+template <>
+struct ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType =
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid)
+        : message_(bytes_.data(), bytes_.size(), _txid) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl_test_union::wire::StrictBoundedXUnion xu;
+  explicit WireResponse(::fidl_test_union::wire::StrictBoundedXUnion& xu)
+      : xu(std::move(xu)) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_union::
+          fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t MaxOutOfLine = 32;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                          ::fidl_test_union::wire::StrictBoundedXUnion& xu)
+        : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireResponse _response{xu};
+      message_.Encode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>>(&_response);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireResponse* response)
+        : message_(bytes, byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      message_.Encode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>>(response);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(
+        ::fidl_test_union::wire::StrictBoundedXUnion& xu)
+        : message_(bytes_.data(), bytes_.size(), xu) {}
+    explicit OwnedEncodedMessage(
+        ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>*
+            response)
+        : message_(bytes_.data(), bytes_.size(), response) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<72> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireResponse* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType =
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid)
+        : message_(bytes_.data(), bytes_.size(), _txid) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl_test_union::wire::OlderSimpleUnion xu;
+  explicit WireResponse(::fidl_test_union::wire::OlderSimpleUnion& xu)
+      : xu(std::move(xu)) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_union::
+          fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasFlexibleEnvelope = true;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                          ::fidl_test_union::wire::OlderSimpleUnion& xu)
+        : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireResponse _response{xu};
+      message_.Encode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>>(&_response);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireResponse* response)
+        : message_(bytes, byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      message_.Encode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>>(response);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(::fidl_test_union::wire::OlderSimpleUnion& xu)
+        : message_(bytes_.data(), bytes_.size(), xu) {}
+    explicit OwnedEncodedMessage(
+        ::fidl::WireResponse<
+            ::fidl_test_union::TestProtocol::
+                FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)
+        : message_(bytes_.data(), bytes_.size(), response) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<48> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireResponse* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<::fidl::WireResponse<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader();
+};
+template <>
+class ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                             StrictXUnionHenceResponseMayBeStackAllocated>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client);
+  WireResult(::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
+             zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>*>(bytes_.data());
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>*>(bytes_.data());
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<72> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_union::TestProtocol::
+        StrictXUnionHenceResponseMayBeStackAllocated>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>*>(bytes_);
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+template <>
+class ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client);
+  WireResult(::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
+             zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(bytes_.data());
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(bytes_.data());
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_union::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocated>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(bytes_);
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_union::TestProtocol>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::WireCall<::fidl_test_union::TestProtocol> final {
+  WireCall() = delete;
+
+ public:
+  // Allocates 88 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end) {
+    return ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                                  StrictXUnionHenceResponseMayBeStackAllocated>(
+        _client_end);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_union::TestProtocol::
+          StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end,
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>(
+        _client_end, _response_buffer.data, _response_buffer.capacity);
+  }
+
+  // Allocates 16 bytes of request buffer on the stack. Response is
+  // heap-allocated.
+  static ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end) {
+    return ::fidl::WireResult<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>(_client_end);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end,
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>(
+        _client_end, _response_buffer.data, _response_buffer.capacity);
+  }
+};
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -4113,44 +4143,46 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
 
   // Allocates 88 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl_test_union::TestProtocol::ResultOf::
-      StrictXUnionHenceResponseMayBeStackAllocated
-      StrictXUnionHenceResponseMayBeStackAllocated() {
-    return ::fidl_test_union::TestProtocol::ResultOf::
-        StrictXUnionHenceResponseMayBeStackAllocated(this->client_end());
+  ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                         StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated() {
+    return ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                                  StrictXUnionHenceResponseMayBeStackAllocated>(
+        this->client_end());
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_union::TestProtocol::UnownedResultOf::
-      StrictXUnionHenceResponseMayBeStackAllocated
-      StrictXUnionHenceResponseMayBeStackAllocated(
-          ::fidl::BufferSpan _response_buffer) {
-    return ::fidl_test_union::TestProtocol::UnownedResultOf::
-        StrictXUnionHenceResponseMayBeStackAllocated(this->client_end(),
-                                                     _response_buffer.data,
-                                                     _response_buffer.capacity);
+  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>(
+        this->client_end(), _response_buffer.data, _response_buffer.capacity);
   }
 
   // Allocates 16 bytes of request buffer on the stack. Response is
   // heap-allocated.
-  ::fidl_test_union::TestProtocol::ResultOf::
-      FlexibleXUnionHenceResponseMustBeHeapAllocated
-      FlexibleXUnionHenceResponseMustBeHeapAllocated() {
-    return ::fidl_test_union::TestProtocol::ResultOf::
-        FlexibleXUnionHenceResponseMustBeHeapAllocated(this->client_end());
+  ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                         FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated() {
+    return ::fidl::WireResult<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>(this->client_end());
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_union::TestProtocol::UnownedResultOf::
-      FlexibleXUnionHenceResponseMustBeHeapAllocated
-      FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          ::fidl::BufferSpan _response_buffer) {
-    return ::fidl_test_union::TestProtocol::UnownedResultOf::
-        FlexibleXUnionHenceResponseMustBeHeapAllocated(
-            this->client_end(), _response_buffer.data,
-            _response_buffer.capacity);
+  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>(
+        this->client_end(), _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -4547,67 +4579,85 @@ static_assert(
     std::is_standard_layout_v<::fidl_test_union::wire::OlderSimpleUnion>);
 
 template <>
-struct IsFidlType<::fidl_test_union::TestProtocol::
-                      StrictXUnionHenceResponseMayBeStackAllocatedRequest>
+struct IsFidlType<
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            StrictXUnionHenceResponseMayBeStackAllocated>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl_test_union::TestProtocol::
-                         StrictXUnionHenceResponseMayBeStackAllocatedRequest>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            StrictXUnionHenceResponseMayBeStackAllocated>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl_test_union::TestProtocol::
-               StrictXUnionHenceResponseMayBeStackAllocatedRequest) ==
-    ::fidl_test_union::TestProtocol::
-        StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize);
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_union::TestProtocol::
+               StrictXUnionHenceResponseMayBeStackAllocated>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_union::TestProtocol::
-                      StrictXUnionHenceResponseMayBeStackAllocatedResponse>
+struct IsFidlType<
+    ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                             StrictXUnionHenceResponseMayBeStackAllocated>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl_test_union::TestProtocol::
-                         StrictXUnionHenceResponseMayBeStackAllocatedResponse>
+struct IsFidlMessage<
+    ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                             StrictXUnionHenceResponseMayBeStackAllocated>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl_test_union::TestProtocol::
-               StrictXUnionHenceResponseMayBeStackAllocatedResponse) ==
-    ::fidl_test_union::TestProtocol::
-        StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize);
-static_assert(offsetof(::fidl_test_union::TestProtocol::
-                           StrictXUnionHenceResponseMayBeStackAllocatedResponse,
+    sizeof(::fidl::WireResponse<
+           ::fidl_test_union::TestProtocol::
+               StrictXUnionHenceResponseMayBeStackAllocated>) ==
+    ::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>::PrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>,
+        xu) == 16);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_union::TestProtocol::
+               FlexibleXUnionHenceResponseMustBeHeapAllocated>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::fidl_test_union::TestProtocol::
+               FlexibleXUnionHenceResponseMustBeHeapAllocated>) ==
+    ::fidl::WireResponse<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>::PrimarySize);
+static_assert(offsetof(::fidl::WireResponse<
+                           ::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
                        xu) == 16);
-
-template <>
-struct IsFidlType<::fidl_test_union::TestProtocol::
-                      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl_test_union::TestProtocol::
-                         FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl_test_union::TestProtocol::
-               FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest) ==
-    ::fidl_test_union::TestProtocol::
-        FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_union::TestProtocol::
-                      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl_test_union::TestProtocol::
-                         FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl_test_union::TestProtocol::
-               FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) ==
-    ::fidl_test_union::TestProtocol::
-        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::PrimarySize);
-static_assert(
-    offsetof(::fidl_test_union::TestProtocol::
-                 FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse,
-             xu) == 16);
 
 template <>
 struct IsFidlType<::fidl_test_union::wire::NullableUnionStruct>
@@ -4731,8 +4781,9 @@ class ::fidl_test_union::TestProtocol::
   StrictXUnionHenceResponseMayBeStackAllocatedResponseContext();
 
   virtual void OnReply(
-      ::fidl_test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse* message) = 0;
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>*
+          message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
@@ -4745,8 +4796,9 @@ class ::fidl_test_union::TestProtocol::
   FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext();
 
   virtual void OnReply(
-      ::fidl_test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* message) = 0;
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+          message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
@@ -4760,9 +4812,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fit::callback<void(
-          ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)>
+      ::fit::callback<
+          void(::fidl::WireResponse<
+               ::fidl_test_union::TestProtocol::
+                   StrictXUnionHenceResponseMayBeStackAllocated>* response)>
           _cb);
 
   // Asynchronous variant of
@@ -4778,27 +4831,28 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   // Synchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 88
   // bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl_test_union::TestProtocol::ResultOf::
-      StrictXUnionHenceResponseMayBeStackAllocated
-      StrictXUnionHenceResponseMayBeStackAllocated_Sync();
+  ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                         StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated_Sync();
 
   // Synchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Caller
   // provides the backing storage for FIDL message via request and response
   // buffers.
-  ::fidl_test_union::TestProtocol::UnownedResultOf::
-      StrictXUnionHenceResponseMayBeStackAllocated
-      StrictXUnionHenceResponseMayBeStackAllocated_Sync(
-          ::fidl::BufferSpan _response_buffer);
+  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated_Sync(
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
   // 16 bytes of request buffer on the stack. The callback is stored on the
   // heap.
   ::fidl::Result FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fit::callback<void(
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)>
+      ::fit::callback<
+          void(::fidl::WireResponse<
+               ::fidl_test_union::TestProtocol::
+                   FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)>
           _cb);
 
   // Asynchronous variant of
@@ -4814,18 +4868,18 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   // Synchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
   // 16 bytes of request buffer on the stack. Response is heap-allocated.
-  ::fidl_test_union::TestProtocol::ResultOf::
-      FlexibleXUnionHenceResponseMustBeHeapAllocated
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync();
+  ::fidl::WireResult<::fidl_test_union::TestProtocol::
+                         FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync();
 
   // Synchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Caller
   // provides the backing storage for FIDL message via request and response
   // buffers.
-  ::fidl_test_union::TestProtocol::UnownedResultOf::
-      FlexibleXUnionHenceResponseMustBeHeapAllocated
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
-          ::fidl::BufferSpan _response_buffer);
+  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
+      ::fidl::BufferSpan _response_buffer);
 
   ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>*
   event_handler() const {

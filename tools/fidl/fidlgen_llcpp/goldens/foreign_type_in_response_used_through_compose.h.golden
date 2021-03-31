@@ -52,319 +52,22 @@ class Top final {
   Top() = delete;
 
  public:
-  class GetFoo;
-
-  struct GetFooResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::bottom::wire::Foo foo;
-    explicit GetFooResponse(::bottom::wire::Foo& foo) : foo(std::move(foo)) {
-      _InitHeader();
-    }
-    GetFooResponse() { _InitHeader(); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl_test_foreigntypeinresponseusedthroughcompose::
-            fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            ::bottom::wire::Foo& foo)
-          : message_(_bytes, _byte_size, sizeof(GetFooResponse), nullptr, 0,
-                     0) {
-        FIDL_ALIGNDECL GetFooResponse _response{foo};
-        message_.Encode<::fidl_test_foreigntypeinresponseusedthroughcompose::
-                            Top::GetFooResponse>(&_response);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            GetFooResponse* response)
-          : message_(bytes, byte_size, sizeof(GetFooResponse), nullptr, 0, 0) {
-        message_.Encode<::fidl_test_foreigntypeinresponseusedthroughcompose::
-                            Top::GetFooResponse>(response);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(::bottom::wire::Foo& foo)
-          : message_(bytes_.data(), bytes_.size(), foo) {}
-      explicit OwnedEncodedMessage(
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-              GetFooResponse* response)
-          : message_(bytes_.data(), bytes_.size(), response) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                   GetFooResponse>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                   GetFooResponse>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      GetFooResponse* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                GetFooResponse*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader();
-  };
-  struct GetFooRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    explicit GetFooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
-
-    static constexpr const fidl_type_t* Type =
-        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 16;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 16;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ::fidl_test_foreigntypeinresponseusedthroughcompose::
-        Top::GetFooResponse;
-
-    class UnownedEncodedMessage final {
-     public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            zx_txid_t _txid)
-          : message_(_bytes, _byte_size, sizeof(GetFooRequest), nullptr, 0, 0) {
-        FIDL_ALIGNDECL GetFooRequest _request(_txid);
-        message_.Encode<GetFooRequest>(&_request);
-      }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                            GetFooRequest* request)
-          : message_(bytes, byte_size, sizeof(GetFooRequest), nullptr, 0, 0) {
-        message_.Encode<GetFooRequest>(request);
-      }
-      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::OutgoingMessage message_;
-    };
-
-    class OwnedEncodedMessage final {
-     public:
-      explicit OwnedEncodedMessage(zx_txid_t _txid)
-          : message_(bytes_.data(), bytes_.size(), _txid) {}
-      explicit OwnedEncodedMessage(GetFooRequest* request)
-          : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif  // __Fuchsia__
-     private:
-      ::fidl::internal::InlineMessageBuffer<16> bytes_;
-      UnownedEncodedMessage message_;
-    };
-
-   public:
-    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-     public:
-      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                     zx_handle_info_t* handles = nullptr,
-                     uint32_t handle_actual = 0)
-          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                              handle_actual) {
-        Decode<GetFooRequest>();
-      }
-      DecodedMessage(fidl_incoming_msg_t* msg)
-          : ::fidl::internal::IncomingMessage(msg) {
-        Decode<GetFooRequest>();
-      }
-      DecodedMessage(const DecodedMessage&) = delete;
-      DecodedMessage(DecodedMessage&&) = delete;
-      DecodedMessage* operator=(const DecodedMessage&) = delete;
-      DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-      GetFooRequest* PrimaryObject() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<GetFooRequest*>(bytes());
-      }
-
-      // Release the ownership of the decoded message. That means that the
-      // handles won't be closed When the object is destroyed. After calling
-      // this method, the DecodedMessage object should not be used anymore.
-      void ReleasePrimaryObject() { ResetBytes(); }
-    };
-
-   private:
-    void _InitHeader(zx_txid_t _txid);
+  class GetFoo final {
+    GetFoo() = delete;
   };
 
+  using GetFooResponse = ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+  using GetFooRequest = ::fidl::WireRequest<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 #ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
    public:
-    class GetFoo final : public ::fidl::Result {
-     public:
-      explicit GetFoo(::fidl::UnownedClientEnd<
-                      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-                          _client);
-      GetFoo(::fidl::UnownedClientEnd<
-                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-                 _client,
-             zx_time_t _deadline);
-      explicit GetFoo(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      GetFoo(GetFoo&&) = delete;
-      GetFoo(const GetFoo&) = delete;
-      GetFoo* operator=(GetFoo&&) = delete;
-      GetFoo* operator=(const GetFoo&) = delete;
-      ~GetFoo() = default;
-
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse*
-      Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                GetFooResponse*>(bytes_.data());
-      }
-      const ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-          GetFooResponse*
-          Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                GetFooResponse*>(bytes_.data());
-      }
-
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse&
-      value() {
-        return *Unwrap();
-      }
-      const ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-          GetFooResponse&
-          value() const {
-        return *Unwrap();
-      }
-
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse*
-      operator->() {
-        return &value();
-      }
-      const GetFooResponse* operator->() const { return &value(); }
-
-      GetFooResponse& operator*() { return value(); }
-      const GetFooResponse& operator*() const { return value(); }
-
-     private:
-      ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    };
+    using GetFoo = ::fidl::WireResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -373,75 +76,16 @@ class Top final {
     UnownedResultOf() = delete;
 
    public:
-    class GetFoo final : public ::fidl::Result {
-     public:
-      explicit GetFoo(
-          ::fidl::UnownedClientEnd<
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-              _client,
-          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
-      explicit GetFoo(const ::fidl::Result& result) : ::fidl::Result(result) {}
-      GetFoo(GetFoo&&) = delete;
-      GetFoo(const GetFoo&) = delete;
-      GetFoo* operator=(GetFoo&&) = delete;
-      GetFoo* operator=(const GetFoo&) = delete;
-      ~GetFoo() = default;
-
-      GetFooResponse* Unwrap() {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                GetFooResponse*>(bytes_);
-      }
-      const GetFooResponse* Unwrap() const {
-        ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<
-            const ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                GetFooResponse*>(bytes_);
-      }
-
-      GetFooResponse& value() { return *Unwrap(); }
-      const GetFooResponse& value() const { return *Unwrap(); }
-
-      GetFooResponse* operator->() { return &value(); }
-      const GetFooResponse* operator->() const { return &value(); }
-
-      GetFooResponse& operator*() { return value(); }
-      const GetFooResponse& operator*() const { return value(); }
-
-     private:
-      uint8_t* bytes_;
-    };
+    using GetFoo = ::fidl::WireUnownedResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>|,
   // avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::GetFoo GetFoo(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-            _client_end) {
-      return ResultOf::GetFoo(_client_end);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::GetFoo GetFoo(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-            _client_end,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::GetFoo(_client_end, _response_buffer.data,
-                                     _response_buffer.capacity);
-    }
-  };
+  using Call = ::fidl::WireCall<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
 
   using SyncClient = fidl::WireSyncClient<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
@@ -487,6 +131,442 @@ class Top final {
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
 };
 }  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+template <>
+struct ::fidl::WireRequest<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType = ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid)
+        : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireRequest _request(_txid);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireRequest* request)
+        : message_(bytes, byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid)
+        : message_(bytes_.data(), bytes_.size(), _txid) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(bytes_.data(), bytes_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<WireRequest>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireRequest* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<WireRequest*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+template <>
+struct ::fidl::WireResponse<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::bottom::wire::Foo foo;
+  explicit WireResponse(::bottom::wire::Foo& foo) : foo(std::move(foo)) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_foreigntypeinresponseusedthroughcompose::
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                          ::bottom::wire::Foo& foo)
+        : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      FIDL_ALIGNDECL WireResponse _response{foo};
+      message_.Encode<::fidl::WireResponse<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
+          &_response);
+    }
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          WireResponse* response)
+        : message_(bytes, byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+      message_.Encode<::fidl::WireResponse<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
+          response);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(::bottom::wire::Foo& foo)
+        : message_(bytes_.data(), bytes_.size(), foo) {}
+    explicit OwnedEncodedMessage(
+        ::fidl::WireResponse<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+            response)
+        : message_(bytes_.data(), bytes_.size(), response) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<::fidl::WireResponse<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<::fidl::WireResponse<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    WireResponse* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<::fidl::WireResponse<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
+          bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader();
+};
+template <>
+class ::fidl::WireResult<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(::fidl::UnownedClientEnd<
+                      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+                          _client);
+  WireResult(::fidl::UnownedClientEnd<
+                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+                 _client,
+             zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
+        bytes_.data());
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
+        bytes_.data());
+  }
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+          _client,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
+        bytes_);
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
+        bytes_);
+  }
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a
+// |fidl::ClientEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::WireCall<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    final {
+  WireCall() = delete;
+
+ public:
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo(::fidl::UnownedClientEnd<
+         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+             _client_end) {
+    return ::fidl::WireResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        _client_end);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo(::fidl::UnownedClientEnd<
+             ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+             _client_end,
+         ::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        _client_end, _response_buffer.data, _response_buffer.capacity);
+  }
+};
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -549,20 +629,22 @@ class ::fidl::WireSyncClient<
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::GetFoo
+  ::fidl::WireResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo() {
-    return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::
-        GetFoo(this->client_end());
+    return ::fidl::WireResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        this->client_end());
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::UnownedResultOf::
-      GetFoo
-      GetFoo(::fidl::BufferSpan _response_buffer) {
-    return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-        UnownedResultOf::GetFoo(this->client_end(), _response_buffer.data,
-                                _response_buffer.capacity);
+  ::fidl::WireUnownedResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo(::fidl::BufferSpan _response_buffer) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        this->client_end(), _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -617,33 +699,37 @@ class ::fidl::WireInterface<
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest>
+struct IsFidlType<::fidl::WireRequest<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
-static_assert(sizeof(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                         GetFooRequest) ==
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                  GetFooRequest::PrimarySize);
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>) ==
+    ::fidl::WireRequest<::fidl_test_foreigntypeinresponseusedthroughcompose::
+                            Top::GetFoo>::PrimarySize);
 
 template <>
-struct IsFidlType<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse>
+struct IsFidlType<::fidl::WireResponse<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
-static_assert(sizeof(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                         GetFooResponse) ==
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                  GetFooResponse::PrimarySize);
-static_assert(offsetof(::fidl_test_foreigntypeinresponseusedthroughcompose::
-                           Top::GetFooResponse,
-                       foo) == 16);
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>) ==
+    ::fidl::WireResponse<::fidl_test_foreigntypeinresponseusedthroughcompose::
+                             Top::GetFoo>::PrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::WireResponse<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
+        foo) == 16);
 }  // namespace fidl
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 
@@ -668,7 +754,8 @@ class ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
   GetFooResponseContext();
 
   virtual void OnReply(
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse*
+      ::fidl::WireResponse<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
           message) = 0;
 
  private:
@@ -684,8 +771,10 @@ class ::fidl::internal::WireClientImpl<
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::Result GetFoo(
-      ::fit::callback<void(::fidl_test_foreigntypeinresponseusedthroughcompose::
-                               Top::GetFooResponse* response)>
+      ::fit::callback<void(
+          ::fidl::WireResponse<
+              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+              response)>
           _cb);
 
   // Asynchronous variant of |Top.GetFoo()|.
@@ -698,15 +787,16 @@ class ::fidl::internal::WireClientImpl<
   // Synchronous variant of |Top.GetFoo()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::GetFoo
+  ::fidl::WireResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo_Sync();
 
   // Synchronous variant of |Top.GetFoo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::UnownedResultOf::
-      GetFoo
-      GetFoo_Sync(::fidl::BufferSpan _response_buffer);
+  ::fidl::WireUnownedResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo_Sync(::fidl::BufferSpan _response_buffer);
 
   ::fidl::WireAsyncEventHandler<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>*

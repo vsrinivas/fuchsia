@@ -38,6 +38,21 @@ class WireRawChannelInterface;
 template <typename FidlProtocol>
 class WireEventSender;
 
+template <typename FidlProtocol>
+class WireCall;
+
+template <typename FidlMethod>
+struct WireRequest;
+
+template <typename FidlMethod>
+struct WireResponse;
+
+template <typename FidlMethod>
+class WireResult;
+
+template <typename FidlMethod>
+class WireUnownedResult;
+
 namespace internal {
 
 // WeakEventSender borrows the server endpoint from a binding object and

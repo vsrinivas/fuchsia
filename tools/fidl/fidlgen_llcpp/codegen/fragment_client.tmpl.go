@@ -83,7 +83,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
     {{- end }}
   // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{- template "ClientAllocationComment" . }}
-  {{ .WireResultOf }} {{ .Name }}_Sync({{ .RequestArgs | Params }});
+  {{ .WireResult }} {{ .Name }}_Sync({{ .RequestArgs | Params }});
 
     {{- /* Sync caller-allocate flavor */}}
     {{- if or .RequestArgs .ResponseArgs }}
@@ -97,7 +97,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  {{ .WireUnownedResultOf }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}(
+  {{ .WireUnownedResult }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}(
       {{- template "SyncRequestCallerAllocateMethodArguments" . }});
     {{- end }}
 {{ "" }}
