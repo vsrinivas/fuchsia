@@ -139,12 +139,12 @@ pub async fn verify_v6_dns_servers(
                 port: fdhcpv6::DEFAULT_CLIENT_PORT,
                 zone_index: interface_id,
             }),
-            models: Some(fdhcpv6::OperationalModels {
-                stateless: Some(fdhcpv6::Stateless {
-                    options_to_request: Some(vec![fdhcpv6::RequestableOptionCode::DnsServers]),
-                    ..fdhcpv6::Stateless::EMPTY
+            config: Some(fdhcpv6::ClientConfig {
+                information_config: Some(fdhcpv6::InformationConfig {
+                    dns_servers: Some(true),
+                    ..fdhcpv6::InformationConfig::EMPTY
                 }),
-                ..fdhcpv6::OperationalModels::EMPTY
+                ..fdhcpv6::ClientConfig::EMPTY
             }),
             ..fdhcpv6::NewClientParams::EMPTY
         },

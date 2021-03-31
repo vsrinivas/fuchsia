@@ -44,7 +44,7 @@ mod tests {
         super::*,
         anyhow::{anyhow, Error},
         fidl::endpoints::create_endpoints,
-        fidl_fuchsia_net_dhcpv6::{ClientProviderMarker, OperationalModels},
+        fidl_fuchsia_net_dhcpv6::{ClientConfig, ClientProviderMarker},
         fuchsia_async as fasync,
         futures::join,
         matches::assert_matches,
@@ -86,9 +86,9 @@ mod tests {
                         NewClientParams {
                             interface_id: Some(interface_id),
                             address: Some(fidl_socket_addr_v6!("[fe01::1:2]:546")),
-                            models: Some(OperationalModels {
-                                stateless: None,
-                                ..OperationalModels::EMPTY
+                            config: Some(ClientConfig {
+                                information_config: None,
+                                ..ClientConfig::EMPTY
                             }),
                             ..NewClientParams::EMPTY
                         },

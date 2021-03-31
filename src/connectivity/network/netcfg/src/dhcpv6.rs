@@ -33,12 +33,12 @@ pub(super) fn start_client(
     let params = fnet_dhcpv6::NewClientParams {
         interface_id: Some(interface_id),
         address: Some(sockaddr),
-        models: Some(fnet_dhcpv6::OperationalModels {
-            stateless: Some(fnet_dhcpv6::Stateless {
-                options_to_request: Some(vec![fnet_dhcpv6::RequestableOptionCode::DnsServers]),
-                ..fnet_dhcpv6::Stateless::EMPTY
+        config: Some(fnet_dhcpv6::ClientConfig {
+            information_config: Some(fnet_dhcpv6::InformationConfig {
+                dns_servers: Some(true),
+                ..fnet_dhcpv6::InformationConfig::EMPTY
             }),
-            ..fnet_dhcpv6::OperationalModels::EMPTY
+            ..fnet_dhcpv6::ClientConfig::EMPTY
         }),
         ..fnet_dhcpv6::NewClientParams::EMPTY
     };

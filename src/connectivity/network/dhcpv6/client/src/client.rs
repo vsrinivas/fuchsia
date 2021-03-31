@@ -11,8 +11,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcpv6::{
-        ClientMarker, ClientRequest, ClientRequestStream, ClientWatchServersResponder,
-        NewClientParams, OperationalModels, RequestableOptionCode, Stateless,
+        ClientConfig, ClientMarker, ClientRequest, ClientRequestStream,
+        ClientWatchServersResponder, InformationConfig, NewClientParams,
         RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS, RELAY_AGENT_AND_SERVER_PORT,
     },
     fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
@@ -50,10 +50,12 @@ pub enum ClientError {
     Fidl(fidl::Error),
     #[error("got watch request while the previous one is pending")]
     DoubleWatch(),
-    #[error("unsupported DHCPv6 operational models: {:?}, only stateless is supported", _0)]
-    UnsupportedModels(OperationalModels),
+    #[error("unsupported DHCPv6 config: {:?}, no addresses or configurations", _0)]
+    UnsupportedConfigs(ClientConfig),
     #[error("socket receive error: {:?}", _0)]
     SocketRecv(std::io::Error),
+    #[error("unimplemented DHCPv6 functionality: {:?}()", _0)]
+    Unimplemented(String),
 }
 
 /// Theoretical size limit for UDP datagrams.
@@ -109,34 +111,39 @@ impl<'a> AsyncSocket<'a> for fasync::net::UdpSocket {
     }
 }
 
-/// Converts a collection of `RequestableOptionCode` to `v6::OptionCode`.
-fn to_dhcpv6_option_codes(codes: Vec<RequestableOptionCode>) -> Vec<v6::OptionCode> {
+/// Converts `InformationConfig` to a collection of `v6::OptionCode`.
+fn to_dhcpv6_option_codes(information_config: InformationConfig) -> Vec<v6::OptionCode> {
+    let InformationConfig { dns_servers, .. } = information_config;
+    let mut codes = Vec::new();
+
+    if dns_servers.unwrap_or(false) {
+        let () = codes.push(v6::OptionCode::DnsServers);
+    }
     codes
-        .into_iter()
-        .map(|option| match option {
-            RequestableOptionCode::DnsServers => v6::OptionCode::DnsServers,
-        })
-        .collect()
 }
 
-/// Creates a state machine for the input operational models.
+/// Creates a state machine for the input client config.
 fn create_state_machine(
     transaction_id: [u8; 3],
-    models: OperationalModels,
+    config: ClientConfig,
 ) -> Result<
     (dhcpv6_core::client::ClientStateMachine<StdRng>, dhcpv6_core::client::Actions),
     ClientError,
 > {
-    match models {
-        OperationalModels { stateless: Some(Stateless { options_to_request, .. }), .. } => {
-            Ok(dhcpv6_core::client::ClientStateMachine::start_information_request(
-                transaction_id,
-                options_to_request.map(to_dhcpv6_option_codes).unwrap_or(Vec::new()),
-                StdRng::from_entropy(),
-            ))
-        }
-        OperationalModels { stateless: None, .. } => Err(ClientError::UnsupportedModels(models)),
-    }
+    if let ClientConfig {
+        address_assignment_config: None,
+        information_config: Some(information_config),
+        ..
+    } = config
+    {
+        return Ok(dhcpv6_core::client::ClientStateMachine::start_information_request(
+            transaction_id,
+            to_dhcpv6_option_codes(information_config),
+            StdRng::from_entropy(),
+        ));
+    };
+    // TODO(https://fxbug.dev/69696) Implement address assignment state machine.
+    Err(ClientError::UnsupportedConfigs(config))
 }
 
 /// Calculates a hash for the input.
@@ -147,18 +154,18 @@ fn hash<H: Hash>(h: &H) -> u64 {
 }
 
 impl<S: for<'a> AsyncSocket<'a>> Client<S> {
-    /// Starts the client in `models`.
+    /// Starts the client in `config`.
     ///
     /// Input `transaction_id` is used to label outgoing messages and match incoming ones.
     pub(crate) async fn start(
         transaction_id: [u8; 3],
-        models: OperationalModels,
+        config: ClientConfig,
         interface_id: u64,
         socket: S,
         server_addr: SocketAddr,
         request_stream: ClientRequestStream,
     ) -> Result<Self, ClientError> {
-        let (state_machine, actions) = create_state_machine(transaction_id, models)?;
+        let (state_machine, actions) = create_state_machine(transaction_id, config)?;
         let mut client = Self {
             state_machine,
             interface_id,
@@ -358,6 +365,14 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     Ok(())
                 }
             },
+            // TODO(https://fxbug.dev/72701) Implement the address watcher.
+            ClientRequest::WatchAddress { responder: _ } => {
+                Err(ClientError::Unimplemented("WatchAddress".to_string()))
+            }
+            // TODO(https://fxbug.dev/72702) Implement Shutdown.
+            ClientRequest::Shutdown { responder: _ } => {
+                Err(ClientError::Unimplemented("Shutdown".to_string()))
+            }
         }
     }
 
@@ -437,7 +452,7 @@ pub(crate) async fn serve_client(
     if let NewClientParams {
         interface_id: Some(interface_id),
         address: Some(address),
-        models: Some(models),
+        config: Some(config),
         ..
     } = params
     {
@@ -460,7 +475,7 @@ pub(crate) async fn serve_client(
             })?;
         let mut client = Client::<fasync::net::UdpSocket>::start(
             transaction_id(),
-            models,
+            config,
             interface_id,
             create_socket(addr).await?,
             SocketAddr::new(servers_addr, RELAY_AGENT_AND_SERVER_PORT),
@@ -487,7 +502,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_endpoints,
-        fidl_fuchsia_net_dhcpv6::{ClientMarker, OperationalModels, DEFAULT_CLIENT_PORT},
+        fidl_fuchsia_net_dhcpv6::{ClientConfig, ClientMarker, DEFAULT_CLIENT_PORT},
         fuchsia_async as fasync,
         futures::{channel::mpsc, join},
         matches::assert_matches,
@@ -523,10 +538,14 @@ mod tests {
     }
 
     #[test]
-    fn test_create_client_with_unsupported_models() {
+    fn test_create_client_with_unsupported_config() {
         assert_matches!(
-            create_state_machine([1, 2, 3], OperationalModels::EMPTY),
-            Err(ClientError::UnsupportedModels(OperationalModels { stateless: None, .. }))
+            create_state_machine([1, 2, 3], ClientConfig::EMPTY),
+            Err(ClientError::UnsupportedConfigs(ClientConfig {
+                address_assignment_config: None,
+                information_config: None,
+                ..
+            }))
         );
     }
 
@@ -542,9 +561,9 @@ mod tests {
                 NewClientParams {
                     interface_id: Some(1),
                     address: Some(fidl_socket_addr_v6!("[::1]:546")),
-                    models: Some(OperationalModels {
-                        stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                        ..OperationalModels::EMPTY
+                    config: Some(ClientConfig {
+                        information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                        ..ClientConfig::EMPTY
                     }),
                     ..NewClientParams::EMPTY
                 },
@@ -567,9 +586,9 @@ mod tests {
                 NewClientParams {
                     interface_id: Some(1),
                     address: Some(fidl_socket_addr_v6!("[::1]:546")),
-                    models: Some(OperationalModels {
-                        stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                        ..OperationalModels::EMPTY
+                    config: Some(ClientConfig {
+                        information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                        ..ClientConfig::EMPTY
                     }),
                     ..NewClientParams::EMPTY
                 },
@@ -606,12 +625,11 @@ mod tests {
                     NewClientParams {
                         interface_id: Some(1),
                         address: Some(fidl_socket_addr_v6!("[::1]:546")),
-                        models: Some(OperationalModels {
-                            stateless: Some(Stateless {
-                                options_to_request: None,
-                                ..Stateless::EMPTY
+                        config: Some(ClientConfig {
+                            information_config: Some(InformationConfig {
+                                ..InformationConfig::EMPTY
                             }),
-                            ..OperationalModels::EMPTY
+                            ..ClientConfig::EMPTY
                         }),
                         ..NewClientParams::EMPTY
                     },
@@ -630,9 +648,9 @@ mod tests {
             NewClientParams {
                 interface_id: Some(1),
                 address: None,
-                models: Some(OperationalModels {
-                    stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                    ..OperationalModels::EMPTY
+                config: Some(ClientConfig {
+                    information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                    ..ClientConfig::EMPTY
                 }),
                 ..NewClientParams::EMPTY
             },
@@ -644,9 +662,9 @@ mod tests {
                     port: DEFAULT_CLIENT_PORT,
                     zone_index: 1,
                 }),
-                models: Some(OperationalModels {
-                    stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                    ..OperationalModels::EMPTY
+                config: Some(ClientConfig {
+                    information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                    ..ClientConfig::EMPTY
                 }),
                 ..NewClientParams::EMPTY
             },
@@ -658,9 +676,9 @@ mod tests {
                     port: DEFAULT_CLIENT_PORT,
                     zone_index: 1,
                 }),
-                models: Some(OperationalModels {
-                    stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                    ..OperationalModels::EMPTY
+                config: Some(ClientConfig {
+                    information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                    ..ClientConfig::EMPTY
                 }),
                 ..NewClientParams::EMPTY
             },
@@ -734,9 +752,9 @@ mod tests {
         let mut client = exec
             .run_singlethreaded(Client::<fasync::net::UdpSocket>::start(
                 transaction_id,
-                OperationalModels {
-                    stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                    ..OperationalModels::EMPTY
+                ClientConfig {
+                    information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                    ..ClientConfig::EMPTY
                 },
                 1, /* interface ID */
                 client_socket,
@@ -915,9 +933,9 @@ mod tests {
         let (server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             transaction_id,
-            OperationalModels {
-                stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                ..OperationalModels::EMPTY
+            ClientConfig {
+                information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                ..ClientConfig::EMPTY
             },
             1, /* interface ID */
             client_socket,
@@ -970,9 +988,9 @@ mod tests {
         let (_server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels {
-                stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                ..OperationalModels::EMPTY
+            ClientConfig {
+                information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                ..ClientConfig::EMPTY
             },
             1, /* interface ID */
             client_socket,
@@ -1073,9 +1091,9 @@ mod tests {
         let (server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels {
-                stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                ..OperationalModels::EMPTY
+            ClientConfig {
+                information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                ..ClientConfig::EMPTY
             },
             1, /* interface ID */
             client_socket,
@@ -1197,9 +1215,9 @@ mod tests {
         let (server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels {
-                stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                ..OperationalModels::EMPTY
+            ClientConfig {
+                information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                ..ClientConfig::EMPTY
             },
             1, /* interface ID */
             client_socket,
@@ -1291,9 +1309,9 @@ mod tests {
 
         let mut client = Client::<StubSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels {
-                stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
-                ..OperationalModels::EMPTY
+            ClientConfig {
+                information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                ..ClientConfig::EMPTY
             },
             1, /* interface ID */
             StubSocket {},

@@ -4,39 +4,87 @@
 
 library fuchsia.net.dhcpv6;
 
+using fuchsia.net.interfaces.admin;
 using fuchsia.net.name;
 using fuchsia.net;
+using zx;
 
 /// Default port a DHCPv6 client should listen to according to [RFC 8415,
 /// Section 7.2](https://tools.ietf.org/html/rfc8415#section-7.2).
 const uint16 DEFAULT_CLIENT_PORT = 546;
 
-/// Supported DHCPv6 option codes that can be included in the client's
-/// [Option Request Option](https://tools.ietf.org/html/rfc8415#section-21.7).
-///
-/// See the full list of option codes
-/// [here](https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2).
-enum RequestableOptionCode {
-    DNS_SERVERS = 23;
+/// Configuration for an address type.
+table AddressConfig {
+    /// Number of addresses.
+    ///
+    /// If not set, interpreted as 0 (no addresses will be requested).
+    1: uint8 address_count;
+
+    /// Preferred addresses.
+    ///
+    /// Used for requesting specific addresses from DHCPv6 servers. The
+    /// addresses are used as hints by DHCPv6 servers, but may be ignored. If
+    /// the DHCPv6 server does not assign the preferred addresses and responds
+    /// with different addresses instead, the DHCPv6 client's behaviour is to
+    /// accept the assigned addresses.
+    ///
+    /// If the size of `preferred_addresses` is greater than `address_count`,
+    /// the client will pick from `preferred_addresses` until `address_count`
+    /// addresses are assigned to it.
+    ///
+    /// Optional field. If not set, or if `preferred_addresses` is empty, no
+    /// address hints are provided.
+    2: vector<fuchsia.net.Ipv6Address>:MAX preferred_addresses;
 };
 
-/// A DHCPv6 operational model where the client only sends information
-/// requests and handles corresponding replies, as defined in
+/// Configuration for negotiating addresses.
+table AddressAssignmentConfig {
+    /// Non-temporary address configuration.
+    ///
+    /// Configures the client to negotiate non-temporary addresses (IA_NA), as
+    /// defined in
+    /// [RFC 8415, section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
+    ///
+    /// It not set, interpreted as an empty `AddressConfig` (no non-temporary
+    /// addresses will be negotiated).
+    1: AddressConfig non_temporary_address_config;
+};
+
+/// Configuration for requesting configuration information.
+table InformationConfig {
+    /// Request a list of available DNS servers
+    /// [RFC 3646](https://tools.ietf.org/html/rfc3646).
+    ///
+    /// If not set, interpreted as false;
+    1: bool dns_servers;
+};
+
+/// Configuration for starting the DHCPv6 client.
+///
+/// If the configuration requests both addresses and other configuration
+/// parameters, all information is requested in the same message exchange,
+/// running in stateful mode. If only configuration parameters are requested
+/// (no addresses), the client runs in stateless mode, as described in
 /// [RFC 8415, Section 6.1](https://tools.ietf.org/html/rfc8415#section-6.1).
-table Stateless {
-    /// A list of option codes to include in
-    /// [Option Request Option](https://tools.ietf.org/html/rfc8415#section-21.7).
-    1: vector<RequestableOptionCode>:1 options_to_request;
-};
+///
+/// If the configuration does not request any information (neither addresses
+/// nor other configuration information), the [`fuchsia.net.dhcpv6/Client`]
+/// creation will fail.
+table ClientConfig {
+    /// Configuration for negotiating addresses.
+    ///
+    /// If set, the client runs in stateful mode, as described in
+    /// [RFC 8415, Section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
+    ///
+    /// If not set, interpreted as an empty `AddressAssignmentConfig` (no
+    /// addresses will be negotiated).
+    1: AddressAssignmentConfig address_assignment_config;
 
-/// Operational models for a client.
-///
-/// The client will run all the provided models in parallel.
-///
-/// See the full list of operational models in
-/// [RFC 8415, Section 6](https://tools.ietf.org/html/rfc8415#section-6).
-table OperationalModels {
-    1: Stateless stateless;
+    /// Configuration for requesting configuration information.
+    ///
+    /// If not set, interpreted as an empty `InformationConfig` (no
+    /// configuration information will be requested).
+    2: InformationConfig information_config;
 };
 
 /// Parameters for calling [`fuchsia.net.dhcpv6/ClientProvider.NewClient`].
@@ -63,12 +111,13 @@ table NewClientParams {
     /// Required.
     2: fuchsia.net.Ipv6SocketAddress address;
 
-    /// The [`fuchsia.net.dhcpv6/OperationalModels`] the client will start in.
+    /// The [`fuchsia.net.dhcpv6/ClientConfig`] the client starts with.
     ///
-    /// Client creation will fail if `models` is empty or unsupported.
+    /// Client creation will fail if `config` is not requesting any
+    /// information.
     ///
     /// Required.
-    3: OperationalModels models;
+    3: ClientConfig config;
 };
 
 /// Provides a method to create new clients.
@@ -84,6 +133,40 @@ protocol ClientProvider {
 };
 
 /// Provides methods to watch for discovered network configurations.
+///
+/// The lifetime of the the client is tied to the channel; closing the channel
+/// will result in shutting down the client.
 protocol Client {
     compose fuchsia.net.name.DnsServerWatcher;
+
+    /// Returns an address and its parameters.
+    ///
+    /// Yields a value for every address acquired by the client.
+    ///
+    /// [`fuchsia.net.interfaces.admin/AddressParameters.address_state_provider`]
+    /// is closed if the address becomes invalid (its valid lifetime expires
+    /// and Renew and Rebind fail).
+    ///
+    /// It is invalid to call `WatchAssignmentState` while a previous call is
+    /// still pending. Doing so will cause the channel to be closed.
+    ///
+    /// - response `address` the assigned address.
+    /// - response `address_parameters` the parameters of the address.
+    WatchAddress()
+        -> (fuchsia.net.Subnet address,
+            fuchsia.net.interfaces.admin.AddressParameters address_parameters);
+
+    /// Shuts down the `Client`.
+    ///
+    /// Blocks until any held addresses are gracefully released, as described
+    /// in
+    /// [RFC 8415, Section 18.2.7](https://tools.ietf.org/html/rfc8415#section-18.2.7).
+    ///
+    /// The channel is closed after shutdown, regardless of whether an error is
+    /// returned.
+    ///
+    /// * error a `zx.status` if any of the addresses were not gracefully
+    ///     released, e.g. the client times out waiting for Reply to Release,
+    ///     or the interface is down and sending Release fails.
+    Shutdown() -> () error zx.status;
 };
