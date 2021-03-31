@@ -63,7 +63,6 @@ const char* kPerFrameGoldenSha256[] = {
     "da59d28a16cb4f9d29688809341f2797edf0462a1c954a3b2f77750e7edb6a90",
     "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8cd0b0aa5f152e1",
     nullptr};
-
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -74,10 +73,13 @@ int main(int argc, char* argv[]) {
       .golden_sha256 = kGoldenSha256,
   };
   // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
-  // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
-  // sometimes.
-  constexpr uint32_t kMaxRetryCount = 100;
-  for (uint32_t try_ordinal = 0; try_ordinal < kMaxRetryCount; ++try_ordinal) {
+  // de-flake due to a decode correctness bug that results in some incorrect pixels sometimes, at
+  // least on sherlock.  See DECODE_CORRECTNESS_COMMENTS in vdec1.cc.
+  uint32_t fail_count = 0;
+  uint32_t success_count = 0;
+  constexpr uint32_t kTryCount = 10;
+  for (uint32_t try_ordinal = 0; try_ordinal < kTryCount; ++try_ordinal) {
+    LOGF("success_count: %u fail_count: %u", success_count, fail_count);
     if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,
                                     /*min_output_buffer_count=*/0, &test_params)) {
@@ -85,10 +87,17 @@ int main(int argc, char* argv[]) {
         LOGF("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u",
              try_ordinal);
       }
-      return 0;
+      ++success_count;
+      continue;
     }
-    LOGF("WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)");
+    LOGF("WARNING - fxbug.dev/13483 - decode probably flaked - internally de-flaking (for now)");
+    ++fail_count;
   }
-  LOGF("Incorrect hash seen every time despite de-flaking retries.  FAIL");
-  return -1;
+  LOGF("overall counts - success_count: %u fail_count: %u", success_count, fail_count);
+  const double kEpsilon = 0.00001;
+  if (static_cast<double>(fail_count) / kTryCount >= 0.1 - kEpsilon) {
+    LOGF("Incorrect hash seen at too great a percentage of tries.  FAIL");
+    return -1;
+  }
+  return 0;
 }

@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
   // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
-  constexpr uint32_t kMaxRetryCount = 100;
+  constexpr uint32_t kMaxRetryCount = 2;
   for (uint32_t i = 0; i < kMaxRetryCount; ++i) {
     if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_multi_decoder,
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,

@@ -32,20 +32,23 @@ typedef fit::function<void(uint64_t stream_lifetime_ordinal, uint8_t* i420_data,
                            uint64_t timestamp_ish)>
     EmitFrame;
 
+struct FrameToCompare;
+
 // Keep fields in alphabetical order please, other than is_validated_.
 struct UseVideoDecoderTestParams final {
   // Let default constructor exist.  This doesn't count as user-declared, so aggregate
   // initialization can still be used.
   UseVideoDecoderTestParams() = default;
-  // No copy, assign, or move.  None of this prevents aggregate initialization.
-  UseVideoDecoderTestParams(const UseVideoDecoderTestParams& from) = delete;
-  UseVideoDecoderTestParams& operator=(const UseVideoDecoderTestParams& from) = delete;
-  UseVideoDecoderTestParams(const UseVideoDecoderTestParams&& from) = delete;
-  UseVideoDecoderTestParams& operator=(const UseVideoDecoderTestParams&& from) = delete;
 
   ~UseVideoDecoderTestParams() {
     // Ensure Validate() gets called at least once, if a bit later than ideal.
     Validate();
+  }
+
+  UseVideoDecoderTestParams Clone() const {
+    UseVideoDecoderTestParams result = *this;
+    result.magic_validated_ = 0;
+    return result;
   }
 
   // Validate() can be called at any time, preferably before the parameters are used.
@@ -269,9 +272,31 @@ struct UseVideoDecoderTestParams final {
   const char* golden_sha256 = kDefaultGoldenSha256;
 
  private:
+  // Private copy, assign, or move.  None of this prevents aggregate initialization.
+  UseVideoDecoderTestParams(const UseVideoDecoderTestParams& from) = default;
+  UseVideoDecoderTestParams& operator=(const UseVideoDecoderTestParams& from) = default;
+  UseVideoDecoderTestParams(UseVideoDecoderTestParams&& from) = default;
+  UseVideoDecoderTestParams& operator=(UseVideoDecoderTestParams&& from) = default;
+
   // Client code should not exploit knowledge of this value, and should not directly initialize or
   // directly set magic_validated_ to any value.
   static constexpr uint64_t kPrivateMagicValidated = 0xC001DECAFC0DE;
+};
+
+// This represents the "actual" frame (not the "expected" frame).
+struct FrameToCompare {
+  // I420 format only, for now.
+
+  // data must point at a complete frame, with at least width * height * 3 / 2 bytes
+  uint8_t* data;
+
+  // Which "expected" frame ordinal needs to be compared to this "actual" frame.
+  uint32_t ordinal;
+
+  // All the pixels width * height Y and width / 2 * height / 2 UV will be compared.
+  // The stride == width.
+  uint32_t width;
+  uint32_t height;
 };
 
 struct UseVideoDecoderParams {
