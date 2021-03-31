@@ -105,9 +105,9 @@ func runGen(
 	// gn will return an error if the argument list is too long, so write the
 	// args directly to the build dir instead of using the --args flag.
 	if f, err := osmisc.CreateFile(filepath.Join(contextSpec.BuildDir, "args.gn")); err != nil {
-		return "", fmt.Errorf("failed to create args.gn: %v", err)
+		return "", fmt.Errorf("failed to create args.gn: %w", err)
 	} else if _, err := io.WriteString(f, formattedArgs); err != nil {
-		return "", fmt.Errorf("failed to write args.gn: %v", err)
+		return "", fmt.Errorf("failed to write args.gn: %w", err)
 	}
 
 	genCmd := []string{

@@ -192,7 +192,7 @@ func TestRunGen(t *testing.T) {
 
 			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, "mac-x64", tc.gnTracePath, []string{"arg1", "arg2"})
 			if err != nil {
-				t.Fatalf("Unexpected error from runGen: %v", err)
+				t.Fatalf("Unexpected error from runGen: %s", err)
 			}
 
 			if string(failureSummary) != string(runner.mockStdout) {
@@ -219,7 +219,7 @@ func TestRunGen(t *testing.T) {
 				t.Errorf("Expected runGen to use build dir from context (%s) but got %s", contextSpec.BuildDir, buildDir)
 			}
 			if _, err := os.Stat(filepath.Join(contextSpec.BuildDir, "args.gn")); err != nil {
-				t.Errorf("Failed to read args.gn file: %v", err)
+				t.Errorf("Failed to read args.gn file: %s", err)
 			}
 			assertSubset(t, tc.expectedOptions, otherOptions, false)
 		})
@@ -524,7 +524,7 @@ func TestGenArgs(t *testing.T) {
 				if tc.expectErr {
 					return
 				}
-				t.Fatalf("Unexpected genArgs() error: %v", err)
+				t.Fatalf("Unexpected genArgs() error: %s", err)
 			} else if tc.expectErr {
 				t.Fatalf("Expected genArgs() to return an error, but got nil")
 			}
