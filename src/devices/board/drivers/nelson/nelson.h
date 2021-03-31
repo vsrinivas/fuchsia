@@ -141,6 +141,7 @@ class Nelson : public NelsonType {
   zx_status_t CpuInit();
   zx_status_t NnaInit();
   zx_status_t RamCtlInit();
+  zx_status_t ThermistorInit();
   int Thread();
 
   uint32_t GetBoardRev(void);

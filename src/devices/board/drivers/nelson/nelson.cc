@@ -219,6 +219,10 @@ int Nelson::Thread() {
     zxlogf(ERROR, "RamCtlInit failed");
   }
 
+  if (ThermistorInit() != ZX_OK) {
+    zxlogf(ERROR, "ThermistorInit failed");
+  }
+
   // This function includes some non-trivial delays, so lets run this last
   // to avoid slowing down the rest of the boot.
   if ((status = BluetoothInit()) != ZX_OK) {

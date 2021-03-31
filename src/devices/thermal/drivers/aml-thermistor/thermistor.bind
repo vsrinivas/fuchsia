@@ -9,6 +9,7 @@ fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.G
 accept fuchsia.BIND_PLATFORM_DEV_PID {
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS,
+  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.NELSON,
 }
 fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.THERMISTOR;
 

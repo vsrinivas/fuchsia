@@ -366,6 +366,9 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "class/radar/000",
 
       "sys/platform/05:05:24/ram",
+
+      "sys/platform/03:0a:27/thermistor-device/therm-thread",
+      "sys/platform/03:0a:27/thermistor-device/therm-audio",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
