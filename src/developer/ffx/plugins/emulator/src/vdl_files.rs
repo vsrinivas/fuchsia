@@ -383,7 +383,7 @@ impl VDLFiles {
             .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
             .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args));
         for i in 0..start_command.envs.len() {
-            cmd.arg("--envs").arg(&start_command.envs[i]);
+            cmd.arg("--env").arg(&start_command.envs[i]);
         }
         let status = cmd.status()?;
         if !status.success() {
