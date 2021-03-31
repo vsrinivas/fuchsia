@@ -111,7 +111,10 @@ fuchsia_unittest_package("test-runner-test-lib-unit-tests") {
 }
 
 expect_includes("tmp_storage") {
-  includes = [ "tmp_storage.shard.cml" ]
+  includes = [
+    "tmp_storage.shard.cml",
+    "tmp_storage.shard.cmx",
+  ]
 }
 
 group("test_runners") {
