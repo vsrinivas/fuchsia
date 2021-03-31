@@ -121,7 +121,6 @@ class AppModel {
     );
     keyboardShortcutsHelpText = _keyboardShortcuts.helpText();
 
-
     // Load startup configuration. First check for dynamic config file, if it
     // is not there look for the static file, otherwise default to normal start.
     if (FileSystemEntity.typeSync(dynamicConfigPath) !=
@@ -401,11 +400,19 @@ class AppModel {
   }
 
   void onFocusChange(List<ViewRef> focusedViews) {
+    if (focusedViews == null) {
+      return;
+    }
+
+    // Dismiss any system overlays.
+    // TODO(https://fxbug.dev/47593): Don't dismiss overlay if focus is
+    // switching to shell.
+    onCancel();
+
     // Get the story whose [ViewRef] is in [focusedViews].
     final story = clustersModel.findStory(focusedViews);
-    if (story != null) {
-      // Also dismiss any system overlays.
-      onCancel();
+    if (story != null && !story.focused) {
+      story.focus();
     }
   }
 

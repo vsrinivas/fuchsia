@@ -221,6 +221,7 @@ void main() {
 
     final story = MockErmineStory();
     when(clustersModel.findStory(any)).thenReturn(story);
+    when(story.focused).thenReturn(false);
 
     appModel.onFocusChange([]);
     expect(appModel.askVisibility.value, false);

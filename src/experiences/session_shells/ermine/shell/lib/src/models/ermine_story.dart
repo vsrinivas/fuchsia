@@ -178,6 +178,7 @@ class ErmineStory {
   void onViewAvailable() {
     childViewAvailableNotifier.value =
         viewController.viewConnectionAvailable.value;
+    focus();
   }
 
   /// Requests focus to be transfered to this view given it's [viewRef].

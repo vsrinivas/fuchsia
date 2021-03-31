@@ -38,7 +38,6 @@ class FullscreenStory extends StatelessWidget {
                       fullscreen: true,
                       child: PostRender(
                         child: ChildView(connection: story.childViewConnection),
-                        onRender: story.requestFocus,
                       ),
                       onDelete: story.delete,
                       onMinimize: story.restore,

@@ -108,7 +108,6 @@ class Cluster extends StatelessWidget {
                             }),
                       ],
                     ),
-                    onRender: story.requestFocus,
                   ),
                   onTap: story.focus,
                   onDelete: story.delete,
