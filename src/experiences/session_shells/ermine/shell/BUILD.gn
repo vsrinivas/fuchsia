@@ -236,6 +236,7 @@ flutter_test("ermine_unittests") {
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.session",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",

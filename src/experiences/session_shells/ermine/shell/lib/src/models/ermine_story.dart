@@ -10,15 +10,18 @@ import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:fuchsia_services/services.dart';
+import 'package:internationalization/strings.dart';
 import 'package:uuid/uuid.dart';
 import 'package:zircon/zircon.dart';
 
 import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
 
+typedef AlertHandler = void Function(String, [String, String]);
+
 /// A function which can be used to launch the suggestion.
 typedef LaunchSuggestion = Future<void> Function(
-    Suggestion, ElementControllerProxy);
+    Suggestion, ElementControllerProxy, AlertHandler);
 
 /// Defines a class to represent a story in ermine.
 class ErmineStory {
@@ -53,11 +56,12 @@ class ErmineStory {
     Suggestion suggestion,
     ValueChanged<ErmineStory> onDelete,
     ValueChanged<ErmineStory> onChange,
+    AlertHandler onAlert,
     LaunchSuggestion launchSuggestion,
   }) {
     final elementController = ElementControllerProxy();
     launchSuggestion ??= ErmineStory.launchSuggestion;
-    launchSuggestion(suggestion, elementController);
+    launchSuggestion(suggestion, elementController, onAlert);
     return ErmineStory(
       id: suggestion.id,
       title: suggestion.title,
@@ -131,8 +135,8 @@ class ErmineStory {
 
   void restore() => onChange?.call(this..fullscreen = false);
 
-  static Future<void> launchSuggestion(
-      Suggestion suggestion, ElementControllerProxy elementController) async {
+  static Future<void> launchSuggestion(Suggestion suggestion,
+      ElementControllerProxy elementController, AlertHandler onAlert) async {
     final proxy = ElementManagerProxy();
 
     final incoming = Incoming.fromSvcPath()..connectToService(proxy);
@@ -160,10 +164,34 @@ class ErmineStory {
         .proposeElement(spec, elementController.ctrl.request())
         .catchError((err) {
       log.shout('$err: Failed to propose element <${suggestion.url}>');
+
+      ErmineStory.handleError(err, suggestion.title, onAlert);
     });
 
     proxy.ctrl.close();
     await incoming.close();
+  }
+
+  @visibleForTesting
+  static void handleError(
+      dynamic error, String elementName, AlertHandler onAlert) {
+    final title = Strings.proposeElementErrorTitle;
+    final header = elementName;
+    String description;
+    switch (error) {
+      case ProposeElementError.notFound:
+        description = 'ElementProposeError.NOT_FOUND:\n'
+            '${Strings.proposeElementErrorNotFoundDesc}'; //  'The component URL could not be resolved.'
+        break;
+      case ProposeElementError.rejected:
+        description = 'ElementProposeError.REJECTED:\n'
+            '${Strings.proposeElementErrorRejectedDesc}'; // 'The element spec may have been malformed.'
+        break;
+      default:
+        description = error.toString();
+        break;
+    }
+    onAlert?.call(title, header, description);
   }
 
   void presentView(

@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:ermine/src/models/ermine_story.dart';
 import 'package:ermine/src/utils/presenter.dart';
 import 'package:ermine/src/utils/suggestion.dart';
+import 'package:fidl_fuchsia_session/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:flutter/foundation.dart';
@@ -20,7 +21,7 @@ void main() {
     final suggestion = Suggestion(id: 'id', title: 'title', url: 'url');
     final story = ErmineStory.fromSuggestion(
       suggestion: suggestion,
-      launchSuggestion: (_, __) async {},
+      launchSuggestion: (_, __, ___) async {},
     );
 
     expect(story.id, 'id');
@@ -32,7 +33,7 @@ void main() {
     final suggestion = Suggestion(id: 'id', title: 'title', url: 'url');
     ErmineStory.fromSuggestion(
       suggestion: suggestion,
-      launchSuggestion: (s, _) async => completer.complete(s.id == 'id'),
+      launchSuggestion: (s, _, ___) async => completer.complete(s.id == 'id'),
     );
     expect(await completer.future, true);
   });
@@ -86,6 +87,42 @@ void main() {
 
     verify(viewRefInstalled.watch(ViewRef(reference: eventPairDup))).called(1);
     verify(childViewConnection.requestFocus()).called(1);
+  });
+
+  test('ErmineStory should handle errors caught while proposing an element',
+      () async {
+    var _title = '';
+    var _header = '';
+    var _description = '';
+
+    void onError(String title, [String header, String description]) {
+      _title = title;
+      _header = header;
+      _description = description;
+    }
+
+    const title = 'An error occurred while launching';
+    ErmineStory.handleError(ProposeElementError.notFound, 'element1', onError);
+    expect(_title, equals(title));
+    expect(_header, equals('element1'));
+    expect(
+        _description,
+        equals('ElementProposeError.NOT_FOUND:\n'
+            'The component URL could not be resolved.'));
+
+    ErmineStory.handleError(ProposeElementError.rejected, 'element2', onError);
+    expect(_title, equals(title));
+    expect(_header, equals('element2'));
+    expect(
+        _description,
+        equals('ElementProposeError.REJECTED:\n'
+            'The element spec may have been malformed.'));
+
+    const arbitraryError = 'This is an arbitrary type of error.';
+    ErmineStory.handleError(arbitraryError, 'element3', onError);
+    expect(_title, equals(title));
+    expect(_header, equals('element3'));
+    expect(_description, equals(arbitraryError));
   });
 }
 

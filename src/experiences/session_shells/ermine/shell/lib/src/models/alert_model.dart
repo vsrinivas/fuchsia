@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// A collection [AlertModel] instances.
+// TODO(fxb/73436): Provide different visibility options.
 class AlertsModel extends ChangeNotifier {
   final _alerts = <AlertModel>[];
   final ValueNotifier<AlertModel> _currentAlert =
@@ -34,11 +35,13 @@ class AlertModel {
   final String title;
   final String description;
   final _actions = <ActionModel>[];
+  final String _id;
 
   /// The model that holds a list of [AlertModel]s including this one.
   final AlertsModel alerts;
 
   List<ActionModel> get actions => _actions;
+  String get id => _id;
 
   AlertModel({
     @required this.alerts,
@@ -47,7 +50,9 @@ class AlertModel {
     this.description = '',
     List<ActionModel> actions = const <ActionModel>[],
   })  : assert(title.isNotEmpty),
-        assert(alerts != null) {
+        assert(alerts != null),
+        _id = '${header ?? 'alert'}_${DateTime.now().toString()}'
+            '_${alerts.alerts.length}' {
     _actions.addAll(actions);
   }
 

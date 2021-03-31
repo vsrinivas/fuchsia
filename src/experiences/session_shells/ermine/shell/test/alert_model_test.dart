@@ -104,4 +104,37 @@ void main() {
 
     model.removeListener(onListened);
   });
+
+  test('AlertsModel should distinguish alerts when they have the same content.',
+      () {
+    // Creats two AlertModel with the same content.
+    final alertA = AlertModel(
+      header: 'header',
+      title: 'title',
+      description: 'description',
+      alerts: model,
+    );
+    final alertB = AlertModel(
+      header: 'header',
+      title: 'title',
+      description: 'description',
+      alerts: model,
+    );
+
+    // The AlertModels should have different IDs.
+    final idA = alertA.id;
+    final idB = alertB.id;
+    expect(idA, isNot(equals(idB)));
+
+    expect(model.alerts.length, 0);
+
+    // Add the AlertModels to the AlertsModel.
+    model..addAlert(alertA)..addAlert(alertB);
+    expect(model.alerts.length, 2);
+
+    // The AlertsModel should remove the given AlertModel.
+    model.removeAlert(alertA);
+    expect(model.alerts.length, 1);
+    expect(model.alerts[0].id, idB);
+  });
 }

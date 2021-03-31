@@ -14,10 +14,10 @@ class AlertContainer extends StatelessWidget {
   const AlertContainer({@required this.model});
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-        valueListenable: model.alertVisibility,
-        builder: (BuildContext context, bool hasAlert, _) =>
-            (hasAlert) ? buildAlertDialog(model) : Offstage(),
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: model.alertsModel,
+        builder: (BuildContext context, _) =>
+            model.alertVisibility.value ? buildAlertDialog(model) : Offstage(),
       );
 
   @visibleForTesting

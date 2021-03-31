@@ -32,6 +32,8 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
 
   final _storyToCluster = <String, ClusterModel>{};
 
+  final AlertHandler onAlert;
+
   /// Change notifier when fullscreen is toggled for a story.
   ValueNotifier<ErmineStory> fullscreenStoryNotifier = ValueNotifier(null);
 
@@ -57,6 +59,8 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
 
   /// Returns a iterable of all [Story] objects.
   Iterable<ErmineStory> get stories => _storyToCluster.keys.map(getStory);
+
+  ClustersModel({this.onAlert});
 
   /// Maximize the story to fullscreen: it's visual state to IMMERSIVE.
   void maximize(String id) {
@@ -127,6 +131,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
       suggestion: suggestion,
       onDelete: storyDeleted,
       onChange: storyChanged,
+      onAlert: onAlert,
       launchSuggestion: launchSuggestion,
     );
     _addErmineStory(story);

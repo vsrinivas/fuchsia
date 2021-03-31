@@ -106,9 +106,9 @@ class AppModel {
 
     statusModel ??= StatusModel.withSvcPath(onLogout);
 
-    clustersModel ??= ClustersModel();
-
     alertsModel ??= AlertsModel();
+
+    clustersModel ??= ClustersModel(onAlert: _onAlert);
 
     // Setup Inspect.
     _inspect ??= Inspect()..serve(outgoing);
@@ -331,7 +331,6 @@ class AppModel {
   /// Escape key was pressed.
   void onCancel() {
     statusModel.reset();
-    alertVisibility.value = false;
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
@@ -425,5 +424,15 @@ class AppModel {
         peekNotifier.value = false;
       }
     }
+  }
+
+  void _onAlert(String title, [String header = '', String description = '']) {
+    final alert = AlertModel(
+      alerts: alertsModel,
+      header: header,
+      title: title,
+      description: description,
+    );
+    alertsModel.addAlert(alert);
   }
 }

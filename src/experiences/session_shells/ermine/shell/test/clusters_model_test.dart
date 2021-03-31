@@ -22,7 +22,7 @@ void main() {
 
   test('Story from suggestion should have focus', () {
     final suggestion = Suggestion(id: 'id', url: 'url', title: 'title');
-    clustersModel.storySuggested(suggestion, (_, __) async {});
+    clustersModel.storySuggested(suggestion, (_, __, ___) async {});
 
     expect(clustersModel.hasStories, true);
     expect(clustersModel.focusedStory, isNotNull);
@@ -72,7 +72,7 @@ void main() {
   test('Story maximize/minimize should toggle fullscreen', () {
     // Create a story.
     final suggestion = Suggestion(id: 'id', url: 'url', title: 'title');
-    clustersModel.storySuggested(suggestion, (_, __) async {});
+    clustersModel.storySuggested(suggestion, (_, __, ___) async {});
     final story = clustersModel.focusedStory;
 
     clustersModel.maximize(story.id);
@@ -89,7 +89,7 @@ void main() {
   test('Story delete should remove from cluster', () {
     // Create a story.
     final suggestion = Suggestion(id: 'id', url: 'url', title: 'title');
-    clustersModel.storySuggested(suggestion, (_, __) async {});
+    clustersModel.storySuggested(suggestion, (_, __, ___) async {});
     expect(clustersModel.getStory('id'), isNotNull);
 
     final story = clustersModel.focusedStory;
@@ -101,14 +101,14 @@ void main() {
   test('Setting focus on story should defocus previous story', () {
     // Create fisrt story.
     var suggestion = Suggestion(id: 'id-1', url: 'url', title: 'title');
-    clustersModel.storySuggested(suggestion, (_, __) async {});
+    clustersModel.storySuggested(suggestion, (_, __, ___) async {});
 
     final story1 = clustersModel.getStory('id-1');
     expect(clustersModel.focusedStory, story1);
 
     // Create second story.
     suggestion = Suggestion(id: 'id-2', url: 'url', title: 'title');
-    clustersModel.storySuggested(suggestion, (_, __) async {});
+    clustersModel.storySuggested(suggestion, (_, __, ___) async {});
 
     final story2 = clustersModel.getStory('id-2');
     expect(clustersModel.focusedStory, story2);
@@ -124,7 +124,7 @@ void main() {
   test('Moving to next cluster should change current cluster', () {
     // Create fisrt story.
     var suggestion = Suggestion(id: 'id-1', url: 'url', title: 'title');
-    clustersModel.storySuggested(suggestion, (_, __) async {});
+    clustersModel.storySuggested(suggestion, (_, __, ___) async {});
 
     final firstCluster = clustersModel.currentCluster.value;
     clustersModel.nextCluster();

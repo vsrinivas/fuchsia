@@ -7,25 +7,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
+import 'package:ermine/src/models/alert_model.dart';
 import 'package:ermine/src/models/app_model.dart';
 import 'package:ermine/src/widgets/support/alert.dart';
 
 void main() async {
   TestAlertContainer alert;
   MockAppModel model;
+  AlertsModel alertsModel;
 
   setUp(() {
     model = MockAppModel();
     alert = TestAlertContainer(model);
+    alertsModel = AlertsModel();
   });
 
   testWidgets('Test Alert visibility', (tester) async {
     final alertVisibility = ValueNotifier<bool>(true);
+    when(model.alertsModel).thenReturn(alertsModel);
     when(model.alertVisibility).thenReturn(alertVisibility);
+
     await tester.pumpWidget(alert);
     expect(find.byWidget(alert.alertDialog), findsOneWidget);
 
     alertVisibility.value = false;
+    alertsModel.notifyListeners();
     await tester.pumpAndSettle();
     expect(find.byWidget(alert.alertDialog), findsNothing);
   });

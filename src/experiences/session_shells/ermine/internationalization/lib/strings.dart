@@ -348,4 +348,21 @@ class Strings {
         name: 'channel',
         desc: 'The short name for the "channel" label',
       );
+  static String get proposeElementErrorTitle => Intl.message(
+        'An error occurred while launching',
+        name: 'proposeElementErrorTitle',
+        desc: 'The title displayed in the error alert dialog',
+      );
+  static String get proposeElementErrorNotFoundDesc => Intl.message(
+        'The component URL could not be resolved.',
+        name: 'proposeElementErrorNotFoundDescription',
+        desc: 'The description displayed in the alert dialog handling '
+            'ProposeElementError.NOT_FOUND',
+      );
+  static String get proposeElementErrorRejectedDesc => Intl.message(
+        'The element spec may have been malformed.',
+        name: 'proposeElementErrorRejectedDescription',
+        desc: 'The description displayed in the alert dialog handling '
+            'ProposeElementError.REJECTED',
+      );
 }
