@@ -102,13 +102,15 @@ impl OrdLowerBound for ExtentKey {
 
 /// ObjectType is the set of possible records in the object store.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum ObjectType {
+pub enum ObjectDescriptor {
     /// A file (in the generic sense; i.e. an object with some attributes).
     File,
     /// A directory (in the generic sense; i.e. an object with children).
     Directory,
     /// A volume, which is the root of a distinct object store containing Files and Directories.
-    Volume,
+    /// The contained u64 is the object ID of an object within the object store that contains volume
+    /// information.
+    Volume(u64),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -215,19 +217,20 @@ impl ExtentValue {
 pub enum ObjectValue {
     /// A generic object in the store with no parent. (Most objects will likely be |Child| of some
     /// other objects.)
-    Object { object_type: ObjectType },
+    Object { object_descriptor: ObjectDescriptor },
     /// An attribute associated with an object. |size| is the size of the attribute in bytes.
     Attribute { size: u64 },
     /// An extent associated with an object.
     Extent(ExtentValue),
-    /// A child of an object. |object_id| is the ID of the child, and |object_type| its type.
-    Child { object_id: u64, object_type: ObjectType },
+    /// A child of an object. |object_id| is the ID of the child, and |object_descriptor| describes
+    /// the child.
+    Child { object_id: u64, object_descriptor: ObjectDescriptor },
 }
 
 impl ObjectValue {
     /// Creates an ObjectValue for a generic parentless object.
-    pub fn object(object_type: ObjectType) -> ObjectValue {
-        ObjectValue::Object { object_type }
+    pub fn object(object_descriptor: ObjectDescriptor) -> ObjectValue {
+        ObjectValue::Object { object_descriptor }
     }
     /// Creates an ObjectValue for an object attribute.
     pub fn attribute(size: u64) -> ObjectValue {
@@ -242,8 +245,8 @@ impl ObjectValue {
         ObjectValue::Extent(ExtentValue { device_offset: None })
     }
     /// Creates an ObjectValue for an object child.
-    pub fn child(object_id: u64, object_type: ObjectType) -> ObjectValue {
-        ObjectValue::Child { object_id, object_type }
+    pub fn child(object_id: u64, object_descriptor: ObjectDescriptor) -> ObjectValue {
+        ObjectValue::Child { object_id, object_descriptor }
     }
 }
 

@@ -4,6 +4,7 @@
 
 mod allocator;
 mod constants;
+pub mod directory;
 pub mod filesystem;
 mod journal;
 mod merge;
@@ -13,8 +14,9 @@ mod testing;
 pub mod transaction;
 
 pub use constants::INVALID_OBJECT_ID;
+pub use directory::Directory;
 pub use filesystem::FxFilesystem;
-pub use record::ObjectType;
+pub use record::ObjectDescriptor;
 
 use {
     crate::{
@@ -237,7 +239,7 @@ impl ObjectStore {
             Mutation::Insert {
                 item: ObjectItem {
                     key: ObjectKey::object(object_id),
-                    value: ObjectValue::object(ObjectType::File),
+                    value: ObjectValue::object(ObjectDescriptor::File),
                 },
             },
         );
