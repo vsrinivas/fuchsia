@@ -10,12 +10,13 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/status.h>
 
-#include <sstream>
+#include <deque>
 #include <stack>
 #include <unordered_set>
 
 #include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
 namespace fdata = fuchsia_data;
@@ -37,18 +38,18 @@ void InspectNode(inspect::Inspector* inspector, InspectStack* stack) {
 
     // Populate root with data from node.
     if (auto offers = node->offers(); !offers.empty()) {
-      std::ostringstream stream;
+      std::vector<std::string_view> strings;
       for (auto& offer : offers) {
-        stream << (stream.tellp() > 0 ? ", " : "") << offer.get();
+        strings.push_back(offer.get());
       }
-      root->CreateString("offers", stream.str(), inspector);
+      root->CreateString("offers", fxl::JoinStrings(strings, ", "), inspector);
     }
     if (auto symbols = node->symbols(); !symbols.empty()) {
-      std::ostringstream stream;
+      std::vector<std::string_view> strings;
       for (auto& symbol : symbols) {
-        stream << (stream.tellp() > 0 ? ", " : "") << symbol.name().get();
+        strings.push_back(symbol.name().get());
       }
-      root->CreateString("symbols", stream.str(), inspector);
+      root->CreateString("symbols", fxl::JoinStrings(strings, ", "), inspector);
     }
 
     // Push children of this node onto the stack.

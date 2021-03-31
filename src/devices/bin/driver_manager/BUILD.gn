@@ -209,17 +209,19 @@ source_set("driver_runner") {
     "driver_runner.h",
   ]
 
+  deps = [
+    "//src/devices/lib/driver2:llcpp",
+    "//src/devices/lib/log",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+
   public_deps = [
-    "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_llcpp",
-    "//src/devices/lib/driver2:llcpp",
-    "//src/devices/lib/log",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
