@@ -666,7 +666,7 @@ impl ServeWriteBlobError {
     /// allow the NeededBlobs client retry the operation later (false).
     fn is_fatal(&self) -> bool {
         match self {
-            ServeWriteBlobError::UnexpectedClose => true,
+            ServeWriteBlobError::UnexpectedClose => false,
             ServeWriteBlobError::Fidl(_) => true,
             ServeWriteBlobError::UnexpectedRequest { .. } => true,
             ServeWriteBlobError::NoSpace => false,
@@ -1421,6 +1421,26 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
+        // Open the meta FAR blob for write, but then close it (a non-fatal error)
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob([0; 32].into(), BlobKind::Package.into())
+                    .await
+                    .expect_close()
+                    .await;
+            },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+
+                let _ = blob.close().await;
+            },
+        )
+        .await;
+
         // Operation succeeds after pkgfs cooperates.
         let ((), ()) = future::join(
             async {
@@ -1996,6 +2016,29 @@ mod serve_needed_blobs_tests {
 
                 let _ = blob.truncate(1).await;
                 let _ = blob.write(&mut [0]).await;
+                let _ = blob.close().await;
+            },
+        )
+        .await;
+
+        // Open the blob for write, but then close it (a non-fatal error)
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob(content_blob, BlobKind::Data.into())
+                    .await
+                    .expect_close()
+                    .await;
+            },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(
+                    proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end).await,
+                    Ok(Ok(true))
+                );
+
                 let _ = blob.close().await;
             },
         )
