@@ -25,9 +25,9 @@ constexpr uint32_t kReadOffsetAlignment = 512;
 
 uint32_t Vdec1::vdec_sleep_bits() {
   switch (owner_->device_type()) {
+    case DeviceType::kGXM:
     case DeviceType::kG12A:
     case DeviceType::kG12B:
-    case DeviceType::kGXM:
       return 0xc;
     case DeviceType::kSM1:
       return 0x2;
@@ -36,9 +36,9 @@ uint32_t Vdec1::vdec_sleep_bits() {
 
 uint32_t Vdec1::vdec_iso_bits() {
   switch (owner_->device_type()) {
+    case DeviceType::kGXM:
     case DeviceType::kG12A:
     case DeviceType::kG12B:
-    case DeviceType::kGXM:
       return 0xc0;
     case DeviceType::kSM1:
       return 0x2;
@@ -134,15 +134,33 @@ void Vdec1::PowerOn() {
     kG12xXtal = 7,  // 24 MHz
   };
 
-  // We'd like to pick 500 MHz. The maximum frequency used in linux is 648 MHz, but that requires
-  // using GP0, which is already being used by the GPU. The linux driver also uses 200MHz in some
-  // circumstances for videos <= 1080p30.
+  // "DECODE_CORRECTNESS_COMMENTS" (are here):
+  //
+  // We'd like to pick 500 MHz, but on astro we need to run at 285.7 to avoid decode flakes at 500
+  // MHz.
+  //
+  // The maximum frequency used in linux is 648 MHz, but that requires using GP0, which is already
+  // being used by the GPU. The linux driver also uses 200MHz in some circumstances for videos <=
+  // 1080p30.
   //
   // However, using the h264 multi decoder, we got a few intermittent decode correctness glitches
-  // when we ran at 500 MHz, and still a few though less frequent at 400 MHz.  At 285.7 we don't see
-  // those. It's possible we have something else misconfigured, or have a timing-dependent SW bug,
-  // but 285.7 is very likely to be fast enough (for now) assuming linear performance per clock
-  // rate.
+  // when we ran at 500 MHz on astro, and still a few though less frequent at 400 MHz on astro.  At
+  // 285.7 on astro we don't see those, but we do still see some on sherlock at 285.7 MHz. It's
+  // possible we have something else misconfigured, or have a timing-dependent SW bug.  Running at
+  // 285.7 is very likely to be fast enough (for now) assuming linear performance per clock rate.
+  //
+  // At 24 MHz on sherlock we don't see any decode correctness glitches.
+  //
+  // Sherlock (one particular sherlock - the one on my desk, in the particular environment, etc):
+  // 800 MHz sherlock   - ~1/12 bear.h264 incorrect decode (213/2529)
+  // 666 MHz sherlock   - ~1/25 bear.h264 incorrect decode (63/1525)
+  // 500 MHz sherlock   - ~1/3054 bear.h264 incorrect decode (6/18322)
+  // 285.7 MHz sherlock - ~1/2436 bear.h264 incorrect decode (27/65763)
+  // 24 MHz sherlcok    - ~0/3156 bear.h264 incorrect decode (0 failures observed in 3156)
+  //
+  // Astro (the astro on my desk):
+  // 400 MHz astro   - decode flakes seen
+  // 285.7 MHz astro - decode flakes not seen
   uint32_t clock_sel;
   switch (owner_->device_type()) {
     case DeviceType::kG12A:

@@ -32,20 +32,23 @@ typedef fit::function<void(uint64_t stream_lifetime_ordinal, uint8_t* i420_data,
                            uint64_t timestamp_ish)>
     EmitFrame;
 
+struct FrameToCompare;
+
 // Keep fields in alphabetical order please, other than is_validated_.
 struct UseVideoDecoderTestParams final {
   // Let default constructor exist.  This doesn't count as user-declared, so aggregate
   // initialization can still be used.
   UseVideoDecoderTestParams() = default;
-  // No copy, assign, or move.  None of this prevents aggregate initialization.
-  UseVideoDecoderTestParams(const UseVideoDecoderTestParams& from) = delete;
-  UseVideoDecoderTestParams& operator=(const UseVideoDecoderTestParams& from) = delete;
-  UseVideoDecoderTestParams(const UseVideoDecoderTestParams&& from) = delete;
-  UseVideoDecoderTestParams& operator=(const UseVideoDecoderTestParams&& from) = delete;
 
   ~UseVideoDecoderTestParams() {
     // Ensure Validate() gets called at least once, if a bit later than ideal.
     Validate();
+  }
+
+  UseVideoDecoderTestParams Clone() const {
+    UseVideoDecoderTestParams result = *this;
+    result.magic_validated_ = 0;
+    return result;
   }
 
   // Validate() can be called at any time, preferably before the parameters are used.
@@ -100,6 +103,24 @@ struct UseVideoDecoderTestParams final {
 
     if (require_sw != kDefaultRequireSw) {
       printf("require_sw: %u\n", require_sw);
+    }
+
+    if (per_frame_golden_sha256 != kDefaultPerFrameGoldenSha256) {
+      uint32_t count = 0;
+      while (per_frame_golden_sha256[count]) {
+        ++count;
+      }
+      printf("per_frame_golden_sha256 provided - count: %u", count);
+    }
+
+    if (compare_to_sw_decode != kDefaultCompareToSwDecode) {
+      printf("compare_to_sw_decode: %u", compare_to_sw_decode);
+    }
+
+    if (frame_to_compare != kDefaultFrameToCompare) {
+      printf("frame_to_compare set");
+      // avoid recursion beyond 2
+      ZX_ASSERT(!compare_to_sw_decode);
     }
 
     magic_validated_ = kPrivateMagicValidated;
@@ -186,10 +207,50 @@ struct UseVideoDecoderTestParams final {
   static constexpr bool kDefaultRequireSw = false;
   bool require_sw = kDefaultRequireSw;
 
+  // Must be either nullptr, or point to a nullptr-terminated array.
+  static constexpr char** kDefaultPerFrameGoldenSha256 = nullptr;
+  const char** per_frame_golden_sha256 = nullptr;
+
+  // If true, a failure to match per_frame_golden_sha256 will decode up to the mis-matching frame,
+  // and then compare that frame pixel-by-pixel, with stderr output indicating the diff in Y, U, and
+  // V.  The SW decode for this purpose only occurs if a per_frame_golden_sha256 mis-match occurs
+  // first.
+  static constexpr bool kDefaultCompareToSwDecode = true;
+  bool compare_to_sw_decode = kDefaultCompareToSwDecode;
+
+  // So far, this is only used recursively to compare a HW-decoded frame to a SW-decoded frame.
+  //
+  // This is the "actual" HW-decoded frame to compare to the corresponding "expected" SW-decoded
+  // frame.
+  static constexpr FrameToCompare* kDefaultFrameToCompare = nullptr;
+  FrameToCompare* frame_to_compare = kDefaultFrameToCompare;
+
  private:
+  // Private copy, assign, or move.  None of this prevents aggregate initialization.
+  UseVideoDecoderTestParams(const UseVideoDecoderTestParams& from) = default;
+  UseVideoDecoderTestParams& operator=(const UseVideoDecoderTestParams& from) = default;
+  UseVideoDecoderTestParams(UseVideoDecoderTestParams&& from) = default;
+  UseVideoDecoderTestParams& operator=(UseVideoDecoderTestParams&& from) = default;
+
   // Client code should not exploit knowledge of this value, and should not directly initialize or
   // directly set magic_validated_ to any value.
   static constexpr uint64_t kPrivateMagicValidated = 0xC001DECAFC0DE;
+};
+
+// This represents the "actual" frame (not the "expected" frame).
+struct FrameToCompare {
+  // I420 format only, for now.
+
+  // data must point at a complete frame, with at least width * height * 3 / 2 bytes
+  uint8_t* data;
+
+  // Which "expected" frame ordinal needs to be compared to this "actual" frame.
+  uint32_t ordinal;
+
+  // All the pixels width * height Y and width / 2 * height / 2 UV will be compared.
+  // The stride == width.
+  uint32_t width;
+  uint32_t height;
 };
 
 struct UseVideoDecoderParams {
