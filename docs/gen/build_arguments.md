@@ -95,11 +95,17 @@ a different persistent data location for every session.
 From //src/modular/bin/basemgr/BUILD.gn:11
 
 ### auto_update_packages
-Whether the component loader should automatically update packages.
+Controls the behavior of sysmgr's PackageUpdatingLoader (v1) and the
+universe-resolver (v2). If true, when resolving a component an attempt to
+update the component's package is first made through the Software Delivery
+system (specifically, through the package resolver,
+fuchsia.pkg.PackageResolver). If false, no attempt to update is made and
+components are loaded only from packages already available locally (for
+example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //src/sys/sysmgr/BUILD.gn:10
+From //build/security.gni:88
 
 ### avb_algorithm
 AVB algorithm type.Supported options:
@@ -3259,6 +3265,13 @@ Platform portability header for spinel.
 
 From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/src/lib/spinel/BUILD.gn#32)
 
+### start_oobe
+Whether or not to launch setup workflow on startup.
+
+**Current value (from the default):** `false`
+
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:16
+
 ### sysmgr_golden_warn_override
 Used by config_package().
 If true, then overrides the value of the sysmgr_golden_warn template
@@ -3267,13 +3280,6 @@ parameter to true regardless of whether it is specified on a target.
 **Current value (from the default):** `false`
 
 From //build/config.gni:13
-
-### syzkaller_dir
-Used by syz-ci to build with own syz-executor source.
-
-**Current value (from the default):** `"//third_party/syzkaller"`
-
-From //src/testing/fuzzing/syzkaller/BUILD.gn:11
 
 ### target_cpu
 
