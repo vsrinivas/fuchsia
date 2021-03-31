@@ -7,7 +7,7 @@
 
 MOCKED_GN="prebuilt/third_party/gn/test/gn"
 
-BT_FILE_DEPS=(
+export BT_FILE_DEPS=(
   "scripts/fx"
   "tools/devshell/set"
   "tools/devshell/lib/fx-cmd-locator.sh"
@@ -16,13 +16,13 @@ BT_FILE_DEPS=(
   "tools/devshell/tests/subcommands/data/fx_set_test/myproduct.gni"
   "tools/devshell/tests/subcommands/data/fx_set_test/myboard.gni"
 )
-BT_MOCKED_TOOLS=(
+export BT_MOCKED_TOOLS=(
   "tools/devshell/lib/metrics.sh"
   "tools/devshell/lib/platform.sh"
   "${MOCKED_GN}"
 )
 
-BT_MKDIR_DEPS=(
+export BT_MKDIR_DEPS=(
   ".jiri_root"
   "products"
   "boards"
@@ -30,7 +30,6 @@ BT_MKDIR_DEPS=(
 
 BT_SET_UP() {
   _FUCHSIA_DIR="${BT_TEMP_DIR}"
-  _FUCHSIA_BUILD_DIR="${_FUCHSIA_DIR}/out/default"
   fx="${_FUCHSIA_DIR}/scripts/fx"
   BT_ASSERT_FILE_EXISTS "${fx}"
   cp "${_FUCHSIA_DIR}/tools/devshell/tests/subcommands/data/fx_set_test/myproduct.gni" "${_FUCHSIA_DIR}/products"
@@ -54,7 +53,8 @@ EOF
 
 # ensure that "fx set product.board" calls gn with the expected args
 TEST_fx-set() {
-  local output="$(${fx} set myproduct.myboard --no-goma)"
+  local output
+  output="$(${fx} set myproduct.myboard --no-goma)"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -65,7 +65,8 @@ TEST_fx-set() {
 
 # ensure that "fx set product.board --with ..." calls gn with the expected args
 TEST_fx-set-with() {
-  local output="$(${fx} set myproduct.myboard --no-goma --with "//bundles:tests")"
+  local output
+  output="$(${fx} set myproduct.myboard --no-goma --with "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -76,7 +77,8 @@ TEST_fx-set-with() {
 
 # ensure that "fx set product.board --with-base ..." calls gn with the expected args
 TEST_fx-set-with-base() {
-  local output="$(${fx} set myproduct.myboard --no-goma --with-base "//bundles:tests")"
+  local output
+  output="$(${fx} set myproduct.myboard --no-goma --with-base "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=["//bundles:tests"'
@@ -87,7 +89,8 @@ TEST_fx-set-with-base() {
 
 # ensure that "fx set product.board --with-cache ..." calls gn with the expected args
 TEST_fx-set-with-cache() {
-  local output="$(${fx} set myproduct.myboard --no-goma --with-cache "//bundles:tests")"
+  local output
+  output="$(${fx} set myproduct.myboard --no-goma --with-cache "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -98,7 +101,8 @@ TEST_fx-set-with-cache() {
 
 # ensure that "fx set product.board --with-host ..." calls gn with the expected args
 TEST_fx-set-with-host() {
-  local output="$(${fx} set myproduct.myboard --no-goma --with-host "//bundles:tests")"
+  local output
+  output="$(${fx} set myproduct.myboard --no-goma --with-host "//bundles:tests")"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
@@ -109,7 +113,8 @@ TEST_fx-set-with-host() {
 
 # ensure that "fx set product.board --fuzz-with ..." calls gn with the expected args
 TEST_fx-set-fuzz-with() {
-  local output="$(${fx} set myproduct.myboard --no-goma --fuzz-with foosan)"
+  local output
+  output="$(${fx} set myproduct.myboard --no-goma --fuzz-with foosan)"
   local select_variant='select_variant=\['
   select_variant+='{variant="foosan-fuzzer" target_type=\["fuzzed_executable"\]},'
   select_variant+='{variant="foosan" label=\["//sdk/lib/fdio"\]},'
