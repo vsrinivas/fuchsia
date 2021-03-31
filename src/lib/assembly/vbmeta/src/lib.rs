@@ -7,8 +7,5 @@
 //! Library for constructing and serializing the VBMeta struct for verified boot.
 
 mod descriptor;
-mod key;
-mod test;
 
 pub use descriptor::{HashDescriptor, Salt, SaltError};
-pub use key::{Key, KeyError, SignFailure, Signature, SIGNATURE_SIZE};
