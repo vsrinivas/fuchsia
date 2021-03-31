@@ -134,4 +134,23 @@ fit::result<std::vector<uint8_t>, std::string> VolumeDescriptor::Serialize() con
   return fit::ok(data);
 }
 
+std::string VolumeDescriptor::DebugString() const {
+  // clang-format off
+  std::string debug_string =
+      "\n{\n"
+      "  name: " + name + "\n" +
+      "  block_size: " + std::to_string(block_size) + "\n" +
+      "  size:  " + std::to_string(size) + "\n" +
+      "  encryption:   " + EnumAsString(encryption) + "\n" +
+      "  options: {\n";
+  // clang-format on
+  for (const auto& option : options) {
+    debug_string += "    " + EnumAsString(option) + ",\n";
+  }
+  debug_string += "  }\n";
+  debug_string += "}\n";
+
+  return debug_string;
+}
+
 }  // namespace storage::volume_image

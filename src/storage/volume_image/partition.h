@@ -52,6 +52,7 @@ class Partition {
 
   // Returns the volume descriptor for this partition.
   const VolumeDescriptor& volume() const { return volume_; }
+  VolumeDescriptor& volume() { return volume_; }
 
   // Returns the address descriptor for this partition.
   const AddressDescriptor& address() const { return address_; }

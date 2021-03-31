@@ -33,6 +33,8 @@ struct VolumeDescriptor {
                                                 serialized.size() * sizeof(char)));
   }
 
+  std::string DebugString() const;
+
   // Returns a byte vector containing the serialized version data.
   // The serialization is meant to be human readable.
   fit::result<std::vector<uint8_t>, std::string> Serialize() const;

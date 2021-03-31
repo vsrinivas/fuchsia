@@ -45,6 +45,27 @@ source_set("minfs-partition") {
   ]
 }
 
+source_set("commands") {
+  sources = [ "commands/create.cc" ]
+  public = [ "commands.h" ]
+
+  public_deps = [
+    ":options",
+    "//src/storage/volume_image/fvm:options",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    ":blobfs-partition",
+    ":minfs-partition",
+    "//src/storage/fvm",
+    "//src/storage/volume_image/fvm:fvm-descriptor",
+    "//src/storage/volume_image/fvm:fvm-sparse-image",
+    "//src/storage/volume_image/utils:fd-io",
+    "//src/storage/volume_image/utils:lz4-compression",
+  ]
+}
+
 test_blob_image_label = ":test-blobfs-image-gen($default_toolchain)"
 test_blob_image_path =
     get_label_info(test_blob_image_label, "target_out_dir") + "/test_blobfs.blk"
@@ -150,17 +171,22 @@ source_set("adapter-tests") {
   testonly = true
   sources = [
     "blobfs_partition_test.cc",
+    "commands/create_test.cc",
     "minfs_partition_test.cc",
   ]
   deps = [
     ":blobfs-partition",
+    ":commands",
     ":minfs-partition",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
     "//src/storage/fvm",
+    "//src/storage/gpt",
     "//src/storage/minfs",
+    "//src/storage/volume_image/fvm:fvm-sparse-image",
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:fd-io",
+    "//src/storage/volume_image/utils:fd-test-helper",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

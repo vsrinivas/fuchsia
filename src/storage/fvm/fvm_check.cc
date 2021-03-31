@@ -315,7 +315,9 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
     if (slices != 0) {
       logger_.Log("Partition %zu allocated\n", i);
       logger_.Log("  Has %u slices allocated\n", slices);
+#ifdef __Fuchsia__
       logger_.Log("  Type: %s\n", gpt::KnownGuid::TypeDescription(vpart_table[i].type).c_str());
+#endif
       logger_.Log("  Name: %s\n", vpart_table[i].name().c_str());
     }
   }

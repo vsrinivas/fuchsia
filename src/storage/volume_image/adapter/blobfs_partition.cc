@@ -84,8 +84,10 @@ class PatchedSuperblockReader final : public Reader {
       memset(buffer.data(), 0, content_bytes);
       if (offset < sizeof(blobfs::Superblock)) {
         uint64_t content_offset = offset % sizeof(blobfs::Superblock);
+        uint64_t remaining_bytes = std::min(
+            buffer.size(), static_cast<size_t>(sizeof(blobfs::Superblock) - content_offset));
         memcpy(buffer.data(), reinterpret_cast<const uint8_t*>(&superblock_) + content_offset,
-               sizeof(blobfs::Superblock) - content_offset);
+               remaining_bytes);
       }
     }
     return fit::ok();
