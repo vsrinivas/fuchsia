@@ -97,8 +97,7 @@ mod tests {
         let f = OpenOptions::new().read(true).write(false).open(file_name).unwrap();
         let mut buffer = vec![0; 100];
 
-        let ret = pread(f.as_raw_fd(), &mut buffer, 0);
-        assert!(ret.is_ok());
+        let () = pread(f.as_raw_fd(), &mut buffer, 0).unwrap();
     }
 
     #[test]
