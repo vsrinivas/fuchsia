@@ -22,6 +22,7 @@ test("pci-unit") {
     "unit/config_tests.cc",
     "unit/device_tests.cc",
     "unit/fake_pciroot_tests.cc",
+    "unit/main.cc",
   ]
   deps = [
     "//sdk/lib/inspect/testing/cpp:zxtest",

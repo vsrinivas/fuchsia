@@ -68,7 +68,9 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_OK;
   }
 
-  zx_status_t PciAckInterrupt() { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PciAckInterrupt() {
+    return (irq_mode_ == PCI_IRQ_MODE_LEGACY) ? ZX_OK : ZX_ERR_BAD_STATE;
+  }
 
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
     if (!out_handle) {
@@ -77,6 +79,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
 
     switch (irq_mode_) {
       case PCI_IRQ_MODE_LEGACY:
+      case PCI_IRQ_MODE_LEGACY_NOACK:
         if (which_irq > 0) {
           return ZX_ERR_INVALID_ARGS;
         }
@@ -135,6 +138,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
 
     switch (mode) {
       case PCI_IRQ_MODE_LEGACY:
+      case PCI_IRQ_MODE_LEGACY_NOACK:
         if (legacy_interrupt_) {
           *out_max_irqs = 1;
           return ZX_OK;
@@ -185,12 +189,13 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
 
     switch (mode) {
       case PCI_IRQ_MODE_LEGACY:
+      case PCI_IRQ_MODE_LEGACY_NOACK:
         if (requested_irq_count > 1) {
           return ZX_ERR_INVALID_ARGS;
         }
 
         if (legacy_interrupt_) {
-          irq_mode_ = PCI_IRQ_MODE_LEGACY;
+          irq_mode_ = mode;
           irq_cnt_ = 1;
         }
         return ZX_OK;

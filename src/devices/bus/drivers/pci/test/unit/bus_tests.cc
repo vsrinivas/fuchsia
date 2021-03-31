@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/status.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/syscalls/port.h>
 
 #include <memory>
 
@@ -45,10 +49,30 @@ class PciBusTests : public zxtest::Test {
         .set_memory_base(0x1000)
         .set_memory_limit(0xFFFFFFFF)
         .set_secondary_bus_number(1);
-    ecam.get({1, 0, 0}).device.set_vendor_id(idx).set_device_id(idx++);
-    ecam.get({1, 0, 1}).device.set_vendor_id(idx).set_device_id(idx);
+    ecam.get({1, 0, 0}).device.set_vendor_id(0x8086).set_device_id(idx++);
+    ecam.get({1, 0, 1}).device.set_vendor_id(0x8086).set_device_id(idx);
     return idx;
   }
+
+  zx::interrupt AddLegacyIrqToBus(uint8_t vector) {
+    zx::interrupt interrupt;
+    ZX_ASSERT(zx::interrupt::create(*zx::unowned_resource(ZX_HANDLE_INVALID), vector,
+                                    ZX_INTERRUPT_VIRTUAL, &interrupt) == ZX_OK);
+    pciroot_.legacy_irqs().push_back(
+        pci_legacy_irq_t{.interrupt = interrupt.get(), .vector = vector});
+
+    return interrupt;
+  }
+
+  void AddRoutingEntryToBus(std::optional<uint8_t> p_dev, std::optional<uint8_t> p_func,
+                            uint8_t dev_id, uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    pciroot_.routing_entries().push_back(pci_irq_routing_entry_t{
+        .port_device_id = (p_dev) ? *p_dev : static_cast<uint8_t>(PCI_IRQ_ROUTING_NO_PARENT),
+        .port_function_id = (p_func) ? *p_func : static_cast<uint8_t>(PCI_IRQ_ROUTING_NO_PARENT),
+        .device_id = dev_id,
+        .pins = {a, b, c, d}});
+  }
+
   void SetUp() final { pciroot_.ecam().reset(); }
   auto& pciroot() { return pciroot_; }
 
@@ -163,8 +187,8 @@ TEST_F(PciBusTests, BdiLinkUnlinkDevice) {
 }
 
 TEST_F(PciBusTests, IrqRoutingEntries) {
-  // Add |int_cnt| interrupts, but make them share vectors based on |int_mod|. This ensures that we
-  // handle duplicate IRQ entries properly.
+  // Add |int_cnt| interrupts, but make them share vectors based on |int_mod|. This ensures that
+  // we handle duplicate IRQ entries properly.
   const size_t int_cnt = 5;
   const uint32_t int_mod = 3;
   zx::interrupt interrupt = {};
@@ -187,7 +211,112 @@ TEST_F(PciBusTests, IrqRoutingEntries) {
   auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
                                        pciroot().ecam().CopyEcam());
   ASSERT_OK(bus->Initialize());
-  ASSERT_EQ(bus->GetSharedIrqCount(), int_mod);
+  ASSERT_EQ(int_mod, bus->GetSharedIrqCount());
+}
+
+TEST_F(PciBusTests, LegacyIrqSignalTest) {
+  // Establish the IRQ in the Pciroot implementation so that the bus will configure our device to
+  // use it if the device id is 0x1 and it uses pin B.
+  uint32_t vector = 0xA;
+  zx::interrupt interrupt = AddLegacyIrqToBus(vector);
+  AddRoutingEntryToBus(/*p_dev=*/std::nullopt, /*p_func=*/std::nullopt, /*dev_id=*/0, /*a=*/vector,
+                       /*b=*/vector, /*c=*/0, /*d=*/0);
+  // Have the routing table target device 0, pin B. This is configured in
+  // SetupTopology for the device itself.
+  SetupTopology();
+  // These devices need interrupt pins mapped before Bus scans the topology.
+  pciroot().ecam().get({0, 0, 0}).device.set_interrupt_pin(0x1);
+  pciroot().ecam().get({0, 0, 1}).device.set_interrupt_pin(0x2);
+  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
+                                       pciroot().ecam().CopyEcam());
+  ASSERT_OK(bus->Initialize());
+  ASSERT_EQ(1, bus->GetSharedIrqCount());
+
+  zx::interrupt dev_interrupt[2];
+  // Configure both devices and map their driver facing interrupts. They have
+  // different pins, but the pins are mapped to the same vector.
+  for (uint8_t i = 0; i < 2; i++) {
+    auto* bus_device = bus->GetDevice({0, 0, i});
+    ASSERT_OK(bus_device->SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+    // Map the interrupt the same way a driver would.
+    auto result = bus->GetDevice({0, 0, i})->MapInterrupt(0);
+    ASSERT_TRUE(result.is_ok());
+    dev_interrupt[i] = std::move(result.value());
+  }
+
+  // Bind device 00:00.0's interrupt to a port so we can "peek" at the interrupt
+  // status via a port wait.
+  zx::port port;
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
+  ASSERT_OK(dev_interrupt[0].bind(port, 1, ZX_INTERRUPT_BIND));
+
+  // Here we simulate triggering the hardware vector and track it all the way to
+  // the interrupt event a downstream driver bound to this device would get.
+  // Timestamps of the original vector must match.
+  zx::time receive_time;
+  zx::time trigger_time = zx::clock::get_monotonic();
+  pciroot().ecam().get({0, 0, 1}).device.set_status(PCI_STATUS_INTERRUPT);
+  ASSERT_OK(interrupt.trigger(0, trigger_time));
+
+  // Only the device at 00:00.1 should trigger because 00:00.0 does not have the interrupt status
+  // bit set in its config space. The interrupt time the driver receives must match the time the
+  // interrupt dispatcher logged.
+  ASSERT_OK(dev_interrupt[1].wait(&receive_time));
+  ASSERT_EQ(trigger_time, receive_time);
+
+  // If we handled the interrupt status check then there should be no packet on this port.
+  zx_port_packet_t packet{};
+  ASSERT_EQ(ZX_ERR_TIMED_OUT, port.wait(zx::deadline_after(zx::sec(0)), &packet));
+}
+
+TEST_F(PciBusTests, LegacyIrqNoAckTest) {
+  // 00:00.0 is a valid device using legacy pin A.
+  pci_bdf_t device = {0, 0, 0};
+  pciroot()
+      .ecam()
+      .get(device)
+      .device.set_vendor_id(0x8086)
+      .set_device_id(0x8086)
+      .set_interrupt_pin(0x1)
+      .set_status(PCI_STATUS_INTERRUPT);
+  // Route pin A to vector 16.
+  uint8_t vector = 0x10;
+  zx::interrupt bus_interrupt = AddLegacyIrqToBus(vector);
+  AddRoutingEntryToBus(/*p_dev=*/std::nullopt, /*p_func=*/std::nullopt, /*dev_id=*/0, /*a=*/vector,
+                       /*b=*/0, /*c=*/0, /*d=*/0);
+  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
+                                       pciroot().ecam().CopyEcam());
+  ASSERT_OK(bus->Initialize());
+  ASSERT_OK(bus->GetDevice(device)->SetIrqMode(PCI_IRQ_MODE_LEGACY_NOACK, 1));
+
+  auto* bus_device = bus->GetDevice(device);
+  // Quick method to check if the disabled flag is set for a legacy interrupt.
+  auto check_disabled = [&bus_device]() {
+    fbl::AutoLock _(bus_device->dev_lock());
+    return bus_device->irqs().legacy_disabled;
+  };
+
+  // By tying the trigger/wait in the same thread we can avoid pitfalls with
+  // racing the IRQ worker thread. When we send at least kMaxIrqsPerNoAckPeriod
+  // IRQs the device's IRQ should be disabled.
+  zx::port port;
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
+  zx::interrupt dev_interrupt = bus_device->MapInterrupt(0).value();
+  ASSERT_OK(dev_interrupt.bind(port, 1, ZX_INTERRUPT_BIND));
+  ASSERT_FALSE(check_disabled());
+
+  zx::time current_time = zx::clock::get_monotonic();
+  uint32_t irq_cnt = 0;
+  zx_port_packet_t packet;
+  while (irq_cnt < kMaxIrqsPerNoAckPeriod) {
+    ASSERT_OK(bus_interrupt.trigger(0, current_time));
+    ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+    // Normally a driver would ack their interrupt object after a port wait so
+    // we need to do it manually here.
+    ASSERT_OK(dev_interrupt.ack());
+    irq_cnt++;
+  }
+  ASSERT_TRUE(check_disabled());
 }
 
 }  // namespace pci

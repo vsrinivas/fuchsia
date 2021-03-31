@@ -35,6 +35,11 @@
 #include "src/devices/bus/drivers/pci/root.h"
 
 namespace pci {
+// The length of time to count interrupts before rolling over.
+constexpr const zx_time_t kLegacyNoAckPeriod = ZX_SEC(1);
+// The max number of interrupts that can be seen before disabling the device
+// function's interrupt generation when in PCI_IRQ_MODE_LEGACY_NOACK.
+constexpr const uint64_t kMaxIrqsPerNoAckPeriod = 512;
 
 // An entry corresponding to a place in the topology to scan. Use to allow for
 // DFS traversal of the bus topology while keeping track of nodes upstream.

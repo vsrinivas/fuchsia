@@ -468,14 +468,23 @@ TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
   };
 
   uint32_t max_irqs;
-  ASSERT_STATUS(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &max_irqs), ZX_OK);
+  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &max_irqs));
+  EXPECT_EQ(max_irqs, PCI_LEGACY_INT_COUNT);
+  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY_NOACK, &max_irqs));
   EXPECT_EQ(max_irqs, PCI_LEGACY_INT_COUNT);
   ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
   ASSERT_EQ(max_irqs, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_OK(pci().AckInterrupt());
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY_NOACK, 1));
+  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
+  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
   // Setting the same mode twice should work if no IRQs have been allocated off of this one.
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
+  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_DISABLED, 0));
+  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
 
   pci_irq_mode_t mode = {};
   ASSERT_OK(pci().ConfigureIrqMode(1, &mode));

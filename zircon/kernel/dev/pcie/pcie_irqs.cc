@@ -564,6 +564,7 @@ zx_status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
       return ZX_OK;
 
     case PCIE_IRQ_MODE_LEGACY:
+    case PCIE_IRQ_MODE_LEGACY_NOACK:
       if (!irq_.legacy.pin) {
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -640,6 +641,7 @@ zx_status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_ir
   // Leave our present IRQ mode
   switch (irq_.mode) {
     case PCIE_IRQ_MODE_LEGACY:
+    case PCIE_IRQ_MODE_LEGACY_NOACK:
       DEBUG_ASSERT(irq_.legacy.shared_handler_node.InContainer());
       LeaveLegacyIrqMode();
       break;

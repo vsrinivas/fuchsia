@@ -4,6 +4,7 @@
 
 #include "src/devices/bus/drivers/pci/bus.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -334,7 +335,7 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
       device.config()->Write(Config::kInterruptLine, vector);
       zxlogf(DEBUG, "[%s] pin %u mapped to %#x", device.config()->addr(), pin, vector);
     } else {
-      zxlogf(WARNING, "[%s] no legacy routing entry found for device", device.config()->addr());
+      zxlogf(DEBUG, "[%s] no legacy routing entry found for device", device.config()->addr());
     }
   }
 
@@ -395,8 +396,32 @@ void Bus::LegacyIrqWorker(const zx::port& port, fbl::Mutex* lock, SharedIrqMap* 
           // Trigger the virtual interrupt the device driver is using by proxy.
           zx_status_t signal_status = device.SignalLegacyIrq(packet.interrupt.timestamp);
           if (signal_status != ZX_OK) {
-            zxlogf(ERROR, "failed to signal vector %#lx for device %s: %s\n", vector,
+            zxlogf(ERROR, "failed to signal vector %#lx for device %s: %s", vector,
                    device.config()->addr(), zx_status_get_string(signal_status));
+          }
+
+          // In the case of PCI_IRQ_MODE_LEGACY, disable the legacy interrupt on
+          // a device until a driver services and acknowledges it. If we're in
+          // the NOACK mode then we update the running total we keep of
+          // interrupts per period. If they exceed the configured limit then
+          // then the interrupt will be disabled. In that case, the device has
+          // no way to re-enable it without changing IRQ modes.
+          auto& irqs = device.irqs();
+          bool disable_irq = true;
+          if (irqs.mode == PCI_IRQ_MODE_LEGACY_NOACK) {
+            irqs.irqs_in_period++;
+            if (packet.interrupt.timestamp - irqs.legacy_irq_period_start >= kLegacyNoAckPeriod) {
+              irqs.legacy_irq_period_start = packet.interrupt.timestamp;
+              irqs.irqs_in_period = 1;
+            }
+
+            if (irqs.irqs_in_period < kMaxIrqsPerNoAckPeriod) {
+              disable_irq = false;
+            }
+          }
+
+          if (disable_irq) {
+            device.DisableLegacyIrq();
           }
         }
       }
@@ -408,7 +433,7 @@ void Bus::LegacyIrqWorker(const zx::port& port, fbl::Mutex* lock, SharedIrqMap* 
                zx_status_get_string(status));
       }
     } else {
-      zxlogf(ERROR, "Unexpected error in IRQ handling, status = %s, pkt status = %s\n",
+      zxlogf(ERROR, "Unexpected error in IRQ handling, status = %s, pkt status = %s",
              zx_status_get_string(status), zx_status_get_string(packet.status));
     }
   } while (status == ZX_OK && packet.status == ZX_OK);

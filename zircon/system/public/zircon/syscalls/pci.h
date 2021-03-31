@@ -126,8 +126,9 @@ typedef struct zx_pci_init_arg {
 typedef uint32_t zx_pci_irq_mode_t;
 #define ZX_PCIE_IRQ_MODE_DISABLED ((zx_pci_irq_mode_t) 0u)
 #define ZX_PCIE_IRQ_MODE_LEGACY ((zx_pci_irq_mode_t) 1u)
-#define ZX_PCIE_IRQ_MODE_MSI ((zx_pci_irq_mode_t) 2u)
-#define ZX_PCIE_IRQ_MODE_MSI_X ((zx_pci_irq_mode_t) 3u)
+#define ZX_PCIE_IRQ_MODE_LEGACY_NOACK ((zx_pci_irq_mode_t) 2u)
+#define ZX_PCIE_IRQ_MODE_MSI ((zx_pci_irq_mode_t) 3u)
+#define ZX_PCIE_IRQ_MODE_MSI_X ((zx_pci_irq_mode_t) 4u)
 
 __END_CDECLS
 

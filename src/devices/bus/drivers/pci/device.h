@@ -68,8 +68,10 @@ class Device : public PciDeviceType,
   static constexpr char kInspectIrqMode[] = "Irq Mode";
   static constexpr char kInspectLegacyInterrupt[] = "Legacy Interrupt";
   static constexpr char kInspectMsi[] = "Message Signaled Interrupts";
-  static const constexpr char* kInspectIrqModes[] = {"Disabled", "Legacy Interrupt",
-                                                     "Message Signaled Interrupts (MSI)", "MSI-X"};
+  static constexpr char kInspectLegacyDisabled[] = "Disabled";
+  static const constexpr char* kInspectIrqModes[PCI_IRQ_MODE_COUNT] = {
+      "Disabled", "Legacy Interrupt", "Legacy Interrupt (No Acknowledge)",
+      "Message Signaled Interrupts (MSI)", "MSI-X"};
   static constexpr char kInspectLegacyInterruptLine[] = "InterruptLine";
   static constexpr char kInspectLegacyInterruptPin[] = "InterruptPin";
   static constexpr char kInspectLegacySignalCount[] = "Signal Count";
@@ -83,6 +85,7 @@ class Device : public PciDeviceType,
     inspect::StringProperty pin;
     inspect::UintProperty signal_count;
     inspect::UintProperty ack_count;
+    inspect::BoolProperty disabled;
   };
 
   struct MsiInspect {
@@ -102,9 +105,13 @@ class Device : public PciDeviceType,
   // configured IRQ mode. It is initialized to PCI_IRQ_MODE_DISABLED.
   struct Irqs {
     pci_irq_mode_t mode;     // The mode currently configured.
-    zx::msi msi_allocation;  // The MSI allocation object for MSI & MSI-X
-    zx::interrupt legacy;
-    uint32_t legacy_vector;
+    zx::interrupt legacy;    // Virtual interrupt for legacy signaling.
+    uint32_t legacy_vector;  // Vector for the legacy interrupt, mirrors kInterruptLine in Config.
+    zx_time_t legacy_irq_period_start;  // Timestamp of the current second we're monitoring for IRQ
+                                        // floods.
+    bool legacy_disabled;               // Whether  the legacy vector has been disabled
+    zx::msi msi_allocation;             // The MSI allocation object for MSI & MSI-X
+    uint64_t irqs_in_period;  // Current count of interrupts per PCI_IRQ_MODE_LEGACY_NOACK period.
   };
 
   struct Capabilities {
@@ -257,7 +264,7 @@ class Device : public PciDeviceType,
   zx_status_t SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
   zx::status<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
   zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);
-  zx_status_t EnableLegacy() __TA_REQUIRES(dev_lock_);
+  zx_status_t EnableLegacy(bool needs_ack) __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsi(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsix(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
   zx_status_t DisableLegacy() __TA_REQUIRES(dev_lock_);
@@ -268,6 +275,11 @@ class Device : public PciDeviceType,
   // driver.
   zx_status_t SignalLegacyIrq(zx_time_t timestamp) const __TA_REQUIRES(dev_lock_);
   zx_status_t AckLegacyIrq() __TA_REQUIRES(dev_lock_);
+  void EnableLegacyIrq() __TA_REQUIRES(dev_lock_);
+  void DisableLegacyIrq() __TA_REQUIRES(dev_lock_);
+
+  // Provide Irq information to the Bus for handling situations with no ack.
+  Irqs& irqs() __TA_REQUIRES(dev_lock_) { return irqs_; }
 
   // Devices need to exist in both the top level bus driver class, as well
   // as in a list for roots/bridges to track their downstream children. These

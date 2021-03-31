@@ -62,9 +62,10 @@ using DeviceHandlerList = fbl::DoublyLinkedListCustomTraits<PcieDevice*, SharedH
 typedef enum pcie_irq_mode {
   PCIE_IRQ_MODE_DISABLED = 0,
   PCIE_IRQ_MODE_LEGACY = 1,
-  PCIE_IRQ_MODE_MSI = 2,
-  PCIE_IRQ_MODE_MSI_X = 3,
-  PCIE_IRQ_MODE_COUNT = 4,
+  PCIE_IRQ_MODE_LEGACY_NOACK = 2,
+  PCIE_IRQ_MODE_MSI = 3,
+  PCIE_IRQ_MODE_MSI_X = 4,
+  PCIE_IRQ_MODE_COUNT = 5,
 } pcie_irq_mode_t;
 
 /**

@@ -104,13 +104,14 @@ Device::Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNo
       break;
     }
   }
+  // Line should always exist if a pin exists, unless there was no mapping in the _PRT.
   uint8_t line = cfg_->Read(Config::kInterruptLine);
   if (line != 0 && line != 0xFF) {
-    metrics_.legacy.line = metrics_.legacy.node.CreateUint(kInspectLegacyInterruptLine,
-                                                           cfg_->Read(Config::kInterruptLine));
+    metrics_.legacy.line = metrics_.legacy.node.CreateUint(kInspectLegacyInterruptLine, line);
   }
   metrics_.legacy.ack_count = metrics_.legacy.node.CreateUint(kInspectLegacyAckCount, 0);
   metrics_.legacy.signal_count = metrics_.legacy.node.CreateUint(kInspectLegacySignalCount, 0);
+  metrics_.legacy.disabled = metrics_.legacy.node.CreateBool(kInspectLegacyDisabled, false);
   metrics_.msi.base_vector = metrics_.msi.node.CreateUint(kInspectMsiBaseVector, 0);
   metrics_.msi.allocated = metrics_.msi.node.CreateUint(kInspectMsiAllocated, 0);
 }

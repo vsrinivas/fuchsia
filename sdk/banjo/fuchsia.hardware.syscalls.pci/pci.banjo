@@ -27,8 +27,9 @@ struct PcieDeviceInfo {
 enum PciIrqMode : uint8 {
     DISABLED = 0;
     LEGACY = 1;
-    MSI = 2;
-    MSI_X = 3;
+    LEGACY_NOACK = 2;
+    MSI = 3;
+    MSI_X = 4;
 };
 
 resource union PciField {

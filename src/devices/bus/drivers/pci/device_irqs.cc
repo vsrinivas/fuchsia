@@ -23,6 +23,7 @@ zx::status<uint32_t> Device::QueryIrqMode(pci_irq_mode_t mode) {
   fbl::AutoLock dev_lock(&dev_lock_);
   switch (mode) {
     case PCI_IRQ_MODE_LEGACY:
+    case PCI_IRQ_MODE_LEGACY_NOACK:
       if (cfg_->Read(Config::kInterruptLine) != 0) {
         return zx::ok(PCI_LEGACY_INT_COUNT);
       }
@@ -70,7 +71,9 @@ zx_status_t Device::SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) {
 
   switch (mode) {
     case PCI_IRQ_MODE_LEGACY:
-      return EnableLegacy();
+      return EnableLegacy(/*needs_ack=*/true);
+    case PCI_IRQ_MODE_LEGACY_NOACK:
+      return EnableLegacy(/*needs_ack=*/false);
     case PCI_IRQ_MODE_MSI:
       if (caps_.msi) {
         return EnableMsi(irq_cnt);
@@ -91,6 +94,7 @@ zx_status_t Device::DisableInterrupts() {
     case PCI_IRQ_MODE_DISABLED:
       return ZX_OK;
     case PCI_IRQ_MODE_LEGACY:
+    case PCI_IRQ_MODE_LEGACY_NOACK:
       st = DisableLegacy();
       break;
     case PCI_IRQ_MODE_MSI:
@@ -122,7 +126,8 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
   zx::interrupt interrupt = {};
   zx_status_t status = ZX_OK;
   switch (irqs_.mode) {
-    case PCI_IRQ_MODE_LEGACY: {
+    case PCI_IRQ_MODE_LEGACY:
+    case PCI_IRQ_MODE_LEGACY_NOACK: {
       if (which_irq != 0) {
         return zx::error(ZX_ERR_INVALID_ARGS);
       }
@@ -172,9 +177,21 @@ zx_status_t Device::AckLegacyIrq() {
     return ZX_ERR_BAD_STATE;
   }
 
-  ModifyCmdLocked(/*clr_bits=*/PCI_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
+  EnableLegacyIrq();
   metrics_.legacy.ack_count.Add(1);
   return ZX_OK;
+}
+
+void Device::EnableLegacyIrq() {
+  ModifyCmdLocked(/*clr_bits=*/PCI_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
+  irqs_.legacy_disabled = false;
+  metrics_.legacy.disabled.Set(irqs_.legacy_disabled);
+}
+
+void Device::DisableLegacyIrq() {
+  ModifyCmdLocked(/*clr_bits=*/0, /*set_bits=*/PCI_CFG_COMMAND_INT_DISABLE);
+  irqs_.legacy_disabled = true;
+  metrics_.legacy.disabled.Set(irqs_.legacy_disabled);
 }
 
 zx::status<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_cnt) {
@@ -197,7 +214,7 @@ zx::status<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_c
   return zx::ok(std::make_pair(std::move(msi), msi_info));
 }
 
-zx_status_t Device::EnableLegacy() {
+zx_status_t Device::EnableLegacy(bool needs_ack) {
   irqs_.legacy_vector = cfg_->Read(Config::kInterruptLine);
   if (irqs_.legacy_vector == 0) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -211,7 +228,7 @@ zx_status_t Device::EnableLegacy() {
   }
 
   ModifyCmdLocked(/*clr_bits=*/PCIE_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
-  irqs_.mode = PCI_IRQ_MODE_LEGACY;
+  irqs_.mode = (needs_ack) ? PCI_IRQ_MODE_LEGACY : PCI_IRQ_MODE_LEGACY_NOACK;
   metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
   return ZX_OK;
 }
@@ -279,7 +296,7 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
 
     irqs_.msi_allocation = std::move(alloc);
     irqs_.mode = PCI_IRQ_MODE_MSI_X;
-    metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
+    metrics_.irq_mode.Set(kInspectIrqModes[PCI_IRQ_MODE_MSI_X]);
   }
   return result.status_value();
 }

@@ -177,6 +177,9 @@ static_assert(static_cast<uint>(ZX_PCIE_IRQ_MODE_DISABLED) ==
               "Mode mismatch, ZX_PCIE_IRQ_MODE_DISABLED != PCIE_IRQ_MODE_DISABLED");
 static_assert(static_cast<uint>(ZX_PCIE_IRQ_MODE_LEGACY) == static_cast<uint>(PCIE_IRQ_MODE_LEGACY),
               "Mode mismatch, ZX_PCIE_IRQ_MODE_LEGACY != PCIE_IRQ_MODE_LEGACY");
+static_assert(static_cast<uint>(ZX_PCIE_IRQ_MODE_LEGACY_NOACK) ==
+                  static_cast<uint>(PCIE_IRQ_MODE_LEGACY_NOACK),
+              "Mode mismatch, ZX_PCIE_IRQ_MODE_LEGACY != PCIE_IRQ_MODE_LEGACY");
 static_assert(static_cast<uint>(ZX_PCIE_IRQ_MODE_MSI) == static_cast<uint>(PCIE_IRQ_MODE_MSI),
               "Mode mismatch, ZX_PCIE_IRQ_MODE_MSI != PCIE_IRQ_MODE_MSI");
 static_assert(static_cast<uint>(ZX_PCIE_IRQ_MODE_MSI_X) == static_cast<uint>(PCIE_IRQ_MODE_MSI_X),

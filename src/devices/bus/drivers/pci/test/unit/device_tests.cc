@@ -312,6 +312,15 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
         inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
   }
   {
+    pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY_NOACK;
+    ASSERT_OK(dev.SetIrqMode(mode, 1));
+    ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo()));
+    auto* node = hierarchy().GetByPath({kTestNodeName});
+    ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
+        node->node(), Device::kInspectIrqMode,
+        inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
+  }
+  {
     pci_irq_mode_t mode = PCI_IRQ_MODE_MSI;
     ASSERT_OK(dev.SetIrqMode(mode, 1));
     ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo()));
@@ -364,6 +373,20 @@ TEST_F(PciDeviceTests, InspectLegacy) {
         node, Device::kInspectLegacyAckCount, inspect::UintPropertyValue(1)));
     ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
         node, Device::kInspectLegacySignalCount, inspect::UintPropertyValue(1)));
+    ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::BoolPropertyValue>(
+        node, Device::kInspectLegacyDisabled, inspect::BoolPropertyValue(false)));
+  }
+
+  {
+    fbl::AutoLock _(dev.dev_lock());
+    dev.DisableLegacyIrq();
+  }
+
+  {
+    ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo()));
+    auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectLegacyInterrupt})->node();
+    ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::BoolPropertyValue>(
+        node, Device::kInspectLegacyDisabled, inspect::BoolPropertyValue(true)));
   }
 }
 

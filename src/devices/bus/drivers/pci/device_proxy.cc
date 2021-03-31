@@ -154,8 +154,9 @@ zx_status_t DeviceProxy::PciResetDevice() { DEVICE_PROXY_UNIMPLEMENTED; }
 
 zx_status_t DeviceProxy::PciAckInterrupt() {
   PciRpcMsg req = {};
+  PciRpcMsg resp = {};
   return RpcRequest(PCI_OP_ACK_INTERRUPT, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr,
-                    /*req=*/&req, /*resp=*/nullptr);
+                    /*req=*/&req, /*resp=*/&resp);
 }
 
 zx_status_t DeviceProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {

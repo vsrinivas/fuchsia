@@ -55,7 +55,7 @@ zx_status_t Bus::AddToSharedIrqList(pci::Device* device, uint32_t vector) {
       return ZX_ERR_ALREADY_EXISTS;
     }
     list.push_back(device);
-    zxlogf(TRACE, "[%s] inserted into vector %#x list\n", device->config()->addr(), vector);
+    zxlogf(TRACE, "[%s] inserted into list for vector %#x", device->config()->addr(), vector);
     return ZX_OK;
   }
   return ZX_ERR_BAD_STATE;
@@ -68,7 +68,7 @@ zx_status_t Bus::RemoveFromSharedIrqList(pci::Device* device, uint32_t vector) {
   if (auto result = shared_irqs_.find(vector); result != shared_irqs_.end()) {
     auto& list = result->second->list;
     if (list.erase(*device) != nullptr) {
-      zxlogf(TRACE, "[%s] removed from vector %#x list\n", device->config()->addr(), vector);
+      zxlogf(TRACE, "[%s] removed from vector %#x list", device->config()->addr(), vector);
       return ZX_OK;
     }
     return ZX_ERR_NOT_FOUND;

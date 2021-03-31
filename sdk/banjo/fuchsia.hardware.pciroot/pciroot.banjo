@@ -26,7 +26,7 @@ struct PciIrqRoutingEntry {
     uint8 port_device_id;
     uint8 port_function_id;
     uint8 device_id;
-    array<uint32>:PINS_PER_FUNCTION pins;
+    array<uint8>:PINS_PER_FUNCTION pins;
 };
 
 /// This represents one of the vectors wired up for PCI legacy interrupts. How
