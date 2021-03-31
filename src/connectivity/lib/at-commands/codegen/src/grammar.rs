@@ -31,7 +31,8 @@ parenthesized_argument_lists = { ("(" ~ argument_list ~ ")")+ }
 argument_list = { (argument ~ ",")* ~ argument? }
 argument = { identifier ~ ":" ~ typ }
 
-typ = { list_type | map_type | identifier }
+typ = { option_type | list_type | map_type | identifier }
+option_type = { "Option" ~ "<" ~ identifier ~ ">" }
 list_type = { "List" ~ "<" ~ identifier ~ ">" }
 map_type = { "Map" ~ "<" ~ identifier  ~ "," ~ identifier ~ ">" }
 

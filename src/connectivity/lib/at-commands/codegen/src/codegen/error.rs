@@ -11,6 +11,8 @@ use {super::super::definition::Arguments, std::io, thiserror};
 pub enum Error {
     #[error("Unable to write to sink: {0:}")]
     WriteFailure(io::Error),
+    #[error("An optional argument must not followed by a required argument: {0:?}")]
+    RequiredMustNotFollowOptional(Arguments),
     #[error("A list argument must be the last in an argument sequence: {0:?}")]
     ListMustBeLast(Arguments),
     #[error("A map argument must be the last in an argument sequence: {0:?}")]

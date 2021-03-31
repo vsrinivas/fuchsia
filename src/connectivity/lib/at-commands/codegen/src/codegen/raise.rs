@@ -372,6 +372,32 @@ fn codegen_extract_list<W: io::Write>(
     Ok(())
 }
 
+fn codegen_extract_option<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    name: &str,
+    typ: &PrimitiveType,
+    index: i64,
+) -> Result {
+    write_indented!(sink, indent, "let {}_option = arg_vec.get({});\n", name, index)?;
+    write_indented!(sink, indent, "let {} = match {}_option {{\n", name, name)?;
+    write_indented!(sink, indent + TABSTOP, "None => None,\n")?;
+    write_indented!(sink, indent + TABSTOP, "Some({}_raw) => {{\n", name)?;
+    codegen_extract_primitive(
+        sink,
+        indent + TABSTOP + TABSTOP,
+        name,
+        name,
+        "extract_primitive_from_field",
+        typ,
+    )?;
+    write_indented!(sink, indent + TABSTOP + TABSTOP, "Some({})\n", name)?;
+    write_indented!(sink, indent + TABSTOP, "}}\n")?;
+    write_indented!(sink, indent, "}};\n")?;
+
+    Ok(())
+}
+
 fn codegen_argument_vec_extraction<W: io::Write>(
     sink: &mut W,
     indent: u64,
@@ -393,6 +419,7 @@ fn codegen_argument_vec_extraction<W: io::Write>(
                     &typ,
                 )?
             }
+            Type::Option(typ) => codegen_extract_option(sink, indent, &arg.name, &typ, i)?,
             Type::List(typ) => {
                 codegen_extract_list(sink, indent, &arg.name, &typ, i)?;
                 break;

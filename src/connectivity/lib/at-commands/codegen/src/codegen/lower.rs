@@ -366,6 +366,34 @@ fn codegen_argument_vec_encoding<W: io::Write>(
                 )?;
                 write_indented!(sink, indent, "{}.push({});\n", arg_vec_name, untyped_arg)?;
             }
+            Type::Option(typ) => {
+                let internal_arg = format!("{}_internal", arg.name);
+                let primitive_arg = format!("{}_primitive", arg.name);
+                let untyped_arg = format!("{}_untyped", arg.name);
+                write_indented!(sink, indent, "if let Some({}) = {} {{\n", internal_arg, arg.name)?;
+                codegen_encode_primitive(
+                    sink,
+                    indent + TABSTOP,
+                    &internal_arg,
+                    &primitive_arg,
+                    &typ,
+                )?;
+                write_indented!(
+                    sink,
+                    indent + TABSTOP,
+                    "let {} = lowlevel::Argument::PrimitiveArgument({});\n",
+                    untyped_arg,
+                    primitive_arg
+                )?;
+                write_indented!(
+                    sink,
+                    indent + TABSTOP,
+                    "{}.push({});\n",
+                    arg_vec_name,
+                    untyped_arg
+                )?;
+                write_indented!(sink, indent, "}}\n")?;
+            }
             Type::List(typ) => {
                 codegen_encode_list(sink, indent, &arg.name, typ, arg_vec_name)?;
                 break;

@@ -25,9 +25,11 @@ command { AT+TESTEXEXTFSI=field1: String, field2: Integer }
 # Extension execute command with multiple arguments, with trailing comma
 command { AT+TESTEXEXTFSIC=field1: String, field2: Integer,}
 
+# Option type argument
+command { AT+TESTIO=field1: Integer, field2: Option<Integer>}
+
 # List type argument
 command { AT+TESTL=field: List<Integer>}
-
 
 # Map  type arguments
 command { AT+TESTM=field: Map<Integer, String> }
@@ -80,6 +82,9 @@ response { +TESTSI: field1: String, field2: Integer }
 
 # Extension response with multiple arguments, with trailing comma
 response { +TESTSIC: field1: String, field2: Integer,}
+
+# Option type arguments
+response { +TESTIO: field1: Integer, field2: Option<Integer> }
 
 # List type arguments
 response { +TESTL: field: List<Integer> }

@@ -256,6 +256,25 @@ fn multiple_paren_args() {
     )
 }
 
+// Option type argument
+#[test]
+fn option_type() {
+    test_parse(
+        "command { AT+TEST=field: Option<Integer>}",
+        Definition::Command(Command::Execute {
+            name: String::from("TEST"),
+            type_name: None,
+            is_extension: true,
+            arguments: Some(ExecuteArguments {
+                nonstandard_delimiter: None,
+                arguments: Arguments::ArgumentList(vec![Argument {
+                    name: String::from("field"),
+                    typ: Type::Option(PrimitiveType::Integer),
+                }]),
+            }),
+        }),
+    )
+}
 // List type argument
 #[test]
 fn list_type() {

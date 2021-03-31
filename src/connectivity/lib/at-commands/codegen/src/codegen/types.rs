@@ -205,10 +205,18 @@ fn validate_arg_vec(
     args_for_error_reporting: &Arguments,
 ) -> Result {
     if arg_vec.len() > 0 {
+        let mut seen_optional = false;
         for arg in &arg_vec[..arg_vec.len() - 1] {
             validate_name_uniqueness(arg_names, arg, args_for_error_reporting)?;
             match arg.typ {
-                Type::PrimitiveType(_) => (),
+                Type::PrimitiveType(_) => {
+                    if seen_optional {
+                        return Err(Error::RequiredMustNotFollowOptional(
+                            args_for_error_reporting.clone(),
+                        ));
+                    }
+                }
+                Type::Option(_) => seen_optional = true,
                 Type::List(_) => {
                     return Err(Error::ListMustBeLast(args_for_error_reporting.clone()))
                 }
@@ -269,10 +277,19 @@ fn codegen_argument<W: io::Write>(sink: &mut W, indent: u64, argument: &Argument
 
 fn codegen_type<W: io::Write>(sink: &mut W, indent: u64, typ: &Type) -> Result {
     match typ {
+        Type::Option(typ) => codegen_option_type(sink, indent, typ),
         Type::List(typ) => codegen_list_type(sink, indent, typ),
         Type::Map { key, value } => codegen_map_type(sink, indent, key, value),
         Type::PrimitiveType(typ) => codegen_primitive_type(sink, indent, typ),
     }
+}
+
+fn codegen_option_type<W: io::Write>(sink: &mut W, indent: u64, typ: &PrimitiveType) -> Result {
+    write_no_indent!(sink, "Option<")?;
+    codegen_primitive_type(sink, indent, typ)?;
+    write_no_indent!(sink, ">")?;
+
+    Ok(())
 }
 
 fn codegen_list_type<W: io::Write>(sink: &mut W, indent: u64, typ: &PrimitiveType) -> Result {

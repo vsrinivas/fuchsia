@@ -329,10 +329,11 @@ fn parse_type(typ: Pair<'_>) -> Result<Type> {
     let mut type_elements = typ.into_inner();
     let type_variant = next_match_one_of(
         &mut type_elements,
-        vec![Rule::list_type, Rule::map_type, Rule::identifier],
+        vec![Rule::option_type, Rule::list_type, Rule::map_type, Rule::identifier],
     )?;
 
     let parsed_type = match type_variant.as_rule() {
+        Rule::option_type => parse_option_type(type_variant)?,
         Rule::list_type => parse_list_type(type_variant)?,
         Rule::map_type => parse_map_type(type_variant)?,
         Rule::identifier => Type::PrimitiveType(parse_primitive_type(type_variant)?),
@@ -340,6 +341,15 @@ fn parse_type(typ: Pair<'_>) -> Result<Type> {
     };
 
     Ok(parsed_type)
+}
+
+fn parse_option_type(option_type: Pair<'_>) -> Result<Type> {
+    let mut option_type_elements = option_type.into_inner();
+
+    let element_type = next_match(&mut option_type_elements, Rule::identifier)?;
+    let parsed_element_type = parse_primitive_type(element_type)?;
+
+    Ok(Type::Option(parsed_element_type))
 }
 
 fn parse_list_type(list_type: Pair<'_>) -> Result<Type> {

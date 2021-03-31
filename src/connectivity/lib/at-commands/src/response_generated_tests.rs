@@ -277,6 +277,39 @@ fn args_list() {
     )
 }
 
+// Extension response with optional arg present
+#[test]
+fn args_optional_present() {
+    test_roundtrips(
+        highlevel::Response::Success(highlevel::Success::Testio { field1: 1, field2: Some(2) }),
+        lowlevel::Response::Success {
+            name: String::from("TESTIO"),
+            is_extension: true,
+            arguments: lowlevel::Arguments::ArgumentList(vec![
+                lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(2)),
+            ]),
+        },
+        cr_lf_delimit("+TESTIO: 1,2"),
+    )
+}
+
+// Extension response with optional arg absent
+#[test]
+fn args_optional_absent() {
+    test_roundtrips(
+        highlevel::Response::Success(highlevel::Success::Testio { field1: 1, field2: None }),
+        lowlevel::Response::Success {
+            name: String::from("TESTIO"),
+            is_extension: true,
+            arguments: lowlevel::Arguments::ArgumentList(vec![
+                lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+            ]),
+        },
+        cr_lf_delimit("+TESTIO: 1"),
+    )
+}
+
 // Extension response with multiple arguments
 #[test]
 fn args() {

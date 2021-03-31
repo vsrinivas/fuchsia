@@ -87,6 +87,7 @@ pub struct Argument {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     List(PrimitiveType),
+    Option(PrimitiveType),
     Map { key: PrimitiveType, value: PrimitiveType },
     PrimitiveType(PrimitiveType),
 }

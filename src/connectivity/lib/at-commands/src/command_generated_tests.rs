@@ -238,6 +238,45 @@ fn exec_args() {
     )
 }
 
+// Extension execute command with an optional argument present
+#[test]
+fn exec_optional_present() {
+    test_roundtrips(
+        highlevel::Command::Testio { field1: 1, field2: Some(2) },
+        lowlevel::Command::Execute {
+            name: String::from("TESTIO"),
+            is_extension: true,
+            arguments: Some(lowlevel::ExecuteArguments {
+                nonstandard_delimiter: None,
+                arguments: lowlevel::Arguments::ArgumentList(vec![
+                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(2)),
+                ]),
+            }),
+        },
+        cr_terminate("AT+TESTIO=1,2"),
+    )
+}
+
+// Extension execute command with an optional argument absent
+#[test]
+fn exec_optional_absent() {
+    test_roundtrips(
+        highlevel::Command::Testio { field1: 1, field2: None },
+        lowlevel::Command::Execute {
+            name: String::from("TESTIO"),
+            is_extension: true,
+            arguments: Some(lowlevel::ExecuteArguments {
+                nonstandard_delimiter: None,
+                arguments: lowlevel::Arguments::ArgumentList(vec![
+                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                ]),
+            }),
+        },
+        cr_terminate("AT+TESTIO=1"),
+    )
+}
+
 // Paren delimited argument list
 #[test]
 fn paren_args() {
