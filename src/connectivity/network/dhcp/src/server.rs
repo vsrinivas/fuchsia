@@ -316,7 +316,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                     }
                     return Ok(client_addr);
                 } else {
-                    if self.pool.addr_is_available(&client_addr) {
+                    if self.pool.addr_is_available(client_addr) {
                         return Ok(client_addr);
                     }
                 }
@@ -324,10 +324,10 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         }
         if let Some(requested_addr) = get_requested_ip_addr(&client) {
             if self.pool.addr_is_available(requested_addr) {
-                return Ok(*requested_addr);
+                return Ok(requested_addr);
             }
         }
-        self.pool.get_next_available_addr().map(|x| *x).map_err(AddressPoolError::into)
+        self.pool.get_next_available_addr().map_err(AddressPoolError::into)
     }
 
     fn store_client_config(
@@ -384,7 +384,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     }
 
     fn handle_request_selecting(&mut self, req: Message) -> Result<ServerAction, ServerError> {
-        let requested_ip = *get_requested_ip_addr(&req)
+        let requested_ip = get_requested_ip_addr(&req)
             .ok_or(ServerError::MissingRequiredDhcpOption(OptionCode::RequestedIpAddress))?;
         if !is_recipient(&self.params.server_ips, &req) {
             Err(ServerError::IncorrectDHCPServer(
@@ -400,7 +400,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         req: Message,
         requested_ip: Ipv4Addr,
     ) -> Result<ServerAction, ServerError> {
-        match self.validate_requested_addr_with_client(&req, &requested_ip) {
+        match self.validate_requested_addr_with_client(&req, requested_ip) {
             Ok(()) => {
                 let dest = self.get_destination(&req, requested_ip);
                 Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
@@ -427,7 +427,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     fn validate_requested_addr_with_client(
         &self,
         req: &Message,
-        requested_ip: &Ipv4Addr,
+        requested_ip: Ipv4Addr,
     ) -> Result<(), ServerError> {
         let client_id = ClientIdentifier::from(req);
         if let Some(client_config) = self.cache.get(&client_id) {
@@ -437,12 +437,12 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
             if let Some(client_addr) = client_config.client_addr {
-                if client_addr != *requested_ip {
-                    Err(ServerError::RequestedIpOfferIpMismatch(*requested_ip, client_addr))
+                if client_addr != requested_ip {
+                    Err(ServerError::RequestedIpOfferIpMismatch(requested_ip, client_addr))
                 } else if client_config.expired(now) {
                     Err(ServerError::ExpiredClientConfig)
                 } else if !self.pool.addr_is_allocated(requested_ip) {
-                    Err(ServerError::UnidentifiedRequestedIp(*requested_ip))
+                    Err(ServerError::UnidentifiedRequestedIp(requested_ip))
                 } else {
                     Ok(())
                 }
@@ -456,7 +456,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
 
     fn handle_request_init_reboot(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let requested_ip =
-            *get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
+            get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
         if !is_in_subnet(&req, &self.params) {
             let (nak, dest) = self.build_nak(req, NakReason::DifferentSubnets)?;
             return Ok(ServerAction::SendResponse(nak, dest));
@@ -505,10 +505,10 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             }
         };
         let () = match entry.get() {
-            &CachedConfig { client_addr: Some(ip), .. } if ip == *declined_ip => (),
+            &CachedConfig { client_addr: Some(ip), .. } if ip == declined_ip => (),
             &CachedConfig { client_addr, .. } => {
                 return Err(ServerError::DeclineIpMismatch {
-                    declined: Some(*declined_ip),
+                    declined: Some(declined_ip),
                     client: client_addr,
                 })
             }
@@ -517,8 +517,8 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         // client declines the address after an OFFER or an ACK, a declined address may already be
         // marked allocated. Attempt to allocate the declined address, but treat the address
         // already being allocated as success.
-        let () = self.pool.allocate_addr(*declined_ip).or_else(|e| match e {
-            AddressPoolError::UnavailableIpv4AddrAllocation(ip) if ip == *declined_ip => Ok(()),
+        let () = self.pool.allocate_addr(declined_ip).or_else(|e| match e {
+            AddressPoolError::UnavailableIpv4AddrAllocation(ip) if ip == declined_ip => Ok(()),
             e => Err(e),
         })?;
         let (id, _config) = entry.remove_entry();
@@ -527,7 +527,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                 .delete(&id)
                 .map_err(|e| ServerError::DataStoreUpdateFailure(anyhow::Error::from(e).into()))?;
         }
-        Ok(ServerAction::AddressDecline(*declined_ip))
+        Ok(ServerAction::AddressDecline(declined_ip))
     }
 
     fn handle_release(&mut self, rel: Message) -> Result<ServerAction, ServerError> {
@@ -1163,10 +1163,9 @@ impl AddressPool {
     /// addresses; the address is selected based on the subnet from which
     /// the message was received (if `giaddr` is 0) or on the address of
     /// the relay agent that forwarded the message (`giaddr` when not 0).
-    fn get_next_available_addr(&self) -> Result<&Ipv4Addr, AddressPoolError> {
-        let mut iter = self.available_addrs.iter();
-        match iter.next() {
-            Some(addr) => Ok(addr),
+    fn get_next_available_addr(&self) -> Result<Ipv4Addr, AddressPoolError> {
+        match self.available_addrs.iter().next() {
+            Some(addr) => Ok(*addr),
             None => Err(AddressPoolError::Ipv4AddrExhaustion),
         }
     }
@@ -1189,12 +1188,12 @@ impl AddressPool {
         }
     }
 
-    fn addr_is_available(&self, addr: &Ipv4Addr) -> bool {
-        self.available_addrs.contains(addr) && !self.allocated_addrs.contains(addr)
+    fn addr_is_available(&self, addr: Ipv4Addr) -> bool {
+        self.available_addrs.contains(&addr) && !self.allocated_addrs.contains(&addr)
     }
 
-    fn addr_is_allocated(&self, addr: &Ipv4Addr) -> bool {
-        !self.available_addrs.contains(addr) && self.allocated_addrs.contains(addr)
+    fn addr_is_allocated(&self, addr: Ipv4Addr) -> bool {
+        !self.available_addrs.contains(&addr) && self.allocated_addrs.contains(&addr)
     }
 
     fn is_empty(&self) -> bool {
@@ -1309,19 +1308,14 @@ fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
     }
 }
 
-fn get_requested_ip_addr(req: &Message) -> Option<&Ipv4Addr> {
-    req.options
-        .iter()
-        .filter_map(
-            |opt| {
-                if let DhcpOption::RequestedIpAddress(addr) = opt {
-                    Some(addr)
-                } else {
-                    None
-                }
-            },
-        )
-        .next()
+fn get_requested_ip_addr(req: &Message) -> Option<Ipv4Addr> {
+    req.options.iter().find_map(|opt| {
+        if let DhcpOption::RequestedIpAddress(addr) = opt {
+            Some(*addr)
+        } else {
+            None
+        }
+    })
 }
 
 enum NakReason {
@@ -2361,7 +2355,7 @@ pub mod tests {
         );
         let _response = server.dispatch(req).unwrap();
         assert!(server.cache.contains_key(&client_id));
-        assert!(server.pool.addr_is_allocated(&requested_ip));
+        assert!(server.pool.addr_is_allocated(requested_ip));
         Ok(())
     }
 
@@ -2400,7 +2394,7 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         assert!(!server.cache.contains_key(&client_id));
-        assert!(!server.pool.addr_is_allocated(&requested_ip));
+        assert!(!server.pool.addr_is_allocated(requested_ip));
         Ok(())
     }
 
@@ -3151,8 +3145,8 @@ pub mod tests {
                 DataStoreAction::StoreClientConfig { client_id: id, client_config }
             ] if *id == client_id && *client_config == test_client_config(None, dns)
         );
-        assert!(!server.pool.addr_is_allocated(&release_ip), "addr marked allocated");
-        assert!(server.pool.addr_is_available(&release_ip), "addr not marked available");
+        assert!(!server.pool.addr_is_allocated(release_ip), "addr marked allocated");
+        assert!(server.pool.addr_is_available(release_ip), "addr not marked available");
         assert!(server.cache.contains_key(&client_id), "client config not retained");
         assert_eq!(
             server.cache.get(&client_id).unwrap(),
@@ -3177,8 +3171,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(release), Err(ServerError::UnknownClientId(client_id)));
 
-        assert!(server.pool.addr_is_allocated(&release_ip), "addr not marked allocated");
-        assert!(!server.pool.addr_is_available(&release_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(release_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(release_ip), "addr still marked available");
         Ok(())
     }
 
@@ -3224,8 +3218,8 @@ pub mod tests {
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -3250,8 +3244,8 @@ pub mod tests {
         server.pool.available_addrs.insert(declined_ip);
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -3293,8 +3287,8 @@ pub mod tests {
                 client: Some(client_ip_according_to_server)
             })
         );
-        assert!(server.pool.addr_is_available(&declined_ip), "addr not marked available");
-        assert!(!server.pool.addr_is_allocated(&declined_ip), "addr marked allocated");
+        assert!(server.pool.addr_is_available(declined_ip), "addr not marked available");
+        assert!(!server.pool.addr_is_allocated(declined_ip), "addr marked allocated");
         assert!(server.cache.contains_key(&client_id), "client config deleted from cache");
         Ok(())
     }
@@ -3317,8 +3311,8 @@ pub mod tests {
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -3343,8 +3337,8 @@ pub mod tests {
             server.dispatch(decline),
             Err(ServerError::DeclineFromUnrecognizedClient(client_id))
         );
-        assert!(server.pool.addr_is_available(&declined_ip), "addr not marked available");
-        assert!(!server.pool.addr_is_allocated(&declined_ip), "addr marked allocated");
+        assert!(server.pool.addr_is_available(declined_ip), "addr not marked available");
+        assert!(!server.pool.addr_is_allocated(declined_ip), "addr marked allocated");
         Ok(())
     }
 
@@ -3369,8 +3363,8 @@ pub mod tests {
         );
 
         assert_eq!(server.dispatch(decline), Err(ServerError::IncorrectDHCPServer(server_id)));
-        assert!(!server.pool.addr_is_available(&declined_ip), "addr marked available");
-        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(declined_ip), "addr marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(server.cache.contains_key(&client_id), "client config not retained");
         Ok(())
     }
@@ -3718,8 +3712,8 @@ pub mod tests {
         let () = server.dispatch_clear_leases().context("dispatch_clear_leases() failed")?;
         let empty_map = HashMap::new();
         assert_eq!(empty_map, server.cache);
-        assert!(server.pool.addr_is_available(&client));
-        assert!(!server.pool.addr_is_allocated(&client));
+        assert!(server.pool.addr_is_available(client));
+        assert!(!server.pool.addr_is_allocated(client));
         let stored_leases = server
             .store
             .as_mut()
