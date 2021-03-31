@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -49,6 +50,10 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   Target* GetCurrentTarget();
   Process* GetCurrentProcess();
   Thread* GetThread(uint64_t koid);
+
+  // Checks if thread is in stopped state; returns error if not stopped.
+  // `thread` can be nullptr, in which case an error is returned.
+  Err CheckStoppedThread(Thread* thread);
 
  private:
   void Init();

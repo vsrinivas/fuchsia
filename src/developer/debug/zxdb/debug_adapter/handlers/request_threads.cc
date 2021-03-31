@@ -4,8 +4,6 @@
 
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 
-#include "src/developer/debug/zxdb/client/breakpoint_location.h"
-#include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 

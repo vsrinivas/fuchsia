@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_continue.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_next.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_pause.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
@@ -109,6 +110,13 @@ void DebugAdapterContext::Init() {
     DEBUG_LOG(DebugAdapter) << "ContinueRequest received";
     return OnRequestContinue(this, req);
   });
+
+  dap_->registerHandler(
+      [this](const dap::NextRequest &req,
+             std::function<void(dap::ResponseOrError<dap::NextResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "NextRequest received";
+        OnRequestNext(this, req, callback);
+      });
 
   // Register to zxdb session events
   session()->thread_observers().AddObserver(this);
@@ -235,6 +243,21 @@ Thread *DebugAdapterContext::GetThread(uint64_t koid) {
     }
   }
   return match;
+}
+
+Err DebugAdapterContext::CheckStoppedThread(Thread *thread) {
+  if (!thread) {
+    return Err("Invalid thread.");
+  }
+
+  if (thread->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
+      thread->GetState() != debug_ipc::ThreadRecord::State::kCoreDump &&
+      thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended) {
+    return Err("Thread should be suspended but thread %llu is %s.",
+               static_cast<unsigned long long>(thread->GetKoid()),
+               debug_ipc::ThreadRecord::StateToString(thread->GetState()));
+  }
+  return Err();
 }
 
 }  // namespace zxdb
