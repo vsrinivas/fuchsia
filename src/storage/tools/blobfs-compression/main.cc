@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 
 #include <cstdio>
+#include <set>
 #include <string>
 
 #include <fbl/unique_fd.h>
@@ -22,6 +23,13 @@ namespace {
 
 using ::chunked_compression::ChunkedCompressor;
 using ::chunked_compression::CompressionParams;
+
+const auto kCliOptions = std::set<std::string>({
+    "source_file",
+    "compressed_file",
+    "help",
+    "verbose",
+});
 
 void usage(const char* fname) {
   fprintf(stderr, "Usage: %s [--option=value ...]\n\n", fname);
@@ -84,16 +92,25 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(cl)) {
     return 1;
   }
-  // TODO: check unknown inputs.
 
-  if (cl.HasOption("verbose", nullptr)) {
+  const bool verbose = cl.HasOption("verbose", nullptr);
+  if (verbose) {
     printf("Received flags:\n");
     for (const auto& option : cl.options()) {
       printf("  %s = \"%s\"\n", option.name.c_str(), option.value.c_str());
     }
     printf("\n");
   }
-  if (cl.HasOption("help", nullptr)) {
+
+  // Check unknown input options.
+  bool printHelp = cl.HasOption("help", nullptr);
+  for (const auto& option : cl.options()) {
+    if (kCliOptions.find(option.name) == kCliOptions.end()) {
+      printf("Error: unknown option \"%s\".\n", option.name.c_str());
+      printHelp = true;
+    }
+  }
+  if (printHelp) {
     usage(argv[0]);
     return 0;
   }
