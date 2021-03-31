@@ -556,15 +556,22 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
   int attempts;
   bool response_received = false;
 
+  // Now get the ncp version
+  auto status = GetNCPVersion();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: get ncp version failed with status: %d", status);
+    return status;
+  }
+
   for (attempts = 0; attempts < kGetNcpVersionMaxRetries; attempts++) {
-    zxlogf(DEBUG, "ot-radio: sending GetNCPVersionCmd, attempt : %d / %d", attempts + 1,
-           kGetNcpVersionMaxRetries);
-    // Now get the ncp version
-    auto status = GetNCPVersion();
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "ot-radio: get ncp version failed with status: %d", status);
-      return status;
-    }
+    zxlogf(DEBUG, "ot-radio: waiting for response for GetNCPVersion cmd, attempt: %d / %d",
+           attempts + 1, kGetNcpVersionMaxRetries);
+
+    // Simply update the allowance for each attempt. Radio will send
+    // response to GetNCPVersion to us eventually. Ignore any response to
+    // earlier commands.
+    spinel_framer_->SetInboundAllowanceStatus(true);
+    inbound_allowance_ = kOutboundAllowanceInit;
 
     // Wait for response to arrive, signaled by spi_rx_complete_
     status = sync_completion_wait(&spi_rx_complete_, ZX_SEC(10));
