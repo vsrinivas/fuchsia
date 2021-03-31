@@ -327,11 +327,18 @@ impl SubnetMask {
         self.ones
     }
 
-    /// Returns the Network address resulting from masking `target` with the `SubnetMask`.
+    /// Returns the network address resulting from masking the argument.
     pub fn apply_to(&self, target: &Ipv4Addr) -> Ipv4Addr {
         let subnet_mask_bits = self.to_u32();
         let target_bits = u32::from_be_bytes(target.octets());
         Ipv4Addr::from(target_bits & subnet_mask_bits)
+    }
+
+    /// Computes the broadcast address for the argument.
+    pub fn broadcast_of(&self, target: &Ipv4Addr) -> Ipv4Addr {
+        let subnet_mask_bits = self.to_u32();
+        let target_bits = u32::from_be_bytes(target.octets());
+        Ipv4Addr::from(!subnet_mask_bits | target_bits)
     }
 }
 
