@@ -8,6 +8,7 @@ zx_library("ddk-platform-defs") {
   kernel = true
   static = true
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [ "lib/ddk/platform-defs.h" ]
   sdk_migrated = true
   sources = []

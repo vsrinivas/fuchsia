@@ -10,6 +10,7 @@ zx_library("mmio-ptr") {
 
   static = true
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [ "lib/mmio-ptr/mmio-ptr.h" ]
   sdk_migrated = true
 }

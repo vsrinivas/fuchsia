@@ -1,0 +1,5 @@
+sdk://docs/metadata_schemas
+sdk://pkg/ddk
+sdk://pkg/ddk-platform-defs
+sdk://pkg/mmio-ptr
+sdk://pkg/syslog-headers

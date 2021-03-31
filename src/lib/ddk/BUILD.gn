@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/library_headers.gni")
+import("//build/cpp/sdk_static_library.gni")
 import("//build/unification/zx_library.gni")
 
 group("tests") {
@@ -10,23 +11,41 @@ group("tests") {
   deps = [ "tests" ]
 }
 
-library_headers("ddk-headers") {
-  headers = [
-    "lib/ddk/binding_priv.h",
-    "lib/ddk/debug.h",
-    "lib/ddk/device.h",
-    "lib/ddk/driver.h",
-    "lib/ddk/fragment-device.h",
-    "lib/ddk/io-buffer.h",
-    "lib/ddk/metadata.h",
-    "lib/ddk/mmio-buffer.h",
-    "lib/ddk/phys-iter.h",
-    "lib/ddk/protodefs.h",
-    "lib/ddk/trace/event.h",
-    "lib/ddk/hw/arch_ops.h",
-    "lib/ddk/hw/inout.h",
-    "lib/ddk/hw/reg.h",
+config("include") {
+  include_dirs = [ "include" ]
+}
+
+# This needs to be static_library rather than source_set, as we need
+# Unix linking rules to apply. This is so that only the object files
+# corresponding to the used functions will be linked to the final binary.
+sdk_static_library("ddk") {
+  category = "partner"
+  sdk_name = "ddk"
+  public = [
+    "include/lib/ddk/binding_priv.h",
+    "include/lib/ddk/debug.h",
+    "include/lib/ddk/device.h",
+    "include/lib/ddk/driver.h",
+    "include/lib/ddk/fragment-device.h",
+    "include/lib/ddk/hw/arch_ops.h",
+    "include/lib/ddk/hw/inout.h",
+    "include/lib/ddk/hw/reg.h",
+    "include/lib/ddk/io-buffer.h",
+    "include/lib/ddk/metadata.h",
+    "include/lib/ddk/mmio-buffer.h",
+    "include/lib/ddk/phys-iter.h",
+    "include/lib/ddk/protodefs.h",
+    "include/lib/ddk/trace/event.h",
   ]
+  sources = [
+    "io-buffer.c",
+    "macros.h",
+    "mmio-buffer.c",
+    "phys-iter.c",
+  ]
+
+  public_configs = [ ":include" ]
+
   public_deps = [
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
 
@@ -40,19 +59,7 @@ library_headers("ddk-headers") {
     # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
     #"//zircon/system/ulib/trace",
   ]
-}
 
-# This needs to be static_library rather than source_set, as we need
-# Unix linking rules to apply. This is so that only the object files
-# corresponding to the used functions will be linked to the final binary.
-static_library("ddk") {
-  sources = [
-    "io-buffer.c",
-    "macros.h",
-    "mmio-buffer.c",
-    "phys-iter.c",
-  ]
-  public_deps = [ ":ddk-headers" ]
   deps = [ "//zircon/public/lib/sync" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

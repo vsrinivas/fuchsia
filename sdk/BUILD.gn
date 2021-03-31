@@ -582,3 +582,13 @@ sdk("fuchsia_dart") {
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
   ]
 }
+
+sdk("ddk") {
+  id = sdk_id
+
+  category = "partner"
+
+  api = "manifests/ddk.manifest"
+
+  deps = [ "//src/lib/ddk:ddk_sdk" ]
+}
