@@ -16,6 +16,11 @@ group("deprecated_flutter_app_allowlist") {
   # This is an allowlist of packages that have not migrated to use flutter_component.
   # This is only intended to be used as a temporary allowlist. Do not add to this list.
   allowlist = [
+    "//examples/dart/fuchsia_inspect_flutter/torus15:torus15-flutter",
+    "//examples/dart/fuchsia_modular/multilevel_mod:multilevel-mod",
+    "//examples/dart/fuchsia_modular/slider_mod:slider-mod",
+    "//examples/dart/fuchsia_webview_flutter/webview_mod:webview-mod",
+    "//examples/diagnostics/inspect/dart/inspect_mod:inspect-mod",
     "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester:inspect-flutter-integration-tester",
     "//src/experiences/benchmarks/bin/button_flutter:button-flutter",
     "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
@@ -26,15 +31,6 @@ group("deprecated_flutter_app_allowlist") {
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view",
     "//src/ui/tests/integration_input_tests/touch/one-flutter:one-flutter",
     "//src/tests/intl/timestamp-server-dart:timestamp-server-flutter",
-    "//topaz/examples/fuchsia_inspect_examples/inspect_mod:inspect-mod",
-    "//topaz/examples/fuchsia_inspect_flutter_examples/torus15:torus15-flutter",
-    "//topaz/examples/fuchsia_modular_examples/multilevel_mod:multilevel-mod",
-    "//topaz/examples/fuchsia_modular_examples/slider_mod:slider-mod",
-    "//topaz/examples/fuchsia_webview_flutter_examples/webview_mod:webview-mod",
-    "//topaz/public/dart/fuchsia_inspect_flutter/examples/torus15:torus15-flutter",
-    "//topaz/public/dart/fuchsia_modular/examples/multilevel_mod:multilevel-mod",
-    "//topaz/public/dart/fuchsia_modular/examples/slider_mod:slider-mod",
-    "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview-mod",
     "//vendor/google/connectivity/management/router_manager_app:router-manager-app",
     "//vendor/google/factory/fctui:fctui",
   ]

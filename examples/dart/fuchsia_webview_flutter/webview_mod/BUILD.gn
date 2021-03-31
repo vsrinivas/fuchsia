@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/flutter/flutter_app.gni")
+
+flutter_app("webview_mod") {
+  main_dart = "lib/main.dart"
+
+  fuchsia_package_name = "webview_mod"
+
+  sources = [
+    "app.dart",
+    "main.dart",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/webview_mod.cmx")
+      dest = "webview_mod.cmx"
+    },
+  ]
+
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_modular",
+    "//sdk/dart/fuchsia_webview_flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/webview_flutter",
+  ]
+}

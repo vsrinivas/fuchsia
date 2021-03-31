@@ -1,0 +1,12 @@
+{
+    "program": {
+        "data": "data/mind_reader_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

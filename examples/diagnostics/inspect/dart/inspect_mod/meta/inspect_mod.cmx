@@ -1,0 +1,24 @@
+{
+    "facets": {
+        "fuchsia.module": {
+            "@version": 2,
+            "intent_filters": [],
+            "suggestion_headline": "Inspect Hello World"
+        }
+    },
+    "program": {
+        "data": "data/inspect_mod"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
