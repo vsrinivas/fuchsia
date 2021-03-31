@@ -13,9 +13,10 @@
 #include <set>
 
 #include <audio-proto-utils/format-utils.h>
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
-namespace {
+namespace audio {
 
 namespace audio_fidl = fuchsia_hardware_audio;
 
@@ -30,9 +31,26 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   return format;
 }
 
-}  // namespace
+class SimpleAudioTest : public inspect::InspectTestHelper, public zxtest::Test {
+ public:
+  void SetUp() override {}
 
-namespace audio {
+  void TearDown() override {}
+
+  template <typename T>
+  static void CheckPropertyNotEqual(const inspect::NodeValue& node, std::string property,
+                                    T not_expected_value) {
+    const T* actual_value = node.get_property<T>(property);
+    EXPECT_TRUE(actual_value);
+    if (!actual_value) {
+      return;
+    }
+    EXPECT_NE(not_expected_value.value(), actual_value->value());
+  }
+
+ protected:
+  fake_ddk::Bind ddk_;
+};
 
 class MockSimpleAudio : public SimpleAudioStream {
  public:
@@ -54,6 +72,7 @@ class MockSimpleAudio : public SimpleAudioStream {
         },
         delay);
   }
+  inspect::Inspector& inspect() { return SimpleAudioStream::inspect(); }
 
  protected:
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -155,35 +174,32 @@ class MockSimpleAudio : public SimpleAudioStream {
   uint32_t us_per_notification_ = 0;
 };
 
-TEST(SimpleAudioTest, DdkLifeCycleTest) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, DdkLifeCycleTest) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
   ddk::SuspendTxn txn(server->zxdev(), 0, false, DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND);
   server->DdkSuspend(std::move(txn));
-  EXPECT_FALSE(tester.remove_called());
+  EXPECT_FALSE(ddk_.remove_called());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, UnbindAndAlsoShutdown) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, UnbindAndAlsoShutdown) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
   server->DdkAsyncRemove();
   server->Shutdown();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, SetAndGetGain) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, SetAndGetGain) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -199,17 +215,16 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   ASSERT_OK(gain_state.status());
   ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -243,17 +258,16 @@ TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   thrd_join(th, &result);
   ASSERT_EQ(result, 0);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, SetAndGetAgc) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, SetAndGetAgc) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -281,17 +295,16 @@ TEST(SimpleAudioTest, SetAndGetAgc) {
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.agc_enabled());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, SetAndGetMute) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, SetAndGetMute) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -319,11 +332,11 @@ TEST(SimpleAudioTest, SetAndGetMute) {
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.muted());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, SetMuteWhenDisabled) {
+TEST_F(SimpleAudioTest, SetMuteWhenDisabled) {
   struct MockSimpleAudioLocal : public MockSimpleAudio {
     MockSimpleAudioLocal(zx_device_t* parent) : MockSimpleAudio(parent) {}
     zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -332,12 +345,11 @@ TEST(SimpleAudioTest, SetMuteWhenDisabled) {
       return status;
     }
   };
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
+  auto server = SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -353,17 +365,16 @@ TEST(SimpleAudioTest, SetMuteWhenDisabled) {
   ASSERT_OK(gain_state1.status());
   ASSERT_FALSE(gain_state1->gain_state.has_muted());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, Enumerate1) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, Enumerate1) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -382,11 +393,11 @@ TEST(SimpleAudioTest, Enumerate1) {
   ASSERT_EQ(1, formats.valid_bits_per_sample.count());
   ASSERT_EQ(16, formats.valid_bits_per_sample[0]);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, Enumerate2) {
+TEST_F(SimpleAudioTest, Enumerate2) {
   struct MockSimpleAudioLocal : public MockSimpleAudio {
     MockSimpleAudioLocal(zx_device_t* parent) : MockSimpleAudio(parent) {}
     zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -414,12 +425,11 @@ TEST(SimpleAudioTest, Enumerate2) {
     }
   };
 
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
+  auto server = SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -463,17 +473,16 @@ TEST(SimpleAudioTest, Enumerate2) {
   ASSERT_EQ(1, formats2.valid_bits_per_sample.count());
   ASSERT_EQ(32, formats2.valid_bits_per_sample[0]);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, CreateRingBuffer1) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, CreateRingBuffer1) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -492,11 +501,11 @@ TEST(SimpleAudioTest, CreateRingBuffer1) {
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, CreateRingBuffer2) {
+TEST_F(SimpleAudioTest, CreateRingBuffer2) {
   struct MockSimpleAudioLocal : public MockSimpleAudio {
     MockSimpleAudioLocal(zx_device_t* parent) : MockSimpleAudio(parent) {}
     zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -511,12 +520,11 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
       return MockSimpleAudio::Init();
     }
   };
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
+  auto server = SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -543,17 +551,16 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, SetBadFormat1) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, SetBadFormat1) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -580,17 +587,16 @@ TEST(SimpleAudioTest, SetBadFormat1) {
   auto result2 = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, SetBadFormat2) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, SetBadFormat2) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -617,17 +623,16 @@ TEST(SimpleAudioTest, SetBadFormat2) {
   auto result2 = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, GetIds) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, GetIds) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -641,17 +646,16 @@ TEST(SimpleAudioTest, GetIds) {
                   strlen("Bike Sheds, Inc."));
   ASSERT_EQ(result->properties.clock_domain(), MockSimpleAudio::kTestClockDomain);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectState) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
 
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
@@ -676,17 +680,16 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_FALSE(state1->plug_state.plugged());
   ASSERT_FALSE(state2->plug_state.plugged());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -735,17 +738,16 @@ TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   thrd_join(th2, &result);
   ASSERT_EQ(result, 0);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -776,17 +778,16 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   ASSERT_TRUE(state2b->plug_state.plugged());
   ASSERT_TRUE(state3b->plug_state.plugged());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, MultipleChannelsGainState) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, MultipleChannelsGainState) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -800,17 +801,16 @@ TEST(SimpleAudioTest, MultipleChannelsGainState) {
   ASSERT_EQ(0.f, state1->gain_state.gain_db());
   ASSERT_EQ(0.f, state2->gain_state.gain_db());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -860,17 +860,16 @@ TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   thrd_join(th, &result);
   ASSERT_EQ(result, 0);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, RingBufferTests) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, RingBufferTests) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -894,8 +893,33 @@ TEST(SimpleAudioTest, RingBufferTests) {
                                                   kNumberOfPositionNotifications);
   ASSERT_OK(vmo.status());
 
+  // Check inspect state.
+  {
+    ASSERT_NO_FATAL_FAILURES(ReadInspect(server->inspect().DuplicateVmo()));
+    auto* simple_audio = hierarchy().GetByPath({"simple_audio_stream"});
+    ASSERT_TRUE(simple_audio);
+    ASSERT_NO_FATAL_FAILURES(
+        CheckProperty(simple_audio->node(), "state", inspect::StringPropertyValue("created")));
+    ASSERT_NO_FATAL_FAILURES(
+        CheckProperty(simple_audio->node(), "start_time", inspect::IntPropertyValue(0)));
+    ASSERT_NO_FATAL_FAILURES(
+        CheckProperty(simple_audio->node(), "frames_requested",
+                      inspect::UintPropertyValue(MockSimpleAudio::kTestFrameRate)));
+  }
+
   auto start = audio_fidl::RingBuffer::Call::Start(local);
   ASSERT_OK(start.status());
+
+  // Check updated inspect state.
+  {
+    ASSERT_NO_FATAL_FAILURES(ReadInspect(server->inspect().DuplicateVmo()));
+    auto* simple_audio = hierarchy().GetByPath({"simple_audio_stream"});
+    ASSERT_TRUE(simple_audio);
+    ASSERT_NO_FATAL_FAILURES(
+        CheckProperty(simple_audio->node(), "state", inspect::StringPropertyValue("started")));
+    ASSERT_NO_FATAL_FAILURES(
+        CheckPropertyNotEqual(simple_audio->node(), "start_time", inspect::IntPropertyValue(0)));
+  }
 
   auto position = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(local);
   ASSERT_EQ(MockSimpleAudio::kTestPositionNotify, position->position_info.position);
@@ -903,17 +927,16 @@ TEST(SimpleAudioTest, RingBufferTests) {
   auto stop = audio_fidl::RingBuffer::Call::Stop(local);
   ASSERT_OK(stop.status());
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client;
-  *client.mutable_channel() = std::move(tester.FidlClient());
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -958,33 +981,31 @@ TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   thrd_join(th, &result);
   ASSERT_EQ(result, 0);
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, ClientCloseStreamConfigProtocol) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, ClientCloseStreamConfigProtocol) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   ch->channel.reset();
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, ClientCloseRingBufferProtocol) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, ClientCloseRingBufferProtocol) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -1003,17 +1024,16 @@ TEST(SimpleAudioTest, ClientCloseRingBufferProtocol) {
   endpoints->client.reset();
 
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -1032,17 +1052,16 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
   client.mutable_channel()->reset();
 
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 
-TEST(SimpleAudioTest, NonPriviledged) {
-  fake_ddk::Bind tester;
-  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+TEST_F(SimpleAudioTest, NonPriviledged) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap;
-  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
+  *client_wrap.mutable_channel() = std::move(ddk_.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch1 = client_wrap.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client_wrap.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch3 = client_wrap.GetChannel();
@@ -1102,7 +1121,7 @@ TEST(SimpleAudioTest, NonPriviledged) {
   ASSERT_NOT_OK(stop3.status());  // Non-priviledged channel.
 
   server->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
+  EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
 }
 

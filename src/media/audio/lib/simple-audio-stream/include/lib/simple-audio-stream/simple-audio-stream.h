@@ -10,6 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -123,11 +124,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
  protected:
   friend class fbl::RefPtr<SimpleAudioStream>;
 
-  SimpleAudioStream(zx_device_t* parent, bool is_input)
-      : SimpleAudioStreamBase(parent),
-        SimpleAudioStreamProtocol(is_input),
-        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  SimpleAudioStream(zx_device_t* parent, bool is_input);
   virtual ~SimpleAudioStream() = default;
+  inspect::Inspector& inspect() { return inspect_; }
 
   // Hooks for driver implementation.
 
@@ -441,6 +440,15 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
       __TA_GUARDED(position_lock_);
   async::Loop loop_;
   Token domain_token_;
+
+  inspect::Inspector inspect_;
+  inspect::Node simple_audio_;
+  inspect::StringProperty state_;
+  inspect::IntProperty start_time_;
+  inspect::IntProperty position_request_time_;
+  inspect::IntProperty position_reply_time_;
+  inspect::UintProperty frames_requested_;
+  inspect::UintProperty ring_buffer_size_;
 };
 
 }  // namespace audio

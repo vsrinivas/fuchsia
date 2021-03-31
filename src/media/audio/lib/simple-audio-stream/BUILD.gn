@@ -22,6 +22,7 @@ source_set("simple-audio-stream") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/inspect",
   ]
   deps = [
     "//src/lib/ddk",

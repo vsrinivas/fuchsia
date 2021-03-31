@@ -18,6 +18,19 @@
 #include <audio-proto-utils/format-utils.h>
 namespace audio {
 
+SimpleAudioStream::SimpleAudioStream(zx_device_t* parent, bool is_input)
+    : SimpleAudioStreamBase(parent),
+      SimpleAudioStreamProtocol(is_input),
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+  simple_audio_ = inspect_.GetRoot().CreateChild("simple_audio_stream");
+  state_ = simple_audio_.CreateString("state", "created");
+  start_time_ = simple_audio_.CreateInt("start_time", 0);
+  position_request_time_ = simple_audio_.CreateInt("position_request_time", 0);
+  position_reply_time_ = simple_audio_.CreateInt("position_reply_time", 0);
+  ring_buffer_size_ = simple_audio_.CreateUint("ring_buffer_size", 0);
+  frames_requested_ = simple_audio_.CreateUint("frames_requested", 0);
+}
+
 void SimpleAudioStream::Shutdown() {
   if (!shutting_down_.exchange(true)) {
     loop_.Shutdown();
@@ -80,7 +93,8 @@ zx_status_t SimpleAudioStream::PublishInternal() {
   // If we succeed in adding our device, add an explicit reference to
   // ourselves to represent the reference now being held by the DDK.  We will
   // get this reference back when the DDK (eventually) calls release.
-  zx_status_t res = DdkAdd(device_name_);
+  zx_status_t res =
+      DdkAdd(ddk::DeviceAddArgs(device_name_).set_inspect_vmo(inspect_.DuplicateVmo()));
   if (res == ZX_OK) {
     AddRef();
   }
@@ -152,6 +166,7 @@ zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPosition
   if (position_completer_) {
     position_completer_->Reply(position_info);
     position_completer_.reset();
+    position_reply_time_.Set(zx::clock::get_monotonic().get());
   }
   return ZX_OK;
 }
@@ -239,6 +254,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
     if (rb_started_) {
       Stop();
       rb_started_ = false;
+      state_.Set("deactivated");
     }
     rb_fetched_ = false;
     expected_notifications_per_ring_.store(0);
@@ -412,6 +428,7 @@ void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
 void SimpleAudioStream::WatchClockRecoveryPositionInfo(
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock position_lock(&position_lock_);
+  position_request_time_.Set(zx::clock::get_monotonic().get());
   position_completer_ = completer.ToAsync();
 }
 
@@ -586,6 +603,7 @@ void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
 void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
                                GetVmoCompleter::Sync& completer) {
   ScopedToken t(domain_token());
+  frames_requested_.Set(min_frames);
 
   if (rb_started_) {
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
@@ -606,6 +624,14 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
 
   expected_notifications_per_ring_.store(req.notifications_per_ring);
   rb_fetched_ = true;
+  uint64_t size = 0;
+  status = buffer.get_size(&size);
+  if (status != ZX_OK) {
+    expected_notifications_per_ring_.store(0);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
+    return;
+  }
+  ring_buffer_size_.Set(size);
   completer.ReplySuccess(num_ring_buffer_frames, std::move(buffer));
 }
 
@@ -622,6 +648,8 @@ void SimpleAudioStream::Start(StartCompleter::Sync& completer) {
   auto result = Start(&start_time);
   if (result == ZX_OK) {
     rb_started_ = true;
+    state_.Set("started");
+    start_time_.Set(zx::clock::get_monotonic().get());
   }
   completer.Reply(start_time);
 }
@@ -637,6 +665,7 @@ void SimpleAudioStream::Stop(StopCompleter::Sync& completer) {
   auto result = Stop();
   if (result == ZX_OK) {
     rb_started_ = false;
+    state_.Set("stopped");
   }
   completer.Reply();
 }

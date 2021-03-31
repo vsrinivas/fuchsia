@@ -12,6 +12,7 @@ test("sa-unittest-bin") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
@@ -26,6 +27,7 @@ test("sa-unittest-bin") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/audio-utils",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/inspect",
   ]
 }
 
