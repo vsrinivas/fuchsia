@@ -1,12 +1,24 @@
 {
     select: {
         disconnects: "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time",
+        connected_durations: "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:connected_duration",
         scan_failures: "INSPECT:wlanstack.cmx:root/client_stats/scan_failures/*:@time",
     },
     eval: {
         last_24_hours: "Fn([time], time > Now() - Hours(24))",
         n_disconnects_today: "Count(Filter(last_24_hours, disconnects))",
         n_scan_failures_today: "Count(Filter(last_24_hours, scan_failures))",
+
+        // Preamble of functions to support filtering one list by the contents of another.
+        identity_two: "Fn([a, b], [a, b])",
+        Zip: "Fn([x, y], Map(identity_two, x, y))",
+        first: "Fn([tuple], Apply(Fn([f, s], f), tuple))",
+        second: "Fn([tuple], Apply(Fn([f, s], s), tuple))",
+
+        // Filter connected_durations to only contain connected_durations in the last 24 hours.
+        disconnects_today_indicator: "Map(last_24_hours, disconnects)",
+        connected_durations_today: "Map(second, Filter(first, Apply(Zip, [disconnects_today_indicator, connected_durations])))",
+        avg_connected_duration_today: "Fold(Fn([acc, next], acc + next), connected_durations_today, 0) / n_disconnects_today",
     },
     act: {
         too_many_disconnects: {
@@ -20,6 +32,18 @@
             trigger: "n_scan_failures_today >= 4",
             repeat: "Hours(24)",
             signature: "four-scan-failures-today",
+        },
+        low_connected_duration: {
+            type: "Snapshot",
+            trigger: "And(avg_connected_duration_today <= Hours(3), n_disconnects_today == 1)",
+            repeat: "Hours(24)",
+            signature: "less-than-three-hours-connected-today",
+        },
+        low_avg_connected_duration: {
+            type: "Snapshot",
+            trigger: "And(avg_connected_duration_today <= Hours(3), n_disconnects_today > 1)",
+            repeat: "Hours(24)",
+            signature: "avg-less-than-three-hours-connected-today",
         },
     },
     test: {
@@ -93,6 +117,151 @@
                     10e13,
                     11e13,
                     12e13,
+                ],
+            },
+        },
+        one_low_connected_duration: {
+            yes: [
+                "low_connected_duration",
+            ],
+            no: [
+                "low_avg_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13.
+                disconnects: [
+                    9e13,
+                ],
+                connected_durations: [
+                    1e9,
+                ],
+            },
+        },
+        multiple_low_connected_duration: {
+            yes: [
+                "low_avg_connected_duration",
+            ],
+            no: [
+                "low_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13.
+                disconnects: [
+                    9e13,
+                    10e13,
+                ],
+                connected_durations: [
+                    3600e9,
+                    12000e9,
+                ],
+            },
+        },
+        recent_one_low_connected_duration: {
+            yes: [
+                "low_connected_duration",
+            ],
+            no: [
+                "low_avg_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13.
+                disconnects: [
+                    1e13,
+                    9e13,
+                ],
+                connected_durations: [
+                    1e9,
+                    1e9,
+                ],
+            },
+        },
+        recent_multiple_low_connected_duration: {
+            yes: [
+                "low_avg_connected_duration",
+            ],
+            no: [
+                "low_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13.
+                disconnects: [
+                    1e13,
+                    9e13,
+                    10e13,
+                ],
+                connected_durations: [
+                    20000e9,
+                    3600e9,
+                    12000e9,
+                ],
+            },
+        },
+        no_connected_duration: {
+            yes: [],
+            no: [
+                "low_connected_duration",
+                "low_avg_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                disconnects: [],
+                connected_durations: [],
+            },
+        },
+        no_recent_one_low_connected_duration: {
+            yes: [],
+            no: [
+                "low_connected_duration",
+                "low_avg_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13.
+                disconnects: [
+                    1e13,
+                ],
+                connected_durations: [
+                    1e9,
+                ],
+            },
+        },
+        one_high_connected_duration: {
+            yes: [],
+            no: [
+                "low_connected_duration",
+                "low_avg_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13.
+                disconnects: [
+                    9e13,
+                ],
+                connected_durations: [
+                    86400e9,
+                ],
+            },
+        },
+        multiple_high_connected_durations: {
+            yes: [],
+            no: [
+                "low_connected_duration",
+                "low_avg_connected_duration",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13.
+                disconnects: [
+                    9e13,
+                    10e13,
+                ],
+                connected_durations: [
+                    7200e9,
+                    15000e9,
                 ],
             },
         },
