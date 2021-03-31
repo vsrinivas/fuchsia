@@ -52,18 +52,34 @@ impl From<CallState> for Direction {
     }
 }
 
+impl From<Direction> for i64 {
+    fn from(x: Direction) -> Self {
+        match x {
+            // When we do not know the direction, arbitrarily choose Mobile Originated.
+            // TODO (fxbug.dev/73326): Update the FIDL API so that the direction is always provided.
+            Direction::Unknown => 0,
+            Direction::MobileOriginated => 0,
+            Direction::MobileTerminated => 1,
+        }
+    }
+}
+
 /// Internal state and resources associated with a single call.
-#[allow(unused)] // TODO: Remove in fxrev.dev/497389
 struct CallEntry {
     /// Proxy associated with this call.
+    // TODO (fxb/64550): Remove when call requests are initiated
+    #[allow(unused)]
     proxy: CallProxy,
     /// The remote party's number.
     number: Number,
     /// Current state.
     state: CallState,
     /// Time of the last update to the call's `state`.
+    // TODO (fxb/64550): Remove when call requests are initiated
+    #[allow(unused)]
     state_updated_at: fasync::Time,
-    /// Direction of the call.
+    /// Direction of the call. If the Direction cannot be determined from the Call's CallState, it
+    /// is set to `Unknown`.
     direction: Direction,
 }
 
@@ -199,7 +215,8 @@ impl Calls {
     }
 
     /// Return a Vec of the current call state for every call that `Calls` is tracking.
-    #[allow(unused)] // TODO: Remove in fxrev.dev/497389
+    ///
+    /// The items in this list are guaranteed to be identical to the
     pub fn current_calls(&self) -> Vec<Call> {
         self.current_calls
             .calls()
@@ -330,7 +347,8 @@ impl<T> CallList<T> {
     }
 
     /// Retrieve a value by index. Returns `None` if the index does not point to a value.
-    #[allow(unused)] // TODO: Remove in fxrev.dev/497389
+    // TODO (fxb/64550): Remove when call requests are initiated
+    #[allow(unused)]
     fn get(&self, index: CallIdx) -> Option<&T> {
         match Self::to_internal_index(index) {
             Some(index) => self.inner.get(index).map(|v| v.as_ref()).unwrap_or(None),
@@ -356,7 +374,6 @@ impl<T> CallList<T> {
     }
 
     /// Return an iterator of the calls and associated call indices.
-    #[allow(unused)] // TODO: Remove in fxrev.dev/497389
     fn calls(&self) -> impl Iterator<Item = (CallIdx, &T)> {
         self.inner
             .iter()

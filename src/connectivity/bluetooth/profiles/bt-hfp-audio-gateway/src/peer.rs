@@ -18,7 +18,7 @@ use {
     futures::{channel::mpsc, Future, FutureExt, SinkExt},
 };
 
-mod calls;
+pub mod calls;
 pub mod gain_control;
 mod ringer;
 pub mod service_level_connection;

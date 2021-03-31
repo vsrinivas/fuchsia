@@ -11,6 +11,7 @@ use {
 use crate::{
     indicator_status::IndicatorStatus,
     peer::{
+        calls::Call,
         gain_control::Gain,
         service_level_connection::{Command, SlcState},
     },
@@ -38,6 +39,9 @@ pub mod subscriber_number_information;
 /// Defines the implementation of the NR/EC Procedure.
 pub mod nrec;
 
+/// Defines the implementation of the Query List of Current Calls Procedure.
+pub mod query_current_calls;
+
 /// Defines the implementation of the Query Operator Selection Procedure.
 pub mod query_operator_selection;
 
@@ -53,6 +57,7 @@ use dtmf::{DtmfCode, DtmfProcedure};
 use extended_errors::ExtendedErrorsProcedure;
 use nrec::NrecProcedure;
 use phone_status::{PhoneStatus, PhoneStatusProcedure};
+use query_current_calls::{build_clcc_response, QueryCurrentCallsProcedure};
 use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
 use subscriber_number_information::{build_cnum_response, SubscriberNumberInformationProcedure};
@@ -136,6 +141,8 @@ pub enum ProcedureMarker {
     SubscriberNumberInformation,
     /// The Volume Level Synchronization procedure as defined in HFP v1.8 Section 4.29.2.
     VolumeSynchronization,
+    /// The Query List of Current Calls procedure as defined in HFP v1.8 Section 4.32.1.
+    QueryCurrentCalls,
 }
 
 impl ProcedureMarker {
@@ -156,6 +163,7 @@ impl ProcedureMarker {
             }
             Self::Dtmf => Box::new(DtmfProcedure::new()),
             Self::VolumeSynchronization => Box::new(VolumeSynchronizationProcedure::new()),
+            Self::QueryCurrentCalls => Box::new(QueryCurrentCallsProcedure::new()),
         }
     }
 
@@ -177,6 +185,7 @@ impl ProcedureMarker {
             }
             at::Command::Cmee { .. } => Ok(Self::ExtendedErrors),
             at::Command::Ccwa { .. } => Ok(Self::CallWaitingNotifications),
+            at::Command::Clcc { .. } => Ok(Self::QueryCurrentCalls),
             at::Command::Clip { .. } => Ok(Self::CallLineIdentNotifications),
             at::Command::Cnum { .. } => Ok(Self::SubscriberNumberInformation),
             at::Command::Vgs { .. } | at::Command::Vgm { .. } => Ok(Self::VolumeSynchronization),
@@ -204,6 +213,8 @@ pub enum InformationRequest {
     SpeakerVolumeSynchronization { level: Gain, response: Box<dyn FnOnce() -> AgUpdate> },
 
     MicrophoneVolumeSynchronization { level: Gain, response: Box<dyn FnOnce() -> AgUpdate> },
+
+    QueryCurrentCalls { response: Box<dyn FnOnce(Vec<Call>) -> AgUpdate> },
 }
 
 impl From<&InformationRequest> for ProcedureMarker {
@@ -218,6 +229,7 @@ impl From<&InformationRequest> for ProcedureMarker {
             SpeakerVolumeSynchronization { .. } | MicrophoneVolumeSynchronization { .. } => {
                 Self::VolumeSynchronization
             }
+            QueryCurrentCalls { .. } => Self::QueryCurrentCalls,
         }
     }
 }
@@ -232,6 +244,7 @@ impl fmt::Debug for InformationRequest {
             Self::SetNrec { enable: true, .. } => "SetNrec(enabled)",
             Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
             Self::GetNetworkOperatorName { .. } => "GetNetworkOperatorName",
+            Self::QueryCurrentCalls { .. } => "QueryCurrentCalls ",
             // DTFM Code values are not displayed in Debug representation
             Self::SendDtmf { .. } => "SendDtmf",
             Self::SpeakerVolumeSynchronization { level, .. } => {
@@ -361,6 +374,8 @@ pub enum AgUpdate {
     PhoneStatusIndicator(PhoneStatus),
     /// The AG's network subscriber number(s).
     SubscriberNumbers(Vec<String>),
+    /// The list of ongoing calls.
+    CurrentCalls(Vec<Call>),
 }
 
 impl From<AgUpdate> for ProcedureRequest {
@@ -416,6 +431,11 @@ impl From<AgUpdate> for ProcedureRequest {
             AgUpdate::SubscriberNumbers(numbers) => {
                 numbers.into_iter().map(build_cnum_response).chain(once(at::Response::Ok)).collect()
             }
+            AgUpdate::CurrentCalls(calls) => calls
+                .into_iter()
+                .filter_map(build_clcc_response)
+                .chain(once(at::Response::Ok))
+                .collect(),
         }
         .into()
     }

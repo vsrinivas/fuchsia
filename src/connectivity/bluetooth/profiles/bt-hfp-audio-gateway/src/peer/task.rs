@@ -246,6 +246,10 @@ impl PeerTask {
                 self.gain_control.report_microphone_gain(level);
                 self.connection.receive_ag_request(marker, response()).await;
             }
+            InformationRequest::QueryCurrentCalls { response } => {
+                let result = self.calls.current_calls();
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
         };
     }
 

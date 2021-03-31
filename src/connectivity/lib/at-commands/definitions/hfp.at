@@ -37,7 +37,15 @@ command { AT+CLCC }
 
 # Standard List Current Calls response
 # HFP 1.8 4.34.2
-response { +CLCC: current_calls: Map<String, Integer> }
+response { +CLCC:
+    index: Integer,
+    dir: Integer,
+    status: Integer,
+    mode: Integer,
+    mpty: Integer,
+    number: String,
+    ty: Integer,
+}
 
 # Bluetooth Available Codecs command
 # HFP 1.8 4.35.1
