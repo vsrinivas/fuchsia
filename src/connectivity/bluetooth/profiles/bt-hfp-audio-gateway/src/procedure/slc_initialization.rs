@@ -8,9 +8,11 @@ use super::{
 };
 
 use crate::{
-    indicator_status::IndicatorStatus,
     peer::service_level_connection::SlcState,
-    protocol::features::{AgFeatures, HfFeatures},
+    protocol::{
+        features::{AgFeatures, HfFeatures},
+        indicators::Indicators,
+    },
 };
 
 use at_commands as at;
@@ -224,7 +226,7 @@ struct AgIndicatorStatusRequestReceived;
 impl SlcProcedureState for AgIndicatorStatusRequestReceived {
     fn request(&self) -> ProcedureRequest {
         InformationRequest::GetAgIndicatorStatus {
-            response: Box::new(|status: IndicatorStatus| AgUpdate::IndicatorStatus(status)),
+            response: Box::new(|status: Indicators| AgUpdate::IndicatorStatus(status)),
         }
         .into()
     }
@@ -583,7 +585,7 @@ mod tests {
             slc_proc.hf_update(update4, &mut state),
             ProcedureRequest::Info(InformationRequest::GetAgIndicatorStatus { .. })
         );
-        let update5 = AgUpdate::IndicatorStatus(IndicatorStatus::default());
+        let update5 = AgUpdate::IndicatorStatus(Indicators::default());
         assert_matches!(slc_proc.ag_update(update5, &mut state), ProcedureRequest::SendMessages(_));
 
         // Lastly, the HF should request to enable the indicator status update on the AG.
@@ -628,7 +630,7 @@ mod tests {
         );
 
         // Indicator status should be updated.
-        let update6 = AgUpdate::IndicatorStatus(IndicatorStatus::default());
+        let update6 = AgUpdate::IndicatorStatus(Indicators::default());
         assert_matches!(slc_proc.ag_update(update6, &mut state), ProcedureRequest::SendMessages(_));
 
         let update7 = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };

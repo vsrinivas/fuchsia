@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct IndicatorStatus {
+pub struct Indicators {
     pub service: bool,
     pub call: bool,
     pub callsetup: (),

@@ -30,9 +30,9 @@ use super::{
 use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
-    indicator_status::IndicatorStatus,
     procedure::{phone_status::PhoneStatus, InformationRequest, ProcedureMarker},
     profile::ProfileEvent,
+    protocol::indicators::Indicators,
 };
 
 pub(super) struct PeerTask {
@@ -188,7 +188,7 @@ impl PeerTask {
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
             InformationRequest::GetAgIndicatorStatus { response } => {
-                let status = IndicatorStatus {
+                let status = Indicators {
                     service: self.network.service_available.unwrap_or(false),
                     call: false,
                     callsetup: (),

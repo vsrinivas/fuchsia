@@ -22,7 +22,6 @@ mod config;
 mod error;
 mod fidl_service;
 mod hfp;
-mod indicator_status;
 mod peer;
 mod procedure;
 mod profile;

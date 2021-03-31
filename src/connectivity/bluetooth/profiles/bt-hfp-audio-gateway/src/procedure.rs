@@ -9,13 +9,12 @@ use {
 };
 
 use crate::{
-    indicator_status::IndicatorStatus,
     peer::{
         calls::Call,
         gain_control::Gain,
         service_level_connection::{Command, SlcState},
     },
-    protocol::features::AgFeatures,
+    protocol::{features::AgFeatures, indicators::Indicators},
 };
 
 /// Defines the implementation of the DTMF Procedure.
@@ -200,7 +199,7 @@ impl ProcedureMarker {
 pub enum InformationRequest {
     GetAgFeatures { response: Box<dyn FnOnce(AgFeatures) -> AgUpdate> },
 
-    GetAgIndicatorStatus { response: Box<dyn FnOnce(IndicatorStatus) -> AgUpdate> },
+    GetAgIndicatorStatus { response: Box<dyn FnOnce(Indicators) -> AgUpdate> },
 
     GetNetworkOperatorName { response: Box<dyn FnOnce(Option<String>) -> AgUpdate> },
 
@@ -359,7 +358,7 @@ pub enum AgUpdate {
     /// Three Way Calling support
     ThreeWaySupport,
     /// Current status of all AG Indicators
-    IndicatorStatus(IndicatorStatus),
+    IndicatorStatus(Indicators),
     /// An Update that contains no additional information
     Ok,
     /// An error occurred and should be communicated to the HF

@@ -4,3 +4,6 @@
 
 /// Defines the supported features for Audio Gateway and Hands Free roles.
 pub mod features;
+
+/// Defines the supported Audio Gateway indicators.
+pub mod indicators;

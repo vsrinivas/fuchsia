@@ -44,7 +44,6 @@ rustc_binary("bin") {
     "src/error.rs",
     "src/fidl_service.rs",
     "src/hfp.rs",
-    "src/indicator_status.rs",
     "src/main.rs",
     "src/peer.rs",
     "src/peer/calls.rs",
@@ -67,6 +66,7 @@ rustc_binary("bin") {
     "src/profile.rs",
     "src/protocol.rs",
     "src/protocol/features.rs",
+    "src/protocol/indicators.rs",
     "src/service_definitions.rs",
   ]
 }

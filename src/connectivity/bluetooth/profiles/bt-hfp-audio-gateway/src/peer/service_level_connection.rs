@@ -21,11 +21,13 @@ use {
 };
 
 use crate::{
-    indicator_status::IndicatorStatus,
     procedure::{
         AgUpdate, InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest,
     },
-    protocol::features::{AgFeatures, HfFeatures},
+    protocol::{
+        features::{AgFeatures, HfFeatures},
+        indicators::Indicators,
+    },
 };
 
 /// The maximum number of concurrent procedures currently supported by this SLC.
@@ -68,7 +70,7 @@ pub struct SlcState {
     /// Whether indicator events reporting is enabled.
     pub indicator_events_reporting: bool,
     /// The current indicator status of the AG.
-    pub ag_indicator_status: IndicatorStatus,
+    pub ag_indicator_status: Indicators,
     /// The format used when representing the network operator name on the AG.
     pub ag_network_operator_name_format: Option<at::NetworkOperatorNameFormat>,
     /// Use AG Extended Error Codes.
@@ -790,7 +792,7 @@ pub(crate) mod tests {
         };
 
         // Simulate local response with AG status - expect this to go to the peer.
-        let status = IndicatorStatus::default();
+        let status = Indicators::default();
         {
             let mut next_request =
                 Box::pin(slc.receive_ag_request(slci_marker, response_fn2(status)));
