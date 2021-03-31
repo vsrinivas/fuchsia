@@ -458,13 +458,13 @@ std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_clien
 // need the variant to own the underlying data.
 //
 // |variant| must outlive the returned WriteFirmwareResult.
-WriteFirmwareResult CreateWriteFirmwareResult(
-    std::variant<zx_status_t, fidl::aligned<bool>>* variant) {
+WriteFirmwareResult CreateWriteFirmwareResult(std::variant<zx_status_t, bool>* variant) {
   WriteFirmwareResult result;
   if (std::holds_alternative<zx_status_t>(*variant)) {
-    result.set_status(fidl::unowned_ptr(&std::get<zx_status_t>(*variant)));
+    result.set_status(
+        fidl::ObjectView<zx_status_t>::FromExternal(&std::get<zx_status_t>(*variant)));
   } else {
-    result.set_unsupported(fidl::unowned_ptr(&std::get<fidl::aligned<bool>>(*variant)));
+    result.set_unsupported(fidl::ObjectView<bool>::FromExternal(&std::get<bool>(*variant)));
   }
   return result;
 }
@@ -577,8 +577,9 @@ zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
   return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
 }
 
-std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
-    Configuration configuration, fidl::StringView type, fuchsia_mem::wire::Buffer payload) {
+std::variant<zx_status_t, bool> DataSinkImpl::WriteFirmware(Configuration configuration,
+                                                            fidl::StringView type,
+                                                            fuchsia_mem::wire::Buffer payload) {
   // Currently all our supported firmware lives in Partition::kBootloaderA/B/R.
   Partition part_type;
   switch (configuration) {
@@ -609,7 +610,7 @@ std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
   }
 
   // unsupported_type = true.
-  return fidl::aligned<bool>(true);
+  return true;
 }
 
 zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {

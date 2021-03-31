@@ -150,7 +150,9 @@ void FileConnection::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& complet
   } else {
     fuchsia_mem::wire::Buffer buffer;
     zx_status_t status = vnode()->GetVmo(flags, &buffer.vmo, &buffer.size);
-    completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&buffer) : nullptr);
+    completer.Reply(status, status == ZX_OK
+                                ? fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer)
+                                : nullptr);
   }
 }
 

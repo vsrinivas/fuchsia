@@ -186,7 +186,7 @@ class FakeBootArgs : public fuchsia_boot::Arguments::Interface {
   }
 
   void GetString(::fidl::StringView arg, GetStringCompleter::Sync& completer) override {
-    completer.Reply(fidl::unowned_str(arg_response_));
+    completer.Reply(fidl::StringView::FromExternal(arg_response_));
   }
 
   // Stubs
@@ -1310,9 +1310,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
-  auto result =
-      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
-                                fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
+  auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
+                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader),
+                                          std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_OK(result->result.status());
@@ -1326,9 +1326,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
-  auto result =
-      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::B,
-                                fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
+  auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::B,
+                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader),
+                                          std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_OK(result->result.status());
@@ -1342,9 +1342,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigR) {
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
-  auto result =
-      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::RECOVERY,
-                                fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
+  auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::RECOVERY,
+                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader),
+                                          std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_unsupported());
   ASSERT_TRUE(result->result.unsupported());
@@ -1363,7 +1363,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigASupported) {
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
-                                          fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
+                                          fidl::StringView::FromExternal(kFirmwareTypeBl2),
+                                          std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_OK(result->result.status());
@@ -1381,7 +1382,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigBFallBackToA)
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::B,
-                                          fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
+                                          fidl::StringView::FromExternal(kFirmwareTypeBl2),
+                                          std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_OK(result->result.status());
@@ -1399,7 +1401,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::RECOVERY,
-                                          fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
+                                          fidl::StringView::FromExternal(kFirmwareTypeBl2),
+                                          std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_unsupported());
   ASSERT_TRUE(result->result.unsupported());
@@ -1418,8 +1421,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
   for (auto config : kAllConfigs) {
     fuchsia_mem::wire::Buffer payload;
     CreatePayload(4 * kPagesPerBlock, &payload);
-    auto result = data_sink_->WriteFirmware(config, fidl::unowned_str(kFirmwareTypeUnsupported),
-                                            std::move(payload));
+    auto result = data_sink_->WriteFirmware(
+        config, fidl::StringView::FromExternal(kFirmwareTypeUnsupported), std::move(payload));
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->result.is_unsupported());
     ASSERT_TRUE(result->result.unsupported());
@@ -1438,9 +1441,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
-  auto result =
-      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
-                                fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
+  auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
+                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader),
+                                          std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_NOT_OK(result->result.status());

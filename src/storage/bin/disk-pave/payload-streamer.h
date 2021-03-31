@@ -32,7 +32,7 @@ class PayloadStreamer : public fuchsia_paver::PayloadStream::Interface {
   fbl::unique_fd payload_;
   zx::vmo vmo_;
   fzl::VmoMapper mapper_;
-  fidl::aligned<bool> eof_reached_ = false;
+  bool eof_reached_ = false;
 };
 
 }  // namespace disk_pave

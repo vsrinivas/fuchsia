@@ -49,7 +49,8 @@ FshostBootArgs::FshostBootArgs(std::optional<fuchsia_boot::Arguments::SyncClient
       {fidl::StringView{"zircon.system.filesystem-check"}, zircon_system_filesystem_check_},
       {fidl::StringView{"zircon.system.wait-for-data"}, zircon_system_wait_for_data_},
   };
-  auto ret = boot_args_->GetBools(fidl::unowned_vec(defaults));
+  auto ret =
+      boot_args_->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(defaults));
   if (!ret.ok()) {
     FX_LOGS(ERROR) << "failed to get boolean parameters: " << ret.error() << "";
   } else {
@@ -83,7 +84,7 @@ zx::status<std::string> FshostBootArgs::GetStringArgument(std::string key) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  auto ret = boot_args_->GetString(fidl::unowned_str(key));
+  auto ret = boot_args_->GetString(fidl::StringView::FromExternal(key));
   if (!ret.ok()) {
     return zx::error(ret.status());
   }

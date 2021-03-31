@@ -33,21 +33,22 @@ class FakePayloadStream : public fuchsia_paver::PayloadStream::Interface {
     vmo_.write(kFileData, 0, sizeof(kFileData));
 
     fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = sizeof(kFileData)};
-    completer.Reply(fuchsia_paver::wire::ReadResult::WithInfo(fidl::unowned_ptr(&info)));
+    completer.Reply(fuchsia_paver::wire::ReadResult::WithInfo(
+        fidl::ObjectView<fuchsia_paver::wire::ReadInfo>::FromExternal(&info)));
   }
 
   void ReadError(ReadDataCompleter::Sync& completer) {
     fuchsia_paver::wire::ReadResult result;
     zx_status_t status = ZX_ERR_INTERNAL;
-    result.set_err(fidl::unowned_ptr(&status));
+    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
 
     completer.Reply(std::move(result));
   }
 
   void ReadEof(ReadDataCompleter::Sync& completer) {
     fuchsia_paver::wire::ReadResult result;
-    fidl::aligned<bool> eof = true;
-    result.set_eof(fidl::unowned_ptr(&eof));
+    bool eof = true;
+    result.set_eof(fidl::ObjectView<bool>::FromExternal(&eof));
 
     completer.Reply(std::move(result));
   }
@@ -56,7 +57,7 @@ class FakePayloadStream : public fuchsia_paver::PayloadStream::Interface {
     if (!vmo_) {
       fuchsia_paver::wire::ReadResult result;
       zx_status_t status = ZX_ERR_BAD_STATE;
-      result.set_err(fidl::unowned_ptr(&status));
+      result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
       completer.Reply(std::move(result));
       return;
     }

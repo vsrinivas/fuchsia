@@ -79,9 +79,9 @@ class DataSinkImpl {
   //
   // Once unions do support owned memory we can just return
   // WriteBootloaderResult directly here.
-  std::variant<zx_status_t, fidl::aligned<bool>> WriteFirmware(
-      fuchsia_paver::wire::Configuration configuration, fidl::StringView type,
-      fuchsia_mem::wire::Buffer payload);
+  std::variant<zx_status_t, bool> WriteFirmware(fuchsia_paver::wire::Configuration configuration,
+                                                fidl::StringView type,
+                                                fuchsia_mem::wire::Buffer payload);
 
   zx::status<> WriteVolumes(zx::channel payload_stream);
 

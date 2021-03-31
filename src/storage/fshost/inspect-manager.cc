@@ -20,7 +20,7 @@ zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::str
     return dir.status_value();
   }
 
-  fidl::StringView path_view(fidl::unowned_ptr(&path[0]), strlen(&path[0]));
+  fidl::StringView path_view(fidl::StringView::FromExternal(path));
   zx_status_t status =
       fio::Directory::Call::Open(root, fs::VnodeConnectionOptions::ReadOnly().ToIoV1Flags(), mode,
                                  std::move(path_view), std::move(dir->server))

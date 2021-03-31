@@ -410,8 +410,8 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      auto result = data_sink.WriteDataFile(fidl::unowned_str(flags.path, strlen(flags.path)),
-                                            std::move(payload));
+      auto result =
+          data_sink.WriteDataFile(fidl::StringView::FromExternal(flags.path), std::move(payload));
       status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("install-data-file failed: %s\n", zx_status_get_string(status));

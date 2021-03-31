@@ -62,7 +62,7 @@ void StreamFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
   };
   zx_status_t status = stream_.readv(0, &vector, 1, &actual);
   ZX_DEBUG_ASSERT(actual <= count);
-  completer.Reply(status, fidl::VectorView(fidl::unowned_ptr(data), actual));
+  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
 void StreamFileConnection::ReadAt(uint64_t count, uint64_t offset,
@@ -90,7 +90,7 @@ void StreamFileConnection::ReadAt(uint64_t count, uint64_t offset,
   };
   zx_status_t status = stream_.readv_at(0, offset, &vector, 1, &actual);
   ZX_DEBUG_ASSERT(actual <= count);
-  completer.Reply(status, fidl::VectorView(fidl::unowned_ptr(data), actual));
+  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
 void StreamFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {

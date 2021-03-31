@@ -60,7 +60,7 @@ void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
     ZX_DEBUG_ASSERT(actual <= count);
     offset_ += actual;
   }
-  completer.Reply(status, fidl::VectorView(fidl::unowned_ptr(data), actual));
+  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
 void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
@@ -85,7 +85,7 @@ void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
   if (status == ZX_OK) {
     ZX_DEBUG_ASSERT(actual <= count);
   }
-  completer.Reply(status, fidl::VectorView(fidl::unowned_ptr(data), actual));
+  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
 void RemoteFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
