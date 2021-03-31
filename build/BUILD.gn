@@ -152,6 +152,8 @@ group("deprecated_package") {
 # - sdk_shared_library
 #
 # Instead of zx_host_tool, use executable and set host_toolchain as needed.
+#
+# See: https://fuchsia.dev/fuchsia-src/contribute/open_projects/build/zx_wrappers_deprecation
 group("deprecated_zx_wrapper_allowlist") {
   visibility = [
     ":*",
