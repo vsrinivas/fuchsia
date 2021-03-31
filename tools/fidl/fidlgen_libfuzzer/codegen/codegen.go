@@ -21,21 +21,19 @@ type FidlGenerator struct {
 }
 
 func NewFidlGenerator() *FidlGenerator {
-	tmpls := template.New("LibFuzzer").Funcs(template.FuncMap{
-		"Kinds": func() interface{} { return cpp.Kinds },
-		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
-		"NEq":   func(a interface{}, b interface{}) bool { return a != b },
-		"DoubleColonToUnderscore": func(s string) string {
-			s2 := strings.ReplaceAll(s, "::", "_")
-			// Drop any leading "::" => "_".
-			if len(s2) > 0 && s2[0] == '_' {
-				return s2[1:]
-			}
-			return s2
-		},
-		"Protocols":            protocols,
-		"CountDecoderEncoders": countDecoderEncoders,
-	})
+	tmpls := template.New("LibFuzzer").Funcs(cpp.MergeFuncMaps(cpp.CommonTemplateFuncs,
+		template.FuncMap{
+			"DoubleColonToUnderscore": func(s string) string {
+				s2 := strings.ReplaceAll(s, "::", "_")
+				// Drop any leading "::" => "_".
+				if len(s2) > 0 && s2[0] == '_' {
+					return s2[1:]
+				}
+				return s2
+			},
+			"Protocols":            protocols,
+			"CountDecoderEncoders": countDecoderEncoders,
+		}))
 
 	template.Must(tmpls.Parse(tmplBits))
 	template.Must(tmpls.Parse(tmplDecoderEncoder))

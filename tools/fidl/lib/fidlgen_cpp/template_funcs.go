@@ -7,40 +7,14 @@ package fidlgen_cpp
 import (
 	"fmt"
 	"strings"
+	"text/template"
 )
 
 // Helper functions used by templates.
 
-// UseNatural sets the template engine to default to the "natural" domain object
-// namespace, when printing NameVariants.
-//
-// Example of Natural type name: "fuchsia::library::MyType".
-func UseNatural() string {
-	currentVariant = naturalVariant
-	return ""
-}
-
-// UseUnified sets the template engine to default to the "unified" domain object
-// namespace, when printing NameVariants.
-//
-// Example of Unified type name: "fuchsia_library::MyType".
-func UseUnified() string {
-	currentVariant = unifiedVariant
-	return ""
-}
-
-// UseWire sets the template engine to default to the "wire" domain object
-// namespace, when printing NameVariants.
-//
-// Example of Wire type name: "fuchsia_library::wire::MyType".
-func UseWire() string {
-	currentVariant = wireVariant
-	return ""
-}
-
-// EnsureNamespace changes the current namespace to the one supplied and
+// ensureNamespace changes the current namespace to the one supplied and
 // returns the C++ code required to switch to that namespace.
-func EnsureNamespace(arg interface{}) string {
+func ensureNamespace(arg interface{}) string {
 	lines := []string{}
 
 	newNamespace := []string{}
@@ -93,7 +67,7 @@ func EnsureNamespace(arg interface{}) string {
 // and leave #ifdef __Fuchsia__ blocks.
 var namespaceStack = []Namespace{}
 
-func IfdefFuchsia() string {
+func ifdefFuchsia() string {
 	namespaceStack = append(namespaceStack, currentNamespace)
 
 	if len(namespaceStack) == 1 {
@@ -102,20 +76,72 @@ func IfdefFuchsia() string {
 	return ""
 }
 
-func EndifFuchsia() string {
+func endifFuchsia() string {
 	last := len(namespaceStack) - 1
 	ns := namespaceStack[last]
 	namespaceStack = namespaceStack[:last]
-	s := EnsureNamespace(ns)
+	s := ensureNamespace(ns)
 	if len(namespaceStack) == 0 {
 		return s + "\n#endif  // __Fuchsia__\n"
 	}
 	return s
 }
 
-func EndOfFile() string {
+func endOfFile() string {
 	if len(namespaceStack) != 0 {
 		panic("The namespace stack isn't empty, there's a EndifFuchsia missing somewhere")
 	}
-	return EnsureNamespace("::")
+	return ensureNamespace("::")
+}
+
+// CommonTemplateFuncs holds a template.FuncMap containing common funcs.
+var CommonTemplateFuncs = template.FuncMap{
+	"Eq":  func(a interface{}, b interface{}) bool { return a == b },
+	"NEq": func(a interface{}, b interface{}) bool { return a != b },
+
+	"Kinds":       func() interface{} { return Kinds },
+	"FamilyKinds": func() interface{} { return FamilyKinds },
+	"TypeKinds":   func() interface{} { return TypeKinds },
+
+	"IfdefFuchsia":    ifdefFuchsia,
+	"EndifFuchsia":    endifFuchsia,
+	"EnsureNamespace": ensureNamespace,
+	"EndOfFile":       endOfFile,
+
+	// UseNatural sets the template engine to default to the "natural" domain object
+	// namespace, when printing NameVariants.
+	//
+	// Example of Natural type name: "fuchsia::library::MyType".
+	"UseNatural": func() string {
+		currentVariant = naturalVariant
+		return ""
+	},
+
+	// UseUnified sets the template engine to default to the "unified" domain object
+	// namespace, when printing NameVariants.
+	//
+	// Example of Unified type name: "fuchsia_library::MyType".
+	"UseUnified": func() string {
+		currentVariant = unifiedVariant
+		return ""
+	},
+
+	// UseWire sets the template engine to default to the "wire" domain object
+	// namespace, when printing NameVariants.
+	//
+	// Example of Wire type name: "fuchsia_library::wire::MyType".
+	"UseWire": func() string {
+		currentVariant = wireVariant
+		return ""
+	},
+}
+
+func MergeFuncMaps(all ...template.FuncMap) template.FuncMap {
+	merged := template.FuncMap{}
+	for _, funcs := range all {
+		for k, fn := range funcs {
+			merged[k] = fn
+		}
+	}
+	return merged
 }

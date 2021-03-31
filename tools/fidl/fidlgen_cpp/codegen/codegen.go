@@ -18,21 +18,9 @@ type Generator struct {
 	tmpls *template.Template
 }
 
-// These are the helper functions we inject for use by the templates.
-var (
-	utilityFuncs = template.FuncMap{
-		"Kinds":           func() interface{} { return cpp.Kinds },
-		"Eq":              func(a interface{}, b interface{}) bool { return a == b },
-		"EnsureNamespace": cpp.EnsureNamespace,
-		"IfdefFuchsia":    cpp.IfdefFuchsia,
-		"EndifFuchsia":    cpp.EndifFuchsia,
-		"EndOfFile":       cpp.EndOfFile,
-	}
-)
-
 func NewGenerator() *Generator {
 	tmpls := template.New("UnifiedCPPTemplates").
-		Funcs(utilityFuncs)
+		Funcs(cpp.CommonTemplateFuncs)
 	templates := []string{
 		fileHeaderTmpl,
 		fileSourceTmpl,

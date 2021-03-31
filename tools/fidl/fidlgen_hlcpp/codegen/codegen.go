@@ -49,18 +49,14 @@ type FidlGenerator struct {
 }
 
 func NewFidlGenerator(mode CodeGenerationMode) *FidlGenerator {
-	tmpls := template.New("CPPTemplates").Funcs(template.FuncMap{
-		"Kinds":                  func() interface{} { return cpp.Kinds },
-		"Eq":                     func(a interface{}, b interface{}) bool { return a == b },
-		"IncludeDomainObjects":   func() bool { return mode == Monolithic || mode == OnlyGenerateDomainObjects },
-		"IncludeProxiesAndStubs": func() bool { return mode == Monolithic },
-		"EnsureNamespace":        cpp.EnsureNamespace,
-		"IfdefFuchsia":           cpp.IfdefFuchsia,
-		"EndifFuchsia":           cpp.EndifFuchsia,
-		"EndOfFile":              cpp.EndOfFile,
-		"UseNatural":             cpp.UseNatural,
-		"UseWire":                cpp.UseWire,
-	})
+	tmpls := template.New("CPPTemplates").Funcs(cpp.MergeFuncMaps(cpp.CommonTemplateFuncs,
+		template.FuncMap{
+			"IncludeDomainObjects": func() bool {
+				return mode == Monolithic ||
+					mode == OnlyGenerateDomainObjects
+			},
+			"IncludeProxiesAndStubs": func() bool { return mode == Monolithic },
+		}))
 
 	// Natural types templates
 	template.Must(tmpls.Parse(bitsTemplate))

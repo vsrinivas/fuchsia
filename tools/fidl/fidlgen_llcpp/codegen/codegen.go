@@ -105,85 +105,73 @@ func closeHandles(argumentName string, argumentValue string, argumentType cpp.Ty
 }
 
 // These are the helper functions we inject for use by the templates.
-var (
-	utilityFuncs = template.FuncMap{
-		"Kinds":       func() interface{} { return cpp.Kinds },
-		"FamilyKinds": func() interface{} { return cpp.FamilyKinds },
-		"TypeKinds":   func() interface{} { return cpp.TypeKinds },
-		"Eq":          func(a interface{}, b interface{}) bool { return a == b },
-		"SyncCallTotalStackSize": func(m cpp.Method) int {
-			totalSize := 0
-			if m.Request.ClientAllocation.IsStack {
-				totalSize += m.Request.ClientAllocation.Size
-			}
-			if m.Response.ClientAllocation.IsStack {
-				totalSize += m.Response.ClientAllocation.Size
-			}
-			return totalSize
-		},
-		"CloseHandles": func(member cpp.Member,
-			access bool,
-			mutableAccess bool) string {
-			n, t := member.NameAndType()
-			return closeHandles(n, n, t, t.WirePointer, t.WirePointer, access, mutableAccess)
-		},
-		"IfdefFuchsia":    cpp.IfdefFuchsia,
-		"EndifFuchsia":    cpp.EndifFuchsia,
-		"EnsureNamespace": cpp.EnsureNamespace,
-		"EndOfFile":       cpp.EndOfFile,
-		"UseNatural":      cpp.UseNatural,
-		"UseWire":         cpp.UseWire,
-		"Params": func(params []cpp.Parameter) string {
-			return formatParams(params, "", func(t cpp.Type, n string) string {
-				return fmt.Sprintf("%s %s", t.String(), n)
-			})
-		},
-		"CommaParams": func(params []cpp.Parameter) string {
-			return formatParams(params, ", ", func(t cpp.Type, n string) string {
-				return fmt.Sprintf("%s %s", t.String(), n)
-			})
-		},
-		"ParamNames": func(params []cpp.Parameter) string {
-			return formatParams(params, "", func(t cpp.Type, n string) string {
-				return n
-			})
-		},
-		"CommaParamNames": func(params []cpp.Parameter) string {
-			return formatParams(params, ", ", func(t cpp.Type, n string) string {
-				return n
-			})
-		},
-		"ParamsNoTypedChannels": func(params []cpp.Parameter) string {
-			return formatParams(params, "", func(t cpp.Type, n string) string {
-				return fmt.Sprintf("%s %s", t.WireNoTypedChannels(), n)
-			})
-		},
-		"ParamMoveNames": func(params []cpp.Parameter) string {
-			return formatParams(params, "", func(t cpp.Type, n string) string {
-				return fmt.Sprintf("std::move(%s)", n)
-			})
-		},
-		"MessagePrototype": func(params []cpp.Parameter) string {
-			return formatParams(params, "", func(t cpp.Type, n string) string {
-				return t.WireArgumentDeclaration(n)
-			})
-		},
-		"CommaMessagePrototype": func(params []cpp.Parameter) string {
-			return formatParams(params, ", ", func(t cpp.Type, n string) string {
-				return t.WireArgumentDeclaration(n)
-			})
-		},
-		"InitMessage": func(params []cpp.Parameter) string {
-			return formatParams(params, ": ", func(t cpp.Type, n string) string {
-				return t.WireInitMessage(n)
-			})
-		},
-	}
-)
+var utilityFuncs = template.FuncMap{
+	"SyncCallTotalStackSize": func(m cpp.Method) int {
+		totalSize := 0
+		if m.Request.ClientAllocation.IsStack {
+			totalSize += m.Request.ClientAllocation.Size
+		}
+		if m.Response.ClientAllocation.IsStack {
+			totalSize += m.Response.ClientAllocation.Size
+		}
+		return totalSize
+	},
+	"CloseHandles": func(member cpp.Member,
+		access bool,
+		mutableAccess bool) string {
+		n, t := member.NameAndType()
+		return closeHandles(n, n, t, t.WirePointer, t.WirePointer, access, mutableAccess)
+	},
+	"Params": func(params []cpp.Parameter) string {
+		return formatParams(params, "", func(t cpp.Type, n string) string {
+			return fmt.Sprintf("%s %s", t.String(), n)
+		})
+	},
+	"CommaParams": func(params []cpp.Parameter) string {
+		return formatParams(params, ", ", func(t cpp.Type, n string) string {
+			return fmt.Sprintf("%s %s", t.String(), n)
+		})
+	},
+	"ParamNames": func(params []cpp.Parameter) string {
+		return formatParams(params, "", func(t cpp.Type, n string) string {
+			return n
+		})
+	},
+	"CommaParamNames": func(params []cpp.Parameter) string {
+		return formatParams(params, ", ", func(t cpp.Type, n string) string {
+			return n
+		})
+	},
+	"ParamsNoTypedChannels": func(params []cpp.Parameter) string {
+		return formatParams(params, "", func(t cpp.Type, n string) string {
+			return fmt.Sprintf("%s %s", t.WireNoTypedChannels(), n)
+		})
+	},
+	"ParamMoveNames": func(params []cpp.Parameter) string {
+		return formatParams(params, "", func(t cpp.Type, n string) string {
+			return fmt.Sprintf("std::move(%s)", n)
+		})
+	},
+	"MessagePrototype": func(params []cpp.Parameter) string {
+		return formatParams(params, "", func(t cpp.Type, n string) string {
+			return t.WireArgumentDeclaration(n)
+		})
+	},
+	"CommaMessagePrototype": func(params []cpp.Parameter) string {
+		return formatParams(params, ", ", func(t cpp.Type, n string) string {
+			return t.WireArgumentDeclaration(n)
+		})
+	},
+	"InitMessage": func(params []cpp.Parameter) string {
+		return formatParams(params, ": ", func(t cpp.Type, n string) string {
+			return t.WireInitMessage(n)
+		})
+	},
+}
 
 func NewGenerator() *Generator {
 	tmpls := template.New("LLCPPTemplates").
-		Funcs(utilityFuncs)
+		Funcs(cpp.MergeFuncMaps(cpp.CommonTemplateFuncs, utilityFuncs))
 	templates := []string{
 		fragmentBitsTmpl,
 		fragmentClientTmpl,
