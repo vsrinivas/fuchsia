@@ -151,8 +151,6 @@ test("fvm_sparse_image_reader_test") {
     ":fvm-sparse-image",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
     "//src/storage/testing:storage_driver_test_support",
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/utils:fd-io",

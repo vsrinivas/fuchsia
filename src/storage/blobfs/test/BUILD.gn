@@ -355,7 +355,6 @@ fuchsia_test_package("blobfs-integration-package") {
   }
   deps = [
     ":external-decompressor-integration",
-    "//src/storage/bin/blobfs",
     "//src/storage/blobfs:decompressor-sandbox",
   ]
 }

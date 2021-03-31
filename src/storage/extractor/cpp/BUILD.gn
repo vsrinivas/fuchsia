@@ -34,10 +34,7 @@ test("disk_extractor_unit_test") {
 fuchsia_component("disk-extractor-unit-test-component") {
   testonly = true
   manifest = "meta/cpp_lib_tests.cml"
-  deps = [
-    ":disk_extractor_unit_test",
-    "//src/storage/bin/minfs",
-  ]
+  deps = [ ":disk_extractor_unit_test" ]
 }
 
 fuchsia_test_package("disk-extractor-unit-test") {
