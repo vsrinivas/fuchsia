@@ -156,7 +156,7 @@ TEST(TimerFDTest, RepeatingBlocking) {
   for (size_t i = 0; i < 5; ++i) {
     uint64_t counter = 2934;
     EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
-    EXPECT_LE(counter, 1u);
+    EXPECT_GE(counter, 1u);
     total += counter;
   }
 
