@@ -91,7 +91,7 @@ async fn connect_with_failed_association() {
     let () = helper
         .run_until_complete_or_timeout(
             240.seconds(),
-            format!("connecting to {} ({:02X?})", SSID.to_ssid_str_not_redactable(), BSSID),
+            format!("connecting to {} ({:02X?})", SSID.to_ssid_string_not_redactable(), BSSID),
             build_event_handler(SSID.to_vec(), BSSID, &proxy),
             save_network_fut,
         )

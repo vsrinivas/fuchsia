@@ -707,9 +707,9 @@ impl Associated {
             let eapol_pdu = &ind.data[..];
             inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
-                foreign_bssid: ind.src_addr.to_mac_str(),
+                foreign_bssid: ind.src_addr.to_mac_string(),
                 foreign_bssid_hash: context.inspect.hasher.hash_mac_addr(&ind.src_addr),
-                current_bssid: self.bss.bssid.to_mac_str(),
+                current_bssid: self.bss.bssid.to_mac_string(),
                 current_bssid_hash: context.inspect.hasher.hash_mac_addr(&self.bss.bssid),
                 status: "rejected (foreign BSS)",
             });
@@ -1018,9 +1018,9 @@ impl ClientState {
             from: start_state,
             to: JOINING_STATE,
             ctx: msg,
-            bssid: cmd.bss.bssid.to_mac_str(),
+            bssid: cmd.bss.bssid.to_mac_string(),
             bssid_hash: context.inspect.hasher.hash_mac_addr(&cmd.bss.bssid),
-            ssid: cmd.bss.ssid().to_ssid_str(),
+            ssid: cmd.bss.ssid().to_ssid_string(),
             ssid_hash: context.inspect.hasher.hash_ssid(cmd.bss.ssid()),
         });
         let state = Self::new(cfg.clone());

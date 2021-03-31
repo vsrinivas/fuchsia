@@ -667,9 +667,9 @@ pub fn log_disconnect(
         connected_duration: info.connected_duration.into_nanos(),
         last_rssi: info.last_rssi,
         last_snr: info.last_snr,
-        bssid: info.bssid.to_mac_str(),
+        bssid: info.bssid.to_mac_string(),
         bssid_hash: inspect_tree.hasher.hash_mac_addr(&info.bssid),
-        ssid: info.ssid.to_ssid_str(),
+        ssid: info.ssid.to_ssid_string(),
         ssid_hash: inspect_tree.hasher.hash_ssid(&info.ssid[..]),
         wsc?: match &info.wsc {
             None => None,

@@ -238,7 +238,7 @@ pub async fn remove_network(
 
     info!(
         "Removing network. SSID: {}, Password: {:?}",
-        ssid.to_ssid_str_not_redactable(),
+        ssid.to_ssid_string_not_redactable(),
         password.map(|p| p.to_string())
     );
     client_controller

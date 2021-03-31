@@ -660,9 +660,9 @@ fn inspect_log_join_scan(
 ) {
     let inspect_bss = InspectListClosure(&bss_list, |node_writer, key, bss| {
         inspect_insert!(node_writer, var key: {
-            bssid: bss.bssid.to_mac_str(),
+            bssid: bss.bssid.to_mac_string(),
             bssid_hash: ctx.inspect.hasher.hash_mac_addr(&bss.bssid),
-            ssid: bss.ssid().to_ssid_str(),
+            ssid: bss.ssid().to_ssid_string(),
             ssid_hash: ctx.inspect.hasher.hash_ssid(bss.ssid()),
             channel: InspectWlanChan(&bss.chan),
             rssi_dbm: bss.rssi_dbm,
@@ -672,7 +672,7 @@ fn inspect_log_join_scan(
     inspect_log!(ctx.inspect.join_scan_events.lock(), {
         bss_list: inspect_bss,
         candidate_bss: {
-            bssid?: candidate_bssid.as_ref().map(|bssid| bssid.to_mac_str()),
+            bssid?: candidate_bssid.as_ref().map(|bssid| bssid.to_mac_string()),
             bssid_hash?: candidate_bssid.map(|bssid| hasher.hash_mac_addr(&bssid)),
         },
         result?: result_msg,

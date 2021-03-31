@@ -249,9 +249,9 @@ pub struct BssInfoNode {
 
 impl BssInfoNode {
     fn new(node: Node, bss_info: &BssInfo, hasher: &WlanHasher) -> Self {
-        let bssid = node.create_string("bssid", bss_info.bssid.to_mac_str());
+        let bssid = node.create_string("bssid", bss_info.bssid.to_mac_string());
         let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(&bss_info.bssid));
-        let ssid = node.create_string("ssid", bss_info.ssid.to_ssid_str());
+        let ssid = node.create_string("ssid", bss_info.ssid.to_ssid_string());
         let ssid_hash = node.create_string("ssid_hash", hasher.hash_ssid(&bss_info.ssid));
         let rssi_dbm = node.create_int("rssi_dbm", bss_info.rssi_dbm as i64);
         let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
@@ -289,9 +289,9 @@ impl BssInfoNode {
     }
 
     fn update(&mut self, bss_info: &BssInfo, hasher: &WlanHasher) {
-        self.bssid.set(&bss_info.bssid.to_mac_str());
+        self.bssid.set(&bss_info.bssid.to_mac_string());
         self.bssid_hash.set(&hasher.hash_mac_addr(&bss_info.bssid));
-        self.ssid.set(&bss_info.ssid.to_ssid_str());
+        self.ssid.set(&bss_info.ssid.to_ssid_string());
         self.ssid_hash.set(&hasher.hash_ssid(&bss_info.ssid));
         self.rssi_dbm.set(bss_info.rssi_dbm as i64);
         self.snr_db.set(bss_info.snr_db as i64);
@@ -492,12 +492,12 @@ pub struct ConnectingToNode {
 impl ConnectingToNode {
     fn new(node: Node, ssid: &[u8], hasher: &WlanHasher) -> Self {
         let ssid_hash = node.create_string("ssid_hash", hasher.hash_ssid(ssid));
-        let ssid = node.create_string("ssid", ssid.to_ssid_str());
+        let ssid = node.create_string("ssid", ssid.to_ssid_string());
         Self { _node: node, ssid, ssid_hash }
     }
 
     fn update(&mut self, ssid: &[u8], hasher: &WlanHasher) {
-        self.ssid.set(&ssid.to_ssid_str());
+        self.ssid.set(&ssid.to_ssid_string());
         self.ssid_hash.set(&hasher.hash_ssid(ssid));
     }
 }

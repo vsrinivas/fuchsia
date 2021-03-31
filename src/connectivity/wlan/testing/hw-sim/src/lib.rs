@@ -711,7 +711,11 @@ where
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connecting to {} ({:02X?})", ap_ssid.to_ssid_str_not_redactable(), ap_bssid),
+            format!(
+                "connecting to {} ({:02X?})",
+                ap_ssid.to_ssid_string_not_redactable(),
+                ap_bssid
+            ),
             |event| {
                 handle_connect_events(
                     &event,

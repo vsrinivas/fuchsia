@@ -101,7 +101,7 @@ async fn handle_tx_event_hooks() {
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connecting to {} ({:02X?})", SSID.to_ssid_str_not_redactable(), BSSID),
+            format!("connecting to {} ({:02X?})", SSID.to_ssid_string_not_redactable(), BSSID),
             |event| {
                 handle_phy_event(
                     &event,

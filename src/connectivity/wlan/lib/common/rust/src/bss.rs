@@ -398,8 +398,8 @@ impl BssDescription {
     pub fn to_non_obfuscated_string(&self) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-            self.ssid().to_ssid_str(),
-            self.bssid.to_mac_str(),
+            self.ssid().to_ssid_string(),
+            self.bssid.to_mac_string(),
             self.protection(),
             self.chan.primary,
             self.rssi_dbm,
