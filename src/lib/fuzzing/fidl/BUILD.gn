@@ -33,7 +33,9 @@ fidl("fuchsia.fuzzer") {
 source_set("core_lib") {
   sources = [
     "shared-memory.cc",
+    "shared-memory.h",
     "signal-coordinator.cc",
+    "signal-coordinator.h",
   ]
   public_deps = [
     ":fuchsia.fuzzer",
@@ -56,13 +58,22 @@ test("fidl_fuzzer_core_unittests") {
 
 source_set("test_utils") {
   testonly = true
+  sources = [
+    "test-utils.cc",
+    "test-utils.h",
+  ]
   deps = [
     ":core_lib",
     "//src/lib/fxl/test:gtest_main",
   ]
   public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync",
   ]
 }
 

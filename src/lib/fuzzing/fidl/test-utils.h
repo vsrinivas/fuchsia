@@ -5,11 +5,22 @@
 #ifndef SRC_LIB_FUZZING_FIDL_TEST_UTILS_H_
 #define SRC_LIB_FUZZING_FIDL_TEST_UTILS_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/synchronization/thread_annotations.h>
+#include <lib/sync/completion.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/zx/eventpair.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#include <atomic>
 #include <limits>
+#include <mutex>
 #include <random>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -41,6 +52,87 @@ std::vector<T> PickVector(size_t size) {
   }
   return v;
 }
+
+// Common base class for unit tests. This class provides methods for synchrnoizing different threads
+// and FIDL services and for recording and retrieving information from the global, exported
+// interface functions.
+class TestBase : public ::testing::Test {
+ public:
+  ~TestBase() override = default;
+
+  // These methods can be called from the library interface functions outside the test instance.
+  // If |Record| is called multiple times, or |Set*| is called multiple times with the same |key|,
+  // only the data from the last call will be saved.
+  // See also the |FUZZER_TEST_*| macros below.
+  static TestBase* Record(const std::string& func);
+  void Signal();
+  void SetU64(const std::string& key, uint64_t val) FXL_LOCKS_EXCLUDED(mutex_);
+  void SetBytes(const std::string& key, const uint8_t* buf, size_t buf_len)
+      FXL_LOCKS_EXCLUDED(mutex_);
+  void SetPaired(zx::eventpair ep) { ep_ = std::move(ep); }
+
+ protected:
+  TestBase();
+
+  // gTest methods.
+  void SetUp() override;
+  void TearDown() override;
+
+  // FIDL methods.
+  async_dispatcher_t* dispatcher() const { return loop_.dispatcher(); }
+  std::unique_ptr<sys::ComponentContext> TakeContext() { return std::move(context_); }
+
+  template <typename Interface>
+  void AddPublicService(fidl::InterfaceRequestHandler<Interface> handler) {
+    ASSERT_NE(context_.get(), nullptr);
+    context_->outgoing()->AddPublicService(std::move(handler));
+  }
+
+  template <typename Interface>
+  void ConnectToPublicService(fidl::InterfaceRequest<Interface> request) {
+    provider_.ConnectToPublicService(std::move(request));
+  }
+
+  // These methods correspond to those public methods called by the library interface functions.
+  // See also the |FUZZER_TEST_*| macros below.
+  const char* GetRecorded() FXL_LOCKS_EXCLUDED(mutex_);
+  void Wait();
+  uint64_t GetU64(const std::string& key) FXL_LOCKS_EXCLUDED(mutex_);
+  std::vector<uint8_t> GetBytes(const std::string& key) FXL_LOCKS_EXCLUDED(mutex_);
+  void MatchBytes(const std::string& key, const std::vector<uint8_t>& bytes)
+      FXL_LOCKS_EXCLUDED(mutex_);
+  void SignalPeer(zx_signals_t signals);
+  zx_signals_t WaitOne();
+
+ private:
+  // Macro variables.
+  static std::atomic<TestBase*> current_;
+
+  // FIDL variables.
+  async::Loop loop_;
+  sys::testing::ComponentContextProvider provider_;
+  std::unique_ptr<sys::ComponentContext> context_;
+
+  // Sync variables.
+  sync_completion_t sync_;
+
+  // Eventpair variables.
+  zx::eventpair ep_;
+
+  // Recording variables.
+  std::mutex mutex_;
+  std::string recorded_ FXL_GUARDED_BY(mutex_);
+  std::unordered_map<std::string, uint64_t> u64s_ FXL_GUARDED_BY(mutex_);
+  std::unordered_map<std::string, std::vector<uint8_t>> bytes_ FXL_GUARDED_BY(mutex_);
+
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(TestBase);
+};
+
+// These macros allow the exported, global interface functions to interact with the unit tests.
+#define FUZZER_TEST_RECORD_U64(x) \
+  TestBase::Record(__FUNCTION__)->SetU64(#x, static_cast<uint64_t>(x))
+#define FUZZER_TEST_RECORD_BYTES(o, o_len) TestBase::Record(__FUNCTION__)->SetBytes(#o, o, o_len)
+#define FUZZER_TEST_SIGNAL() TestBase::Record(__FUNCTION__)->Signal()
 
 }  // namespace fuzzing
 
