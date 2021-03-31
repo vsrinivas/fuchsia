@@ -129,7 +129,7 @@ if (platform_enable_user_pci) {
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
     }
-    sources = [ "kpci/kpci.c" ]
+    sources = [ "kpci/kpci.cc" ]
     deps = [
       ":pci_bind",
       "//sdk/banjo/fuchsia.hardware.pci",

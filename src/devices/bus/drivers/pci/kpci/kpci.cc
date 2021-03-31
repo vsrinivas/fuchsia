@@ -40,7 +40,7 @@ static zx_status_t pci_rpc_reply(zx_handle_t ch, zx_status_t status, zx_handle_t
 
   fidl_init_txn_header(&resp->hdr, req->hdr.txid, status);
   return zx_channel_write(ch, 0, resp, sizeof(*resp), handle, handle_cnt);
-};
+}
 
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
 static zx_status_t kpci_enable_bus_master(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
@@ -240,7 +240,7 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
     return ZX_OK;
   }
 
-  kpci_device_t* device = ctx;
+  auto* device = static_cast<kpci_device_t*>(ctx);
   const char* name = device_get_name(device->zxdev);
   pci_msg_t req = {};
   uint32_t actual_bytes;
@@ -298,7 +298,7 @@ err:;
 }
 
 static void kpci_release(void* ctx) {
-  kpci_device_t* device = ctx;
+  auto* device = static_cast<kpci_device_t*>(ctx);
   if (device->handle != ZX_HANDLE_INVALID) {
     zx_handle_close(device->handle);
   }
@@ -307,8 +307,8 @@ static void kpci_release(void* ctx) {
 
 static zx_protocol_device_t pci_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .rxrpc = kpci_rxrpc,
     .release = kpci_release,
+    .rxrpc = kpci_rxrpc,
 };
 
 // Initializes the upper half of a pci / pci.proxy devhost pair.
@@ -327,7 +327,7 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
     return status;
   }
 
-  kpci_device_t* device = calloc(1, sizeof(kpci_device_t));
+  auto* device = static_cast<kpci_device_t*>(calloc(1, sizeof(kpci_device_t)));
   if (!device) {
     zx_handle_close(handle);
     return ZX_ERR_NO_MEMORY;
@@ -352,7 +352,8 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
       {BIND_PCI_SUBCLASS, 0, info.sub_class},
       {BIND_PCI_INTERFACE, 0, info.program_interface},
       {BIND_PCI_REVISION, 0, info.revision_id},
-      {BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(info.bus_id, info.dev_id, info.func_id)},
+      {BIND_TOPO_PCI, 0,
+       static_cast<uint32_t>(BIND_TOPO_PCI_PACK(info.bus_id, info.dev_id, info.func_id))},
   };
 
   // The most important detail here is the handling of DEVICE_ADD_MUST_ISOLATE. With that
@@ -367,9 +368,9 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
       .name = name,
       .ctx = device,
       .ops = &pci_device_proto,
-      .proto_id = ZX_PROTOCOL_PCI,
       .props = device_props,
       .prop_count = countof(device_props),
+      .proto_id = ZX_PROTOCOL_PCI,
       .proxy_args = argstr,
       .flags = DEVICE_ADD_MUST_ISOLATE,
   };
