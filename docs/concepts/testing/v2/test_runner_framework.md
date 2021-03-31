@@ -185,6 +185,19 @@ At runtime, your test will have read/write access to `/tmp`.
 The contents of this directory will be empty when the test starts, and will be
 deleted after the test finishes.
 
+[Tests that don't specify a custom manifest][component-unit-tests] and instead
+rely on the build system to generate their component manifest can add the
+following dependency:
+
+```gn
+fuchsia_unittest_package("foo-tests") {
+  deps = [
+    ":foo_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
+}
+```
+
 ## Hermeticity
 
 A test is *hermetic* if it [uses][manifests-use] or [offers][manifests-offer] no
@@ -219,6 +232,7 @@ Components in the test realm may play various roles in the test, as follows:
 
 [cf]: /docs/concepts/components/v2/
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
+[component-unit-tests]: /docs/development/components/build.md#unit-tests
 [fidl-test-manager]: /sdk/fidl/fuchsia.test.manager/test_manager.fidl
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
 [ffx]: /docs/development/tools/ffx/overview.md
