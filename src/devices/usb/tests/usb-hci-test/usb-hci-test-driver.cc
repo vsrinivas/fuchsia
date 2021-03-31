@@ -35,7 +35,7 @@ void HciTest::Run(RunCompleter::Sync& completer) {
 
 void HciTest::TestThread(RunCompleter::Async completer) {
   test_running_ = true;
-  fbl::AutoCall test_complete([this]() { test_running_ = false; });
+  auto test_complete = fbl::MakeAutoCall([this]() { test_running_ = false; });
   zx_status_t status = ZX_OK;
   fuchsia_hardware_usb_hcitest::wire::TestResults test_results;
   using Request = usb::CallbackRequest<sizeof(std::max_align_t) * 4>;

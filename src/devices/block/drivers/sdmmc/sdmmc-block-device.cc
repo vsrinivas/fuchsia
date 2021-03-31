@@ -210,7 +210,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
     return st;
   }
 
-  fbl::AutoCall remove_device_on_error([&]() { DdkAsyncRemove(); });
+  auto remove_device_on_error = fbl::MakeAutoCall([&]() { DdkAsyncRemove(); });
 
   fbl::AllocChecker ac;
   std::unique_ptr<PartitionDevice> user_partition(

@@ -107,7 +107,7 @@ TEST_F(ServerTestFixture, CloseFifo) {
 TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
   ASSERT_OK(Server::Create(&client_, &fifo_, &server_));
   CreateThread();
-  fbl::AutoCall cleanup([&] {
+  auto cleanup = fbl::MakeAutoCall([&] {
     server_->Shutdown();
     JoinThread();
   });

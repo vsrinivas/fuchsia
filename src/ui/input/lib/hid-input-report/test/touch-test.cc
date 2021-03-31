@@ -41,7 +41,7 @@ TEST(TouchscreenTest, ParadiseV1) {
   hid::DeviceDescriptor* hid_desc;
   hid::ReportDescriptor* hid_report_desc;
   HidParseTouchscreen(paradise_touch_v1_report_desc, desc_size, &hid_desc, &hid_report_desc);
-  fbl::AutoCall free_descriptor([hid_desc]() { hid::FreeDeviceDescriptor(hid_desc); });
+  auto free_descriptor = fbl::MakeAutoCall([hid_desc]() { hid::FreeDeviceDescriptor(hid_desc); });
 
   hid_input_report::Touch touch;
   EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));
@@ -101,7 +101,7 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
   hid::DeviceDescriptor* hid_desc;
   hid::ReportDescriptor* hid_report_desc;
   HidParseTouchscreen(desc, desc_size, &hid_desc, &hid_report_desc);
-  fbl::AutoCall free_descriptor([hid_desc]() { hid::FreeDeviceDescriptor(hid_desc); });
+  auto free_descriptor = fbl::MakeAutoCall([hid_desc]() { hid::FreeDeviceDescriptor(hid_desc); });
 
   hid_input_report::Touch touch;
   EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));

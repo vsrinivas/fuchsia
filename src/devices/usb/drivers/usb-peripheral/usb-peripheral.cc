@@ -131,7 +131,7 @@ zx_status_t UsbPeripheral::Init() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  fbl::AutoCall call(
+  auto call = fbl::MakeAutoCall(
       [=]() { operator delete[](reinterpret_cast<char*>(config), std::align_val_t(alignment)); });
   status = device_get_metadata(parent(), DEVICE_METADATA_USB_CONFIG, config, metasize, &metasize);
   if (status != ZX_OK) {

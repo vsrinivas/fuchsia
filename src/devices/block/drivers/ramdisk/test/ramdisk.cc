@@ -465,7 +465,7 @@ TEST(RamdiskTests, RamdiskTestFilesystem) {
   strcpy(blockpath, "/dev/class/block/");
   DIR* dir = opendir(blockpath);
   ASSERT_NE(dir, nullptr);
-  const auto closer = fbl::AutoCall([dir]() { closedir(dir); });
+  const auto closer = fbl::MakeAutoCall([dir]() { closedir(dir); });
 
   typedef struct watcher_args {
     const char* expected_name;

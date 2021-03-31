@@ -84,7 +84,7 @@ class UsbHarness : public zxtest::Test {
   auto StartDispatching() {
     dispatching_ = true;
     device_->GetStateChangeQueue().StartThread(fit::bind_member(this, &UsbHarness::DispatchThread));
-    return fbl::AutoCall([this]() { StopDispatching(); });
+    return fbl::MakeAutoCall([this]() { StopDispatching(); });
   }
 
   void SetConnectCallback(fit::function<zx_status_t(uint32_t port, usb_speed_t speed)> callback) {

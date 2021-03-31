@@ -1078,7 +1078,7 @@ class MultiVmoTestInstance : public TestInstance {
         mapping = std::nullopt;
       }
     };
-    auto cleanup = fbl::AutoCall([&unmap_mapping, &pmt]() {
+    auto cleanup = fbl::MakeAutoCall([&unmap_mapping, &pmt]() {
       unmap_mapping();
       if (pmt) {
         pmt.unpin();

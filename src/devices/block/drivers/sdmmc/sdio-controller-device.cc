@@ -189,7 +189,7 @@ zx_status_t SdioControllerDevice::AddDevice() {
     return st;
   }
 
-  fbl::AutoCall remove_device_on_error([&]() { DdkAsyncRemove(); });
+  auto remove_device_on_error = fbl::MakeAutoCall([&]() { DdkAsyncRemove(); });
 
   std::array<std::unique_ptr<SdioFunctionDevice>, SDIO_MAX_FUNCS> devices = {};
   for (uint32_t i = 0; i < hw_info_.num_funcs - 1; i++) {

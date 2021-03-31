@@ -132,7 +132,7 @@ void PipelineManager::ConfigureStreamPipeline(
     ProcessNode* graph_node_to_be_appended = nullptr;
     camera::InternalConfigNode internal_graph_node_to_be_appended;
     std::unique_ptr<camera::ProcessNode> graph_head;
-    fbl::AutoCall shutdown_graph_on_error([&] {
+    auto shutdown_graph_on_error = fbl::MakeAutoCall([&] {
       if (graph_head) {
         graph_head->OnShutdown([] {});
       }

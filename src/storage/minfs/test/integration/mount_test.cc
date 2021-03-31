@@ -174,7 +174,7 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
   DIR* dir = fdopendir(dir_fd.get());
   ASSERT_NE(dir, nullptr);
   dir_fd.release();
-  fbl::AutoCall close_dir([&]() { closedir(dir); });
+  auto close_dir = fbl::MakeAutoCall([&]() { closedir(dir); });
   int count = 0;
   // Verify that there is exactly one entry called "root".
   // TODO(fxbug.dev/34531): Adjust this test accordingly when the admin service is added.

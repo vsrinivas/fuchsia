@@ -1322,7 +1322,8 @@ TEST_P(BlobfsIntegrationTest, FailedWrite) {
   ASSERT_EQ(
       fs().GetRamDisk()->SleepAfter(pages_per_block * (kBlockCountToWrite - 1)).status_value(),
       ZX_OK);
-  fbl::AutoCall wake([&] { ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), ZX_OK); });
+  auto wake =
+      fbl::MakeAutoCall([&] { ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), ZX_OK); });
 
   ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
             static_cast<ssize_t>(info->size_data));

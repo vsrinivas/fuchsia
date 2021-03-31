@@ -274,7 +274,7 @@ zx_status_t Sherlock::UsbInit() {
     if (!config) {
       return ZX_ERR_NO_MEMORY;
     }
-    fbl::AutoCall call([=]() { free(config); });
+    auto call = fbl::MakeAutoCall([=]() { free(config); });
     config->vid = GOOGLE_USB_VID;
     config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
     strncpy(config->manufacturer, kManufacturer, sizeof(config->manufacturer));

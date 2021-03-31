@@ -177,7 +177,7 @@ class UmsTest : public zxtest::Test {
     while (true) {
       fbl::unique_fd fd(openat(bus_.GetRootFd(), "class/block", O_RDONLY));
       DIR* dir_handle = fdopendir(fd.get());
-      fbl::AutoCall release_dir([=]() { closedir(dir_handle); });
+      auto release_dir = fbl::MakeAutoCall([=]() { closedir(dir_handle); });
       for (dirent* ent = readdir(dir_handle); ent; ent = readdir(dir_handle)) {
         if (strcmp(ent->d_name, ".") && strcmp(ent->d_name, "..")) {
           last_known_devpath_ =

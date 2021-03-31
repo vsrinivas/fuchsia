@@ -21,7 +21,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   hid::DeviceDescriptor* dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(descriptor_data, descriptor_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
-  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+  auto free_descriptor = fbl::MakeAutoCall([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::ConsumerControl consumer_control;
   EXPECT_EQ(hid_input_report::ParseResult::kOk,

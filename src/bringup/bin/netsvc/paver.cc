@@ -108,7 +108,7 @@ int Paver::StreamBuffer() {
     return ZX_OK;
   };
 
-  fbl::AutoCall cleanup([this, &result]() {
+  auto cleanup = fbl::MakeAutoCall([this, &result]() {
     unsigned int refcount = std::atomic_fetch_sub(&buf_refcount_, 1u);
     if (refcount == 1) {
       buffer_mapper_.Reset();
@@ -428,7 +428,7 @@ zx_status_t Paver::WipePartitionTables(fuchsia_mem::wire::Buffer buffer) {
 int Paver::MonitorBuffer() {
   int result = TFTP_NO_ERROR;
 
-  fbl::AutoCall cleanup([this, &result]() {
+  auto cleanup = fbl::MakeAutoCall([this, &result]() {
     unsigned int refcount = std::atomic_fetch_sub(&buf_refcount_, 1u);
     if (refcount == 1) {
       buffer_mapper_.Reset();
@@ -657,7 +657,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
     printf("netsvc: unable to allocate and map buffer. Size - %lu, Error - %d\n", size, status);
     return status;
   }
-  fbl::AutoCall buffer_cleanup([this]() { buffer_mapper_.Reset(); });
+  auto buffer_cleanup = fbl::MakeAutoCall([this]() { buffer_mapper_.Reset(); });
 
   zx::channel paver_local, paver_remote;
   status = zx::channel::create(0, &paver_local, &paver_remote);
@@ -673,7 +673,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   }
 
   paver_svc_.emplace(std::move(paver_local));
-  fbl::AutoCall svc_cleanup([&]() { paver_svc_.reset(); });
+  auto svc_cleanup = fbl::MakeAutoCall([&]() { paver_svc_.reset(); });
 
   size_ = size;
 

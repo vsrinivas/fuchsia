@@ -714,7 +714,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
     dut.SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
     EXPECT_OK(dut.AddDevice());
 
-    fbl::AutoCall stop_threads([&]() { dut.StopWorkerThread(); });
+    auto stop_threads = fbl::MakeAutoCall([&]() { dut.StopWorkerThread(); });
 
     ddk::BlockImplProtocolClient user = GetBlockClient(USER_DATA_PARTITION);
     ASSERT_TRUE(user.is_valid());

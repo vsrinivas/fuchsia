@@ -55,7 +55,7 @@ zx_status_t SdmmcRootDevice::Init() {
 }
 
 int SdmmcRootDevice::WorkerThread() {
-  fbl::AutoCall remove_device_on_error([&]() { DdkAsyncRemove(); });
+  auto remove_device_on_error = fbl::MakeAutoCall([&]() { DdkAsyncRemove(); });
 
   SdmmcDevice sdmmc(host_);
   zx_status_t st = sdmmc.Init();

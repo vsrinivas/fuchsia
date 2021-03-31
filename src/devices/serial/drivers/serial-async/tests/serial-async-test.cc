@@ -231,7 +231,7 @@ TEST_F(SerialDeviceTest, AsyncRead) {
   strcpy(serial_impl().read_buffer(), expected);
   serial_impl().set_state_and_notify(SERIAL_STATE_READABLE);
   ASSERT_OK(device()->Bind());
-  fbl::AutoCall unbind([=]() { device()->DdkAsyncRemove(); });
+  auto unbind = fbl::MakeAutoCall([=]() { device()->DdkAsyncRemove(); });
   // Test.
   ASSERT_EQ(ZX_OK, Read(&fidl(), &buffer));
   ASSERT_EQ(4, buffer.size());
@@ -247,7 +247,7 @@ TEST_F(SerialDeviceTest, AsyncWrite) {
 
   // Test set up.
   ASSERT_OK(device()->Bind());
-  fbl::AutoCall unbind([=]() { device()->DdkAsyncRemove(); });
+  auto unbind = fbl::MakeAutoCall([=]() { device()->DdkAsyncRemove(); });
   serial_impl().set_state_and_notify(SERIAL_STATE_WRITABLE);
 
   // Test.
