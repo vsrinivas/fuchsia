@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     anyhow::Result,
+    async_net::unix::UnixListener,
     futures_util::future::FutureExt,
     futures_util::io::{AsyncReadExt, AsyncWriteExt},
 };
@@ -30,7 +31,7 @@ pub async fn debug(
     let tx = std::cell::RefCell::new(tx);
 
     // Create our Unix socket.
-    let listener = async_std::os::unix::net::UnixListener::bind(&cmd.socket_location).await?;
+    let listener = UnixListener::bind(&cmd.socket_location)?;
 
     // Start the local debugger.
     std::process::Command::new(zxdb_path)

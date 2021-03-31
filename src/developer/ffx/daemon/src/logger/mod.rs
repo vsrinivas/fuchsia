@@ -4,7 +4,6 @@
 use {
     crate::target::WeakTarget,
     anyhow::{anyhow, bail, Context, Result},
-    async_std::sync::Arc,
     diagnostics_data::{LogsData, Timestamp},
     ffx_config::get,
     ffx_log_data::{EventType, LogData, LogEntry},
@@ -22,6 +21,7 @@ use {
     selectors::parse_selector,
     std::convert::TryInto,
     std::future::Future,
+    std::sync::Arc,
     std::time::SystemTime,
     streamer::GenericDiagnosticsStreamer,
 };
@@ -387,7 +387,7 @@ mod test {
         super::*,
         crate::target::{RcsConnection, Target},
         crate::NodeId,
-        async_std::sync::Mutex,
+        async_lock::Mutex,
         async_trait::async_trait,
         ffx_log_test_utils::{
             setup_fake_archive_iterator, FakeArchiveIteratorResponse, LogsDataBuilder,

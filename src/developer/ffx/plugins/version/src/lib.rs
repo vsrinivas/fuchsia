@@ -4,7 +4,6 @@
 
 use {
     anyhow::Result,
-    async_std::future::timeout,
     chrono::{Local, Offset, TimeZone},
     ffx_core::{build_info, ffx_plugin},
     ffx_version_args::VersionCommand,
@@ -12,6 +11,7 @@ use {
     std::fmt::Display,
     std::io::Write,
     std::time::Duration,
+    timeout::timeout,
 };
 
 const UNKNOWN_BUILD_HASH: &str = "(unknown)";

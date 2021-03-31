@@ -8,8 +8,9 @@ use {
     crate::target::*,
     ::mdns::protocol as dns,
     anyhow::{Context as _, Result},
-    async_std::net::UdpSocket,
-    async_std::sync::Mutex,
+    async_io::Async,
+    async_lock::Mutex,
+    async_net::UdpSocket,
     ffx_daemon_core::{
         events,
         net::{self, IsLocalAddr},
@@ -408,7 +409,7 @@ fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
         }
     }
     .into();
-    Ok(socket.into())
+    Ok(Async::new(socket)?.into())
 }
 
 fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<UdpSocket> {
@@ -442,5 +443,5 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
         }
     }
     .into();
-    Ok(socket.into())
+    Ok(Async::new(socket)?.into())
 }

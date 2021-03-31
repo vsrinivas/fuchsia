@@ -12,7 +12,6 @@ ffx_plugin("ffx_flash") {
   args_deps = [ "//third_party/rust_crates:serde" ]
 
   deps = [
-    "//third_party/rust_crates:async-std",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:regex",

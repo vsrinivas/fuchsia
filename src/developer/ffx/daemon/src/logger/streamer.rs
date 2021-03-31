@@ -4,15 +4,8 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    async_std::{
-        fs::{create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions},
-        io::{BufReader, Lines},
-        path::PathBuf,
-        prelude::*,
-        stream::{Stream, StreamExt},
-        sync::{Arc, RwLock, RwLockWriteGuard},
-        task::Poll,
-    },
+    async_fs::{create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions},
+    async_lock::{RwLock, RwLockWriteGuard},
     async_trait::async_trait,
     diagnostics_data::Timestamp,
     ffx_config::get,
@@ -21,13 +14,19 @@ use {
     futures::{
         channel::oneshot,
         future::{BoxFuture, Shared},
-        FutureExt, TryStreamExt,
+        FutureExt,
     },
+    futures_lite::io::{BufReader, Lines},
+    futures_lite::stream::{Stream, StreamExt},
+    futures_lite::{AsyncBufReadExt, AsyncWriteExt},
     std::convert::TryInto,
     std::fmt,
     std::io::ErrorKind,
     std::iter::Iterator,
+    std::path::PathBuf,
     std::pin::Pin,
+    std::sync::Arc,
+    std::task::Poll,
 };
 
 const CACHE_DIRECTORY_CONFIG: &str = "proactive_log.cache_directory";
@@ -162,6 +161,7 @@ impl LogFile {
         for entry in entries.iter() {
             f.write_all(entry.as_slice()).await?;
         }
+        f.flush().await?;
         f.sync_data().await?;
 
         Ok(())
@@ -211,7 +211,7 @@ impl TargetLogDirectory {
         while let Some(dir_ent) = reader.try_next().await? {
             let first_chunk_path = dir_ent.path().join("1");
 
-            if first_chunk_path.exists().await {
+            if first_chunk_path.exists() {
                 let f = LogFile::new(
                     first_chunk_path.clone(),
                     TargetSessionDirectory::new(
@@ -469,6 +469,18 @@ impl SessionStream {
     }
 
     pub async fn iter(&mut self) -> Result<Option<Result<LogEntry>>> {
+        // Initialize a mpmc listener if we will eventually subscribe, else some messages may be missed.
+        match self.stream_mode {
+            StreamMode::Subscribe
+            | StreamMode::SnapshotAllThenSubscribe
+            | StreamMode::SnapshotRecentThenSubscribe => {
+                if self.read_receiver.is_none() {
+                    self.read_receiver = Some(self.read_stream.new_receiver());
+                }
+            }
+            _ => {}
+        }
+
         if self.stream_mode != StreamMode::Subscribe && !self.cache_read_finished {
             let res = self.cache_stream.iter().await;
             if let Ok(opt) = res {
@@ -483,9 +495,6 @@ impl SessionStream {
         }
 
         if self.stream_mode != StreamMode::SnapshotAll {
-            if self.read_receiver.is_none() {
-                self.read_receiver = Some(self.read_stream.new_receiver());
-            }
             let res = self
                 .read_receiver
                 .as_mut()
@@ -760,17 +769,15 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
             None
         };
 
-        let inner = self.inner.read().await;
-        let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
+        let (output_dir, read_stream) = {
+            let inner = self.inner.read().await;
+            (
+                inner.output_dir.as_ref().context("stream not setup")?.clone(),
+                inner.read_stream.clone(),
+            )
+        };
 
-        SessionStream::new(
-            output_dir.clone(),
-            min_target_timestamp,
-            ts,
-            stream_mode,
-            inner.read_stream.clone(),
-        )
-        .await
+        SessionStream::new(output_dir, min_target_timestamp, ts, stream_mode, read_stream).await
     }
 }
 
@@ -847,7 +854,6 @@ impl DiagnosticsStreamer<'_> {
 mod test {
     use {
         super::*,
-        async_std::{fs::read_to_string, future::timeout},
         diagnostics_data::LogsData,
         ffx_log_data::LogData,
         ffx_log_test_utils::LogsDataBuilder,
@@ -855,6 +861,7 @@ mod test {
         std::collections::HashMap,
         std::time::Duration,
         tempfile::{tempdir, TempDir},
+        timeout::timeout,
     };
 
     const FAKE_DIR_NAME: &str = "fake_logs";
@@ -876,7 +883,7 @@ mod test {
             let f = f?;
             result.insert(
                 String::from(f.file_name().to_string_lossy()),
-                read_to_string(String::from(f.path().to_str().unwrap())).await?,
+                std::fs::read_to_string(String::from(f.path().to_str().unwrap()))?,
             );
         }
 
@@ -1540,13 +1547,13 @@ mod test {
         session1.push(FAKE_DIR_NAME);
         session1.push(NODENAME);
         session1.push(BOOT_TIME_MILLIS.to_string());
-        assert!(!session1.exists().await);
+        assert!(!session1.exists());
 
         let mut session2 = root.clone();
         session2.push(FAKE_DIR_NAME);
         session2.push(NODENAME);
         session2.push((BOOT_TIME_MILLIS - 2).to_string());
-        assert!(!session2.exists().await);
+        assert!(!session2.exists());
 
         let results = collect_default_logs_for_session(&root, BOOT_TIME_MILLIS - 3).await.unwrap();
         assert_eq!(results.len(), 1, "{:?}", results);

@@ -472,7 +472,7 @@ impl Daemon {
                 };
 
                 return responder
-                    .send(&mut match async_std::future::timeout(
+                    .send(&mut match timeout::timeout(
                         Duration::from_nanos(timeout.try_into()?),
                         fut,
                     )
@@ -629,7 +629,6 @@ mod test {
         super::*,
         crate::target::TargetAddr,
         anyhow::bail,
-        async_std::future::timeout,
         fidl_fuchsia_developer_bridge as bridge,
         fidl_fuchsia_developer_bridge::{DaemonMarker, FastbootMarker},
         fidl_fuchsia_developer_remotecontrol as rcs,
@@ -641,6 +640,7 @@ mod test {
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::net::SocketAddr,
+        timeout::timeout,
     };
 
     struct TestHookFakeFastboot {
@@ -886,7 +886,10 @@ mod test {
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
-        assert!(matches!(daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap(), Err(DaemonError::TargetAmbiguous)));
+        assert!(matches!(
+            daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap(),
+            Err(DaemonError::TargetAmbiguous)
+        ));
         Ok(())
     }
 

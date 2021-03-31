@@ -31,9 +31,10 @@ ffx_plugin("ffx_log") {
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:async-std",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:termion",
   ]

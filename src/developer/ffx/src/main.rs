@@ -380,8 +380,7 @@ async fn main() {
 mod test {
     use super::*;
     use ascendd;
-    use async_std::os::unix::net::UnixListener;
-    use async_std::sync::Mutex;
+    use async_net::unix::UnixListener;
     use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
     use fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream};
     use fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream};
@@ -404,7 +403,7 @@ mod test {
         let sockpath = setup_ascendd_temp();
 
         // Start a listener that accepts and immediately closes the socket..
-        let listener = UnixListener::bind(sockpath.to_owned()).await.unwrap();
+        let listener = UnixListener::bind(sockpath.to_owned()).unwrap();
         let _listen_task = Task::spawn(async move {
             loop {
                 drop(listener.accept().await.unwrap());
@@ -422,7 +421,7 @@ mod test {
         let sockpath = setup_ascendd_temp();
 
         // Start a listener that never accepts the socket.
-        let _listener = UnixListener::bind(sockpath.to_owned()).await.unwrap();
+        let _listener = UnixListener::bind(sockpath.to_owned()).unwrap();
 
         let res = get_daemon_proxy().await;
         let str = format!("{}", res.err().unwrap());
@@ -439,7 +438,7 @@ mod test {
         let link_tasks = Arc::new(Mutex::new(Vec::<Task<()>>::new()));
         let link_tasks1 = link_tasks.clone();
 
-        let listener = UnixListener::bind(sockpath.to_owned()).await.unwrap();
+        let listener = UnixListener::bind(sockpath.to_owned()).unwrap();
         let listen_task = Task::spawn(async move {
             // let (sock, _addr) = listener.accept().await.unwrap();
             let mut stream = listener.incoming();

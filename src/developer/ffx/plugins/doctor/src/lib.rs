@@ -7,11 +7,7 @@ use {
     crate::daemon_manager::{DaemonManager, DefaultDaemonManager},
     crate::recorder::{DoctorRecorder, Recorder},
     anyhow::{Error, Result},
-    async_std::{
-        future::timeout,
-        sync::{Arc, Mutex},
-        task::sleep,
-    },
+    async_lock::Mutex,
     async_trait::async_trait,
     ffx_config::get,
     ffx_core::{build_info, ffx_bail, ffx_plugin},
@@ -20,6 +16,7 @@ use {
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     itertools::{Either, Itertools},
+    std::sync::Arc,
     std::{
         collections::HashSet,
         io::{stdout, Write},
@@ -27,6 +24,7 @@ use {
         time::Duration,
     },
     termion::{color, style},
+    timeout::timeout,
 };
 
 mod constants;
@@ -269,7 +267,7 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         println!("  ffx config set log.enabled true");
         println!("You will then need to restart the ffx daemon:");
         println!("  ffx doctor --force-restart\n\n");
-        sleep(Duration::from_millis(10000)).await;
+        fuchsia_async::Timer::new(Duration::from_millis(10000)).await;
     }
 
     let log_root: PathBuf = get("log.dir").await?;
@@ -386,7 +384,7 @@ async fn execute_steps(
             // to spawn one too quickly after killing one will lead to timeouts
             // when attempting to communicate with the spawned daemon.
             // Temporary fix for fxbug.dev/66958. Remove when that bug is resolved.
-            async_std::task::sleep(Duration::from_millis(5000)).await;
+            fuchsia_async::Timer::new(Duration::from_millis(5000)).await;
             success_or_continue!(timeout(retry_delay, daemon_manager.spawn()), step_handler, _p, {
             });
         } else {
@@ -510,7 +508,7 @@ mod test {
         super::*,
         crate::recorder::Recorder,
         anyhow::anyhow,
-        async_std::sync::{Arc, Mutex},
+        async_lock::Mutex,
         async_trait::async_trait,
         fidl::endpoints::{spawn_local_stream_handler, Request, ServerEnd, ServiceMarker},
         fidl_fuchsia_developer_bridge::{
@@ -524,6 +522,7 @@ mod test {
         futures::future::Shared,
         futures::{Future, FutureExt, TryFutureExt, TryStreamExt},
         std::cell::Cell,
+        std::sync::Arc,
         tempfile::tempdir,
     };
 

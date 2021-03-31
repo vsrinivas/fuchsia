@@ -4,19 +4,16 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    async_std::{
-        fs::File,
-        io::{stdin, Stdin},
-        prelude::*,
-    },
+    async_fs::File,
+    blocking::unblock,
     ffx_core::ffx_plugin,
     ffx_trace_args::{Record, TraceCommand, TraceSubCommand},
     fidl_fuchsia_tracing_controller::{
         ControllerProxy, StartOptions, StopOptions, TerminateOptions, TraceConfig,
     },
     futures::future::BoxFuture,
-    futures::FutureExt,
-    std::io::{stdout, Write},
+    futures::prelude::*,
+    std::io::{stdin, stdout, BufRead, Stdin, Write},
     std::time::Duration,
 };
 
@@ -31,11 +28,19 @@ impl<'a> LineWaiter<'a> for Stdin {
     type LineWaiterFut = BoxFuture<'a, ()>;
 
     fn wait(&'a mut self) -> Self::LineWaiterFut {
-        async move {
+        unblock(|| {
             let mut line = String::new();
+            // This is sort of a hack to avoid a borrow bound challenge with
+            // self, though because this is explicitly implemented on the String
+            // marker type there's a high confidence that it's ok. It is likley
+            // that this can be refactored out a little, with the differently
+            // shaped libraries, for example it may be possible to re-arrange to
+            // wrap stdin().locked() in Unblock to get AsyncBufRead.
+            let stdin = stdin();
+            let mut locked = stdin.lock();
             // Ignoring error, though maybe Ack would want to bubble up errors instead?
-            let _ = self.read_line(&mut line).await;
-        }
+            let _ = locked.read_line(&mut line);
+        })
         .boxed()
     }
 }

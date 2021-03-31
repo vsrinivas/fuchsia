@@ -4,19 +4,18 @@
 
 use {
     anyhow::{Context, Result},
-    async_std::{
-        io::BufReader,
-        path::PathBuf,
-        sync::{Arc, Mutex},
-    },
+    async_lock::Mutex,
     ffx_config::{get, get_sdk},
     fuchsia_async::Task,
     futures::{
         channel::mpsc::{Receiver, Sender},
         AsyncBufReadExt, AsyncWriteExt, FutureExt, SinkExt, StreamExt,
     },
+    futures_lite::io::BufReader,
     smol::Async,
+    std::path::PathBuf,
     std::process::{Child, Command, Stdio},
+    std::sync::Arc,
 };
 
 const BARRIER: &str = "<ffx symbolizer>\n";
@@ -38,7 +37,9 @@ pub async fn is_current_sdk_root_registered() -> Result<bool> {
 
     let path = get_sdk().await?.get_host_tool("symbol-index")?;
     let c = Command::new(path).arg("list").output()?;
-    let abs_path = sdk_root.canonicalize().await.unwrap();
+    // Note: canonicalize here performs synchronous filesystem operations. This
+    // is likely not a significant issue, but it is noteworthy.
+    let abs_path = sdk_root.canonicalize().unwrap();
 
     Ok(symbol_list_contains(String::from_utf8(c.stdout).unwrap(), abs_path))
 }

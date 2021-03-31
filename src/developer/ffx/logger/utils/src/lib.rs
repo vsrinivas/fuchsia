@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    async_std::task::Poll,
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorGetNextResult, ArchiveIteratorProxy},
     futures::stream::{FusedStream, FuturesOrdered, ReadyChunks, Stream, StreamExt},
     std::future::Future,
     std::pin::Pin,
+    std::task::Poll,
 };
 
 pub mod symbolizer;

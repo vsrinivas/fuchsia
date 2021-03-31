@@ -8,12 +8,12 @@ use {
     crate::target::{ConnectionState, TargetAddr, WeakTarget},
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
-    async_std::io::prelude::BufReadExt,
-    async_std::prelude::StreamExt,
     fuchsia_async::{Task, Timer},
     futures::channel::oneshot,
     futures::future::FutureExt,
     futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    futures_lite::io::AsyncBufReadExt,
+    futures_lite::stream::StreamExt,
     hoist::OvernetInstance,
     smol::Async,
     std::future::Future,
@@ -95,7 +95,7 @@ impl HostPipeChild {
             inner.stderr.take().ok_or(anyhow!("unable to stderr from target pipe"))?;
         let stderr_pipe = Async::new(stderr_pipe)?;
         let logger = async move {
-            let mut stderr_lines = async_std::io::BufReader::new(stderr_pipe).lines();
+            let mut stderr_lines = futures_lite::io::BufReader::new(stderr_pipe).lines();
             while let Some(result) = stderr_lines.next().await {
                 match result {
                     Ok(line) => log::info!("SSH stderr: {}", line),
@@ -211,7 +211,7 @@ pub async fn create_ascendd() -> Result<Ascendd> {
         ascendd::Opt { sockpath: Some(get_socket().await), ..Default::default() },
         // TODO: this just prints serial output to stdout - ffx probably wants to take a more
         // nuanced approach here.
-        Box::new(async_std::io::stdout()),
+        blocking::Unblock::new(std::io::stdout()),
     )
 }
 

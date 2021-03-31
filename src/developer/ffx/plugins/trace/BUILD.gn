@@ -12,6 +12,9 @@ ffx_plugin("ffx_trace") {
 
   deps = [
     "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller-rustc",
+    "//third_party/rust_crates:async-fs",
+    "//third_party/rust_crates:blocking",
+    "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:tempfile",
   ]
 

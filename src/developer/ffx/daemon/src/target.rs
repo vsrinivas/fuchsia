@@ -12,10 +12,7 @@ use {
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::onet::HostPipeConnection,
     anyhow::{anyhow, bail, Context, Error, Result},
-    async_std::{
-        future::{timeout, TimeoutError},
-        sync::RwLock,
-    },
+    async_lock::RwLock,
     async_trait::async_trait,
     bridge::{DaemonError, TargetAddrInfo, TargetIp, TargetIpPort},
     chrono::{DateTime, Utc},
@@ -44,6 +41,7 @@ use {
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     std::sync::{Arc, Weak},
     std::time::Duration,
+    timeout::{timeout, TimeoutError},
     usb_bulk::AsyncInterface as Interface,
 };
 
@@ -1270,7 +1268,7 @@ impl From<String> for TargetQuery {
     fn from(s: String) -> Self {
         // TODO(raggi): add support for named scopes in the strings
         if s == "" {
-            return Self::First
+            return Self::First;
         }
 
         if let Ok(saddr) = s.parse::<SocketAddr>() {

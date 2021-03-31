@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Result},
+    blocking::Unblock,
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     fidl::endpoints::create_proxy,
@@ -28,8 +29,8 @@ pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentComma
     let (serr, cerr) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
 
-    let mut stdout = async_std::io::stdout();
-    let mut stderr = async_std::io::stderr();
+    let mut stdout = Unblock::new(std::io::stdout());
+    let mut stderr = Unblock::new(std::io::stderr());
     let copy_futures = futures::future::try_join(
         futures::io::copy(fidl::AsyncSocket::from_socket(cout)?, &mut stdout),
         futures::io::copy(fidl::AsyncSocket::from_socket(cerr)?, &mut stderr),

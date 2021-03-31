@@ -18,7 +18,6 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-std",
     "//third_party/rust_crates:futures",
   ]
 

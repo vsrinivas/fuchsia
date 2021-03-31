@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Context as _, Result},
-    async_std::future::timeout,
     async_trait::async_trait,
     ffx_core::TryStreamUtilExt,
     fuchsia_async::Task,
@@ -19,6 +18,7 @@ use {
     std::pin::Pin,
     std::sync::{Arc, Weak},
     std::time::Duration,
+    timeout::timeout,
 };
 
 pub trait EventTrait: Debug + Sized + Hash + Clone + Eq + Send + Sync {}

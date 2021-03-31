@@ -9,8 +9,9 @@ use {
     crate::paths::get_config_base_path,
     crate::runtime::populate_runtime_config,
     anyhow::{anyhow, Context, Result},
-    async_std::sync::{Arc, RwLock},
+    async_lock::RwLock,
     serde_json::Value,
+    std::sync::Arc,
     std::{
         collections::HashMap,
         path::PathBuf,

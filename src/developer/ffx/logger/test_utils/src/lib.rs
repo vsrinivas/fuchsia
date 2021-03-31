@@ -4,7 +4,6 @@
 
 use {
     anyhow::Result,
-    async_std::sync::Arc,
     diagnostics_data::{LogsData, LogsField, Severity, Timestamp},
     diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
     fidl::endpoints::ServerEnd,
@@ -12,6 +11,7 @@ use {
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
     },
     futures::TryStreamExt,
+    std::sync::Arc,
 };
 
 pub struct FakeArchiveIteratorResponse {

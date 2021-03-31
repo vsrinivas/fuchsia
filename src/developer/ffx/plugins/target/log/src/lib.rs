@@ -4,13 +4,8 @@
 
 use {
     anyhow::{anyhow, Context, Error, Result},
-    async_std::{
-        io::{stdout, Write},
-        prelude::*,
-        sync::Arc,
-        task::sleep,
-    },
     async_trait::async_trait,
+    blocking::Unblock,
     chrono::{DateTime, Local, TimeZone, Utc},
     diagnostics_data::{LogsData, Severity, Timestamp},
     ffx_config::{get, get_sdk},
@@ -28,7 +23,10 @@ use {
         ArchiveIteratorError, ArchiveIteratorMarker, RemoteControlProxy,
     },
     fidl_fuchsia_diagnostics::ComponentSelector,
+    fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
+    fuchsia_async::Timer,
     selectors::{match_moniker_against_component_selectors, parse_path_to_moniker},
+    std::sync::Arc,
     std::{
         iter::Iterator,
         time::{Duration, SystemTime},
@@ -178,7 +176,7 @@ pub trait LogFormatter {
 }
 
 struct DefaultLogFormatter<'a> {
-    writer: Box<dyn Write + Unpin + 'a>,
+    writer: Box<dyn AsyncWrite + Unpin + 'a>,
     has_previous_log: bool,
     filters: LogFilterCriteria,
     color: bool,
@@ -245,7 +243,7 @@ impl<'a> DefaultLogFormatter<'a> {
         filters: LogFilterCriteria,
         color: bool,
         time_format: TimeFormat,
-        writer: impl Write + Unpin + 'a,
+        writer: impl AsyncWrite + Unpin + 'a,
     ) -> Self {
         Self {
             filters,
@@ -349,7 +347,7 @@ async fn print_symbolizer_warning(err: Error, should_sleep: bool) {
     );
 
     if should_sleep {
-        sleep(Duration::from_secs(10)).await;
+        Timer::new(Duration::from_secs(10)).await;
     }
 }
 
@@ -361,7 +359,7 @@ pub async fn log(
 ) -> Result<()> {
     let config_color: bool = get(COLOR_CONFIG_NAME).await?;
 
-    let mut stdout = stdout();
+    let mut stdout = Unblock::new(std::io::stdout());
     let mut formatter = DefaultLogFormatter::new(
         LogFilterCriteria::from(&cmd),
         should_color(config_color, cmd.color),
@@ -405,7 +403,7 @@ pub async fn log(
                     }
 
                     if !registered_result.unwrap_or(false) && !cmd.ignore_symbolizer_failure {
-                        sleep(Duration::from_secs(10)).await;
+                        Timer::new(Duration::from_secs(10)).await;
                     }
                 }
                 Err(e) => {
@@ -570,7 +568,7 @@ pub async fn log_cmd(
                                             );
                                         }
                                     }
-                                    sleep(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
+                                    Timer::new(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
                                     continue;
                                 }
                             }
@@ -597,7 +595,6 @@ pub async fn log_cmd(
 mod test {
     use {
         super::*,
-        async_std::sync::Arc,
         diagnostics_data::Timestamp,
         ffx_log_test_utils::{
             setup_fake_archive_iterator, FakeArchiveIteratorResponse, LogsDataBuilder,
@@ -607,6 +604,7 @@ mod test {
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlRequest,
         },
         selectors::parse_component_selector,
+        std::sync::Arc,
     };
 
     const DEFAULT_TS_NANOS: u64 = 1615535969000000000;
