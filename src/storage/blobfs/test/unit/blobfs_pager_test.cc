@@ -18,7 +18,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

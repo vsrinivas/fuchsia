@@ -15,7 +15,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 #include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/root.h"

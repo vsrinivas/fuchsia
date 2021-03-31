@@ -4,6 +4,7 @@
 
 #include "intel-dsp.h"
 
+#include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pci.h>
 #include <string.h>
 #include <zircon/errors.h>
@@ -12,7 +13,6 @@
 #include <map>
 #include <utility>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>

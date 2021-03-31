@@ -11,7 +11,6 @@
 #include <lib/ddk/platform-defs.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/graphics/display/drivers/ssd1306/ssd1306-bind.h"
 

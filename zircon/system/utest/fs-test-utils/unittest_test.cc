@@ -7,7 +7,6 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>

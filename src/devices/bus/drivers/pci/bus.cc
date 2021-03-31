@@ -18,7 +18,6 @@
 #include <thread>
 
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/span.h>
 #include <fbl/vector.h>

@@ -14,7 +14,6 @@
 #include <string>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <safemath/checked_math.h>
 
 #include "range/interval-tree.h"

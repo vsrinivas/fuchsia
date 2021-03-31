@@ -6,7 +6,6 @@
 
 #include <lib/mmio/mmio.h>
 
-#include <fbl/auto_call.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 
 namespace {

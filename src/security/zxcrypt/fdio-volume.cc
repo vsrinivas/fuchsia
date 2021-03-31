@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/security/zxcrypt/fdio-volume.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
@@ -21,13 +23,11 @@
 #include <memory>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 #include <ramdevice-client/ramdisk.h>  // Why does wait_for_device_at() come from here?
 
 #include "src/security/kms-stateless/kms-stateless.h"
-#include "src/security/zxcrypt/fdio-volume.h"
 #include "src/security/zxcrypt/volume.h"
 
 #define ZXDEBUG 0

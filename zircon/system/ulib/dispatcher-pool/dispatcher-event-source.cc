@@ -10,7 +10,6 @@
 #include <dispatcher-pool/dispatcher-event-source.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
-#include <fbl/auto_call.h>
 
 namespace dispatcher {
 

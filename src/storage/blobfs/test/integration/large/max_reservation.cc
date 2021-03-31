@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/common.h"

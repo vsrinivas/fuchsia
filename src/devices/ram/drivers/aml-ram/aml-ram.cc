@@ -13,7 +13,6 @@
 
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 

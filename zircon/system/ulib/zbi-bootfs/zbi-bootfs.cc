@@ -25,6 +25,7 @@
 #include <limits>
 #include <string>
 
+#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>

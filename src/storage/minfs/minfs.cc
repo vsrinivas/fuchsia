@@ -22,7 +22,6 @@
 #include <bitmap/raw-bitmap.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <safemath/checked_math.h>
 
 #include "src/lib/storage/vfs/cpp/journal/initializer.h"

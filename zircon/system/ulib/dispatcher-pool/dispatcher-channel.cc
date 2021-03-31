@@ -4,14 +4,13 @@
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <fbl/auto_call.h>
+
+#include <utility>
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-event-source.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
-
-#include <utility>
 
 namespace dispatcher {
 

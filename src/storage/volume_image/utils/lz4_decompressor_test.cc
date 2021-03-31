@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <lz4/lz4.h>

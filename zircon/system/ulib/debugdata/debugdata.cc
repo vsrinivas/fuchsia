@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>

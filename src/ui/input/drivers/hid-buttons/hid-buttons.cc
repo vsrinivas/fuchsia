@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/buttons/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <string.h>
 #include <threads.h>
@@ -19,11 +20,9 @@
 #include <cstdint>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <hid/descriptor.h>
 
 #include "src/ui/input/drivers/hid-buttons/hid-buttons-bind.h"

@@ -44,7 +44,6 @@
 #include <utility>
 
 #include <driver-info/driver-info.h>
-#include <fbl/auto_call.h>
 #include <fbl/string_printf.h>
 #include <inspector/inspector.h>
 

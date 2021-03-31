@@ -32,7 +32,6 @@
 #include <block-client/cpp/pass-through-read-only-device.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
-#include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/digest/digest.h"

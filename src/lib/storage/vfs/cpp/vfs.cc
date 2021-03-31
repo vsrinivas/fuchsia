@@ -14,8 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include <fbl/auto_call.h>
-
 #include "src/lib/storage/vfs/cpp/debug.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 

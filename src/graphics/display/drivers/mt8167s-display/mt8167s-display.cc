@@ -4,15 +4,14 @@
 #include "mt8167s-display.h"
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/display.h>
-#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 
 #include "common.h"

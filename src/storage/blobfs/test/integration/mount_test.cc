@@ -18,7 +18,6 @@
 
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>

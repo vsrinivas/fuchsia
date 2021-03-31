@@ -9,8 +9,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include <fbl/auto_call.h>
-
 namespace fuzzing {
 namespace {
 

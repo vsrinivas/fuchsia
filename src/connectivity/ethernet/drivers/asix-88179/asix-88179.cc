@@ -19,8 +19,6 @@
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 
-#include <fbl/auto_call.h>
-
 #include "asix-88179-regs.h"
 #include "src/connectivity/ethernet/drivers/asix-88179/ethernet_ax88179-bind.h"
 

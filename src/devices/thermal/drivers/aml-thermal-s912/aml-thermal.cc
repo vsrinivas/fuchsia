@@ -7,12 +7,11 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <string.h>
 #include <zircon/syscalls/port.h>
 
-#include <lib/ddk/metadata.h>
-#include <fbl/auto_call.h>
 #include <soc/aml-common/aml-thermal.h>
 
 #include "src/devices/thermal/drivers/aml-thermal-s912/aml-thermal-s912-bind.h"

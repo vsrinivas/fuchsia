@@ -16,7 +16,6 @@
 #include <atomic>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>

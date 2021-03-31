@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/driver-unit-test/logger.h>
 #include <lib/driver-unit-test/utils.h>
 
 #include <fbl/auto_call.h>
-#include <lib/driver-unit-test/logger.h>
 #include <zxtest/zxtest.h>
 
 namespace {

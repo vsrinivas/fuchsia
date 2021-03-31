@@ -24,7 +24,6 @@
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "fbl/vector.h"
@@ -39,12 +38,8 @@ namespace fake_display {
 
 namespace {
 // List of supported pixel formats
-zx_pixel_format_t kSupportedPixelFormats[] = {
-  ZX_PIXEL_FORMAT_RGB_x888,
-  ZX_PIXEL_FORMAT_ARGB_8888,
-  ZX_PIXEL_FORMAT_BGR_888x,
-  ZX_PIXEL_FORMAT_ABGR_8888
-};
+zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_ARGB_8888,
+                                              ZX_PIXEL_FORMAT_BGR_888x, ZX_PIXEL_FORMAT_ABGR_8888};
 // Arbitrary dimensions - the same as astro.
 constexpr uint32_t kWidth = 1024;
 constexpr uint32_t kHeight = 600;
@@ -103,9 +98,7 @@ static bool IsAcceptableImageType(uint32_t image_type) {
   return image_type == IMAGE_TYPE_PREFERRED_SCANOUT || image_type == IMAGE_TYPE_SIMPLE;
 }
 
-static bool IsAcceptablePixelFormat(zx_pixel_format_t pixel_format) {
-  return true;
-}
+static bool IsAcceptablePixelFormat(zx_pixel_format_t pixel_format) { return true; }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
@@ -257,8 +250,7 @@ zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[i];
     image_constraints.pixel_format.type =
-        i & 0b01 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8
-                 : fuchsia_sysmem_PixelFormatType_BGRA32;
+        i & 0b01 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8 : fuchsia_sysmem_PixelFormatType_BGRA32;
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.pixel_format.format_modifier.value =
         i & 0b10 ? fuchsia_sysmem_FORMAT_MODIFIER_LINEAR
@@ -289,7 +281,6 @@ zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     image_constraints.start_offset_divisor = 1;
     image_constraints.display_width_divisor = 1;
     image_constraints.display_height_divisor = 1;
-
   }
 
   zx_status_t status =
@@ -340,7 +331,8 @@ zx_status_t FakeDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_hand
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  import_capture->pixel_format = collection_info.settings.image_format_constraints.pixel_format.type;
+  import_capture->pixel_format =
+      collection_info.settings.image_format_constraints.pixel_format.type;
   import_capture->ram_domain = collection_info.settings.buffer_settings.coherency_domain == RAM;
   import_capture->vmo = std::move(vmos[index]);
   *out_capture_handle = reinterpret_cast<uint64_t>(import_capture.get());
@@ -448,7 +440,8 @@ int FakeDisplay::CaptureThread() {
             auto dst = reinterpret_cast<ImageInfo*>(capture_active_id_);
 
             if (src->pixel_format != dst->pixel_format) {
-              DISP_ERROR("Trying to capture format=%d as format=%d\n", src->pixel_format, dst->pixel_format);
+              DISP_ERROR("Trying to capture format=%d as format=%d\n", src->pixel_format,
+                         dst->pixel_format);
               continue;
             }
             size_t src_vmo_size;
@@ -482,11 +475,13 @@ int FakeDisplay::CaptureThread() {
               return status;
             }
             if (src->ram_domain) {
-              zx_cache_flush(mapped_src.start(), src_vmo_size, ZX_CACHE_FLUSH_DATA|ZX_CACHE_FLUSH_INVALIDATE);
+              zx_cache_flush(mapped_src.start(), src_vmo_size,
+                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
             }
             memcpy(mapped_dst.start(), mapped_src.start(), dst_vmo_size);
             if (dst->ram_domain) {
-              zx_cache_flush(mapped_dst.start(), dst_vmo_size, ZX_CACHE_FLUSH_DATA|ZX_CACHE_FLUSH_INVALIDATE);
+              zx_cache_flush(mapped_dst.start(), dst_vmo_size,
+                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
             }
           }
         }

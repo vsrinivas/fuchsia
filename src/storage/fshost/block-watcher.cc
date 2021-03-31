@@ -38,7 +38,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>

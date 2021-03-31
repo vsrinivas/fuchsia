@@ -10,7 +10,6 @@
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls/object.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "helper.h"

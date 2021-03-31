@@ -7,7 +7,6 @@
 
 #include <array>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/block/drivers/block-verity/block-loader-interface.h"

@@ -6,6 +6,8 @@
 
 #include <lib/ddk/platform-defs.h>
 
+#include <fbl/auto_call.h>
+
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/device.h"
 #include "src/devices/bus/drivers/pci/test/driver/driver_tests.h"

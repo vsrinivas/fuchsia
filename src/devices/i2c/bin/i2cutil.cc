@@ -12,7 +12,6 @@
 
 #include <filesystem>
 
-#include <fbl/auto_call.h>
 #include <fbl/span.h>
 #include <fbl/unique_fd.h>
 

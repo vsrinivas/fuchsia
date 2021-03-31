@@ -8,8 +8,6 @@
 #include <lib/async/default.h>
 #include <lib/trace/event.h>
 
-#include <fbl/auto_call.h>
-
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/naive_image.h"

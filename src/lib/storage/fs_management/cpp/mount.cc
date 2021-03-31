@@ -26,7 +26,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>

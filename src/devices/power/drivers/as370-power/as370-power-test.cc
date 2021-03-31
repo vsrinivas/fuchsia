@@ -6,7 +6,6 @@
 
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <fbl/auto_call.h>
 #include <soc/as370/as370-power.h>
 #include <zxtest/zxtest.h>
 

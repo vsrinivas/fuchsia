@@ -16,7 +16,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <storage/buffer/owned_vmoid.h>
 

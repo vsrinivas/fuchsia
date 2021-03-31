@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hid/boot.h>
 

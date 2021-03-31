@@ -19,7 +19,6 @@
 
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/ui/input/drivers/i2c-hid/i2c_hid_bind.h"

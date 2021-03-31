@@ -20,7 +20,6 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 
 using fdio_ptr = fbl::RefPtr<fdio>;

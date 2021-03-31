@@ -30,7 +30,6 @@
 
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 

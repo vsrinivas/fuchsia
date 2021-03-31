@@ -18,7 +18,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <hid/boot.h>

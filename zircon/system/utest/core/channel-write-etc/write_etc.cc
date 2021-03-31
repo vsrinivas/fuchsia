@@ -21,7 +21,6 @@
 #include <set>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace {

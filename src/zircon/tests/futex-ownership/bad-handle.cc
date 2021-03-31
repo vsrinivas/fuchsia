@@ -14,7 +14,6 @@
 
 #include <iterator>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "utils.h"

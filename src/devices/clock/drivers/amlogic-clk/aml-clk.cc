@@ -13,7 +13,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/bitfields.h>
 #include <soc/aml-meson/aml-clk-common.h>

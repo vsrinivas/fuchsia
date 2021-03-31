@@ -25,7 +25,6 @@
 #include <utility>
 
 #include <ddktl/resume-txn.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "composite_device.h"

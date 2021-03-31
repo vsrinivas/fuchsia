@@ -12,7 +12,6 @@
 #include <memory>
 
 #include <acpica/acpi.h>
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace {

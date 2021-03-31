@@ -5,12 +5,12 @@
 #include "tas27xx.h"
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <algorithm>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

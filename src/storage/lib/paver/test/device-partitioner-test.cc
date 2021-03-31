@@ -30,7 +30,6 @@
 #include <string_view>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/span.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>

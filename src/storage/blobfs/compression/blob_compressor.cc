@@ -11,7 +11,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 
 #include "src/storage/blobfs/compression/chunked.h"
@@ -96,8 +95,8 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
                        << zx_status_get_string(status);
         return std::nullopt;
       }
-      status = compressor->SetOutput(compressed_inmemory_blob.start(),
-                                     compressed_inmemory_blob.size());
+      status =
+          compressor->SetOutput(compressed_inmemory_blob.start(), compressed_inmemory_blob.size());
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to initialize compressor: " << zx_status_get_string(status);
         return std::nullopt;

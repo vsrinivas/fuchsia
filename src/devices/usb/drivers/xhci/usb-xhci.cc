@@ -5,10 +5,10 @@
 #include "usb-xhci.h"
 
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/pci.h>
 #include <lib/ddk/hw/arch_ops.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/platform-defs.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <stdio.h>
@@ -22,7 +22,6 @@
 #include <memory>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/devices/usb/drivers/xhci/usb_xhci_bind.h"
 #include "xhci-device-manager.h"

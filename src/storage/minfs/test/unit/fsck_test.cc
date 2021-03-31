@@ -10,7 +10,6 @@
 #include <sys/types.h>
 
 #include <block-client/cpp/fake-device.h>
-#include <fbl/auto_call.h>
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>

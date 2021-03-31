@@ -16,7 +16,6 @@
 
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 

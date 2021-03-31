@@ -11,7 +11,6 @@
 
 #include <set>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <gtest/gtest.h>

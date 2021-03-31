@@ -14,7 +14,6 @@
 #include <set>
 
 #include <block-client/cpp/fake-device.h>
-#include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/digest/digest.h"

@@ -9,7 +9,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 namespace optee {
 

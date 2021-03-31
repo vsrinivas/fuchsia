@@ -22,7 +22,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>

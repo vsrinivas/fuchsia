@@ -9,7 +9,6 @@
 #include <zircon/syscalls/types.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "qemu-bus.h"
 #include "qemu-virt.h"

@@ -13,7 +13,6 @@
 #include <memory>
 
 #include <block-client/cpp/fake-device.h>
-#include <fbl/auto_call.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

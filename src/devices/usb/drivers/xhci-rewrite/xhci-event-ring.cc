@@ -11,8 +11,6 @@
 #include <lib/fit/promise.h>
 #include <lib/zx/clock.h>
 
-#include <fbl/auto_call.h>
-
 #include "usb-xhci.h"
 
 namespace usb_xhci {

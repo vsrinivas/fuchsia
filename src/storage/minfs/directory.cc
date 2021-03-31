@@ -456,8 +456,7 @@ zx::status<bool> Directory::ForEachDirent(DirArgs* args, const DirentCallback fu
 
   args->offs.off = 0;
   args->offs.off_prev = 0;
-  while (args->offs.off + kMinfsDirentSize < kMinfsMaxDirectorySize &&
-         args->offs.off < GetSize()) {
+  while (args->offs.off + kMinfsDirentSize < kMinfsMaxDirectorySize && args->offs.off < GetSize()) {
     FX_LOGS(DEBUG) << "Reading dirent at offset " << args->offs.off;
     size_t r;
     zx_status_t status =
@@ -939,7 +938,8 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   // before updating any other metadata.
   args.type = kMinfsTypeFile;  // We can't hard link directories
   args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace); found_or.is_error()) {
+  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
+      found_or.is_error()) {
     return found_or.error_value();
   } else if (!found_or.value()) {
     return ZX_ERR_NO_SPACE;

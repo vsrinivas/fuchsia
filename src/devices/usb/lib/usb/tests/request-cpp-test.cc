@@ -10,7 +10,6 @@
 #include <lib/zx/vmo.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace {

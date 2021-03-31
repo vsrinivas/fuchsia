@@ -9,7 +9,6 @@
 #include <zircon/assert.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 #include "wav-source.h"
 

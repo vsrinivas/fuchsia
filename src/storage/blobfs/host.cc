@@ -27,7 +27,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fs-host/common.h>
 #include <safemath/checked_math.h>

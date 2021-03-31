@@ -12,7 +12,6 @@
 #include <limits>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 zx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
   WAVHeader wav_hdr;

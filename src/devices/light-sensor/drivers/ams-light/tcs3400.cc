@@ -6,6 +6,7 @@
 
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
@@ -16,10 +17,8 @@
 
 #include <algorithm>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hid/descriptor.h>
 

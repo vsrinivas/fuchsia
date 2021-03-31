@@ -12,7 +12,6 @@
 #include <atomic>
 #include <thread>
 
-#include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/common.h"

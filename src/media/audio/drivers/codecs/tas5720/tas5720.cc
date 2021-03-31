@@ -5,15 +5,14 @@
 #include "tas5720.h"
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <algorithm>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/media/audio/drivers/codecs/tas5720/ti_tas5720-bind.h"
 

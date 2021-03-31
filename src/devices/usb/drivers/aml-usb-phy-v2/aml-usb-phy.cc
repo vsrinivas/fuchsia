@@ -8,8 +8,9 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,7 +22,6 @@
 #include <sstream>
 #include <string>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>

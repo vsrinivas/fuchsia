@@ -11,7 +11,6 @@
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 namespace gpio {
 

@@ -27,7 +27,6 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>

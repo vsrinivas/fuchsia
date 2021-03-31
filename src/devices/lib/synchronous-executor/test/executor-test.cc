@@ -10,7 +10,6 @@
 #include <memory>
 #include <thread>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace synchronous_executor {

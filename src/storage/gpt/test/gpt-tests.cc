@@ -13,7 +13,6 @@
 #include <memory>
 #include <optional>
 
-#include <fbl/auto_call.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
 #include <ramdevice-client/ramdisk.h>

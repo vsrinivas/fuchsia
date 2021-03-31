@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <block-client/cpp/fake-device.h>
-#include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/minfs/bcache.h"
@@ -58,4 +57,3 @@ TEST_F(ReadWriteTest, WriteZeroLength) {
 
 }  // namespace
 }  // namespace minfs
-

@@ -19,7 +19,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <virtio/scsi.h>

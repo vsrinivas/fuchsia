@@ -28,7 +28,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <gpt/gpt.h>
 

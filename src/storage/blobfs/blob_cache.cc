@@ -8,7 +8,6 @@
 
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 

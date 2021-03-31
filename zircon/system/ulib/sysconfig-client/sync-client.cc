@@ -23,6 +23,7 @@
 #include <array>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 
 namespace sysconfig {
 

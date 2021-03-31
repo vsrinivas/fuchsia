@@ -13,8 +13,6 @@
 #include <memory>
 #include <utility>
 
-#include <fbl/auto_call.h>
-
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"

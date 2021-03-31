@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>

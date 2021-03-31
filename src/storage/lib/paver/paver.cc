@@ -28,7 +28,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/span.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>

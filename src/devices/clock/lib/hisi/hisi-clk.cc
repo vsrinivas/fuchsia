@@ -19,7 +19,6 @@
 
 #include <dev/clk/hisi-lib/hisi-clk.h>
 #include <dev/clk/hisi-lib/hisi-gate.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 // HiSilicon has two different types of clock gates:

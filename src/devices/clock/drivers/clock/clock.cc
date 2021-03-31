@@ -6,14 +6,13 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/clock.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/devices/clock/drivers/clock/clock-bind.h"
 

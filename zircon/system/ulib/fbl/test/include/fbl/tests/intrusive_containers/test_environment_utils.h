@@ -8,8 +8,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <fbl/auto_call.h>
-
 namespace fbl {
 namespace tests {
 namespace intrusive_containers {

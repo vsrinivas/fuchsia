@@ -13,7 +13,6 @@
 
 #include <regex>
 
-#include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>

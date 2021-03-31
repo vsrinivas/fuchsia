@@ -7,7 +7,6 @@
 #include <lib/ddk/platform-defs.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 
 #include "a113-blocks.h"

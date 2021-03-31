@@ -6,10 +6,11 @@
 
 #include <fuchsia/hardware/ethernet/mac/c/banjo.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
-#include <lib/fzl/vmar-manager.h>
 #include <lib/ddk/hw/arch_ops.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
+#include <lib/fzl/vmar-manager.h>
 #include <lib/operation/ethernet.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/clock.h>
@@ -18,7 +19,6 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

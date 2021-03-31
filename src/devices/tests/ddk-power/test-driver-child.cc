@@ -18,7 +18,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/devices/tests/ddk-power/test-power-child-bind.h"
 

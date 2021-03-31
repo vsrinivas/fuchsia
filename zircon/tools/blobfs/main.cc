@@ -15,8 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include <fbl/auto_call.h>
-
 #include "blobfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/format.h"

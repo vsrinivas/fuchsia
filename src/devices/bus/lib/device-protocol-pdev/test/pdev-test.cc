@@ -4,7 +4,6 @@
 
 #include <lib/device-protocol/pdev.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "zircon/errors.h"

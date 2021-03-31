@@ -7,8 +7,6 @@
 #include <array>
 #include <cstdint>
 
-#include <fbl/auto_call.h>
-
 #include "src/devices/bus/drivers/pci/capabilities/msi.h"
 #include "src/devices/bus/drivers/pci/common.h"
 

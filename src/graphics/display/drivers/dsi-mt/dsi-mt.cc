@@ -5,13 +5,12 @@
 #include "dsi-mt.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "mt-dsi-reg.h"
 #include "src/graphics/display/drivers/dsi-mt/dsi-mt-bind.h"

@@ -17,8 +17,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <fbl/auto_call.h>
-
 #include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/metrics.h"

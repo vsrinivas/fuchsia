@@ -37,7 +37,6 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>

@@ -4,7 +4,6 @@
 
 #include "mtk-power.h"
 
-#include <fbl/auto_call.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

@@ -9,7 +9,6 @@
 #include <zircon/device/network.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 
 #include "device_interface.h"

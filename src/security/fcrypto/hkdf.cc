@@ -11,7 +11,6 @@
 #include <zircon/types.h>
 
 #include <explicit-memory/bytes.h>
-#include <fbl/auto_call.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX

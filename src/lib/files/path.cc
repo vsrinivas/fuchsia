@@ -17,8 +17,6 @@
 #include <list>
 #include <memory>
 
-#include <fbl/auto_call.h>
-
 #include "src/lib/files/directory.h"
 
 namespace files {

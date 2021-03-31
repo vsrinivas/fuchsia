@@ -5,11 +5,11 @@
 #include "mtk-spi.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <unistd.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/spi.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

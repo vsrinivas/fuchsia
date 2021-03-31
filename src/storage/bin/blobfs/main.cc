@@ -24,7 +24,6 @@
 #include <utility>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>

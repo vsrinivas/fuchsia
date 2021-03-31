@@ -15,8 +15,6 @@
 
 #include <cmath>
 
-#include <fbl/auto_call.h>
-
 #include "aml-tsensor-regs.h"
 
 namespace thermal {

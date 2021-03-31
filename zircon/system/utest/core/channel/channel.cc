@@ -12,7 +12,6 @@
 #include <set>
 #include <vector>
 
-#include <fbl/auto_call.h>
 // Needed to test API coverage of null params in GCC.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnonnull"
@@ -26,6 +25,7 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "utils.h"

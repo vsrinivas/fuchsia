@@ -19,7 +19,6 @@
 
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <lz4/lz4frame.h>
 

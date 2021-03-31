@@ -11,6 +11,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,6 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

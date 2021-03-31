@@ -5,6 +5,7 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 #include <stdlib.h>
@@ -13,9 +14,7 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
-#include <fbl/auto_call.h>
 #include <soc/aml-common/aml-registers.h>
 #include <usb/dwc2/metadata.h>
 

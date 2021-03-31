@@ -11,8 +11,6 @@
 #include <memory>
 #include <utility>
 
-#include <fbl/auto_call.h>
-
 namespace fs {
 
 ManagedVfs::ManagedVfs() : is_shutting_down_(false) {}

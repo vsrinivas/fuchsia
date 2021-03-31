@@ -18,7 +18,6 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <storage/buffer/owned_vmoid.h>
 

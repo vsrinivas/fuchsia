@@ -12,7 +12,6 @@
 
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 
 namespace fdio_cpp {

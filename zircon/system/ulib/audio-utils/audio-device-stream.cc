@@ -29,7 +29,6 @@
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 
 namespace audio {

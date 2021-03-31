@@ -10,7 +10,6 @@
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
-#include <fbl/auto_call.h>
 
 #include "intel-dsp.h"
 

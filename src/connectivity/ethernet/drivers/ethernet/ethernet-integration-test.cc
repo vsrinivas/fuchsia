@@ -38,7 +38,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
