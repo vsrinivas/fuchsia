@@ -275,7 +275,7 @@ reg_xa  .req x11
 // stack and hypervisor state, and we use the exec vector table to maintain
 // execution of the hypervisor.
 
-.align 10
+.align 11
 FUNCTION_LABEL(arm64_el2_init_table)
     /* exceptions from current EL, using SP0 */
     entry_invalid_exception
@@ -301,7 +301,7 @@ FUNCTION_LABEL(arm64_el2_init_table)
     entry_invalid_exception
     entry_invalid_exception
 
-.align 10
+.align 11
 FUNCTION_LABEL(arm64_el2_exec_table)
     /* exceptions from current EL, using SP0 */
     entry_invalid_exception
