@@ -611,8 +611,7 @@ class View {
         // Failed to read the next header.
         Fail("cannot read item header", std::move(header.error_value()));
         return;
-      } else if (auto header_error = CheckHeader(header.value(), view_->limit_ - next_item_offset);
-                 header_error.is_error()) {
+      } else if (auto header_error = CheckHeader(header.value()); header_error.is_error()) {
         Fail(header_error.error_value());
         return;
       } else {
@@ -662,8 +661,7 @@ class View {
 
     // Minimal bounds check before trying to read.
     if (capacity < sizeof(zbi_header_t)) {
-      return fitx::error(
-          Error{"storage capacity too small for ZBI container header", capacity, {}});
+      return fitx::error(Error{"container header doesn't fit. Truncated?", capacity, {}});
     }
 
     // Read and validate the container header.
@@ -675,8 +673,7 @@ class View {
     }
 
     const header_type header(std::move(header_error.value()));
-
-    auto check_error = CheckHeader(*header, capacity);
+    auto check_error = CheckHeader(*header);
     if (check_error.is_error()) {
       return fitx::error(Error{check_error.error_value(), 0, {}});
     }
@@ -694,6 +691,10 @@ class View {
 
     if (header->length % ZBI_ALIGNMENT != 0) {
       return fitx::error(Error{"container header has misaligned length", 0, {}});
+    }
+
+    if (header->length > capacity - sizeof(*header)) {
+      return fitx::error{Error{"container doesn't fit. Truncated?", 0, {}}};
     }
 
     return fitx::ok(*header);

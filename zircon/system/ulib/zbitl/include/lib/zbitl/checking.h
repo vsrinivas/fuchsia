@@ -15,7 +15,7 @@ namespace zbitl {
 
 /// The capacity argument is the maximum space left in the container,
 /// starting from the position of this header (not its payload).
-fitx::result<std::string_view> CheckHeader(const zbi_header_t& header, size_t capacity);
+fitx::result<std::string_view> CheckHeader(const zbi_header_t& header);
 
 // Modify a header so that it passes checks.  This can be used to mint new
 // items from a designated initializer that omits uninteresting bits.

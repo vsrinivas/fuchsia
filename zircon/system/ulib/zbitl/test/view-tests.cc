@@ -41,7 +41,7 @@ TEST_ITERATION(ZbitlViewStringTests, StringTestTraits)
 
 TEST(ZbitlViewStringTests, TooSmallForNextHeader) {
   // "payload" here refers to that of the entire container.
-  constexpr std::string_view kExpectedError = "payload doesn't fit. ZBI truncated?";
+  constexpr std::string_view kExpectedError = "container doesn't fit. Truncated?";
 
   // Construct a ZBI of reported size 64, but actual length 32 (just enough to
   // fit a single item header). Both accessing the container and header and
@@ -73,7 +73,7 @@ TEST(ZbitlViewStringTests, TooSmallForNextHeader) {
 TEST(ZbitlViewStringTests, TooSmallForNextPayload) {
   constexpr uint32_t kItemType = ZBI_TYPE_IMAGE_ARGS;
 
-  constexpr std::string_view kExpectedError = "payload doesn't fit. ZBI truncated?";
+  constexpr std::string_view kExpectedError = "container too short for next item payload";
 
   // Construct a ZBI of reported size 64, but whose last header reports that
   // the last item extends beyond that. Iteration should result in
