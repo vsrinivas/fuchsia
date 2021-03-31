@@ -5,72 +5,20 @@
 #ifndef FBL_AUTO_CALL_H_
 #define FBL_AUTO_CALL_H_
 
-#include <fbl/macros.h>
+#include <lib/fit/defer.h>
 
-#include <utility>
-
-// RAII class to automatically call a function-like thing as it goes out of
-// scope
-//
-// Examples:
-//
-//    extern int foo();
-//    int a;
-//
-//    auto ac = fbl::MakeAutoCall([&](){ a = 1; });
-//    auto ac2 = fbl::MakeAutoCall(foo);
-//
-//    auto func = [&](){ a = 2; };
-//    fbl::AutoCall<decltype(func)> ac3(func);
-//    fbl::AutoCall<decltype(&foo)> ac4(&foo);
-//
-//    // abort the call
-//    ac2.cancel();
 namespace fbl {
 
+// See fit::deferred_action and fit::defer.
+//
+// TODO(fxbug.dev/57355): Delete aliases once usage has been migrated over to
+// fit explicitly.
 template <typename T>
-class AutoCall {
- public:
-  constexpr explicit AutoCall(T c) : call_(std::move(c)) {}
-  ~AutoCall() { call(); }
+using AutoCall = fit::deferred_action<T>;
 
-  // move semantics
-  AutoCall(AutoCall&& c) : call_(std::move(c.call_)), active_(c.active_) { c.cancel(); }
-
-  AutoCall& operator=(AutoCall&& c) {
-    call();
-    call_ = std::move(c.call_);
-    active_ = c.active_;
-    c.cancel();
-    return *this;
-  }
-
-  // no copy
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AutoCall);
-
-  // cancel the eventual call
-  void cancel() { active_ = false; }
-
-  // call it immediately
-  void call() {
-    // Reset |active_| first to handle recursion (in the unlikely case it
-    // should happen).
-    bool active = active_;
-    cancel();
-    if (active)
-      (call_)();
-  }
-
- private:
-  T call_;
-  bool active_ = true;
-};
-
-// helper routine to create an autocall object without needing template
-// specialization
 template <typename T>
 inline AutoCall<T> MakeAutoCall(T c) {
-  return AutoCall<T>(std::move(c));
+  return fit::defer(std::move(c));
 }
 
 }  // namespace fbl

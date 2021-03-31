@@ -67,9 +67,11 @@ zx_library("fbl") {
     ]
   }
 
+  public_deps = [ "//sdk/lib/fit" ]
+
   if (is_kernel) {
     # Anything using libc++ headers in the kernel needs this.
-    public_deps = [ "//zircon/kernel/lib/ktl:headers" ]
+    public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
     if (toolchain.environment != "kernel") {
       deps = [
         "//zircon/kernel/lib/ktl",
