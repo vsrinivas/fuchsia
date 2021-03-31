@@ -1231,7 +1231,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
   struct brcmf_netbuf* pnext;
 
   zx_status_t errcode;
-  uint8_t doff, sfdoff;
+  uint8_t doff;
 
   struct brcmf_sdio_hdrinfo rd_new;
 
@@ -1349,15 +1349,16 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
     sdio_claim_host(bus->sdiodev->func1);
     errcode = brcmf_sdio_hdparse(bus, pfirst->data, &rd_new, BRCMF_SDIO_FT_SUPER);
     sdio_release_host(bus->sdiodev->func1);
-    const auto cur_len = rd_new.len_nxtfrm << 4;
-    ZX_DEBUG_ASSERT(cur_len <= std::numeric_limits<uint16_t>::max());
-    bus->cur_read.len = static_cast<uint16_t>(cur_len);
+    if (errcode == ZX_OK) {
+      const auto cur_len = rd_new.len_nxtfrm << 4;
+      ZX_DEBUG_ASSERT(cur_len <= std::numeric_limits<uint16_t>::max());
+      bus->cur_read.len = static_cast<uint16_t>(cur_len);
 
-    /* Remove superframe header, remember offset */
-    brcmf_netbuf_shrink_head(pfirst, rd_new.dat_offset);
-    sfdoff = rd_new.dat_offset;
+      /* Remove superframe header, remember offset */
+      brcmf_netbuf_shrink_head(pfirst, rd_new.dat_offset);
+    }
+
     num = 0;
-
     /* Validate all the subframe headers */
     brcmf_netbuf_list_for_every(&bus->glom, pnext) {
       /* leave when invalid subframe is found */
