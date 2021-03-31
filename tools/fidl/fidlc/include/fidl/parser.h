@@ -339,18 +339,6 @@ class Parser {
   // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
   // --- new syntax ---
 
-  // A helper function to parse any comma separated list into a vector of some
-  // type T. The items_seen pointer tracks how many item parsings were
-  // attempted. This information may be useful for callers that want to error in
-  // certain cases, like empty lists or lists with greater than N members. If
-  // such a reference were not passed in, this error logic could only account
-  // for successfully parsed list members, resulting in situations where lists
-  // with a single malformed member are mistaken for empty lists, and so on.
-  //
-  // The function does not consume the supplied closing token - the invoked must
-  // do that work after this function has successfully returned.
-  template <typename T, typename Fn, Token::Kind>
-  std::vector<std::unique_ptr<T>> ParseCommaSeparatedList(Fn, size_t*);
   std::unique_ptr<raw::TypeParameter> ParseTypeParameter();
   std::unique_ptr<raw::TypeParameterList> MaybeParseTypeParameterList();
   std::unique_ptr<raw::TypeConstraints> MaybeParseConstraints();

@@ -690,25 +690,25 @@ TEST(NewSyntaxTests, ConstraintsRecoverability) {
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
-    // error: no constraints specified
+    // errors[0]: no constraints specified
     f0 vector<uint16>:;
-    // error: no constraints specified
+    // errors[1]: no constraints specified
     f1 vector<uint16>:[];
-    // error: leading comma
+    // errors[2]: leading comma
     f2 vector<uint16>:[,16,optional];
-    // error: trailing comma
+    // errors[3]: trailing comma
     f3 vector<uint16>:[16,optional,];
-    // error: double comma
+    // errors[4]: double comma
     f4 vector<uint16>:[16,,optional];
-    // error: missing comma
+    // errors[5]: missing comma, errors[6]: unecessary brackets
     f5 vector<uint16>:[16 optional];
-    // error: unnecessary brackets
+    // errors[7]: unnecessary brackets
     f6 vector<uint16>:[16];
-    // error (x2): unnecessary brackets, missing close bracket
+    // errors[8] missing close bracket, errors[9] unnecessary brackets
     f7 vector<uint16>:[16;
-    // error (x2): invalid constant, missing list brackets
+    // errors[10]: invalid constant
     f8 vector<uint16>:1~6,optional;
-    // error (x4): leading/double/trailing comma, missing list brackets
+    // errors[11]: unexpected token
     f9 vector<uint16>:,16,,optional,;
 };
 )FIDL",
@@ -716,22 +716,19 @@ type TypeDecl = struct {
 
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 15);
-  ASSERT_ERR(errors[0], fidl::ErrEmptyConstraints);
-  ASSERT_ERR(errors[1], fidl::ErrEmptyConstraints);
-  ASSERT_ERR(errors[2], fidl::ErrLeadingComma);
-  ASSERT_ERR(errors[3], fidl::ErrTrailingComma);
-  ASSERT_ERR(errors[4], fidl::ErrConsecutiveComma);
-  ASSERT_ERR(errors[5], fidl::ErrMissingComma);
-  ASSERT_ERR(errors[6], fidl::ErrUnnecessaryConstraintBrackets);
-  ASSERT_ERR(errors[7], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[8], fidl::ErrUnnecessaryConstraintBrackets);
-  ASSERT_ERR(errors[9], fidl::ErrInvalidCharacter);
-  ASSERT_ERR(errors[10], fidl::ErrMissingConstraintBrackets);
-  ASSERT_ERR(errors[11], fidl::ErrLeadingComma);
-  ASSERT_ERR(errors[12], fidl::ErrConsecutiveComma);
-  ASSERT_ERR(errors[13], fidl::ErrTrailingComma);
-  ASSERT_ERR(errors[14], fidl::ErrMissingConstraintBrackets);
+  ASSERT_EQ(errors.size(), 12);
+  EXPECT_ERR(errors[0], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[1], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[2], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[3], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[4], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[5], fidl::ErrUnexpectedTokenOfKind);
+  EXPECT_ERR(errors[6], fidl::ErrUnnecessaryConstraintBrackets);
+  EXPECT_ERR(errors[7], fidl::ErrUnnecessaryConstraintBrackets);
+  EXPECT_ERR(errors[8], fidl::ErrUnexpectedTokenOfKind);
+  EXPECT_ERR(errors[9], fidl::ErrUnnecessaryConstraintBrackets);
+  EXPECT_ERR(errors[10], fidl::ErrInvalidCharacter);
+  EXPECT_ERR(errors[11], fidl::ErrUnexpectedToken);
 }
 
 TEST(NewSyntaxTests, DisallowUsingAlias) {
@@ -752,51 +749,48 @@ using foo = uint8;
 }
 
 // TODO(fxbug.dev/72671): this should be covered by an existing old syntax test
-// TODO(fxbug.dev/72924): fix type constructor parsing
-// TEST(NewSyntaxTests, ConstParsing) {
-//   fidl::ExperimentalFlags experimental_flags;
-//   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+TEST(NewSyntaxTests, ConstParsing) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
 
-//   TestLibrary library(R"FIDL(
-// library example;
+  TestLibrary library(R"FIDL(
+library example;
 
-// const MY_NUMBER uint32 = 11259375;
-// const MY_STRING string:10 = "ten";
-// const MY_VAR uint32 = MY_NUMBER;
-// )FIDL",
-//                       std::move(experimental_flags));
-//   ASSERT_COMPILED(library);
+const MY_NUMBER uint32 = 11259375;
+const MY_STRING string:10 = "ten";
+const MY_VAR uint32 = MY_NUMBER;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
 
-//   {
-//     auto decl = library.LookupConstant("MY_NUMBER");
-//     ASSERT_NOT_NULL(decl);
-//     ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kLiteral);
-//     ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kUint32);
-//     auto val = static_cast<const
-//     fidl::flat::NumericConstantValue<uint32_t>&>(decl->value->Value()); EXPECT_EQ(11259375,
-//     static_cast<uint32_t>(val));
-//   }
+  {
+    auto decl = library.LookupConstant("MY_NUMBER");
+    ASSERT_NOT_NULL(decl);
+    ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kLiteral);
+    ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kUint32);
+    auto val = static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(decl->value->Value());
+    EXPECT_EQ(11259375, static_cast<uint32_t>(val));
+  }
 
-//   {
-//     auto decl = library.LookupConstant("MY_STRING");
-//     ASSERT_NOT_NULL(decl);
-//     ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kLiteral);
-//     ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kString);
-//     auto val = static_cast<const fidl::flat::StringConstantValue&>(decl->value->Value());
-//     std::cout << val.value << std::endl;
-//     EXPECT_EQ(val.value, "\"ten\"");
-//   }
+  {
+    auto decl = library.LookupConstant("MY_STRING");
+    ASSERT_NOT_NULL(decl);
+    ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kLiteral);
+    ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kString);
+    auto val = static_cast<const fidl::flat::StringConstantValue&>(decl->value->Value());
+    std::cout << val.value << std::endl;
+    EXPECT_EQ(val.value, "\"ten\"");
+  }
 
-//   {
-//     auto decl = library.LookupConstant("MY_VAR");
-//     ASSERT_NOT_NULL(decl);
-//     ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kIdentifier);
-//     ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kUint32);
-//     auto val = static_cast<const
-//     fidl::flat::NumericConstantValue<uint32_t>&>(decl->value->Value()); EXPECT_EQ(11259375,
-//     static_cast<uint32_t>(val));
-//   }
-// }
+  {
+    auto decl = library.LookupConstant("MY_VAR");
+    ASSERT_NOT_NULL(decl);
+    ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kIdentifier);
+    ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kUint32);
+    auto val = static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(decl->value->Value());
+    EXPECT_EQ(11259375, static_cast<uint32_t>(val));
+  }
+}
 
 TEST(NewSyntaxTests, ConstraintsOnVectors) {
   fidl::ExperimentalFlags experimental_flags;

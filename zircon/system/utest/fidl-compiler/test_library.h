@@ -179,8 +179,12 @@ class TestLibrary final {
     for (auto& source : converted_files) {
       new_syntax_lib.AddSource(std::move(source));
     }
-    if (!new_syntax_lib.Compile())
+    if (!new_syntax_lib.Compile()) {
+      for (auto src : new_syntax_lib.all_sources_) {
+        std::cout << src->data() << std::endl;
+      }
       return false;
+    }
 
     // Compare the IR of the two compiled libraries.
     auto from_old = GenerateJSON();

@@ -37,10 +37,6 @@ constexpr ErrorDef ErrRemoveSyntaxVersion(
     "the deprecated_syntax token is only recognized when the experimental allow_new_syntax flag is "
     "enabled");
 constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
-constexpr ErrorDef ErrLeadingComma("lists must not have leading commas");
-constexpr ErrorDef ErrTrailingComma("lists must not have trailing commas");
-constexpr ErrorDef ErrConsecutiveComma("lists entries must not be empty");
-constexpr ErrorDef ErrMissingComma("list entries must be separated using commas");
 constexpr ErrorDef ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");
 constexpr ErrorDef ErrMissingConstraintBrackets(

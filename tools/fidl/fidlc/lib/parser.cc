@@ -1675,60 +1675,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(comment_tokens_), fidl::utils::Syntax::kOld);
 }
 
-template <typename T, typename Fn, Token::Kind ClosingToken>
-std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(Fn parse_element,
-                                                                size_t* items_seen) {
-  std::vector<std::unique_ptr<T>> items;
-  size_t seen = 0;
-
-  auto consume_next = [&]() {
-    switch (Peek().kind()) {
-      case Token::Kind::kSemicolon:
-      case ClosingToken: {
-        if (previous_token_.kind() == Token::Kind::kComma) {
-          Fail(ErrTrailingComma);
-          RecoverOneError();
-        }
-        return Done;
-      }
-      case Token::Kind::kComma: {
-        if (previous_token_.kind() == Token::Kind::kComma) {
-          Fail(ErrConsecutiveComma);
-        } else if (seen == 0) {
-          Fail(ErrLeadingComma);
-        }
-        seen++;
-        ConsumeToken(OfKind(Token::Kind::kComma));
-        return More;
-      }
-      default: {
-        if (seen > 0 && previous_token_.kind() != Token::Kind::kComma)
-          Fail(ErrMissingComma);
-        add(&items, parse_element);
-        seen++;
-        return More;
-      }
-    }
-  };
-
-  while (consume_next() == More) {
-    if (!Ok()) {
-      const auto result = RecoverToEndOfListItem<ClosingToken>();
-      if (result == RecoverResult::Failure && Peek().kind() != Token::Kind::kSemicolon) {
-        break;
-      }
-      if (result == RecoverResult::EndOfScope) {
-        continue;
-      }
-    }
-  }
-
-  if (items_seen != nullptr) {
-    *items_seen = seen;
-  }
-  return items;
-}
-
 std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
   ASTScope scope(this);
 
@@ -1768,21 +1714,17 @@ std::unique_ptr<raw::TypeParameterList> Parser::MaybeParseTypeParameterList() {
   }
 
   ASTScope scope(this);
-  size_t items_seen = 0;
-  auto parse_item = [&] { return ParseTypeParameter(); };
-  auto items =
-      ParseCommaSeparatedList<raw::TypeParameter, decltype(parse_item), Token::Kind::kRightAngle>(
-          parse_item, &items_seen);
-  if (!Ok())
-    return Fail();
+  std::vector<std::unique_ptr<raw::TypeParameter>> params;
+  for (;;) {
+    params.emplace_back(ParseTypeParameter());
+    if (!Ok())
+      return Fail();
+    if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
+      break;
+  }
 
   ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
-  if (items_seen == 0) {
-    Fail(ErrEmptyTypeParameterList);
-  }
-  RecoverAllErrors();
-
-  return std::make_unique<raw::TypeParameterList>(scope.GetSourceElement(), std::move(items));
+  return std::make_unique<raw::TypeParameterList>(scope.GetSourceElement(), std::move(params));
 }
 
 std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
@@ -1792,34 +1734,28 @@ std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
 
   ASTScope scope(this);
   bool bracketed = false;
-
-  if (Peek().kind() == Token::Kind::kLeftSquare) {
-    ConsumeToken(OfKind(Token::Kind::kLeftSquare));
+  std::vector<std::unique_ptr<raw::Constant>> constraints;
+  if (MaybeConsumeToken(OfKind(Token::Kind::kLeftSquare))) {
     bracketed = true;
   }
 
-  size_t items_seen = 0;
-  auto parse_item = [&] { return ParseConstant(); };
-  auto items =
-      ParseCommaSeparatedList<raw::Constant, decltype(parse_item), Token::Kind::kRightSquare>(
-          parse_item, &items_seen);
-
-  if (!Ok())
-    return Fail();
-
-  if (items_seen == 0) {
-    Fail(ErrEmptyConstraints);
+  for (;;) {
+    constraints.emplace_back(ParseConstant());
+    if (!Ok())
+      return Fail();
+    if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
+      break;
   }
+
   if (bracketed) {
     ConsumeTokenOrRecover(OfKind(Token::Kind::kRightSquare));
-    if (items_seen == 1) {
+    if (constraints.size() == 1) {
       Fail(ErrUnnecessaryConstraintBrackets);
     }
-  } else if (items_seen > 1) {
+  } else if (constraints.size() > 1) {
     Fail(ErrMissingConstraintBrackets);
   }
-  RecoverAllErrors();
-  return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(items));
+  return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(constraints));
 }
 
 std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::Kind kind) {
