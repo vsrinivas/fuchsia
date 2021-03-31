@@ -237,7 +237,6 @@ struct MyStruct {
 TEST(HandleTests, DisallowOldHandles) {
   SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kDisallowOldHandleSyntax);
 
   TestLibrary library(R"FIDL(
 library example;

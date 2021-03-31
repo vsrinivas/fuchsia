@@ -16,7 +16,6 @@ class ExperimentalFlags {
   enum class Flag : FlagSet {
     kEnableHandleRights = 0b01,
     kDisallowOldUsingSyntax = 0b10,
-    kDisallowOldHandleSyntax = 0b100,
     kAllowNewSyntax = 0b1000,
   };
 
