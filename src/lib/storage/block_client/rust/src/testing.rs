@@ -45,7 +45,7 @@ impl BlockClient for FakeBlockClient {
         for id in 1..u16::MAX {
             if !inner.vmo_registry.contains_key(&id) {
                 inner.vmo_registry.insert(id, vmo);
-                return Ok(VmoId(id));
+                return Ok(VmoId::new(id));
             }
         }
         Err(anyhow!("Out of vmoids"))
