@@ -8,9 +8,6 @@ use {
     fidl_fuchsia_io::NodeAttributes, fidl_fuchsia_mem::Buffer, fuchsia_zircon::Status,
 };
 
-/// File nodes with per-connection buffers.
-pub mod pcb;
-
 /// File nodes backed by VMOs.
 pub mod vmo;
 

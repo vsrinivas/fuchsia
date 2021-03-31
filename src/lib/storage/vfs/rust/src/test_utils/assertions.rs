@@ -373,14 +373,17 @@ macro_rules! open_get_file_proxy_assert_ok {
 macro_rules! open_get_vmo_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {{
         use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, NodeInfo, Status, Vmofile,
+            FileEvent, FileMarker, FileObject, NodeInfo, Status, Vmofile,
         };
 
         open_get_proxy_assert!($proxy, $flags, $path, FileMarker, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(Status::from_raw(s), Status::OK);
             let info = *info.expect("Empty NodeInfo");
             assert!(
-                matches!(info, NodeInfo::Vmofile(Vmofile { .. })),
+                matches!(
+                    info,
+                    NodeInfo::Vmofile(Vmofile { .. }) | NodeInfo::File(FileObject { .. })
+                ),
                 "Expected Vmofile but got {:?}",
                 info
             );
@@ -484,14 +487,17 @@ macro_rules! clone_get_file_proxy_assert_ok {
 macro_rules! clone_get_vmo_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr) => {{
         use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, NodeInfo, Status, Vmofile,
+            FileEvent, FileMarker, FileObject, NodeInfo, Status, Vmofile,
         };
 
         clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(Status::from_raw(s), Status::OK);
             let info = *info.expect("Empty NodeInfo");
             assert!(
-                matches!(info, NodeInfo::Vmofile(Vmofile { .. })),
+                matches!(
+                    info,
+                    NodeInfo::Vmofile(Vmofile { .. }) | NodeInfo::File(FileObject { .. })
+                ),
                 "Expected Vmofile but got {:?}",
                 info
             );

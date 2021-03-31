@@ -121,6 +121,7 @@ fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult>
             let size = content.len() as u64;
             let vmo = Vmo::create(size)?;
             vmo.write(&content, 0)?;
+            vmo.set_content_size(&size)?;
             Ok(NewVmo { vmo, size, capacity: size })
         })
     }
@@ -181,6 +182,7 @@ pub fn simple_init_vmo_with_capacity(
             if content.len() > 0 {
                 vmo.write(&content, 0)?;
             }
+            vmo.set_content_size(&size)?;
             Ok(NewVmo { vmo, size, capacity })
         })
     }
@@ -203,6 +205,7 @@ pub fn simple_init_vmo_resizable_with_capacity(
             if vmo_size > 0 {
                 vmo.write(&content, 0)?;
             }
+            vmo.set_content_size(&vmo_size)?;
             Ok(NewVmo { vmo, size: vmo_size, capacity })
         })
     }

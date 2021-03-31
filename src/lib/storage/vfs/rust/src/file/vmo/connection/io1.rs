@@ -27,9 +27,16 @@ use {
         VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
+    //    fuchsia_runtime::vmar_root_self,
     fuchsia_zircon::{
+        //       self as zx,
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
-        AsHandleRef, HandleBased, Rights, Status, Vmo, VmoChildOptions,
+        AsHandleRef,
+        HandleBased,
+        Rights,
+        Status,
+        Vmo,
+        VmoChildOptions,
     },
     futures::{lock::MutexGuard, stream::StreamExt},
     static_assertions::assert_eq_size,
@@ -317,6 +324,10 @@ impl FileConnection {
                     Err(status) => break Err(status),
                 };
 
+                    if let Err(status) = vmo.set_content_size(&new_size) {
+                        break Err(status);
+                    }
+
                 *size = new_size;
 
                 // We are not supposed to touch the seek position during truncation, but the
@@ -377,7 +388,7 @@ impl FileConnection {
 
     /// Returns `NodeInfo` for the VMO file.
     async fn get_node_info(&mut self) -> Result<NodeInfo, Status> {
-        if self.flags & &OPEN_FLAG_NODE_REFERENCE != 0 {
+        if self.flags & &OPEN_FLAG_NODE_REFERENCE != 0 || self.flags & OPEN_RIGHT_WRITABLE != 0 {
             Ok(NodeInfo::File(FileObject { event: None, stream: None }))
         } else {
             let vmofile = update_initialized_state! {
@@ -721,6 +732,9 @@ impl FileConnection {
                             Ok(size) => size,
                             Err(status) => break (status, 0),
                         };
+                    }
+                    if let Err(status) = vmo.set_content_size(&new_size) {
+                        break (status, 0);
                     }
                     *size = offset + actual;
                 }

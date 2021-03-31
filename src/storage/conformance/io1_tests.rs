@@ -695,8 +695,8 @@ async fn vmo_file_describe() {
     let node_info = file.describe().await.expect("describe failed");
 
     assert!(
-        matches!(node_info, io::NodeInfo::Vmofile { .. }),
-        "Expected Vmofile, instead got {:?}",
+        matches!(node_info, io::NodeInfo::File { .. } | io::NodeInfo::Vmofile { .. }),
+        "Expected File, instead got {:?}",
         node_info
     );
 }

@@ -287,13 +287,17 @@ impl TestEnvironment {
             fuchsia_component::client::AppBuilder::new(NETDUMP_URL.to_string()).args(args);
         if let Some(dump_contents) = dump_contents {
             let dir = vfs::pseudo_directory! {
-               NETDUMP_DUMPFILE_NAME => vfs::file::pcb::write_only(
-                  DUMPFILE_BUFFER_LEN,
-                  move |content| {
-                      let content = content.to_owned();
+               NETDUMP_DUMPFILE_NAME => vfs::file::vmo::write_only(
+                   vfs::file::vmo::simple_init_vmo_resizable_with_capacity(b"", DUMPFILE_BUFFER_LEN),
+                   move|vmo| {
                       let mut outer = dump_contents.lock().unwrap();
-                      let _old_content = std::mem::replace(outer.as_mut(), content.to_owned());
-                      futures::future::ok(())
+
+                      // TODO(https://fxbug.dev/73388): We should handle failures gracefully instead
+                      // of calling unwrap() here.
+                      let size = vmo.get_content_size().unwrap().try_into().unwrap();
+                      let () = outer.resize(size, 0);
+                      let () = vmo.read(&mut outer, 0).unwrap();
+                      futures::future::ready(())
                   })
             };
 

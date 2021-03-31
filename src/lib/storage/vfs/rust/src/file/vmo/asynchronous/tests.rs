@@ -1375,3 +1375,26 @@ fn get_buffer_two_vmos() {
         },
     );
 }
+
+#[test]
+fn vmo_content_size_after_write() {
+    let (consume_vmo_call_tx, consume_vmo_call_rx) = oneshot::channel::<()>();
+    let consume_vmo_call_tx = Mutex::new(Some(consume_vmo_call_tx));
+    run_server_client(
+        OPEN_RIGHT_WRITABLE,
+        write_only(simple_init_vmo_resizable(b""), move |vmo| {
+            let mut lock = consume_vmo_call_tx.lock();
+            let consume_vmo_call_tx = lock.take().unwrap();
+            assert_eq!(vmo.get_content_size().unwrap(), b"Updated content".len() as u64);
+            Box::pin(async move {
+                assert_vmo_content!(&vmo, b"Updated content");
+                consume_vmo_call_tx.send(()).unwrap();
+            })
+        }),
+        move |proxy| async move {
+            assert_write!(proxy, "Updated content");
+            drop(proxy);
+            consume_vmo_call_rx.await.unwrap();
+        },
+    );
+}
