@@ -8,6 +8,7 @@
 #include <asm-generic/errno.h>
 #include <asm-generic/mman-common.h>
 #include <asm-x86/asm/prctl.h>
+#include <asm-x86/asm/unistd_64.h>
 #include <linux/auxvec.h>
 #include <linux/mman.h>
 #include <linux/uio.h>
