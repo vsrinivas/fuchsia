@@ -68,6 +68,7 @@ impl<T> ParsedRecord<T> {
 #[derive(Debug)]
 pub struct Records<B, R: RecordsImplLayout> {
     bytes: B,
+    record_count: usize,
     context: R::Context,
 }
 
@@ -180,6 +181,7 @@ where
 /// An iterator over the records contained inside a [`Records`] instance.
 pub struct RecordsIter<'a, R: RecordsImpl<'a>> {
     bytes: &'a [u8],
+    records_left: usize,
     context: R::Context,
 }
 
@@ -694,8 +696,11 @@ where
         // - R::parse could be non-deterministic
         let c = context.clone();
         let mut b = LongLivedBuff::new(bytes.deref());
-        while next::<_, R>(&mut b, context)?.is_some() {}
-        Ok(Records { bytes, context: c })
+        let mut record_count = 0;
+        while next::<_, R>(&mut b, context)?.is_some() {
+            record_count += 1;
+        }
+        Ok(Records { bytes, record_count, context: c })
     }
 }
 
@@ -751,7 +756,11 @@ where
     ///
     /// [`R::parse_with_context`]: crate::records::RecordsImpl::parse_with_context
     pub fn iter(&'a self) -> RecordsIter<'a, R> {
-        RecordsIter { bytes: &self.bytes, context: self.context.clone_for_iter() }
+        RecordsIter {
+            bytes: &self.bytes,
+            records_left: self.record_count,
+            context: self.context.clone_for_iter(),
+        }
     }
 }
 
@@ -779,8 +788,24 @@ where
             Ok(o) => o,
             Err(_) => panic!("already-validated options should not fail to parse"),
         };
+        if result.is_some() {
+            self.records_left -= 1;
+        }
         self.bytes = bytes.into_rest();
         result
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.records_left, Some(self.records_left))
+    }
+}
+
+impl<'a, R> ExactSizeIterator for RecordsIter<'a, R>
+where
+    R: RecordsImpl<'a>,
+{
+    fn len(&self) -> usize {
+        self.records_left
     }
 }
 
@@ -1176,7 +1201,10 @@ mod test {
         ) -> Result<Records<B, R>, R::Error> {
             let c = context.clone();
             let mut b = LongLivedBuff::new(bytes.as_ref());
-            while next::<_, R>(&mut b, context)?.is_some() {}
+            let mut record_count = 0;
+            while next::<_, R>(&mut b, context)?.is_some() {
+                record_count += 1;
+            }
 
             // When we get here, we know that whatever is left in `b` is not
             // needed so we only take the amount of bytes we actually need from
@@ -1184,14 +1212,26 @@ mod test {
             // parsing with.
             let bytes_len = bytes.len();
             let b_len = b.len();
-            Ok(Records { bytes: bytes.take_front(bytes_len - b_len).unwrap(), context: c })
+            Ok(Records {
+                bytes: bytes.take_front(bytes_len - b_len).unwrap(),
+                record_count,
+                context: c,
+            })
         }
     }
 
     #[test]
     fn all_records_parsing() {
         let parsed = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]).unwrap();
-        assert_eq!(parsed.iter().count(), 4);
+        let mut iter = parsed.iter();
+        // Test ExactSizeIterator implementation.
+        assert_eq!(iter.len(), 4);
+        let mut cnt = 4;
+        while let Some(_) = iter.next() {
+            cnt -= 1;
+            assert_eq!(iter.len(), cnt);
+        }
+        assert_eq!(iter.len(), 0);
         for rec in parsed.iter() {
             check_parsed_record(rec.deref());
         }
