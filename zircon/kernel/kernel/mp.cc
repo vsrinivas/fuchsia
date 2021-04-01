@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include "kernel/mp.h"
+#include "lib/instrumentation/csan.h"
 
 #include <assert.h>
 #include <debug.h>
@@ -111,6 +112,7 @@ static void mp_sync_task(void* raw_context) {
  * The callback in |task| will always be called with |arch_blocking_disallowed()|
  * set to true.
  */
+__attribute__((no_sanitize_thread))
 void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, void* context) {
   uint num_cpus = arch_max_num_cpus();
 
@@ -193,9 +195,11 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     if (ints_disabled) {
       // Optimistically check if our task list has work without the lock.
       // mp_mbx_generic_irq will take the lock and check again.
+      data_race_begin();
       bool empty = [local_cpu]() TA_NO_THREAD_SAFETY_ANALYSIS {
         return mp.ipi_task_list[local_cpu].is_empty();
       }();
+      data_race_end();
       if (!empty) {
         bool previous_blocking_disallowed = arch_blocking_disallowed();
         arch_set_blocking_disallowed(true);

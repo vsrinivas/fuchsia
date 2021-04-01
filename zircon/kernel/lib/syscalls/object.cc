@@ -184,6 +184,7 @@ zx_status_t single_record_result(user_out_ptr<void> dst_buffer, size_t dst_buffe
 // This allows for zx_object_get_info(handle, topic, &info, sizeof(info), NULL, NULL)
 
 // zx_status_t zx_object_get_info
+__attribute__((no_sanitize_thread))
 zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr<void> _buffer,
                                 size_t buffer_size, user_out_ptr<size_t> _actual,
                                 user_out_ptr<size_t> _avail) {
@@ -609,17 +610,17 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
         stats.reschedules = cpu->stats.reschedules;
         stats.context_switches = cpu->stats.context_switches;
-        stats.irq_preempts = cpu->stats.irq_preempts;
+        // stats.irq_preempts = cpu->stats.irq_preempts;		/// KCSAN
         stats.preempts = cpu->stats.preempts;
         stats.yields = cpu->stats.yields;
         stats.ints = cpu->stats.interrupts;
-        stats.timer_ints = cpu->stats.timer_ints;
+        //stats.timer_ints = cpu->stats.timer_ints;
         stats.timers = cpu->stats.timers;
         stats.page_faults = cpu->stats.page_faults;
         stats.exceptions = 0;  // deprecated, use "kcounter" command for now.
-        stats.syscalls = cpu->stats.syscalls;
-        stats.reschedule_ipis = cpu->stats.reschedule_ipis;
-        stats.generic_ipis = cpu->stats.generic_ipis;
+        //stats.syscalls = cpu->stats.syscalls;
+        //stats.reschedule_ipis = cpu->stats.reschedule_ipis;
+        //stats.generic_ipis = cpu->stats.generic_ipis;
 
         // copy out one at a time
         if (cpu_buf.copy_array_to_user(&stats, 1, i) != ZX_OK)
@@ -651,7 +652,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       // |get_count| returns an estimate so the sum of the counts may not equal the total.
       uint64_t state_count[VmPageStateIndex(vm_page_state::COUNT_)] = {};
       for (uint32_t i = 0; i < VmPageStateIndex(vm_page_state::COUNT_); i++) {
-        state_count[i] = vm_page_t::get_count(vm_page_state(i));
+        //state_count[i] = vm_page_t::get_count(vm_page_state(i));
       }
 
       uint64_t free_heap_bytes = 0;

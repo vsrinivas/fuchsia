@@ -331,7 +331,8 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
   }
 
   // is_empty : False if the list has at least one element in it, true otherwise.
-  bool is_empty() const {
+//  /*__attribute__((no_sanitize_thread))*/ bool is_empty() const {
+  __attribute__((no_sanitize_thread)) bool is_empty() const {
     ZX_DEBUG_ASSERT(head_ != nullptr);
     return internal::is_sentinel_ptr(head_);
   }

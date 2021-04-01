@@ -123,15 +123,18 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id);
 // Allocate all of the necessary structures for all of the APs to run.
 zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count);
 
+__attribute__((no_sanitize_thread))
 static inline struct x86_percpu *x86_get_percpu(void) {
   return (struct x86_percpu *)x86_read_gs_offset64(PERCPU_DIRECT_OFFSET);
 }
 
 // Return a pointer to the high-level percpu struct for the calling CPU.
+__attribute__((no_sanitize_thread))
 static inline struct percpu *arch_get_curr_percpu(void) {
   return ((struct percpu *)x86_read_gs_offset64(PERCPU_HIGH_LEVEL_PERCPU_OFFSET));
 }
 
+__attribute__((no_sanitize_thread))
 static inline cpu_num_t arch_curr_cpu_num(void) {
   return x86_read_gs_offset32(PERCPU_CPU_NUM_OFFSET);
 }

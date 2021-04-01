@@ -848,6 +848,7 @@ ScopedThreadExceptionContext::~ScopedThreadExceptionContext() {
 }
 
 // check for any pending signals and handle them
+__attribute__((no_sanitize_thread))
 void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* gregs) {
   Thread* current_thread = Thread::Current::Get();
   if (likely(current_thread->signals() == 0)) {
@@ -980,6 +981,8 @@ void Thread::Current::Reschedule() {
   Scheduler::Reschedule();
 }
 
+// WARNING: VS: Why did this conflict? this is under the threadlock!!
+__attribute__((no_sanitize_thread))
 void PreemptionState::CheckPreemptPending() const {
   // First check preempt_pending without the expense of taking the lock.
   // At this point, interrupts could be enabled, so an interrupt handler

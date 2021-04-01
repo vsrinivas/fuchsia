@@ -24,11 +24,8 @@ source_set("kernel") {
     "wait.cc",
   ]
 
-  if (enable_kernel_csan) {
-    sources += [ "csan.cc" ]
-  }
-
   deps = [
+    ":csan",
     ":tests",
     "//sdk/lib/fit",
     "//zircon/kernel/dev/interrupt",
@@ -54,6 +51,16 @@ source_set("kernel") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]
+  public_deps = [
+    "$zx/kernel/lib/instrumentation:headers"
+  ]
+}
+
+source_set("csan") {
+#  if (enable_kernel_csan) {
+    sources = [ "csan.cc" ]
+    cflags = [ "-mllvm", "-tsan-instrument-atomics=0", "-mllvm", "-tsan-instrument-memory-accesses=0" ]
+#  }
 }
 
 source_set("tests") {

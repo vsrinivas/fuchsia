@@ -371,6 +371,7 @@ void X86PageTableBase::UpdateEntry(ConsistencyManager* cm, PageTableLevel level,
   }
 }
 
+__attribute__((no_sanitize_thread))
 void X86PageTableBase::UnmapEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
                                   volatile pt_entry_t* pte, bool was_terminal) {
   DEBUG_ASSERT(pte);

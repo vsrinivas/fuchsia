@@ -45,6 +45,7 @@ void ZeroPage(vm_page_t* p) {
   ZeroPage(pa);
 }
 
+__attribute__((no_sanitize_thread))
 bool IsZeroPage(vm_page_t* p) {
   uint64_t* base = (uint64_t*)paddr_to_physmap(p->paddr());
   for (int i = 0; i < PAGE_SIZE / (int)sizeof(uint64_t); i++) {
@@ -255,6 +256,7 @@ VmCowPages::~VmCowPages() {
   pmm_free(&list);
 }
 
+__attribute__((no_sanitize_thread))
 bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   canary_.Assert();
 

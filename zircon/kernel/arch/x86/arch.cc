@@ -343,6 +343,9 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
     write_msr_on_cpu((uint)argv[2].u, (uint)argv[3].u, argv[4].u);
   } else if (!strcmp(argv[1].str, "lbr")) {
     return LbrCtrl(argc, argv, flags);
+  } else if (!strcmp(argv[1].str, "kcsan")) {
+    extern void kcsan_enable();
+    kcsan_enable();
   } else {
     printf("unknown command\n");
     goto usage;

@@ -95,6 +95,7 @@ static void apic_error_init(void);
 static void apic_timer_init(void);
 static void apic_pmi_init(void);
 
+__attribute__((no_sanitize_thread))
 static uint32_t lapic_reg_read(size_t offset) {
   if (x2apic_enabled) {
     return read_msr32(LAPIC_X2APIC_MSR_BASE + (uint32_t)(offset >> 4));
@@ -103,6 +104,7 @@ static uint32_t lapic_reg_read(size_t offset) {
   }
 }
 
+__attribute__((no_sanitize_thread))
 static void lapic_reg_write(size_t offset, uint32_t val) {
   if (x2apic_enabled) {
     write_msr(LAPIC_X2APIC_MSR_BASE + (uint32_t)(offset >> 4), val);
@@ -111,15 +113,18 @@ static void lapic_reg_write(size_t offset, uint32_t val) {
   }
 }
 
+__attribute__((no_sanitize_thread))
 static void lapic_reg_or(size_t offset, uint32_t bits) {
   lapic_reg_write(offset, lapic_reg_read(offset) | bits);
 }
 
+__attribute__((no_sanitize_thread))
 static void lapic_reg_and(size_t offset, uint32_t bits) {
   lapic_reg_write(offset, lapic_reg_read(offset) & bits);
 }
 
 // This function must be called once on the kernel address space
+__attribute__((no_sanitize_thread))
 void apic_vm_init(void) {
   // only memory map the aperture if we're using the legacy mmio interface
   if (!x2apic_enabled) {
@@ -147,6 +152,7 @@ void apic_vm_init(void) {
 
 // Initializes the current processor's local APIC.  Should be called after
 // apic_vm_init has been called.
+__attribute__((no_sanitize_thread))
 void apic_local_init(void) {
   DEBUG_ASSERT(arch_ints_disabled());
 
@@ -184,6 +190,7 @@ void apic_local_init(void) {
   apic_pmi_init();
 }
 
+__attribute__((no_sanitize_thread))
 uint8_t apic_local_id(void) {
   uint32_t id = lapic_reg_read(LAPIC_REG_ID);
 
@@ -202,6 +209,7 @@ uint8_t apic_bsp_id(void) {
   return bsp_apic_id;
 }
 
+__attribute__((no_sanitize_thread))
 static inline void apic_wait_for_ipi_send(void) {
   while (lapic_reg_read(LAPIC_REG_IRQ_CMD_LOW) & ICR_DELIVERY_PENDING) {
   }
@@ -209,6 +217,7 @@ static inline void apic_wait_for_ipi_send(void) {
 
 // We only support physical destination modes for now
 
+__attribute__((no_sanitize_thread))
 void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_delivery_mode dm) {
   // we only support 8 bit apic ids
   DEBUG_ASSERT(dst_apic_id < UINT8_MAX);
@@ -234,6 +243,7 @@ void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_del
   }
 }
 
+__attribute__((no_sanitize_thread))
 void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
   uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
   if (x86_hypervisor_has_pv_ipi()) {

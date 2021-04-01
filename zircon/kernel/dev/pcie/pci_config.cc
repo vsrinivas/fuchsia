@@ -122,31 +122,37 @@ class PciMmioConfig : public PciConfig {
 };
 
 // MMIO Config Implementation
+__attribute__((no_sanitize_thread))
 uint8_t PciMmioConfig::Read(const PciReg8 addr) const {
   auto reg = reinterpret_cast<const volatile uint8_t*>(base_ + addr.offset());
   return *reg;
 }
 
+__attribute__((no_sanitize_thread))
 uint16_t PciMmioConfig::Read(const PciReg16 addr) const {
   auto reg = reinterpret_cast<const volatile uint16_t*>(base_ + addr.offset());
   return LE16(*reg);
 }
 
+__attribute__((no_sanitize_thread))
 uint32_t PciMmioConfig::Read(const PciReg32 addr) const {
   auto reg = reinterpret_cast<const volatile uint32_t*>(base_ + addr.offset());
   return LE32(*reg);
 }
 
+__attribute__((no_sanitize_thread))
 void PciMmioConfig::Write(PciReg8 addr, uint8_t val) const {
   auto reg = reinterpret_cast<volatile uint8_t*>(base_ + addr.offset());
   *reg = val;
 }
 
+__attribute__((no_sanitize_thread))
 void PciMmioConfig::Write(PciReg16 addr, uint16_t val) const {
   auto reg = reinterpret_cast<volatile uint16_t*>(base_ + addr.offset());
   *reg = LE16(val);
 }
 
+__attribute__((no_sanitize_thread))
 void PciMmioConfig::Write(PciReg32 addr, uint32_t val) const {
   auto reg = reinterpret_cast<volatile uint32_t*>(base_ + addr.offset());
   *reg = LE32(val);

@@ -316,10 +316,11 @@ if (is_kernel) {
           "-mllvm",
           "-tsan-instrument-func-entry-exit=0",
 
-          #"-mllvm",
-          #"-tsan-distinguish-volatile=1",
+          "-mllvm",
+          "-tsan-distinguish-volatile=1",
         ]
       }
+      configs = [ "//build/config/zircon:no_safestack" ]
     }
   }
 

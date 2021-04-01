@@ -521,6 +521,7 @@ static zx_thread_state_t ThreadLifecycleToState(ThreadState::Lifecycle lifecycle
   }
 }
 
+__attribute__((no_sanitize_thread))
 zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   canary_.Assert();
 

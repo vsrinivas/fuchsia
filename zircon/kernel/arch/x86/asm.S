@@ -21,10 +21,12 @@ FUNCTION(x86_64_context_switch)
     push_reg %r14
     push_reg %r15
 
+#if 0
 #if __has_feature(safe_stack)
     movq %gs:ZX_TLS_UNSAFE_SP_OFFSET, %rax
     movq %rcx, %gs:ZX_TLS_UNSAFE_SP_OFFSET
     movq %rax, (%rdx)
+#endif
 #endif
 
     movq %rsp,(%rdi)

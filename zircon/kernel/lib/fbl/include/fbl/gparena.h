@@ -92,7 +92,7 @@ class __OWNER(void) GPArena {
 
   // Returns a raw pointer and not a reference to an object of type T so that the memory can be
   // inspected prior to construction taking place.
-  void* Alloc() {
+  __attribute__((no_sanitize_thread)) void* Alloc() {
     // Take a local copy/snapshot of the current head node.
     // Use an acquire to match with the release in Free.
     HeadNode head_node = head_node_.load(ktl::memory_order_acquire);

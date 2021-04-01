@@ -203,6 +203,7 @@ static bool test_interrupt_preserves_preempt_pending() {
 
 // Test that resched_disable does not prevent preemption by an interrupt
 // handler.
+__attribute__((no_sanitize_thread))
 static bool test_interrupt_clears_preempt_pending() {
   BEGIN_TEST;
 

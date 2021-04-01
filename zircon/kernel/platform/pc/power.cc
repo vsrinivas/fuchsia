@@ -92,7 +92,10 @@ void platform_halt_cpu(void) {
   halted_cpus.fetch_or(cpu_num_to_mask(arch_curr_cpu_num()));
 }
 
+extern void kcsan_disable();
+
 void platform_panic_start(void) {
+  kcsan_disable();
   platform_debug_panic_start();
   arch_disable_ints();
 

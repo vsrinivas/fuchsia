@@ -33,7 +33,7 @@ static void event_signal_from_dpc_check_cpu(Dpc* dpc) {
   // DPCs allow interrupts and blocking.
   DEBUG_ASSERT(!arch_ints_disabled());
   DEBUG_ASSERT(!arch_blocking_disallowed());
-  DEBUG_ASSERT(context->expected_cpu == arch_curr_cpu_num());
+  DEBUG_ASSERT_MSG(context->expected_cpu == arch_curr_cpu_num(), "%d, %d", context->expected_cpu.load(), arch_curr_cpu_num());
 
   context->event.Signal();
 }
