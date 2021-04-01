@@ -43,6 +43,8 @@ func (r *warningRecorder) Warnf(tok core.Token, format string, a ...interface{})
 }
 
 func (ex ruleTestCase) runOverTokens(t *testing.T, instantiator func(core.Reporter) core.LintRuleOverTokens) {
+	t.Helper()
+
 	var (
 		recorder    = &warningRecorder{}
 		rule        = instantiator(recorder)
