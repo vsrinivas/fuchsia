@@ -84,7 +84,7 @@ func (ex ruleTestCase) runOverTokens(t *testing.T, instantiator func(core.Report
 		}
 		for ; i < numExpected && i < numActual; i++ {
 			if diff := cmp.Diff(expected[i], recorder.actual[i]); diff != "" {
-				t.Errorf("#%d: expected at %d:%d (`%s`), found at %d:%d (`%q`)", i,
+				t.Errorf("#%d: expected at %d:%d (`%q`), found at %d:%d (`%q`)", i,
 					expected[i].Ln, expected[i].Col, expected[i].TokContent,
 					actual[i].Ln, actual[i].Col, actual[i].TokContent)
 			}
