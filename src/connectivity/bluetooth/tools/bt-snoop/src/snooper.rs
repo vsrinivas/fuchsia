@@ -4,10 +4,10 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopPacket, Timestamp},
+    fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopPacket as FidlSnoopPacket, Timestamp},
     fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fuchsia_async as fasync,
-    fuchsia_zircon::{Channel, MessageBuf},
+    fuchsia_zircon::{self as zx, Channel, MessageBuf},
     futures::Stream,
     std::{
         fs::{File, OpenOptions},
@@ -15,8 +15,13 @@ use {
         path::PathBuf,
         pin::Pin,
         task::{Context, Poll},
-        time::{SystemTime, UNIX_EPOCH},
+        time::Duration,
     },
+};
+
+use crate::{
+    bounded_queue::{CreatedAt, SizeOf},
+    clock::TransformClock,
 };
 
 /// A wrapper type for the bitmask representing flags in the snoop channel protocol.
@@ -41,6 +46,72 @@ impl HciFlags {
             HciFlags::PACKET_TYPE_EVENT => PacketType::Event,
             _ => PacketType::Data,
         }
+    }
+}
+
+pub struct SnoopPacket {
+    pub is_received: bool,
+    pub type_: PacketType,
+    // Clock monotonic timestamp.
+    // Not exposed in the public API so that it is not used without
+    // a ClockTransformation being applied.
+    timestamp: zx::Time,
+    pub original_len: usize,
+    pub payload: Vec<u8>,
+}
+
+impl SnoopPacket {
+    pub fn new(
+        is_received: bool,
+        type_: PacketType,
+        monotonic_timestamp: zx::Time,
+        payload: Vec<u8>,
+    ) -> Self {
+        Self {
+            is_received,
+            type_,
+            timestamp: monotonic_timestamp,
+            original_len: payload.len(),
+            payload,
+        }
+    }
+
+    pub fn timestamp_parts(&self, clock_xform: Option<&zx::ClockTransformation>) -> (i64, i32) {
+        let nanos = if let Some(xform) = clock_xform {
+            self.timestamp.apply(xform)
+        } else {
+            self.timestamp
+        }
+        .into_nanos();
+        let seconds = nanos / 1_000_000_000;
+        let nanos = nanos % 1_000_000_000;
+        (seconds, nanos as i32)
+    }
+
+    /// Create a FidlSnoopPacket. Use `clock` to transform the timestamp
+    /// to the correct synthetic Clock.
+    pub fn to_fidl(&self, clock_xform: Option<&zx::ClockTransformation>) -> FidlSnoopPacket {
+        let (seconds, subsec_nanos) = self.timestamp_parts(clock_xform);
+        FidlSnoopPacket {
+            is_received: self.is_received,
+            type_: self.type_,
+            timestamp: Timestamp { subsec_nanos: subsec_nanos as u32, seconds: seconds as u64 },
+            original_len: self.original_len as u32,
+            payload: self.payload.clone(),
+        }
+    }
+}
+
+impl SizeOf for SnoopPacket {
+    fn size_of(&self) -> usize {
+        std::mem::size_of::<Self>() + self.payload.len()
+    }
+}
+
+impl CreatedAt for SnoopPacket {
+    fn created_at(&self) -> Duration {
+        let (secs, nanos) = self.timestamp_parts(None);
+        Duration::new(secs as u64, nanos as u32)
     }
 }
 
@@ -78,26 +149,13 @@ impl Snooper {
     /// Parse a raw byte buffer and return a SnoopPacket. Returns `None` if the buffer does not
     /// contain a valid packet.
     pub fn build_pkt(buf: MessageBuf) -> Option<SnoopPacket> {
-        let duration = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards");
-
         if buf.bytes().is_empty() {
             return None;
         }
         let flags = HciFlags(buf.bytes()[0]);
-
+        let time = zx::Time::get_monotonic();
         let payload = buf.bytes()[1..].to_vec();
-        let pkt = SnoopPacket {
-            is_received: flags.is_received(),
-            type_: flags.hci_packet_type(),
-            timestamp: Timestamp {
-                subsec_nanos: duration.subsec_nanos(),
-                seconds: duration.as_secs(),
-            },
-            original_len: payload.len() as u32,
-            payload,
-        };
-
-        Some(pkt)
+        Some(SnoopPacket::new(flags.is_received(), flags.hci_packet_type(), time, payload))
     }
 }
 
@@ -152,7 +210,7 @@ mod tests {
         let pkt = Snooper::build_pkt(buf).unwrap();
         assert!(pkt.is_received);
         assert!(pkt.payload.is_empty());
-        assert!(pkt.timestamp.seconds > 0);
+        assert!(pkt.timestamp.into_nanos() > 0);
         assert_eq!(pkt.type_, PacketType::Cmd);
 
         let flags = HciFlags::PACKET_TYPE_DATA;

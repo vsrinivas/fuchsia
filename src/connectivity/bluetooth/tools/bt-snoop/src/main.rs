@@ -9,14 +9,14 @@ use {
     argh::FromArgs,
     fidl::endpoints::Proxy,
     fidl::Error as FidlError,
-    fidl_fuchsia_bluetooth_snoop::{SnoopPacket, SnoopRequest, SnoopRequestStream},
+    fidl_fuchsia_bluetooth_snoop::{SnoopRequest, SnoopRequestStream},
     fidl_fuchsia_io, fuchsia_async as fasync,
     fuchsia_bluetooth::bt_fidl_status,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect, fuchsia_trace as trace,
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     futures::{
-        future::{join, ready, Join, Ready},
+        future::{join, ready, Join, Ready, TryFutureExt},
         select,
         stream::{FusedStream, FuturesUnordered, Stream, StreamExt, StreamFuture},
     },
@@ -29,9 +29,15 @@ use {
     },
 };
 
-use crate::{packet_logs::PacketLogs, snooper::Snooper, subscription_manager::SubscriptionManager};
+use crate::{
+    clock::{set_utc_clock, utc_clock_transformation},
+    packet_logs::PacketLogs,
+    snooper::{SnoopPacket, Snooper},
+    subscription_manager::SubscriptionManager,
+};
 
 mod bounded_queue;
+mod clock;
 mod packet_logs;
 mod snooper;
 mod subscription_manager;
@@ -108,7 +114,6 @@ fn handle_hci_device_event(
     match message.event {
         WatchEvent::ADD_FILE | WatchEvent::EXISTING => {
             info!("Opening snoop channel for hci device \"{}\"", path.display());
-            println!("Getting vfs event");
             match Snooper::new(path.clone()) {
                 Ok(snooper) => {
                     snoopers.push(snooper.into_future());
@@ -118,7 +123,6 @@ fn handle_hci_device_event(
                     }
                 }
                 Err(e) => {
-                    println!("failed");
                     warn!("Failed to open snoop channel for \"{}\": {}", path.display(), e);
                 }
             }
@@ -169,11 +173,15 @@ async fn handle_client_request(
 
             let control_handle = responder.control_handle().clone();
 
+            // Get UTC time if it is available.
+            let utc_xform = utc_clock_transformation();
+
             if let Some(ref device) = host_device {
                 if let Some(log) = packet_logs.get(device) {
                     responder.send(&mut bt_fidl_status!())?;
                     for packet in log.lock().await.iter_mut() {
-                        control_handle.send_on_packet(device, packet)?;
+                        control_handle
+                            .send_on_packet(device, &mut packet.to_fidl(utc_xform.as_ref()))?;
                     }
                 } else {
                     responder.send(&mut bt_fidl_status!(NotFound, "Unrecognized device name."))?;
@@ -185,7 +193,8 @@ async fn handle_client_request(
                 for device in &device_ids {
                     if let Some(log) = packet_logs.get(device) {
                         for packet in log.lock().await.iter_mut() {
-                            control_handle.send_on_packet(device, packet)?;
+                            control_handle
+                                .send_on_packet(device, &mut packet.to_fidl(utc_xform.as_ref()))?;
                         }
                     }
                 }
@@ -193,7 +202,7 @@ async fn handle_client_request(
 
             if follow {
                 subscribers
-                    .register(id, control_handle, host_device)
+                    .register(id, control_handle, utc_xform.clone(), host_device)
                     .expect("A client `Start` request should never be processed more than once");
                 client_requests.push(join(ready(id), client_stream.into_future()));
                 trace!("Client {} subscribed and waiting", id);
@@ -437,6 +446,12 @@ async fn main() {
     fs.dir("svc").add_fidl_service(|stream: SnoopRequestStream| stream);
 
     fs.take_and_serve_directory_handle().expect("serve ServiceFS directory");
+
+    // Set the UTC Clock if it becomes available.
+    fasync::Task::local(set_utc_clock().unwrap_or_else(|e| {
+        warn!("Could not set UTC Clock. Falling back to clock monotonic. Error: {}", e);
+    }))
+    .detach();
 
     match run(config, fs.fuse(), runtime_inspect).await {
         Err(err) => error!("Failed with critical error: {:?}", err),

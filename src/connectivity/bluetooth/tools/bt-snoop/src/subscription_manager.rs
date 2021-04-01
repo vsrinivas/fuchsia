@@ -4,12 +4,13 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_snoop::{SnoopControlHandle, SnoopPacket},
+    fidl_fuchsia_bluetooth_snoop::SnoopControlHandle,
+    fuchsia_zircon as zx,
     log::{trace, warn},
     std::{collections::HashMap, iter},
 };
 
-use crate::{ClientId, DeviceId};
+use crate::{snooper::SnoopPacket, ClientId, DeviceId};
 
 /// `SubscriptionManager` tracks the client subscriptions for hci devices. It allows clients to be
 /// registered and degregistered as subscribers, clean up all clients registered to
@@ -20,8 +21,9 @@ use crate::{ClientId, DeviceId};
 /// tracking state changes of subscribers and devices. This is because client and device state is
 /// not expected to change frequently.
 pub(crate) struct SubscriptionManager {
-    global: Vec<(ClientId, SnoopControlHandle)>,
-    by_device: HashMap<DeviceId, Vec<(ClientId, SnoopControlHandle)>>,
+    global: Vec<(ClientId, SnoopControlHandle, Option<zx::ClockTransformation>)>,
+    by_device:
+        HashMap<DeviceId, Vec<(ClientId, SnoopControlHandle, Option<zx::ClockTransformation>)>>,
 }
 
 impl SubscriptionManager {
@@ -38,6 +40,7 @@ impl SubscriptionManager {
         &mut self,
         id: ClientId,
         handle: SnoopControlHandle,
+        xform: Option<zx::ClockTransformation>,
         device: Option<DeviceId>,
     ) -> Result<(), Error> {
         if self.is_registered(&id) {
@@ -45,9 +48,9 @@ impl SubscriptionManager {
         }
         match device {
             Some(device) => {
-                self.by_device.entry(device).or_insert_with(Vec::new).push((id, handle));
+                self.by_device.entry(device).or_insert_with(Vec::new).push((id, handle, xform));
             }
-            None => self.global.push((id, handle)),
+            None => self.global.push((id, handle, xform)),
         }
         Ok(())
     }
@@ -57,9 +60,9 @@ impl SubscriptionManager {
     pub fn deregister(&mut self, id: &ClientId) {
         let global_subs = iter::once(&mut self.global);
         for subscribers in self.by_device.values_mut().chain(global_subs) {
-            let index = subscribers.iter().position(|(id_, _)| id_ == id);
+            let index = subscribers.iter().position(|(id_, _, _)| id_ == id);
             if let Some(i) = index {
-                let (_, handle) = subscribers.swap_remove(i);
+                let (_, handle, ..) = subscribers.swap_remove(i);
                 handle.shutdown();
             }
         }
@@ -69,7 +72,7 @@ impl SubscriptionManager {
     /// Clients with global subscriptions are not affected.
     pub fn remove_device(&mut self, device_id: &DeviceId) {
         if let Some(clients) = self.by_device.remove(device_id) {
-            for (_, handle) in clients {
+            for (_, handle, ..) in clients {
                 handle.shutdown();
             }
         }
@@ -81,7 +84,7 @@ impl SubscriptionManager {
             .values()
             .flat_map(|v| v.iter())
             .chain(self.global.iter())
-            .any(|(id_, _)| id_ == id)
+            .any(|(id_, ..)| id_ == id)
     }
 
     /// Send `packet` to all clients that are subscribed to receive it.
@@ -97,8 +100,8 @@ impl SubscriptionManager {
         let subscribers = subscribers.iter().flat_map(|subs| subs.iter()).chain(self.global.iter());
 
         // Send events to all clients that have registered interest in this device
-        for (id, handle) in subscribers {
-            if let Err(e) = handle.send_on_packet(device, packet) {
+        for (id, handle, utc_xform) in subscribers {
+            if let Err(e) = handle.send_on_packet(device, &mut packet.to_fidl(utc_xform.as_ref())) {
                 warn!("Subscriber {} failed with {}. Removing.", id, e);
                 to_cleanup.push(*id);
             } else {

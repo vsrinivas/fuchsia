@@ -9,9 +9,7 @@ use {
     },
     async_utils::PollExt,
     fidl::{endpoints::RequestStream, Error as FidlError},
-    fidl_fuchsia_bluetooth_snoop::{
-        PacketType, SnoopMarker, SnoopPacket, SnoopProxy, SnoopRequestStream, Timestamp,
-    },
+    fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopMarker, SnoopProxy, SnoopRequestStream},
     fuchsia_async::{Channel, Executor},
     fuchsia_inspect::{assert_inspect_tree, Inspector},
     fuchsia_zircon as zx,
@@ -158,18 +156,13 @@ async fn test_packet_logs_inspect() {
         }
     });
 
-    let packet = SnoopPacket {
-        is_received: false,
-        type_: PacketType::Data,
-        timestamp: Timestamp { subsec_nanos: 0, seconds: 123 },
-        original_len: 3,
-        payload: vec![3, 2, 1],
-    };
+    let ts = zx::Time::from_nanos(123 * 1_000_000_000);
+    let packet = snooper::SnoopPacket::new(false, PacketType::Data, ts, vec![3, 2, 1]);
 
     // write pcap header and packet data to expected_data buffer
     let mut expected_data = vec![];
     write_pcap_header(&mut expected_data).expect("write to succeed");
-    append_pcap(&mut expected_data, &packet).expect("write to succeed");
+    append_pcap(&mut expected_data, &packet, None).expect("write to succeed");
 
     packet_logs.log_packet(&id_1, packet).await;
 
@@ -178,7 +171,7 @@ async fn test_packet_logs_inspect() {
             logging_active_for_devices: "\"001\"",
             device_0: {
                 hci_device_name: "001",
-                byte_len: 59u64,
+                byte_len: 51u64,
                 number_of_items: 1u64,
                 data: expected_data,
             },
@@ -306,7 +299,7 @@ fn test_handle_bad_client_request() {
     let (_proxy, req_stream) = fidl_endpoints();
     let handle = req_stream.control_handle();
     let request = (id, (err, req_stream));
-    subscribers.register(id, handle, None).unwrap();
+    subscribers.register(id, handle, None, None).unwrap();
     assert!(subscribers.is_registered(&id));
     pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     assert!(!subscribers.is_registered(&id));
@@ -316,7 +309,7 @@ fn test_handle_bad_client_request() {
     let (_proxy, req_stream) = fidl_endpoints();
     let handle = req_stream.control_handle();
     let request = (id, (err, req_stream));
-    subscribers.register(id, handle, None).unwrap();
+    subscribers.register(id, handle, None, None).unwrap();
     assert!(subscribers.is_registered(&id));
     pump_handle_client_request(&mut exec, request, &mut requests, &mut subscribers, &mut logs);
     assert!(!subscribers.is_registered(&id));
