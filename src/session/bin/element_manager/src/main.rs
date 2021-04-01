@@ -68,35 +68,9 @@ mod tests {
         element_management::{ElementManager, SimpleElementManager},
         fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_element as felement, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
-        futures::TryStreamExt,
         lazy_static::lazy_static,
         test_util::Counter,
     };
-
-    /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
-    /// The provided `request_handler` is notified when an incoming request is received.
-    ///
-    /// # Parameters
-    /// - `request_handler`: A function that is called with incoming requests to the spawned
-    ///                      `Realm` server.
-    /// # Returns
-    /// A `RealmProxy` to the spawned server.
-    fn spawn_realm_server<F: 'static>(request_handler: F) -> fsys2::RealmProxy
-    where
-        F: Fn(fsys2::RealmRequest) + Send,
-    {
-        let (realm_proxy, mut realm_stream) = create_proxy_and_stream::<fsys2::RealmMarker>()
-            .expect("Failed to create Realm proxy and stream.");
-
-        fasync::Task::spawn(async move {
-            while let Some(realm_request) = realm_stream.try_next().await.unwrap() {
-                request_handler(realm_request);
-            }
-        })
-        .detach();
-
-        realm_proxy
-    }
 
     /// Spawns a local `Manager` server.
     ///
@@ -132,20 +106,23 @@ mod tests {
 
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection: _, decl, responder } => {
-                assert_eq!(decl.url.unwrap(), component_url);
-                CREATE_CHILD_CALL_COUNT.inc();
-                let _ = responder.send(&mut Ok(()));
+        let realm = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys2::RealmRequest::CreateChild { collection: _, decl, responder } => {
+                    assert_eq!(decl.url.unwrap(), component_url);
+                    CREATE_CHILD_CALL_COUNT.inc();
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                    BIND_CHILD_CALL_COUNT.inc();
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => {
+                    panic!("Realm handler received unexpected request");
+                }
             }
-            fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                BIND_CHILD_CALL_COUNT.inc();
-                let _ = responder.send(&mut Ok(()));
-            }
-            _ => {
-                panic!("Realm server received unexpected request");
-            }
-        });
+        })
+        .unwrap();
 
         let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components");

@@ -397,7 +397,7 @@ mod tests {
     use {
         super::SessionManager,
         fidl::encoding::Decodable,
-        fidl::endpoints::{create_endpoints, create_proxy_and_stream},
+        fidl::endpoints::{create_endpoints, create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
         fidl_fuchsia_input_report::InputDeviceMarker,
         fidl_fuchsia_session::{
@@ -408,31 +408,6 @@ mod tests {
         futures::prelude::*,
         matches::assert_matches,
     };
-
-    /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
-    /// The provided `request_handler` is notified when an incoming request is received.
-    ///
-    /// # Parameters
-    /// - `request_handler`: A function which is called with incoming requests to the spawned
-    ///                      `Realm` server.
-    /// # Returns
-    /// A `RealmProxy` to the spawned server.
-    fn spawn_realm_server<F: 'static>(mut request_handler: F) -> fsys::RealmProxy
-    where
-        F: FnMut(fsys::RealmRequest) + Send,
-    {
-        let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys::RealmMarker>()
-            .expect("Failed to create realm proxy and server.");
-
-        fasync::Task::spawn(async move {
-            while let Some(realm_request) = realm_server.try_next().await.unwrap() {
-                request_handler(realm_request);
-            }
-        })
-        .detach();
-
-        realm_proxy
-    }
 
     fn serve_session_manager_services(
         session_manager: SessionManager,
@@ -471,7 +446,7 @@ mod tests {
     async fn test_launch() {
         let session_url = "session";
 
-        let realm = spawn_realm_server(move |realm_request| {
+        let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
                 fsys::RealmRequest::DestroyChild { child: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
@@ -483,11 +458,10 @@ mod tests {
                 fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                _ => {
-                    assert!(false);
-                }
+                _ => panic!("Realm handler received an unexpected request"),
             };
-        });
+        })
+        .unwrap();
 
         let session_manager = SessionManager::new(realm);
         let (launcher, _restarter) = serve_session_manager_services(session_manager);
@@ -506,7 +480,7 @@ mod tests {
     async fn test_restart() {
         let session_url = "session";
 
-        let realm = spawn_realm_server(move |realm_request| {
+        let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
                 fsys::RealmRequest::DestroyChild { child: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
@@ -518,11 +492,10 @@ mod tests {
                 fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                _ => {
-                    assert!(false);
-                }
+                _ => panic!("Realm handler received an unexpected request"),
             };
-        });
+        })
+        .unwrap();
 
         let session_manager = SessionManager::new(realm);
         let (launcher, restarter) = serve_session_manager_services(session_manager);
@@ -542,9 +515,10 @@ mod tests {
     /// Verifies that Launcher.Restart return an error if there is no running existing session.
     #[fasync::run_until_stalled(test)]
     async fn test_restart_error_not_running() {
-        let realm = spawn_realm_server(move |_realm_request| {
-            assert!(false);
-        });
+        let realm = spawn_stream_handler(move |_realm_request| async move {
+            panic!("Realm should not receive any requests as there is no session to launch")
+        })
+        .unwrap();
 
         let session_manager = SessionManager::new(realm);
         let (_launcher, restarter) = serve_session_manager_services(session_manager);

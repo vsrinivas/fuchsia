@@ -262,36 +262,7 @@ pub fn event_time_or_now(event_time: Option<i64>) -> EventTime {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
-
-    /// Spawns a local `fidl_input_report::InputDevice` server, and returns a proxy to the
-    /// spawned server.
-    /// The provided `request_handler` is notified when an incoming request is received.
-    ///
-    /// # Parameters
-    /// - `request_handler`: A function which is called with incoming requests to the spawned
-    ///                      `InputDevice` server.
-    /// # Returns
-    /// A `InputDeviceProxy` to the spawned server.
-    fn spawn_input_device_server<F: 'static>(
-        request_handler: F,
-    ) -> fidl_input_report::InputDeviceProxy
-    where
-        F: Fn(fidl_input_report::InputDeviceRequest) + Send,
-    {
-        let (input_device_proxy, mut input_device_server) =
-            create_proxy_and_stream::<fidl_input_report::InputDeviceMarker>()
-                .expect("Failed to create InputDevice proxy and server.");
-
-        fasync::Task::spawn(async move {
-            while let Some(input_device_request) = input_device_server.try_next().await.unwrap() {
-                request_handler(input_device_request);
-            }
-        })
-        .detach();
-
-        input_device_proxy
-    }
+    use {super::*, fidl::endpoints::spawn_stream_handler};
 
     #[test]
     fn max_event_time() {
@@ -309,8 +280,8 @@ mod tests {
     // button device exists.
     #[fasync::run_singlethreaded(test)]
     async fn media_buttons_input_device_exists() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -331,10 +302,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
     }
@@ -343,8 +314,8 @@ mod tests {
     // button device doesn't exist.
     #[fasync::run_singlethreaded(test)]
     async fn media_buttons_input_device_doesnt_exists() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -364,10 +335,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(!is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
     }
@@ -375,8 +346,8 @@ mod tests {
     // Tests that is_device_type() returns true for InputDeviceType::Mouse when a mouse exists.
     #[fasync::run_singlethreaded(test)]
     async fn mouse_input_device_exists() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -400,10 +371,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Mouse).await);
     }
@@ -412,8 +383,8 @@ mod tests {
     // exist.
     #[fasync::run_singlethreaded(test)]
     async fn mouse_input_device_doesnt_exist() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -425,10 +396,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(!is_device_type(&input_device_proxy, InputDeviceType::Mouse).await);
     }
@@ -437,8 +408,8 @@ mod tests {
     // exists.
     #[fasync::run_singlethreaded(test)]
     async fn touch_input_device_exists() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -459,10 +430,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Touch).await);
     }
@@ -471,8 +442,8 @@ mod tests {
     // exists.
     #[fasync::run_singlethreaded(test)]
     async fn touch_input_device_doesnt_exist() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -484,10 +455,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(!is_device_type(&input_device_proxy, InputDeviceType::Touch).await);
     }
@@ -496,8 +467,8 @@ mod tests {
     // exists.
     #[fasync::run_singlethreaded(test)]
     async fn keyboard_input_device_exists() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -517,10 +488,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Keyboard).await);
     }
@@ -529,8 +500,8 @@ mod tests {
     // exists.
     #[fasync::run_singlethreaded(test)]
     async fn keyboard_input_device_doesnt_exist() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -542,10 +513,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(!is_device_type(&input_device_proxy, InputDeviceType::Keyboard).await);
     }
@@ -553,8 +524,8 @@ mod tests {
     // Tests that is_device_type() returns true for every input device type that exists.
     #[fasync::run_singlethreaded(test)]
     async fn no_input_device_match() {
-        let input_device_proxy =
-            spawn_input_device_server(move |input_device_request| match input_device_request {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                     let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
@@ -604,10 +575,10 @@ mod tests {
                         ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
-                _ => {
-                    assert!(false);
-                }
-            });
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
 
         assert!(is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Mouse).await);

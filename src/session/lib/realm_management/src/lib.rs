@@ -101,38 +101,13 @@ pub async fn destroy_child_component(
 mod tests {
     use {
         super::{bind_child_component, create_child_component, destroy_child_component},
-        fidl::endpoints::create_proxy_and_stream,
+        fidl::endpoints::spawn_stream_handler,
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
         fuchsia_async as fasync,
         futures::prelude::*,
         lazy_static::lazy_static,
         test_util::Counter,
     };
-
-    /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
-    /// The provided `request_handler` is notified when an incoming request is received.
-    ///
-    /// # Parameters
-    /// - `request_handler`: A function that is called with incoming requests to the spawned
-    ///                      `Realm` server.
-    /// # Returns
-    /// A `RealmProxy` to the spawned server.
-    fn spawn_realm_server<F: 'static>(request_handler: F) -> fsys::RealmProxy
-    where
-        F: Fn(fsys::RealmRequest) + Send,
-    {
-        let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys::RealmMarker>()
-            .expect("Failed to create realm proxy and server.");
-
-        fasync::Task::spawn(async move {
-            while let Some(realm_request) = realm_server.try_next().await.unwrap() {
-                request_handler(realm_request);
-            }
-        })
-        .detach();
-
-        realm_proxy
-    }
 
     /// Spawns a local handler for the given `fidl_fuchsia_io::Directory` request stream.
     /// The provided `request_handler` is notified when an incoming request is received.
@@ -162,18 +137,19 @@ mod tests {
         let child_url = "test_url";
         let child_collection = "test_collection";
 
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::CreateChild { collection, decl, responder } => {
-                assert_eq!(decl.name.unwrap(), child_name);
-                assert_eq!(decl.url.unwrap(), child_url);
-                assert_eq!(&collection.name, child_collection);
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::CreateChild { collection, decl, responder } => {
+                    assert_eq!(decl.name.unwrap(), child_name);
+                    assert_eq!(decl.url.unwrap(), child_url);
+                    assert_eq!(&collection.name, child_collection);
 
-                let _ = responder.send(&mut Ok(()));
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         assert!(create_child_component(child_name, child_url, child_collection, &realm_proxy)
             .await
@@ -184,14 +160,15 @@ mod tests {
     /// `create_child`.
     #[fasync::run_until_stalled(test)]
     async fn create_child_success() {
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Ok(()));
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         assert!(create_child_component("", "", "", &realm_proxy).await.is_ok());
     }
@@ -200,14 +177,15 @@ mod tests {
     /// `create_child`.
     #[fasync::run_until_stalled(test)]
     async fn create_child_error() {
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Err(fcomponent::Error::Internal));
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                    let _ = responder.send(&mut Err(fcomponent::Error::Internal));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         assert!(create_child_component("", "", "", &realm_proxy).await.is_err());
     }
@@ -218,17 +196,18 @@ mod tests {
         let child_name = "test_child";
         let child_collection = "test_collection";
 
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
-                assert_eq!(child.name, child_name);
-                assert_eq!(child.collection, Some(child_collection.to_string()));
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
+                    assert_eq!(child.name, child_name);
+                    assert_eq!(child.collection, Some(child_collection.to_string()));
 
-                let _ = responder.send(&mut Ok(()));
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         assert!(bind_child_component(child_name, child_collection, &realm_proxy).await.is_ok());
     }
@@ -237,14 +216,15 @@ mod tests {
     /// `bind_child`.
     #[fasync::run_until_stalled(test)]
     async fn bind_child_success() {
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                let _ = responder.send(&mut Ok(()));
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         assert!(bind_child_component("", "", &realm_proxy).await.is_ok());
     }
@@ -262,28 +242,27 @@ mod tests {
                 CALL_COUNT.inc();
                 assert_eq!(fake_capability_path, "fake_capability_path");
             }
-            _ => {
-                assert!(false);
-            }
+            _ => panic!("Directory handler received an unexpected request"),
         };
 
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::BindChild {
-                child: _,
-                exposed_dir: exposed_dir_server,
-                responder,
-            } => {
-                CALL_COUNT.inc();
-                spawn_directory_server(
-                    exposed_dir_server.into_stream().unwrap(),
-                    directory_request_handler,
-                );
-                let _ = responder.send(&mut Ok(()));
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::BindChild {
+                    child: _,
+                    exposed_dir: exposed_dir_server,
+                    responder,
+                } => {
+                    CALL_COUNT.inc();
+                    spawn_directory_server(
+                        exposed_dir_server.into_stream().unwrap(),
+                        directory_request_handler,
+                    );
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         let exposed_dir = bind_child_component("", "", &realm_proxy).await.unwrap();
 
@@ -316,14 +295,15 @@ mod tests {
     /// `bind_child`.
     #[fasync::run_until_stalled(test)]
     async fn bind_child_error() {
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                let _ = responder.send(&mut Err(fcomponent::Error::Internal));
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                    let _ = responder.send(&mut Err(fcomponent::Error::Internal));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         assert!(bind_child_component("", "", &realm_proxy).await.is_err());
     }
@@ -334,17 +314,18 @@ mod tests {
         let child_name = "test_child";
         let child_collection = "test_collection";
 
-        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
-            fsys::RealmRequest::DestroyChild { child, responder } => {
-                assert_eq!(child.name, child_name);
-                assert_eq!(child.collection, Some(child_collection.to_string()));
+        let realm_proxy = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys::RealmRequest::DestroyChild { child, responder } => {
+                    assert_eq!(child.name, child_name);
+                    assert_eq!(child.collection, Some(child_collection.to_string()));
 
-                let _ = responder.send(&mut Ok(()));
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
         assert!(destroy_child_component(child_name, child_collection, &realm_proxy).await.is_ok());
     }

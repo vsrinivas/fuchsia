@@ -173,53 +173,33 @@ async fn set_session(
 mod tests {
     use {
         super::{set_session, zx, SESSION_CHILD_COLLECTION, SESSION_NAME},
-        fidl::endpoints::create_proxy_and_stream,
+        fidl::endpoints::spawn_stream_handler,
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-        futures::prelude::*,
+        lazy_static::lazy_static,
+        std::sync::mpsc,
+        test_util::Counter,
     };
-
-    /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
-    /// The provided `request_handler` is notified when an incoming request is received.
-    ///
-    /// # Parameters
-    /// - `request_handler`: A function which is called with incoming requests to the spawned
-    ///                      `Realm` server.
-    /// # Returns
-    /// A `RealmProxy` to the spawned server.
-    fn spawn_realm_server<F: 'static>(mut request_handler: F) -> fsys::RealmProxy
-    where
-        F: FnMut(fsys::RealmRequest) + Send,
-    {
-        let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys::RealmMarker>()
-            .expect("Failed to create realm proxy and server.");
-
-        fasync::Task::spawn(async move {
-            while let Some(realm_request) = realm_server.try_next().await.unwrap() {
-                request_handler(realm_request);
-            }
-        })
-        .detach();
-
-        realm_proxy
-    }
 
     #[fasync::run_singlethreaded(test)]
     async fn set_session_calls_realm_methods_in_appropriate_order() {
-        let session_url = "session";
-        // The number of realm calls which have been made so far.
-        let mut num_realm_requests: i32 = 0;
+        lazy_static! {
+            // The number of realm calls which have been made so far.
+            static ref NUM_REALM_REQUESTS: Counter = Counter::new(0);
+        }
 
-        let realm = spawn_realm_server(move |realm_request| {
+        let session_url = "session";
+
+        let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
                 fsys::RealmRequest::DestroyChild { child, responder } => {
-                    assert_eq!(num_realm_requests, 0);
+                    assert_eq!(NUM_REALM_REQUESTS.get(), 0);
                     assert_eq!(child.collection, Some(SESSION_CHILD_COLLECTION.to_string()));
                     assert_eq!(child.name, SESSION_NAME);
 
                     let _ = responder.send(&mut Ok(()));
                 }
                 fsys::RealmRequest::CreateChild { collection, decl, responder } => {
-                    assert_eq!(num_realm_requests, 1);
+                    assert_eq!(NUM_REALM_REQUESTS.get(), 1);
                     assert_eq!(decl.url.unwrap(), session_url);
                     assert_eq!(decl.name.unwrap(), SESSION_NAME);
                     assert_eq!(&collection.name, SESSION_CHILD_COLLECTION);
@@ -227,18 +207,17 @@ mod tests {
                     let _ = responder.send(&mut Ok(()));
                 }
                 fsys::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
-                    assert_eq!(num_realm_requests, 2);
+                    assert_eq!(NUM_REALM_REQUESTS.get(), 2);
                     assert_eq!(child.collection, Some(SESSION_CHILD_COLLECTION.to_string()));
                     assert_eq!(child.name, SESSION_NAME);
 
                     let _ = responder.send(&mut Ok(()));
                 }
-                _ => {
-                    assert!(false);
-                }
+                _ => panic!("Realm handler received an unexpected request"),
             };
-            num_realm_requests += 1;
-        });
+            NUM_REALM_REQUESTS.inc();
+        })
+        .unwrap();
 
         assert!(set_session(session_url, &realm).await.is_ok());
     }
@@ -246,28 +225,29 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn set_session_returns_channel_bound_to_exposed_dir() {
         let session_url = "session";
-        let (exposed_dir_server_end_sender, exposed_dir_server_end_receiver) =
-            std::sync::mpsc::channel();
+        let (exposed_dir_server_end_sender, exposed_dir_server_end_receiver) = mpsc::channel();
 
-        let realm = spawn_realm_server(move |realm_request| {
-            match realm_request {
-                fsys::RealmRequest::DestroyChild { responder, .. } => {
-                    let _ = responder.send(&mut Ok(()));
+        let realm = spawn_stream_handler(move |realm_request| {
+            let exposed_dir_server_end_sender = exposed_dir_server_end_sender.clone();
+            async move {
+                match realm_request {
+                    fsys::RealmRequest::DestroyChild { responder, .. } => {
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    fsys::RealmRequest::CreateChild { responder, .. } => {
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    fsys::RealmRequest::BindChild { exposed_dir, responder, .. } => {
+                        exposed_dir_server_end_sender
+                            .send(exposed_dir)
+                            .expect("Failed to relay `exposed_dir`");
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    _ => panic!("Realm handler received an unexpected request"),
                 }
-                fsys::RealmRequest::CreateChild { responder, .. } => {
-                    let _ = responder.send(&mut Ok(()));
-                }
-                fsys::RealmRequest::BindChild { exposed_dir, responder, .. } => {
-                    exposed_dir_server_end_sender
-                        .send(exposed_dir)
-                        .expect("Failed to relay `exposed_dir`");
-                    let _ = responder.send(&mut Ok(()));
-                }
-                _ => {
-                    assert!(false);
-                }
-            };
-        });
+            }
+        })
+        .unwrap();
 
         let exposed_dir_client_end = match set_session(session_url, &realm).await {
             Ok(exposed_dir_client_end) => exposed_dir_client_end,

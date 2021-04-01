@@ -660,7 +660,7 @@ impl ElementManager for SimpleElementManager {
 mod tests {
     use {
         super::{ElementManager, ElementManagerError, SimpleElementManager},
-        fidl::endpoints::{create_proxy_and_stream, ServerEnd},
+        fidl::endpoints::{spawn_stream_handler, ServerEnd},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
         fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2,
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -668,31 +668,6 @@ mod tests {
         lazy_static::lazy_static,
         test_util::Counter,
     };
-
-    /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
-    /// The provided `request_handler` is notified when an incoming request is received.
-    ///
-    /// # Parameters
-    /// - `request_handler`: A function which is called with incoming requests to the spawned
-    ///                      `Realm` server.
-    /// # Returns
-    /// A `RealmProxy` to the spawned server.
-    fn spawn_realm_server<F: 'static>(request_handler: F) -> fsys2::RealmProxy
-    where
-        F: Fn(fsys2::RealmRequest) + Send,
-    {
-        let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys2::RealmMarker>()
-            .expect("Failed to create realm proxy and server.");
-
-        fasync::Task::spawn(async move {
-            while let Some(realm_request) = realm_server.try_next().await.unwrap() {
-                request_handler(realm_request);
-            }
-        })
-        .detach();
-
-        realm_proxy
-    }
 
     fn spawn_directory_server<F: 'static>(
         mut directory_server: fio::DirectoryRequestStream,
@@ -706,32 +681,6 @@ mod tests {
             }
         })
         .detach();
-    }
-
-    /// Spawns a local `fidl_fuchsia_sys::Launcher` server, and returns a proxy to the spawned
-    /// server. The provided `request_handler` is notified when an incoming request is received.
-    ///
-    /// # Parameters
-    /// - `request_handler`: A function which is called with incoming requests to the spawned
-    ///                      `Launcher` server.
-    /// # Returns
-    /// A `LauncherProxy` to the spawned server.
-    fn spawn_launcher_server<F: 'static>(request_handler: F) -> fsys::LauncherProxy
-    where
-        F: Fn(fsys::LauncherRequest) + Send,
-    {
-        let (launcher_proxy, mut launcher_server) =
-            create_proxy_and_stream::<fsys::LauncherMarker>()
-                .expect("Failed to create launcher proxy and server.");
-
-        fasync::Task::spawn(async move {
-            while let Some(launcher_request) = launcher_server.try_next().await.unwrap() {
-                request_handler(launcher_request);
-            }
-        })
-        .detach();
-
-        launcher_proxy
     }
 
     /// Tests that launching a component with a cmx file successfully returns an Element
@@ -748,12 +697,10 @@ mod tests {
         let child_name = "child";
         let child_collection = "elements";
 
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            _ => {
-                // CFv1 elements do not use the realm so fail the test if it is requested.
-                assert!(false);
-            }
-        });
+        let realm = spawn_stream_handler(move |_realm_request| async move {
+            panic!("Realm should not receive any requests as it's only used for v2 components")
+        })
+        .unwrap();
 
         let (directory_open_sender, directory_open_receiver) = channel::<String>(1);
         let directory_request_handler = move |directory_request| match directory_request {
@@ -764,32 +711,36 @@ mod tests {
                 })
                 .detach()
             }
-            _ => {
-                assert!(false);
-            }
+            _ => panic!("Directory handler received an unexpected request"),
         };
 
         let (create_component_sender, create_component_receiver) = channel::<()>(ELEMENT_COUNT);
-        let launcher = spawn_launcher_server(move |launcher_request| match launcher_request {
-            fsys::LauncherRequest::CreateComponent {
-                launch_info: fsys::LaunchInfo { url, directory_request, .. },
-                ..
-            } => {
-                assert_eq!(url, component_url);
-                let mut result_sender = create_component_sender.clone();
-                spawn_directory_server(
-                    ServerEnd::<fio::DirectoryMarker>::new(directory_request.unwrap())
-                        .into_stream()
-                        .unwrap(),
-                    directory_request_handler.clone(),
-                );
-                fasync::Task::spawn(async move {
-                    let _ = result_sender.send(()).await;
-                    CREATE_COMPONENT_CALL_COUNT.inc();
-                })
-                .detach()
+        let launcher = spawn_stream_handler(move |launcher_request| {
+            let directory_request_handler = directory_request_handler.clone();
+            let mut result_sender = create_component_sender.clone();
+            async move {
+                match launcher_request {
+                    fsys::LauncherRequest::CreateComponent {
+                        launch_info: fsys::LaunchInfo { url, directory_request, .. },
+                        ..
+                    } => {
+                        assert_eq!(url, component_url);
+                        spawn_directory_server(
+                            ServerEnd::<fio::DirectoryMarker>::new(directory_request.unwrap())
+                                .into_stream()
+                                .unwrap(),
+                            directory_request_handler,
+                        );
+                        fasync::Task::spawn(async move {
+                            let _ = result_sender.send(()).await;
+                            CREATE_COMPONENT_CALL_COUNT.inc();
+                        })
+                        .detach()
+                    }
+                }
             }
-        });
+        })
+        .unwrap();
 
         let element_manager =
             SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
@@ -839,25 +790,27 @@ mod tests {
 
         let child_collection = "elements";
 
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            _ => {
-                // CFv1 elements do not use the realm so fail the test if it is requested.
-                assert!(false);
-            }
-        });
+        let realm = spawn_stream_handler(move |_realm_request| async move {
+            panic!("Realm should not receive any requests as it's only used for v2 components")
+        })
+        .unwrap();
 
-        let launcher = spawn_launcher_server(move |launcher_request| match launcher_request {
-            fsys::LauncherRequest::CreateComponent {
-                launch_info: fsys::LaunchInfo { .. }, ..
-            } => {
-                let mut result_sender = sender.clone();
-                fasync::Task::spawn(async move {
-                    let _ = result_sender.send(()).await.expect("Could not create component.");
-                    CREATE_COMPONENT_CALL_COUNT.inc();
-                })
-                .detach()
+        let launcher = spawn_stream_handler(move |launcher_request| {
+            let mut result_sender = sender.clone();
+            async move {
+                match launcher_request {
+                    fsys::LauncherRequest::CreateComponent {
+                        launch_info: fsys::LaunchInfo { .. },
+                        ..
+                    } => fasync::Task::spawn(async move {
+                        let _ = result_sender.send(()).await.expect("Could not create component.");
+                        CREATE_COMPONENT_CALL_COUNT.inc();
+                    })
+                    .detach(),
+                }
             }
-        });
+        })
+        .unwrap();
 
         let element_manager =
             SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
@@ -901,12 +854,10 @@ mod tests {
 
         const ELEMENT_COUNT: usize = 1;
 
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            _ => {
-                // CFv1 elements do not use the realm so fail the test if it is requested.
-                assert!(false);
-            }
-        });
+        let realm = spawn_stream_handler(move |_realm_request| async move {
+            panic!("Realm should not receive any requests as it's only used for v2 components")
+        })
+        .unwrap();
 
         // Spawn a directory server from which the element can connect to services.
         let (directory_open_sender, directory_open_receiver) = channel::<String>(1);
@@ -918,9 +869,7 @@ mod tests {
                 })
                 .detach()
             }
-            _ => {
-                assert!(false);
-            }
+            _ => panic!("Directory handler received an unexpected request"),
         };
 
         let (dir_client, dir_server) = fidl::Channel::create().unwrap();
@@ -939,33 +888,38 @@ mod tests {
         };
 
         let (create_component_sender, create_component_receiver) = channel::<()>(ELEMENT_COUNT);
-        let launcher = spawn_launcher_server(move |launcher_request| match launcher_request {
-            fsys::LauncherRequest::CreateComponent {
-                launch_info: fsys::LaunchInfo { url, additional_services, .. },
-                ..
-            } => {
-                assert_eq!(url, component_url);
+        let launcher = spawn_stream_handler(move |launcher_request| {
+            let mut result_sender = create_component_sender.clone();
+            async move {
+                match launcher_request {
+                    fsys::LauncherRequest::CreateComponent {
+                        launch_info: fsys::LaunchInfo { url, additional_services, .. },
+                        ..
+                    } => {
+                        assert_eq!(url, component_url);
 
-                assert!(additional_services.is_some());
-                let services = additional_services.unwrap();
-                assert!(services.host_directory.is_some());
-                let host_directory = services.host_directory.unwrap();
+                        assert!(additional_services.is_some());
+                        let services = additional_services.unwrap();
+                        assert!(services.host_directory.is_some());
+                        let host_directory = services.host_directory.unwrap();
 
-                assert_eq!(vec![service_name.to_string()], services.names);
+                        assert_eq!(vec![service_name.to_string()], services.names);
 
-                // Connect to the service hosted in `additional_services.host_directory`.
-                let (_client_channel, server_channel) = zx::Channel::create().unwrap();
-                fdio::service_connect_at(&host_directory, service_name, server_channel)
-                    .expect("could not connect to service");
+                        // Connect to the service hosted in `additional_services.host_directory`.
+                        let (_client_channel, server_channel) = zx::Channel::create().unwrap();
+                        fdio::service_connect_at(&host_directory, service_name, server_channel)
+                            .expect("could not connect to service");
 
-                let mut result_sender = create_component_sender.clone();
-                fasync::Task::spawn(async move {
-                    let _ = result_sender.send(()).await;
-                    CREATE_COMPONENT_CALL_COUNT.inc();
-                })
-                .detach()
+                        fasync::Task::spawn(async move {
+                            let _ = result_sender.send(()).await;
+                            CREATE_COMPONENT_CALL_COUNT.inc();
+                        })
+                        .detach()
+                    }
+                }
             }
-        });
+        })
+        .unwrap();
 
         let element_manager =
             SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
@@ -1009,35 +963,38 @@ mod tests {
                 })
                 .detach()
             }
-            _ => {
-                assert!(false);
-            }
+            _ => panic!("Directory handler received an unexpected request"),
         };
 
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
-                assert_eq!(decl.url.unwrap(), component_url);
-                assert_eq!(decl.name.unwrap(), child_name);
-                assert_eq!(&collection.name, child_collection);
+        let realm = spawn_stream_handler(move |realm_request| {
+            let directory_request_handler = directory_request_handler.clone();
+            async move {
+                match realm_request {
+                    fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
+                        assert_eq!(decl.url.unwrap(), component_url);
+                        assert_eq!(decl.name.unwrap(), child_name);
+                        assert_eq!(&collection.name, child_collection);
 
-                let _ = responder.send(&mut Ok(()));
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    fsys2::RealmRequest::BindChild { child, exposed_dir, responder } => {
+                        assert_eq!(child.collection, Some(child_collection.to_string()));
+                        spawn_directory_server(
+                            exposed_dir.into_stream().unwrap(),
+                            directory_request_handler,
+                        );
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    _ => panic!("Realm handler received an unexpected request"),
+                }
             }
-            fsys2::RealmRequest::BindChild { child, exposed_dir, responder } => {
-                assert_eq!(child.collection, Some(child_collection.to_string()));
-                spawn_directory_server(
-                    exposed_dir.into_stream().unwrap(),
-                    directory_request_handler.clone(),
-                );
-                let _ = responder.send(&mut Ok(()));
-            }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components")
-        });
+        })
+        .unwrap();
 
         let element_manager =
             SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
@@ -1068,27 +1025,29 @@ mod tests {
         let child_name = "child";
         let child_collection = "elements";
 
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
-                assert_eq!(decl.url.unwrap(), component_url);
-                assert_eq!(decl.name.unwrap(), child_name);
-                assert_eq!(&collection.name, child_collection);
+        let realm = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
+                    assert_eq!(decl.url.unwrap(), component_url);
+                    assert_eq!(decl.name.unwrap(), child_name);
+                    assert_eq!(&collection.name, child_collection);
 
-                let _ = responder.send(&mut Ok(()));
-            }
-            fsys2::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
-                assert_eq!(child.collection, Some(child_collection.to_string()));
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys2::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
+                    assert_eq!(child.collection, Some(child_collection.to_string()));
 
-                let _ = responder.send(&mut Ok(()));
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components")
-        });
+        })
+        .unwrap();
 
         let element_manager =
             SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
@@ -1108,19 +1067,15 @@ mod tests {
     /// Tests that launching an element with no URL returns the appropriate error.
     #[fasync::run_until_stalled(test)]
     async fn launch_element_no_url() {
-        // The following match errors if it sees a bind request: since the child was not created
-        // successfully the bind should not be called.
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            _ => {
-                assert!(false);
-            }
-        });
+        let realm = spawn_stream_handler(move |_realm_request| async move {
+            panic!("Realm should not receive any requests as there is no component to launch")
+        })
+        .unwrap();
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
-            panic!(
-                "Launcher should not receive any requests as there is no valid component to launch"
-            )
-        });
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
+            panic!("Launcher should not receive any requests as there is no component to launch")
+        })
+        .unwrap();
 
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
@@ -1147,17 +1102,16 @@ mod tests {
             provider: Some(provider),
         };
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as the spec is invalid")
-        });
+        })
+        .unwrap();
 
-        // The following match errors if it sees a bind request: since the child was not created
-        // successfully the bind should not be called.
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            _ => {
-                assert!(false);
-            }
-        });
+        let realm = spawn_stream_handler(move |_realm_request| async move {
+            panic!("Realm should not receive any requests since the child won't be created")
+        })
+        .unwrap();
+
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
@@ -1188,17 +1142,15 @@ mod tests {
             provider: None,
         };
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components")
-        });
+        })
+        .unwrap();
 
-        // The following match errors if it sees a bind request: since the child was not created
-        // successfully the bind should not be called.
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            _ => {
-                assert!(false);
-            }
-        });
+        let realm = spawn_stream_handler(move |_realm_request| async move {
+            panic!("Realm should not receive any requests since the child won't be created")
+        })
+        .unwrap();
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
@@ -1224,20 +1176,22 @@ mod tests {
     async fn launch_element_create_error_internal() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components")
-        });
+        })
+        .unwrap();
 
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Err(fcomponent::Error::Internal));
+        let realm = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                    let _ = responder.send(&mut Err(fcomponent::Error::Internal));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
@@ -1262,20 +1216,22 @@ mod tests {
     async fn launch_element_create_error_no_space() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components")
-        });
+        })
+        .unwrap();
 
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Err(fcomponent::Error::ResourceUnavailable));
+        let realm = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                    let _ = responder.send(&mut Err(fcomponent::Error::ResourceUnavailable));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
@@ -1305,23 +1261,25 @@ mod tests {
     async fn launch_element_bind_error() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
-        let launcher = spawn_launcher_server(move |_launcher_request| {
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components")
-        });
+        })
+        .unwrap();
 
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Ok(()));
+        let realm = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                    let _ = responder.send(&mut Err(fcomponent::Error::InstanceCannotStart));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
-            fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                let _ = responder.send(&mut Err(fcomponent::Error::InstanceCannotStart));
-            }
-            _ => {
-                assert!(false);
-            }
-        });
+        })
+        .unwrap();
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
