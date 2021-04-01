@@ -35,8 +35,9 @@ const char* kGoldenSha256 = "4d4a4aff658c12fbbcdabb4ac0c79734420891e0701d43e7daf
 int main(int argc, char* argv[]) {
   UseVideoDecoderTestParams test_params = {
       .require_sw = true,
+      .golden_sha256 = kGoldenSha256,
   };
   return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                 /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
+                                /*min_output_buffer_count=*/0, &test_params);
 }

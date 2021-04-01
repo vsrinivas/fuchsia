@@ -112,6 +112,29 @@ package("use_h264_decoder_test") {
   ]
 }
 
+# Gaps in frame_num are often handled specially.  We need to at least verify this doesn't get stuck
+# or crash.  At the moment we also verify that the decoder outputs at least a few output frames
+# beyond the first missing input frame.
+fuchsia_unittest_package("use-h264-decoder-frame-num-gaps-test") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_frame_num_gaps_test.cmx"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_frame_num_gaps_test",
+  ]
+
+  test_specs = {
+    environments = [
+      astro_env,
+      emu_env,
+      nelson_env,
+      sherlock_env,
+
+      # Fails on Vim3 due to fxb/70799
+      vim3_env,
+    ]
+  }
+}
+
 # Force SW decode.  Only run in environments where we include a SW h264 decoder.
 package("use-h264-sw-decoder-test") {
   testonly = true

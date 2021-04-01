@@ -33,7 +33,10 @@ const char* kGoldenSha256 = "8317a8c078a0c27b7a524a25bf9964ee653063237698411361b
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  UseVideoDecoderTestParams test_params = {
+      .golden_sha256 = kGoldenSha256,
+  };
   return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_vp9_decoder,
                                 /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                /*min_output_buffer_count=*/0, kGoldenSha256);
+                                /*min_output_buffer_count=*/0, &test_params);
 }

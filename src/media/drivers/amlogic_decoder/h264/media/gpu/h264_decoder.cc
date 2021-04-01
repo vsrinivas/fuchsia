@@ -792,8 +792,10 @@ H264Decoder::H264Accelerator::Status H264Decoder::StartNewFrame(
   // 7.4.3
   if (frame_num != prev_ref_frame_num_ &&
       frame_num != (prev_ref_frame_num_ + 1) % max_frame_num_) {
-    if (!HandleFrameNumGap(frame_num))
-      return H264Accelerator::Status::kFail;
+    H264Accelerator::Status handle_gap_status = HandleFrameNumGap(frame_num);
+    if (handle_gap_status != H264Accelerator::Status::kOk) {
+      return handle_gap_status;
+    }
   }
 
   if (!InitCurrPicture(slice_hdr))
@@ -1277,11 +1279,12 @@ H264Decoder::H264Accelerator::Status H264Decoder::FinishPrevFrameIfPresent() {
   return H264Accelerator::Status::kOk;
 }
 
-bool H264Decoder::HandleFrameNumGap(int frame_num) {
+H264Decoder::H264Accelerator::Status H264Decoder::HandleFrameNumGap(
+    int frame_num) {
   DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   const H264SPS* sps = parser_.GetSPS(curr_sps_id_);
   if (!sps)
-    return false;
+    return H264Decoder::H264Accelerator::Status::kFail;
 
   if (!sps->gaps_in_frame_num_value_allowed_flag) {
     DVLOG(1) << "Invalid frame_num: " << frame_num;
@@ -1299,20 +1302,26 @@ bool H264Decoder::HandleFrameNumGap(int frame_num) {
   // 7.4.3/7-23
   int unused_short_term_frame_num = (prev_ref_frame_num_ + 1) % max_frame_num_;
   while (unused_short_term_frame_num != frame_num) {
-    scoped_refptr<H264Picture> pic = accelerator_->CreateH264Picture();
+    scoped_refptr<H264Picture> pic =
+        accelerator_->CreateH264Picture(/*is_for_output*/ false);
+    if (!pic) {
+      // CreateH264Picture() returning no pic is like kTryAgain from
+      // accelerator_.
+      return H264Decoder::H264Accelerator::Status::kTryAgain;
+    }
     if (!InitNonexistingPicture(pic, unused_short_term_frame_num))
-      return false;
+      return H264Decoder::H264Accelerator::Status::kFail;
 
     UpdatePicNums(unused_short_term_frame_num);
 
     if (!FinishPicture(pic))
-      return false;
+      return H264Decoder::H264Accelerator::Status::kFail;
 
     unused_short_term_frame_num++;
     unused_short_term_frame_num %= max_frame_num_;
   }
 
-  return true;
+  return H264Decoder::H264Accelerator::Status::kOk;
 }
 
 H264Decoder::H264Accelerator::Status H264Decoder::PreprocessCurrentSlice() {
@@ -1543,7 +1552,7 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
           } else {
             // New picture/finished previous one, try to start a new one
             // or tell the client we need more surfaces.
-            curr_pic_ = accelerator_->CreateH264Picture();
+            curr_pic_ = accelerator_->CreateH264Picture(true);
             if (!curr_pic_)
               return kRanOutOfSurfaces;
 #if CHROMIM_CODE
