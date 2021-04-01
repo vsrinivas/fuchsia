@@ -2610,7 +2610,7 @@ uefi_disk_path = "$target_out_dir/disk.raw"
 compiled_action("uefi-disk") {
   hermetic_deps = false
 
-  deps = uefi_disk_deps
+  deps = uefi_disk_deps + [ "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)" ]
   testonly = true
   tool = "//tools/make-fuchsia-vol"
   args = [
