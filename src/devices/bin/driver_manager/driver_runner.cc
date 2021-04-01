@@ -194,6 +194,14 @@ void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
 
 fbl::DoublyLinkedList<std::unique_ptr<Node>>& Node::children() { return children_; }
 
+std::string Node::TopoName() const {
+  std::deque<std::string_view> names;
+  for (auto node = this; node != nullptr; node = node->parent_) {
+    names.push_front(node->name());
+  }
+  return fxl::JoinStrings(names, ".");
+}
+
 void Node::Unbind() {
   UnbindAndReset(driver_ref_);
   UnbindAndReset(controller_ref_);
@@ -264,16 +272,26 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
 
 void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
                     fidl::ServerEnd<fdf::Node> node, AddChildCompleter::Sync& completer) {
-  auto name = args.has_name() ? std::move(args.name()) : fidl::StringView();
+  if (!args.has_name()) {
+    LOGF(ERROR, "Failed to add Node, a name must be provided");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  auto name = args.name().get();
+  if (name.find('.') != std::string_view::npos) {
+    LOGF(ERROR, "Failed to add Node '%.*s', name must not contain '.'", name.size(), name.data());
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
   for (auto& child : children_) {
-    if (child.name() == name.get()) {
+    if (child.name() == name) {
       LOGF(ERROR, "Failed to add Node '%.*s', names must be unique among siblings", name.size(),
            name.data());
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
   }
-  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name.get());
+  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name);
 
   if (args.has_offers()) {
     child->offers_.reserve(args.offers().count());
@@ -396,8 +414,7 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
 }
 
 zx::status<> DriverRunner::StartDriver(Node* node, std::string_view url) {
-  auto driver_name = "driver-" + std::to_string(NextId());
-  auto create_result = CreateComponent(driver_name, std::string(url), DriverCollection(url));
+  auto create_result = CreateComponent(node->TopoName(), std::string(url), DriverCollection(url));
   if (create_result.is_error()) {
     return create_result.take_error();
   }
@@ -530,7 +547,7 @@ void DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args,
 }
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {
-  auto name = "driver_host-" + std::to_string(NextId());
+  auto name = "driver_host-" + std::to_string(next_driver_host_id_++);
   auto create = CreateComponent(name, "fuchsia-boot:///#meta/driver_host2.cm", "driver_hosts");
   if (create.is_error()) {
     return create.take_error();
@@ -593,5 +610,3 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   }
   return zx::ok(std::move(endpoints->client));
 }
-
-uint64_t DriverRunner::NextId() { return next_id_++; }

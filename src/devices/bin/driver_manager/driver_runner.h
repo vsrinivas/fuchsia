@@ -104,6 +104,7 @@ class Node : public fuchsia_driver_framework::NodeController::Interface,
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
   fbl::DoublyLinkedList<std::unique_ptr<Node>>& children();
 
+  std::string TopoName() const;
   void Remove();
 
  private:
@@ -163,9 +164,7 @@ class DriverRunner : public fuchsia_component_runner::ComponentRunner::Interface
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateComponent(std::string name,
                                                                      std::string url,
                                                                      std::string collection);
-  uint64_t NextId();
-
-  uint64_t next_id_ = 0;
+  uint64_t next_driver_host_id_ = 0;
   fidl::Client<fuchsia_sys2::Realm> realm_;
   fidl::Client<fuchsia_driver_framework::DriverIndex> driver_index_;
   async_dispatcher_t* dispatcher_;
