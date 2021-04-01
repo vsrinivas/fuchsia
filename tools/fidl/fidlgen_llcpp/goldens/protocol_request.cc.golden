@@ -488,84 +488,75 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocolrequest {
 #ifdef __Fuchsia__
-namespace methods {
 
-void ParentDispatchGetChild(void* interface, void* bytes,
-                            ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
-      GetChildCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
-      ->GetChild(completer);
-}
-
-void ParentDispatchGetChildRequest(void* interface, void* bytes,
-                                   ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
-      GetChildRequestCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
-      ->GetChildRequest(completer);
-}
-
-void ParentDispatchTakeChild(void* interface, void* bytes,
-                             ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*>(
-      bytes);
-  ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
-      TakeChildCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
-      ->TakeChild(std::move(message->c), completer);
-}
-
-void ParentDispatchTakeChildRequest(void* interface, void* bytes,
-                                    ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<::fidl::WireRequest<
-      ::fidl_test_protocolrequest::Parent::TakeChildRequest>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
-      TakeChildRequestCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
-      ->TakeChildRequest(std::move(message->r), completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry Parent[] = {
-    {::fidl_test_protocolrequest::kParent_GetChild_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::Type,
-     methods::ParentDispatchGetChild},
-    {::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal,
-     ::fidl::WireRequest<
-         ::fidl_test_protocolrequest::Parent::GetChildRequest>::Type,
-     methods::ParentDispatchGetChildRequest},
-    {::fidl_test_protocolrequest::kParent_TakeChild_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>::Type,
-     methods::ParentDispatchTakeChild},
-    {::fidl_test_protocolrequest::kParent_TakeChildRequest_Ordinal,
-     ::fidl::WireRequest<
-         ::fidl_test_protocolrequest::Parent::TakeChildRequest>::Type,
-     methods::ParentDispatchTakeChildRequest},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult Parent::TryDispatch(Interface* impl,
-                                           fidl_incoming_msg_t* msg,
-                                           ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocolrequest::Parent>::TryDispatch(
+        ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocolrequest::kParent_GetChild_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocolrequest::Parent::GetChild>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+                GetChildCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+                interface)
+                ->GetChild(completer);
+          },
+      },
+      {
+          ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocolrequest::Parent::GetChildRequest>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+                GetChildRequestCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+                interface)
+                ->GetChildRequest(completer);
+          },
+      },
+      {
+          ::fidl_test_protocolrequest::kParent_TakeChild_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocolrequest::Parent::TakeChild>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocolrequest::Parent::TakeChild>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+                TakeChildCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+                interface)
+                ->TakeChild(std::move(message->c), completer);
+          },
+      },
+      {
+          ::fidl_test_protocolrequest::kParent_TakeChildRequest_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocolrequest::Parent::TakeChildRequest>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocolrequest::Parent::TakeChildRequest>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+                TakeChildRequestCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+                interface)
+                ->TakeChildRequest(std::move(message->r), completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::Parent,
-      entries::Parent +
-          sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult Parent::Dispatch(Interface* impl,
-                                        fidl_incoming_msg_t* msg,
-                                        ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -574,16 +565,22 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_protocolrequest
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_protocolrequest::Parent::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocolrequest::Parent>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocolrequest::Parent>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_protocolrequest::Parent::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocolrequest::Parent>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
     GetChildCompleterBase::Reply(
@@ -702,42 +699,40 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocolrequest {
 #ifdef __Fuchsia__
-namespace methods {}  // namespace methods
 
-namespace entries {
-
-::fidl::internal::MethodEntry Child[] = {};
-
-}  // namespace entries
-
-::fidl::DispatchResult Child::TryDispatch(Interface* impl,
-                                          fidl_incoming_msg_t* msg,
-                                          ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>::TryDispatch(
+    ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult Child::Dispatch(Interface* impl,
-                                       fidl_incoming_msg_t* msg,
-                                       ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
-}  // namespace fidl_test_protocolrequest
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_protocolrequest::Child::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocolrequest::Child>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocolrequest::Child>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_protocolrequest::Child::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocolrequest::Child>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__

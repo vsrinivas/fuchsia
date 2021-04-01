@@ -66,7 +66,8 @@ class MockBlockDevice {
     if (status != ZX_ERR_NOT_SUPPORTED) {
       return status;
     }
-    return fio::Node::TryDispatch(mock_node_.get(), msg, nullptr) == fidl::DispatchResult::kFound
+    return fidl::WireTryDispatch<fio::Node>(mock_node_.get(), msg, nullptr) ==
+                   fidl::DispatchResult::kFound
                ? ZX_OK
                : ZX_ERR_PEER_CLOSED;
   }

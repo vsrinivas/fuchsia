@@ -85,7 +85,8 @@ void DevfsVnode::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transac
     txn->Close(ZX_ERR_IO_NOT_PRESENT);
     return;
   }
-  ::fidl::DispatchResult dispatch_result = fuchsia_device::Controller::TryDispatch(this, msg, txn);
+  ::fidl::DispatchResult dispatch_result =
+      fidl::WireTryDispatch<fuchsia_device::Controller>(this, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kFound) {
     return;
   }

@@ -110,7 +110,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     static FidlProtocol Create(typename Protocol::Interface* protocol_impl) {
       return FidlProtocol(static_cast<void*>(protocol_impl),
                           [](void* impl, fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
-                            return Protocol::TryDispatch(
+                            return fidl::WireTryDispatch<Protocol>(
                                 static_cast<typename Protocol::Interface*>(impl), msg, txn);
                           });
     }

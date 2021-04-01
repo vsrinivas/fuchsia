@@ -143,28 +143,31 @@ class Parent final {
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>;
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocolrequest::Parent>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocolrequest::Parent>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocolrequest
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_protocolrequest {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_protocolrequest
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
@@ -1730,28 +1733,31 @@ class Child final {
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child>;
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Child>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocolrequest::Child>;
   using WeakEventSender =
       ::fidl::internal::WireWeakEventSender<::fidl_test_protocolrequest::Child>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocolrequest
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_protocolrequest {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_protocolrequest
 
 // Methods to make a sync FIDL call directly on an unowned channel or a

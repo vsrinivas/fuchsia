@@ -438,67 +438,63 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_requestflexibleenvelope {
 #ifdef __Fuchsia__
-namespace methods {
 
-void ProtocolDispatchRequestStrictResponseFlexible(void* interface, void* bytes,
-                                                   ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                              RequestStrictResponseFlexible>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
-      RequestStrictResponseFlexibleCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::Interface*>(
-      interface)
-      ->RequestStrictResponseFlexible(std::move(message->s), completer);
-}
-
-void ProtocolDispatchRequestFlexibleResponseStrict(void* interface, void* bytes,
-                                                   ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                              RequestFlexibleResponseStrict>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
-      RequestFlexibleResponseStrictCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::Interface*>(
-      interface)
-      ->RequestFlexibleResponseStrict(std::move(message->s), completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry Protocol[] = {
-    {::fidl_test_requestflexibleenvelope::
-         kProtocol_RequestStrictResponseFlexible_Ordinal,
-     ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestStrictResponseFlexible>::Type,
-     methods::ProtocolDispatchRequestStrictResponseFlexible},
-    {::fidl_test_requestflexibleenvelope::
-         kProtocol_RequestFlexibleResponseStrict_Ordinal,
-     ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestFlexibleResponseStrict>::Type,
-     methods::ProtocolDispatchRequestFlexibleResponseStrict},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult Protocol::TryDispatch(Interface* impl,
-                                             fidl_incoming_msg_t* msg,
-                                             ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_requestflexibleenvelope::Protocol>::TryDispatch(
+        ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>*
+            impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_requestflexibleenvelope::
+              kProtocol_RequestStrictResponseFlexible_Ordinal,
+          ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                                  RequestStrictResponseFlexible>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_requestflexibleenvelope::Protocol::
+                    RequestStrictResponseFlexible>*>(bytes);
+            ::fidl::WireInterface<
+                ::fidl_test_requestflexibleenvelope::Protocol>::
+                RequestStrictResponseFlexibleCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_requestflexibleenvelope::Protocol::Interface*>(
+                interface)
+                ->RequestStrictResponseFlexible(std::move(message->s),
+                                                completer);
+          },
+      },
+      {
+          ::fidl_test_requestflexibleenvelope::
+              kProtocol_RequestFlexibleResponseStrict_Ordinal,
+          ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                                  RequestFlexibleResponseStrict>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_requestflexibleenvelope::Protocol::
+                    RequestFlexibleResponseStrict>*>(bytes);
+            ::fidl::WireInterface<
+                ::fidl_test_requestflexibleenvelope::Protocol>::
+                RequestFlexibleResponseStrictCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_requestflexibleenvelope::Protocol::Interface*>(
+                interface)
+                ->RequestFlexibleResponseStrict(std::move(message->s),
+                                                completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::Protocol,
-      entries::Protocol +
-          sizeof(entries::Protocol) / sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult Protocol::Dispatch(Interface* impl,
-                                          fidl_incoming_msg_t* msg,
-                                          ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_requestflexibleenvelope::Protocol>::Dispatch(
+        ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>*
+            impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -507,17 +503,22 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_requestflexibleenvelope
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_requestflexibleenvelope::Protocol::Dispatch(
+    ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_requestflexibleenvelope::Protocol>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_requestflexibleenvelope::Protocol::Dispatch(this, msg,
-                                                                 txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_requestflexibleenvelope::Protocol>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_requestflexibleenvelope {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_requestflexibleenvelope
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::

@@ -255,7 +255,7 @@ void Lp8556Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
 
 zx_status_t Lp8556Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  if (FidlBacklight::Device::TryDispatch(this, msg, &transaction) ==
+  if (fidl::WireTryDispatch<FidlBacklight::Device>(this, msg, &transaction) ==
       ::fidl::DispatchResult::kFound) {
     return transaction.Status();
   }

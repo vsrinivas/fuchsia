@@ -87,27 +87,29 @@ class super final {
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super>;
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::super>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_inheritance::super>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender = ::fidl::WireEventSender<::fidl_test_inheritance::super>;
   using WeakEventSender =
       ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::super>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::super> final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_inheritance::super>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_inheritance::super>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_inheritance {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_inheritance
 template <>
 struct ::fidl::WireRequest<::fidl_test_inheritance::super::foo> final {
@@ -694,27 +696,29 @@ class sub final {
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>;
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::sub>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_inheritance::sub>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender = ::fidl::WireEventSender<::fidl_test_inheritance::sub>;
   using WeakEventSender =
       ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::sub>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::sub> final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_inheritance::sub>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_inheritance::sub>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_inheritance {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_inheritance
 template <>
 struct ::fidl::WireRequest<::fidl_test_inheritance::sub::foo> final {

@@ -369,60 +369,51 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
   }
 }
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
-namespace methods {
 
-void TransitionalDispatchRequest(void* interface, void* bytes,
-                                 ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>*>(
-      bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::Transitional>::RequestCompleter::
-      Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::Transitional::Interface*>(interface)
-      ->Request(std::move(message->x), completer);
-}
-
-void TransitionalDispatchOneWay(void* interface, void* bytes,
-                                ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::Transitional>::OneWayCompleter::
-      Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::Transitional::Interface*>(interface)
-      ->OneWay(std::move(message->x), completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry Transitional[] = {
-    {::fidl_test_protocols::kTransitional_Request_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>::Type,
-     methods::TransitionalDispatchRequest},
-    {::fidl_test_protocols::kTransitional_OneWay_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>::Type,
-     methods::TransitionalDispatchOneWay},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult Transitional::TryDispatch(Interface* impl,
-                                                 fidl_incoming_msg_t* msg,
-                                                 ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocols::Transitional>::TryDispatch(
+        ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kTransitional_Request_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::Transitional::Request>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::Transitional::Request>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
+                RequestCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::Transitional::Interface*>(
+                interface)
+                ->Request(std::move(message->x), completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kTransitional_OneWay_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::Transitional::OneWay>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::Transitional::OneWay>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
+                OneWayCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::Transitional::Interface*>(
+                interface)
+                ->OneWay(std::move(message->x), completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::Transitional,
-      entries::Transitional + sizeof(entries::Transitional) /
-                                  sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult Transitional::Dispatch(Interface* impl,
-                                              fidl_incoming_msg_t* msg,
-                                              ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -431,16 +422,22 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_protocols
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_protocols::Transitional::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::Transitional>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_protocols::Transitional::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::Transitional>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::Transitional>::
     RequestCompleterBase::Reply(int64_t y) {
@@ -1209,94 +1206,81 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
   }
 }
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
-namespace methods {
 
-void ChannelProtocolDispatchMethodA(void* interface, void* bytes,
-                                    ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>*>(
-      bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
-      MethodACompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::ChannelProtocol::Interface*>(
-      interface)
-      ->MethodA(std::move(message->a), std::move(message->b), completer);
-}
-
-void ChannelProtocolDispatchMethodB(void* interface, void* bytes,
-                                    ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>*>(
-      bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
-      MethodBCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::ChannelProtocol::Interface*>(
-      interface)
-      ->MethodB(std::move(message->a), std::move(message->b), completer);
-}
-
-void ChannelProtocolDispatchTakeHandle(void* interface, void* bytes,
-                                       ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(
-      bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
-      TakeHandleCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::ChannelProtocol::Interface*>(
-      interface)
-      ->TakeHandle(std::move(message->h), completer);
-}
-
-void ChannelProtocolDispatchMutateSocket(void* interface, void* bytes,
-                                         ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<::fidl::WireRequest<
-      ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
-      MutateSocketCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::ChannelProtocol::Interface*>(
-      interface)
-      ->MutateSocket(std::move(message->a), completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry ChannelProtocol[] = {
-    {::fidl_test_protocols::kChannelProtocol_MethodA_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>::Type,
-     methods::ChannelProtocolDispatchMethodA},
-    {::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
-     methods::ChannelProtocolDispatchMethodB},
-    {::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal,
-     ::fidl::WireRequest<
-         ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
-     methods::ChannelProtocolDispatchTakeHandle},
-    {::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal,
-     ::fidl::WireRequest<
-         ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
-     methods::ChannelProtocolDispatchMutateSocket},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult ChannelProtocol::TryDispatch(Interface* impl,
-                                                    fidl_incoming_msg_t* msg,
-                                                    ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocols::ChannelProtocol>::TryDispatch(
+        ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kChannelProtocol_MethodA_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::ChannelProtocol::MethodA>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::ChannelProtocol::MethodA>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+                MethodACompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ->MethodA(std::move(message->a), std::move(message->b),
+                          completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::ChannelProtocol::MethodB>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+                MethodBCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ->MethodB(std::move(message->a), std::move(message->b),
+                          completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+                TakeHandleCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ->TakeHandle(std::move(message->h), completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(bytes);
+            ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+                MutateSocketCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ->MutateSocket(std::move(message->a), completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::ChannelProtocol,
-      entries::ChannelProtocol + sizeof(entries::ChannelProtocol) /
-                                     sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult ChannelProtocol::Dispatch(Interface* impl,
-                                                 fidl_incoming_msg_t* msg,
-                                                 ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocols::ChannelProtocol>::Dispatch(
+        ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -1305,16 +1289,22 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_protocols
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_protocols::ChannelProtocol::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::ChannelProtocol>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_protocols::ChannelProtocol::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::ChannelProtocol>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
     MethodBCompleterBase::Reply(int64_t result) {
@@ -2510,131 +2500,130 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   }
 }
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
-namespace methods {
 
-void WithAndWithoutRequestResponseDispatchNoRequestNoResponse(
-    void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-      NoRequestNoResponseCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface*>(
-      interface)
-      ->NoRequestNoResponse(completer);
-}
-
-void WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse(
-    void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-      NoRequestEmptyResponseCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface*>(
-      interface)
-      ->NoRequestEmptyResponse(completer);
-}
-
-void WithAndWithoutRequestResponseDispatchNoRequestWithResponse(
-    void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-      NoRequestWithResponseCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface*>(
-      interface)
-      ->NoRequestWithResponse(completer);
-}
-
-void WithAndWithoutRequestResponseDispatchWithRequestNoResponse(
-    void* interface, void* bytes, ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestNoResponse>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-      WithRequestNoResponseCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface*>(
-      interface)
-      ->WithRequestNoResponse(std::move(message->arg), completer);
-}
-
-void WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse(
-    void* interface, void* bytes, ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestEmptyResponse>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-      WithRequestEmptyResponseCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface*>(
-      interface)
-      ->WithRequestEmptyResponse(std::move(message->arg), completer);
-}
-
-void WithAndWithoutRequestResponseDispatchWithRequestWithResponse(
-    void* interface, void* bytes, ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestWithResponse>*>(bytes);
-  ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-      WithRequestWithResponseCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface*>(
-      interface)
-      ->WithRequestWithResponse(std::move(message->arg), completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry WithAndWithoutRequestResponse[] = {
-    {::fidl_test_protocols::
-         kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                             NoRequestNoResponse>::Type,
-     methods::WithAndWithoutRequestResponseDispatchNoRequestNoResponse},
-    {::fidl_test_protocols::
-         kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                             NoRequestEmptyResponse>::Type,
-     methods::WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse},
-    {::fidl_test_protocols::
-         kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                             NoRequestWithResponse>::Type,
-     methods::WithAndWithoutRequestResponseDispatchNoRequestWithResponse},
-    {::fidl_test_protocols::
-         kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestNoResponse>::Type,
-     methods::WithAndWithoutRequestResponseDispatchWithRequestNoResponse},
-    {::fidl_test_protocols::
-         kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestEmptyResponse>::Type,
-     methods::WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse},
-    {::fidl_test_protocols::
-         kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-     ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestWithResponse>::Type,
-     methods::WithAndWithoutRequestResponseDispatchWithRequestWithResponse},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult WithAndWithoutRequestResponse::TryDispatch(
-    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::WireDispatcher<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+    TryDispatch(::fidl::WireInterface<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
+                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                  NoRequestNoResponse>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+                NoRequestNoResponseCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::
+                                 WithAndWithoutRequestResponse::Interface*>(
+                interface)
+                ->NoRequestNoResponse(completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                  NoRequestEmptyResponse>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+                NoRequestEmptyResponseCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::
+                                 WithAndWithoutRequestResponse::Interface*>(
+                interface)
+                ->NoRequestEmptyResponse(completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                  NoRequestWithResponse>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+                NoRequestWithResponseCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::
+                                 WithAndWithoutRequestResponse::Interface*>(
+                interface)
+                ->NoRequestWithResponse(completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                  WithRequestNoResponse>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                    WithRequestNoResponse>*>(bytes);
+            ::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+                WithRequestNoResponseCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::
+                                 WithAndWithoutRequestResponse::Interface*>(
+                interface)
+                ->WithRequestNoResponse(std::move(message->arg), completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                  WithRequestEmptyResponse>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                    WithRequestEmptyResponse>*>(bytes);
+            ::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+                WithRequestEmptyResponseCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::
+                                 WithAndWithoutRequestResponse::Interface*>(
+                interface)
+                ->WithRequestEmptyResponse(std::move(message->arg), completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                  WithRequestWithResponse>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                    WithRequestWithResponse>*>(bytes);
+            ::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+                WithRequestWithResponseCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_protocols::
+                                 WithAndWithoutRequestResponse::Interface*>(
+                interface)
+                ->WithRequestWithResponse(std::move(message->arg), completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::WithAndWithoutRequestResponse,
-      entries::WithAndWithoutRequestResponse +
-          sizeof(entries::WithAndWithoutRequestResponse) /
-              sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult WithAndWithoutRequestResponse::Dispatch(
-    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::WireDispatcher<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+    Dispatch(::fidl::WireInterface<
+                 ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
+             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -2643,17 +2632,26 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_protocols
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult
+fidl_test_protocols::WithAndWithoutRequestResponse::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>*
+        impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>::Dispatch(impl, msg,
+                                                                      txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_protocols::WithAndWithoutRequestResponse::Dispatch(
-      this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>::Dispatch(this, msg,
+                                                                      txn);
 }
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -3391,72 +3389,59 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
 #ifdef __Fuchsia__
-namespace methods {
 
-void WithErrorSyntaxDispatchResponseAsStruct(void* interface, void* bytes,
-                                             ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
-      ResponseAsStructCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::WithErrorSyntax::Interface*>(
-      interface)
-      ->ResponseAsStruct(completer);
-}
-
-void WithErrorSyntaxDispatchErrorAsPrimitive(void* interface, void* bytes,
-                                             ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
-      ErrorAsPrimitiveCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::WithErrorSyntax::Interface*>(
-      interface)
-      ->ErrorAsPrimitive(completer);
-}
-
-void WithErrorSyntaxDispatchErrorAsEnum(void* interface, void* bytes,
-                                        ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
-      ErrorAsEnumCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_protocols::WithErrorSyntax::Interface*>(
-      interface)
-      ->ErrorAsEnum(completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry WithErrorSyntax[] = {
-    {::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-     ::fidl::WireRequest<
-         ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::Type,
-     methods::WithErrorSyntaxDispatchResponseAsStruct},
-    {::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-     ::fidl::WireRequest<
-         ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Type,
-     methods::WithErrorSyntaxDispatchErrorAsPrimitive},
-    {::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
-     ::fidl::WireRequest<
-         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::Type,
-     methods::WithErrorSyntaxDispatchErrorAsEnum},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult WithErrorSyntax::TryDispatch(Interface* impl,
-                                                    fidl_incoming_msg_t* msg,
-                                                    ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocols::WithErrorSyntax>::TryDispatch(
+        ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
+                ResponseAsStructCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_protocols::WithErrorSyntax::Interface*>(interface)
+                ->ResponseAsStruct(completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
+                ErrorAsPrimitiveCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_protocols::WithErrorSyntax::Interface*>(interface)
+                ->ErrorAsPrimitive(completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
+                ErrorAsEnumCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_protocols::WithErrorSyntax::Interface*>(interface)
+                ->ErrorAsEnum(completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::WithErrorSyntax,
-      entries::WithErrorSyntax + sizeof(entries::WithErrorSyntax) /
-                                     sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult WithErrorSyntax::Dispatch(Interface* impl,
-                                                 fidl_incoming_msg_t* msg,
-                                                 ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocols::WithErrorSyntax>::Dispatch(
+        ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -3465,16 +3450,22 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_protocols
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_protocols::WithErrorSyntax::Dispatch(
+    ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::WithErrorSyntax>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_protocols::WithErrorSyntax::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::WithErrorSyntax>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStructCompleterBase::Reply(

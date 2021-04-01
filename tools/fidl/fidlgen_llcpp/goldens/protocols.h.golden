@@ -961,28 +961,31 @@ class Transitional final {
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>;
   using Interface = ::fidl::WireInterface<::fidl_test_protocols::Transitional>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocols::Transitional>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocols::Transitional>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_protocols
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
@@ -2018,28 +2021,31 @@ class ChannelProtocol final {
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocols::ChannelProtocol>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::ChannelProtocol>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_protocols
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
@@ -4125,28 +4131,35 @@ class WithAndWithoutRequestResponse final {
   using Interface = ::fidl::WireInterface<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender = ::fidl::WireEventSender<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireDispatcher<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_protocols
 template <>
 struct ::fidl::WireRequest<
@@ -7090,28 +7103,31 @@ class WithErrorSyntax final {
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_protocols::WithErrorSyntax>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
       ::fidl_test_protocols::WithErrorSyntax>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::WithErrorSyntax>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_protocols
 template <>
 struct ::fidl::WireRequest<

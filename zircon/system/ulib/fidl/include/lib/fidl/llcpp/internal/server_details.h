@@ -54,7 +54,7 @@ struct MethodEntry {
 // The TryDispatch method for each protocol calls this function using the generated entries, which
 // searches through the array using the method ordinal to find the corresponding dispatch function.
 ::fidl::DispatchResult TryDispatch(void* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn,
-                                   MethodEntry* begin, MethodEntry* end);
+                                   const MethodEntry* begin, const MethodEntry* end);
 
 //
 // Definitions related to binding a connection to a dispatcher

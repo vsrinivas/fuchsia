@@ -152,8 +152,24 @@ func (dn NameVariants) Self() string {
 		fidlgen.TemplateFatalf("Called NameVariants.Self() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
 	case naturalVariant:
 		return dn.Natural.Self()
+	case unifiedVariant:
+		return dn.Unified.Self()
 	case wireVariant:
 		return dn.Wire.Self()
+	}
+	panic("not reached")
+}
+
+func (dn NameVariants) NoLeading() string {
+	switch currentVariant {
+	case noVariant:
+		fidlgen.TemplateFatalf("Called NameVariants.NoLeading() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+	case naturalVariant:
+		return dn.Natural.NoLeading()
+	case unifiedVariant:
+		return dn.Unified.NoLeading()
+	case wireVariant:
+		return dn.Wire.NoLeading()
 	}
 	panic("not reached")
 }

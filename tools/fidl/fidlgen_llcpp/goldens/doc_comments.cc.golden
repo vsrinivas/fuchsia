@@ -160,44 +160,34 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
   }
 }
 
-namespace fidl_test_doccomments {
 #ifdef __Fuchsia__
-namespace methods {
 
-void InterfaceDispatchMethod(void* interface, void* bytes,
-                             ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<
-      ::fidl_test_doccomments::Interface>::MethodCompleter::Sync completer(txn);
-  reinterpret_cast<::fidl_test_doccomments::Interface::Interface*>(interface)
-      ->Method(completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry Interface[] = {
-    {::fidl_test_doccomments::kInterface_Method_Ordinal,
-     ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>::Type,
-     methods::InterfaceDispatchMethod},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult Interface::TryDispatch(Interface* impl,
-                                              fidl_incoming_msg_t* msg,
-                                              ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_doccomments::Interface>::TryDispatch(
+    ::fidl::WireInterface<::fidl_test_doccomments::Interface>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_doccomments::kInterface_Method_Ordinal,
+          ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<::fidl_test_doccomments::Interface>::
+                MethodCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl_test_doccomments::Interface::Interface*>(
+                interface)
+                ->Method(completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::Interface,
-      entries::Interface +
-          sizeof(entries::Interface) / sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult Interface::Dispatch(Interface* impl,
-                                           fidl_incoming_msg_t* msg,
-                                           ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_doccomments::Interface>::Dispatch(
+    ::fidl::WireInterface<::fidl_test_doccomments::Interface>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -206,16 +196,21 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_doccomments
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_doccomments::Interface::Dispatch(
+    ::fidl::WireInterface<::fidl_test_doccomments::Interface>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_doccomments::Interface>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_doccomments::Interface>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_doccomments::Interface::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_doccomments::Interface>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_doccomments {
 #endif  // __Fuchsia__
-
-}  // namespace fidl_test_doccomments
 
 void ::fidl::WireRequest<
     ::fidl_test_doccomments::Interface::Method>::_InitHeader(zx_txid_t _txid) {

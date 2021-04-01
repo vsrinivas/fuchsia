@@ -643,7 +643,7 @@ zx_status_t Device::HandleRead() {
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
     ::fidl::DispatchResult dispatch_result =
-        fuchsia_device_manager::Coordinator::TryDispatch(this, &fidl_msg, &txn);
+        fidl::WireTryDispatch<fuchsia_device_manager::Coordinator>(this, &fidl_msg, &txn);
     auto status = txn.Status();
     if (dispatch_result == ::fidl::DispatchResult::kFound) {
       if (status == ZX_OK && state_ == Device::State::kDead) {

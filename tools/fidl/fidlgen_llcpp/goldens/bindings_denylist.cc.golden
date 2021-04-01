@@ -162,46 +162,41 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_bindingsdenylist {
 #ifdef __Fuchsia__
-namespace methods {
 
-void OnlyLibfuzzerAndDepsDispatchLibfuzzerNeedsNonemptyProtocol(
-    void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-      LibfuzzerNeedsNonemptyProtocolCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Interface*>(interface)
-      ->LibfuzzerNeedsNonemptyProtocol(completer);
-}
-
-}  // namespace methods
-
-namespace entries {
-
-::fidl::internal::MethodEntry OnlyLibfuzzerAndDeps[] = {
-    {::fidl_test_bindingsdenylist::
-         kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
-     ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                             LibfuzzerNeedsNonemptyProtocol>::Type,
-     methods::OnlyLibfuzzerAndDepsDispatchLibfuzzerNeedsNonemptyProtocol},
-};
-
-}  // namespace entries
-
-::fidl::DispatchResult OnlyLibfuzzerAndDeps::TryDispatch(
-    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::WireDispatcher<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+    TryDispatch(::fidl::WireInterface<
+                    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
+                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_bindingsdenylist::
+              kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocol>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireInterface<
+                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+                LibfuzzerNeedsNonemptyProtocolCompleter::Sync completer(txn);
+            reinterpret_cast<
+                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Interface*>(
+                interface)
+                ->LibfuzzerNeedsNonemptyProtocol(completer);
+          },
+      },
+  };
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries::OnlyLibfuzzerAndDeps,
-      entries::OnlyLibfuzzerAndDeps +
-          sizeof(entries::OnlyLibfuzzerAndDeps) /
-              sizeof(::fidl::internal::MethodEntry));
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult OnlyLibfuzzerAndDeps::Dispatch(
-    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::WireDispatcher<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+    Dispatch(::fidl::WireInterface<
+                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
+             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -210,17 +205,26 @@ namespace entries {
   }
   return dispatch_result;
 }
-}  // namespace fidl_test_bindingsdenylist
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult
+fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Dispatch(
+    ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
+        impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(impl, msg,
+                                                                    txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Dispatch(this, msg,
-                                                                      txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this, msg,
+                                                                    txn);
 }
-namespace fidl_test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
@@ -275,42 +279,42 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_bindingsdenylist {
 #ifdef __Fuchsia__
-namespace methods {}  // namespace methods
 
-namespace entries {
-
-::fidl::internal::MethodEntry OnlyCppAndDeps[] = {};
-
-}  // namespace entries
-
-::fidl::DispatchResult OnlyCppAndDeps::TryDispatch(Interface* impl,
-                                                   fidl_incoming_msg_t* msg,
-                                                   ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::TryDispatch(
+        ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>*
+            impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult OnlyCppAndDeps::Dispatch(Interface* impl,
-                                                fidl_incoming_msg_t* msg,
-                                                ::fidl::Transaction* txn) {
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(
+        ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>*
+            impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
-}  // namespace fidl_test_bindingsdenylist
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_bindingsdenylist::OnlyCppAndDeps::Dispatch(
+    ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_bindingsdenylist::OnlyCppAndDeps::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__

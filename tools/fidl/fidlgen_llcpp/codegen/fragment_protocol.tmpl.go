@@ -125,23 +125,16 @@ class {{ .Name }} final {
   using RawChannelInterface = {{ .WireRawChannelInterface }};
   {{- end }}
 
-
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static ::fidl::DispatchResult TryDispatch{{ template "SyncServerDispatchMethodSignature" }};
-
-  // Dispatches the incoming message to one of the handlers functions in the protocol.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch{{ template "SyncServerDispatchMethodSignature" }};
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 
 {{- EndifFuchsia -}}
 
   using EventSender = {{ .WireEventSender }};
   using WeakEventSender = {{ .WireWeakEventSender }};
 };
+
+{{- template "ProtocolDispatcherDeclaration" . }}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -371,8 +364,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- end }}
 
 {{- /* Server implementation */}}
-{{ template "SyncServerTryDispatchMethodDefinition" . }}
-{{ template "SyncServerDispatchMethodDefinition" . }}
+{{ template "ProtocolDispatcherDefinition" . }}
 
 {{- if .Methods }}
 {{ "" }}

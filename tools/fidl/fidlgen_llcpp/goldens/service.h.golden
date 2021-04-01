@@ -100,28 +100,31 @@ class SecondProtocol final {
       ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>;
   using Interface = ::fidl::WireInterface<::fidl_test_service::SecondProtocol>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_service::SecondProtocol>;
   using WeakEventSender = ::fidl::internal::WireWeakEventSender<
       ::fidl_test_service::SecondProtocol>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_service
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_service::SecondProtocol>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_service {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_service
 template <>
 struct ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
@@ -450,28 +453,31 @@ class FirstProtocol final {
       ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol>;
   using Interface = ::fidl::WireInterface<::fidl_test_service::FirstProtocol>;
 
-  // Attempts to dispatch the incoming message to a handler function in the
-  // server implementation. If there is no matching handler, it returns false,
-  // leaving the message and transaction intact. In all other cases, it consumes
-  // the message and returns true. It is possible to chain multiple TryDispatch
-  // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
-                                            fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the
-  // protocol. If there is no matching handler, it closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
-                                         fidl_incoming_msg_t* msg,
-                                         ::fidl::Transaction* txn);
+  // TODO(ianloic): Remove this when all users have migrated.
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_service::FirstProtocol>;
   using WeakEventSender =
       ::fidl::internal::WireWeakEventSender<::fidl_test_service::FirstProtocol>;
 };
+#ifdef __Fuchsia__
+}  // namespace fidl_test_service
+template <>
+struct ::fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>
+    final {
+  WireDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+namespace fidl_test_service {
+#endif  // __Fuchsia__
 }  // namespace fidl_test_service
 template <>
 struct ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>

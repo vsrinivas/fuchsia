@@ -52,42 +52,40 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_handles {
 #ifdef __Fuchsia__
-namespace methods {}  // namespace methods
 
-namespace entries {
-
-::fidl::internal::MethodEntry SomeProtocol[] = {};
-
-}  // namespace entries
-
-::fidl::DispatchResult SomeProtocol::TryDispatch(Interface* impl,
-                                                 fidl_incoming_msg_t* msg,
-                                                 ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>::TryDispatch(
+    ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl,
-                                              fidl_incoming_msg_t* msg,
-                                              ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>::Dispatch(
+    ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
-}  // namespace fidl_test_handles
+
+// TODO(ianloic): Remove this when all users have migrated.
+::fidl::DispatchResult fidl_test_handles::SomeProtocol::Dispatch(
+    ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_handles::SomeProtocol>::Dispatch(impl, msg, txn);
+}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_handles::SomeProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl_test_handles::SomeProtocol::Dispatch(this, msg, txn);
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_handles::SomeProtocol>::Dispatch(this, msg, txn);
 }
-namespace fidl_test_handles {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_handles
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__

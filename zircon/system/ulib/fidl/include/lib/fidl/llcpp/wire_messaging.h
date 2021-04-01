@@ -5,7 +5,10 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
+#include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/transaction.h>
+#include <zircon/fidl.h>
 
 namespace fidl {
 
@@ -71,6 +74,9 @@ class WireEventHandlerInterface;
 template <typename FidlProtocol>
 class WireCaller;
 
+template <typename FidlProtocol>
+struct WireDispatcher;
+
 }  // namespace internal
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
@@ -88,6 +94,25 @@ template <typename FidlProtocol>
 fidl::internal::WireCaller<FidlProtocol> WireCall(
     const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
   return fidl::internal::WireCaller<FidlProtocol>(client_end);
+}
+
+// Dispatches the incoming message to one of the handlers functions in the protocol.
+// If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+template <typename FidlProtocol>
+fidl::DispatchResult WireDispatch(fidl::WireInterface<FidlProtocol>* impl, fidl_incoming_msg_t* msg,
+                                  fidl::Transaction* txn) {
+  return fidl::internal::WireDispatcher<FidlProtocol>::Dispatch(impl, msg, txn);
+}
+
+// Attempts to dispatch the incoming message to a handler function in the server implementation.
+// If there is no matching handler, it returns false, leaving the message and transaction intact.
+// In all other cases, it consumes the message and returns true.
+// It is possible to chain multiple TryDispatch functions in this manner.
+template <typename FidlProtocol>
+fidl::DispatchResult WireTryDispatch(fidl::WireInterface<FidlProtocol>* impl,
+                                     fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+  return fidl::internal::WireDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
 }
 
 }  // namespace fidl
