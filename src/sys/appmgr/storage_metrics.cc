@@ -64,7 +64,6 @@ StorageMetrics::Usage SumDirUsage(fbl::unique_fd unique_fd, uint32_t recursion =
       if (fstat(child.get(), &st) != 0) {
         FX_LOGS(WARNING) << "Failed to stat file: " << ent->d_name;
       } else {
-        // 512 is part of the stat spec to report blocks in terms of 512B size.
         total_bytes += st.st_blocks * st.st_blksize;
         total_files++;
       }
@@ -159,19 +158,29 @@ void StorageMetrics::UsageMap::AddForKey(const std::string& name, const Usage& u
   }
 }
 
-fit::promise<inspect::Inspector> StorageMetrics::InspectByteUsage() const {
+fit::promise<inspect::Inspector> StorageMetrics::InspectByteUsage(const std::string& path) const {
   inspect::Inspector inspector;
   std::lock_guard<std::mutex> lock(usage_lock_);
-  for (const auto& it : usage_.map()) {
+  auto entry = usage_.find(path);
+  if (entry == usage_.end()) {
+    // No data populated yet for this path.
+    return fit::make_ok_promise(inspector);
+  }
+  for (const auto& it : entry->second.map()) {
     inspector.GetRoot().CreateUint(it.first, it.second.bytes, &inspector);
   }
   return fit::make_ok_promise(inspector);
 }
 
-fit::promise<inspect::Inspector> StorageMetrics::InspectInodeUsage() const {
+fit::promise<inspect::Inspector> StorageMetrics::InspectInodeUsage(const std::string& path) const {
   inspect::Inspector inspector;
   std::lock_guard<std::mutex> lock(usage_lock_);
-  for (const auto& it : usage_.map()) {
+  auto entry = usage_.find(path);
+  if (entry == usage_.end()) {
+    // No data populated yet for this path.
+    return fit::make_ok_promise(inspector);
+  }
+  for (const auto& it : entry->second.map()) {
     inspector.GetRoot().CreateUint(it.first, it.second.inodes, &inspector);
   }
   return fit::make_ok_promise(inspector);
@@ -180,26 +189,34 @@ fit::promise<inspect::Inspector> StorageMetrics::InspectInodeUsage() const {
 StorageMetrics::StorageMetrics(std::vector<std::string> paths_to_watch, inspect::Node inspect_node)
     : paths_to_watch_(std::move(paths_to_watch)),
       inspect_root_(std::move(inspect_node)),
-      inspect_bytes_stats_(
-          inspect_root_.CreateLazyNode("bytes", [this] { return this->InspectByteUsage(); })),
-      inspect_inode_stats_(
-          inspect_root_.CreateLazyNode("inodes", [this] { return this->InspectInodeUsage(); })) {}
+      inspect_bytes_stats_(inspect_root_.CreateChild("bytes")),
+      inspect_inode_stats_(inspect_root_.CreateChild("inodes")) {
+  for (auto& it : paths_to_watch_) {
+    lazy_nodes_.push_back(inspect_bytes_stats_.CreateLazyNode(
+        it, [this, &it] { return this->InspectByteUsage(it); }));
+    lazy_nodes_.push_back(inspect_inode_stats_.CreateLazyNode(
+        it, [this, &it] { return this->InspectInodeUsage(it); }));
+  }
+}
 
-StorageMetrics::UsageMap StorageMetrics::GatherStorageUsage() const {
-  UsageMap usage;
+std::unordered_map<std::string, StorageMetrics::UsageMap> StorageMetrics::GatherStorageUsage()
+    const {
+  std::unordered_map<std::string, StorageMetrics::UsageMap> usage_by_path;
   for (const std::string& dir : paths_to_watch_) {
+    UsageMap usage;
     fbl::unique_fd fd(open(dir.c_str(), O_DIRECTORY | O_RDONLY));
     if (!fd) {
       FX_LOGS(WARNING) << "Failed to open path: " << dir;
       continue;
     }
     SumComponentsForPath(std::move(fd), &usage);
+    usage_by_path[dir] = std::move(usage);
   }
-  return usage;
+  return usage_by_path;
 }
 
 void StorageMetrics::PollStorage() {
-  StorageMetrics::UsageMap new_usage = GatherStorageUsage();
+  auto new_usage = GatherStorageUsage();
   {
     std::lock_guard<std::mutex> lock(usage_lock_);
     usage_ = std::move(new_usage);

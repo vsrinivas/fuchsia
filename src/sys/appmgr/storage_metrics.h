@@ -45,7 +45,6 @@ class StorageMetrics {
   // paths_to_watch takes the list of file paths to watch from the rootof appmgr's namespace, and
   // inspect_node will be the root of the inspect tree for this set of metrics.
   StorageMetrics(std::vector<std::string> paths_to_watch, inspect::Node inspect_node);
-  DISALLOW_COPY_ASSIGN_AND_MOVE(StorageMetrics);
 
   // Should be called exactly once to begin the periodic aggregation, with one being scheduled
   // immediately. Call this only once.
@@ -57,13 +56,13 @@ class StorageMetrics {
   friend class StorageMetricsTest;
 
   // Populate the inspect node for byte usage using the results from the last poll.
-  fit::promise<inspect::Inspector> InspectByteUsage() const;
+  fit::promise<inspect::Inspector> InspectByteUsage(const std::string& path) const;
 
   // Populate the inspect node for inode usage using the results from the last poll.
-  fit::promise<inspect::Inspector> InspectInodeUsage() const;
+  fit::promise<inspect::Inspector> InspectInodeUsage(const std::string& path) const;
 
   // Perform the actual aggregation.
-  UsageMap GatherStorageUsage() const;
+  std::unordered_map<std::string, StorageMetrics::UsageMap> GatherStorageUsage() const;
 
   // This is the task that will be scheduled for running, which calls GatherStorageUsage() before
   // scheduling the next run after some delay.
@@ -75,21 +74,26 @@ class StorageMetrics {
   // The root of the storage metrics inspect tree.
   inspect::Node inspect_root_;
 
-  // Will be a list of bytes used per component, populated on demand.
-  inspect::LazyNode inspect_bytes_stats_;
+  // A list of bytes used per component, per path, populated on demand.
+  inspect::Node inspect_bytes_stats_;
 
-  // Will be a list of inodes used per component, populated on demand.
-  inspect::LazyNode inspect_inode_stats_;
+  // A list of inodes used per component, per path, populated on demand.
+  inspect::Node inspect_inode_stats_;
+
+  // The list of lazy nodes need to be held somewhere, if they're never directly referenced again.
+  std::vector<inspect::LazyNode> lazy_nodes_;
 
   // Protect the population of the stored usage map between updating and reading from inspect.
   mutable std::mutex usage_lock_;
 
   // The results of the last poll.
-  UsageMap usage_ __TA_GUARDED(usage_lock_);
+  std::unordered_map<std::string, UsageMap> usage_ __TA_GUARDED(usage_lock_);
 
   // Manages the lifetime of the thread and dispatcher. This should be last to force the thread
   // shutdown before destructing anything else.
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  DISALLOW_COPY_ASSIGN_AND_MOVE(StorageMetrics);
 };
 
 #endif  // SRC_SYS_APPMGR_STORAGE_METRICS_H_

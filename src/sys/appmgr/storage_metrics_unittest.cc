@@ -73,7 +73,7 @@ class StorageMetricsTest : public ::testing::Test {
 
   // Rebuilds a UsageMap from the Inspect data. Do all the heavy lifting here so that the tests can
   // focus on verifying the right values.
-  void GetUsageMap(StorageMetrics::UsageMap* usage) {
+  void GetUsageMap(StorageMetrics::UsageMap* usage, const std::string& path) {
     inspect::Hierarchy hierarchy;
     GetHierarchy(&hierarchy);
 
@@ -84,19 +84,29 @@ class StorageMetricsTest : public ::testing::Test {
         [](const inspect::Hierarchy& node) { return node.name() == kInspectNodeName; });
     child_nodes = it->take_children();
 
-    for (auto& child : child_nodes) {
-      if (child.name() == "inodes") {
-        for (auto& property : child.node_ptr()->take_properties()) {
-          usage->AddForKey(property.name(),
-                           {0, property.Get<inspect::UintPropertyValue>().value()});
+    for (auto& units : child_nodes) {
+      if (units.name() == "inodes") {
+        for (auto& child : units.take_children()) {
+          if (child.name() != path) {
+            continue;
+          }
+          for (auto& property : child.node_ptr()->take_properties()) {
+            usage->AddForKey(property.name(),
+                             {0, property.Get<inspect::UintPropertyValue>().value()});
+          }
         }
-      } else if (child.name() == "bytes") {
-        for (auto& property : child.node_ptr()->take_properties()) {
-          usage->AddForKey(property.name(),
-                           {property.Get<inspect::UintPropertyValue>().value(), 0});
+      } else if (units.name() == "bytes") {
+        for (auto& child : units.take_children()) {
+          if (child.name() != path) {
+            continue;
+          }
+          for (auto& property : child.node_ptr()->take_properties()) {
+            usage->AddForKey(property.name(),
+                             {property.Get<inspect::UintPropertyValue>().value(), 0});
+          }
         }
       } else {
-        ASSERT_TRUE(false) << "Unexpected child node: " << child.name();
+        ASSERT_TRUE(false) << "Unexpected child node: " << units.name();
       }
     }
   }
@@ -133,7 +143,7 @@ TEST_F(StorageMetricsTest, TwoComponents) {
 
   AggregateStorage();
   StorageMetrics::UsageMap usage;
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage, kPersistentPath));
 
   // Expect one file each.
   ASSERT_EQ(usage.map().at("12345").inodes, 1ul);
@@ -161,7 +171,7 @@ TEST_F(StorageMetricsTest, CountSubdirectories) {
 
   AggregateStorage();
   StorageMetrics::UsageMap usage;
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage, kPersistentPath));
 
   // 3 Total files
   ASSERT_EQ(usage.map().at("12345").inodes, 3ul);
@@ -182,7 +192,7 @@ TEST_F(StorageMetricsTest, IncrementByBlocks) {
 
   AggregateStorage();
   StorageMetrics::UsageMap usage;
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage, kPersistentPath));
 
   // Check block size, the one byte file will allocate an entire block.
   ASSERT_EQ(usage.map().at("12345").inodes, 1ul);
@@ -198,7 +208,7 @@ TEST_F(StorageMetricsTest, IncrementByBlocks) {
   }
 
   AggregateStorage();
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage, kPersistentPath));
   ASSERT_EQ(usage.map().at("12345").bytes, block_size);
 
   // Reopen file and make it block_size + 1 to make the result 2 * block_size
@@ -216,7 +226,7 @@ TEST_F(StorageMetricsTest, IncrementByBlocks) {
     }
   }
   AggregateStorage();
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage, kPersistentPath));
   ASSERT_EQ(usage.map().at("12345").bytes, block_size * 2);
 }
 
@@ -225,7 +235,7 @@ TEST_F(StorageMetricsTest, EmptyComponent) {
   files::CreateDirectory(files::JoinPath(kPersistentPath, "12345"));
   AggregateStorage();
   StorageMetrics::UsageMap usage;
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage, kPersistentPath));
   ASSERT_EQ(usage.map().at("12345").inodes, 0ul);
   ASSERT_EQ(usage.map().at("12345").bytes, 0ul);
 }
@@ -243,13 +253,21 @@ TEST_F(StorageMetricsTest, MultipleWatchPaths) {
     fbl::unique_fd fd(open(files::JoinPath(kCachePath, "12345/other").c_str(), O_RDWR | O_CREAT));
     ASSERT_GE(fd.get(), 0);
   }
+  {
+    fbl::unique_fd fd(open(files::JoinPath(kCachePath, "12345/third").c_str(), O_RDWR | O_CREAT));
+    ASSERT_GE(fd.get(), 0);
+  }
 
   AggregateStorage();
-  StorageMetrics::UsageMap usage;
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  StorageMetrics::UsageMap persistent_usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&persistent_usage, kPersistentPath));
 
-  ASSERT_EQ(usage.map().at("12345").inodes, 2ul);
-  ASSERT_EQ(usage.map().at("12345").bytes, 0ul);
+  ASSERT_EQ(persistent_usage.map().at("12345").inodes, 1ul);
+
+  StorageMetrics::UsageMap cache_usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&cache_usage, kCachePath));
+
+  ASSERT_EQ(cache_usage.map().at("12345").inodes, 2ul);
 }
 
 // Nested Realm gets included.
@@ -271,9 +289,9 @@ TEST_F(StorageMetricsTest, RealmNesting) {
   }
 
   AggregateStorage();
-  StorageMetrics::UsageMap usage;
-  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+  StorageMetrics::UsageMap persistent_usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&persistent_usage, kPersistentPath));
 
-  ASSERT_EQ(usage.map().at("12345").inodes, 1ul);
-  ASSERT_EQ(usage.map().at("67890").inodes, 1ul);
+  ASSERT_EQ(persistent_usage.map().at("12345").inodes, 1ul);
+  ASSERT_EQ(persistent_usage.map().at("67890").inodes, 1ul);
 }

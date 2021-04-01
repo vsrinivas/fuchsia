@@ -50,6 +50,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)),
       storage_metrics_(
           {
+              "/data/cache",
               "/data/persistent",
           },
           inspector_.GetRoot().CreateChild("storage_usage")),
