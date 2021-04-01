@@ -54,7 +54,9 @@ class NL_DLL_EXPORT ConnectivityManagerDelegateImpl : public ConnectivityManager
   fuchsia::net::interfaces::StatePtr state_;
   fuchsia::net::interfaces::WatcherPtr watcher_;
 
+  uint64_t wlan_interface_id_ = 0;
   std::optional<std::string> wlan_interface_name_ = std::nullopt;
+  uint64_t thread_interface_id_ = 0;
 
   std::unordered_set<int> routable_v4_interfaces;
   std::unordered_set<int> routable_v6_interfaces;

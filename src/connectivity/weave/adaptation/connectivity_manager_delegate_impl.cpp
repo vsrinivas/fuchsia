@@ -5,6 +5,7 @@
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConnectivityManager.h>
+#include <Weave/DeviceLayer/ThreadStackManager.h>
 #include <Weave/DeviceLayer/internal/BLEManager.h>
 #include <Weave/DeviceLayer/internal/DeviceNetworkInfo.h>
 #include <Weave/DeviceLayer/internal/ServiceTunnelAgent.h>
@@ -18,6 +19,7 @@
 // clang-format on
 #include "connectivity_manager_delegate_impl.h"
 
+#include <fuchsia/hardware/network/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -30,6 +32,7 @@ namespace {
 using namespace ::nl::Weave;
 using namespace ::nl::Weave::Profiles::WeaveTunnel;
 
+using fuchsia::hardware::network::DeviceClass;
 using Internal::ServiceTunnelAgent;
 
 using ThreadMode = ConnectivityManager::ThreadMode;
@@ -289,9 +292,54 @@ void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces:
           },
           (intptr_t)this);
     }
+
+    // TODO(73097): Instead of attempting to "detect" the right interface (and assuming the first
+    // interface that matches is correct), allow the wlan and thread interfaces to be specified via
+    // config.
+
+    if (wlan_interface_id_ == 0 && properties.has_device_class() &&
+        properties.device_class().is_device() &&
+        properties.device_class().device() == DeviceClass::WLAN) {
+      wlan_interface_id_ = properties.id();
+      wlan_interface_name_ = properties.name();
+      FX_LOGS(INFO) << "Identifying interface \"" << properties.name()
+                    << "\" as the WLAN interface.";
+      PlatformMgr().ScheduleWork(
+          [](intptr_t) { Warm::WiFiInterfaceStateChange(Warm::kInterfaceStateUp); }, 0);
+    }
+
+    if (thread_interface_id_ == 0 && properties.has_name() &&
+        properties.name() == ThreadStackMgrImpl().GetInterfaceName()) {
+      thread_interface_id_ = properties.id();
+      FX_LOGS(INFO) << "Identifying interface \"" << properties.name()
+                    << "\" as the Thread interface.";
+      PlatformMgr().ScheduleWork(
+          [](intptr_t) { Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateUp); }, 0);
+    }
   } else if (event.is_removed()) {
     routable_v4_interfaces.erase(event.removed());
     routable_v6_interfaces.erase(event.removed());
+
+    if (event.removed() == wlan_interface_id_) {
+      FX_LOGS(INFO) << "Wlan iface removed, informing WARM of WLAN down.";
+      PlatformMgr().ScheduleWork(
+          [](intptr_t context) {
+            auto self = reinterpret_cast<ConnectivityManagerDelegateImpl*>(context);
+            Warm::WiFiInterfaceStateChange(Warm::kInterfaceStateDown);
+            self->wlan_interface_id_ = 0;
+            self->wlan_interface_name_ = std::nullopt;
+          },
+          reinterpret_cast<intptr_t>(this));
+    } else if (event.removed() == thread_interface_id_) {
+      FX_LOGS(INFO) << "Thread iface removed, informing WARM of Thread down.";
+      PlatformMgr().ScheduleWork(
+          [](intptr_t context) {
+            auto self = reinterpret_cast<ConnectivityManagerDelegateImpl*>(context);
+            Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateDown);
+            self->thread_interface_id_ = 0;
+          },
+          reinterpret_cast<intptr_t>(this));
+    }
   }
 
   PlatformMgr().ScheduleWork(

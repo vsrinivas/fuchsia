@@ -120,7 +120,11 @@ PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IP
     return kPlatformResultFailure;
   }
   status = GetInterface(stack_sync_ptr, interface_name, &interface_id);
-  if (status != ZX_OK) {
+  if (!add && status == ZX_ERR_NOT_FOUND) {
+    // When removing, don't report error if interface isn't found as the interface itself may have
+    // been removed beforehand.
+    return kPlatformResultSuccess;
+  } if (status != ZX_OK) {
     return kPlatformResultFailure;
   }
 

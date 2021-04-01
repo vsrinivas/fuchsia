@@ -469,7 +469,7 @@ TEST_F(WarmTest, AddAddressThreadNoInterface) {
 
   fake_net_stack().RemoveFakeInterface(kThreadInterfaceName);
 
-  // Attempt to add to the inteface when there's no Thread interface. Expect failure.
+  // Attempt to add to the interface when there's no Thread interface. Expect failure.
   ASSERT_TRUE(IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ true);
   EXPECT_EQ(result, kPlatformResultFailure);
@@ -482,10 +482,10 @@ TEST_F(WarmTest, RemoveAddressThreadNoInterface) {
 
   fake_net_stack().RemoveFakeInterface(kThreadInterfaceName);
 
-  // Attempt to remove from the inteface when there's no Thread interface. Expect failure.
+  // Attempt to remove from the interface when there's no Thread interface. Expect success.
   ASSERT_TRUE(IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
-  EXPECT_EQ(result, kPlatformResultFailure);
+  EXPECT_EQ(result, kPlatformResultSuccess);
 }
 
 TEST_F(WarmTest, AddAddressTunnelNoInterface) {
@@ -495,7 +495,7 @@ TEST_F(WarmTest, AddAddressTunnelNoInterface) {
 
   fake_net_stack().RemoveFakeInterface(kTunInterfaceName);
 
-  // Attempt to add to the inteface when there's no Tunnel interface. Expect failure.
+  // Attempt to add to the interface when there's no Tunnel interface. Expect failure.
   ASSERT_TRUE(IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeTunnel, addr, kPrefixLength, /*add*/ true);
   EXPECT_EQ(result, kPlatformResultFailure);
@@ -508,10 +508,10 @@ TEST_F(WarmTest, RemoveAddressTunnelNoInterface) {
 
   fake_net_stack().RemoveFakeInterface(kTunInterfaceName);
 
-  // Attempt to remove from the inteface when there's no Tunnel interface. Expect failure.
+  // Attempt to remove from the interface when there's no Tunnel interface. Expect success.
   ASSERT_TRUE(IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeTunnel, addr, kPrefixLength, /*add*/ false);
-  EXPECT_EQ(result, kPlatformResultFailure);
+  EXPECT_EQ(result, kPlatformResultSuccess);
 }
 
 TEST_F(WarmTest, AddRemoveHostRouteThread) {
