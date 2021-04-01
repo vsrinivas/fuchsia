@@ -77,6 +77,11 @@ impl Facade for WlanPolicyFacade {
                 to_value(result)
                     .map_err(|e| format_err!("error initializing client controller: {}", e))
             }
+            "drop_client_controller" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "dropping client controller");
+                let result = self.drop_client_controller();
+                to_value(result).map_err(|e| format_err!("error dropping client controller: {}", e))
+            }
             "remove_all_networks" => {
                 fx_log_info!(tag: "WlanPolicyFacade", "Removing all saved client network configs");
                 let result = self.remove_all_networks().await?;

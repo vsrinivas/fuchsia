@@ -109,6 +109,12 @@ impl WlanPolicyFacade {
         Ok((controller, update_stream))
     }
 
+    /// Drop the facade's client controller so that something else can get a controller.
+    pub fn drop_client_controller(&self) {
+        let mut controller_guard = self.controller.write();
+        controller_guard.inner = None;
+    }
+
     /// Creates a listener update stream for getting status updates.
     fn init_listener() -> Result<fidl_policy::ClientStateUpdatesRequestStream, Error> {
         let listener = connect_to_service::<fidl_policy::ClientListenerMarker>()?;
