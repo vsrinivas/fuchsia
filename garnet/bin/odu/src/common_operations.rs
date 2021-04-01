@@ -63,7 +63,7 @@ pub fn allowed_ops(target_type: AvailableTargets) -> &'static TargetOps {
 mod tests {
 
     use {
-        crate::common_operations::{pread, pwrite},
+        crate::common_operations::pwrite,
         crate::target::Error,
         std::{fs::File, fs::OpenOptions, io::ErrorKind, os::unix::io::AsRawFd},
     };
@@ -84,34 +84,5 @@ mod tests {
         let ret = pwrite(f.as_raw_fd(), &mut buffer, 0);
         assert!(ret.is_err());
         assert_eq!(ret.err(), Some(Error::DoIoError(ErrorKind::Other)));
-    }
-
-    #[test]
-    fn test_pread_file() {
-        let file_name = "/tmp/odu-common_operations-test_pread-file01".to_string();
-
-        // Create a file in rw mode if it doesn't exists.
-        File::create(&file_name).unwrap().set_len(1024).unwrap();
-
-        // Open the file in read-only mode and try to read from it.
-        let f = OpenOptions::new().read(true).write(false).open(file_name).unwrap();
-        let mut buffer = vec![0; 100];
-
-        let () = pread(f.as_raw_fd(), &mut buffer, 0).unwrap();
-    }
-
-    #[test]
-    fn test_pread_failure() {
-        let file_name = "/tmp/odu-common_operations-test_pread-file01".to_string();
-
-        // Create a file in rw mode if it doesn't exists.
-        File::create(&file_name).unwrap().set_len(1024).unwrap();
-
-        // Open the file in read-only mode and try to read from it.
-        let f = OpenOptions::new().read(true).write(false).open(file_name).unwrap();
-        let mut buffer = vec![0; 100];
-
-        let ret = pread(f.as_raw_fd(), &mut buffer, 1000);
-        assert_eq!(ret.err(), Some(Error::ShortRead));
     }
 }
