@@ -161,7 +161,9 @@ pub struct WithAndWithoutRequestResponseSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name =
+            <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
@@ -1495,7 +1497,8 @@ pub struct WithErrorSyntaxSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
@@ -2401,7 +2404,8 @@ pub struct ChannelProtocolSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl ChannelProtocolSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
@@ -3423,7 +3427,8 @@ pub struct TransitionalSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl TransitionalSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <TransitionalMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {

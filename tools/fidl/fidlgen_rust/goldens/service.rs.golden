@@ -49,7 +49,8 @@ pub struct FirstProtocolSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl FirstProtocolSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <FirstProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
@@ -384,7 +385,8 @@ pub struct SecondProtocolSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl SecondProtocolSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <SecondProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {

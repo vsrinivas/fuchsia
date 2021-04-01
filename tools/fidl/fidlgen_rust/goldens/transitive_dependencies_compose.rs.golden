@@ -51,7 +51,8 @@ pub struct TopSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl TopSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <TopMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {

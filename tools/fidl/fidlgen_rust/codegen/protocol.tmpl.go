@@ -117,7 +117,8 @@ pub struct {{ $protocol.Name }}SynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl {{ $protocol.Name }}SynchronousProxy {
 	pub fn new(channel: fidl::Channel) -> Self {
-		Self { client: fidl::client::sync::Client::new(channel) }
+		let service_name = <{{ $protocol.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+		Self { client: fidl::client::sync::Client::new(channel, service_name) }
 	}
 
 	pub fn into_channel(self) -> fidl::Channel {

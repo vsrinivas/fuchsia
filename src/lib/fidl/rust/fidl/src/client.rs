@@ -721,6 +721,9 @@ pub mod sync {
 
         // Reusable handle buffer for writes.
         buf_write_handles: Vec<HandleDisposition<'static>>,
+
+        // The `ServiceMarker::DEBUG_NAME` for the service this client connects to.
+        service_name: &'static str,
     }
 
     // TODO: remove this and allow multiple overlapping queries on the same channel.
@@ -728,7 +731,7 @@ pub mod sync {
 
     impl Client {
         /// Create a new synchronous FIDL client.
-        pub fn new(channel: zx::Channel) -> Self {
+        pub fn new(channel: zx::Channel, service_name: &'static str) -> Self {
             // Initialize tracing. This is a no-op if FIDL userspace tracing is
             // disabled or if the function was already called.
             create_trace_provider();
@@ -737,6 +740,7 @@ pub mod sync {
                 buf_bytes: Vec::new(),
                 buf_read_handles: Vec::new(),
                 buf_write_handles: Vec::new(),
+                service_name,
             }
         }
 
@@ -754,7 +758,7 @@ pub mod sync {
             Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
             self.channel
                 .write_etc(&mut self.buf_bytes, &mut self.buf_write_handles)
-                .map_err(|e| Error::ClientWrite(e.into()))?;
+                .map_err(|e| self.wrap_error(Error::ClientWrite, e))?;
             Ok(())
         }
 
@@ -775,7 +779,7 @@ pub mod sync {
             Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
             self.channel
                 .write_etc(&mut self.buf_bytes, &mut self.buf_write_handles)
-                .map_err(|e| Error::ClientWrite(e.into()))?;
+                .map_err(|e| self.wrap_error(Error::ClientWrite, e))?;
 
             // Read the response
             self.buf_bytes.clear();
@@ -792,21 +796,42 @@ pub mod sync {
                         .map_err(|e| Error::ClientRead(e.into()))?;
                     if !signals.contains(zx::Signals::CHANNEL_READABLE) {
                         debug_assert!(signals.contains(zx::Signals::CHANNEL_PEER_CLOSED));
-                        return Err(Error::ClientRead(zx_status::Status::PEER_CLOSED));
+                        return Err(
+                            self.wrap_error(Error::ClientRead, zx_status::Status::PEER_CLOSED)
+                        );
                     }
                     self.channel
                         .read_etc_split(&mut self.buf_bytes, &mut self.buf_read_handles)
-                        .map_err(|e| Error::ClientRead(e.into()))?;
+                        .map_err(|e| self.wrap_error(Error::ClientRead, e))?;
                 }
-                Err(e) => return Err(Error::ClientRead(e.into())),
+                Err(e) => return Err(self.wrap_error(Error::ClientRead, e)),
             }
             let (header, body_bytes) = decode_transaction_header(&self.buf_bytes)?;
+            // TODO(fxbug.dev/73477): Handle epitaphs.
             if header.tx_id() != QUERY_TX_ID || header.ordinal() != ordinal {
                 return Err(Error::UnexpectedSyncResponse);
             }
             let mut output = D::new_empty();
             Decoder::decode_into(&header, body_bytes, &mut self.buf_read_handles, &mut output)?;
             Ok(output)
+        }
+
+        /// Wraps an error in the given `variant` of the `Error` enum, except
+        /// for `zx_status::Status::PEER_CLOSED`, in which case it uses the
+        /// `Error::ClientChannelClosed` variant.
+        fn wrap_error<T: Fn(zx_status::Status) -> Error>(
+            &self,
+            variant: T,
+            err: zx_status::Status,
+        ) -> Error {
+            if err == zx_status::Status::PEER_CLOSED {
+                Error::ClientChannelClosed {
+                    status: zx_status::Status::PEER_CLOSED,
+                    service_name: self.service_name,
+                }
+            } else {
+                variant(err)
+            }
         }
     }
 }
@@ -863,7 +888,7 @@ mod tests {
     #[test]
     fn sync_client() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end);
+        let mut client = sync::Client::new(client_end, "test_service");
         client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).context("sending")?;
         let mut received = MessageBufEtc::new();
         server_end.read_etc(&mut received).context("reading")?;
@@ -875,7 +900,7 @@ mod tests {
     #[test]
     fn sync_client_with_response() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end);
+        let mut client = sync::Client::new(client_end, "test_service");
         thread::spawn(move || {
             // Server
             let mut received = MessageBufEtc::new();
@@ -897,6 +922,62 @@ mod tests {
             )
             .context("sending query")?;
         assert_eq!(SEND_DATA, response_data);
+        Ok(())
+    }
+
+    #[test]
+    fn sync_client_peer_closed() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let mut client = sync::Client::new(client_end, "test_service");
+        // Close the server channel.
+        drop(server_end);
+        assert_matches!(
+            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL),
+            Err(crate::Error::ClientChannelClosed {
+                status: zx_status::Status::PEER_CLOSED,
+                service_name: "test_service",
+            })
+        );
+        Ok(())
+    }
+
+    // TODO(fxbug.dev/73477): When the sync client supports epitaphs, rename
+    // this and change the assert to expect zx_status::Status::UNAVAILABLE.
+    #[test]
+    fn sync_client_does_not_receive_epitaphs() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let mut client = sync::Client::new(client_end, "test_service");
+        // Close the server channel with an epitaph.
+        server_end
+            .close_with_epitaph(zx_status::Status::UNAVAILABLE)
+            .expect("failed to write epitaph");
+        assert_matches!(
+            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL),
+            Err(crate::Error::ClientChannelClosed {
+                status: zx_status::Status::PEER_CLOSED,
+                service_name: "test_service",
+            })
+        );
+        Ok(())
+    }
+
+    // TODO(fxbug.dev/73478): When the sync client supports receiving events,
+    // rename this and expect the client to receive both response and event.
+    #[test]
+    fn sync_client_broken_by_event() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let mut client = sync::Client::new(client_end, "test_service");
+        // Send an event from the server.
+        send_transaction(TransactionHeader::new(0, 5), &server_end);
+        // Client gets the event instead of the expected sync method response.
+        assert_matches!(
+            client.send_query::<u8, u8>(
+                &mut SEND_DATA.clone(),
+                SEND_ORDINAL,
+                zx::Time::after(5.seconds()),
+            ),
+            Err(crate::Error::UnexpectedSyncResponse)
+        );
         Ok(())
     }
 

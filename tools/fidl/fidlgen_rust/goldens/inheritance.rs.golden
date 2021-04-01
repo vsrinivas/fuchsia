@@ -50,7 +50,8 @@ pub struct Super_SynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl Super_SynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <Super_Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
@@ -513,7 +514,8 @@ pub struct SubSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl SubSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        Self { client: fidl::client::sync::Client::new(channel) }
+        let service_name = <SubMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
