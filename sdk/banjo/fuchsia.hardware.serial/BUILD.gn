@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.serial") {
+  sdk_category = "partner"
   sources = [ "serial.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }

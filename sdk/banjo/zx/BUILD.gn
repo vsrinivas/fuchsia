@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("zx") {
+  sdk_category = "partner"
   sources = [ "zx.banjo" ]
 
   needs_composite = false

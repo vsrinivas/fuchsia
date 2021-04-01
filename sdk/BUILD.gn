@@ -583,6 +583,55 @@ sdk("fuchsia_dart") {
   ]
 }
 
+sdk_molecule("ddk_host_tools") {
+  visibility = [ ":*" ]
+
+  cross_compiled = [
+    "//tools/bindc:bindc_sdk",
+    "//src/devices/tools/banjo:banjo_bin_sdk",
+  ]
+
+  toolchains = []
+  if (host_os == "linux") {
+    toolchains += [
+      host_x64_toolchain,
+      host_arm64_toolchain,
+    ]
+  } else if (host_os == "mac") {
+    toolchains += [ host_toolchain ]
+  }
+
+  deps = []
+
+  foreach(toolchain, toolchains) {
+    foreach(dep, cross_compiled) {
+      deps += [ "$dep($toolchain)" ]
+      if (toolchain == host_toolchain) {
+        deps += [ "${dep}_legacy($toolchain)" ]
+      }
+    }
+  }
+}
+
+sdk_molecule("banjo") {
+  visibility = [ ":*" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($banjo_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_sdk($banjo_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_sdk($banjo_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_sdk($banjo_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_sdk($banjo_toolchain)",
+  ]
+}
+
+sdk_molecule("bind") {
+  visibility = [ ":*" ]
+  deps = [
+    "//src/devices/bind/fuchsia.test:fuchsia.test_sdk",
+    "//src/devices/bind/fuchsia.usb:fuchsia.usb_sdk",
+  ]
+}
+
 sdk("ddk") {
   id = sdk_id
 
@@ -590,5 +639,10 @@ sdk("ddk") {
 
   api = "manifests/ddk.manifest"
 
-  deps = [ "//src/lib/ddk:ddk_sdk" ]
+  deps = [
+    ":banjo",
+    ":bind",
+    ":ddk_host_tools",
+    "//src/lib/ddk:ddk_sdk",
+  ]
 }

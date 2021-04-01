@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.i2cimpl") {
+  sdk_category = "partner"
   sources = [ "i2c-impl.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
