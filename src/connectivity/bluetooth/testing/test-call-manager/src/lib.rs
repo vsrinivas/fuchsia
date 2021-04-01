@@ -20,7 +20,10 @@ use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, stream::StreamExt, FutureExt, TryStreamExt};
 use serde::Serialize;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+};
 
 pub const HFP_AG_URL: &str =
     "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cmx";
@@ -34,8 +37,6 @@ struct ManagerState {
     #[derivative(Debug = "ignore")]
     peer_watcher: Option<fasync::Task<()>>,
     network: NetworkInformation,
-    reported_network: Option<NetworkInformation>,
-    network_responder: Option<PeerHandlerWatchNetworkInformationResponder>,
     operator: String,
     subscriber_numbers: Vec<String>,
     nrec_support: bool,
@@ -46,8 +47,6 @@ impl Default for ManagerState {
         Self {
             peer_watcher: None,
             network: NetworkInformation::EMPTY,
-            reported_network: None,
-            network_responder: None,
             operator: String::new(),
             subscriber_numbers: vec![],
             nrec_support: true,
@@ -59,6 +58,8 @@ impl Default for ManagerState {
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
 struct PeerState {
+    reported_network: Option<NetworkInformation>,
+    network_responder: Option<PeerHandlerWatchNetworkInformationResponder>,
     nrec_enabled: bool,
     battery_level: u8,
     speaker_gain: u8,
@@ -93,7 +94,8 @@ impl CallState {
     pub fn update_state(&mut self, state: FidlCallState) -> Result<(), Error> {
         self.state = state;
         if self.reported_state != Some(state) {
-            let responder = self.responder.take().ok_or(format_err!("No call responder"))?;
+            let responder =
+                self.responder.take().ok_or_else(|| format_err!("No call responder"))?;
             responder.send(state)?;
             self.reported_state = Some(state);
         }
@@ -111,7 +113,6 @@ pub struct StateSer {
 #[derive(Serialize)]
 pub struct ManagerStateSer {
     network: NetworkInformationSer,
-    reported_network: Option<NetworkInformationSer>,
     operator: String,
     subscriber_numbers: Vec<String>,
     nrec_support: bool,
@@ -142,7 +143,6 @@ impl From<&ManagerState> for ManagerStateSer {
     fn from(state: &ManagerState) -> Self {
         Self {
             network: state.network.clone().into(),
-            reported_network: state.reported_network.clone().map(Into::into),
             operator: state.operator.clone(),
             subscriber_numbers: state.subscriber_numbers.clone(),
             nrec_support: state.nrec_support.clone(),
@@ -152,6 +152,7 @@ impl From<&ManagerState> for ManagerStateSer {
 
 #[derive(Serialize)]
 struct PeerStateSer {
+    reported_network: Option<NetworkInformationSer>,
     nrec_enabled: bool,
     battery_level: u8,
     speaker_gain: u8,
@@ -163,6 +164,7 @@ struct PeerStateSer {
 impl From<&PeerState> for PeerStateSer {
     fn from(state: &PeerState) -> Self {
         Self {
+            reported_network: state.reported_network.clone().map(Into::into),
             nrec_enabled: state.nrec_enabled,
             battery_level: state.battery_level,
             speaker_gain: state.speaker_gain,
@@ -209,6 +211,8 @@ struct TestCallManagerInner {
     /// State for all ongoing calls
     #[derivative(Debug = "ignore")]
     calls: HashMap<CallId, CallState>,
+    /// Unreported calls
+    unreported_calls: VecDeque<CallId>,
 }
 
 impl TestCallManagerInner {
@@ -308,12 +312,14 @@ impl TestCallManager {
             let responder = peer
                 .call_responder
                 .take()
-                .ok_or(format_err!("No peer call responder for {:?}", peer_id))?;
+                .ok_or_else(|| format_err!("No peer call responder for {:?}", peer_id))?;
             if let Ok(()) = responder.send(client_end, remote, fidl_state) {
                 let task = fasync::Task::local(self.clone().manage_call(peer_id, call_id, stream));
                 peer.call_tasks.insert(call_id, task);
                 state.peer_id = Some(peer_id);
             }
+        } else {
+            inner.unreported_calls.push_back(call_id);
         }
 
         inner.calls.insert(call_id, state);
@@ -352,7 +358,7 @@ impl TestCallManager {
             .await
             .calls
             .get_mut(&call_id)
-            .ok_or(format_err!("Unknown Call Id {}", call_id))
+            .ok_or_else(|| format_err!("Unknown Call Id {}", call_id))
             .and_then(|call| call.update_state(fidl_state))
     }
 
@@ -427,6 +433,40 @@ impl TestCallManager {
         }
     }
 
+    // Report all calls to the given peer. Panics if `id` does not point to a valid peer in the
+    // peers map.
+    fn report_calls(
+        self,
+        id: PeerId,
+        mut inner: futures::lock::MutexGuard<'_, TestCallManagerInner>,
+    ) -> Result<(), Error> {
+        // keep popping from unreported until we get one
+        // that is also found in the calls map.
+        while let Some(cid) = inner.unreported_calls.pop_front() {
+            if let Some(call) = inner.calls.get(&cid) {
+                let remote = call.remote.clone();
+                let state = call.state;
+                drop(call);
+                let (client_end, stream) =
+                    fidl::endpoints::create_request_stream::<CallMarker>()
+                        .map_err(|e| format_err!("Error creating fidl endpoints: {}", e))?;
+                let peer = inner.peers.get_mut(&id).expect("peer just added");
+                let res = peer
+                    .call_responder
+                    .take()
+                    .expect("just put here")
+                    .send(client_end, &remote, state);
+                if let Ok(()) = res {
+                    let task = fasync::Task::local(self.manage_call(id, cid, stream));
+                    peer.call_tasks.insert(cid, task);
+                    inner.calls.get_mut(&cid).expect("still here").peer_id = Some(id);
+                }
+                break;
+            }
+        }
+        Ok(())
+    }
+
     /// Handle a peer `request`. Most requests are handled by immediately responding with the
     /// relevant data which is stored in the facade's state.
     ///
@@ -442,20 +482,31 @@ impl TestCallManager {
         match request {
             PeerHandlerRequest::WatchNetworkInformation { responder, .. } => {
                 let mut inner = self.inner.lock().await;
-                if Some(inner.manager.network.clone()) == inner.manager.reported_network {
-                    inner.manager.network_responder = Some(responder);
+                let current_network = inner.manager.network.clone();
+                let peer = inner
+                    .peers
+                    .get_mut(&id)
+                    .ok_or_else(|| format_err!("peer removed: {:?}", id))?;
+
+                if Some(&current_network) == peer.reported_network.as_ref() {
+                    peer.network_responder = Some(responder);
                 } else {
-                    responder.send(inner.manager.network.clone())?;
-                    inner.manager.reported_network = Some(inner.manager.network.clone());
+                    responder.send(current_network.clone())?;
+                    peer.reported_network = Some(current_network);
                 }
             }
             PeerHandlerRequest::WaitForCall { responder, .. } => {
+                let this = self.clone();
                 let mut inner = self.inner.lock().await;
-                let peer = inner.peers.get_mut(&id).ok_or(format_err!("peer removed: {:?}", id))?;
+                let peer = inner
+                    .peers
+                    .get_mut(&id)
+                    .ok_or_else(|| format_err!("peer removed: {:?}", id))?;
                 if peer.call_responder.is_none() {
                     peer.call_responder = Some(responder);
+                    this.report_calls(id, inner)?;
                 } else {
-                    let err = format_err!("double hanging get call on PeerHandler::WatchForCall");
+                    let err = format_err!("double hanging get call on PeerHandler::WaitForCall");
                     fx_log_err!("{}", err);
                     *inner = TestCallManagerInner::default();
                     return Err(err);
@@ -482,8 +533,10 @@ impl TestCallManager {
             PeerHandlerRequest::SetNrecMode { enabled, responder, .. } => {
                 let mut inner = self.inner.lock().await;
                 if inner.manager.nrec_support {
-                    let peer =
-                        inner.peers.get_mut(&id).ok_or(format_err!("peer removed: {:?}", id))?;
+                    let peer = inner
+                        .peers
+                        .get_mut(&id)
+                        .ok_or_else(|| format_err!("peer removed: {:?}", id))?;
                     peer.nrec_enabled = enabled;
                     responder.send(&mut Ok(()))?;
                 } else {
@@ -496,7 +549,7 @@ impl TestCallManager {
                     .await
                     .peers
                     .get_mut(&id)
-                    .ok_or(format_err!("peer removed: {:?}", id))?
+                    .ok_or_else(|| format_err!("peer removed: {:?}", id))?
                     .battery_level = level;
             }
             PeerHandlerRequest::GainControl { control, .. } => {
@@ -535,7 +588,10 @@ impl TestCallManager {
                     fx_log_info!("Headset gain control channel for peer {:?} closed", id);
                 });
                 let mut inner = self.inner.lock().await;
-                let peer = inner.peers.get_mut(&id).ok_or(format_err!("peer removed: {:?}", id))?;
+                let peer = inner
+                    .peers
+                    .get_mut(&id)
+                    .ok_or_else(|| format_err!("peer removed: {:?}", id))?;
                 if let Some(requested) = peer.requested_speaker_gain.take() {
                     proxy_.set_speaker_gain(requested)?;
                 }
@@ -607,6 +663,7 @@ impl TestCallManager {
     ///     `stream`: A stream of requests associated with a single call.
     async fn manage_call(self, peer_id: PeerId, call_id: CallId, mut stream: CallRequestStream) {
         while let Some(request) = stream.next().await {
+            fx_log_info!("Got call request: {:?} {:?} -> {:?}", peer_id, call_id, request);
             let mut inner = self.inner.lock().await;
             let state = if let Some(state) = inner.calls.get_mut(&call_id) {
                 state
@@ -680,7 +737,7 @@ impl TestCallManager {
     pub async fn set_speaker_gain(&self, value: u64) -> Result<(), Error> {
         let value = value as u8;
         let mut inner = self.inner.lock().await;
-        let peer = inner.active_peer_mut().ok_or(format_err!("No active peer"))?;
+        let peer = inner.active_peer_mut().ok_or_else(|| format_err!("No active peer"))?;
         if peer.speaker_gain != value {
             if let Some(gain_control) = &peer.gain_control {
                 gain_control.set_speaker_gain(value)?;
@@ -698,7 +755,7 @@ impl TestCallManager {
     pub async fn set_microphone_gain(&self, value: u64) -> Result<(), Error> {
         let value = value as u8;
         let mut inner = self.inner.lock().await;
-        let peer = inner.active_peer_mut().ok_or(format_err!("No active peer"))?;
+        let peer = inner.active_peer_mut().ok_or_else(|| format_err!("No active peer"))?;
         if peer.microphone_gain != value {
             if let Some(gain_control) = &peer.gain_control {
                 gain_control.set_microphone_gain(value)?;
@@ -726,12 +783,15 @@ impl TestCallManager {
             .map(|update| inner.manager.network.service_available = Some(update));
         network.signal_strength.map(|update| inner.manager.network.signal_strength = Some(update));
         network.roaming.map(|update| inner.manager.network.roaming = Some(update));
+        let current_network = inner.manager.network.clone();
 
-        // Update the client if a responder is present
-        if Some(inner.manager.network.clone()) != inner.manager.reported_network {
-            if let Some(responder) = inner.manager.network_responder.take() {
-                responder.send(inner.manager.network.clone())?;
-                inner.manager.reported_network = Some(inner.manager.network.clone());
+        for peer in inner.peers.values_mut() {
+            // Update the client if a responder is present
+            if Some(&current_network) != peer.reported_network.as_ref() {
+                if let Some(responder) = peer.network_responder.take() {
+                    responder.send(current_network.clone())?;
+                    peer.reported_network = Some(current_network.clone());
+                }
             }
         }
 
