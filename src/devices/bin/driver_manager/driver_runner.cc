@@ -522,24 +522,25 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
 
 void DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args,
                         fit::callback<void(zx::status<>)> callback) {
-  auto match_result = driver_index_->MatchDriver(
-      std::move(args), [this, callback = callback.share(), node](auto response) mutable {
-        if (response->result.is_err()) {
-          LOGF(ERROR, "Failed to match driver %s: %s", node->name().data(),
-               zx_status_get_string(response->result.err()));
-          callback(zx::error(response->result.err()));
-          return;
-        }
-        auto& url = response->result.response().url;
-        auto start_result = StartDriver(node, url.get());
-        if (start_result.is_error()) {
-          LOGF(ERROR, "Failed to start driver %s: %s", node->name().data(),
-               zx_status_get_string(start_result.status_value()));
-          callback(start_result.take_error());
-          return;
-        }
-        callback(zx::ok());
-      });
+  auto match_callback = [this, callback = callback.share(),
+                         node](fdf::DriverIndex::MatchDriverResponse* response) mutable {
+    if (response->result.is_err()) {
+      LOGF(ERROR, "Failed to match driver %s: %s", node->name().data(),
+           zx_status_get_string(response->result.err()));
+      callback(zx::error(response->result.err()));
+      return;
+    }
+    auto& url = response->result.response().url;
+    auto start_result = StartDriver(node, url.get());
+    if (start_result.is_error()) {
+      LOGF(ERROR, "Failed to start driver %s: %s", node->name().data(),
+           zx_status_get_string(start_result.error_value()));
+      callback(start_result.take_error());
+      return;
+    }
+    callback(zx::ok());
+  };
+  auto match_result = driver_index_->MatchDriver(std::move(args), std::move(match_callback));
   if (!match_result.ok()) {
     LOGF(ERROR, "Failed to call match driver %s: %s", node->name().data(), match_result.error());
     callback(zx::error(match_result.status()));
