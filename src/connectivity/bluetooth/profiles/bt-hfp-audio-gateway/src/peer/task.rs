@@ -380,7 +380,7 @@ mod tests {
             tests::{create_and_initialize_slc, expect_data_received_by_peer},
             SlcState,
         },
-        protocol::features::HfFeatures,
+        protocol::{features::HfFeatures, indicators::IndicatorsReporting},
     };
 
     fn arb_signal() -> impl Strategy<Value = Option<SignalStrength>> {
@@ -573,7 +573,10 @@ mod tests {
 
         // Set up the executor, peer, and background call manager task
         let mut exec = fasync::Executor::new().unwrap();
-        let state = SlcState { indicator_events_reporting: true, ..SlcState::default() };
+        let state = SlcState {
+            indicator_events_reporting: IndicatorsReporting::new_enabled(),
+            ..SlcState::default()
+        };
         let (connection, mut remote) = create_and_initialize_slc(state);
         let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
 

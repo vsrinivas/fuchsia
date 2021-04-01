@@ -44,6 +44,9 @@ pub mod nrec;
 /// Defines the implementation of the Query List of Current Calls Procedure.
 pub mod query_current_calls;
 
+/// Defines the implementation of the Indicators Activation and Deactivation Procedure.
+pub mod indicators_activation;
+
 /// Defines the implementation of the Query Operator Selection Procedure.
 pub mod query_operator_selection;
 
@@ -57,6 +60,7 @@ use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
 use extended_errors::ExtendedErrorsProcedure;
+use indicators_activation::IndicatorsActivationProcedure;
 use nrec::NrecProcedure;
 use phone_status::PhoneStatusProcedure;
 use query_current_calls::{build_clcc_response, QueryCurrentCallsProcedure};
@@ -145,6 +149,8 @@ pub enum ProcedureMarker {
     VolumeSynchronization,
     /// The Query List of Current Calls procedure as defined in HFP v1.8 Section 4.32.1.
     QueryCurrentCalls,
+    /// The Indicators Activation and Deactivation procedure as defined in HFP v1.8 Section 4.35.
+    Indicators,
 }
 
 impl ProcedureMarker {
@@ -166,6 +172,7 @@ impl ProcedureMarker {
             Self::Dtmf => Box::new(DtmfProcedure::new()),
             Self::VolumeSynchronization => Box::new(VolumeSynchronizationProcedure::new()),
             Self::QueryCurrentCalls => Box::new(QueryCurrentCallsProcedure::new()),
+            Self::Indicators => Box::new(IndicatorsActivationProcedure::new()),
         }
     }
 

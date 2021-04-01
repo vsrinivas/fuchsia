@@ -26,7 +26,7 @@ use crate::{
     },
     protocol::{
         features::{AgFeatures, HfFeatures},
-        indicators::Indicators,
+        indicators::{Indicators, IndicatorsReporting},
     },
 };
 
@@ -67,8 +67,8 @@ pub struct SlcState {
     pub hf_features: HfFeatures,
     /// The codecs supported by the HF.
     pub hf_supported_codecs: Option<Vec<u32>>,
-    /// Whether indicator events reporting is enabled.
-    pub indicator_events_reporting: bool,
+    /// The current indicator events reporting state.
+    pub indicator_events_reporting: IndicatorsReporting,
     /// The current indicator status of the AG.
     pub ag_indicator_status: Indicators,
     /// The format used when representing the network operator name on the AG.
@@ -585,7 +585,7 @@ pub(crate) mod tests {
             procedure::InformationRequest,
             protocol::{
                 features::{AgFeatures, HfFeatures},
-                indicators::Indicator,
+                indicators::{Indicator, BATT_CHG_INDICATOR_INDEX},
             },
         },
         fuchsia_async as fasync,
@@ -843,7 +843,10 @@ pub(crate) mod tests {
     async fn locally_initiated_phone_status_procedure_returns_message() {
         // Bypass the SLCI procedure by setting the channel to initialized and enable indicator
         // reporting.
-        let state = SlcState { indicator_events_reporting: true, ..SlcState::default() };
+        let state = SlcState {
+            indicator_events_reporting: IndicatorsReporting::new_enabled(),
+            ..SlcState::default()
+        };
         let (mut slc, mut remote) = create_and_initialize_slc(state);
 
         // Local device wants to initiate a phone status update.
@@ -851,8 +854,11 @@ pub(crate) mod tests {
         let status = Indicator::BatteryLevel(2);
         slc.receive_ag_request(expected_marker, status.into()).await;
         // We expect the PhoneStatus Procedure to be initiated and an outgoing message to the peer
-        // with the status update. Battery Level has Index 7.
-        let expected_messages = vec![at::Response::Success(at::Success::Ciev { ind: 7, value: 2 })];
+        // with the status update.
+        let expected_messages = vec![at::Response::Success(at::Success::Ciev {
+            ind: BATT_CHG_INDICATOR_INDEX as i64,
+            value: 2,
+        })];
         expect_data_received_by_peer(&mut remote, expected_messages).await;
 
         // Since status updates require no response, the procedure should be terminated.
