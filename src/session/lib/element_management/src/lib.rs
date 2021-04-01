@@ -1034,7 +1034,14 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm, child_collection);
+
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!("Launcher should not receive any requests as it's only used for v1 components")
+        });
+
+        let element_manager =
+            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
+
         let result = element_manager
             .launch_element(
                 felement::Spec {
@@ -1078,14 +1085,14 @@ mod tests {
                 assert!(false);
             }
         });
-        let launcher = spawn_launcher_server(move |launcher_request| match launcher_request {
-            // Fail if any call to the launcher is made.
-            _ => {
-                assert!(false);
-            }
+
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!("Launcher should not receive any requests as it's only used for v1 components")
         });
+
         let element_manager =
             SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
+
         assert!(element_manager
             .launch_element(
                 felement::Spec {
@@ -1108,7 +1115,14 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm, "");
+
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!(
+                "Launcher should not receive any requests as there is no valid component to launch"
+            )
+        });
+
+        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
             .launch_element(felement::Spec { component_url: None, ..felement::Spec::EMPTY }, "")
@@ -1133,6 +1147,10 @@ mod tests {
             provider: Some(provider),
         };
 
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!("Launcher should not receive any requests as the spec is invalid")
+        });
+
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
@@ -1140,7 +1158,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm, "");
+        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
             .launch_element(
@@ -1170,6 +1188,10 @@ mod tests {
             provider: None,
         };
 
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!("Launcher should not receive any requests as it's only used for v1 components")
+        });
+
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
@@ -1177,7 +1199,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm, "");
+        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
             .launch_element(
@@ -1202,6 +1224,10 @@ mod tests {
     async fn launch_element_create_error_internal() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!("Launcher should not receive any requests as it's only used for v1 components")
+        });
+
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
@@ -1212,7 +1238,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm, "");
+        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
             .launch_element(
@@ -1236,6 +1262,10 @@ mod tests {
     async fn launch_element_create_error_no_space() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!("Launcher should not receive any requests as it's only used for v1 components")
+        });
+
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
@@ -1246,7 +1276,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm, "");
+        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
             .launch_element(
@@ -1275,6 +1305,10 @@ mod tests {
     async fn launch_element_bind_error() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
+        let launcher = spawn_launcher_server(move |_launcher_request| {
+            panic!("Launcher should not receive any requests as it's only used for v1 components")
+        });
+
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
@@ -1288,7 +1322,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm, "");
+        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
 
         let result = element_manager
             .launch_element(

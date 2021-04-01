@@ -66,7 +66,7 @@ mod tests {
     use {
         super::ELEMENT_COLLECTION_NAME,
         element_management::{ElementManager, SimpleElementManager},
-        fidl::endpoints::create_proxy_and_stream,
+        fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_element as felement, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
         futures::TryStreamExt,
         lazy_static::lazy_static,
@@ -143,11 +143,20 @@ mod tests {
                 let _ = responder.send(&mut Ok(()));
             }
             _ => {
-                assert!(false);
+                panic!("Realm server received unexpected request");
             }
         });
 
-        let element_manager = Box::new(SimpleElementManager::new(realm, ELEMENT_COLLECTION_NAME));
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
+            panic!("Launcher should not receive any requests as it's only used for v1 components");
+        })
+        .unwrap();
+
+        let element_manager = Box::new(SimpleElementManager::new_with_sys_launcher(
+            realm,
+            ELEMENT_COLLECTION_NAME,
+            launcher,
+        ));
         let manager_proxy = spawn_manager_server(element_manager);
 
         let result = manager_proxy
