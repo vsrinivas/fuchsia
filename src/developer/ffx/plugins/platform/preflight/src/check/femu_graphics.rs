@@ -17,9 +17,10 @@ lazy_static! {
     // 18:00.0 VGA compatible controller: NVIDIA Corporation GP107GL [Quadro P1000] (rev a1)
     static ref LINUX_GRAPHICS_CARDS_RE: Regex = Regex::new("(?m)^..:.... VGA compatible controller: (.+)$").unwrap();
 
-    // Regex to match the only supported video card on Linux. Example:
-    // NVIDIA Corporation GP107GL [Quadro P1000] (rev a1)
-    static ref LINUX_SUPPORTED_CARDS_RE: Regex = Regex::new("^NVIDIA.+Quadro.+$").unwrap();
+    // Regex to match the supported video cards on Linux. Includes:
+    // * NVIDIA Corporation Quadro-based cards
+    // * All Intel Gen9 integrated graphics cards
+    static ref LINUX_SUPPORTED_CARDS_RE: Regex = Regex::new(r"^(?:Intel .*(?:HD|UHD|Iris|Iris Pro|Iris Plus) Graphics P?\d{3} .*|NVIDIA.+Quadro.+)$").unwrap();
 
     // Regex to extract graphics cards on MacOS. Matches output strings from `system_profiler` like:
     // Chipset Model: Intel UHD Graphics 630
@@ -177,29 +178,18 @@ mod test {
     // Contains a "VGA compatible controller" line with an NVIDIA Quadro chipset.
     static LSPCI_OUTPUT_GOOD: &str =
         "17:1e.3 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
-17:1e.4 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
-17:1e.5 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
 17:1e.6 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
 18:00.0 VGA compatible controller: NVIDIA Corporation GP107GL [Quadro P1000] (rev a1)
 18:00.1 Audio device: NVIDIA Corporation GP107GL High Definition Audio Controller (rev a1)
-3a:05.0 System peripheral: Intel Corporation Sky Lake-E VT-d (rev 04)
-3a:05.2 System peripheral: Intel Corporation Sky Lake-E RAS Configuration Registers (rev 04)
-3a:05.4 PIC: Intel Corporation Sky Lake-E IOxAPIC Configuration Registers (rev 04)
-3a:08.0 System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller (rev 04)
 3a:09.0 System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller (rev 04)";
 
     // Contains an unsupported chipset.
     static LSPCI_OUTPUT_BAD: &str =
         "17:1e.3 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
-17:1e.4 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
-17:1e.5 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
 17:1e.6 System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)
 18:00.0 VGA compatible controller: NVIDIA No-good-o (rev a1)
 18:00.1 Audio device: NVIDIA Corporation GP107GL High Definition Audio Controller (rev a1)
 3a:05.0 System peripheral: Intel Corporation Sky Lake-E VT-d (rev 04)
-3a:05.2 System peripheral: Intel Corporation Sky Lake-E RAS Configuration Registers (rev 04)
-3a:05.4 PIC: Intel Corporation Sky Lake-E IOxAPIC Configuration Registers (rev 04)
-3a:08.0 System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller (rev 04)
 3a:09.0 System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller (rev 04)";
 
     // Contains a supported Mac OS graphics chipset (Intel UHD)
@@ -246,6 +236,34 @@ Intel Iris Plus Graphics 650:
   Revision ID: 0x0006
   Metal: Supported, feature set macOS GPUFamily2 v1
 ";
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_linux_graphics_cards_re() -> Result<()> {
+        let supported = vec![
+            "Intel Corporation HD Graphics P530 (rev NN)",
+            "Intel Corporation HD Graphics 630 (rev 04)",
+            "Intel Corporation UHD Graphics 620 (rev 07)",
+            "NVIDIA Corporation GP107GL [Quadro P1000] (rev a1)",
+            "Intel Corporation Iris Pro Graphics P555 (rev NN)",
+            "Intel Corporation Iris Plus Graphics 645 (rev NN)",
+        ];
+        let supported_n = supported.len();
+        assert_eq!(
+            supported.into_iter().filter(|e| LINUX_SUPPORTED_CARDS_RE.is_match(&e)).count(),
+            supported_n
+        );
+
+        let unsupported = vec![
+            "Intel Corporation HD Graphics 6000 (rev NN)",
+            "Intel Corporation Iris Pro Graphics 6200 (rev NN)",
+            "Intel Corporation Iris Graphics 6100 (rev NN)",
+        ];
+        assert_eq!(
+            unsupported.into_iter().filter(|e| LINUX_SUPPORTED_CARDS_RE.is_match(&e)).count(),
+            0
+        );
+        Ok(())
+    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_linux_success() -> Result<()> {
