@@ -1116,7 +1116,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_default_target_empty() {
+    async fn test_get_target_empty() {
         let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let nodename = "where-is-my-hasenpfeffer";
@@ -1126,7 +1126,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_default_target_query() {
+    async fn test_get_target_query() {
         let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let nodename = "where-is-my-hasenpfeffer";
@@ -1139,7 +1139,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_default_target_ambiguous() {
+    async fn test_get_target_ambiguous() {
         let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let t = Target::new_autoconnected("where-is-my-hasenpfeffer").await;

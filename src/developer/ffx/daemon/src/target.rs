@@ -1331,6 +1331,14 @@ impl TargetCollection {
         }
     }
 
+    #[cfg(test)]
+    async fn new_with_queue() -> Arc<Self> {
+        let target_collection = Arc::new(Self::new());
+        let queue = events::Queue::new(&target_collection);
+        target_collection.set_event_queue(queue).await;
+        target_collection
+    }
+
     pub async fn set_event_queue(&self, q: events::Queue<DaemonEvent>) {
         // This should be the only place a write lock is ever held.
         self.events
@@ -1573,59 +1581,6 @@ impl TargetCollection {
         self.get(matcher).await.ok_or(DaemonError::TargetNotFound)
     }
 
-    /// Attempts to get a target based off of the default. Returns an error if
-    /// there is no target available (this doesn't await a new target).
-    ///
-    /// Ignores any targets that do not have the state of "connected" at the
-    /// time the command is invoked, so can cause some raciness.
-    pub async fn get_default(&self, n: Option<String>) -> Result<Target, DaemonError> {
-        // The "get the mapped targets for filtering connected ones" step has
-        // to be separate from the actual `filter_map()` statement on account of
-        // the compiler claiming a temporary value is borrowed whilst still in
-        // use. It is unclear why this needs to be done in two statements, but
-        // without it the compiler will complain.
-        let inner = &self.inner.read().await;
-        let targets_iter = inner.named.values().chain(inner.unnamed.iter());
-        let targets = futures::future::join_all(
-            targets_iter
-                .map(|t| async move {
-                    (
-                        t.nodename().await,
-                        t.clone(),
-                        t.inner.state.lock().await.connection_state.is_connected(),
-                    )
-                })
-                .collect::<Vec<_>>(),
-        )
-        .await;
-        let targets = targets
-            .iter()
-            .filter_map(|(_, t, connected)| if *connected { Some(t) } else { None })
-            .collect::<Vec<_>>();
-        match (targets.len(), n) {
-            (0, None) => Err(DaemonError::TargetCacheEmpty),
-            (1, None) => {
-                let res = targets
-                    .iter()
-                    .next()
-                    .ok_or(DaemonError::TargetCacheEmpty)
-                    .map(|t| (*t).clone())?;
-                log::debug!(
-                    "No default target selected, returning only target - {:?}",
-                    res.nodename().await,
-                );
-                Ok(res)
-            }
-            (_, None) => {
-                // n > 1 case (0 and 1 are covered, and this is an unsigned integer).
-                Err(DaemonError::TargetAmbiguous)
-            }
-            (_, Some(nodename)) => {
-                targets.iter().match_target(nodename).await.ok_or(DaemonError::TargetNotFound)
-            }
-        }
-    }
-
     pub async fn get_connected<TQ>(&self, t: TQ) -> Option<Target>
     where
         TQ: Into<TargetQuery>,
@@ -1712,7 +1667,7 @@ mod test {
     }
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_insert_new_not_connected() {
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         let nodename = String::from("what");
         let t = Target::new_with_time(&nodename, fake_now());
         tc.merge_insert(clone_target(&t).await).await;
@@ -1739,7 +1694,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_insert_new() {
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         let nodename = String::from("what");
         let t = Target::new_with_time(&nodename, fake_now());
         tc.merge_insert(clone_target(&t).await).await;
@@ -1752,7 +1707,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_merge() {
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         let nodename = String::from("bananas");
         let t1 = Target::new_with_time(&nodename, fake_now());
         let t2 = Target::new_with_time(&nodename, fake_elapsed());
@@ -1791,7 +1746,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_no_scopeless_ipv6() {
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         let nodename = String::from("bananas");
         let t1 = Target::new_with_time(&nodename, fake_now());
         let t2 = Target::new_with_time(&nodename, fake_elapsed());
@@ -1932,7 +1887,7 @@ mod test {
         let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
         let t = Target::new("foo");
         t.addrs_insert(addr.clone()).await;
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(tc.get(addr).await.unwrap(), t);
         assert_eq!(tc.get("192.168.0.1").await.unwrap(), t);
@@ -2072,7 +2027,7 @@ mod test {
         let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
         let t3 = Target::new_autoconnected("i-should-probably-eat-lunch").await;
         let t4 = Target::new_autoconnected("i-should-probably-eat-lunch").await;
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(t).await;
         tc.merge_insert(t2).await;
         tc.merge_insert(t3).await;
@@ -2104,7 +2059,7 @@ mod test {
         let t3 = Target::new("i-should-probably-eat-lunch");
         let t4 = Target::new("i-should-probably-eat-lunch");
 
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(t).await;
         tc.merge_insert(t2).await;
         tc.merge_insert(t3).await;
@@ -2195,36 +2150,32 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_get_default() {
+    async fn test_target_wait_for_match() {
         let default = "clam-chowder-is-tasty";
         let t = Target::new_autoconnected(default).await;
         let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
-        let tc = TargetCollection::new();
-        assert!(tc.get_default(None).await.is_err());
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
-        assert_eq!(tc.get_default(None).await.unwrap(), t);
+        assert_eq!(tc.wait_for_match(Some(default.to_string())).await.unwrap(), t);
+        assert_eq!(tc.wait_for_match(None).await.unwrap(), t);
         tc.merge_insert(t2).await;
-        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
-        assert!(tc.get_default(None).await.is_err());
-        assert!(tc.get_default(Some("not_in_here".to_owned())).await.is_err());
+        assert_eq!(tc.wait_for_match(Some(default.to_string())).await.unwrap(), t);
+        assert!(tc.wait_for_match(None).await.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_get_default_matches_contains() {
+    async fn test_target_wait_for_match_matches_contains() {
         let default = "clam-chowder-is-tasty";
         let t = Target::new_autoconnected(default).await;
         let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
-        let tc = TargetCollection::new();
-        assert!(tc.get_default(None).await.is_err());
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
-        assert_eq!(tc.get_default(None).await.unwrap(), t);
+        assert_eq!(tc.wait_for_match(Some(default.to_string())).await.unwrap(), t);
+        assert_eq!(tc.wait_for_match(None).await.unwrap(), t);
         tc.merge_insert(t2).await;
-        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
-        assert!(tc.get_default(None).await.is_err());
-        assert!(tc.get_default(Some("not_in_here".to_owned())).await.is_err());
-        assert_eq!(tc.get_default(Some("clam".to_string())).await.unwrap(), t);
+        assert_eq!(tc.wait_for_match(Some(default.to_string())).await.unwrap(), t);
+        assert!(tc.wait_for_match(None).await.is_err());
+        assert_eq!(tc.wait_for_match(Some("clam".to_string())).await.unwrap(), t);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2385,7 +2336,7 @@ mod test {
         let t2 = Target::new("this-is-a-crunchy-falafel");
         t2.inner.addrs.write().await.replace(TargetAddr { ip, scope_id: 0 }.into());
 
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
@@ -2411,7 +2362,7 @@ mod test {
         let t2 = Target::new_with_addrs(Some("t2"), addr_set.clone());
         t2.set_ssh_port(Some(8023)).await;
 
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
 
@@ -2434,48 +2385,23 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_get_default_empty() {
-        let tc = TargetCollection::new();
-        assert_eq!(Err(DaemonError::TargetCacheEmpty), tc.get_default(None).await);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_get_default_successful() {
+    async fn test_target_wait_for_match_successful() {
         let default = "clam-chowder-is-tasty";
         let t = Target::new_autoconnected(default).await;
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
+        assert_eq!(tc.wait_for_match(Some(default.to_string())).await.unwrap(), t);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_get_default_ambiguous() {
+    async fn test_target_wait_for_match_ambiguous() {
         let default = "clam-chowder-is-tasty";
         let t = Target::new_autoconnected(default).await;
         let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(clone_target(&t).await).await;
         tc.merge_insert(t2).await;
-        assert_eq!(Err(DaemonError::TargetAmbiguous), tc.get_default(None).await);
-
-        assert_eq!(
-            Err(DaemonError::TargetNotFound),
-            tc.get_default(Some("not_in_here".to_owned())).await
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_get_default_not_found() {
-        let default = "clam-chowder-is-tasty";
-        let t = Target::new_autoconnected(default).await;
-        let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
-        let tc = TargetCollection::new();
-        tc.merge_insert(clone_target(&t).await).await;
-        tc.merge_insert(t2).await;
-        assert_eq!(
-            Err(DaemonError::TargetNotFound),
-            tc.get_default(Some("not_in_here".to_owned())).await
-        );
+        assert_eq!(Err(DaemonError::TargetAmbiguous), tc.wait_for_match(None).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2486,7 +2412,7 @@ mod test {
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
@@ -2511,7 +2437,7 @@ mod test {
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
@@ -2536,7 +2462,7 @@ mod test {
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
@@ -2557,7 +2483,7 @@ mod test {
     async fn test_target_match_serial() {
         let string = "turritopsis-dohrnii-is-an-immortal-jellyfish";
         let t = Target::new_with_serial(string);
-        let tc = TargetCollection::new();
+        let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(clone_target(&t).await).await;
         let found_target = tc.get(string).await.expect("target serial should match");
         assert_eq!(string, found_target.serial().await.expect("target should have serial number"));
