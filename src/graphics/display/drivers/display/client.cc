@@ -679,7 +679,7 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
     pending_config_valid_ = true;
   }
 
-  _completer.Reply(res, ::fidl::unowned_vec(ops));
+  _completer.Reply(res, ::fidl::VectorView<fhd::wire::ClientCompositionOp>::FromExternal(ops));
 }
 
 void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
@@ -1301,10 +1301,11 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
       modes.push_back(std::move(mode));
     }
     modes_vector.emplace_back(std::move(modes));
-    info.modes = fidl::unowned_vec(modes_vector.back());
+    info.modes = fidl::VectorView<fhd::wire::Mode>::FromExternal(modes_vector.back());
 
     static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
-    info.pixel_format = fidl::unowned_vec(config->pixel_formats_);
+    info.pixel_format = fidl::VectorView<zx_pixel_format_t>::FromExternal(
+        config->pixel_formats_.data(), config->pixel_formats_.size());
 
     static_assert(offsetof(cursor_info_t, width) == offsetof(fhd::wire::CursorInfo, width),
                   "Bad struct");
@@ -1313,9 +1314,8 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     static_assert(offsetof(cursor_info_t, format) == offsetof(fhd::wire::CursorInfo, pixel_format),
                   "Bad struct");
     static_assert(sizeof(cursor_info_t) <= sizeof(fhd::wire::CursorInfo), "Bad size");
-    info.cursor_configs = fidl::VectorView<fhd::wire::CursorInfo>(
-        fidl::unowned_ptr((fhd::wire::CursorInfo*)config->cursor_infos_.data()),
-        config->cursor_infos_.size());
+    info.cursor_configs = fidl::VectorView<fhd::wire::CursorInfo>::FromExternal(
+        (fhd::wire::CursorInfo*)config->cursor_infos_.data(), config->cursor_infos_.size());
 
     const char* manufacturer_name = "";
     const char* monitor_name = "";
@@ -1338,9 +1338,9 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
       info.using_fallback_size = true;
     }
 
-    info.manufacturer_name = fidl::unowned_str(manufacturer_name, strlen(manufacturer_name));
-    info.monitor_name = fidl::unowned_str(monitor_name, strlen(monitor_name));
-    info.monitor_serial = fidl::unowned_str(monitor_serial, strlen(monitor_serial));
+    info.manufacturer_name = fidl::StringView::FromExternal(manufacturer_name);
+    info.monitor_name = fidl::StringView::FromExternal(monitor_name);
+    info.monitor_serial = fidl::StringView::FromExternal(monitor_serial);
 
     coded_configs.push_back(std::move(info));
   }
@@ -1359,8 +1359,9 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 
   if (!coded_configs.empty() || !removed_ids.empty()) {
     zx_status_t status = binding_state_.SendEvents([&](auto&& event_sender) {
-      return event_sender.OnDisplaysChanged(fidl::unowned_vec(coded_configs),
-                                            fidl::unowned_vec(removed_ids));
+      return event_sender.OnDisplaysChanged(
+          fidl::VectorView<fhd::wire::Info>::FromExternal(coded_configs),
+          fidl::VectorView<uint64_t>::FromExternal(removed_ids));
     });
     if (status != ZX_OK) {
       zxlogf(ERROR, "Error writing remove message %d", status);
@@ -1523,8 +1524,8 @@ fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_sta
     zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d", status);
   } else {
     sysmem_allocator_ = sysmem::Allocator::SyncClient(std::move(sysmem_allocator_client));
-    sysmem_allocator_.SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
-                                         fsl::GetCurrentProcessKoid());
+    sysmem_allocator_.SetDebugClientInfo(
+        fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
   }
 
   return res;
@@ -1713,7 +1714,8 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     buffered_vsync_messages_.pop();
     status = handler_.binding_state().SendEvents([&](auto&& event_sender) {
       return event_sender.OnVsync(v.display_id, v.timestamp,
-                                  fidl::VectorView(fidl::unowned_ptr(v.image_ids), v.count), 0);
+                                  fidl::VectorView<uint64_t>::FromExternal(v.image_ids, v.count),
+                                  0);
     });
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to send all buffered vsync messages %d\n", status);
@@ -1725,7 +1727,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   // Send the latest vsync event
   status = handler_.binding_state().SendEvents([&](auto&& event_sender) {
     return event_sender.OnVsync(display_id, timestamp,
-                                fidl::VectorView(fidl::unowned_ptr(image_ids), count), cookie);
+                                fidl::VectorView<uint64_t>::FromExternal(image_ids, count), cookie);
   });
   if (status != ZX_OK) {
     return status;

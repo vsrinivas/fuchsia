@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/dsi/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 #include <lib/zx/channel.h>
@@ -71,8 +70,8 @@ int main(int argc, char* argv[]) {
   fidl::FidlAllocator<2048> allocator;
   auto res = mipi_dsi::MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
-  auto response = client.SendCmd(
-      std::move(res.value()), fidl::VectorView<uint8_t>{fidl::unowned_ptr(tbuf), std::size(tbuf)});
+  auto response =
+      client.SendCmd(std::move(res.value()), fidl::VectorView<uint8_t>::FromExternal(tbuf));
 
   if (!response.ok()) {
     printf("Could not send command to DSI (%s)\n", response.error());

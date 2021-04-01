@@ -560,11 +560,12 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     uint64_t* signal_semaphores = semaphores + command_buffer->wait_semaphore_count;
 
     magma_status_t result = client_.ExecuteCommandBufferWithResources(
-        context_id, std::move(fidl_command_buffer), fidl::unowned_vec(fidl_resources),
-        fidl::VectorView<uint64_t>(fidl::unowned_ptr(wait_semaphores),
-                                   command_buffer->wait_semaphore_count),
-        fidl::VectorView<uint64_t>(fidl::unowned_ptr(signal_semaphores),
-                                   command_buffer->signal_semaphore_count));
+        context_id, std::move(fidl_command_buffer),
+        fidl::VectorView<fuchsia_gpu_magma::wire::Resource>::FromExternal(fidl_resources),
+        fidl::VectorView<uint64_t>::FromExternal(wait_semaphores,
+                                                 command_buffer->wait_semaphore_count),
+        fidl::VectorView<uint64_t>::FromExternal(signal_semaphores,
+                                                 command_buffer->signal_semaphore_count));
 
     if (result != MAGMA_STATUS_OK)
       SetError(result);
@@ -600,8 +601,9 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       // Tally up the number of commands to send in this batch.
       uint64_t command_bytes = 0;
       uint32_t num_semaphores = 0;
-      int buffers_to_send = FitCommands(fuchsia_gpu_magma::wire::MAX_IMMEDIATE_COMMANDS_DATA_SIZE, num_buffers,
-                                        buffers, buffers_sent, &command_bytes, &num_semaphores);
+      int buffers_to_send =
+          FitCommands(fuchsia_gpu_magma::wire::MAX_IMMEDIATE_COMMANDS_DATA_SIZE, num_buffers,
+                      buffers, buffers_sent, &command_bytes, &num_semaphores);
 
       // TODO(fxbug.dev/13144): Figure out how to move command and semaphore bytes across the FIDL
       //               interface without copying.
@@ -618,7 +620,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
                   std::back_inserter(semaphore_vec));
       }
       magma_status_t result = client_.ExecuteImmediateCommands(
-          context_id, fidl::unowned_vec(command_vec), fidl::unowned_vec(semaphore_vec));
+          context_id, fidl::VectorView<uint8_t>::FromExternal(command_vec),
+          fidl::VectorView<uint64_t>::FromExternal(semaphore_vec));
       if (result != MAGMA_STATUS_OK)
         SetError(result);
       buffers_sent += buffers_to_send;
@@ -726,7 +729,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
 
   magma::Status EnablePerformanceCounters(uint64_t* counters, uint64_t counter_count) override {
     magma_status_t result = client_.EnablePerformanceCounters(
-        fidl::VectorView<uint64_t>(fidl::unowned_ptr(counters), counter_count));
+        fidl::VectorView<uint64_t>::FromExternal(counters, counter_count));
 
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
@@ -763,8 +766,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     auto fidl_offsets = const_cast<fuchsia_gpu_magma::wire::BufferOffset*>(
         reinterpret_cast<const fuchsia_gpu_magma::wire::BufferOffset*>(offsets));
     magma_status_t result = client_.AddPerformanceCounterBufferOffsetsToPool(
-        pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset>(
-                     fidl::unowned_ptr(fidl_offsets), offset_count));
+        pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset>::FromExternal(
+                     fidl_offsets, offset_count));
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
     return MAGMA_STATUS_OK;
@@ -787,7 +790,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
 
   magma::Status ClearPerformanceCounters(uint64_t* counters, uint64_t counter_count) override {
     magma_status_t result = client_.ClearPerformanceCounters(
-        fidl::VectorView<uint64_t>(fidl::unowned_ptr(counters), counter_count));
+        fidl::VectorView<uint64_t>::FromExternal(counters, counter_count));
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
     return MAGMA_STATUS_OK;

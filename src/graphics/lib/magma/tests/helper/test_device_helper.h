@@ -92,7 +92,8 @@ class TestDeviceBase {
       ASSERT_TRUE(retry_count++ < kMaxRetryCount) << "Timed out rebinding driver";
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have
       // other children that shouldn't be unbound.
-      auto res = fuchsia_device::Controller::Call::Bind(parent_device, fidl::unowned_str(path));
+      auto res = fuchsia_device::Controller::Call::Bind(parent_device,
+                                                        fidl::StringView::FromExternal(path));
       ASSERT_EQ(ZX_OK, res.status());
       if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));

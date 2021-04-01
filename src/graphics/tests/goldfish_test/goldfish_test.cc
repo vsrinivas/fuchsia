@@ -29,7 +29,7 @@ fuchsia_sysmem::Allocator::SyncClient CreateSysmemAllocator() {
 
   fuchsia_sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
 
-  allocator.SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+  allocator.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                fsl::GetCurrentProcessKoid());
   return allocator;
 }
@@ -37,7 +37,8 @@ fuchsia_sysmem::Allocator::SyncClient CreateSysmemAllocator() {
 void SetDefaultCollectionName(fuchsia_sysmem::BufferCollection::SyncClient& collection) {
   constexpr uint32_t kTestNamePriority = 1000u;
   std::string test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-  EXPECT_TRUE(collection.SetName(kTestNamePriority, fidl::unowned_str(test_name)).ok());
+  EXPECT_TRUE(
+      collection.SetName(kTestNamePriority, fidl::StringView::FromExternal(test_name)).ok());
 }
 }  // namespace
 

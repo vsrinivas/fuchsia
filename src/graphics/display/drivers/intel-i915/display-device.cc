@@ -230,9 +230,11 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& comple
   FidlBacklight::wire::Device_GetStateNormalized_Result result;
   FidlBacklight::wire::Device_GetStateNormalized_Response response{.state = state};
   if (status == ZX_OK) {
-    result.set_response(fidl::unowned_ptr(&response));
+    result.set_response(
+        fidl::ObjectView<FidlBacklight::wire::Device_GetStateNormalized_Response>::FromExternal(
+            &response));
   } else {
-    result.set_err(fidl::unowned_ptr(&status));
+    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
   }
   completer.Reply(std::move(result));
 }
@@ -261,7 +263,7 @@ void DisplayDevice::SetStateNormalized(FidlBacklight::wire::State state,
 void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
   FidlBacklight::wire::Device_GetStateAbsolute_Result result;
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  result.set_err(fidl::unowned_ptr(&status));
+  result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
   completer.Reply(std::move(result));
 }
 

@@ -111,7 +111,7 @@ class IntegrationTest : public TestBase {
     EXPECT_TRUE(connector->Connect(std::move(server)).ok());
     __UNUSED auto c = connector->mutable_channel()->release();
     sysmem_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(client));
-    sysmem_->SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+    sysmem_->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                 fsl::GetCurrentProcessKoid());
   }
 

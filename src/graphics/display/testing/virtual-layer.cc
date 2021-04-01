@@ -425,8 +425,7 @@ bool ColorLayer::Init(fhd::Controller::SyncClient* dc) {
 
     auto result = dc->SetLayerColorConfig(
         layer->id, kColorLayerFormat,
-        ::fidl::VectorView<uint8_t>(fidl::unowned_ptr(data),
-                                    ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat)));
+        ::fidl::VectorView<uint8_t>::FromExternal(data, ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat)));
 
     if (!result.ok()) {
       printf("Setting layer config failed\n");

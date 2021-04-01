@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
-#include <lib/fidl/llcpp/memory.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 
@@ -391,8 +390,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     // These names are very generic, so set a low priority so it's easy to override them.
     constexpr uint32_t kVulkanPriority = 5;
     zx_status_t status =
-        collection_->SetName(kVulkanPriority, fidl::unowned_str(buffer_name, strlen(buffer_name)))
-            .status();
+        collection_->SetName(kVulkanPriority, fidl::StringView::FromExternal(buffer_name)).status();
     if (status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting name: %d", status);
     }
@@ -458,7 +456,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
   ZirconPlatformSysmemConnection(fuchsia_sysmem::Allocator::SyncClient allocator)
       : sysmem_allocator_(std::move(allocator)) {
     sysmem_allocator_.SetDebugClientInfo(
-        fidl::unowned_str(magma::PlatformProcessHelper::GetCurrentProcessName()),
+        fidl::StringView::FromExternal(magma::PlatformProcessHelper::GetCurrentProcessName()),
         magma::PlatformProcessHelper::GetCurrentProcessId());
   }
 
@@ -579,7 +577,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(h1));
 
     if (!name.empty()) {
-      collection.SetName(10, fidl::unowned_str(name));
+      collection.SetName(10, fidl::StringView::FromExternal(name));
     }
     status = collection.SetConstraints(true, std::move(constraints)).status();
     if (status != ZX_OK)

@@ -557,9 +557,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   // Set priority to 10 to override the Vulkan driver name priority of 5, but be less than most
   // application priorities.
   constexpr uint32_t kNamePriority = 10;
-  auto name_res =
-      sysmem::BufferCollection::Call::SetName(zx::unowned_channel(collection), kNamePriority,
-                                              fidl::unowned_str(buffer_name, strlen(buffer_name)));
+  auto name_res = sysmem::BufferCollection::Call::SetName(
+      zx::unowned_channel(collection), kNamePriority, fidl::StringView::FromExternal(buffer_name));
   if (!name_res.ok()) {
     DISP_ERROR("Failed to set name: %d", name_res.status());
     return name_res.status();

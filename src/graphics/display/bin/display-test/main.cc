@@ -33,8 +33,8 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
-#include "lib/ddk/driver.h"
 #include "fuchsia/hardware/display/llcpp/fidl.h"
+#include "lib/ddk/driver.h"
 #include "lib/fdio/directory.h"
 #include "lib/fzl/vmo-mapper.h"
 #include "src/graphics/display/testing/display.h"
@@ -214,8 +214,8 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
   if (layer_change) {
     current_layers->swap(new_layers);
-    if (!dc->SetDisplayLayers(display.id(),
-                              {fidl::unowned_ptr(current_layers->data()), current_layers->size()})
+    if (!dc->SetDisplayLayers(display.id(), fidl::VectorView<uint64_t>::FromExternal(
+                                                current_layers->data(), current_layers->size()))
              .ok()) {
       printf("Failed to set layers\n");
       return false;
