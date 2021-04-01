@@ -1125,12 +1125,14 @@ mod tests {
         let mut transaction = Transaction::new();
         object.preallocate_range(&mut transaction, 0..512).await.expect("preallocate_range failed");
         fs.commit_transaction(transaction).await;
+        assert!(object.get_size() < 1048576);
         let mut transaction = Transaction::new();
         object
             .preallocate_range(&mut transaction, 0..1048576)
             .await
             .expect("preallocate_range failed");
         fs.commit_transaction(transaction).await;
+        assert_eq!(object.get_size(), 1048576);
         // Check that it didn't reallocate the space for the existing extent
         let allocated_after = allocator.allocated();
         assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as usize);
