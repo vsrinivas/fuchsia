@@ -10,8 +10,11 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
+#include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
+#include "src/developer/debug/debug_agent/mock_job_handle.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
+#include "src/developer/debug/debug_agent/mock_system_interface.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
 #include "src/developer/debug/shared/logging/debug.h"
 
@@ -760,12 +763,20 @@ TEST(ProcessBreakpoint, RecursiveStep) {
 
 // This also tests registration and unregistration of ProcessBreakpoints via the Breakpoint object.
 TEST(ProcessBreakpoint, HitCount) {
+  // This test requires a debug agent because it causes a breakpoint hit which will try to suspend
+  // all processes attached.
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(MockJobHandle(99999)));
   TestProcessDelegate process_delegate;
 
   constexpr zx_koid_t kProcess1 = 1;
-  auto owning_process = std::make_unique<MockProcess>(nullptr, kProcess1);
+  auto owning_process = std::make_unique<MockProcess>(&debug_agent, kProcess1);
+  DebuggedProcess* process = owning_process.get();
   owning_process->mock_process_handle().mock_memory().AddMemory(kAddress, GetOriginalData());
   process_delegate.InjectMockProcess(std::move(owning_process));
+
+  auto owning_thread = std::make_unique<MockThread>(process, 28374);
+  MockThread* thread = owning_thread.get();
+  process->InjectThreadForTest(std::move(owning_thread));
 
   constexpr uint32_t kBreakpointId1 = 12;
   debug_ipc::BreakpointSettings settings;
@@ -796,7 +807,9 @@ TEST(ProcessBreakpoint, HitCount) {
 
   // Hitting the ProcessBreakpoint should update both Breakpoints.
   std::vector<debug_ipc::BreakpointStats> stats;
-  process_delegate.bps().begin()->second->OnHit(debug_ipc::BreakpointType::kSoftware, &stats);
+  std::vector<debug_ipc::ThreadRecord> affected_threads;
+  process_delegate.bps().begin()->second->OnHit(thread, debug_ipc::BreakpointType::kSoftware, stats,
+                                                affected_threads);
   ASSERT_EQ(2u, stats.size());
 
   // Order of the vector is not defined so allow either.

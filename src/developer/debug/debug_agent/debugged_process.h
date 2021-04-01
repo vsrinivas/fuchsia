@@ -73,7 +73,6 @@ class DebuggedProcess : public ProcessHandleObserver {
   zx_status_t Init();
 
   // IPC handlers.
-  void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply);
   void OnResume(const debug_ipc::ResumeRequest& request);
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request, debug_ipc::ReadMemoryReply* reply);
   void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply);
@@ -89,7 +88,13 @@ class DebuggedProcess : public ProcessHandleObserver {
 
   // Synchronously pauses all threads in the process from the perspective of the client. This issues
   // ClientSuspend() on all threads (see that for more on what "client" means).
-  void ClientSuspendAllThreads();
+  //
+  // The except_thread can be passed which indicates a thread to ship when suspending. This is for
+  // certain operations that want to do something to all other threads.
+  //
+  // The affected thread koids are returned. If a thread is already in a client suspend, it will
+  // not be affected and it will not be returned in the result.
+  std::vector<zx_koid_t> ClientSuspendAllThreads(zx_koid_t except_thread = ZX_KOID_INVALID);
 
   // Returns the thread or null if there is no known thread for this koid.
   DebuggedThread* GetThread(zx_koid_t thread_koid) const;

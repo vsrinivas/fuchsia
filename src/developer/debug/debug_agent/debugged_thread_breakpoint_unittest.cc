@@ -43,21 +43,24 @@ TEST(DebuggedThreadBreakpoint, SoftwareBreakpoint) {
 
   constexpr zx_koid_t kProcKoid = 12;
   MockProcess* process = harness.AddProcess(kProcKoid);
-  constexpr zx_koid_t kThreadKoid = 23;
-  MockThread* thread = process->AddThread(kThreadKoid);
+  constexpr zx_koid_t kThread1Koid = 23;
+  constexpr zx_koid_t kThread2Koid = 24;
+  MockThread* thread1 = process->AddThread(kThread1Koid);
+  MockThread* thread2 = process->AddThread(kThread2Koid);
 
   // Set an exception for a software breakpoint instruction. Since no breakpoint has been installed,
   // this will look like a hardcoded breakpoint instruction.
   constexpr uint64_t kBreakpointAddress = 0xdeadbeef;
   const uint64_t kExceptionAddress =
       kBreakpointAddress + arch::kExceptionOffsetForSoftwareBreakpoint;
-  thread->SendException(kExceptionAddress, debug_ipc::ExceptionType::kSoftwareBreakpoint);
+  thread1->SendException(kExceptionAddress, debug_ipc::ExceptionType::kSoftwareBreakpoint);
 
   // Validate the exception notification.
   ASSERT_EQ(harness.stream_backend()->exceptions().size(), 1u);
   auto exception = harness.stream_backend()->exceptions()[0];
   EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint);
   EXPECT_EQ(exception.hit_breakpoints.size(), 0u);
+  EXPECT_EQ(exception.other_affected_threads.size(), 0u);  // No other threads should be stopped.
 
   // Resume the thread to clear the exception.
   harness.Resume();
@@ -69,7 +72,7 @@ TEST(DebuggedThreadBreakpoint, SoftwareBreakpoint) {
   // Add a breakpoint on that address and throw the same exception as above.
   constexpr uint32_t kBreakpointId = 1;
   harness.AddOrChangeBreakpoint(kBreakpointId, kProcKoid, kBreakpointAddress);
-  thread->SendException(kExceptionAddress, debug_ipc::ExceptionType::kSoftwareBreakpoint);
+  thread1->SendException(kExceptionAddress, debug_ipc::ExceptionType::kSoftwareBreakpoint);
 
   // Now the exception notification should reference the hit breakpoint.
   ASSERT_EQ(harness.stream_backend()->exceptions().size(), 2u);
@@ -78,6 +81,15 @@ TEST(DebuggedThreadBreakpoint, SoftwareBreakpoint) {
   EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint);
   ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
   EXPECT_EQ(exception.hit_breakpoints[0].id, kBreakpointId);
+
+  // The other thread should be stopped because the default breakpoint stop mode is "all".
+  // Note that the test doesn't update the ThreadRecord so the
+  // other_affected_threads[0].state won't be correct. But we do check whether the thread thinks
+  // it has been client suspended which is a more detailed check.
+  EXPECT_TRUE(thread2->mock_thread_handle().is_suspended());
+  ASSERT_EQ(exception.other_affected_threads.size(), 1u);
+  EXPECT_EQ(exception.other_affected_threads[0].process_koid, kProcKoid);
+  EXPECT_EQ(exception.other_affected_threads[0].thread_koid, kThread2Koid);
 
   // The breakpoint stats should be up-to-date.
   Breakpoint* breakpoint = harness.debug_agent()->GetBreakpoint(kBreakpointId);

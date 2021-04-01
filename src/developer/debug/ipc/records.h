@@ -305,12 +305,13 @@ struct ProcessBreakpointSettings {
   AddressRange address_range;
 };
 
-// What threads to stop when the breakpoint is hit.
+// What threads to stop when the breakpoint is hit. These are ordered such that the integer values
+// increase for larger scopes.
 enum class Stop : uint32_t {
-  kAll,      // Stop all threads of all processes attached to the debugger.
-  kProcess,  // Stop all threads of the process that hit the breakpoint.
-  kThread,   // Stop only the thread that hit the breakpoint.
-  kNone      // Don't stop anything but accumulate hit counts.
+  kNone = 0,  // Don't stop anything but accumulate hit counts.
+  kThread,    // Stop only the thread that hit the breakpoint.
+  kProcess,   // Stop all threads of the process that hit the breakpoint.
+  kAll        // Stop all threads of all processes attached to the debugger.
 };
 
 // NOTE: read-only could be added in the future as arm64 supports them. They're not added today as

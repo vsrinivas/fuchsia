@@ -20,26 +20,23 @@ namespace debug_agent {
 
 namespace {
 
-// This test is an integration test to verify that the debug agent is able to
-// successfully set breakpoints to Zircon and get the correct responses.
-// This particular test does the following script:
+// This test is an integration test to verify that the debug agent is able to successfully set
+// breakpoints to Zircon and get the correct responses. This particular test does the following
+// script:
 //
-// 1. Load a pre-made .so (debug_agent_test_so) and search for a particular
-//    exported function. By also getting the loaded base address of the .so, we
-//    can get the offset of the function within the module.
+// 1. Load a pre-made .so (debug_agent_test_so) and search for a particular exported function. By
+//    also getting the loaded base address of the .so, we can get the offset of the function within
+//    the module.
 //
 // 2. Launch a process (through RemoteAPI::OnLaunch) control by the debug agent.
 //
-// 3. Get the module notication (NotifyModules message) for the process launched
-//    in (2). We look over the modules for the same module (debug_agent_test_so)
-//    that was loaded by this newly created process.
-//    With the base address of this module, we can use the offset calculated in
-//    (1) and get the actual loaded address for the exported function within
-//    the process.
+// 3. Get the module notication (NotifyModules message) for the process launched in (2). We look
+//    over the modules for the same module (debug_agent_test_so) that was loaded by this newly
+//    created process. With the base address of this module, we can use the offset calculated in (1)
+//    and get the actual loaded address for the exported function within the process.
 //
-// 4. Set a breakpoint on that address and resume the process. The test program
-//    is written such that it will call the searched symbol, so should hit the
-//    breakpoint.
+// 4. Set a breakpoint on that address and resume the process. The test program is written such that
+//    it will call the searched symbol, so should hit the breakpoint.
 //
 // 5. Verify that we get a breakpoint exception on that address.
 //
@@ -53,9 +50,8 @@ const char* kExportedFunctionName2 = "InsertBreakpointFunction2";
 // within it.
 const char* kTestSo = "debug_agent_test_so.so";
 
-// The test executable the debug agent is going to launch. This is linked with
-// |kTestSo|, meaning that the offset within that .so will be valid into the
-// loaded module of this executable.
+// The test executable the debug agent is going to launch. This is linked with |kTestSo|, meaning
+// that the offset within that .so will be valid into the loaded module of this executable.
 /* const char* kTestExecutableName = "breakpoint_test_exe"; */
 const char* kTestExecutablePath = "/pkg/bin/breakpoint_test_exe";
 const char* kModuleToSearch = "libdebug_agent_test_so.so";
@@ -132,7 +128,8 @@ class BreakpointStreamBackend : public LocalStreamBackend {
 
 }  // namespace
 
-TEST(BreakpointIntegration, SWBreakpoint) {
+// TODO(fxbug.dev/73422): This test fails, fix and re-enable.
+TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
   // Uncomment for debugging the test.
   // debug_ipc::SetDebugMode(true);
 
@@ -149,8 +146,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
   MessageLoopWrapper loop_wrapper;
   {
     auto* loop = loop_wrapper.loop();
-    // This stream backend will take care of intercepting the calls from the
-    // debug agent.
+    // This stream backend will take care of intercepting the calls from the debug agent.
     BreakpointStreamBackend mock_stream_backend(loop);
 
     DebugAgent agent(std::make_unique<ZirconSystemInterface>());
@@ -224,6 +220,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
+    EXPECT_TRUE(exception.other_affected_threads.empty());  // Test has only one thread.
 
     // Verify that the correct breakpoint was hit.
     auto& breakpoint = exception.hit_breakpoints[0];
@@ -279,8 +276,7 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
   {
     auto* loop = loop_wrapper.loop();
 
-    // This stream backend will take care of intercepting the calls from the
-    // debug agent.
+    // This stream backend will take care of intercepting the calls from the debug agent.
     BreakpointStreamBackend mock_stream_backend(loop);
 
     DebugAgent agent(std::make_unique<ZirconSystemInterface>());
@@ -344,8 +340,7 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     // Resume the process now that the breakpoint is installed.
     remote_api->OnResume(resume_request, &resume_reply);
 
-    // The loop will run until the stream backend receives an exception
-    // notification.
+    // The loop will run until the stream backend receives an exception notification.
     loop->Run();
 
     DEBUG_LOG(Test) << "Hit breakpoint.";

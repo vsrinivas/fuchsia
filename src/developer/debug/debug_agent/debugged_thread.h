@@ -47,6 +47,10 @@ class DebuggedThread {
   const ThreadHandle& thread_handle() const { return *thread_handle_; }
   ThreadHandle& thread_handle() { return *thread_handle_; }
 
+  // Returns true if this thread is currently suspended from the perspective of the client. See
+  // ClientSuspend().
+  bool is_client_suspended() const { return client_suspend_handle_.get(); }
+
   // TODO(brettw) remove this and have all callers use thread_handle().
   zx::thread& handle() { return thread_handle_->GetNativeHandle(); }
   const zx::thread& handle() const { return thread_handle_->GetNativeHandle(); }
@@ -152,7 +156,8 @@ class DebuggedThread {
   // Updates the registers and the thread state for hitting the breakpoint, and fills in the
   // given breakpoint array for all matches.
   OnStop UpdateForSoftwareBreakpoint(GeneralRegisters& regs,
-                                     std::vector<debug_ipc::BreakpointStats>& hit_breakpoints);
+                                     std::vector<debug_ipc::BreakpointStats>& hit_breakpoints,
+                                     std::vector<debug_ipc::ThreadRecord>& other_affected_threads);
 
   // When hitting a SW breakpoint, the PC needs to be correctly re-set depending on where the CPU
   // leaves the PC after a SW exception. This updates both the given register record and syncs it
@@ -166,7 +171,8 @@ class DebuggedThread {
   //          breakpoint, so it must not be used after this call.
   void UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType exception_type,
                                      ProcessBreakpoint* process_breakpoint,
-                                     std::vector<debug_ipc::BreakpointStats>& hit_breakpoints);
+                                     std::vector<debug_ipc::BreakpointStats>& hit_breakpoints,
+                                     std::vector<debug_ipc::ThreadRecord>& stopped_threads);
 
   // Returns true if there is a software breakpoint instruction at the given address.
   bool IsBreakpointInstructionAtAddress(uint64_t address) const;

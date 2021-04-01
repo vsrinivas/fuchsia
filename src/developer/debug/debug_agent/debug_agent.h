@@ -72,6 +72,14 @@ class DebugAgent : public RemoteAPI,
   // Returns the exception handling strategy for a given type.
   debug_ipc::ExceptionStrategy GetExceptionStrategy(debug_ipc::ExceptionType type);
 
+  // Suspends all threads of all attached processes. If given the process/thread will be excepted
+  // from the suspend (they must both be either specified or ZX_KOID_INVALID).
+  //
+  // The affected process/thread koid pairs are returned. Any threads already in a client suspend
+  // will not be affected.
+  std::vector<std::pair<zx_koid_t, zx_koid_t>> ClientSuspendAll(
+      zx_koid_t except_process = ZX_KOID_INVALID, zx_koid_t except_thread = ZX_KOID_INVALID);
+
   // RemoteAPI implementation.
   void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
                      debug_ipc::ConfigAgentReply* reply) override;

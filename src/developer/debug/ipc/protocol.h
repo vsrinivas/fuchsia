@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 31;
+constexpr uint32_t kProtocolVersion = 32;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 

@@ -257,15 +257,35 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
 }
 
 void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) {
+  std::vector<std::pair<zx_koid_t, zx_koid_t>> proc_thread_pairs;
+
   if (request.process_koid) {
     // Single process.
-    DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-    if (proc)
-      proc->OnPause(request, reply);
+    if (DebuggedProcess* proc = GetDebuggedProcess(request.process_koid)) {
+      if (request.thread_koid) {
+        // Single thread of the process.
+        if (DebuggedThread* thread = proc->GetThread(request.thread_koid)) {
+          thread->ClientSuspend(true);
+          proc_thread_pairs.emplace_back(request.process_koid, request.thread_koid);
+        }
+      } else {
+        // All threads of that process.
+        auto suspended_thread_koids = proc->ClientSuspendAllThreads();
+        for (zx_koid_t thread_koid : suspended_thread_koids) {
+          proc_thread_pairs.emplace_back(request.process_koid, thread_koid);
+        }
+      }
+    }
   } else {
     // All debugged processes.
-    for (const auto& pair : procs_)
-      pair.second->OnPause(request, reply);
+    proc_thread_pairs = ClientSuspendAll();
+  }
+
+  // Save the affected thread info.
+  for (auto& [process_koid, thread_koid] : proc_thread_pairs) {
+    if (DebuggedThread* thread = GetDebuggedThread(process_koid, thread_koid))
+      reply->threads.push_back(
+          thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal));
   }
 }
 
@@ -530,6 +550,30 @@ DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid, zx_koid_t 
   if (!process)
     return nullptr;
   return process->GetThread(thread_koid);
+}
+
+std::vector<std::pair<zx_koid_t, zx_koid_t>> DebugAgent::ClientSuspendAll(zx_koid_t except_process,
+                                                                          zx_koid_t except_thread) {
+  // Neither or both koids must be supplied.
+  FX_DCHECK((except_process == ZX_KOID_INVALID && except_thread == ZX_KOID_INVALID) ||
+            (except_process != ZX_KOID_INVALID && except_thread != ZX_KOID_INVALID));
+
+  std::vector<std::pair<zx_koid_t, zx_koid_t>> affected;
+
+  for (const auto& [process_koid, process] : procs_) {
+    std::vector<zx_koid_t> affected_threads;
+    if (process_koid == except_process) {
+      affected_threads = process->ClientSuspendAllThreads(except_thread);
+    } else {
+      affected_threads = process->ClientSuspendAllThreads();
+    }
+
+    for (zx_koid_t thread_koid : affected_threads) {
+      affected.emplace_back(process_koid, thread_koid);
+    }
+  }
+
+  return affected;
 }
 
 zx_status_t DebugAgent::AddDebuggedJob(std::unique_ptr<JobHandle> job_handle) {

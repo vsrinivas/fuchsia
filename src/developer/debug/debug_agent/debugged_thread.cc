@@ -260,15 +260,14 @@ void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exceptio
 
 void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* exception,
                                               GeneralRegisters& regs) {
-  auto on_stop = UpdateForSoftwareBreakpoint(regs, exception->hit_breakpoints);
-  switch (on_stop) {
+  switch (UpdateForSoftwareBreakpoint(regs, exception->hit_breakpoints,
+                                      exception->other_affected_threads)) {
     case OnStop::kIgnore:
       return;
     case OnStop::kNotify:
       SendExceptionNotification(exception, regs);
       return;
     case OnStop::kResume: {
-      // We mark the thread as within an exception
       ResumeFromException();
       return;
     }
@@ -282,7 +281,7 @@ void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* except
   uint64_t breakpoint_address = arch::BreakpointInstructionForHardwareExceptionAddress(regs.ip());
   if (HardwareBreakpoint* found_bp = process_->FindHardwareBreakpoint(breakpoint_address)) {
     UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp,
-                                  exception->hit_breakpoints);
+                                  exception->hit_breakpoints, exception->other_affected_threads);
     // Note: may have deleted found_bp.
   } else {
     // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint. This is probably a
@@ -321,7 +320,8 @@ void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
   }
 
   // TODO(donosoc): Plumb in R/RW types.
-  UpdateForHitProcessBreakpoint(watchpoint->Type(), watchpoint, exception->hit_breakpoints);
+  UpdateForHitProcessBreakpoint(watchpoint->Type(), watchpoint, exception->hit_breakpoints,
+                                exception->other_affected_threads);
   // The ProcessBreakpoint could'be been deleted, so we cannot use it anymore.
   watchpoint = nullptr;
   SendExceptionNotification(exception, regs);
@@ -498,7 +498,8 @@ void DebuggedThread::WillDeleteProcessBreakpoint(ProcessBreakpoint* bp) {
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
-    GeneralRegisters& regs, std::vector<debug_ipc::BreakpointStats>& hit_breakpoints) {
+    GeneralRegisters& regs, std::vector<debug_ipc::BreakpointStats>& hit_breakpoints,
+    std::vector<debug_ipc::ThreadRecord>& other_affected_threads) {
   // Get the correct address where the CPU is after hitting a breakpoint (this is
   // architecture-specific).
   uint64_t breakpoint_address = regs.ip() - arch::kExceptionOffsetForSoftwareBreakpoint;
@@ -532,7 +533,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       return OnStop::kResume;
     }
 
-    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware, found_bp, hit_breakpoints);
+    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware, found_bp, hit_breakpoints,
+                                  other_affected_threads);
     // Note: may have deleted found_bp!
   } else if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
     // Hit a software breakpoint that doesn't correspond to any current breakpoint.
@@ -586,10 +588,11 @@ void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_bre
 
 void DebuggedThread::UpdateForHitProcessBreakpoint(
     debug_ipc::BreakpointType exception_type, ProcessBreakpoint* process_breakpoint,
-    std::vector<debug_ipc::BreakpointStats>& hit_breakpoints) {
+    std::vector<debug_ipc::BreakpointStats>& hit_breakpoints,
+    std::vector<debug_ipc::ThreadRecord>& other_affected_threads) {
   current_breakpoint_ = process_breakpoint;
 
-  process_breakpoint->OnHit(exception_type, &hit_breakpoints);
+  process_breakpoint->OnHit(this, exception_type, hit_breakpoints, other_affected_threads);
 
   // Delete any one-shot breakpoints. Since there can be multiple Breakpoints (some one-shot, some
   // not) referring to the current ProcessBreakpoint, this operation could delete the

@@ -9,6 +9,7 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/breakpoint.h"
+#include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
@@ -69,9 +70,19 @@ bool ProcessBreakpoint::ShouldHitThread(zx_koid_t thread_koid) const {
   return false;
 }
 
-void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
-                              std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
-  hit_breakpoints->clear();
+void ProcessBreakpoint::OnHit(DebuggedThread* hitting_thread,
+                              debug_ipc::BreakpointType exception_type,
+                              std::vector<debug_ipc::BreakpointStats>& hit_breakpoints,
+                              std::vector<debug_ipc::ThreadRecord>& other_affected_threads) {
+  // This will be filled in with the largest scope to stop.
+  debug_ipc::Stop max_stop = debug_ipc::Stop::kNone;
+
+  DebugAgent* agent = process_->debug_agent();
+
+  // How much stack to capture for the suspended threads.
+  constexpr auto kSuspendedStackAmount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
+
+  hit_breakpoints.clear();
   for (Breakpoint* breakpoint : breakpoints_) {
     // Only care for breakpoints that match the exception type.
     if (!Breakpoint::DoesExceptionApply(breakpoint->settings().type, exception_type))
@@ -81,7 +92,48 @@ void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
 
     // The breakpoint stats are for the client, don't tell it about our internal ones.
     if (!breakpoint->is_debug_agent_internal())
-      hit_breakpoints->push_back(breakpoint->stats());
+      hit_breakpoints.push_back(breakpoint->stats());
+
+    if (static_cast<uint32_t>(breakpoint->settings().stop) > static_cast<uint32_t>(max_stop))
+      max_stop = breakpoint->settings().stop;
+  }
+
+  // Apply the maximal stop mode.
+  switch (max_stop) {
+    case debug_ipc::Stop::kNone: {
+      // In this case the client will be in charge of resuming the thread because it may need to do
+      // stuff like printing a message.
+      break;
+    }
+    case debug_ipc::Stop::kThread: {
+      // The thread is already stopped, nothing to do.
+      break;
+    }
+    case debug_ipc::Stop::kProcess: {
+      // Suspend each thread in the process except the one that just hit the exception (leave it
+      // suspended in the exception).
+      std::vector<zx_koid_t> suspended_koids =
+          process_->ClientSuspendAllThreads(hitting_thread->koid());
+
+      // Save the record for each suspended thread.
+      for (zx_koid_t affected_thread : suspended_koids) {
+        if (DebuggedThread* thread = process_->GetThread(affected_thread))
+          other_affected_threads.push_back(thread->GetThreadRecord(kSuspendedStackAmount));
+      }
+      break;
+    }
+    case debug_ipc::Stop::kAll: {
+      // Suspend each thread in all processes except the one that just hit the exception (leave it
+      // suspended in the exception).
+      std::vector<std::pair<zx_koid_t, zx_koid_t>> proc_thread_pairs =
+          agent->ClientSuspendAll(process_->koid(), hitting_thread->koid());
+
+      for (auto& [process_koid, thread_koid] : proc_thread_pairs) {
+        if (DebuggedThread* thread = agent->GetDebuggedThread(process_koid, thread_koid))
+          other_affected_threads.push_back(thread->GetThreadRecord(kSuspendedStackAmount));
+      }
+      break;
+    }
   }
 }
 
