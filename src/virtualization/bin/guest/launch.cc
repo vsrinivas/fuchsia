@@ -25,7 +25,7 @@ void handle_launch(int argc, const char** argv, async::Loop* loop,
   // Launch guest.
   auto url = fxl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", argv[0], argv[0]);
   fuchsia::virtualization::GuestPtr guest;
-  realm->LaunchInstance(url, nullptr, std::move(cfg), guest.NewRequest(), [](uint32_t) {});
+  realm->LaunchInstance(url, cpp17::nullopt, std::move(cfg), guest.NewRequest(), [](uint32_t) {});
 
   // Setup serial console.
   SerialConsole console(loop);

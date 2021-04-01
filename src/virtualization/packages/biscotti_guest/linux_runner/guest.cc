@@ -202,7 +202,7 @@ void Guest::StartGuest() {
 
   auto vm_create_nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);
-  guest_env_->LaunchInstance(kLinuxGuestPackage, nullptr, std::move(cfg),
+  guest_env_->LaunchInstance(kLinuxGuestPackage, cpp17::nullopt, std::move(cfg),
                              guest_controller_.NewRequest(), [this, vm_create_nonce](uint32_t cid) {
                                TRACE_DURATION("linux_runner", "LaunchInstance Callback");
                                TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);

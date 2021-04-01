@@ -171,7 +171,6 @@ src:../../sdk/lib/fidl/cpp/message_part.h
 src:../../sdk/lib/fidl/cpp/object_coding.h
 src:../../sdk/lib/fidl/cpp/string.h
 src:../../sdk/lib/fidl/cpp/traits.h
-src:../../sdk/lib/fidl/cpp/transition.h
 src:../../sdk/lib/fidl/cpp/types.h
 src:../../sdk/lib/fidl/cpp/vector.h
 src:../../sdk/lib/fidl/cpp/interface_handle.h

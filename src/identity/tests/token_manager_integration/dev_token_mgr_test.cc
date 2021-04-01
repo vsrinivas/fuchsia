@@ -161,9 +161,10 @@ class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
     scopes.push_back("test_scope");
 
     bool call_complete = false;
-    token_mgr_->Authorize(app_config, nullptr,        /* optional AuthenticationUiContext */
-                          std::move(scopes), nullptr, /* new user, no existing user_profile_id */
-                          "",                         /* empty auth_code */
+    token_mgr_->Authorize(app_config, nullptr, /* optional AuthenticationUiContext */
+                          std::move(scopes),
+                          cpp17::nullopt, /* new user, no existing user_profile_id */
+                          "",             /* empty auth_code */
                           [&](Status status, UserProfileInfoPtr user_info) {
                             EXPECT_EQ(Status::OK, status);
                             EXPECT_NE(nullptr, user_info);
@@ -180,9 +181,10 @@ TEST_F(DevTokenManagerAppTest, Authorize) {
   std::vector<std::string> scopes;
   scopes.push_back("test_scope");
   bool call_complete = false;
-  token_mgr_->Authorize(dev_app_config_, nullptr,   /* optional AuthenticationUiContext */
-                        std::move(scopes), nullptr, /* new user, no existing user_profile_id */
-                        "",                         /* empty auth_code */
+  token_mgr_->Authorize(dev_app_config_, nullptr, /* optional AuthenticationUiContext */
+                        std::move(scopes),
+                        cpp17::nullopt, /* new user, no existing user_profile_id */
+                        "",             /* empty auth_code */
                         [&](Status status, UserProfileInfoPtr user_info) {
                           EXPECT_EQ(Status::OK, status);
                           EXPECT_NE(nullptr, user_info);
@@ -218,7 +220,7 @@ TEST_F(DevTokenManagerAppTest, GetIdToken) {
   RegisterUser(dev_app_config_);
   bool call_complete = false;
   ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), cpp17::nullopt,
                          [&](Status status, fidl::StringPtr id_token) {
                            EXPECT_EQ(Status::OK, status);
                            ASSERT_TRUE(id_token.has_value());
@@ -233,7 +235,7 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   bool last_call_complete = false;
 
   ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), cpp17::nullopt,
                          [&](Status status, fidl::StringPtr id_token) {
                            EXPECT_EQ(Status::OK, status);
                            EXPECT_NE(nullptr, id_token);
@@ -250,7 +252,7 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
                               [&](Status status) { EXPECT_EQ(Status::OK, status); });
 
   token_mgr_->GetIdToken(
-      dev_app_config_, user_profile_id_.value(), nullptr,
+      dev_app_config_, user_profile_id_.value(), cpp17::nullopt,
       [&](Status status, fidl::StringPtr id_token) { EXPECT_EQ(Status::USER_NOT_FOUND, status); });
 
   scopes.clear();
@@ -271,13 +273,13 @@ TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
 
   bool last_call_complete = false;
   ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), cpp17::nullopt,
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
                            id_token = std::move(token);
                          });
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), cpp17::nullopt,
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
                            ASSERT_TRUE(id_token.has_value());
@@ -290,7 +292,7 @@ TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
   fidl::StringPtr original_user_profile_id = user_profile_id_;
   RegisterUser(dev_app_config_);
   EXPECT_NE(user_profile_id_, original_user_profile_id);
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), cpp17::nullopt,
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
                            ASSERT_TRUE(id_token.has_value());
@@ -341,7 +343,7 @@ TEST_F(DevTokenManagerAppTest, Reauthorize) {
   bool last_call_complete = false;
 
   std::vector<std::string> scopes;
-  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), nullptr, "",
+  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), cpp17::nullopt, "",
                         [&](Status status, UserProfileInfoPtr user_info) {
                           EXPECT_EQ(Status::OK, status);
                           user_profile_id = user_info->id;

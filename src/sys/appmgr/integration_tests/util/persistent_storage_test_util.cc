@@ -26,7 +26,7 @@ class IsolatedStorageTestUtil : public test::appmgr::integration::DataFileReader
   void ReadFile(std::string path, ReadFileCallback callback) override {
     std::string contents;
     if (!files::ReadFileToString(files::JoinPath("/data", path), &contents)) {
-      callback(nullptr);
+      callback(cpp17::nullopt);
       return;
     }
     callback(contents);

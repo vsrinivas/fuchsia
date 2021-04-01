@@ -409,7 +409,7 @@ TEST_DECODE_WIRE(Array2, Array2, R"({"b_2":["1", "2"]})",
                  "{ b_2: array<#gre#int32#rst#> = [ #blu#1#rst#, #blu#2#rst# ] }", two_param_array);
 
 TEST_DECODE_WIRE(NullVector, Vector, R"({"v_1": null})",
-                 "{ v_1: vector<#gre#int32#rst#> = #red#null#rst# }", nullptr)
+                 "{ v_1: vector<#gre#int32#rst#> = #red#null#rst# }", cpp17::nullopt)
 
 TEST_DECODE_WIRE(VectorOneElt, Vector, R"({"v_1":["1"]})",
                  "{ v_1: vector<#gre#int32#rst#> = [ #blu#1#rst# ] }", one_param_vector);

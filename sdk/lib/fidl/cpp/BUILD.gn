@@ -124,7 +124,6 @@ sdk_source_set("cpp_base") {
     "object_coding.h",
     "string.h",
     "traits.h",
-    "transition.h",
     "types.h",
     "vector.h",
   ]

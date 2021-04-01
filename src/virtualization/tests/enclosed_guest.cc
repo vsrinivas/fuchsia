@@ -127,8 +127,7 @@ zx_status_t EnclosedGuest::Start() {
 
   status = services->AllowParentService(fuchsia::kernel::VmexResource::Name_);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failure adding vmex resource service: "
-                   << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failure adding vmex resource service: " << zx_status_get_string(status);
     return status;
   }
 
@@ -160,7 +159,7 @@ zx_status_t EnclosedGuest::Start() {
 
   // Launch the guest.
   bool launch_complete = false;
-  realm_->LaunchInstance(url, nullptr, std::move(cfg), guest_.NewRequest(),
+  realm_->LaunchInstance(url, cpp17::nullopt, std::move(cfg), guest_.NewRequest(),
                          [this, &launch_complete](uint32_t cid) {
                            guest_cid_ = cid;
                            launch_complete = true;

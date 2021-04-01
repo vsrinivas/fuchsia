@@ -97,6 +97,8 @@ TEST(StringPtr, Conversions) {
     EXPECT_EQ("world", *world);
   }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   StringPtr null = nullptr;
   EXPECT_FALSE(null.has_value());
 
@@ -105,6 +107,7 @@ TEST(StringPtr, Conversions) {
 
   std::string nullStr = StringPtr(nullptr).value_or("");
   EXPECT_EQ("", nullStr);
+#pragma GCC diagnostic pop
 }
 
 TEST(StringPtr, Map) {

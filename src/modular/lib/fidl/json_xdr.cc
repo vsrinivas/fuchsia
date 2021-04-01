@@ -97,7 +97,9 @@ void XdrContext::Value(unsigned short* const data) {
 
 void XdrContext::Value(short* const data) { ValueWithDefault(data, true, static_cast<short>(0)); }
 
-void XdrContext::Value(fidl::StringPtr* const data) { ValueWithDefault(data, true, nullptr); }
+void XdrContext::Value(fidl::StringPtr* const data) {
+  ValueWithDefault(data, true, cpp17::nullopt);
+}
 
 void XdrContext::Value(std::string* const data) { ValueWithDefault(data, true, ""); }
 

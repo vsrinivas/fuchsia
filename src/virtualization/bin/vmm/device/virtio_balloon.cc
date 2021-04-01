@@ -95,7 +95,7 @@ class StatsStream : public StreamBase {
   void GetMemStats(GetMemStatsCallback callback) {
     if (callbacks_.size() >= kCallbackLimit) {
       // If we have reached our limit for queued callbacks, return.
-      callback(ZX_ERR_SHOULD_WAIT, nullptr);
+      callback(ZX_ERR_SHOULD_WAIT, cpp17::nullopt);
       return;
     } else if (!chain_.IsValid()) {
       // If this is the first time memory statistics are requested, fetch a
@@ -103,7 +103,7 @@ class StatsStream : public StreamBase {
       if (!queue_.NextChain(&chain_)) {
         // If we do not have a descriptor chain in the queue, the device is not
         // ready, therefore return.
-        callback(ZX_ERR_SHOULD_WAIT, nullptr);
+        callback(ZX_ERR_SHOULD_WAIT, cpp17::nullopt);
         return;
       }
     }
@@ -183,7 +183,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
   void GetMemStats(GetMemStatsCallback callback) override {
     if (!(negotiated_features_ & VIRTIO_BALLOON_F_STATS_VQ)) {
       // If memory statistics are not supported, return.
-      callback(ZX_ERR_NOT_SUPPORTED, nullptr);
+      callback(ZX_ERR_NOT_SUPPORTED, cpp17::nullopt);
     } else {
       stats_stream_.GetMemStats(std::move(callback));
     }

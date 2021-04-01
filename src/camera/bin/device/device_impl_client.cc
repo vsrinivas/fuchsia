@@ -37,7 +37,7 @@ void DeviceImpl::Client::CloseConnection(zx_status_t status) {
 
 void DeviceImpl::Client::GetIdentifier(GetIdentifierCallback callback) {
   if (!device_.device_info_.has_vendor_id() || !device_.device_info_.has_product_id()) {
-    callback(nullptr);
+    callback(cpp17::nullopt);
     return;
   }
 

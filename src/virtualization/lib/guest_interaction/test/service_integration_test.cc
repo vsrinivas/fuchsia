@@ -39,7 +39,7 @@ TEST_F(GuestInteractionTest, FidlExecScriptTest) {
   env_->ConnectToService(gds.NewRequest());
 
   fuchsia::netemul::guest::GuestInteractionPtr gis;
-  gds->GetGuest(nullptr, kGuestLabel, gis.NewRequest());
+  gds->GetGuest(cpp17::nullopt, kGuestLabel, gis.NewRequest());
 
   ASSERT_TRUE(gis.is_bound());
 
@@ -194,7 +194,7 @@ TEST_F(GuestInteractionTest, FidlPutGetTest) {
   env_->ConnectToService(gds.NewRequest());
 
   fuchsia::netemul::guest::GuestInteractionPtr gis;
-  gds->GetGuest(nullptr, kGuestLabel, gis.NewRequest());
+  gds->GetGuest(cpp17::nullopt, kGuestLabel, gis.NewRequest());
 
   // Write a file of gibberish that the test can send over to the guest.
   char test_file[] = "/data/test_file.txt";

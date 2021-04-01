@@ -16,9 +16,8 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/message_builder.h": "2deb7e46901817a5141b293a5e88a9ee",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/message_part.h": "41ef9cba95309d8b2f6e352eefd7516a",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "654a2d9b39f18bb4e844362ba4dfc31d",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "972c77ef036856b7ef039d68a21565bf",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "3426864c462f5d65934bf8518631ae73",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "9a662d0b356f8ca126441598fbb7d169",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "ea5fd3c5abf19d39e0dda995f794d148",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/types.h": "56e709911f72250dfe5755dfcc2d1445",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "6ad9c74d26e7a5b160ef1ad6d0ae9b44"
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "4527ff9c4f238110d48fc8c4821b36de"
 }

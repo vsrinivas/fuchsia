@@ -43,7 +43,7 @@ class MockGestureListener : public fuchsia::accessibility::gesture::Listener {
                  Listener::OnGestureCallback callback) override;
 
   // Stores utterance which will be sent in the callback when OnGesture() is called.
-  fidl::StringPtr utterance_ = nullptr;
+  fidl::StringPtr utterance_ = cpp17::nullopt;
 
   // Status sent in the callback when OnGesture() is called.
   bool on_gesture_callback_status_ = true;

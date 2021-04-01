@@ -387,7 +387,7 @@ fidl::VectorPtr<uint8_t>
 TypeConverter<fidl::VectorPtr<uint8_t>, const media_player::Bytes*>::Convert(
     const media_player::Bytes* input) {
   if (input == nullptr) {
-    return nullptr;
+    return cpp17::nullopt;
   }
 
   std::vector<uint8_t> array(input->size());

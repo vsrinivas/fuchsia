@@ -239,7 +239,7 @@ bool Bus::CheckClientWatch(WaitForClientsWatch* watch) {
       return false;
     }
   }
-  watch->FireCallback(true, nullptr);
+  watch->FireCallback(true, cpp17::nullopt);
   return true;
 }
 

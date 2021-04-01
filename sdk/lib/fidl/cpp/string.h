@@ -15,18 +15,15 @@
 
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/traits.h"
-#include "lib/fidl/cpp/transition.h"
 
 namespace fidl {
-
-#if defined(FIDL_USE_FIT_OPTIONAL)
 
 class StringPtr final : public cpp17::optional<std::string> {
  public:
   constexpr StringPtr() = default;
 
   constexpr StringPtr(cpp17::nullopt_t) noexcept {}
-  FIDL_FIT_OPTIONAL_DEPRECATED("Use cpp17::nullopt instead of nullptr")
+  // Deprecated in favor of cpp17::nullopt_t.
   constexpr StringPtr(std::nullptr_t) noexcept {}
 
   StringPtr(const StringPtr&) = default;
@@ -92,104 +89,6 @@ class StringPtr final : public cpp17::optional<std::string> {
   // Destructor.
   ~StringPtr() = default;
 };
-
-#else
-
-// A representation of a FIDL string that owns the memory for the string.
-//
-// A StringPtr has three states: (1) null, (2) empty, (3) contains a string. In
-// the second state, operations that return an std::string return the empty
-// std::string. The null and empty states can be distinguished using the
-// |is_null| and |operator bool| methods.
-class StringPtr final {
- public:
-  StringPtr() = default;
-  StringPtr(const StringPtr& other) = default;
-  StringPtr(StringPtr&& other) noexcept = default;
-  ~StringPtr() = default;
-
-  StringPtr& operator=(const StringPtr&) = default;
-  StringPtr& operator=(StringPtr&& other) = default;
-
-  StringPtr(std::string str) : str_(std::move(str)), is_null_if_empty_(false) {}
-  StringPtr(const char* str)
-      : str_(str ? std::string(str) : std::string()), is_null_if_empty_(!str) {}
-  FIDL_FIT_OPTIONAL_DEPRECATED("use StringPtr(std::string(bytes, length))")
-  StringPtr(const char* str, size_t length)
-      : str_(str ? std::string(str, length) : std::string()), is_null_if_empty_(!str) {}
-
-  // Accesses the underlying std::string object.
-  FIDL_FIT_OPTIONAL_DEPRECATED("use value_or(\"\")")
-  const std::string& get() const { return str_; }
-
-  // Accesses the underlying std::string object.
-  const std::string& value() const { return str_; }
-  std::string& value() { return str_; }
-
-  std::string value_or(std::string&& default_value) const& {
-    if (has_value()) {
-      return str_;
-    } else {
-      return std::move(default_value);
-    }
-  }
-
-  std::string value_or(std::string&& default_value) && {
-    if (has_value()) {
-      return std::move(str_);
-    } else {
-      return std::move(default_value);
-    }
-  }
-
-  // Stores the given std::string in this StringPtr.
-  //
-  // After this method returns, the StringPtr is non-null.
-  FIDL_FIT_OPTIONAL_DEPRECATED("use assignment")
-  void reset(std::string str) {
-    str_ = std::move(str);
-    is_null_if_empty_ = false;
-  }
-
-  // Causes this StringPtr to become null.
-  void reset() {
-    str_.clear();
-    is_null_if_empty_ = true;
-  }
-
-  void swap(StringPtr& other) {
-    using std::swap;
-    swap(str_, other.str_);
-    swap(is_null_if_empty_, other.is_null_if_empty_);
-  }
-
-  // Whether this StringPtr is null.
-  //
-  // The null state is separate from the empty state.
-  FIDL_FIT_OPTIONAL_DEPRECATED("use !has_value()")
-  bool is_null() const { return is_null_if_empty_ && str_.empty(); }
-
-  bool has_value() const { return !(is_null_if_empty_ && str_.empty()); }
-
-  // Tests as true if non-null, false if null.
-  explicit operator bool() const { return has_value(); }
-
-  // Provides access to the underlying std::string.
-  std::string* operator->() { return &str_; }
-  const std::string* operator->() const { return &str_; }
-
-  // Provides access to the underlying std::string.
-  const std::string& operator*() const { return str_; }
-
-  FIDL_FIT_OPTIONAL_DEPRECATED("use value_or(\"\")")
-  operator const std::string&() const { return str_; }
-
- private:
-  std::string str_;
-  bool is_null_if_empty_ = true;
-};
-
-#endif
 
 template <>
 struct Equality<StringPtr> {
@@ -279,9 +178,6 @@ inline bool operator>=(const char* lhs, const StringPtr& rhs) { return !(lhs < r
 
 inline bool operator>=(const StringPtr& lhs, const char* rhs) { return !(lhs < rhs); }
 
-#if defined(FIDL_USE_FIT_OPTIONAL)
-FIDL_FIT_OPTIONAL_DEPRECATED("Use value_or(\"\")")
-#endif
 inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
   return out << str.value_or("");
 }
