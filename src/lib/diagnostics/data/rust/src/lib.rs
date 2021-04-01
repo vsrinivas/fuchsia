@@ -621,6 +621,74 @@ impl fmt::Display for Data<Logs> {
                     .collect::<Vec<_>>()
             })
             .unwrap_or(vec![]);
+        let kvps = self
+            .payload
+            .as_ref()
+            .map(|p| {
+                p.properties
+                    .iter()
+                    .filter_map(|property| match property {
+                        LogsProperty::String(LogsField::Tag, _tag) => None,
+                        LogsProperty::String(LogsField::ProcessId, _tag) => None,
+                        LogsProperty::String(LogsField::ThreadId, _tag) => None,
+                        LogsProperty::String(LogsField::Verbosity, _tag) => None,
+                        LogsProperty::String(LogsField::Dropped, _tag) => None,
+                        LogsProperty::String(LogsField::Msg, _tag) => None,
+                        LogsProperty::String(LogsField::FilePath, _tag) => None,
+                        LogsProperty::String(LogsField::LineNumber, _tag) => None,
+                        LogsProperty::String(LogsField::Other(key), value) => {
+                            Some(format!("{}={}", key.to_string(), value))
+                        }
+                        LogsProperty::Bytes(LogsField::Other(key), _) => {
+                            Some(format!("{} = <bytes>", key.to_string()))
+                        }
+                        LogsProperty::Int(LogsField::Other(key), value) => {
+                            Some(format!("{}={}", key.to_string(), value))
+                        }
+                        LogsProperty::Uint(LogsField::Other(key), value) => {
+                            Some(format!("{}={}", key.to_string(), value))
+                        }
+                        LogsProperty::Double(LogsField::Other(key), value) => {
+                            Some(format!("{}={}", key.to_string(), value))
+                        }
+                        LogsProperty::Bool(LogsField::Other(key), value) => {
+                            Some(format!("{}={}", key.to_string(), value))
+                        }
+                        LogsProperty::DoubleArray(LogsField::Other(key), value) => {
+                            Some(format!("{}={:?}", key.to_string(), value))
+                        }
+                        LogsProperty::IntArray(LogsField::Other(key), value) => {
+                            Some(format!("{}={:?}", key.to_string(), value))
+                        }
+                        LogsProperty::UintArray(LogsField::Other(key), value) => {
+                            Some(format!("{}={:?}", key.to_string(), value))
+                        }
+                        LogsProperty::StringList(LogsField::Other(key), value) => {
+                            Some(format!("{}={:?}", key.to_string(), value))
+                        }
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or(vec![]);
+        let mut file = None;
+        let mut line = None;
+
+        for p in self.payload.as_ref() {
+            for property in &p.properties {
+                match property {
+                    LogsProperty::String(LogsField::FilePath, tag) => {
+                        file = Some(tag.to_string());
+                        ()
+                    }
+                    LogsProperty::Uint(LogsField::LineNumber, tag) => {
+                        line = Some(tag);
+                        ()
+                    }
+                    _ => (),
+                }
+            }
+        }
         let time: Duration = self.metadata.timestamp.into();
         write!(
             f,
@@ -631,12 +699,21 @@ impl fmt::Display for Data<Logs> {
             self.tid().map(|s| s.to_string()).unwrap_or("".to_string()),
             self.moniker,
         )?;
-
+        let mut file_line_str = "".to_string();
+        if file.is_some() && line.is_some() {
+            file_line_str = format!(" [{}({})]", file.unwrap(), line.unwrap());
+        }
         if !tags.is_empty() {
             write!(f, "[{}]", tags.join(","))?;
         }
 
-        write!(f, " {}: {}", self.metadata.severity, self.msg().unwrap_or(""))
+        write!(f, " {}:{} {}", self.metadata.severity, file_line_str, self.msg().unwrap_or(""))?;
+        if !kvps.is_empty() {
+            for kvp in kvps {
+                write!(f, " {}", kvp)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -942,6 +1019,9 @@ mod tests {
                 Property::String(LogsField::Tag, "foo".to_string()),
                 Property::String(LogsField::Tag, "bar".to_string()),
                 Property::String(LogsField::Msg, "some message".to_string()),
+                Property::String(LogsField::FilePath, "some_file.cc".to_string()),
+                Property::Uint(LogsField::LineNumber, 420),
+                Property::String(LogsField::Other("test".to_string()), "property".to_string()),
             ],
             vec![],
         );
@@ -956,7 +1036,7 @@ mod tests {
         );
 
         assert_eq!(
-            "[00012.345678][123][456][moniker][foo,bar] INFO: some message",
+            "[00012.345678][123][456][moniker][foo,bar] INFO: [some_file.cc(420)] some message test=property",
             format!("{}", data)
         )
     }
