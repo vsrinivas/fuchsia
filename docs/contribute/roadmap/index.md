@@ -12,6 +12,9 @@ of active projects that inform the way that we’re currently thinking about
 Fuchsia.
 
 **2021**
-     * [Defining a Stable Driver Runtime](/docs/contribute/roadmap/2021/stable_driver_runtime.md)
+
+* [Defining a Stable Driver Runtime](/docs/contribute/roadmap/2021/stable_driver_runtime.md)
+
 **2020**
-     * [Fuchsia 2020 roadmap overview](/docs/contribute/roadmap/2020/overview.md)
+
+* [Fuchsia 2020 roadmap overview](/docs/contribute/roadmap/2020/overview.md)

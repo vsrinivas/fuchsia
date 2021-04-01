@@ -9,7 +9,6 @@ toc:
 - title: "Contributing to Fuchsia"
   path: /CONTRIBUTING.md
 - title: "Fuchsia roadmap"
-  path: /docs/contribute/roadmap/index.md
   section:
   - include: /docs/contribute/roadmap/_toc.yaml
 - title: "Code of conduct"
