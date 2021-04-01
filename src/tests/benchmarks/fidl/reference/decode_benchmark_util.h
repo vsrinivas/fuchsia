@@ -23,8 +23,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   fidl::FidlAllocator<65536> allocator;
-  fidl::aligned<FidlType> aligned_value = builder(allocator);
-  fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
+  FidlType aligned_value = builder(allocator);
+  fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
   fidl::OutgoingMessage& encoded_message = encoded.GetOutgoingMessage();
 

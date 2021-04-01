@@ -67,11 +67,11 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   typename ProtocolType::EventSender sender(std::move(endpoints->server));
   while (state->KeepRunning()) {
     fidl::FidlAllocator<65536> allocator;
-    fidl::aligned<FidlType> aligned_value = builder(allocator);
+    FidlType aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: SendEvent.
 
-    sender.Send(std::move(aligned_value.value));
+    sender.Send(std::move(aligned_value));
 
     {
       std::unique_lock<std::mutex> lock(mu);

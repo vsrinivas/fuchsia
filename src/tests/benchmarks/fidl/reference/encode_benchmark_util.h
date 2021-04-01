@@ -26,12 +26,12 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
 
   while (state->KeepRunning()) {
     fidl::FidlAllocator<65536> allocator;
-    fidl::aligned<FidlType> aligned_value = builder(allocator);
+    FidlType aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: Encode.
 
     const char* error;
-    if (!encode(&aligned_value.value, &error, [](const uint8_t*, size_t) {})) {
+    if (!encode(&aligned_value, &error, [](const uint8_t*, size_t) {})) {
       std::cout << "error in encode benchmark: " << error << std::endl;
       return false;
     }
@@ -41,15 +41,15 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
 
   // Encode the input with fidl::Encode and compare againt encode().
   fidl::FidlAllocator<65536> allocator;
-  fidl::aligned<FidlType> aligned_value = builder(allocator);
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
+  FidlType aligned_value = builder(allocator);
+  ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
 
   fidl::FidlAllocator<65536> allocator2;
   aligned_value = builder(allocator2);
   std::vector<uint8_t> reference_bytes;
   const char* error;
-  if (!encode(&aligned_value.value, &error, [&reference_bytes](const uint8_t* bytes, size_t size) {
+  if (!encode(&aligned_value, &error, [&reference_bytes](const uint8_t* bytes, size_t size) {
         reference_bytes.resize(size);
         memcpy(reference_bytes.data(), bytes, size);
       })) {

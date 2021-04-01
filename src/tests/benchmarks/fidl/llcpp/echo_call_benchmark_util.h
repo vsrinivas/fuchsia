@@ -43,11 +43,11 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   while (state->KeepRunning()) {
     fidl::FidlAllocator<65536> allocator;
-    fidl::aligned<FidlType> aligned_value = builder(allocator);
+    FidlType aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: EchoCall.
 
-    auto result = client.Echo(std::move(aligned_value.value));
+    auto result = client.Echo(std::move(aligned_value));
 
     state->NextStep();  // End: EchoCall. Begin: Teardown
 

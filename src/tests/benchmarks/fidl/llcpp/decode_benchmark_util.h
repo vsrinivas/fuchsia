@@ -30,9 +30,9 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     // construct a new object each iteration, so that the handle close cost is included in the
     // decode time.
     fidl::FidlAllocator<65536> allocator;
-    fidl::aligned<FidlType> aligned_value = builder(allocator);
+    FidlType aligned_value = builder(allocator);
     // encode the value.
-    fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
+    fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
     if (encoded.error() != nullptr) {
       std::cerr << "Unexpected error: " << encoded.error() << '\n';
     }

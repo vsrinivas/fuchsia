@@ -5,7 +5,6 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_WALKER_WALKER_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_WALKER_WALKER_BENCHMARK_UTIL_H_
 
-#include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/visitor.h>
@@ -24,11 +23,11 @@ void Walk(const fidl_type_t* fidl_type, uint8_t* data);
 template <typename FidlType, typename BuilderFunc>
 bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   builder([state](FidlType value) {
-    fidl::aligned<FidlType> aligned_value = std::move(value);
+    FidlType aligned_value = std::move(value);
 
     // Linearize the object by encoding and then decoding it.
     // TODO(fxbug.dev/53743) Change the walker to walk encoded bytes.
-    fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
+    fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
     ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
     auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
     auto decoded = fidl::DecodedMessage<FidlType>(converted.incoming_message());
