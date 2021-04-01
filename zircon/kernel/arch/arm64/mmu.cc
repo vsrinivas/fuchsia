@@ -11,6 +11,7 @@
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/instrumentation/asan.h>
@@ -44,6 +45,9 @@
 #define LOCAL_KTRACE(string, args...)                                                         \
   ktrace_probe(LocalTrace<LOCAL_KTRACE_ENABLE>, TraceContext::Cpu, KTRACE_STRING_REF(string), \
                ##args)
+
+using LocalTraceDuration =
+    TraceDuration<TraceEnabled<LOCAL_KTRACE_ENABLE>, KTRACE_GRP_VM, TraceContext::Thread>;
 
 static_assert(((long)KERNEL_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
@@ -822,11 +826,12 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
   return ZX_OK;
 }
 
-void ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
-                                               const uint index_shift, const uint page_size_shift,
-                                               volatile pte_t* page_table,
-                                               const HarvestCallback& accessed_callback,
-                                               ConsistencyManager& cm) {
+size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t vaddr,
+                                                 vaddr_t vaddr_rel_in, size_t size,
+                                                 const uint index_shift, const uint page_size_shift,
+                                                 volatile pte_t* page_table,
+                                                 const HarvestCallback& accessed_callback,
+                                                 ConsistencyManager& cm) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
@@ -835,10 +840,15 @@ void ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
   // vaddr_rel and size must be page aligned
   DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
 
-  while (size) {
+  size_t harvested_size = 0;
+
+  while (size > 0 && *entry_limit > 0) {
+    LocalTraceDuration trace{"page_table_loop"_stringref};
+
     const vaddr_t vaddr_rem = vaddr_rel & block_mask;
-    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
     const vaddr_t index = vaddr_rel >> index_shift;
+
+    size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
 
     pte_t pte = page_table[index];
 
@@ -852,8 +862,9 @@ void ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       volatile pte_t* next_page_table =
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
-      HarvestAccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                               page_size_shift, next_page_table, accessed_callback, cm);
+      chunk_size = HarvestAccessedPageTable(entry_limit, vaddr, vaddr_rem, chunk_size,
+                                            index_shift - (page_size_shift - 3), page_size_shift,
+                                            next_page_table, accessed_callback, cm);
     } else if (is_pte_valid(pte)) {
       if (pte & MMU_PTE_ATTR_AF) {
         const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
@@ -876,7 +887,20 @@ void ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
     vaddr += chunk_size;
     vaddr_rel += chunk_size;
     size -= chunk_size;
+
+    harvested_size += chunk_size;
+
+    // Each iteration of this loop examines a PTE at the current level. The
+    // total number of PTEs examined is limited to avoid holding the aspace lock
+    // for too long. However, the remaining limit balance is updated at the end
+    // of the loop to ensure that harvesting makes progress, even if the initial
+    // limit is too small to reach a terminal PTE.
+    if (*entry_limit > 0) {
+      *entry_limit -= 1;
+    }
   }
+
+  return harvested_size;
 }
 
 void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
@@ -1321,7 +1345,8 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<Mutex> a{&lock_};
+  Guard<Mutex> guard{&lock_};
+
   vaddr_t vaddr_base;
   uint top_size_shift, top_index_shift, page_size_shift;
   MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift, &page_size_shift);
@@ -1340,10 +1365,58 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
   LOCAL_KTRACE("mmu harvest accessed",
                (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
-  ConsistencyManager cm(*this);
+  // Limit harvesting to 32 entries per iteration with the arch aspace lock held
+  // to avoid delays in accessed faults in the same aspace running in parallel.
+  //
+  // This limit is derived from the following observations:
+  // 1. Worst case runtime to harvest a terminal PTE on a low-end A53 is ~780ns.
+  // 2. Real workloads can result in harvesting thousands of terminal PTEs in a
+  //    single aspace.
+  // 3. An access fault handler will spin up to 150us on the aspace adaptive
+  //    mutex before blocking.
+  // 4. Unnecessarily blocking is costly when the system is heavily loaded,
+  //    especially during accessed faults, which tend to occur multiple times in
+  //    quick succession within and across threads in the same process.
+  //
+  // To achieve optimal contention between access harvesting and access faults,
+  // it is important to avoid exhausting the 150us mutex spin phase by holding
+  // the aspace mutex for too long. The selected entry limit results in a worst
+  // case harvest time of about 1/6 of the mutex spin phase.
+  //
+  //   Ti = worst case runtime per top-level harvest iteration.
+  //   Te = worst case runtime per terminal entry harvest.
+  //   L  = max entries per top-level harvest iteration.
+  //
+  //   Ti = Te * L = 780ns * 32 = 24.96us
+  //
+  const size_t kMaxEntriesPerIteration = 32;
 
-  HarvestAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_,
-                           accessed_callback, cm);
+  ConsistencyManager cm(*this);
+  size_t remaining_size = size;
+  vaddr_t current_vaddr = vaddr;
+  vaddr_t current_vaddr_rel = vaddr_rel;
+
+  while (remaining_size) {
+    LocalTraceDuration trace{"harvest_loop"_stringref};
+    size_t entry_limit = kMaxEntriesPerIteration;
+    const size_t harvested_size =
+        HarvestAccessedPageTable(&entry_limit, current_vaddr, current_vaddr_rel, remaining_size,
+                                 top_index_shift, page_size_shift, tt_virt_, accessed_callback, cm);
+    DEBUG_ASSERT(harvested_size > 0);
+    DEBUG_ASSERT(harvested_size <= remaining_size);
+
+    remaining_size -= harvested_size;
+    current_vaddr += harvested_size;
+    current_vaddr_rel += harvested_size;
+
+    // Release and re-acquire the lock to let contending threads have a chance
+    // to acquire the arch aspace lock between iterations. Use arch::Yield() to
+    // give other CPUs spinning on the aspace mutex a slight edge in acquiring
+    // the mutex. Releasing the mutex also flushes a preemption that may have
+    // pended during the critical section.
+    guard.CallUnlocked([] { arch::Yield(); });
+  }
+
   return ZX_OK;
 }
 
