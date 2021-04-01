@@ -11,8 +11,6 @@ source_set("attachment_providers") {
   sources = [
     "inspect.cc",
     "inspect.h",
-    "inspect_data_budget.cc",
-    "inspect_data_budget.h",
     "kernel_log_ptr.cc",
     "kernel_log_ptr.h",
     "screenshot_ptr.cc",
@@ -32,6 +30,7 @@ source_set("attachment_providers") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:archive_accessor",
+    "//src/developer/forensics/feedback_data:inspect_budget",
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",

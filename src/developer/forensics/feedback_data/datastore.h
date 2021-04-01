@@ -14,8 +14,8 @@
 
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/fit/timeout.h"

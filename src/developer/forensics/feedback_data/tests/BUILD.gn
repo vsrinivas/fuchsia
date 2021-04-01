@@ -296,7 +296,7 @@ executable("inspect_data_budget_unittest_exe") {
   sources = [ "inspect_data_budget_unittest.cc" ]
 
   deps = [
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
+    "//src/developer/forensics/feedback_data:inspect_budget",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/lib/files",

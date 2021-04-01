@@ -14,13 +14,13 @@
 
 #include <memory>
 
-#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/feedback_data/data_provider_controller.h"
 #include "src/developer/forensics/feedback_data/data_register.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
+#include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/inspect_manager.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/previous_boot_file.h"

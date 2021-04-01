@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
+#include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -47,8 +47,8 @@ void InspectDataBudget::UpdateBudget(
   //
   // Note: converges faster when the compressed portion of the inspect file is larger.
   // Note: converges when the relationship between budget and snapshot is close to linearity.
-  const double ratio = (double) kTargetZipSizeInBytes / (double) previous_zip_size;
-  const size_t new_budget = (size_t) ((double)data_budget_.value() * ratio);
+  const double ratio = (double)kTargetZipSizeInBytes / (double)previous_zip_size;
+  const size_t new_budget = (size_t)((double)data_budget_.value() * ratio);
   data_budget_ = std::clamp(new_budget, kMinInspectDataBudgetInBytes, kMaxInspectDataBudgetInBytes);
 }
 

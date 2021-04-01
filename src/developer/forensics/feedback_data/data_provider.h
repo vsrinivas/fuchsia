@@ -15,8 +15,8 @@
 #include <map>
 #include <memory>
 
-#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
+#include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"

@@ -72,6 +72,7 @@ source_set("data_provider") {
   ]
 
   public_deps = [
+    ":inspect_budget",
     ":metadata",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
@@ -127,6 +128,7 @@ source_set("datastore") {
   ]
 
   public_deps = [
+    ":inspect_budget",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
@@ -246,6 +248,20 @@ source_set("inspect_manager") {
   public_deps = [ "//src/developer/forensics/utils:inspect_node_manager" ]
 
   deps = [ "//src/developer/forensics/utils:inspect_protocol_stats" ]
+}
+
+source_set("inspect_budget") {
+  sources = [
+    "inspect_data_budget.cc",
+    "inspect_data_budget.h",
+  ]
+
+  public_deps = [ "//src/developer/forensics/utils:archive" ]
+
+  deps = [
+    ":constants",
+    "//sdk/lib/syslog/cpp",
+  ]
 }
 
 source_set("metadata") {

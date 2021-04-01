@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
+#include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
