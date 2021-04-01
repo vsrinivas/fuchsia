@@ -57,29 +57,27 @@ impl WlanPolicyFacade {
     }
 
     /// Client controller needs to be created once per server before the client controller API
-    /// can be used. This will get the client conrtoller if has not already been initialized, if it
-    /// has been initialize it does nothing.
+    /// can be used. This will drop the existing client controller and attempt to get a new
+    /// controller even if the facade already has one, since errors in getting a client controller
+    /// may only happen after using the client controller.
     pub async fn create_client_controller(&self) -> Result<(), Error> {
         let tag = "WlanPolicyFacade::create_client_controller";
         let mut controller_guard = self.controller.write();
-        if let Some(controller) = controller_guard.inner.as_ref() {
-            fx_log_info!(tag: &with_line!(tag), "Current client controller: {:?}", controller);
+        // Drop the controller if the facade has one, otherwise creating a controller will fail.
+        controller_guard.inner = None;
+
+        let (controller, update_stream) = Self::init_client_controller().await.map_err(|e| {
+            fx_log_info!(tag: &with_line!(tag), "Error getting client controller: {}", e);
+            format_err!("Error getting client controller: {}", e)
+        })?;
+        controller_guard.inner = Some(controller);
+
+        // Do not set value if it has already been set by getting updates or a previous call.
+        let update_listener = self.update_listener.take();
+        if update_listener.is_none() {
+            self.update_listener.set(Some(update_stream));
         } else {
-            // Get controller
-            fx_log_info!(tag: &with_line!(tag), "Setting new client controller");
-            let (controller, update_stream) =
-                Self::init_client_controller().await.map_err(|e| {
-                    fx_log_info!(tag: &with_line!(tag), "Error getting client controller: {}", e);
-                    format_err!("Error getting client controller: {}", e)
-                })?;
-            controller_guard.inner = Some(controller);
-            // Do not set value if it has already been set by getting updates.
-            let update_listener = self.update_listener.take();
-            if update_listener.is_none() {
-                self.update_listener.set(Some(update_stream));
-            } else {
-                self.update_listener.set(update_listener);
-            }
+            self.update_listener.set(update_listener);
         }
         Ok(())
     }
