@@ -531,7 +531,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       dir_path = current_dir;
     }
     fio::Directory::Call::Open(*diagnostics_channel, flags, 0,
-                               fidl::unowned_str(dir_path, strlen(dir_path)),
+                               fidl::StringView::FromExternal(dir_path),
                                fidl::ServerEnd<fio::Node>(std::move(ipc)));
     return;
   }
@@ -563,8 +563,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     }
     if (describe) {
       fio::wire::NodeInfo node_info;
-      fidl::aligned<fio::wire::DirectoryObject> directory;
-      node_info.set_directory(fidl::unowned_ptr(&directory));
+      fio::wire::DirectoryObject directory;
+      node_info.set_directory(
+          fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
       fio::Node::OnOpenResponse::OwnedEncodedMessage response(ZX_OK, node_info);
 
       // Writing to unowned_ipc is safe because this is executing on the same
@@ -811,7 +812,7 @@ void DevfsFidlServer::Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
 void DevfsFidlServer::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   fio::wire::FilesystemInfo info;
   strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fio::wire::MAX_FS_NAME_BUFFER);
-  completer.Reply(ZX_OK, fidl::unowned_ptr(&info));
+  completer.Reply(ZX_OK, fidl::ObjectView<fio::wire::FilesystemInfo>::FromExternal(&info));
 }
 
 void DevfsFidlServer::Watch(uint32_t mask, uint32_t options, zx::channel watcher,
@@ -843,7 +844,7 @@ void DevfsFidlServer::ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync
     actual = status;
     status = ZX_OK;
   }
-  completer.Reply(status, fidl::VectorView<uint8_t>(fidl::unowned_ptr<uint8_t>(data), actual));
+  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
 void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
@@ -864,8 +865,8 @@ void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
 
 void DevfsFidlServer::Describe(DescribeCompleter::Sync& completer) {
   fio::wire::NodeInfo node_info;
-  fidl::aligned<fio::wire::DirectoryObject> directory;
-  node_info.set_directory(fidl::unowned_ptr(&directory));
+  fio::wire::DirectoryObject directory;
+  node_info.set_directory(fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
   completer.Reply(std::move(node_info));
 }
 

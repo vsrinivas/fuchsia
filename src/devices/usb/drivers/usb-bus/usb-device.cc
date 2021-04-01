@@ -9,9 +9,9 @@
 #include <fuchsia/hardware/usb/device/llcpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <zircon/hw/usb.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 #include <utf_conversion/utf_conversion.h>
@@ -741,11 +741,9 @@ void UsbDevice::GetConfigurationDescriptor(uint8_t config,
   }
 
   size_t length = le16toh(descriptor->wTotalLength);
-  completer.Reply(
-      ZX_OK,
-      fidl::VectorView<uint8_t>(
-          fidl::unowned_ptr(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor))),
-          length));
+  completer.Reply(ZX_OK,
+                  fidl::VectorView<uint8_t>::FromExternal(
+                      const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor)), length));
 }
 
 void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,

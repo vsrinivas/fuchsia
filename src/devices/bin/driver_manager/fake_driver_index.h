@@ -41,7 +41,7 @@ class FakeDriverIndex final : public fuchsia_driver_framework::DriverIndex::Inte
       completer.ReplyError(match.status_value());
       return;
     }
-    completer.ReplySuccess(fidl::unowned_str(match.value().url),
+    completer.ReplySuccess(fidl::StringView::FromExternal(match.value().url),
                            std::move(match.value().matched_args));
   }
 

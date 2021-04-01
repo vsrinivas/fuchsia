@@ -7,13 +7,13 @@
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/spi/spi.h>
 
 #include <map>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/spi.h>
 #include <zxtest/zxtest.h>
 
@@ -413,7 +413,7 @@ TEST(SpiDevice, SpiFidlVectorTest) {
   ddk.current_test_cs_ = 0;
   ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
   {
-    fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
+    auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client->TransmitVector_Sync(std::move(tx_buffer));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
@@ -432,7 +432,7 @@ TEST(SpiDevice, SpiFidlVectorTest) {
   ddk.current_test_cs_ = 0;
   ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
   {
-    fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
+    auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client->ExchangeVector_Sync(std::move(tx_buffer));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
@@ -478,7 +478,7 @@ TEST(SpiDevice, SpiFidlVectorErrorTest) {
   ddk.current_test_cs_ = 0;
   ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
   {
-    fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
+    auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client->TransmitVector_Sync(std::move(tx_buffer));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
@@ -496,7 +496,7 @@ TEST(SpiDevice, SpiFidlVectorErrorTest) {
   ddk.current_test_cs_ = 0;
   ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
   {
-    fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
+    auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client->ExchangeVector_Sync(std::move(tx_buffer));
     ASSERT_OK(result.status());
     EXPECT_EQ(result->status, ZX_ERR_INTERNAL);

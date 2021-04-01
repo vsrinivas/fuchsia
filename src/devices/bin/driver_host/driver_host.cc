@@ -240,9 +240,10 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   uint64_t device_id = 0;
   auto response = rpc->AddDevice_Sync(
       std::move(coordinator_remote), std::move(device_controller_remote),
-      ::fidl::unowned_vec(props_list), ::fidl::unowned_str(child->name(), strlen(child->name())),
-      child->protocol_id(), ::fidl::unowned_str(child->driver->libname()),
-      ::fidl::unowned_str(proxy_args, proxy_args_len), add_device_config,
+      ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props_list),
+      ::fidl::StringView::FromExternal(child->name()), child->protocol_id(),
+      ::fidl::StringView::FromExternal(child->driver->libname()),
+      ::fidl::StringView::FromExternal(proxy_args, proxy_args_len), add_device_config,
       child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote));
   status = response.status();
   if (status == ZX_OK) {
@@ -878,7 +879,7 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
     return ZX_ERR_IO_REFUSED;
   }
   VLOGD(1, *dev, "bind-device");
-  auto driver_path = ::fidl::unowned_str(drv_libname, strlen(drv_libname));
+  auto driver_path = ::fidl::StringView::FromExternal(drv_libname);
   auto response = client->BindDevice_Sync(std::move(driver_path));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
@@ -925,7 +926,7 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
     return ZX_ERR_IO_REFUSED;
   }
   VLOGD(1, *dev, "load-firmware");
-  auto str_path = ::fidl::unowned_str(path, strlen(path));
+  auto str_path = ::fidl::StringView::FromExternal(path);
   auto response = client->LoadFirmware_Sync(std::move(str_path));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
@@ -960,7 +961,7 @@ void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, c
     return;
   }
   VLOGD(1, *dev, "load-firmware-async");
-  auto str_path = ::fidl::unowned_str(path, strlen(path));
+  auto str_path = ::fidl::StringView::FromExternal(path);
   auto result = client->LoadFirmware(
       std::move(str_path),
       [callback, context, dev = std::move(device_ref)](
@@ -1052,8 +1053,8 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   }
   VLOGD(1, *dev, "add-metadata");
   auto response = client->AddMetadata_Sync(
-      type, ::fidl::VectorView(
-                fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))), length));
+      type, ::fidl::VectorView<uint8_t>::FromExternal(
+                reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response->result.is_err()) {
@@ -1074,9 +1075,9 @@ zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& d
   }
   VLOGD(1, *dev, "publish-metadata");
   auto response = client->PublishMetadata_Sync(
-      ::fidl::unowned_str(path, strlen(path)), type,
-      ::fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
-                         length));
+      ::fidl::StringView::FromExternal(path), type,
+      ::fidl::VectorView<uint8_t>::FromExternal(reinterpret_cast<uint8_t*>(const_cast<void*>(data)),
+                                                length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response->result.is_err()) {
@@ -1121,8 +1122,8 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
       parts[j] = part;
     }
     auto dc = fuchsia_device_manager::wire::DeviceFragment{
-        .name = ::fidl::StringView{fidl::unowned_ptr(comp_desc->fragments[i].name),
-                                   strnlen(comp_desc->fragments[i].name, 32)},
+        .name = ::fidl::StringView::FromExternal(comp_desc->fragments[i].name,
+                                                 strnlen(comp_desc->fragments[i].name, 32)),
         .parts_count = comp_desc->fragments[i].parts_count,
         .parts = parts,
     };
@@ -1133,9 +1134,9 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   for (size_t i = 0; i < comp_desc->metadata_count; i++) {
     auto meta = fuchsia_device_manager::wire::DeviceMetadata{
         .key = comp_desc->metadata_list[i].type,
-        .data = fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(
-                                     const_cast<void*>(comp_desc->metadata_list[i].data))),
-                                 comp_desc->metadata_list[i].length)};
+        .data = fidl::VectorView<uint8_t>::FromExternal(
+            reinterpret_cast<uint8_t*>(const_cast<void*>(comp_desc->metadata_list[i].data)),
+            comp_desc->metadata_list[i].length)};
     metadata.emplace_back(std::move(meta));
   }
 
@@ -1145,14 +1146,17 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   }
 
   fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_dev = {
-      .props = ::fidl::unowned_vec(props),
-      .fragments = ::fidl::unowned_vec(compvec),
+      .props =
+          ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props),
+      .fragments =
+          ::fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment>::FromExternal(compvec),
       .coresident_device_index = comp_desc->coresident_device_index,
-      .metadata = ::fidl::unowned_vec(metadata)};
+      .metadata =
+          ::fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata>::FromExternal(metadata)};
 
   static_assert(sizeof(comp_desc->props[0]) == sizeof(uint64_t));
   auto response =
-      client->AddCompositeDevice_Sync(::fidl::unowned_str(name, strlen(name)), std::move(comp_dev));
+      client->AddCompositeDevice_Sync(::fidl::StringView::FromExternal(name), std::move(comp_dev));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response->result.is_err()) {

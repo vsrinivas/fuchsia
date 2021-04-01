@@ -74,7 +74,8 @@ DriverManagerParams GetDriverManagerParams(fuchsia_boot::Arguments::SyncClient& 
       {"devmgr.suspend-timeout-fallback", true},
       {"devmgr.verbose", false},
   };
-  auto bool_resp = client.GetBools(fidl::unowned_vec(bool_req));
+  auto bool_resp =
+      client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_req));
   if (!bool_resp.ok()) {
     return {};
   }

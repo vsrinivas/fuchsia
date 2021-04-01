@@ -6,11 +6,11 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/mutex.h>
@@ -73,11 +73,11 @@ void I2cChild::Transfer(fidl::VectorView<bool> segments_is_write,
     if (status == ZX_OK) {
       auto reads = std::make_unique<fidl::VectorView<uint8_t>[]>(op_count);
       for (size_t i = 0; i < op_count; ++i) {
-        reads[i].set_data(fidl::unowned_ptr(const_cast<uint8_t*>(op_list[i].data_buffer)));
-        reads[i].set_count(op_list[i].data_size);
+        reads[i] = fidl::VectorView<uint8_t>::FromExternal(
+            const_cast<uint8_t*>(op_list[i].data_buffer), op_list[i].data_size);
       }
-      fidl::VectorView<fidl::VectorView<uint8_t>> all_reads(fidl::unowned_ptr(reads.get()),
-                                                            op_count);
+      auto all_reads =
+          fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(reads.get(), op_count);
       ctx2->completer->ReplySuccess(std::move(all_reads));
     } else {
       ctx2->completer->ReplyError(status);

@@ -192,7 +192,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
   this->dev()->unbind_cb = [dev = this->dev(), completer = completer.ToAsync(),
                             trace = std::move(trace)](zx_status_t status) mutable {
     fuchsia_device_manager::wire::DeviceController_Unbind_Result result;
-    fidl::aligned<fuchsia_device_manager::wire::DeviceController_Unbind_Response> response;
+    fuchsia_device_manager::wire::DeviceController_Unbind_Response response;
     if (status != ZX_OK && dev->parent()) {
       // If unbind returns an error, and if client is waiting for unbind to complete,
       // inform the client.
@@ -201,7 +201,9 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
         unbind_children_conn(status);
       }
     }
-    result.set_response(fidl::unowned_ptr(&response));
+    result.set_response(
+        fidl::ObjectView<fuchsia_device_manager::wire::DeviceController_Unbind_Response>::
+            FromExternal(&response));
     completer.Reply(std::move(result));
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());
@@ -212,8 +214,10 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync&
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Result result;
-    fidl::aligned<fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Response> response;
-    result.set_response(fidl::unowned_ptr(&response));
+    fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Response response;
+    result.set_response(
+        fidl::ObjectView<fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Response>::
+            FromExternal(&response));
     completer.Reply(std::move(result));
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());

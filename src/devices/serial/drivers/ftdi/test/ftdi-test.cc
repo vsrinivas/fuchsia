@@ -58,7 +58,8 @@ void USBVirtualBus::InitFtdi(fbl::String* devpath) {
   std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(ftdi_function_desc);
   std::vector<ConfigurationDescriptor> config_descs;
-  config_descs.emplace_back(fidl::unowned_vec(function_descs));
+  config_descs.emplace_back(
+      fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
   ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial", O_RDONLY));

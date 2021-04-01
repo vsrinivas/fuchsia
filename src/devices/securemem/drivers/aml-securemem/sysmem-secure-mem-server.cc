@@ -119,12 +119,14 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
   zx_status_t status = SetPhysicalSecureHeapsInternal(heaps);
   if (status != ZX_OK) {
     // Logging handled in `SetPhysicalSecureHeapsInternal`
-    result.set_err(fidl::unowned_ptr(&status));
+    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(result));
     return;
   }
-  fidl::aligned<fuchsia_sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Response> response;
-  result.set_response(fidl::unowned_ptr(&response));
+  fuchsia_sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Response response;
+  result.set_response(
+      fidl::ObjectView<fuchsia_sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Response>::
+          FromExternal(&response));
   completer.Reply(std::move(result));
 }
 

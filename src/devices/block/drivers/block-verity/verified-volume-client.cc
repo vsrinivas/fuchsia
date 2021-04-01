@@ -22,8 +22,8 @@ const char* kDriverLib = "/boot/driver/block-verity.so";
 
 zx_status_t BindVerityDriver(zx::unowned_channel block_dev_chan) {
   zx_status_t rc;
-  auto resp = fuchsia_device::Controller::Call::Bind(
-      std::move(block_dev_chan), ::fidl::unowned_str(kDriverLib, strlen(kDriverLib)));
+  auto resp = fuchsia_device::Controller::Call::Bind(std::move(block_dev_chan),
+                                                     ::fidl::StringView::FromExternal(kDriverLib));
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->result.is_err()) {
@@ -141,14 +141,18 @@ zx_status_t VerifiedVolumeClient::CreateFromBlockDevice(
 zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
                                                    fbl::unique_fd& mutable_block_fd_out) {
   // make FIDL call to open in authoring mode
-  fidl::aligned<fuchsia_hardware_block_verified::wire::HashFunction> hash_function =
+  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
       fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
-  fidl::aligned<fuchsia_hardware_block_verified::wire::BlockSize> block_size =
+  fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fidl::unowned_ptr(&hash_function));
-  config.set_block_size(fidl::unowned_ptr(&block_size));
+  config.set_hash_function(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
+          &hash_function));
+  config.set_block_size(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
+          &block_size));
 
   // Request the device be opened for writes
   auto open_resp = fuchsia_hardware_block_verified::DeviceManager::Call::OpenForWrite(
@@ -235,21 +239,25 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
                                                       const zx::duration& timeout,
                                                       fbl::unique_fd& verified_block_fd_out) {
   // make FIDL call to open in authoring mode
-  fidl::aligned<fuchsia_hardware_block_verified::wire::HashFunction> hash_function =
+  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
       fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
-  fidl::aligned<fuchsia_hardware_block_verified::wire::BlockSize> block_size =
+  fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fidl::unowned_ptr(&hash_function));
-  config.set_block_size(fidl::unowned_ptr(&block_size));
+  config.set_hash_function(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
+          &hash_function));
+  config.set_block_size(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
+          &block_size));
 
   // Make a copy of the seal to send.
   fuchsia_hardware_block_verified::wire::Sha256Seal sha256_seal;
   expected_seal.CopyTo(sha256_seal.superblock_hash.begin(), sha256_seal.superblock_hash.size());
-  fidl::aligned<fuchsia_hardware_block_verified::wire::Sha256Seal> aligned = std::move(sha256_seal);
-  auto seal_to_send =
-      fuchsia_hardware_block_verified::wire::Seal::WithSha256(fidl::unowned_ptr(&aligned));
+  auto seal_to_send = fuchsia_hardware_block_verified::wire::Seal::WithSha256(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::Sha256Seal>::FromExternal(
+          &sha256_seal));
 
   // Request the device be opened for verified read
   auto open_resp = fuchsia_hardware_block_verified::DeviceManager::Call::OpenForVerifiedRead(

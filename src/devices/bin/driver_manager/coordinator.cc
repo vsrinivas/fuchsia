@@ -1035,13 +1035,13 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
               dev->coordinator->LibnameToDriver(child.libname().data())->name.data();
           auto bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-enable", drivername);
 
-          auto compat_test_enabled =
-              dev->coordinator->boot_args()->GetBool(fidl::unowned_str(bootarg), false);
+          auto compat_test_enabled = dev->coordinator->boot_args()->GetBool(
+              fidl::StringView::FromExternal(bootarg), false);
           if (compat_test_enabled.ok() && compat_test_enabled->value &&
               (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
             bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-wait-time", drivername);
             auto test_wait_time =
-                dev->coordinator->boot_args()->GetString(fidl::unowned_str(bootarg));
+                dev->coordinator->boot_args()->GetString(fidl::StringView::FromExternal(bootarg));
             zx::duration test_time = kDefaultTestTimeout;
             if (test_wait_time.ok() && !test_wait_time->value.is_null()) {
               auto test_timeout =
@@ -1566,7 +1566,9 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
         .debug = driver->binding[i].debug,
     });
   }
-  completer.ReplySuccess(::fidl::unowned_vec(instructions));
+  completer.ReplySuccess(
+      ::fidl::VectorView<fuchsia_device_manager::wire::BindInstruction>::FromExternal(
+          instructions));
 }
 
 void Coordinator::Register(fuchsia_pkg::wire::PackageUrl driver_url,
@@ -1620,7 +1622,8 @@ void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
         .value = prop.value,
     });
   }
-  completer.ReplySuccess(::fidl::unowned_vec(props));
+  completer.ReplySuccess(
+      ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props));
 }
 
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {

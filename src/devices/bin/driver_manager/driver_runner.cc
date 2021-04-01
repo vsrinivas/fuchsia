@@ -172,9 +172,13 @@ Node::~Node() { UnbindAndReset(controller_ref_); }
 
 const std::string& Node::name() const { return name_; }
 
-fidl::VectorView<fidl::StringView> Node::offers() { return fidl::unowned_vec(offers_); }
+fidl::VectorView<fidl::StringView> Node::offers() {
+  return fidl::VectorView<fidl::StringView>::FromExternal(offers_);
+}
 
-fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() { return fidl::unowned_vec(symbols_); }
+fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() {
+  return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols_);
+}
 
 DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_host_; }
 
@@ -610,21 +614,22 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
       LOGF(ERROR, "Failed to create component '%s': %u", name.data(), response->result.err());
       return;
     }
-    auto bind = realm_->BindChild(fsys::wire::ChildRef{.name = fidl::unowned_str(name),
-                                                       .collection = fidl::unowned_str(collection)},
-                                  std::move(server_end), std::move(bind_callback));
+    auto bind = realm_->BindChild(
+        fsys::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
+                             .collection = fidl::StringView::FromExternal(collection)},
+        std::move(server_end), std::move(bind_callback));
     if (!bind.ok()) {
       LOGF(ERROR, "Failed to bind component '%s': %s", name.data(), bind.error());
     }
   };
   fidl::FidlAllocator allocator;
   fsys::wire::ChildDecl child_decl(allocator);
-  child_decl.set_name(allocator, fidl::unowned_str(name))
-      .set_url(allocator, fidl::unowned_str(url))
+  child_decl.set_name(allocator, fidl::StringView::FromExternal(name))
+      .set_url(allocator, fidl::StringView::FromExternal(url))
       .set_startup(allocator, fsys::wire::StartupMode::LAZY);
-  auto create =
-      realm_->CreateChild(fsys::wire::CollectionRef{.name = fidl::unowned_str(collection)},
-                          std::move(child_decl), std::move(create_callback));
+  auto create = realm_->CreateChild(
+      fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
+      std::move(child_decl), std::move(create_callback));
   if (!create.ok()) {
     LOGF(ERROR, "Failed to create component '%s': %s", name.data(), create.error());
     return zx::error(ZX_ERR_INTERNAL);

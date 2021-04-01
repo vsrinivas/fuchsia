@@ -1015,7 +1015,9 @@ void InsntraceDevice::Terminate(TerminateCompleter::Sync& completer) {
 void InsntraceDevice::GetAllocation(GetAllocationCompleter::Sync& completer) {
   fuchsia_insntrace::wire::Allocation config{};
   zx_status_t status = IptGetAllocation(&config);
-  completer.Reply(status == ZX_OK ? fidl::unowned_ptr(&config) : nullptr);
+  completer.Reply(status == ZX_OK
+                      ? fidl::ObjectView<fuchsia_insntrace::wire::Allocation>::FromExternal(&config)
+                      : nullptr);
 }
 
 void InsntraceDevice::AllocateBuffer(BufferConfig config,
@@ -1053,14 +1055,15 @@ void InsntraceDevice::GetBufferConfig(BufferDescriptor descriptor,
                                       GetBufferConfigCompleter::Sync& completer) {
   BufferConfig config;
   zx_status_t status = IptGetBufferConfig(descriptor, &config);
-  completer.Reply(status == ZX_OK ? fidl::unowned_ptr(&config) : nullptr);
+  completer.Reply(status == ZX_OK ? fidl::ObjectView<BufferConfig>::FromExternal(&config)
+                                  : nullptr);
 }
 
 void InsntraceDevice::GetBufferState(BufferDescriptor descriptor,
                                      GetBufferStateCompleter::Sync& completer) {
   BufferState state;
   zx_status_t status = IptGetBufferState(descriptor, &state);
-  completer.Reply(status == ZX_OK ? fidl::unowned_ptr(&state) : nullptr);
+  completer.Reply(status == ZX_OK ? fidl::ObjectView<BufferState>::FromExternal(&state) : nullptr);
 }
 
 void InsntraceDevice::GetChunkHandle(BufferDescriptor descriptor, uint32_t chunk_num,

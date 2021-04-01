@@ -93,7 +93,7 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
   zx::channel::create(0u, &local_endpoint, &server_endpoint);
   fdio_service_connect("/svc/fuchsia.sysmem.Allocator", server_endpoint.release());
   sysmem::Allocator::SyncClient sysmem_allocator(std::move(local_endpoint));
-  sysmem_allocator.SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+  sysmem_allocator.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                       fsl::GetCurrentProcessKoid());
 
   zx::channel client_collection_channel, server_collection;

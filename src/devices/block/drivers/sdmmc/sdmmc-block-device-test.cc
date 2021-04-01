@@ -1163,7 +1163,8 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   ASSERT_OK(rx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &rx_frames_range.vmo));
   rx_frames_range.offset = 512;
   rx_frames_range.size = 1536;
-  write_read_request.rx_frames = fidl::unowned_ptr_t<fuchsia_mem::wire::Range>(&rx_frames_range);
+  write_read_request.rx_frames =
+      fidl::ObjectView<fuchsia_mem::wire::Range>::FromExternal(&rx_frames_range);
 
   sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
     const uint32_t index = (req->arg >> 16) & 0xff;

@@ -5,8 +5,6 @@
 #include "qmi-usb-transport.h"
 
 #include <endian.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
@@ -20,6 +18,8 @@
 #include <thread>
 
 #include <ddktl/fidl.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
 #include "src/connectivity/telephony/drivers/qmi-usb-transport/qmi_usb_bind.h"
 

@@ -175,8 +175,9 @@ int MockDevice::ThreadFunc(void* raw_arg) {
       break;
     }
     ProcessActionsContext ctx(event_sender, false, arg->dev, arg->dev->zxdev());
-    status =
-        ProcessActions(fidl::VectorView(fidl::unowned_ptr(actions.data()), actions.size()), &ctx);
+    status = ProcessActions(
+        fidl::VectorView<device_mock::wire::Action>::FromExternal(actions.data(), actions.size()),
+        &ctx);
     ZX_ASSERT(status == ZX_OK);
     if (ctx.device == nullptr) {
       // If the device was removed, bail out since we're releasing.
@@ -312,7 +313,7 @@ zx_status_t MockDevice::DdkRead(void* buf, size_t count, zx_off_t off, size_t* a
 zx_status_t MockDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
   auto result = controller_.Write(
       ConstructHookInvocation(),
-      fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(const_cast<void*>(buf))), count),
+      fidl::VectorView<uint8_t>::FromExternal(static_cast<uint8_t*>(const_cast<void*>(buf)), count),
       off);
   ZX_ASSERT(result.ok());
   ProcessActionsContext::ChannelVariants channel = zx::unowned_channel(controller_.channel());

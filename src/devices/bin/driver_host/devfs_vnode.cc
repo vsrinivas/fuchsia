@@ -194,11 +194,11 @@ void DevfsVnode::GetDriverName(GetDriverNameCompleter::Sync& completer) {
   if (name == nullptr) {
     name = "unknown";
   }
-  completer.Reply(ZX_OK, fidl::unowned_str(name, strlen(name)));
+  completer.Reply(ZX_OK, fidl::StringView::FromExternal(name));
 }
 
 void DevfsVnode::GetDeviceName(GetDeviceNameCompleter::Sync& completer) {
-  completer.Reply(fidl::unowned_str(dev_->name(), strlen(dev_->name())));
+  completer.Reply(fidl::StringView::FromExternal(dev_->name()));
 }
 
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
@@ -275,7 +275,8 @@ void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& completer
     response.dpstates[i] = states[i];
   }
   completer.Reply(fuchsia_device::wire::Controller_GetDevicePowerCaps_Result::WithResponse(
-      fidl::unowned_ptr(&response)));
+      fidl::ObjectView<fuchsia_device::wire::Controller_GetDevicePowerCaps_Response>::FromExternal(
+          &response)));
 };
 
 void DevfsVnode::SetPerformanceState(uint32_t requested_state,
@@ -312,9 +313,10 @@ void DevfsVnode::UpdatePowerStateMapping(
     return;
   }
 
-  fidl::aligned<fuchsia_device::wire::Controller_UpdatePowerStateMapping_Response> response;
+  fuchsia_device::wire::Controller_UpdatePowerStateMapping_Response response;
   completer.Reply(fuchsia_device::wire::Controller_UpdatePowerStateMapping_Result::WithResponse(
-      fidl::unowned_ptr(&response)));
+      fidl::ObjectView<fuchsia_device::wire::Controller_UpdatePowerStateMapping_Response>::
+          FromExternal(&response)));
 }
 
 void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& completer) {
@@ -327,7 +329,8 @@ void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& compl
     response.mapping[i] = mapping[i];
   }
   completer.Reply(fuchsia_device::wire::Controller_GetPowerStateMapping_Result::WithResponse(
-      fidl::unowned_ptr(&response)));
+      fidl::ObjectView<fuchsia_device::wire::Controller_GetPowerStateMapping_Response>::
+          FromExternal(&response)));
 };
 
 void DevfsVnode::Suspend(fuchsia_device::wire::DevicePowerState requested_state,

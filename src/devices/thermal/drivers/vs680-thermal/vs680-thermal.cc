@@ -146,7 +146,7 @@ void Vs680Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
 void Vs680Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
   if (power_domain == PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
     OperatingPoint operating_points_copy = kOperatingPoints;
-    completer.Reply(ZX_OK, fidl::unowned_ptr(&operating_points_copy));
+    completer.Reply(ZX_OK, fidl::ObjectView<OperatingPoint>::FromExternal(&operating_points_copy));
   } else {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
   }

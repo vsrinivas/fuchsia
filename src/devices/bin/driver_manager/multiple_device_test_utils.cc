@@ -313,9 +313,9 @@ void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote, zx_t
 // request received by |CheckUnbindReceived|.
 void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_t txid) {
   namespace fdm = fuchsia_device_manager;
-  fidl::aligned<fdm::wire::DeviceController_Unbind_Response> result_resp;
-  auto result =
-      fdm::wire::DeviceController_Unbind_Result::WithResponse(fidl::unowned_ptr(&result_resp));
+  fdm::wire::DeviceController_Unbind_Response result_resp;
+  auto result = fdm::wire::DeviceController_Unbind_Result::WithResponse(
+      fidl::ObjectView<fdm::wire::DeviceController_Unbind_Response>::FromExternal(&result_resp));
   fdm::DeviceController::UnbindResponse resp(result);
   resp._hdr.txid = txid;
   fidl::OwnedEncodedMessage<fdm::DeviceController::UnbindResponse> encoded(&resp);
@@ -358,9 +358,10 @@ void MultipleDeviceTestCase::CheckRemoveReceived(const zx::channel& remote, zx_t
 // request received by |CheckRemoveReceived|.
 void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_t txid) {
   namespace fdm = fuchsia_device_manager;
-  fidl::aligned<fdm::wire::DeviceController_CompleteRemoval_Response> result_resp;
+  fdm::wire::DeviceController_CompleteRemoval_Response result_resp;
   auto result = fdm::wire::DeviceController_CompleteRemoval_Result::WithResponse(
-      fidl::unowned_ptr(&result_resp));
+      fidl::ObjectView<fdm::wire::DeviceController_CompleteRemoval_Response>::FromExternal(
+          &result_resp));
   fdm::DeviceController::CompleteRemovalResponse resp(result);
   resp._hdr.txid = txid;
   fidl::OwnedEncodedMessage<fdm::DeviceController::CompleteRemovalResponse> encoded(&resp);

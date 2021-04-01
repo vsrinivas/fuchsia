@@ -180,8 +180,9 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
     return status;
   }
 
-  auto result = fuchsia_io::Directory::Call::Open(
-      std::move(root_channel), flags, mode, fidl::unowned_str(path), std::move(channel_server_end));
+  auto result = fuchsia_io::Directory::Call::Open(std::move(root_channel), flags, mode,
+                                                  fidl::StringView::FromExternal(path),
+                                                  std::move(channel_server_end));
   status = result.status();
   if (status != ZX_OK) {
     LOG(ERROR, "could not call fuchsia.io.Directory/Open (status: %d)", status);
@@ -1128,7 +1129,8 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
 
     rx_frames_range.offset = rx_offset;
     rx_frames_range.size = resp->size();
-    rpmb_request.rx_frames = fidl::unowned_ptr_t<fuchsia_mem::wire::Range>(&rx_frames_range);
+    rpmb_request.rx_frames =
+        fidl::ObjectView<fuchsia_mem::wire::Range>::FromExternal(&rx_frames_range);
   }
 
   auto res = rpmb_client_->Request(std::move(rpmb_request));
@@ -1514,7 +1516,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
 
     auto result = fuchsia_io::File::Call::WriteAt(
         zx::unowned_channel(file_channel),
-        fidl::VectorView(fidl::unowned_ptr(buffer), write_chunk_request), offset);
+        fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
     status = result.status();
     io_status = result->s;
     buffer += result->actual;
@@ -1588,7 +1590,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
 
   std::string filename = path.filename().string();
   auto result = fuchsia_io::Directory::Call::Unlink(zx::unowned_channel(storage_channel),
-                                                    fidl::unowned_str(filename));
+                                                    fidl::StringView::FromExternal(filename));
   status = result.status();
   zx_status_t io_status = result->s;
   if (status != ZX_OK || io_status != ZX_OK) {
@@ -1679,8 +1681,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
   }
 
   auto rename_result = fuchsia_io::Directory::Call::Rename(
-      zx::unowned_channel(old_storage_channel), fidl::unowned_str(old_name),
-      std::move(token_result->token), fidl::unowned_str(new_name));
+      zx::unowned_channel(old_storage_channel), fidl::StringView::FromExternal(old_name),
+      std::move(token_result->token), fidl::StringView::FromExternal(new_name));
   status = rename_result.status();
   io_status = rename_result->s;
   if (status != ZX_OK || io_status != ZX_OK) {

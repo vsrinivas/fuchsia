@@ -112,17 +112,19 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
   for (size_t i = 0; i < metadata_count; i++) {
     auto meta = fuchsia_device_manager::wire::DeviceMetadata{
         .key = metadata[i].type,
-        .data = ::fidl::VectorView(
-            fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data))),
-            metadata[i].length)};
+        .data = ::fidl::VectorView<uint8_t>::FromExternal(
+            reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data)), metadata[i].length)};
     metadata_list.emplace_back(std::move(meta));
   }
 
   fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc = {
-      .props = ::fidl::unowned_vec(props_list),
-      .fragments = ::fidl::unowned_vec(fragments),
+      .props = ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(
+          props_list),
+      .fragments =
+          ::fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment>::FromExternal(fragments),
       .coresident_device_index = 0,
-      .metadata = ::fidl::unowned_vec(metadata_list),
+      .metadata = ::fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata>::FromExternal(
+          metadata_list),
   };
 
   Coordinator* coordinator = platform_bus->coordinator;

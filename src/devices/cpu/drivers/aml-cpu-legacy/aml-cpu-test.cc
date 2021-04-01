@@ -10,7 +10,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
-#include <soc/aml-common/aml-cpu-metadata.h>
 
 #include <algorithm>
 #include <memory>
@@ -21,6 +20,7 @@
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <fbl/array.h>
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
+#include <soc/aml-common/aml-cpu-metadata.h>
 #include <zxtest/zxtest.h>
 
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
@@ -91,16 +91,15 @@ constexpr uint32_t kBigClusterCoreCount = 4;
 constexpr uint32_t kLittleClusterCoreCount = 2;
 
 constexpr legacy_cluster_size_t kClusterSizeMetadata[] = {
-      {
+    {
         .pd_id = kBigClusterIdx,
         .core_count = kBigClusterCoreCount,
-      },
-      {
+    },
+    {
         .pd_id = kLittleClusterIdx,
         .core_count = kLittleClusterCoreCount,
-      },
-    };    
-
+    },
+};
 
 constexpr size_t PowerDomainToIndex(fuchsia_thermal::wire::PowerDomain pd) {
   switch (pd) {
@@ -206,19 +205,22 @@ void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync& completer) {
   result.critical_temp_celsius = 0;
   result.max_trip_count = 0;
 
-  completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
+  completer.Reply(ZX_OK,
+                  fidl::ObjectView<fuchsia_thermal::wire::ThermalInfo>::FromExternal(&result));
 }
 
 void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   fuchsia_thermal::wire::ThermalDeviceInfo result = device_info_;
-  completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
+  completer.Reply(
+      ZX_OK, fidl::ObjectView<fuchsia_thermal::wire::ThermalDeviceInfo>::FromExternal(&result));
 }
 
 void FakeAmlThermal::GetDvfsInfo(fuchsia_thermal::wire::PowerDomain pd,
                                  GetDvfsInfoCompleter::Sync& completer) {
   fuchsia_thermal::wire::ThermalDeviceInfo device_info = device_info_;
   fuchsia_thermal::wire::OperatingPoint result = device_info.opps[PowerDomainToIndex(pd)];
-  completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
+  completer.Reply(ZX_OK,
+                  fidl::ObjectView<fuchsia_thermal::wire::OperatingPoint>::FromExternal(&result));
 }
 
 void FakeAmlThermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
@@ -312,7 +314,8 @@ class AmlCpuBindingTest : public zxtest::Test {
         *reinterpret_cast<const fake_ddk::Protocol*>(thermal_device_.proto())});
     ddk_.SetFragments(std::move(fragments));
 
-    ddk_.SetMetadata(DEVICE_METADATA_CLUSTER_SIZE_LEGACY, &kClusterSizeMetadata, sizeof(kClusterSizeMetadata));
+    ddk_.SetMetadata(DEVICE_METADATA_CLUSTER_SIZE_LEGACY, &kClusterSizeMetadata,
+                     sizeof(kClusterSizeMetadata));
   }
 
   zx_device_t* parent() { return fake_ddk::FakeParent(); }
@@ -356,11 +359,8 @@ TEST_F(AmlCpuBindingTest, TwoDomains) {
 
     // Find the cluster metadata that corresponds to this cluster index.
     const auto& cluster_size_meta_itr = std::find_if(
-      std::begin(kClusterSizeMetadata), std::end(kClusterSizeMetadata),
-      [idx](const legacy_cluster_size_t& elem) -> bool {
-        return idx == elem.pd_id;
-      }
-    );
+        std::begin(kClusterSizeMetadata), std::end(kClusterSizeMetadata),
+        [idx](const legacy_cluster_size_t& elem) -> bool { return idx == elem.pd_id; });
 
     ASSERT_NE(cluster_size_meta_itr, std::end(kClusterSizeMetadata));
     ASSERT_EQ(cluster_size_meta_itr->core_count, device->ClusterCoreCount());
@@ -369,7 +369,8 @@ TEST_F(AmlCpuBindingTest, TwoDomains) {
 
 class AmlCpuTest : public AmlCpu {
  public:
-  AmlCpuTest(ThermalSyncClient thermal) : AmlCpu(nullptr, std::move(thermal), kBigClusterIdx, kBigClusterCoreCount) {}
+  AmlCpuTest(ThermalSyncClient thermal)
+      : AmlCpu(nullptr, std::move(thermal), kBigClusterIdx, kBigClusterCoreCount) {}
 
   zx_status_t Init();
   static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);

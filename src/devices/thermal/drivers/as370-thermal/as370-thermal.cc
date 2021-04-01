@@ -5,11 +5,11 @@
 #include "as370-thermal.h"
 
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/time.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 
@@ -103,7 +103,7 @@ void As370Thermal::GetInfo(GetInfoCompleter::Sync& completer) {
 
 void As370Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   ThermalDeviceInfo device_info_copy = device_info_;
-  completer.Reply(ZX_OK, fidl::unowned_ptr(&device_info_copy));
+  completer.Reply(ZX_OK, fidl::ObjectView<ThermalDeviceInfo>::FromExternal(&device_info_copy));
 }
 
 void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
@@ -111,7 +111,7 @@ void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::S
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   } else {
     OperatingPoint dvfs_info_copy = device_info_.opps[static_cast<uint32_t>(power_domain)];
-    completer.Reply(ZX_OK, fidl::unowned_ptr(&dvfs_info_copy));
+    completer.Reply(ZX_OK, fidl::ObjectView<OperatingPoint>::FromExternal(&dvfs_info_copy));
   }
 }
 

@@ -46,8 +46,7 @@ void SerialDevice::Read(ReadCompleter::Sync& completer) {
           static_cast<SerialDevice*>(ctx)->read_completer_.reset();
           completer->ReplyError(status);
         } else {
-          auto view = fidl::VectorView<uint8_t>(
-              fidl::unowned_ptr(const_cast<uint8_t*>(static_cast<const uint8_t*>(buffer))), length);
+          auto view = fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(buffer), length);
           auto completer = std::move(static_cast<SerialDevice*>(ctx)->read_completer_);
           static_cast<SerialDevice*>(ctx)->read_completer_.reset();
           completer->ReplySuccess(std::move(view));

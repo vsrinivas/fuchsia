@@ -179,8 +179,9 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
 
   ASSERT_TRUE(TestDevice::Call::AsyncRemoveChild(chan_, child_id).ok());
   ASSERT_EQ(File::Call::Read(chan, 10).value().s, ZX_ERR_IO_NOT_PRESENT);
-  fidl::Array<uint8_t, 5> array;
-  ASSERT_EQ(File::Call::Write(chan, fidl::unowned_vec(array)).value().s, ZX_ERR_IO_NOT_PRESENT);
+  std::array<uint8_t, 5> array;
+  ASSERT_EQ(File::Call::Write(chan, fidl::VectorView<uint8_t>::FromExternal(array)).value().s,
+            ZX_ERR_IO_NOT_PRESENT);
   int fd2 = open("sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child", O_RDWR);
   ASSERT_EQ(fd2, -1);
   ASSERT_EQ(

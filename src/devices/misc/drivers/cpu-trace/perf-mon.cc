@@ -527,7 +527,8 @@ void PerfmonDevice::Terminate(TerminateCompleter::Sync& completer) {
 void PerfmonDevice::GetAllocation(GetAllocationCompleter::Sync& completer) {
   FidlPerfmonAllocation alloc{};
   zx_status_t status = PmuGetAllocation(&alloc);
-  completer.Reply(status != ZX_OK ? nullptr : fidl::unowned_ptr(&alloc));
+  completer.Reply(status != ZX_OK ? nullptr
+                                  : fidl::ObjectView<FidlPerfmonAllocation>::FromExternal(&alloc));
 }
 
 void PerfmonDevice::StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync& completer) {
@@ -542,7 +543,8 @@ void PerfmonDevice::StageConfig(FidlPerfmonConfig config, StageConfigCompleter::
 void PerfmonDevice::GetConfig(GetConfigCompleter::Sync& completer) {
   FidlPerfmonConfig config{};
   zx_status_t status = PmuGetConfig(&config);
-  completer.Reply(status != ZX_OK ? nullptr : fidl::unowned_ptr(&config));
+  completer.Reply(status != ZX_OK ? nullptr
+                                  : fidl::ObjectView<FidlPerfmonConfig>::FromExternal(&config));
 }
 
 void PerfmonDevice::GetBufferHandle(uint32_t descriptor,

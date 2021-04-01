@@ -174,20 +174,16 @@ static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   device_desc.id_vendor = htole16(config->vid);
   device_desc.id_product = htole16(config->pid);
   device_desc.manufacturer = MANUFACTURER_STRING;
-  device_desc.product = fidl::unowned_str(config->product_string, strlen(config->product_string));
+  device_desc.product = fidl::StringView::FromExternal(config->product_string);
   device_desc.serial = SERIAL_STRING;
   ConfigurationDescriptor config_desc;
   peripheral::wire::FunctionDescriptor func_descs[config->descs_count];
   memcpy(func_descs, config->descs,
          sizeof(peripheral::wire::FunctionDescriptor) * config->descs_count);
-  {
-    fidl::VectorView<peripheral::wire::FunctionDescriptor> function_descs(
-        fidl::unowned_ptr(func_descs), config->descs_count);
-    config_desc = std::move(function_descs);
-  }
+  config_desc = ConfigurationDescriptor::FromExternal(func_descs, config->descs_count);
   auto resp = peripheral::Device::Call::SetConfiguration(
       zx::unowned_channel(svc), std::move(device_desc),
-      fidl::VectorView(fidl::unowned_ptr(&config_desc), 1));
+      fidl::VectorView<ConfigurationDescriptor>::FromExternal(&config_desc, 1));
   if (resp.status() != ZX_OK) {
     return resp.status();
   }

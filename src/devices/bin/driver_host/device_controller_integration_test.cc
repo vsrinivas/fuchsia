@@ -43,8 +43,8 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  auto result = test_root.CreateDevice(fidl::unowned_str(driver_name, strlen(driver_name)),
-                                       std::move(remote));
+  auto result =
+      test_root.CreateDevice(fidl::StringView::FromExternal(driver_name), std::move(remote));
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   *dev_channel = std::move(local);
@@ -145,8 +145,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
 
   // Do not open the child. Otherwise rebind will be stuck.
   zx_status_t call_status = ZX_OK;
-  auto resp = fuchsia_device::Controller::Call::Rebind(zx::unowned(parent_channel),
-                                                       ::fidl::StringView("", 0));
+  auto resp =
+      fuchsia_device::Controller::Call::Rebind(zx::unowned(parent_channel), ::fidl::StringView(""));
   ASSERT_OK(resp.status());
   if (resp->result.is_err()) {
     call_status = resp->result.err();

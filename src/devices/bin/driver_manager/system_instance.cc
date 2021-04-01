@@ -53,7 +53,8 @@ ServiceStarterParams GetServiceStarterParams(fuchsia_boot::Arguments::SyncClient
       "clock.backstop",
   };
 
-  auto string_resp = client->GetStrings(fidl::unowned_vec(string_keys));
+  auto string_resp =
+      client->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
   ServiceStarterParams ret;
   if (string_resp.ok()) {
     auto& values = string_resp->values;

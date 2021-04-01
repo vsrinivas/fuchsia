@@ -367,8 +367,8 @@ TEST_F(OpteeClientTestRpmb, GetDeviceInfo) {
     emmc_info.rpmb_size = 0x74;
     emmc_info.reliable_write_sector_count = 1;
 
-    fidl::aligned<EmmcDeviceInfo> aligned_emmc_info(emmc_info);
-    fidl::unowned_ptr_t<fidl::aligned<EmmcDeviceInfo>> emmc_info_ptr(&aligned_emmc_info);
+    EmmcDeviceInfo aligned_emmc_info(emmc_info);
+    auto emmc_info_ptr = fidl::ObjectView<EmmcDeviceInfo>::FromExternal(&aligned_emmc_info);
 
     completer.Reply(DeviceInfo::WithEmmcInfo(emmc_info_ptr));
   });

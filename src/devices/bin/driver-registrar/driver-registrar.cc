@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
   fuchsia_driver_registrar::DriverRegistrar::SyncClient client(std::move(local));
 
   auto resp =
-      client.Register(fuchsia_pkg::wire::PackageUrl{fidl::unowned_str(argv[1], strlen(argv[1]))});
+      client.Register(fuchsia_pkg::wire::PackageUrl{fidl::StringView::FromExternal(argv[1])});
   if (!resp.ok()) {
     fprintf(stderr, "Failed to call DriverRegistrar::Register for driver package %s\n", argv[1]);
     return -1;

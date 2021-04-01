@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-unit-test/utils.h>
 #include <stdlib.h>
@@ -14,7 +15,6 @@
 #include <zircon/status.h>
 
 #include <acpica/acpi.h>
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
@@ -247,8 +247,7 @@ void X86::ListTableEntries(ListTableEntriesCompleter::Sync& completer) {
   }
 
   // Send them back to the user.
-  completer.ReplySuccess(
-      fidl::VectorView<TableInfo>(fidl::unowned_ptr(entries.data()), entries.size()));
+  completer.ReplySuccess(fidl::VectorView<TableInfo>::FromExternal(entries.data(), entries.size()));
 }
 
 void X86::ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,

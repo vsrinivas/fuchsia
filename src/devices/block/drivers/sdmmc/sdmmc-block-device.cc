@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/unowned_ptr.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/process.h>
@@ -149,8 +148,7 @@ void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   emmc_info.rpmb_size = rpmb_size_;
   emmc_info.reliable_write_sector_count = reliable_write_sector_count_;
 
-  fidl::aligned<EmmcDeviceInfo> aligned_emmc_info(emmc_info);
-  fidl::unowned_ptr_t<fidl::aligned<EmmcDeviceInfo>> emmc_info_ptr(&aligned_emmc_info);
+  auto emmc_info_ptr = fidl::ObjectView<EmmcDeviceInfo>::FromExternal(&emmc_info);
 
   completer.ToAsync().Reply(DeviceInfo::WithEmmcInfo(emmc_info_ptr));
 }

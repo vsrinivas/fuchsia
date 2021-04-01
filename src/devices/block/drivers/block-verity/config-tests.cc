@@ -11,14 +11,18 @@
 namespace {
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
-  fidl::aligned<fuchsia_hardware_block_verified::wire::HashFunction> hash_function =
+  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
       fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
-  fidl::aligned<fuchsia_hardware_block_verified::wire::BlockSize> block_size =
+  fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fidl::unowned_ptr(&hash_function));
-  config.set_block_size(fidl::unowned_ptr(&block_size));
+  config.set_hash_function(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
+          &hash_function));
+  config.set_block_size(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
+          &block_size));
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -27,14 +31,18 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
 }
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
-  fidl::aligned<fuchsia_hardware_block_verified::wire::HashFunction> hash_function =
+  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
       fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
-  fidl::aligned<fuchsia_hardware_block_verified::wire::BlockSize> block_size =
+  fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fidl::unowned_ptr(&hash_function));
-  config.set_block_size(fidl::unowned_ptr(&block_size));
+  config.set_hash_function(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
+          &hash_function));
+  config.set_block_size(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
+          &block_size));
 
   block_info_t blk;
   blk.block_size = 512;
@@ -43,11 +51,13 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
 }
 
 TEST(ConfigCheckTest, RejectsMissingHashFunction) {
-  fidl::aligned<fuchsia_hardware_block_verified::wire::BlockSize> block_size =
+  fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_block_size(fidl::unowned_ptr(&block_size));
+  config.set_block_size(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
+          &block_size));
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -56,11 +66,13 @@ TEST(ConfigCheckTest, RejectsMissingHashFunction) {
 }
 
 TEST(ConfigCheckTest, RejectsMissingBlockSize) {
-  fidl::aligned<fuchsia_hardware_block_verified::wire::HashFunction> hash_function =
+  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
       fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fidl::unowned_ptr(&hash_function));
+  config.set_hash_function(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
+          &hash_function));
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -69,14 +81,18 @@ TEST(ConfigCheckTest, RejectsMissingBlockSize) {
 }
 
 TEST(ConfigCheckTest, RejectsIfBlockSizeUnsupportable) {
-  fidl::aligned<fuchsia_hardware_block_verified::wire::HashFunction> hash_function =
+  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
       fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
-  fidl::aligned<fuchsia_hardware_block_verified::wire::BlockSize> block_size =
+  fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fidl::unowned_ptr(&hash_function));
-  config.set_block_size(fidl::unowned_ptr(&block_size));
+  config.set_hash_function(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
+          &hash_function));
+  config.set_block_size(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
+          &block_size));
 
   block_info_t blk;
   // not a divisor of 4k

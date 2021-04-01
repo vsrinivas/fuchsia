@@ -50,9 +50,9 @@ void TestEnvironmentDriver::GetServiceList(GetServiceListCompleter::Sync& comple
   files::Glob glob("/svc/*");
   std::vector<fidl::StringView> services;
   for (const char* file : glob) {
-    services.push_back(fidl::unowned_str(file, strlen(file)));
+    services.push_back(fidl::StringView::FromExternal(file));
   }
-  completer.Reply(fidl::unowned_vec(services));
+  completer.Reply(fidl::VectorView<fidl::StringView>::FromExternal(services));
 }
 
 zx_status_t TestEnvironmentBind(void* ctx, zx_device_t* device) {

@@ -69,8 +69,9 @@ zx::status<fio::Directory::SyncClient> PackageResolver::Resolve(
 
   // This is synchronous for now so we can get the proof of concept working.
   // Eventually we will want to do this asynchronously.
-  auto result = resolver_client_.Resolve(::fidl::StringView(fidl::unowned_str(fp.package_path())),
-                                         std::move(selectors), std::move(remote));
+  auto result = resolver_client_.Resolve(
+      ::fidl::StringView(fidl::StringView::FromExternal(fp.package_path())), std::move(selectors),
+      std::move(remote));
   if (!result.ok() || result.Unwrap()->result.is_err()) {
     LOGF(ERROR, "Failed to resolve package");
     return zx::error(!result.ok() ? ZX_ERR_INTERNAL : result.Unwrap()->result.err());
@@ -109,9 +110,10 @@ zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::LoadDriverPac
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  auto file_open_result = lib_dir.Open(
-      kFileRights, 0u /* mode */, ::fidl::StringView(fidl::unowned_str(libname_result.value())),
-      std::move(remote));
+  auto file_open_result =
+      lib_dir.Open(kFileRights, 0u /* mode */,
+                   ::fidl::StringView(fidl::StringView::FromExternal(libname_result.value())),
+                   std::move(remote));
   if (!file_open_result.ok()) {
     LOGF(ERROR, "Failed to open driver file: %s", libname_result.value().c_str());
     return zx::error(ZX_ERR_INTERNAL);

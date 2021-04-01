@@ -30,7 +30,7 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
   auto result =
       fio::Directory::Call::Open(zx::unowned_channel(directory),
                                  fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_FLAG_DESCRIBE, 0,
-                                 fidl::unowned_str(path, strlen(path)), std::move(server));
+                                 fidl::StringView::FromExternal(path), std::move(server));
   ASSERT_EQ(result.status(), ZX_OK);
   zx_signals_t pending;
   ASSERT_EQ(

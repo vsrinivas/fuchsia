@@ -41,8 +41,8 @@ const char* kDriverLib = "/boot/driver/block-verity.so";
 // Bind the block verity driver to the ramdisk.
 zx_status_t BindVerityDriver(zx::unowned_channel ramdisk_chan) {
   zx_status_t rc;
-  auto resp = fuchsia_device::Controller::Call::Bind(
-      std::move(ramdisk_chan), ::fidl::unowned_str(kDriverLib, strlen(kDriverLib)));
+  auto resp = fuchsia_device::Controller::Call::Bind(std::move(ramdisk_chan),
+                                                     ::fidl::StringView::FromExternal(kDriverLib));
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->result.is_err()) {
@@ -442,10 +442,9 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   // because the superblock hash doesn't match.
   fuchsia_hardware_block_verified::wire::Sha256Seal mangled_sha256_seal;
   memset(mangled_sha256_seal.superblock_hash.begin(), 0xff, 32);
-  fidl::aligned<fuchsia_hardware_block_verified::wire::Sha256Seal> mangled_aligned =
-      std::move(mangled_sha256_seal);
-  auto mangled_seal =
-      fuchsia_hardware_block_verified::wire::Seal::WithSha256(fidl::unowned_ptr(&mangled_aligned));
+  auto mangled_seal = fuchsia_hardware_block_verified::wire::Seal::WithSha256(
+      fidl::ObjectView<fuchsia_hardware_block_verified::wire::Sha256Seal>::FromExternal(
+          &mangled_sha256_seal));
   ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, OpenForVerifiedRead(mangled_seal, verified_block_fd));
 
   // Corrupt the superblock, then attempt to open the superblock with the last working seal.

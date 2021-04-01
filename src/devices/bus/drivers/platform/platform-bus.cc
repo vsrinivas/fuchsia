@@ -9,6 +9,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -20,7 +21,6 @@
 
 #include <algorithm>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -199,7 +199,8 @@ void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter
   fuchsia_sysinfo::wire::InterruptControllerInfo info = {
       .type = interrupt_controller_type_,
   };
-  completer.Reply(ZX_OK, fidl::unowned_ptr(&info));
+  completer.Reply(
+      ZX_OK, fidl::ObjectView<fuchsia_sysinfo::wire::InterruptControllerInfo>::FromExternal(&info));
 }
 
 zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {
