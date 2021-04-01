@@ -822,6 +822,7 @@ mod stub {
 
     impl PolicyEngine for MockPolicyEngine {
         type TimeSource = MockTimeSource;
+        type InstallResult = ();
 
         fn time_source(&self) -> &Self::TimeSource {
             &self.time_source
@@ -860,7 +861,11 @@ mod stub {
             future::ready(UpdateDecision::Ok).boxed()
         }
 
-        fn reboot_allowed(&mut self, _check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+        fn reboot_allowed(
+            &mut self,
+            _check_options: &CheckOptions,
+            _install_result: &Self::InstallResult,
+        ) -> BoxFuture<'_, bool> {
             future::ready(true).boxed()
         }
     }

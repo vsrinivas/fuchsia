@@ -63,6 +63,7 @@ pub struct StubInstaller {
 impl Installer for StubInstaller {
     type InstallPlan = StubPlan;
     type Error = StubInstallErrors;
+    type InstallResult = ();
 
     /// Perform the installation as given by the install plan (as parsed form the Omaha server
     /// response).  If given, provide progress via the observer, and a final finished or Error

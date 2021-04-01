@@ -218,14 +218,15 @@ impl ControlHandle {
     }
 }
 
-impl<PE, HR, IN, TM, MR, ST> StateMachine<PE, HR, IN, TM, MR, ST>
+impl<PE, HR, IN, TM, MR, ST, IR> StateMachine<PE, HR, IN, TM, MR, ST>
 where
-    PE: PolicyEngine,
+    PE: PolicyEngine<InstallResult = IR>,
     HR: HttpRequest,
-    IN: Installer,
+    IN: Installer<InstallResult = IR>,
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
+    IR: 'static + Send,
 {
     /// Ask policy engine for the next update check time and update the context and yield event.
     async fn update_next_update_time(
@@ -335,7 +336,7 @@ where
                 }
             };
 
-            {
+            let install_result = {
                 let apps = self.app_set.to_vec().await;
                 info!("Checking to see if an update check is allowed at this time for {:?}", apps);
                 let decision = self
@@ -377,7 +378,7 @@ where
                 // during the check.
                 loop {
                     select! {
-                        () = update_check => break,
+                        install_result = update_check => break install_result,
                         ControlRequest::StartUpdateCheck{
                             options: new_options,
                             responder
@@ -392,12 +393,15 @@ where
                         }
                     }
                 }
-            }
+            };
 
             // TODO: This is the last place we read self.state, we should see if we can find another
             // way to achieve this so that we can remove self.state entirely.
             if self.state == State::WaitingForReboot {
-                self.wait_for_reboot(options, &mut control, &mut co).await;
+                // install_result is safe to unwrap here!
+                // This option is always `Some` if the state machine enters the WaitingForReboot state,
+                // which only happens when an update installs successfully.
+                self.wait_for_reboot(options, &mut control, install_result.unwrap(), &mut co).await;
             }
 
             self.set_state(State::Idle, &mut co).await;
@@ -408,9 +412,10 @@ where
         &mut self,
         mut options: CheckOptions,
         control: &mut mpsc::Receiver<ControlRequest>,
+        install_result: IN::InstallResult,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
-        if !self.policy_engine.reboot_allowed(&options).await {
+        if !self.policy_engine.reboot_allowed(&options, &install_result).await {
             let wait_to_see_if_reboot_allowed =
                 self.timer.wait_for(CHECK_REBOOT_ALLOWED_INTERVAL).fuse();
             futures::pin_mut!(wait_to_see_if_reboot_allowed);
@@ -422,9 +427,10 @@ where
             loop {
                 // Wait for either the next time to check if reboot allowed or the next
                 // ping time or a request to start an update check.
+
                 select! {
                     () = wait_to_see_if_reboot_allowed => {
-                        if self.policy_engine.reboot_allowed(&options).await {
+                        if self.policy_engine.reboot_allowed(&options, &install_result).await {
                             break;
                         }
                         info!("Reboot not allowed at the moment, will try again in 30 minutes...");
@@ -446,7 +452,7 @@ where
                             info!("Waiting for reboot, but ensuring that InstallSource is OnDemand");
                             options.source = InstallSource::OnDemand;
 
-                            if self.policy_engine.reboot_allowed(&options).await {
+                            if self.policy_engine.reboot_allowed(&options, &install_result).await {
                                 info!("Upgraded update check request to on demand, policy allowed reboot");
                                 break;
                             }
@@ -568,69 +574,74 @@ where
         &mut self,
         request_params: RequestParams,
         co: &mut async_generator::Yield<StateMachineEvent>,
-    ) {
+    ) -> Option<IN::InstallResult> {
         let apps = self.app_set.to_vec().await;
         let result = self.perform_update_check(request_params, apps, co).await;
-        match &result {
-            Ok(result) => {
-                info!("Update check result: {:?}", result);
-                // Update check succeeded, update |last_update_time|.
-                self.context.schedule.last_update_time = Some(self.time_source.now().into());
 
-                // Determine if any app failed to install, or we had a successful upadte.
-                let install_result = result.app_responses.iter().fold(None, |result, app| {
-                    match (result, &app.result) {
-                        (_, update_check::Action::InstallPlanExecutionError) => Some(false),
-                        (None, update_check::Action::Updated) => Some(true),
-                        (result, _) => result,
+        let (result, install_result) =
+            match result {
+                Ok((result, install_result)) => {
+                    info!("Update check result: {:?}", result);
+                    // Update check succeeded, update |last_update_time|.
+                    self.context.schedule.last_update_time = Some(self.time_source.now().into());
+
+                    // Determine if any app failed to install, or we had a successful upadte.
+                    let install_success = result.app_responses.iter().fold(None, |result, app| {
+                        match (result, &app.result) {
+                            (_, update_check::Action::InstallPlanExecutionError) => Some(false),
+                            (None, update_check::Action::Updated) => Some(true),
+                            (result, _) => result,
+                        }
+                    });
+
+                    // Update check succeeded, reset |consecutive_failed_update_checks| to 0 and
+                    // report metrics.
+                    self.report_attempts_to_successful_check(true).await;
+
+                    self.app_set.update_from_omaha(&result.app_responses).await;
+
+                    // Only report |attempts_to_successful_install| if we get an error trying to
+                    // install, or we succeed to install an update without error.
+                    if let Some(success) = install_success {
+                        self.report_attempts_to_successful_install(success).await;
                     }
-                });
 
-                // Update check succeeded, reset |consecutive_failed_update_checks| to 0 and
-                // report metrics.
-                self.report_attempts_to_successful_check(true).await;
-
-                self.app_set.update_from_omaha(&result.app_responses).await;
-
-                // Only report |attempts_to_successful_install| if we get an error trying to
-                // install, or we succeed to install an update without error.
-                if let Some(success) = install_result {
-                    self.report_attempts_to_successful_install(success).await;
+                    (Ok(result), install_result)
+                    // TODO: update consecutive_proxied_requests
                 }
+                Err(error) => {
+                    error!("Update check failed: {:?}", error);
 
-                // TODO: update consecutive_proxied_requests
-            }
-            Err(error) => {
-                error!("Update check failed: {:?}", error);
+                    let failure_reason = match &error {
+                        UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
+                            // We talked to Omaha, update |last_update_time|.
+                            self.context.schedule.last_update_time =
+                                Some(self.time_source.now().into());
 
-                let failure_reason = match error {
-                    UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
-                        // We talked to Omaha, update |last_update_time|.
-                        self.context.schedule.last_update_time =
-                            Some(self.time_source.now().into());
-
-                        UpdateCheckFailureReason::Omaha
-                    }
-                    UpdateCheckError::OmahaRequest(request_error) => match request_error {
-                        OmahaRequestError::Json(_) | OmahaRequestError::HttpBuilder(_) => {
-                            UpdateCheckFailureReason::Internal
+                            UpdateCheckFailureReason::Omaha
                         }
-                        OmahaRequestError::HttpTransport(_) | OmahaRequestError::HttpStatus(_) => {
-                            UpdateCheckFailureReason::Network
-                        }
-                    },
-                };
-                self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
+                        UpdateCheckError::OmahaRequest(request_error) => match request_error {
+                            OmahaRequestError::Json(_) | OmahaRequestError::HttpBuilder(_) => {
+                                UpdateCheckFailureReason::Internal
+                            }
+                            OmahaRequestError::HttpTransport(_)
+                            | OmahaRequestError::HttpStatus(_) => UpdateCheckFailureReason::Network,
+                        },
+                    };
+                    self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
 
-                self.report_attempts_to_successful_check(false).await;
-            }
-        }
+                    self.report_attempts_to_successful_check(false).await;
+                    (Err(error), None)
+                }
+            };
 
         co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule.clone())).await;
         co.yield_(StateMachineEvent::ProtocolStateChange(self.context.state.clone())).await;
         co.yield_(StateMachineEvent::UpdateCheckResult(result)).await;
 
         self.persist_data().await;
+
+        install_result
     }
 
     // Update self.context.state.consecutive_failed_update_checks and report the metric if
@@ -682,7 +693,7 @@ where
         request_params: RequestParams,
         apps: Vec<App>,
         co: &mut async_generator::Yield<StateMachineEvent>,
-    ) -> Result<update_check::Response, UpdateCheckError> {
+    ) -> Result<(update_check::Response, Option<IN::InstallResult>), UpdateCheckError> {
         self.set_state(State::CheckingForUpdates, co).await;
 
         self.report_check_interval(request_params.source.clone()).await;
@@ -815,7 +826,7 @@ where
             // A successful, no-update, check
 
             self.set_state(State::NoUpdateAvailable, co).await;
-            Ok(Self::make_response(response, update_check::Action::NoUpdate))
+            Ok((Self::make_response(response, update_check::Action::NoUpdate), None))
         } else {
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
@@ -876,9 +887,9 @@ where
                     .await;
 
                     self.set_state(State::InstallationDeferredByPolicy, co).await;
-                    return Ok(Self::make_response(
-                        response,
-                        update_check::Action::DeferredByPolicy,
+                    return Ok((
+                        Self::make_response(response, update_check::Action::DeferredByPolicy),
+                        None,
                     ));
                 }
                 UpdateDecision::DeniedByPolicy => {
@@ -893,7 +904,10 @@ where
                         co,
                     )
                     .await;
-                    return Ok(Self::make_response(response, update_check::Action::DeniedByPolicy));
+                    return Ok((
+                        Self::make_response(response, update_check::Action::DeniedByPolicy),
+                        None,
+                    ));
                 }
             }
 
@@ -945,25 +959,31 @@ where
                     None
                 }
             };
-            if let Err(e) = install_result {
-                co.yield_(StateMachineEvent::InstallerError(Some(Box::new(e)))).await;
-                self.set_state(State::InstallationError, co).await;
-                self.report_omaha_event_and_update_context(
-                    &request_params,
-                    Event::error(EventErrorCode::Installation),
-                    &apps,
-                    &session_id,
-                    next_versions.clone(),
-                    install_duration,
-                    co,
-                )
-                .await;
+            let install_result = match install_result {
+                Ok(install_result) => install_result,
+                Err(e) => {
+                    co.yield_(StateMachineEvent::InstallerError(Some(Box::new(e)))).await;
+                    self.set_state(State::InstallationError, co).await;
+                    self.report_omaha_event_and_update_context(
+                        &request_params,
+                        Event::error(EventErrorCode::Installation),
+                        &apps,
+                        &session_id,
+                        next_versions.clone(),
+                        install_duration,
+                        co,
+                    )
+                    .await;
 
-                return Ok(Self::make_response(
-                    response,
-                    update_check::Action::InstallPlanExecutionError,
-                ));
-            }
+                    return Ok((
+                        Self::make_response(
+                            response,
+                            update_check::Action::InstallPlanExecutionError,
+                        ),
+                        None,
+                    ));
+                }
+            };
 
             self.report_omaha_event_and_update_context(
                 &request_params,
@@ -1010,7 +1030,7 @@ where
                 storage.commit_or_log().await;
             }
             self.set_state(State::WaitingForReboot, co).await;
-            Ok(Self::make_response(response, update_check::Action::Updated))
+            Ok((Self::make_response(response, update_check::Action::Updated), Some(install_result)))
         }
     }
 
@@ -1253,17 +1273,20 @@ fn randomize(n: u64, range: u64) -> u64 {
 }
 
 #[cfg(test)]
-impl<PE, HR, IN, TM, MR, ST> StateMachine<PE, HR, IN, TM, MR, ST>
+impl<PE, HR, IN, TM, MR, ST, IR> StateMachine<PE, HR, IN, TM, MR, ST>
 where
-    PE: PolicyEngine,
+    PE: PolicyEngine<InstallResult = IR>,
     HR: HttpRequest,
-    IN: Installer,
+    IN: Installer<InstallResult = IR>,
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
+    IR: 'static + Send,
 {
     /// Run perform_update_check once, returning the update check result.
-    pub async fn oneshot(&mut self) -> Result<update_check::Response, UpdateCheckError> {
+    pub async fn oneshot(
+        &mut self,
+    ) -> Result<(update_check::Response, Option<IN::InstallResult>), UpdateCheckError> {
         let request_params = RequestParams::default();
 
         let apps = self.app_set.to_vec().await;
@@ -1386,11 +1409,44 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let response = StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
+            let (response, install_result) =
+                StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
             assert_eq!(None, response.app_responses[0].cohort.hint);
+
+            assert_eq!(None, install_result);
+        });
+    }
+
+    #[test]
+    fn test_cohort_returned_with_update_result() {
+        block_on(async {
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "cohort": "1",
+                "cohortname": "stable-channel",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }]
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(HttpResponse::new(response));
+
+            let (response, install_result) =
+                StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
+            assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
+            assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
+            assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
+            assert_eq!(None, response.app_responses[0].cohort.hint);
+
+            assert_eq!(Some(()), install_result);
         });
     }
 
@@ -1488,8 +1544,9 @@ mod tests {
                 .build()
                 .await;
 
-            let response = state_machine.oneshot().await.unwrap();
+            let (response, install_result) = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
+            assert_eq!(None, install_result);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
@@ -1584,8 +1641,9 @@ mod tests {
                 .build()
                 .await;
 
-            let response = state_machine.oneshot().await.unwrap();
+            let (response, install_result) = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
+            assert_eq!(None, install_result);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
@@ -1631,8 +1689,9 @@ mod tests {
                 .build()
                 .await;
 
-            let response = state_machine.oneshot().await.unwrap();
+            let (response, install_result) = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
+            assert_eq!(None, install_result);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
@@ -1749,12 +1808,14 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let response = StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
+            let (response, install_result) =
+                StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
 
             assert_eq!(
                 UserCounting::ClientRegulatedByDate(Some(1234567)),
                 response.app_responses[0].user_counting
             );
+            assert_eq!(None, install_result);
         });
     }
 
@@ -2499,6 +2560,8 @@ mod tests {
     impl Installer for TestInstaller {
         type InstallPlan = StubPlan;
         type Error = StubInstallErrors;
+        type InstallResult = ();
+
         fn perform_install<'a>(
             &'a mut self,
             _install_plan: &StubPlan,
@@ -3372,13 +3435,14 @@ mod tests {
     impl Installer for BlockingInstaller {
         type InstallPlan = StubPlan;
         type Error = StubInstallErrors;
+        type InstallResult = ();
 
         fn perform_install(
             &mut self,
             _install_plan: &StubPlan,
             _observer: Option<&dyn ProgressObserver>,
         ) -> BoxFuture<'_, Result<(), StubInstallErrors>> {
-            let (send, recv) = oneshot::channel();
+            let (send, recv) = oneshot::channel::<Result<(), StubInstallErrors>>();
             let send_fut = self.on_install.send(send);
 
             async move {

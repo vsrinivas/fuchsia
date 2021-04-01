@@ -186,7 +186,18 @@ where
         self.app_set = app_set;
         self
     }
+}
 
+impl<'a, PE, HR, IN, TM, MR, ST, IR> StateMachineBuilder<PE, HR, IN, TM, MR, ST>
+where
+    PE: 'a + PolicyEngine<InstallResult = IR>,
+    HR: 'a + HttpRequest,
+    IN: 'a + Installer<InstallResult = IR>,
+    TM: 'a + Timer,
+    MR: 'a + MetricsReporter,
+    ST: 'a + Storage,
+    IR: 'static + Send,
+{
     pub async fn build(self) -> StateMachine<PE, HR, IN, TM, MR, ST> {
         let StateMachineBuilder {
             policy_engine,
@@ -241,14 +252,14 @@ where
         let request_params = RequestParams::default();
 
         async_generator::generate(move |mut co| async move {
-            state_machine.start_update_check(request_params, &mut co).await
+            state_machine.start_update_check(request_params, &mut co).await;
         })
         .into_yielded()
     }
 
     /// Run perform_update_check once, returning the update check result.
     #[cfg(test)]
-    pub async fn oneshot(self) -> Result<update_check::Response, UpdateCheckError> {
+    pub async fn oneshot(self) -> Result<(update_check::Response, Option<IR>), UpdateCheckError> {
         self.build().await.oneshot().await
     }
 }

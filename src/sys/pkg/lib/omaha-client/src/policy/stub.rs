@@ -75,6 +75,7 @@ where
     T: TimeSource + Clone,
 {
     type TimeSource = T;
+    type InstallResult = ();
 
     fn time_source(&self) -> &Self::TimeSource {
         &self.time_source
@@ -120,7 +121,11 @@ where
         future::ready(decision).boxed()
     }
 
-    fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+    fn reboot_allowed(
+        &mut self,
+        check_options: &CheckOptions,
+        _install_result: &Self::InstallResult,
+    ) -> BoxFuture<'_, bool> {
         let decision = StubPolicy::reboot_allowed(&(), check_options);
         future::ready(decision).boxed()
     }

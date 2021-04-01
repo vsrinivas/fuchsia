@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::installer::InstallResult;
 use crate::timer::FuchsiaTimer;
 use anyhow::{anyhow, Context as _, Error};
 use fidl_fuchsia_ui_activity::{
@@ -197,6 +198,7 @@ impl Policy for FuchsiaPolicy {
             || (policy_data
                 .current_time
                 .is_after_or_eq_any(policy_data.last_reboot_time + VALID_REBOOT_DURATION))
+            || policy_data.urgent_update
     }
 }
 
@@ -303,6 +305,7 @@ where
     T: TimeSource + Clone,
 {
     type TimeSource = T;
+    type InstallResult = InstallResult;
 
     fn time_source(&self) -> &Self::TimeSource {
         &self.time_source
@@ -353,7 +356,11 @@ where
         async move { FuchsiaPolicy::update_can_start(&data.await, proposed_install_plan) }.boxed()
     }
 
-    fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+    fn reboot_allowed(
+        &mut self,
+        check_options: &CheckOptions,
+        install_result: &Self::InstallResult,
+    ) -> BoxFuture<'_, bool> {
         if self.waiting_for_reboot_time.is_none() {
             self.waiting_for_reboot_time = Some(self.time_source.now());
         }
@@ -364,6 +371,7 @@ where
                 self.time_source.now(),
                 self.waiting_for_reboot_time.unwrap(),
                 self.config.allow_reboot_when_idle,
+                install_result.urgent_update,
             ),
             check_options,
         );
@@ -509,6 +517,7 @@ struct FuchsiaRebootPolicyData {
     current_time: ComplexTime,
     last_reboot_time: ComplexTime,
     allow_reboot_when_idle: bool,
+    urgent_update: bool,
 }
 
 impl FuchsiaRebootPolicyData {
@@ -517,8 +526,9 @@ impl FuchsiaRebootPolicyData {
         current_time: ComplexTime,
         last_reboot_time: ComplexTime,
         allow_reboot_when_idle: bool,
+        urgent_update: bool,
     ) -> Self {
-        Self { ui_activity, current_time, last_reboot_time, allow_reboot_when_idle }
+        Self { ui_activity, current_time, last_reboot_time, allow_reboot_when_idle, urgent_update }
     }
 }
 
@@ -1413,12 +1423,36 @@ mod tests {
     fn test_reboot_allowed_interactive() {
         let mock_time = MockTimeSource::new_from_now();
         let now = mock_time.now();
-        let policy_data =
-            FuchsiaRebootPolicyData::new(UiActivityState { state: State::Active }, now, now, true);
+        let policy_data = FuchsiaRebootPolicyData::new(
+            UiActivityState { state: State::Active },
+            now,
+            now,
+            true,
+            false,
+        );
         assert_eq!(
             FuchsiaPolicy::reboot_allowed(
                 &policy_data,
                 &CheckOptions { source: InstallSource::OnDemand },
+            ),
+            true
+        );
+    }
+    #[test]
+    fn test_reboot_allowed_when_urgent_update_true() {
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        let policy_data = FuchsiaRebootPolicyData::new(
+            UiActivityState { state: State::Active },
+            now,
+            now,
+            false,
+            true,
+        );
+        assert_eq!(
+            FuchsiaPolicy::reboot_allowed(
+                &policy_data,
+                &CheckOptions { source: InstallSource::ScheduledTask },
             ),
             true
         );
@@ -1428,7 +1462,8 @@ mod tests {
     fn test_reboot_allowed_unknown() {
         let mock_time = MockTimeSource::new_from_now();
         let now = mock_time.now();
-        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState::new(), now, now, true);
+        let policy_data =
+            FuchsiaRebootPolicyData::new(UiActivityState::new(), now, now, true, false);
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
     }
 
@@ -1436,8 +1471,13 @@ mod tests {
     fn test_reboot_allowed_idle() {
         let mock_time = MockTimeSource::new_from_now();
         let now = mock_time.now();
-        let policy_data =
-            FuchsiaRebootPolicyData::new(UiActivityState { state: State::Idle }, now, now, true);
+        let policy_data = FuchsiaRebootPolicyData::new(
+            UiActivityState { state: State::Idle },
+            now,
+            now,
+            true,
+            false,
+        );
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
     }
 
@@ -1450,6 +1490,7 @@ mod tests {
             now,
             now - VALID_REBOOT_DURATION,
             true,
+            false,
         );
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
     }
@@ -1463,6 +1504,7 @@ mod tests {
             now,
             now - VALID_REBOOT_DURATION,
             false,
+            false,
         );
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
     }
@@ -1471,8 +1513,13 @@ mod tests {
     fn test_reboot_not_allowed_when_active() {
         let mock_time = MockTimeSource::new_from_now();
         let now = mock_time.now();
-        let policy_data =
-            FuchsiaRebootPolicyData::new(UiActivityState { state: State::Active }, now, now, true);
+        let policy_data = FuchsiaRebootPolicyData::new(
+            UiActivityState { state: State::Active },
+            now,
+            now,
+            true,
+            false,
+        );
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), false);
     }
 

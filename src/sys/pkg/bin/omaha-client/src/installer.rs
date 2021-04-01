@@ -57,6 +57,12 @@ impl From<PrepareFailureReason> for InstallerFailureReason {
     }
 }
 
+/// Information from the config about whether an update is urgent.
+#[derive(Debug)]
+pub struct InstallResult {
+    pub urgent_update: bool,
+}
+
 /// Information about a specific failure state that the installer ended in.
 #[derive(Debug, Copy, Clone)]
 pub struct InstallerFailure {
@@ -122,12 +128,13 @@ impl FuchsiaInstaller<ServiceReconnector<InstallerMarker>> {
 impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C> {
     type InstallPlan = FuchsiaInstallPlan;
     type Error = FuchsiaInstallError;
+    type InstallResult = InstallResult;
 
     fn perform_install<'a>(
         &'a mut self,
         install_plan: &'a FuchsiaInstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> BoxFuture<'a, Result<(), FuchsiaInstallError>> {
+    ) -> BoxFuture<'a, Result<Self::InstallResult, FuchsiaInstallError>> {
         let options = Options {
             initiator: match install_plan.install_source {
                 InstallSource::ScheduledTask => Initiator::Service,
@@ -170,7 +177,7 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C
                     }
                 }
                 if state.id() == StateId::WaitToReboot || state.is_success() {
-                    return Ok(());
+                    return Ok(InstallResult { urgent_update: install_plan.urgent_update });
                 } else if state.is_failure() {
                     match state {
                         State::FailFetch(fail_fetch_data) => {
@@ -258,10 +265,12 @@ mod tests {
         total_size: Option<u64>,
         size_so_far: Option<u64>,
     }
+
     impl Eq for Progress {}
     struct MockProgressObserver {
         progresses: Arc<Mutex<Vec<Progress>>>,
     }
+
     impl MockProgressObserver {
         fn new() -> Self {
             Self { progresses: Arc::new(Mutex::new(vec![])) }
@@ -319,11 +328,12 @@ mod tests {
         let plan = FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),
             install_source: InstallSource::OnDemand,
+            urgent_update: false,
         };
         let observer = MockProgressObserver::new();
         let progresses = observer.progresses();
         let installer_fut = async move {
-            let () = installer.perform_install(&plan, Some(&observer)).await.unwrap();
+            let _install_result = installer.perform_install(&plan, Some(&observer)).await.unwrap();
             assert_matches!(installer.reboot_controller, Some(_));
         };
         let stream_fut = async move {
@@ -411,6 +421,7 @@ mod tests {
         let plan = FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),
             install_source: InstallSource::OnDemand,
+            urgent_update: false,
         };
         let installer_fut = async move {
             assert_matches!(
@@ -451,6 +462,7 @@ mod tests {
         let plan = FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),
             install_source: InstallSource::OnDemand,
+            urgent_update: false,
         };
         let installer_fut = async move {
             assert_matches!(
@@ -498,6 +510,7 @@ mod tests {
         let plan = FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),
             install_source: InstallSource::OnDemand,
+            urgent_update: false,
         };
         assert_matches!(
             installer.perform_install(&plan, None).await,

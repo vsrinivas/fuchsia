@@ -141,6 +141,7 @@ pub trait Policy {
 
 pub trait PolicyEngine {
     type TimeSource: TimeSource + Clone;
+    type InstallResult;
 
     /// Provides the time source used by the PolicyEngine to the state machine.
     fn time_source(&self) -> &Self::TimeSource;
@@ -173,7 +174,11 @@ pub trait PolicyEngine {
     ) -> BoxFuture<'p, UpdateDecision>;
 
     /// Is reboot allowed right now.
-    fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool>;
+    fn reboot_allowed(
+        &mut self,
+        check_options: &CheckOptions,
+        install_result: &Self::InstallResult,
+    ) -> BoxFuture<'_, bool>;
 }
 
 #[cfg(test)]

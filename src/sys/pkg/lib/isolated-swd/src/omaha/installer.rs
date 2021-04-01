@@ -60,12 +60,13 @@ pub enum IsolatedInstallError {
 impl Installer for IsolatedInstaller {
     type InstallPlan = FuchsiaInstallPlan;
     type Error = IsolatedInstallError;
+    type InstallResult = ();
 
     fn perform_install<'a>(
         &'a mut self,
         install_plan: &FuchsiaInstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> BoxFuture<'_, Result<(), IsolatedInstallError>> {
+    ) -> BoxFuture<'_, Result<Self::InstallResult, IsolatedInstallError>> {
         if let Some(o) = observer.as_ref() {
             o.receive_progress(None, 0., None, None);
         }

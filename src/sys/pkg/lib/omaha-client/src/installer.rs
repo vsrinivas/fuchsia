@@ -31,10 +31,14 @@ pub trait Plan: std::marker::Sized + std::marker::Sync {
 /// InstallPlan - This is the type that implements the Plan trait, and represents the platform-
 ///               specific installation plan (the data used to define what an update is).
 ///
+/// InstallResult - InstallResult is data passed from the Installer trait implementation to the PolicyEngine
+///                 trait implementation to help the PolicyEngine schedule the reboot.
+///
 /// Error - This the type that implements the thiserror::Error trait and is used to collect all of
 ///         the errors that can occur during the installation of an update.
 pub trait Installer {
     type InstallPlan: Plan;
+    type InstallResult;
     type Error: std::error::Error + std::marker::Send + std::marker::Sync + 'static;
 
     /// Perform the installation as given by the install plan (as parsed form the Omaha server
@@ -44,7 +48,7 @@ pub trait Installer {
         &'a mut self,
         install_plan: &'a Self::InstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> BoxFuture<'a, Result<(), Self::Error>>;
+    ) -> BoxFuture<'a, Result<Self::InstallResult, Self::Error>>;
 
     /// Perform a reboot of the system (in whichever manner that the installer needs to perform
     /// a reboot.  This fn should not return unless reboot failed.

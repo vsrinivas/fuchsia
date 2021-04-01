@@ -38,6 +38,7 @@ impl Default for MockPolicyEngine {
 
 impl PolicyEngine for MockPolicyEngine {
     type TimeSource = MockTimeSource;
+    type InstallResult = ();
 
     fn time_source(&self) -> &Self::TimeSource {
         &self.time_source
@@ -69,7 +70,11 @@ impl PolicyEngine for MockPolicyEngine {
         future::ready(self.update_decision.clone()).boxed()
     }
 
-    fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+    fn reboot_allowed(
+        &mut self,
+        check_options: &CheckOptions,
+        _install_result: &Self::InstallResult,
+    ) -> BoxFuture<'_, bool> {
         (*self.reboot_check_options_received.borrow_mut()).push(check_options.clone());
         future::ready(*self.reboot_allowed.borrow()).boxed()
     }
