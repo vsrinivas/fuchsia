@@ -113,6 +113,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/lib/zircon/rust/*",
     "//src/media/audio/drivers/intel-hda/controller/*",
     "//src/media/playback/mediaplayer/*",
+    "//src/sys/time/httpsdate_time_source/*",
     "//src/ui/examples/escher/test/*",
     "//src/ui/input/drivers/hid-input-report/*",
     "//src/ui/lib/escher/test/*",
