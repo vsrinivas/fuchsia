@@ -10,14 +10,23 @@ use std::fs::read_to_string;
 #[allow(unused_imports)]
 use std::path::{Path, PathBuf};
 
-fn read_json5(object: String) -> Result<(ParsedDocument, String), anyhow::Error> {
-    let object_as_json = serde_json5::from_str::<Value>(&object)?.to_string();
+/// Processes `json5_string`, a string representing a JSON5 object, and returns
+/// a tuple of two elements where the first element is a `ParsedDocument`
+/// representation of the JSON5 object and the second element is a string
+/// representing the JSON5 object without comments.
+pub(crate) fn read_json5(json5_string: String) -> Result<(ParsedDocument, String), anyhow::Error> {
+    // A JSON-ified version of the input JSON5 object.
+    let object_as_json_string = serde_json5::from_str::<Value>(&json5_string)?.to_string();
 
-    let deserialized_object = json5format::ParsedDocument::from_string(object, None)?;
-    Ok((deserialized_object, object_as_json))
+    let deserialized_object = json5format::ParsedDocument::from_string(json5_string, None)?;
+    Ok((deserialized_object, object_as_json_string))
 }
 
-pub fn read_json5_fromfile(file: &PathBuf) -> Result<(ParsedDocument, String), anyhow::Error> {
+/// Calls `read_json5` on the contents of the specified file. Returns a tuple
+/// representing the same data returned by `read_json5`.
+pub(crate) fn read_json5_fromfile(
+    file: &PathBuf,
+) -> Result<(ParsedDocument, String), anyhow::Error> {
     let path = file.as_path();
     let object = read_to_string(path)?;
     Ok(read_json5(object)?)
@@ -26,6 +35,10 @@ pub fn read_json5_fromfile(file: &PathBuf) -> Result<(ParsedDocument, String), a
 mod tests {
     #[allow(unused_imports)]
     use super::*;
+    use std::fs::OpenOptions;
+    use std::io::prelude::*;
+    use std::path::PathBuf;
+
     #[test]
     #[ignore]
     /*
@@ -286,5 +299,110 @@ baz: 5,
             serde_json5::from_str::<Value>(&(read_json5(json5).unwrap().1)).unwrap(),
             serde_json5::from_str::<Value>(&json).unwrap()
         );
+    }
+
+    #[test]
+    fn read_from_file_1() {
+        let tmp_path = PathBuf::from(r"/tmp/read_from_file_1.json5");
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(tmp_path.as_path())
+            .unwrap();
+        let json5_string = String::from(
+            r##"
+{
+    // Foo
+    hello: 'world',
+
+    // Bar
+    yoinks: 'scoob',
+}
+"##,
+        );
+        file.write_all(json5_string.as_bytes()).unwrap();
+
+        let (parsed_json5, json_string) = read_json5_fromfile(&tmp_path).unwrap();
+        assert_eq!(
+            serde_json5::from_str::<Value>(&json5_string).unwrap(),
+            serde_json5::from_str::<Value>(&json_string).unwrap()
+        );
+
+        let format = Json5Format::new().unwrap();
+        assert_eq!(
+            format.to_string(&parsed_json5).unwrap(),
+            format.to_string(&ParsedDocument::from_string(json5_string, None).unwrap()).unwrap()
+        )
+    }
+
+    #[test]
+    fn read_from_file_2() {
+        let tmp_path = PathBuf::from(r"/tmp/read_from_file_2.json5");
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(tmp_path.as_path())
+            .unwrap();
+        let json5_string = String::from(
+            r##"{
+    "name": {
+        "last": "Smith",
+        "first": "John",
+        "middle": "Jacob"
+    },
+    "children": [
+        "Buffy",
+        "Biff",
+        "Balto"
+    ],
+    // Consider adding a note field to the `other` contact option
+    "contact_options": [
+        {
+            "home": {
+                "email": "jj@notreallygmail.com",   // This was the original user id.
+                                                    // Now user id's are hash values.
+                "phone": "212-555-4321"
+            },
+            "other": {
+                "email": "volunteering@serviceprojectsrus.org"
+            },
+            "work": {
+                "phone": "212-555-1234",
+                "email": "john.j.smith@worksforme.gov"
+            }
+        }
+    ],
+    "address": {
+        "city": "Anytown",
+        "country": "USA",
+        "state": "New York",
+        "street": "101 Main Street"
+        /* Update schema to support multiple addresses:
+           "work": {
+               "city": "Anytown",
+               "country": "USA",
+               "state": "New York",
+               "street": "101 Main Street"
+           }
+        */
+    }
+}
+"##,
+        );
+        file.write_all(json5_string.as_bytes()).unwrap();
+
+        let (parsed_json5, json_string) = read_json5_fromfile(&tmp_path).unwrap();
+        assert_eq!(
+            serde_json5::from_str::<Value>(&json5_string).unwrap(),
+            serde_json5::from_str::<Value>(&json_string).unwrap()
+        );
+
+        let format = Json5Format::new().unwrap();
+        assert_eq!(
+            format.to_string(&parsed_json5).unwrap(),
+            format.to_string(&ParsedDocument::from_string(json5_string, None).unwrap()).unwrap()
+        )
     }
 }
