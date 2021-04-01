@@ -242,9 +242,8 @@ function main {
     *.*)
       local product_name="${1%.*}"
       local board_name="${1##*.}"
-      local product board
-      product="$(find_config "products" "${product_name}")"
-      board="$(find_config "boards" "${board_name}")"
+      local product="$(find_config "products" "${product_name}")"
+      local board="$(find_config "boards" "${board_name}")"
       if [[ "${product}" == "" ]] || [[ "${board}" == "" ]]; then
         exit 1
       fi
@@ -502,7 +501,7 @@ function main {
 # See: fx args --list=base_package_labels
 base_package_labels+=["
 
-  for package in "${base_packages[@]}"; do
+  for package in ${base_packages[@]}; do
     gn_args+="\"${package}\","
   done
   gn_args+="]
@@ -510,7 +509,7 @@ base_package_labels+=["
 # See: fx args --list=cache_package_labels
 cache_package_labels+=["
 
-  for package in "${cache_packages[@]}"; do
+  for package in ${cache_packages[@]}; do
     gn_args+="\"${package}\","
   done
   gn_args+="]
@@ -518,7 +517,7 @@ cache_package_labels+=["
 # See: fx args --list=universe_package_labels
 universe_package_labels+=["
 
-  for package in "${universe_packages[@]}"; do
+  for package in ${universe_packages[@]}; do
     gn_args+="\"${package}\","
   done
   gn_args+="]
@@ -526,7 +525,7 @@ universe_package_labels+=["
 # See: fx args --list=host_labels
 host_labels+=["
 
-  for label in "${host_labels[@]}"; do
+  for label in ${host_labels[@]}; do
     gn_args+="\"${label}\","
   done
   gn_args+="]"
