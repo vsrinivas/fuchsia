@@ -214,6 +214,7 @@ async-net = "1.5"
 blocking = "1.0.2"
 crossterm = "0.17.7"
 concurrent-queue = "1"
+easy-parallel = "3.1"
 handlebars = "2.0.0-beta.2"
 home = "0.5.3"
 hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }

@@ -178,6 +178,12 @@ group("difference") {
   deps = [ ":difference-v2_0_0" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("easy-parallel") {
+    deps = [ ":easy-parallel-v3_1_0" ]
+  }
+}
+
 if (current_os == "fuchsia") {
   group("euclid") {
     deps = [ ":euclid-v0_22_1" ]
@@ -3055,6 +3061,27 @@ rust_library("downcast-v0_10_0") {
     "-Cextra-filename=-417417cb956aacf6",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("easy-parallel-v3_1_0") {
+  crate_name = "easy_parallel"
+  crate_root = "//third_party/rust_crates/vendor/easy-parallel/src/lib.rs"
+  output_name = "easy_parallel-87f77231f1b1949b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=87f77231f1b1949b",
+    "-Cextra-filename=-87f77231f1b1949b",
   ]
 }
 
