@@ -9,3 +9,4 @@ pub mod object_handle;
 pub mod object_store;
 #[cfg(test)]
 pub mod testing;
+pub mod volume;

@@ -51,6 +51,7 @@ fxfs_sources = [
   "src/testing.rs",
   "src/testing/fake_device.rs",
   "src/testing/fake_object.rs",
+  "src/volume.rs",
 ]
 
 if (is_fuchsia) {
