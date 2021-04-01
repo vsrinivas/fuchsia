@@ -15,6 +15,12 @@ pub struct AccessibilityInfo {
     pub captions_settings: Option<CaptionsSettings>,
 }
 
+impl AccessibilityInfo {
+    pub(crate) fn is_finite(&self) -> bool {
+        self.captions_settings.map_or(true, |captions| captions.is_finite())
+    }
+}
+
 impl Merge for AccessibilityInfo {
     fn merge(&self, other: Self) -> Self {
         AccessibilityInfo {
@@ -95,6 +101,14 @@ pub struct CaptionsSettings {
     pub background_color: Option<ColorRgba>,
 }
 
+impl CaptionsSettings {
+    pub(crate) fn is_finite(&self) -> bool {
+        self.font_style.map_or(true, |font_style| font_style.is_finite())
+            && self.window_color.map_or(true, |window_color| window_color.is_finite())
+            && self.background_color.map_or(true, |bkg_color| bkg_color.is_finite())
+    }
+}
+
 impl Merge for CaptionsSettings {
     fn merge(&self, other: Self) -> Self {
         CaptionsSettings {
@@ -140,6 +154,13 @@ pub struct CaptionFontStyle {
     pub color: Option<ColorRgba>,
     pub relative_size: Option<f32>,
     pub char_edge_style: Option<EdgeStyle>,
+}
+
+impl CaptionFontStyle {
+    pub(crate) fn is_finite(&self) -> bool {
+        self.color.map_or(true, |color| color.is_finite())
+            && self.relative_size.map_or(true, |size| size.is_finite())
+    }
 }
 
 impl Merge for CaptionFontStyle {
@@ -287,6 +308,15 @@ pub struct ColorRgba {
     pub green: f32,
     pub blue: f32,
     pub alpha: f32,
+}
+
+impl ColorRgba {
+    pub(crate) fn is_finite(&self) -> bool {
+        self.red.is_finite()
+            && self.green.is_finite()
+            && self.blue.is_finite()
+            && self.alpha.is_finite()
+    }
 }
 
 impl From<fidl_fuchsia_ui_types::ColorRgba> for ColorRgba {

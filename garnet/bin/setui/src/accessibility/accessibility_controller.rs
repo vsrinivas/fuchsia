@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::accessibility::types::AccessibilityInfo;
-use crate::base::{Merge, SettingInfo};
+use crate::base::{Merge, SettingInfo, SettingType};
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
@@ -58,6 +58,15 @@ impl controller::Handle for AccessibilityController {
             ),
             Request::SetAccessibilityInfo(info) => {
                 let original_info = self.client.read_setting::<AccessibilityInfo>().await;
+                assert!(original_info.is_finite());
+                // Validate accessibility info contains valid float numbers.
+                if !info.is_finite() {
+                    return Some(Err(ControllerError::InvalidArgument(
+                        SettingType::Accessibility,
+                        "accessibility".into(),
+                        format!("{:?}", info).into(),
+                    )));
+                }
                 let result =
                     self.client.write_setting(info.merge(original_info).into(), false).await;
                 Some(result.into_handler_result())
