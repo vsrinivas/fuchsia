@@ -10,8 +10,7 @@
             "build-info",
             "config-data",
             "isolated-cache-storage",
-            "isolated-temp",
-            "root-ssl-certificates"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
