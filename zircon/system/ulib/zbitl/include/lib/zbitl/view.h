@@ -170,54 +170,57 @@ class View {
     // Whether the unbuffered variation of Traits::Write() is defined.
     static constexpr bool CanUnbufferedWrite() { return SfinaeUnbufferedWrite(0); }
 
-    // This fetches the item (or container) header at the given offset.  The
-    // return type can use either plain `zbi_header_t` or it can use
-    // `std::reference_wrapper<const zbi_header_t>`.  The former case is for
+    // LocalizedRead fetches a POD struct at the given offset byte offset.
+    // The fetch is assumed to have low locality: that is, a small, random
+    // access into the storage.  The return type can use either plain `Data` or
+    // it can use `std::reference_wrapper<const Data>`.  The former case is for
     // remote access to storage, where fetching the header has to copy it.  The
     // latter case is for in-memory storage, where the header can just be
     // accessed in place via a direct pointer.
-    template <typename T = Traits>
-    static fitx::result<
-        error_type,
-        std::conditional_t<T::template CanOneShotRead<zbi_header_t, /*LowLocality=*/true>(),
-                           std::reference_wrapper<const zbi_header_t>, zbi_header_t>>
-    Header(Storage& storage, uint32_t offset) {
+    template <typename Data, typename T = Traits>
+    using LocalizedReadResult =
+        std::conditional_t<T::template CanOneShotRead<Data, /*LowLocality=*/true>(),
+                           std::reference_wrapper<const Data>, Data>;
+
+    template <typename Data, typename T = Traits>
+    [[gnu::always_inline]] static fitx::result<error_type, LocalizedReadResult<Data, T>>
+    LocalizedRead(Storage& storage, uint32_t offset) {
+      static_assert(is_uniquely_representable_pod_v<Data>);
+
       payload_type payload;
-      if (auto result = Base::Payload(storage, offset, sizeof(zbi_header_t)); result.is_error()) {
+      if (auto result = Base::Payload(storage, offset, sizeof(Data)); result.is_error()) {
         return result.take_error();
       } else {
         payload = std::move(result).value();
       }
 
       // `LowLocality = true`, as we are only reading a single header here.
-      if constexpr (T::template CanOneShotRead<zbi_header_t, /*LowLocality=*/true>()) {
-        auto result =
-            Base::template Read<zbi_header_t, true>(storage, payload, sizeof(zbi_header_t));
+      if constexpr (T::template CanOneShotRead<Data, /*LowLocality=*/true>()) {
+        auto result = Base::template Read<Data, true>(storage, payload, sizeof(Data));
         if (result.is_error()) {
           return result.take_error();
         }
-        auto header = std::move(result).value();
-        ZX_DEBUG_ASSERT(header.size() == 1);  // We expect a span of one zbi_header_t.
-        return fitx::ok(std::ref(header.front()));
+        auto data = std::move(result).value();
+        ZX_DEBUG_ASSERT(data.size() == 1);  // We expect a span of one `Data`.
+        return fitx::ok(std::ref(data.front()));
       } else if constexpr (T::CanUnbufferedRead()) {
-        zbi_header_t header;
-        if (auto result = Base::Read(storage, payload, &header, sizeof(header));
-            result.is_error()) {
+        Data datum;
+        if (auto result = Base::Read(storage, payload, &datum, sizeof(datum)); result.is_error()) {
           return result.take_error();
         }
-        return fitx::ok(header);
+        return fitx::ok(datum);
       } else {
-        zbi_header_t header;
+        Data datum;
         size_t bytes_read = 0;
-        auto read = [header_bytes = AsSpan<std::byte>(header)](auto bytes) mutable {
-          memcpy(header_bytes.data(), bytes.data(), bytes.size());
-          header_bytes = header_bytes.subspan(bytes.size());
+        auto read = [datum_bytes = AsSpan<std::byte>(datum)](auto bytes) mutable {
+          memcpy(datum_bytes.data(), bytes.data(), bytes.size());
+          datum_bytes = datum_bytes.subspan(bytes.size());
         };
-        if (auto result = Base::Read(storage, payload, sizeof(header), read); result.is_error()) {
+        if (auto result = Base::Read(storage, payload, sizeof(datum), read); result.is_error()) {
           return result.take_error();
         }
-        ZX_DEBUG_ASSERT(bytes_read == sizeof(zbi_header_t));
-        return fitx::ok(header);
+        ZX_DEBUG_ASSERT(bytes_read == sizeof(Data));
+        return fitx::ok(datum);
       }
     }
 
@@ -322,6 +325,20 @@ class View {
                   "Both Write() and EnsureCapacity() are expected to be implemented together");
   };
 
+  // Fetches the container header.
+  static fitx::result<typename Traits::error_type,
+                      typename Traits::template LocalizedReadResult<zbi_header_t>>
+  ContainerHeader(Storage& storage) {
+    return Traits::template LocalizedRead<zbi_header_t>(storage, 0);
+  }
+
+  // Fetches an item header at a given offset.
+  static fitx::result<typename Traits::error_type,
+                      typename Traits::template LocalizedReadResult<zbi_header_t>>
+  ItemHeader(Storage& storage, uint32_t offset) {
+    return Traits::template LocalizedRead<zbi_header_t>(storage, offset);
+  }
+
   /// The header is represented by an opaque type that can be dereferenced as
   /// if it were `const zbi_header_t*`, i.e. `*header` or `header->member`.
   /// Either it stores the `zbi_header_t` directly or it holds a pointer into
@@ -356,7 +373,7 @@ class View {
     }
 
    private:
-    using TraitsHeader = decltype(Traits::Header(std::declval<View>().storage(), 0));
+    using TraitsHeader = decltype(ItemHeader(std::declval<View>().storage(), 0));
     static constexpr bool kCopy =
         std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type, zbi_header_t>>;
     static constexpr bool kReference =
@@ -607,7 +624,7 @@ class View {
         return;
       }
 
-      if (auto header = Traits::Header(view_->storage(), next_item_offset); header.is_error()) {
+      if (auto header = ItemHeader(view_->storage(), next_item_offset); header.is_error()) {
         // Failed to read the next header.
         Fail("cannot read item header", std::move(header.error_value()));
         return;
@@ -665,7 +682,7 @@ class View {
     }
 
     // Read and validate the container header.
-    auto header_error = Traits::Header(storage(), 0);
+    auto header_error = ContainerHeader(storage());
     if (header_error.is_error()) {
       // Failed to read the container header.
       return fitx::error{
@@ -716,7 +733,7 @@ class View {
       if (capacity_error.is_ok()) {
         uint32_t capacity = capacity_error.value();
         if (capacity >= sizeof(zbi_header_t)) {
-          auto header_error = Traits::Header(storage(), 0);
+          auto header_error = ContainerHeader(storage());
           if (header_error.is_ok()) {
             const header_type header(header_error.value());
             if (header->length <= capacity - sizeof(zbi_header_t)) {
