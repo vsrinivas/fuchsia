@@ -92,7 +92,7 @@ zx_status_t DeviceReportsReader::SendReports() {
       if (status == ZX_OK) {
         reports[reports_size].time = time;
         reports[reports_size].data =
-            fidl::VectorView<uint8_t>(fidl::unowned_ptr(buf.data() + buf_index), report_size);
+            fidl::VectorView<uint8_t>::FromExternal(buf.data() + buf_index, report_size);
         reports_size++;
         buf_index += report_size;
       }
@@ -109,8 +109,9 @@ zx_status_t DeviceReportsReader::SendReports() {
     return status;
   }
 
-  waiting_read_->ReplySuccess(::fidl::VectorView<fuchsia_hardware_input::wire::Report>(
-      fidl::unowned_ptr(reports.data()), reports_size));
+  waiting_read_->ReplySuccess(
+      ::fidl::VectorView<fuchsia_hardware_input::wire::Report>::FromExternal(reports.data(),
+                                                                             reports_size));
   waiting_read_.reset();
 
   return ZX_OK;

@@ -217,7 +217,9 @@ void InputReportReader<Report>::ReplyWithReports(ReadInputReportsCompleterBase& 
     reports_data_.pop();
   }
 
-  completer.ReplySuccess(fidl::VectorView(fidl::unowned_ptr(reports.data()), num_reports));
+  completer.ReplySuccess(
+      fidl::VectorView(fidl::VectorView<fuchsia_input_report::wire::InputReport>::FromExternal(
+          reports.data(), num_reports)));
 
   if (reports_data_.empty()) {
     report_allocator_.Reset();

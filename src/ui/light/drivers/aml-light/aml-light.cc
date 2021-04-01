@@ -4,12 +4,12 @@
 
 #include "aml-light.h"
 
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <string.h>
 
 #include <cmath>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/lights.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
@@ -91,7 +91,7 @@ void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
   }
   auto name = lights_[index].GetName();
   completer.ReplySuccess({
-      .name = ::fidl::unowned_str(name),
+      .name = ::fidl::StringView::FromExternal(name),
       .capability = lights_[index].GetCapability(),
   });
 }

@@ -53,7 +53,8 @@ void USBVirtualBus::InitUsbHid(fbl::String* devpath,
   std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(desc);
   std::vector<ConfigurationDescriptor> config_descs;
-  config_descs.emplace_back(fidl::unowned_vec(function_descs));
+  config_descs.emplace_back(
+      fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
 
   ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
@@ -162,7 +163,7 @@ TEST_F(UsbOneEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
   auto set_result = sync_client_->SetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0,
-                                            fidl::unowned_vec(buf));
+                                            fidl::VectorView<uint8_t>::FromExternal(buf));
   auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0);
 
   ASSERT_OK(set_result.status());
@@ -183,7 +184,7 @@ TEST_F(UsbTwoEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
   auto set_result = sync_client_->SetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0,
-                                            fidl::unowned_vec(buf));
+                                            fidl::VectorView<uint8_t>::FromExternal(buf));
   auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0);
 
   ASSERT_OK(set_result.status());

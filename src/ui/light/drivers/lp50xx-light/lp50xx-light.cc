@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <stdint.h>
@@ -21,7 +22,6 @@
 #include <cmath>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/lights.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
@@ -313,7 +313,7 @@ void Lp50xxLight::GetGroupCurrentRgbValue(uint32_t group_id,
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::FAILED);
   } else {
     completer.ReplySuccess(::fidl::VectorView<fuchsia_hardware_light::wire::Rgb>(
-        fidl::unowned_ptr(out.data()), out.size()));
+        fidl::VectorView<fuchsia_hardware_light::wire::Rgb>::FromExternal(out)));
   }
 }
 

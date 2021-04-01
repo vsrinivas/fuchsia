@@ -98,7 +98,7 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync& completer) {
     status = ReadReportFromFifo(buf.data(), buf.size(), &time, &report_size);
   }
 
-  ::fidl::VectorView<uint8_t> buf_view(fidl::unowned_ptr(buf.data()), report_size);
+  auto buf_view = fidl::VectorView<uint8_t>::FromExternal(buf.data(), report_size);
   completer.Reply(status, std::move(buf_view), time);
 }
 
@@ -137,7 +137,7 @@ void HidInstance::ReadReports(ReadReportsCompleter::Sync& completer) {
     return;
   }
 
-  ::fidl::VectorView<uint8_t> buf_view(fidl::unowned_ptr(buf.data()), buf_index);
+  auto buf_view = fidl::VectorView<uint8_t>::FromExternal(buf.data(), buf_index);
   completer.Reply(status, std::move(buf_view));
 }
 
@@ -182,8 +182,7 @@ void HidInstance::GetReportDesc(GetReportDescCompleter::Sync& completer) {
 
   // (BUG 35762) Const cast is necessary until simple data types are generated
   // as const in LLCPP. We know the data is not modified.
-  completer.Reply(
-      ::fidl::VectorView<uint8_t>(fidl::unowned_ptr(const_cast<uint8_t*>(desc)), desc_size));
+  completer.Reply(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(desc), desc_size));
 }
 
 void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync& completer) {
@@ -198,7 +197,7 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
   zx_status_t status = base_->GetHidbusProtocol()->GetReport(static_cast<uint8_t>(type), id, report,
                                                              needed, &actual);
 
-  fidl::VectorView<uint8_t> report_view(fidl::unowned_ptr(report), actual);
+  auto report_view = fidl::VectorView<uint8_t>::FromExternal(report, actual);
   completer.Reply(status, std::move(report_view));
 }
 
