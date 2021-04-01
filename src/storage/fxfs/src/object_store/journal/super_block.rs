@@ -135,7 +135,12 @@ impl ObjectHandle for SuperBlockHandle {
         Ok(len)
     }
 
-    async fn write(&self, _offset: u64, _buf: BufferRef<'_>) -> Result<(), Error> {
+    async fn txn_write(
+        &self,
+        _transaction: &mut Transaction,
+        _offset: u64,
+        _buf: BufferRef<'_>,
+    ) -> Result<(), Error> {
         unreachable!();
     }
 
@@ -143,7 +148,7 @@ impl ObjectHandle for SuperBlockHandle {
         unreachable!();
     }
 
-    async fn truncate(&self, _length: u64) -> Result<(), Error> {
+    async fn truncate(&self, _transaction: &mut Transaction, _length: u64) -> Result<(), Error> {
         unreachable!();
     }
 
@@ -152,6 +157,10 @@ impl ObjectHandle for SuperBlockHandle {
         _transaction: &mut Transaction,
         _range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
+        unreachable!();
+    }
+
+    async fn commit_transaction(&self, _transaction: Transaction) {
         unreachable!();
     }
 }
@@ -175,17 +184,18 @@ impl SuperBlock {
     }
 
     /// Creates the super-block object.
-    pub async fn create_object(store: &Arc<ObjectStore>) -> Result<StoreObjectHandle, Error> {
-        let mut transaction = Transaction::new();
+    pub async fn create_object(
+        transaction: &mut Transaction,
+        store: &Arc<ObjectStore>,
+    ) -> Result<StoreObjectHandle, Error> {
         let handle = store
             .create_object_with_id(
-                &mut transaction,
+                transaction,
                 SUPER_BLOCK_OBJECT_ID,
                 HandleOptions { overwrite: true, ..Default::default() },
             )
             .await?;
-        handle.extend(&mut transaction, first_extent()).await;
-        store.filesystem().commit_transaction(transaction).await;
+        handle.extend(transaction, first_extent()).await;
         Ok(handle)
     }
 
@@ -308,8 +318,9 @@ mod tests {
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
         let root_parent_store = ObjectStore::new_empty(None, 2, fs.clone());
+        let mut transaction = Transaction::new();
         let root_store = root_parent_store
-            .create_child_store_with_id(3)
+            .create_child_store_with_id(&mut transaction, 3)
             .await
             .expect("create_child_store failed");
         const JOURNAL_OBJECT_ID: u64 = 4;
@@ -334,7 +345,11 @@ mod tests {
         );
         super_block.journal_file_offsets.insert(1, 2);
 
-        let handle = SuperBlock::create_object(&root_store).await.expect("create_object failed");
+        let mut transaction = Transaction::new();
+        let handle = SuperBlock::create_object(&mut transaction, &root_store)
+            .await
+            .expect("create_object failed");
+        fs.commit_transaction(transaction).await;
 
         let layer_set = root_parent_store.tree().layer_set();
         let mut merger = layer_set.merger();

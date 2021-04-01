@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        object_handle::ObjectHandle,
+        object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
     },
     anyhow::Error,

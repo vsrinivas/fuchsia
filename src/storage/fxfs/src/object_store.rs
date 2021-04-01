@@ -147,26 +147,25 @@ impl ObjectStore {
         &self.tree
     }
 
-    pub async fn create_child_store(self: &Arc<ObjectStore>) -> Result<Arc<ObjectStore>, Error> {
+    pub async fn create_child_store(
+        self: &Arc<ObjectStore>,
+        transaction: &mut Transaction,
+    ) -> Result<Arc<ObjectStore>, Error> {
         let object_id = self.get_next_object_id();
-        self.create_child_store_with_id(object_id).await
+        self.create_child_store_with_id(transaction, object_id).await
     }
 
     async fn create_child_store_with_id(
         self: &Arc<ObjectStore>,
+        transaction: &mut Transaction,
         object_id: u64,
     ) -> Result<Arc<ObjectStore>, Error> {
         self.ensure_open().await?;
-        // TODO(csuter): This should probably all be in a transaction. There should probably be a
-        // journal record to create a store.
-        let mut transaction = Transaction::new();
         let handle = self
             .clone()
-            .create_object_with_id(&mut transaction, object_id, HandleOptions::default())
+            .create_object_with_id(transaction, object_id, HandleOptions::default())
             .await?;
-        let filesystem = self.filesystem.upgrade().unwrap();
-        filesystem.commit_transaction(transaction).await;
-
+        // TODO(csuter): if the transaction rolls back, we need to delete the store.
         Ok(Self::new_empty(
             Some(self.clone()),
             handle.object_id(),
@@ -301,15 +300,13 @@ impl ObjectStore {
         {
             let mut store_info = self.store_info.lock().unwrap();
             store_info.layers = vec![object_id];
-            // TODO(csuter): replace with a replace_contents method, or maybe better, pass
-            // transaction to write.
             serialize_into(&mut serialized_info, &*store_info)?;
         }
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
-        handle.write(0u64, buf.as_ref()).await?;
-
         let mut transaction = Transaction::new();
+        handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
+
         transaction.add(self.store_object_id(), Mutation::TreeCompact);
         filesystem.commit_transaction(transaction).await;
 
@@ -422,7 +419,8 @@ impl StoreObjectHandle {
         let (old_size, new_size) = {
             let mut size = self.size.lock().unwrap();
             let old_size = *size;
-            // TODO(csuter): roll back size change if transaction fails
+            // TODO(csuter): roll back size change if transaction fails, or alternatively, change
+            // the size when the transaction commits (whilst keeping the object locked).
             *size += device_range.end - device_range.start;
             (old_size, *size)
         };
@@ -751,16 +749,18 @@ impl ObjectHandle for StoreObjectHandle {
         Ok(to_do)
     }
 
-    async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+    async fn txn_write(
+        &self,
+        transaction: &mut Transaction,
+        offset: u64,
+        buf: BufferRef<'_>,
+    ) -> Result<(), Error> {
         if buf.is_empty() {
             Ok(())
         } else if self.options.overwrite {
             self.overwrite(offset, buf).await
         } else {
-            let mut transaction = Transaction::new(); // TODO(csuter): transaction too big?
-            self.write_cow(&mut transaction, offset, buf).await?;
-            self.store.filesystem.upgrade().unwrap().commit_transaction(transaction).await;
-            Ok(())
+            self.write_cow(transaction, offset, buf).await
         }
     }
 
@@ -768,8 +768,7 @@ impl ObjectHandle for StoreObjectHandle {
         *self.size.lock().unwrap()
     }
 
-    async fn truncate(&self, length: u64) -> Result<(), Error> {
-        let mut transaction = Transaction::new(); // TODO(csuter): transaction too big?
+    async fn truncate(&self, transaction: &mut Transaction, length: u64) -> Result<(), Error> {
         let old_length = *self.size.lock().unwrap();
         if length == old_length {
             return Ok(());
@@ -791,7 +790,7 @@ impl ObjectHandle for StoreObjectHandle {
                 },
             );
             self.deallocate_old_extents(
-                &mut transaction,
+                transaction,
                 &ExtentKey::new(self.attribute_id, deleted_range),
             )
             .await?;
@@ -806,7 +805,7 @@ impl ObjectHandle for StoreObjectHandle {
                 // Is there a better way?
                 let mut buf = self.allocate_buffer(to_zero as usize);
                 buf.as_mut_slice().fill(0);
-                self.write_cow(&mut transaction, length, buf.as_ref()).await?;
+                self.write_cow(transaction, length, buf.as_ref()).await?;
             }
         }
         transaction.add(
@@ -818,7 +817,6 @@ impl ObjectHandle for StoreObjectHandle {
                 },
             },
         );
-        self.store.filesystem.upgrade().unwrap().commit_transaction(transaction).await;
         *self.size.lock().unwrap() = length;
         Ok(())
     }
@@ -927,13 +925,17 @@ impl ObjectHandle for StoreObjectHandle {
         }
         Ok(ranges)
     }
+
+    async fn commit_transaction(&self, transaction: Transaction) {
+        self.store.filesystem().commit_transaction(transaction).await;
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         crate::{
-            object_handle::ObjectHandle,
+            object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 filesystem::Filesystem,
                 round_up,
@@ -962,11 +964,13 @@ mod tests {
         let allocator = Arc::new(FakeAllocator::new());
         filesystem.object_manager().set_allocator(allocator.clone());
         let parent_store = ObjectStore::new_empty(None, 2, filesystem.clone());
-        (
-            filesystem.clone(),
-            allocator,
-            parent_store.create_child_store_with_id(3).await.expect("create_child_store failed"),
-        )
+        let mut transaction = Transaction::new();
+        let store = parent_store
+            .create_child_store_with_id(&mut transaction, 3)
+            .await
+            .expect("create_child_store failed");
+        filesystem.commit_transaction(transaction).await;
+        (filesystem.clone(), allocator, store)
     }
 
     async fn test_filesystem_and_object(
@@ -977,13 +981,16 @@ mod tests {
             .create_object(&mut transaction, HandleOptions::default())
             .await
             .expect("create_object failed");
-        store.filesystem().commit_transaction(transaction).await;
         {
             let mut buf = object.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
-            object.write(TEST_DATA_OFFSET, buf.as_ref()).await.expect("write failed");
+            object
+                .txn_write(&mut transaction, TEST_DATA_OFFSET, buf.as_ref())
+                .await
+                .expect("write failed");
         }
-        object.truncate(TEST_OBJECT_SIZE).await.expect("truncate failed");
+        object.truncate(&mut transaction, TEST_OBJECT_SIZE).await.expect("truncate failed");
+        store.filesystem().commit_transaction(transaction).await;
         (fs, allocator, object)
     }
 
@@ -1049,7 +1056,9 @@ mod tests {
         let mut buf = object.allocate_buffer(TEST_DATA.len());
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
         object.write(0, buf.as_ref()).await.expect("write failed"); // This adds an extent at 0..512.
-        object.truncate(3).await.expect("truncate failed"); // This deletes 512..1024.
+        let mut transaction = Transaction::new();
+        object.truncate(&mut transaction, 3).await.expect("truncate failed"); // This deletes 512..1024.
+        object.commit_transaction(transaction).await;
         let data = b"foo";
         let mut buf = object.allocate_buffer(data.len());
         buf.as_mut_slice().copy_from_slice(data);
@@ -1093,7 +1102,9 @@ mod tests {
         let mut buffer = object.allocate_buffer(512);
         buffer.as_mut_slice().fill(0xaf);
         object.write(512, buffer.as_ref()).await.expect("write failed");
-        object.truncate(1536).await.expect("truncate failed");
+        let mut transaction = Transaction::new();
+        object.truncate(&mut transaction, 1536).await.expect("truncate failed");
+        object.commit_transaction(transaction).await;
         object2.write(512, ef_buffer.as_ref()).await.expect("write failed");
 
         let mut buffer = object.allocate_buffer(2048);
@@ -1225,13 +1236,18 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_truncate_deallocates_old_extents() {
-        let (_fs, allocator, object) = test_filesystem_and_object().await;
+        let (fs, allocator, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(5 * TEST_DEVICE_BLOCK_SIZE as usize);
         buf.as_mut_slice().fill(0xaa);
         object.write(0, buf.as_ref()).await.expect("write failed");
 
         let deallocated_before = allocator.deallocated();
-        object.truncate(TEST_DEVICE_BLOCK_SIZE as u64).await.expect("truncate failed");
+        let mut transaction = Transaction::new();
+        object
+            .truncate(&mut transaction, TEST_DEVICE_BLOCK_SIZE as u64)
+            .await
+            .expect("truncate failed");
+        fs.commit_transaction(transaction).await;
         let deallocated_after = allocator.deallocated();
         assert!(
             deallocated_before < deallocated_after,

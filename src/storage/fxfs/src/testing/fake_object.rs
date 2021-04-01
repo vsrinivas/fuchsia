@@ -78,7 +78,12 @@ impl ObjectHandle for FakeObjectHandle {
         self.object.lock().unwrap().read(offset, buf)
     }
 
-    async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+    async fn txn_write(
+        &self,
+        _transaction: &mut Transaction,
+        offset: u64,
+        buf: BufferRef<'_>,
+    ) -> Result<(), Error> {
         self.object.lock().unwrap().write(offset, buf)
     }
 
@@ -86,7 +91,7 @@ impl ObjectHandle for FakeObjectHandle {
         self.object.lock().unwrap().get_size()
     }
 
-    async fn truncate(&self, length: u64) -> Result<(), Error> {
+    async fn truncate(&self, _transaction: &mut Transaction, length: u64) -> Result<(), Error> {
         self.object.lock().unwrap().buf.resize(length as usize, 0);
         Ok(())
     }
@@ -98,4 +103,6 @@ impl ObjectHandle for FakeObjectHandle {
     ) -> Result<Vec<Range<u64>>, Error> {
         panic!("Unsupported");
     }
+
+    async fn commit_transaction(&self, _transaction: Transaction) {}
 }
