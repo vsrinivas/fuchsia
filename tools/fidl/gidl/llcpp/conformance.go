@@ -62,11 +62,11 @@ TEST(Conformance, {{ .Name }}_Encode) {
 TEST(Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
-	std::vector<zx_koid_t> handle_koids;
+	std::vector<zx_koid_t> {{ .HandleKoidVectorName }};
 	for (zx_handle_info_t def : handle_defs) {
 		zx_info_handle_basic_t info;
-		ZX_ASSERT(ZX_OK == zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
-		handle_koids.push_back(info.koid);
+		ASSERT_EQ(ZX_OK, zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		{{ .HandleKoidVectorName }}.push_back(info.koid);
 	}
 	{{- end }}
 	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
@@ -144,7 +144,7 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, HandleDefs                               string
+	Name, HandleDefs, HandleKoidVectorName         string
 	ValueBuild, ValueVar, ValueType                string
 	EqualityInputVar, EqualityBuild, EqualityValue string
 	Bytes, Handles                                 string
@@ -235,6 +235,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeSuccess.HandleDefs)
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", decodeSuccess.Value, decl, libllcpp.HandleReprInfo)
 		equalityInputVar := "actual"
+		handleKoidVectorName := "handle_koids"
 		equalityBuild, EqualityValue := libllcpp.BuildEqualityCheck(equalityInputVar, decodeSuccess.Value, decl, "handle_koids")
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
@@ -242,17 +243,18 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:             testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:       handleDefs,
-				ValueBuild:       valueBuild,
-				ValueVar:         valueVar,
-				ValueType:        libllcpp.ConformanceType(gidlir.TypeFromValue(decodeSuccess.Value)),
-				EqualityInputVar: equalityInputVar,
-				EqualityBuild:    equalityBuild,
-				EqualityValue:    EqualityValue,
-				Bytes:            libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:          libhlcpp.BuildRawHandleInfos(encoding.Handles),
-				FuchsiaOnly:      fuchsiaOnly,
+				Name:                 testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:           handleDefs,
+				ValueBuild:           valueBuild,
+				ValueVar:             valueVar,
+				ValueType:            libllcpp.ConformanceType(gidlir.TypeFromValue(decodeSuccess.Value)),
+				EqualityInputVar:     equalityInputVar,
+				EqualityBuild:        equalityBuild,
+				EqualityValue:        EqualityValue,
+				Bytes:                libhlcpp.BuildBytes(encoding.Bytes),
+				Handles:              libhlcpp.BuildRawHandleInfos(encoding.Handles),
+				FuchsiaOnly:          fuchsiaOnly,
+				HandleKoidVectorName: handleKoidVectorName,
 			})
 		}
 	}

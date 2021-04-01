@@ -348,14 +348,14 @@ func BuildBytes(bytes []byte) string {
 	return builder.String()
 }
 
-func buildRawHandleImpl(handles []gidlir.Handle, handleType string) string {
+func buildRawHandleImpl(handles []gidlir.Handle, handleType, handleExtractOp string) string {
 	if len(handles) == 0 {
 		return fmt.Sprintf("std::vector<%s>{}", handleType)
 	}
 	var builder strings.Builder
 	builder.WriteString(fmt.Sprintf("std::vector<%s>{\n", handleType))
 	for i, h := range handles {
-		builder.WriteString(fmt.Sprintf("handle_defs[%d],", h))
+		builder.WriteString(fmt.Sprintf("handle_defs[%d]%s,", h, handleExtractOp))
 		if i%8 == 7 {
 			builder.WriteString("\n")
 		}
@@ -365,11 +365,15 @@ func buildRawHandleImpl(handles []gidlir.Handle, handleType string) string {
 }
 
 func BuildRawHandles(handles []gidlir.Handle) string {
-	return buildRawHandleImpl(handles, "zx_handle_t")
+	return buildRawHandleImpl(handles, "zx_handle_t", "")
+}
+
+func BuildRawHandlesFromHandleInfos(handles []gidlir.Handle) string {
+	return buildRawHandleImpl(handles, "zx_handle_t", ".handle")
 }
 
 func BuildRawHandleInfos(handles []gidlir.Handle) string {
-	return buildRawHandleImpl(handles, "zx_handle_info_t")
+	return buildRawHandleImpl(handles, "zx_handle_info_t", "")
 }
 
 func BuildRawHandleDispositions(handle_dispositions []gidlir.HandleDisposition) string {

@@ -881,7 +881,7 @@ zx_handle_info_t{
 	std::vector<zx_koid_t> handle_koids;
 	for (zx_handle_info_t def : handle_defs) {
 		zx_info_handle_basic_t info;
-		ZX_ASSERT(ZX_OK == zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		ASSERT_EQ(ZX_OK, zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
 		handle_koids.push_back(info.koid);
 	}
 	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
@@ -926,7 +926,7 @@ zx_handle_info_t{
 	std::vector<zx_koid_t> handle_koids;
 	for (zx_handle_info_t def : handle_defs) {
 		zx_info_handle_basic_t info;
-		ZX_ASSERT(ZX_OK == zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		ASSERT_EQ(ZX_OK, zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
 		handle_koids.push_back(info.koid);
 	}
 	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;

@@ -56,18 +56,18 @@ TEST(Conformance, {{ .Name }}_Encode) {
 TEST(Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const auto handle_defs = {{ .HandleDefs }};
+	std::vector<zx_koid_t> {{ .HandleKoidVectorName }};
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ASSERT_OK(zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		{{ .HandleKoidVectorName }}.push_back(info.koid);
+	}
 	{{- end }}
-	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
-	auto value = fidl::test::util::DecodedBytes<{{ .ValueType }}>(std::move(bytes), std::move(handles));
-	{{- if not .IsResourceType }}
-	{{- /*
-		We currently cannot check equality for resource types.
-		TODO(fxbug.dev/71467) Enable some form of equality for resource types.
-		*/}}
-	ASSERT_TRUE(fidl::Equals(value, {{ .ValueVar }}));
-	{{- end }}
+	auto {{ .ActualValueVar }} =
+	    fidl::test::util::DecodedBytes<{{ .ValueType }}>(std::move(bytes), std::move(handles));
+	{{ .EqualityCheck }}
 	{{- /* The handles are closed in the destructor of .ValueVar */}}
 	fidl::test::util::ForgetHandles(std::move(value));
 }
@@ -136,8 +136,8 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, HandleDefs, ValueType, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly, IsResourceType                                       bool
+	Name, HandleDefs, ValueType, ActualValueVar, EqualityCheck, Bytes, Handles, HandleKoidVectorName string
+	FuchsiaOnly                                                                                      bool
 }
 
 type encodeFailureCase struct {
@@ -220,28 +220,24 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
 		handleDefs := BuildHandleInfoDefs(decodeSuccess.HandleDefs)
-		valueBuilder := cppValueBuilder{
-			handleExtractOp: ".handle",
-		}
-		valueVar := valueBuilder.visit(decodeSuccess.Value, decl)
-		valueBuild := valueBuilder.String()
+		actualValueVar := "value"
+		handleKoidVectorName := "handle_koids"
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
+		equalityCheck := BuildEqualityCheck(actualValueVar, decodeSuccess.Value, decl, handleKoidVectorName)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				ValueType:   declName(decl),
-				Bytes:       BuildBytes(encoding.Bytes),
-				Handles:     BuildRawHandleInfos(encoding.Handles),
-				FuchsiaOnly: fuchsiaOnly,
-				// Pass in if the type is a resource to disable equality checking.
-				// TODO(fxb/71467) Remove this.
-				IsResourceType: decl.IsResourceType(),
+				Name:                 testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:           handleDefs,
+				ActualValueVar:       actualValueVar,
+				ValueType:            declName(decl),
+				Bytes:                BuildBytes(encoding.Bytes),
+				Handles:              BuildRawHandleInfos(encoding.Handles),
+				FuchsiaOnly:          fuchsiaOnly,
+				EqualityCheck:        equalityCheck,
+				HandleKoidVectorName: handleKoidVectorName,
 			})
 		}
 	}

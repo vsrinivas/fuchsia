@@ -26,6 +26,7 @@ go_library("gopkg") {
     "hlcpp/benchmarks.go",
     "hlcpp/builder.go",
     "hlcpp/conformance.go",
+    "hlcpp/equality_builder.go",
     "ir/error.go",
     "ir/test_case.go",
     "ir/util.go",
