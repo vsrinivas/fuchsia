@@ -5,13 +5,15 @@
 // Helper code for setting up SL4F, running performance tests, and
 // uploading the tests' results to the Catapult performance dashboard.
 
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
 import 'package:args/args.dart';
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
+
+import 'summarize.dart' show summarizeFuchsiaPerfFiles, writeFuchsiaPerfJson;
 
 void enableLoggingOutput() {
   // This is necessary to get information about the commands the tests have
@@ -46,6 +48,7 @@ void runShardTests(List<String> args, List<void Function()> tests) {
 class PerfTestHelper {
   sl4f.Sl4f sl4fDriver;
   sl4f.Performance performance;
+  sl4f.Dump dump;
   sl4f.Storage storage;
   sl4f.Component component;
 
@@ -57,6 +60,7 @@ class PerfTestHelper {
       sl4fDriver.close();
     });
     performance = sl4f.Performance(sl4fDriver);
+    dump = sl4f.Dump();
     storage = sl4f.Storage(sl4fDriver);
     component = sl4f.Component(sl4fDriver);
   }
@@ -67,12 +71,29 @@ class PerfTestHelper {
     return helper;
   }
 
+  // Takes a fuchsiaperf file, specified as a remote filename
+  // (i.e. the path of the file on the Fuchsia device under test).
+  // Publishes this file as results for the current test.
   Future<void> processResults(String resultsFile) async {
     final localResultsFile =
         await storage.dumpFile(resultsFile, 'results', 'fuchsiaperf.json');
 
     await performance.convertResults('runtime_deps/catapult_converter',
         localResultsFile, Platform.environment);
+  }
+
+  // Takes a set of "raw data" fuchsiaperf files, specified as local
+  // files.  Generates a "summary" version of that data, following the
+  // process described in summarize.dart, and publishes that as
+  // results for the current test.
+  Future<void> processResultsSummarized(List<File> jsonFiles) async {
+    final jsonSummaryData = summarizeFuchsiaPerfFiles(jsonFiles);
+
+    final File jsonSummaryFile = dump.createFile('results', 'fuchsiaperf.json');
+    await writeFuchsiaPerfJson(jsonSummaryFile, jsonSummaryData);
+
+    await performance.convertResults('runtime_deps/catapult_converter',
+        jsonSummaryFile, Platform.environment);
   }
 }
 

@@ -33,6 +33,7 @@ foreach(target_name, test_list) {
     sources = [
       "$target_name.dart",
       "helpers.dart",
+      "summarize.dart",
     ]
 
     deps = [
@@ -41,6 +42,7 @@ foreach(target_name, test_list) {
       "//third_party/dart-pkg/pub/logging",
       "//third_party/dart-pkg/pub/meta",
       "//third_party/dart-pkg/pub/test",
+      "//third_party/dart-pkg/pub/tuple",
     ]
 
     non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
@@ -51,6 +53,25 @@ foreach(target_name, test_list) {
     ]
   }
 }
+
+dart_test("summarize_perf_results_test") {
+  sources = [
+    "summarize.dart",
+    "summarize_test.dart",
+  ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/tuple",
+  ]
+
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+}
+test_list += [ "summarize_perf_results_test" ]
 
 flutter_test_list = [
   # fxbug.dev/60742
@@ -102,6 +123,7 @@ foreach(test, shard_test_list) {
       sources = [
         test + ".dart",
         "helpers.dart",
+        "summarize.dart",
       ]
 
       args = [
@@ -115,6 +137,7 @@ foreach(test, shard_test_list) {
         "//third_party/dart-pkg/pub/logging",
         "//third_party/dart-pkg/pub/meta",
         "//third_party/dart-pkg/pub/test",
+        "//third_party/dart-pkg/pub/tuple",
       ]
 
       non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
@@ -203,6 +226,7 @@ group("touch_input_test") {
 dart_test("touch_input_latency_benchmarks_test") {
   sources = [
     "helpers.dart",
+    "summarize.dart",
     "touch_input_latency_benchmarks_test.dart",
   ]
 
@@ -211,6 +235,7 @@ dart_test("touch_input_latency_benchmarks_test") {
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/tuple",
   ]
 
   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
@@ -233,6 +258,7 @@ group("tests") {
 dart_test("touch_input_latency_metric_test") {
   sources = [
     "helpers.dart",
+    "summarize.dart",
     "touch_input_latency_metric_test.dart",
   ]
 
@@ -241,6 +267,7 @@ dart_test("touch_input_latency_metric_test") {
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/tuple",
   ]
 }
 
@@ -249,6 +276,7 @@ dart_test("flutter_startup_time_metric_test") {
     "flutter/flutter_startup_time_metric_test.dart",
     "flutter/helpers.dart",
     "helpers.dart",
+    "summarize.dart",
   ]
 
   deps = [
@@ -258,5 +286,6 @@ dart_test("flutter_startup_time_metric_test") {
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/tuple",
   ]
 }
