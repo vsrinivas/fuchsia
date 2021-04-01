@@ -35,6 +35,7 @@ if (target_cpu == "x64") {
       "//src/lib/syslog/rust:syslog",
       "//src/lib/zerocopy",
       "//src/lib/zircon/rust:fuchsia-zircon",
+      "//src/proc/lib/linux_uapi",
       "//src/sys/lib/library_loader",
       "//src/sys/lib/runner",
       "//third_party/rust_crates:anyhow",
