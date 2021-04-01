@@ -76,6 +76,8 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 		//    seconds to see if the device disconnects. If so, treat it
 		//    like the OTA was successful.
 
+		// We pass createRewriteRule=true for versions of system-update-checker prior to
+		// fxrev.dev/504000. Newer versions need to have `update channel set` called below.
 		server, err := c.ServePackageRepository(ctx, u.repo, "trigger-ota", true)
 		if err != nil {
 			return fmt.Errorf("error setting up server: %w", err)
@@ -86,6 +88,16 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 		c.RegisterDisconnectListener(ch)
 
 		cmd := []string{
+			"/bin/update",
+			"channel",
+			"set",
+			"trigger-ota",
+		}
+		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+			logger.Warningf(ctx, "update channel set failed: %v. This probably indicates the device is running an old version of system-update-checker.", err)
+		}
+
+		cmd = []string{
 			"/bin/update",
 			"check-now",
 			"--monitor",

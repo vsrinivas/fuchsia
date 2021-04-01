@@ -275,7 +275,7 @@ async fn test_update_manager_progress() {
 
     let env = TestEnvBuilder::new().installer(installer).build();
 
-    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update/0").resolve(
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
         &env.proxies
             .resolver
             .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
@@ -392,7 +392,7 @@ async fn test_installation_deferred() {
         )
         .build();
 
-    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update/0").resolve(
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
         &env.proxies
             .resolver
             .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
@@ -471,7 +471,7 @@ async fn test_system_update_checker_crashes_on_commit_status_provider_error() {
         .paver(MockPaverServiceBuilder::new().insert_hook(throttle_hook).build())
         .build();
 
-    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update/0").resolve(
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
         &env.proxies
             .resolver
             .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")

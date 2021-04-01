@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::Error;
+use crate::{errors::Error, update_manager::TargetChannelUpdater};
 use anyhow::{anyhow, Context as _};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_update_ext::Initiator;
@@ -23,12 +23,13 @@ const UPDATE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 // On success, system will reboot before this function returns
 pub async fn apply_system_update<'a>(
     initiator: Initiator,
+    target_channel_updater: &'a dyn TargetChannelUpdater,
 ) -> Result<BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error> {
     let installer_proxy =
         connect_to_service::<InstallerMarker>().context("connecting to component Installer")?;
     let mut update_installer = RealUpdateInstaller { installer_proxy };
 
-    apply_system_update_impl(&mut update_installer, initiator).await
+    apply_system_update_impl(&mut update_installer, initiator, target_channel_updater).await
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -96,6 +97,7 @@ impl UpdateInstaller for RealUpdateInstaller {
 async fn apply_system_update_impl(
     update_installer: &mut impl UpdateInstaller,
     initiator: Initiator,
+    target_channel_updater: &dyn TargetChannelUpdater,
 ) -> Result<BoxStream<'static, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error> {
     fx_log_info!("starting system updater");
     let options = Options {
@@ -106,7 +108,9 @@ async fn apply_system_update_impl(
         should_write_recovery: true,
         allow_attach_to_existing_attempt: true,
     };
-    let update_url = PkgUrl::parse(UPDATE_URL)?;
+    let update_url = PkgUrl::parse(
+        &target_channel_updater.get_target_channel_update_url().unwrap_or(UPDATE_URL.to_owned()),
+    )?;
     let (reboot_controller, reboot_controller_server_end) =
         fidl::endpoints::create_proxy::<RebootControllerMarker>()
             .context("creating reboot controller")?;
@@ -171,6 +175,7 @@ async fn monitor_update_progress(
 #[cfg(test)]
 mod test_apply_system_update_impl {
     use super::*;
+    use crate::update_manager::tests::FakeTargetChannelUpdater;
     use fidl_fuchsia_update_installer::RebootControllerRequest;
     use fidl_fuchsia_update_installer_ext::{
         PrepareFailureReason, Progress, UpdateInfo, UpdateInfoAndProgress,
@@ -220,7 +225,13 @@ mod test_apply_system_update_impl {
     async fn test_call_installer() {
         let mut update_installer = WasCalledUpdateInstaller { was_called: false };
 
-        apply_system_update_impl(&mut update_installer, Initiator::User).await.unwrap();
+        apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap();
         assert!(update_installer.was_called);
     }
 
@@ -255,9 +266,40 @@ mod test_apply_system_update_impl {
     async fn test_call_install_with_right_arguments() {
         let mut update_installer = ArgumentCapturingUpdateInstaller::default();
 
-        apply_system_update_impl(&mut update_installer, Initiator::User).await.unwrap();
+        apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(update_installer.update_url, Some(PkgUrl::parse(UPDATE_URL).unwrap()));
+        assert_eq!(
+            update_installer.options,
+            Some(Options {
+                initiator: installer::Initiator::User,
+                should_write_recovery: true,
+                allow_attach_to_existing_attempt: true,
+            })
+        );
+        assert_matches!(update_installer.reboot_controller_server_end, Some(Some(_)));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_call_install_with_right_arguments_and_target_channel() {
+        let mut update_installer = ArgumentCapturingUpdateInstaller::default();
+
+        let target_url = "fuchsia-pkg://my.update.server.example.com/my-update";
+        apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new_with_update_url(target_url),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(update_installer.update_url, Some(PkgUrl::parse(target_url).unwrap()));
         assert_eq!(
             update_installer.options,
             Some(Options {
@@ -276,8 +318,13 @@ mod test_apply_system_update_impl {
         let state = State::WaitToReboot(UpdateInfoAndProgress::done(info));
         let mut update_installer =
             ArgumentCapturingUpdateInstaller { state: Some(state), ..Default::default() };
-        let mut stream =
-            apply_system_update_impl(&mut update_installer, Initiator::User).await.unwrap();
+        let mut stream = apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap();
         assert_matches!(stream.next().await, Some(Ok(ApplyState::WaitingForReboot(_))));
         assert_matches!(stream.next().now_or_never(), None);
 
@@ -317,13 +364,17 @@ mod test_apply_system_update_impl {
     #[fasync::run_singlethreaded(test)]
     async fn test_does_not_reboot_on_failure() {
         let mut update_installer = FailingUpdateInstaller::default();
-        let (_, error) = apply_system_update_impl(&mut update_installer, Initiator::User)
-            .await
-            .unwrap()
-            .next()
-            .await
-            .unwrap()
-            .unwrap_err();
+        let (_, error) = apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap()
+        .next()
+        .await
+        .unwrap()
+        .unwrap_err();
 
         assert_matches!(error.downcast::<Error>().unwrap(), Error::SystemUpdaterFailed);
     }
@@ -351,11 +402,15 @@ mod test_apply_system_update_impl {
     async fn test_reboot_errors_on_no_service() {
         let mut update_installer = RebootUpdateInstaller;
 
-        let mut results: Vec<_> = apply_system_update_impl(&mut update_installer, Initiator::User)
-            .await
-            .unwrap()
-            .collect()
-            .await;
+        let mut results: Vec<_> = apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap()
+        .collect()
+        .await;
 
         assert_eq!(results.len(), 2);
         // We should have errored out on calling reboot_controller.
@@ -379,7 +434,8 @@ mod test_apply_system_update_impl {
             let mut executor =
                 fasync::Executor::new().expect("create executor in test");
             executor.run_singlethreaded(async move{
-                let result = apply_system_update_impl(&mut update_installer, initiator
+                let result = apply_system_update_impl(&mut update_installer, initiator,
+            &FakeTargetChannelUpdater::new(),
                     ).await;
 
                 prop_assert!(result.is_ok(), "apply_system_update_impl failed: {:?}", result.err());
@@ -449,8 +505,13 @@ mod test_apply_system_update_impl {
             State::WaitToReboot(UpdateInfoAndProgress::done(info)),
         ]);
 
-        let mut stream =
-            apply_system_update_impl(&mut update_installer, Initiator::User).await.unwrap();
+        let mut stream = apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap();
 
         for state in &[
             ApplyState::InstallingUpdate(ApplyProgress::none()),
@@ -480,8 +541,13 @@ mod test_apply_system_update_impl {
             State::Complete(UpdateInfoAndProgress::done(info)),
         ]);
 
-        let mut stream =
-            apply_system_update_impl(&mut update_installer, Initiator::User).await.unwrap();
+        let mut stream = apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap();
 
         for state in &[
             ApplyState::InstallingUpdate(ApplyProgress::none()),
@@ -501,8 +567,13 @@ mod test_apply_system_update_impl {
             State::FailPrepare(PrepareFailureReason::Internal),
         ]);
 
-        let mut stream =
-            apply_system_update_impl(&mut update_installer, Initiator::User).await.unwrap();
+        let mut stream = apply_system_update_impl(
+            &mut update_installer,
+            Initiator::User,
+            &FakeTargetChannelUpdater::new(),
+        )
+        .await
+        .unwrap();
 
         assert_matches!(
             stream.next().await,

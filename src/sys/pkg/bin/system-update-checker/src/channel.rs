@@ -4,6 +4,7 @@
 
 use crate::connect::*;
 use anyhow::anyhow;
+use fidl_fuchsia_boot::ArgumentsMarker;
 use fidl_fuchsia_cobalt::{
     SoftwareDistributionInfo, Status as CobaltStatus, SystemDataUpdaterMarker,
     SystemDataUpdaterProxy,
@@ -209,8 +210,24 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         Self { service_connector, path, target_channel }
     }
 
+    /// Fetch the target channel from vbmeta, if one is present.
+    /// Otherwise, will attempt to guess channel from the current rewrite rules.
     pub async fn update(&self) -> Result<(), anyhow::Error> {
-        let target_channel = self.lookup_target_channel().await?;
+        let target_channel = self.lookup_target_channel_from_vbmeta().await?;
+        if target_channel.is_some()
+            && self.target_channel.lock().as_ref() == target_channel.as_ref()
+        {
+            return Ok(());
+        }
+
+        if let Some(channel) = target_channel {
+            self.set_target_channel(channel).await?;
+            return Ok(());
+        }
+
+        // If no vbmeta channel is present, try using the rewrite rules.
+        // This ensures that the target channel is a sensible value for local builds.
+        let target_channel = self.lookup_target_channel_from_rewrite_engine().await?;
         if self.target_channel.lock().as_ref() == Some(&target_channel) {
             return Ok(());
         }
@@ -218,7 +235,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         self.set_target_channel(target_channel).await
     }
 
-    async fn lookup_target_channel(&self) -> Result<String, anyhow::Error> {
+    async fn lookup_target_channel_from_rewrite_engine(&self) -> Result<String, anyhow::Error> {
         let rewrite_engine = self.service_connector.connect_to_service::<EngineMarker>()?;
         let rewritten: PkgUrl = rewrite_engine
             .test_apply("fuchsia-pkg://fuchsia.com/update/0")
@@ -230,8 +247,19 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         Ok(channel.to_owned())
     }
 
+    async fn lookup_target_channel_from_vbmeta(&self) -> Result<Option<String>, anyhow::Error> {
+        let proxy = self.service_connector.connect_to_service::<ArgumentsMarker>()?;
+        let channel = proxy.get_string("ota_channel").await?;
+        Ok(channel)
+    }
+
     pub fn get_target_channel(&self) -> Option<String> {
         self.target_channel.lock().clone()
+    }
+
+    pub fn get_target_channel_update_url(&self) -> Option<String> {
+        let target_repo_url = self.get_target_channel()?;
+        return Some(format!("fuchsia-pkg://{}/update", target_repo_url));
     }
 
     pub async fn set_target_channel(&self, channel: String) -> Result<(), anyhow::Error> {
@@ -313,6 +341,7 @@ pub enum Error {
 mod tests {
     use super::*;
     use fidl::endpoints::{DiscoverableService, RequestStream};
+    use fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream};
     use fidl_fuchsia_cobalt::{SystemDataUpdaterRequest, SystemDataUpdaterRequestStream};
     use fidl_fuchsia_pkg::{
         RepositoryIteratorRequest, RepositoryManagerRequest, RepositoryManagerRequestStream,
@@ -626,7 +655,10 @@ mod tests {
         let target_channel_path = dir.path().join(TARGET_CHANNEL);
         let current_channel_path = dir.path().join(CURRENT_CHANNEL);
 
-        let target_connector = RewriteServiceConnector::new("fuchsia-pkg://devhost/update/0");
+        let target_connector = ArgumentsServiceConnector::new(
+            "fuchsia-pkg://devhost/update/0",
+            Some("devhost".to_string()),
+        );
         let target_channel_manager =
             TargetChannelManager::new(target_connector.clone(), dir.path());
 
@@ -694,7 +726,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let target_channel_path = dir.path().join(TARGET_CHANNEL);
 
-        let connector = RewriteServiceConnector::new("fuchsia-pkg://devhost/update/0");
+        let connector = ArgumentsServiceConnector::new("fuchsia-pkg://devhost/update/0", None);
         let channel_manager = TargetChannelManager::new(connector.clone(), dir.path());
 
         // First write of the file with the correct data.
@@ -709,8 +741,8 @@ mod tests {
         assert_eq!(channel_manager.get_target_channel(), Some("devhost".to_string()));
         assert_eq!(read_channel(&target_channel_path).unwrap(), "unique");
 
-        // If the update package changes, however, the file will be updated.
-        connector.set("fuchsia-pkg://hello.world.fuchsia.com/update/0");
+        // If the update package changes, or our vbmeta changes, the file will be updated.
+        connector.set(Some("world".to_owned()));
         channel_manager.update().await.expect("channel update to succeed");
         assert_eq!(channel_manager.get_target_channel(), Some("world".to_string()));
         assert_eq!(read_channel(&target_channel_path).unwrap(), "world");
@@ -723,7 +755,8 @@ mod tests {
 
         fs::write(&target_channel_path, r#"invalid json"#).unwrap();
 
-        let connector = RewriteServiceConnector::new("fuchsia-pkg://a.b.c.fuchsia.com/update/0");
+        let connector =
+            ArgumentsServiceConnector::new("fuchsia-pkg://devhost/update/0", Some("b".to_string()));
         let channel_manager = TargetChannelManager::new(connector, dir.path());
 
         assert!(read_channel(&target_channel_path).is_err());
@@ -737,34 +770,79 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let target_channel_path = dir.path().join(TARGET_CHANNEL);
 
-        let connector = RewriteServiceConnector::new("fuchsia-pkg://devhost/update/0");
+        let connector = ArgumentsServiceConnector::new(
+            "fuchsia-pkg://devhost/update/0",
+            Some("not-target-channel".to_string()),
+        );
         let channel_manager = TargetChannelManager::new(connector, dir.path());
         channel_manager.set_target_channel("target-channel".to_string()).await.unwrap();
         assert_eq!(channel_manager.get_target_channel(), Some("target-channel".to_string()));
         assert_eq!(read_channel(&target_channel_path).unwrap(), "target-channel");
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_channel_manager_update_uses_vbmeta() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let connector = ArgumentsServiceConnector::new(
+            "fuchsia-pkg://devhost/update/0",
+            Some("not-devhost".to_string()),
+        );
+        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        channel_manager.update().await.unwrap();
+        assert_eq!(channel_manager.get_target_channel(), Some("not-devhost".to_string()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_channel_manager_update_falls_back_to_rewrite_engine() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let connector = ArgumentsServiceConnector::new(
+            "fuchsia-pkg://my-cool-package-server.example.com/update/0",
+            None,
+        );
+        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        channel_manager.update().await.unwrap();
+        assert_eq!(
+            channel_manager.get_target_channel(),
+            Some("my-cool-package-server.example.com".to_string())
+        );
+    }
+
     #[derive(Clone)]
-    struct RewriteServiceConnector {
-        target: Arc<Mutex<String>>,
+    struct ArgumentsServiceConnector {
+        ota_channel: Arc<Mutex<Option<String>>>,
+        update_url: Arc<Mutex<String>>,
     }
 
-    impl RewriteServiceConnector {
-        fn new(target: impl Into<String>) -> Self {
-            Self { target: Arc::new(Mutex::new(target.into())) }
+    impl ArgumentsServiceConnector {
+        fn new<'a>(update_url: impl Into<String>, ota_channel: Option<String>) -> Self {
+            Self {
+                ota_channel: Arc::new(Mutex::new(ota_channel)),
+                update_url: Arc::new(Mutex::new(update_url.into())),
+            }
         }
-        fn set(&self, target: impl Into<String>) {
-            *self.target.lock() = target.into();
+        fn set(&self, target: Option<String>) {
+            *self.ota_channel.lock() = target;
         }
-    }
+        fn handle_arguments_stream(&self, mut stream: ArgumentsRequestStream) {
+            let channel = self.ota_channel.lock().clone();
+            fasync::Task::local(async move {
+                while let Some(req) = stream.try_next().await.unwrap() {
+                    match req {
+                        ArgumentsRequest::GetString { key, responder } => {
+                            assert_eq!(&key, "ota_channel");
+                            responder.send(channel.as_deref()).unwrap();
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            })
+            .detach();
+        }
 
-    impl ServiceConnect for RewriteServiceConnector {
-        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, anyhow::Error> {
-            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<S>().unwrap();
-            assert_eq!(S::SERVICE_NAME, EngineMarker::SERVICE_NAME);
-            let mut stream: EngineRequestStream = stream.cast_stream();
-
-            let target = self.target.lock().clone();
+        fn handle_engine_stream(&self, mut stream: EngineRequestStream) {
+            let target = self.update_url.lock().clone();
             fasync::Task::local(async move {
                 while let Some(req) = stream.try_next().await.unwrap() {
                     match req {
@@ -778,6 +856,17 @@ mod tests {
                 }
             })
             .detach();
+        }
+    }
+
+    impl ServiceConnect for ArgumentsServiceConnector {
+        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, anyhow::Error> {
+            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<S>().unwrap();
+            match S::SERVICE_NAME {
+                ArgumentsMarker::SERVICE_NAME => self.handle_arguments_stream(stream.cast_stream()),
+                EngineMarker::SERVICE_NAME => self.handle_engine_stream(stream.cast_stream()),
+                _ => panic!("Unsupported service {}", S::DEBUG_NAME),
+            }
             Ok(proxy)
         }
     }

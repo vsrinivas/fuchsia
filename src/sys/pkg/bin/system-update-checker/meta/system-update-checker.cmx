@@ -20,6 +20,7 @@
             "system"
         ],
         "services": [
+            "fuchsia.boot.Arguments",
             "fuchsia.cobalt.SystemDataUpdater",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageResolver",

@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::{self, Error};
+use crate::{
+    errors::{self, Error},
+    update_manager::TargetChannelUpdater,
+};
 use anyhow::{anyhow, Context as _};
 use fidl_fuchsia_paver::{Asset, BootManagerMarker, DataSinkMarker, PaverMarker, PaverProxy};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
@@ -13,7 +16,7 @@ use fuchsia_zircon as zx;
 use std::{cmp::min, convert::TryInto as _, io};
 use update_package::{ImageType, UpdatePackage};
 
-const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
+const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum SystemUpdateStatus {
@@ -23,6 +26,7 @@ pub enum SystemUpdateStatus {
 
 pub async fn check_for_system_update(
     last_known_update_package: Option<&Hash>,
+    target_channel_manager: &dyn TargetChannelUpdater,
 ) -> Result<SystemUpdateStatus, Error> {
     let mut file_system = RealFileSystem;
     let package_resolver =
@@ -33,6 +37,7 @@ pub async fn check_for_system_update(
         &mut file_system,
         &package_resolver,
         &paver,
+        target_channel_manager,
         last_known_update_package,
     )
     .await
@@ -59,9 +64,10 @@ async fn check_for_system_update_impl(
     file_system: &mut impl FileSystem,
     package_resolver: &impl PackageResolverProxyInterface,
     paver: &PaverProxy,
+    target_channel_manager: &dyn TargetChannelUpdater,
     last_known_update_package: Option<&Hash>,
 ) -> Result<SystemUpdateStatus, crate::errors::Error> {
-    let update_pkg = latest_update_package(package_resolver).await?;
+    let update_pkg = latest_update_package(package_resolver, target_channel_manager).await?;
     let latest_update_merkle = update_pkg.hash().await.map_err(errors::UpdatePackage::Hash)?;
     let current_system_image = current_system_image_merkle(file_system)?;
     let latest_system_image = latest_system_image_merkle(&update_pkg).await?;
@@ -120,11 +126,13 @@ fn current_system_image_merkle(
 
 async fn latest_update_package(
     package_resolver: &impl PackageResolverProxyInterface,
+    channel_manager: &dyn TargetChannelUpdater,
 ) -> Result<UpdatePackage, errors::UpdatePackage> {
     let (dir_proxy, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(errors::UpdatePackage::CreateDirectoryProxy)?;
-    let fut =
-        package_resolver.resolve(&UPDATE_PACKAGE_URL, &mut vec![].into_iter(), dir_server_end);
+    let update_package =
+        channel_manager.get_target_channel_update_url().unwrap_or(UPDATE_PACKAGE_URL.to_owned());
+    let fut = package_resolver.resolve(&update_package, &mut vec![].into_iter(), dir_server_end);
     let () = fut
         .await
         .map_err(errors::UpdatePackage::ResolveFidl)?
@@ -201,6 +209,7 @@ fn compare_buffer(
 #[cfg(test)]
 pub mod test_check_for_system_update_impl {
     use super::*;
+    use crate::update_manager::tests::FakeTargetChannelUpdater;
     use fidl_fuchsia_paver::Configuration;
     use fidl_fuchsia_pkg::{
         PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
@@ -210,7 +219,7 @@ pub mod test_check_for_system_update_impl {
     use maplit::hashmap;
     use matches::assert_matches;
     use mock_paver::MockPaverServiceBuilder;
-    use std::{collections::hash_map::HashMap, fs, io::Write, sync::Arc};
+    use std::{collections::hash_map::HashMap, fs, sync::Arc};
 
     const ACTIVE_SYSTEM_IMAGE_MERKLE: &str =
         "0000000000000000000000000000000000000000000000000000000000000000";
@@ -251,66 +260,116 @@ pub mod test_check_for_system_update_impl {
         }
     }
 
+    pub struct PackageResolverProxyTempDirBuilder {
+        temp_dir: tempfile::TempDir,
+        expected_package_url: String,
+        write_packages_json: bool,
+        packages: Vec<String>,
+        images: HashMap<String, Vec<u8>>,
+    }
+
+    impl PackageResolverProxyTempDirBuilder {
+        const VBMETA_NAME: &'static str = "fuchsia.vbmeta";
+        const ZBI_NAME: &'static str = "zbi";
+        const ZBI_SIGNED_NAME: &'static str = "zbi.signed";
+        fn new() -> PackageResolverProxyTempDirBuilder {
+            Self {
+                temp_dir: tempfile::tempdir().expect("create temp dir"),
+                expected_package_url: UPDATE_PACKAGE_URL.to_owned(),
+                write_packages_json: false,
+                packages: Vec::new(),
+                images: HashMap::new(),
+            }
+        }
+
+        fn with_packages_json(mut self) -> Self {
+            self.write_packages_json = true;
+            self
+        }
+
+        fn with_system_image_merkle(mut self, merkle: &str) -> Self {
+            assert!(self.write_packages_json);
+            self.packages.push(format!("fuchsia-pkg://fuchsia.com/system_image/0?hash={}", merkle));
+            self
+        }
+
+        fn with_image(mut self, name: &str, value: impl AsRef<[u8]>) -> Self {
+            self.images.insert(name.to_owned(), value.as_ref().to_vec());
+            self
+        }
+
+        fn with_update_url(mut self, url: &str) -> Self {
+            self.expected_package_url = url.to_owned();
+            self
+        }
+
+        fn build(self) -> PackageResolverProxyTempDir {
+            fs::write(self.temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
+                .expect("write meta");
+            if self.write_packages_json {
+                let packages_json = serde_json::json!({
+                    "version": "1",
+                    "content": self.packages
+                })
+                .to_string();
+                eprintln!("{}", packages_json);
+                fs::write(self.temp_dir.path().join("packages.json"), packages_json)
+                    .expect("write packages.json");
+            }
+
+            for (name, image) in self.images.into_iter() {
+                fs::write(self.temp_dir.path().join(name.clone()), image)
+                    .expect(&format!("write {}", name));
+            }
+            PackageResolverProxyTempDir {
+                temp_dir: self.temp_dir,
+                expected_package_url: self.expected_package_url,
+            }
+        }
+    }
+
     pub struct PackageResolverProxyTempDir {
         temp_dir: tempfile::TempDir,
+        expected_package_url: String,
     }
     impl PackageResolverProxyTempDir {
         fn new_with_default_meta() -> PackageResolverProxyTempDir {
-            let temp_dir = tempfile::tempdir().expect("create temp dir");
-            fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
-                .expect("write meta");
-            PackageResolverProxyTempDir { temp_dir }
+            PackageResolverProxyTempDirBuilder::new().build()
         }
 
         fn new_with_empty_packages_json() -> PackageResolverProxyTempDir {
-            let temp_dir = tempfile::tempdir().expect("create temp dir");
-            fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
-                .expect("write meta");
-            let mut packages_json = fs::File::create(
-                temp_dir.path().join("packages.json").to_str().expect("path is utf8"),
-            )
-            .expect("create packages.json");
-            write!(&mut packages_json, r#"{{"version": "1", "content": []}}"#)
-                .expect("write json with no contents");
-            PackageResolverProxyTempDir { temp_dir }
+            PackageResolverProxyTempDirBuilder::new().with_packages_json().build()
         }
 
         fn new_with_latest_system_image(merkle: &str) -> PackageResolverProxyTempDir {
-            let temp_dir = tempfile::tempdir().expect("create temp dir");
-            fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
-                .expect("write meta");
-            let mut packages_json = fs::File::create(
-                temp_dir.path().join("packages.json").to_str().expect("path is utf8"),
-            )
-            .expect("create packages.json");
-            write!(
-                &mut packages_json,
-                r#"{{"version": "1", "content": ["fuchsia-pkg://fuchsia.com/system_image/0?hash={}"]}}"#,
-                merkle
-            )
-            .expect("write to package file");
-            PackageResolverProxyTempDir { temp_dir }
+            PackageResolverProxyTempDirBuilder::new()
+                .with_packages_json()
+                .with_system_image_merkle(merkle)
+                .build()
         }
 
         fn new_with_vbmeta(vbmeta: impl AsRef<[u8]>) -> PackageResolverProxyTempDir {
-            let PackageResolverProxyTempDir { temp_dir } =
-                Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
-            fs::write(temp_dir.path().join("fuchsia.vbmeta"), vbmeta).expect("write vbmeta");
-            PackageResolverProxyTempDir { temp_dir }
+            PackageResolverProxyTempDirBuilder::new()
+                .with_packages_json()
+                .with_system_image_merkle(ACTIVE_SYSTEM_IMAGE_MERKLE)
+                .with_image(PackageResolverProxyTempDirBuilder::VBMETA_NAME, vbmeta)
+                .build()
         }
 
         fn new_with_zbi(zbi: impl AsRef<[u8]>) -> PackageResolverProxyTempDir {
-            let PackageResolverProxyTempDir { temp_dir } =
-                Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
-            fs::write(temp_dir.path().join("zbi"), zbi).expect("write zbi");
-            PackageResolverProxyTempDir { temp_dir }
+            PackageResolverProxyTempDirBuilder::new()
+                .with_packages_json()
+                .with_system_image_merkle(ACTIVE_SYSTEM_IMAGE_MERKLE)
+                .with_image(PackageResolverProxyTempDirBuilder::ZBI_NAME, zbi)
+                .build()
         }
 
         fn new_with_zbi_signed(zbi: impl AsRef<[u8]>) -> PackageResolverProxyTempDir {
-            let PackageResolverProxyTempDir { temp_dir } =
-                Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
-            fs::write(temp_dir.path().join("zbi.signed"), zbi).expect("write zbi");
-            PackageResolverProxyTempDir { temp_dir }
+            PackageResolverProxyTempDirBuilder::new()
+                .with_packages_json()
+                .with_system_image_merkle(ACTIVE_SYSTEM_IMAGE_MERKLE)
+                .with_image(PackageResolverProxyTempDirBuilder::ZBI_SIGNED_NAME, zbi)
+                .build()
         }
     }
     impl PackageResolverProxyInterface for PackageResolverProxyTempDir {
@@ -321,7 +380,7 @@ pub mod test_check_for_system_update_impl {
             selectors: &mut dyn ExactSizeIterator<Item = &str>,
             dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
         ) -> Self::ResolveResponseFut {
-            assert_eq!(package_url, UPDATE_PACKAGE_URL);
+            assert_eq!(package_url, self.expected_package_url);
             assert_eq!(selectors.len(), 0);
             fdio::service_connect(
                 self.temp_dir.path().to_str().expect("path is utf8"),
@@ -344,8 +403,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(result, Err(Error::ReadSystemMeta(_)));
     }
@@ -361,8 +426,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(result, Err(Error::ParseSystemMeta(_)));
     }
@@ -393,8 +464,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(result, Err(Error::UpdatePackage(errors::UpdatePackage::ResolveFidl(_))));
     }
@@ -425,8 +502,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(result, Err(Error::UpdatePackage(errors::UpdatePackage::Resolve(_))));
     }
@@ -457,8 +540,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(result, Err(Error::UpdatePackage(errors::UpdatePackage::Hash(_))));
     }
@@ -470,8 +559,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,
@@ -486,8 +581,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,
@@ -503,8 +604,14 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
         assert_matches!(
             result,
             Err(Error::UpdatePackage(errors::UpdatePackage::ExtractPackagesManifest(_)))
@@ -533,6 +640,7 @@ pub mod test_check_for_system_update_impl {
             &mut file_system,
             &package_resolver,
             &paver,
+            &FakeTargetChannelUpdater::new(),
             Some(&UPDATE_PACKAGE_MERKLE),
         )
         .await;
@@ -568,6 +676,7 @@ pub mod test_check_for_system_update_impl {
             &mut file_system,
             &package_resolver,
             &paver,
+            &FakeTargetChannelUpdater::new(),
             Some(&UPDATE_PACKAGE_MERKLE),
         )
         .await;
@@ -589,8 +698,48 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
+            if
+                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("active system image string literal") &&
+                latest_system_image == NEW_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("new system image string literal")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_update_available_changing_target_channel() {
+        let update_url: &str = "fuchsia-pkg://this.is.a.test.example.com/my-update-package";
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDirBuilder::new()
+            .with_packages_json()
+            .with_system_image_merkle(NEW_SYSTEM_IMAGE_MERKLE)
+            .with_update_url(update_url)
+            .build();
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new_with_update_url(update_url),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,
@@ -618,6 +767,7 @@ pub mod test_check_for_system_update_impl {
             &mut file_system,
             &package_resolver,
             &paver,
+            &FakeTargetChannelUpdater::new(),
             Some(&previous_update_package),
         )
         .await;
@@ -650,8 +800,14 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,
@@ -684,8 +840,14 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,
@@ -718,8 +880,14 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,
@@ -748,8 +916,14 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,
@@ -782,8 +956,14 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result =
-            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
 
         assert_matches!(
             result,

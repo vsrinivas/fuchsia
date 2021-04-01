@@ -383,11 +383,9 @@ where
             }
         );
 
-        self.target_channel_updater.update().await;
-
         match self
             .update_checker
-            .check(self.last_known_update_package.as_ref())
+            .check(self.last_known_update_package.as_ref(), self.target_channel_updater.as_ref())
             .await
             .context("check_for_system_update failed")
         {
@@ -460,7 +458,7 @@ where
 
                 match self
                     .update_applier
-                    .apply(initiator)
+                    .apply(initiator, self.target_channel_updater.as_ref())
                     .await
                     .context("apply_system_update failed")
                 {
@@ -549,6 +547,7 @@ pub trait UpdateChecker: Send + Sync + 'static {
     fn check<'a>(
         &self,
         last_known_update_hash: Option<&'a Hash>,
+        target_channel_manager: &'a dyn TargetChannelUpdater,
     ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>>;
 }
 
@@ -558,14 +557,16 @@ impl UpdateChecker for RealUpdateChecker {
     fn check<'a>(
         &self,
         last_known_update_hash: Option<&'a Hash>,
+        target_channel_manager: &'a dyn TargetChannelUpdater,
     ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>> {
-        check_for_system_update(last_known_update_hash).boxed()
+        check_for_system_update(last_known_update_hash, target_channel_manager).boxed()
     }
 }
 
 // For mocking
 pub trait TargetChannelUpdater: Send + Sync + 'static {
     fn update(&self) -> BoxFuture<'_, ()>;
+    fn get_target_channel_update_url(&self) -> Option<String>;
 }
 
 impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<S> {
@@ -573,6 +574,10 @@ impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<
         TargetChannelManager::update(self)
             .unwrap_or_else(|e| fx_log_err!("while updating target channel: {:#}", anyhow!(e)))
             .boxed()
+    }
+
+    fn get_target_channel_update_url(&self) -> Option<String> {
+        TargetChannelManager::get_target_channel_update_url(self)
     }
 }
 
@@ -594,6 +599,7 @@ pub trait UpdateApplier: Send + Sync + 'static {
     fn apply<'a>(
         &self,
         initiator: Initiator,
+        target_channel_updater: &'a dyn TargetChannelUpdater,
     ) -> BoxFuture<
         'a,
         Result<BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error>,
@@ -606,11 +612,12 @@ impl UpdateApplier for RealUpdateApplier {
     fn apply<'a>(
         &self,
         initiator: Initiator,
+        target_channel_updater: &'a dyn TargetChannelUpdater,
     ) -> BoxFuture<
         'a,
         Result<BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error>,
     > {
-        apply_system_update(initiator).boxed()
+        apply_system_update(initiator, target_channel_updater).boxed()
     }
 }
 
@@ -723,6 +730,7 @@ pub(crate) mod tests {
         fn check<'a>(
             &self,
             _last_known_update_hash: Option<&'a Hash>,
+            _target_channel_updater: &'a dyn TargetChannelUpdater,
         ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>> {
             let check_blocked = Arc::clone(&self.check_blocked);
             let result = (self.result)();
@@ -736,25 +744,27 @@ pub(crate) mod tests {
         }
     }
 
+    const UPDATE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
     #[derive(Clone)]
     pub struct FakeTargetChannelUpdater {
-        call_count: Arc<AtomicU64>,
+        update_url: String,
     }
     impl FakeTargetChannelUpdater {
         pub fn new() -> Self {
-            Self { call_count: Arc::new(AtomicU64::new(0)) }
+            Self::new_with_update_url(UPDATE_URL)
         }
-        pub fn call_count(&self) -> u64 {
-            self.call_count.load(Ordering::SeqCst)
+
+        pub fn new_with_update_url(url: &str) -> Self {
+            Self { update_url: url.to_owned() }
         }
     }
     impl TargetChannelUpdater for FakeTargetChannelUpdater {
         fn update(&self) -> BoxFuture<'_, ()> {
-            let call_count = self.call_count.clone();
-            async move {
-                call_count.fetch_add(1, Ordering::SeqCst);
-            }
-            .boxed()
+            async move {}.boxed()
+        }
+
+        fn get_target_channel_update_url(&self) -> Option<String> {
+            Some(self.update_url.clone())
         }
     }
 
@@ -786,6 +796,7 @@ pub(crate) mod tests {
         fn apply<'a>(
             &self,
             _initiator: Initiator,
+            _target_channel_updater: &'a dyn TargetChannelUpdater,
         ) -> BoxFuture<
             'a,
             Result<
@@ -835,6 +846,7 @@ pub(crate) mod tests {
         fn apply<'a>(
             &self,
             _initiator: Initiator,
+            _target_channel_updater: &'a dyn TargetChannelUpdater,
         ) -> BoxFuture<
             'a,
             Result<
@@ -1301,27 +1313,6 @@ pub(crate) mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_channel_updater_called() {
-        let channel_updater = Arc::new(FakeTargetChannelUpdater::new());
-        let mut manager = UpdateManager::from_checker_and_applier(
-            Arc::clone(&channel_updater),
-            Arc::new(FakeCurrentChannelUpdater::new()),
-            FakeUpdateChecker::new_up_to_date(),
-            UnreachableUpdateApplier,
-            FakeCommitQuerier::new(),
-        )
-        .await
-        .spawn();
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
-
-        let options = CheckOptions::builder().initiator(Initiator::User).build();
-        manager.try_start_update(options, Some(callback)).await.unwrap();
-        let _ = receiver.collect::<Vec<State>>().await;
-
-        assert_eq!(channel_updater.call_count(), 1);
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_update_applier_called_if_update_available() {
         let update_applier = FakeUpdateApplier::new_error();
         let mut manager = FakeUpdateManager::from_checker_and_applier(
@@ -1420,6 +1411,7 @@ pub(crate) mod tests {
         fn check<'a>(
             &self,
             _last_known_update_hash: Option<&'a Hash>,
+            _target_channel_updater: &'a dyn TargetChannelUpdater,
         ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>> {
             let blocker = self.blocker.clone();
             async move {
