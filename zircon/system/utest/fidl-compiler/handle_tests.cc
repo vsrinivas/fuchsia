@@ -17,47 +17,10 @@
 
 namespace {
 
-void AddZxLibraryDep(TestLibrary* lib, SharedAmongstLibraries* shared) {
-  // Include a fake "zx" library with every test.
-  std::string zx = R"FIDL(
-library zx;
-
-enum obj_type : uint32 {
-    NONE = 0;
-    PROCESS = 1;
-    THREAD = 2;
-    VMO = 3;
-    CHANNEL = 4;
-    EVENT = 5;
-    PORT = 6;
-};
-
-bits rights : uint32 {
-    DUPLICATE = 0x00000001;
-    TRANSFER = 0x00000002;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-        rights rights;
-    };
-};
-)FIDL";
-
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
-  TestLibrary zx_lib("zx.fidl", zx, shared, experimental_flags);
-  zx_lib.Compile();
-  lib->AddDependentLibrary(std::move(zx_lib));
-}
-
 TEST(HandleTests, HandleRightsTest) {
-  SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
-
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
@@ -66,9 +29,8 @@ resource struct MyStruct {
     zx.handle:<THREAD, zx.rights.DUPLICATE | zx.rights.TRANSFER> h;
 };
 )FIDL",
-                      std::move(experimental_flags));
-  AddZxLibraryDep(&library, &shared);
-  EXPECT_TRUE(library.Compile());
+                               std::move(experimental_flags));
+  ASSERT_COMPILED(library);
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
@@ -83,11 +45,10 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, NoHandleRightsTest) {
-  SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
@@ -96,9 +57,8 @@ resource struct MyStruct {
     zx.handle:VMO h;
 };
 )FIDL",
-                      std::move(experimental_flags));
+                               std::move(experimental_flags));
 
-  AddZxLibraryDep(&library, &shared);
   EXPECT_TRUE(library.Compile());
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
@@ -110,11 +70,10 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, InvalidHandleRightsTest) {
-  SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
@@ -123,9 +82,8 @@ protocol P {
     Method(zx.handle:<VMO, 1> h);  // rights must be zx.rights-typed.
 };
 )FIDL",
-                      std::move(experimental_flags));
+                               std::move(experimental_flags));
 
-  AddZxLibraryDep(&library, &shared);
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 2);
@@ -134,11 +92,10 @@ protocol P {
 }
 
 TEST(HandleTests, PlainHandleTest) {
-  SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
@@ -147,8 +104,7 @@ resource struct MyStruct {
     zx.handle h;
 };
 )FIDL",
-                      std::move(experimental_flags));
-  AddZxLibraryDep(&library, &shared);
+                               std::move(experimental_flags));
   EXPECT_TRUE(library.Compile());
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
@@ -158,11 +114,10 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, HandleFidlDefinedTest) {
-  SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
@@ -173,9 +128,8 @@ resource struct MyStruct {
   zx.handle:<VMO, zx.rights.TRANSFER> c;
 };
 )FIDL",
-                      std::move(experimental_flags));
+                               std::move(experimental_flags));
 
-  AddZxLibraryDep(&library, &shared);
   EXPECT_TRUE(library.Compile());
   auto a = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
   EXPECT_TRUE(a->handle_subtype_identifier.has_value());
@@ -211,11 +165,10 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, InvalidFidlDefinedHandleSubtype) {
-  SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
@@ -224,9 +177,8 @@ struct MyStruct {
   zx.handle:ZIPPY a;
 };
 )FIDL",
-                      std::move(experimental_flags));
+                               std::move(experimental_flags));
 
-  AddZxLibraryDep(&library, &shared);
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -235,10 +187,9 @@ struct MyStruct {
 }
 
 TEST(HandleTests, DisallowOldHandles) {
-  SharedAmongstLibraries shared;
   fidl::ExperimentalFlags experimental_flags;
 
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
@@ -247,9 +198,8 @@ struct MyStruct {
     handle<vmo> h;
 };
 )FIDL",
-                      std::move(experimental_flags));
+                               std::move(experimental_flags));
 
-  AddZxLibraryDep(&library, &shared);
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);

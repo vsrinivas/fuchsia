@@ -8,58 +8,27 @@
 #include "test_library.h"
 
 namespace {
-std::string Convert(const std::string& in, const std::vector<std::string>& deps,
+std::string Convert(const std::string& source, const std::vector<std::string>& deps,
                     fidl::ExperimentalFlags flags, fidl::utils::Syntax syntax) {
   // Convert the test file, along with its deps, into a flat AST.
-  SharedAmongstLibraries shared;
-  TestLibrary flat_lib("example.fidl", in, &shared, flags);
-
-  // Include a fake "zx" library with every test.
-  std::string zx = R"FIDL(
-library zx;
-
-enum obj_type : uint32 {
-    NONE = 0;
-    PROCESS = 1;
-    THREAD = 2;
-    VMO = 3;
-    CHANNEL = 4;
-    EVENT = 5;
-    PORT = 6;
-};
-
-bits rights : uint32 {
-    DUPLICATE = 0x00000001;
-    TRANSFER = 0x00000002;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-        rights rights;
-    };
-};
-)FIDL";
-  TestLibrary zx_lib("zx.fidl", zx, &shared, flags);
-  zx_lib.Compile();
-  flat_lib.AddDependentLibrary(std::move(zx_lib));
+  auto flat_lib = WithLibraryZx(source, flags);
 
   for (size_t i = 0; i < deps.size(); i++) {
     std::string dep_name = "dep" + std::to_string(i + 1) + ".fidl";
-    TestLibrary dependency(dep_name, deps[i], &shared, flags);
+    TestLibrary dependency(dep_name, deps[i], flat_lib.OwnedShared(), flags);
     if (!dependency.Compile()) {
-      shared.reporter.PrintReports();
+      flat_lib.PrintReports();
       return "DEPENDENCY_COMPILATION_FAILED: " + dep_name;
     }
     flat_lib.AddDependentLibrary(std::move(dependency));
   }
   if (!flat_lib.Compile()) {
-    shared.reporter.PrintReports();
+    flat_lib.PrintReports();
     return "LIBRARY_COMPILED_FAILED";
   }
 
   // Read the file again, and convert it into a raw AST.
-  TestLibrary raw_lib("example.fidl", in, flags);
+  TestLibrary raw_lib(source, flags);
   std::unique_ptr<fidl::raw::File> ast;
   raw_lib.Parse(&ast);
 

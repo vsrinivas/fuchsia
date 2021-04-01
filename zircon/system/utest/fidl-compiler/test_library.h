@@ -56,7 +56,7 @@ fidl::raw::Ordinal64 GetGeneratedOrdinal64ForTesting(
   return fidl::ordinals::GetGeneratedOrdinal64(library_name, protocol_name, selector_name,
                                                source_element);
 }
-};  // namespace
+}  // namespace
 
 class TestLibrary final {
  public:
@@ -141,7 +141,8 @@ class TestLibrary final {
     // rather than figure out how to make a copy of the initial typespace before it gets modified
     // during the first compilation.
     assert(typespace_ == &owned_shared_.typespace &&
-           "Only compilation starting from the root typespace is supported for CompileAndCheckConversion");
+           "Only compilation starting from the root typespace is supported for "
+           "CompileAndCheckConversion");
 
     if (!Compile())
       return false;
@@ -375,6 +376,16 @@ class TestLibrary final {
     return library_->declaration_order_;
   }
 
+  SharedAmongstLibraries* OwnedShared() {
+    // Assume that the only good reason to obtain the owned shared is if it is
+    // actually being used by the TestLibrary
+    assert(typespace_ == &owned_shared_.typespace &&
+           "typespaces don't match - are you sure this TestLibrary is using owned_shared_?");
+    return &owned_shared_;
+  }
+
+  void PrintReports() { reporter_->PrintReports(); }
+
  protected:
   SharedAmongstLibraries owned_shared_;
   fidl::Reporter* reporter_;
@@ -386,5 +397,7 @@ class TestLibrary final {
   std::vector<fidl::SourceFile*> all_sources_;
   std::unique_ptr<fidl::flat::Library> library_;
 };
+
+TestLibrary WithLibraryZx(const std::string& source_code, fidl::ExperimentalFlags flags);
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_

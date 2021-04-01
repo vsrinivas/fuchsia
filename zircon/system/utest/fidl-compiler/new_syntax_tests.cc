@@ -17,50 +17,6 @@
 
 namespace {
 
-// Tests that use handles need to define a "fake" zx dependency, written in the
-// old syntax. This helper function streamlines that process. It also serves as
-// a good psuedo-test for situations where a library written in the new syntax
-// depends on one written in the old.
-TestLibrary with_fake_zx(const std::string& in, SharedAmongstLibraries& shared,
-                         fidl::ExperimentalFlags flags) {
-  TestLibrary main_lib("example.fidl", in, &shared, flags);
-  fidl::ExperimentalFlags zx_flags;
-  zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
-
-  std::string zx = R"FIDL(
-deprecated_syntax;
-library zx;
-
-const uint32 READ = 8;
-
-enum obj_type : uint32 {
-    NONE = 0;
-    PROCESS = 1;
-    THREAD = 2;
-    VMO = 3;
-    CHANNEL = 4;
-    EVENT = 5;
-    PORT = 6;
-};
-
-bits rights : uint32 {
-  SOME_RIGHT = 1;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-        rights rights;
-    };
-};
-)FIDL";
-  TestLibrary zx_lib("zx.fidl", zx, &shared, zx_flags);
-  zx_lib.Compile();
-  main_lib.AddDependentLibrary(std::move(zx_lib));
-  return main_lib;
-}
-
 TEST(NewSyntaxTests, SyntaxVersionOmitted) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -304,9 +260,7 @@ type TypeDecl = struct {
 TEST(NewSyntaxTests, TypeDeclOfStructLayoutWithResourceness) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  SharedAmongstLibraries shared;
-
-  auto library = with_fake_zx(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
 type t1 = struct {
@@ -316,7 +270,7 @@ type t2 = resource struct {
     f1 zx.handle;
 };
 )FIDL",
-                              shared, std::move(experimental_flags));
+                               std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
 
@@ -332,9 +286,8 @@ type t2 = resource struct {
 TEST(NewSyntaxTests, TypeDeclOfTableLayoutWithResourceness) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  SharedAmongstLibraries shared;
 
-  auto library = with_fake_zx(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
 type t1 = table {
@@ -344,7 +297,7 @@ type t2 = resource table {
     1: f1 zx.handle;
 };
 )FIDL",
-                              shared, std::move(experimental_flags));
+                               std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
 
@@ -378,9 +331,8 @@ type TypeDecl = union {
 TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourceness) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  SharedAmongstLibraries shared;
 
-  auto library = with_fake_zx(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
 type t1 = union {
@@ -390,7 +342,7 @@ type t2 = resource union {
     1: v1 zx.handle;
 };
 )FIDL",
-                              shared, std::move(experimental_flags));
+                               std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
 
@@ -444,9 +396,8 @@ type t3 = strict union {
 TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourcenessAndStrictness) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  SharedAmongstLibraries shared;
 
-  auto library = with_fake_zx(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
 type t1 = resource flexible union {
@@ -462,7 +413,7 @@ type t4 = strict resource union {
     1: v1 zx.handle;
 };
 )FIDL",
-                              shared, std::move(experimental_flags));
+                               std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
 
@@ -643,12 +594,11 @@ TEST(NewSyntaxTests, LayoutMemberConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
-  SharedAmongstLibraries shared;
 
   // TODO(fxbug.dev/65978): a number of fields in this struct declaration have
   //  been commented out until their respective features (client/server_end)
   //  have been added to the compiler.
-  auto library = with_fake_zx(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
 type t1 = resource struct {
@@ -656,8 +606,8 @@ type t1 = resource struct {
   h1 zx.handle:optional;
   h2 zx.handle:VMO;
   h3 zx.handle:[VMO,optional];
-  h4 zx.handle:[VMO,zx.rights.SOME_RIGHT];
-  h5 zx.handle:[VMO,zx.rights.SOME_RIGHT,optional];
+  h4 zx.handle:[VMO,zx.rights.DUPLICATE];
+  h5 zx.handle:[VMO,zx.rights.DUPLICATE,optional];
   u7 union { 1: b bool; };
   u8 union { 1: b bool; }:optional;
   v9 vector<bool>;
@@ -670,7 +620,7 @@ type t1 = resource struct {
   //r16 server_end:[MyProtocol,optional];
 };
 )FIDL",
-                              shared, std::move(experimental_flags));
+                               std::move(experimental_flags));
   ASSERT_COMPILED(library);
 
   auto type_decl = library.LookupStruct("t1");
@@ -939,9 +889,8 @@ TEST(NewSyntaxTests, ConstraintsOnHandles) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
-  SharedAmongstLibraries shared;
 
-  auto library = with_fake_zx(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
 
@@ -950,11 +899,11 @@ type TypeDecl = resource struct {
   h1 zx.handle:VMO;
   h2 zx.handle:optional;
   h3 zx.handle:[VMO,optional];
-  h4 zx.handle:[VMO,zx.rights.SOME_RIGHT];
-  h5 zx.handle:[VMO,zx.rights.SOME_RIGHT,optional];
+  h4 zx.handle:[VMO,zx.rights.TRANSFER];
+  h5 zx.handle:[VMO,zx.rights.TRANSFER,optional];
 };
 )FIDL",
-                              shared, std::move(experimental_flags));
+                               std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
