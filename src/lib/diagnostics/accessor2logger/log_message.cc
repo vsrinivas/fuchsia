@@ -23,6 +23,8 @@ namespace {
 const char kPidLabel[] = "pid";
 const char kTidLabel[] = "tid";
 const char kTagLabel[] = "tag";
+const char kFileLabel[] = "file";
+const char kLineLabel[] = "line";
 const char kTagsLabel[] = "tags";
 const char kMessageLabel[] = "message";
 
@@ -99,14 +101,16 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
       return fit::error("Expected payload.root to be an object if present");
     }
   }
-
+  std::string msg;
+  std::string filename;
+  std::optional<int> line_number;
   for (auto it = payload->value.MemberBegin(); it != payload->value.MemberEnd(); ++it) {
     if (!it->name.IsString()) {
       return fit::error("A key is not a string");
     }
     std::string name = it->name.GetString();
     if (name == kMessageLabel && it->value.IsString()) {
-      ret.msg = std::move(it->value.GetString());
+      msg = std::move(it->value.GetString());
     } else if (name == kTagLabel) {
       // TODO(fxbug.dev/63007): Parse only "tags"
       if (!it->value.IsString()) {
@@ -131,6 +135,10 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
       ret.tid = it->value.GetUint64();
     } else if (name == kPidLabel && it->value.IsUint64()) {
       ret.pid = it->value.GetUint64();
+    } else if (name == kFileLabel && it->value.IsString()) {
+      filename = it->value.GetString();
+    } else if (name == kLineLabel && it->value.IsUint64()) {
+      line_number = it->value.GetUint64();
     } else {
       // If the name of the field is not a known special field, treat it as a key/value pair and
       // append to the message.
@@ -148,6 +156,12 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
       }
     }
   }
+  if (!filename.empty() && line_number.has_value()) {
+    std::stringstream enc;
+    enc << "[" << filename << "(" << line_number.value() << ")] ";
+    ret.msg = enc.str();
+  }
+  ret.msg += msg;
 
   ret.msg += kv_mapping.str();
 

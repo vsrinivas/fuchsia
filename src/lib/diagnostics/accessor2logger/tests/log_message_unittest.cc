@@ -419,8 +419,9 @@ TEST(LogMessage, FileValidation) {
 TEST(LogMessage, MessageFormatting) {
   std::vector<ValidationTestCase> cases;
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"message": "Hello, world"})"),
-      .expected_message = "Hello, world",
+      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE,
+                                 R"({"message": "Hello, world", "file":"test.cc", "line":420})"),
+      .expected_message = "[test.cc(420)] Hello, world",
   });
   cases.emplace_back(ValidationTestCase{
       .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"message": "Hello, world", "kv": "ok"})"),
