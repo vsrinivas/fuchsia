@@ -18,7 +18,7 @@ namespace fs {
 
 zx_status_t Vfs::UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
                                zx::time deadline) {
-  fio::DirectoryAdmin::ResultOf::Unmount result(handle, deadline.get());
+  fidl::WireResult<fio::DirectoryAdmin::Unmount> result(handle, deadline.get());
   if (!result.ok()) {
     return result.status();
   }

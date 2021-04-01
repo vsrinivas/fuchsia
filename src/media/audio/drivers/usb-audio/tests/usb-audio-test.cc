@@ -270,7 +270,7 @@ TEST(UsbAudioTest, GetStreamProperties) {
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
   audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
-  audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   auto result = audio_fidl::StreamConfig::Call::GetProperties(ch->channel);
@@ -297,7 +297,7 @@ TEST(UsbAudioTest, SetAndGetGain) {
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
   audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
-  audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   constexpr float kTestGain = -12.f;
@@ -326,7 +326,7 @@ TEST(UsbAudioTest, Enumerate) {
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
   audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
@@ -369,7 +369,7 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
   audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
@@ -395,7 +395,7 @@ TEST(UsbAudioTest, RingBuffer) {
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
   audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
-  audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();

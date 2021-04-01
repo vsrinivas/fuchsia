@@ -159,13 +159,14 @@ TEST(SvchostTest, FuchsiaKernelStatsPresent) {
   ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
 
   fuchsia_kernel::Stats::SyncClient stats_client(std::move(client));
-  fuchsia_kernel::Stats::ResultOf::GetMemoryStats mem_result = stats_client.GetMemoryStats();
+  fidl::WireResult<fuchsia_kernel::Stats::GetMemoryStats> mem_result =
+      stats_client.GetMemoryStats();
   ASSERT_EQ(ZX_OK, mem_result.status(), "GetMemoryStats failed");
 
   auto mem_stats = mem_result.Unwrap();
   ASSERT_GT(mem_stats->stats.total_bytes(), 0);
 
-  fuchsia_kernel::Stats::ResultOf::GetCpuStats cpu_result = stats_client.GetCpuStats();
+  fidl::WireResult<fuchsia_kernel::Stats::GetCpuStats> cpu_result = stats_client.GetCpuStats();
   ASSERT_EQ(ZX_OK, cpu_result.status(), "GetCpuStats failed");
 
   auto cpu_stats = cpu_result.Unwrap();

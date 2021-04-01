@@ -879,24 +879,6 @@ class SimpleProtocol final {
   using AddRequest =
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using Add = ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using Add =
-        ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_nullable::SimpleProtocol>|, avoiding setting

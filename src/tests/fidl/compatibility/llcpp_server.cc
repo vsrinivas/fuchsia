@@ -31,14 +31,14 @@ class EchoClientApp {
 
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
 
-  Echo::ResultOf::EchoStruct EchoStruct(wire::Struct value, ::fidl::StringView forward_to_server) {
+  fidl::WireResult<Echo::EchoStruct> EchoStruct(wire::Struct value,
+                                                ::fidl::StringView forward_to_server) {
     return client_.EchoStruct(std::move(value), std::move(forward_to_server));
   }
 
-  Echo::ResultOf::EchoStructWithError EchoStructWithError(wire::Struct value,
-                                                          wire::default_enum err,
-                                                          ::fidl::StringView forward_to_server,
-                                                          wire::RespondWith result_variant) {
+  fidl::WireResult<Echo::EchoStructWithError> EchoStructWithError(
+      wire::Struct value, wire::default_enum err, ::fidl::StringView forward_to_server,
+      wire::RespondWith result_variant) {
     return client_.EchoStructWithError(std::move(value), err, std::move(forward_to_server),
                                        result_variant);
   }
@@ -52,60 +52,56 @@ class EchoClientApp {
     return client_.HandleOneEvent(event_handler).status();
   }
 
-  Echo::UnownedResultOf::EchoArrays EchoArrays(::fidl::BufferSpan request_buffer,
-                                               wire::ArraysStruct value,
-                                               ::fidl::StringView forward_to_server,
-                                               ::fidl::BufferSpan response_buffer) {
+  fidl::WireUnownedResult<Echo::EchoArrays> EchoArrays(::fidl::BufferSpan request_buffer,
+                                                       wire::ArraysStruct value,
+                                                       ::fidl::StringView forward_to_server,
+                                                       ::fidl::BufferSpan response_buffer) {
     return client_.EchoArrays(request_buffer, std::move(value), std::move(forward_to_server),
                               response_buffer);
   }
 
-  Echo::ResultOf::EchoArraysWithError EchoArraysWithError(wire::ArraysStruct value,
-                                                          wire::default_enum err,
-                                                          ::fidl::StringView forward_to_server,
-                                                          wire::RespondWith result_variant) {
+  fidl::WireResult<Echo::EchoArraysWithError> EchoArraysWithError(
+      wire::ArraysStruct value, wire::default_enum err, ::fidl::StringView forward_to_server,
+      wire::RespondWith result_variant) {
     return client_.EchoArraysWithError(std::move(value), err, std::move(forward_to_server),
                                        result_variant);
   }
 
-  Echo::ResultOf::EchoVectors EchoVectors(wire::VectorsStruct value,
-                                          ::fidl::StringView forward_to_server) {
+  fidl::WireResult<Echo::EchoVectors> EchoVectors(wire::VectorsStruct value,
+                                                  ::fidl::StringView forward_to_server) {
     return client_.EchoVectors(std::move(value), std::move(forward_to_server));
   }
 
-  Echo::ResultOf::EchoVectorsWithError EchoVectorsWithError(wire::VectorsStruct value,
-                                                            wire::default_enum err,
-                                                            ::fidl::StringView forward_to_server,
-                                                            wire::RespondWith result_variant) {
+  fidl::WireResult<Echo::EchoVectorsWithError> EchoVectorsWithError(
+      wire::VectorsStruct value, wire::default_enum err, ::fidl::StringView forward_to_server,
+      wire::RespondWith result_variant) {
     return client_.EchoVectorsWithError(std::move(value), err, std::move(forward_to_server),
                                         result_variant);
   }
 
-  Echo::UnownedResultOf::EchoTable EchoTable(::fidl::BufferSpan request_buffer,
-                                             wire::AllTypesTable value,
-                                             ::fidl::StringView forward_to_server,
-                                             ::fidl::BufferSpan response_buffer) {
+  fidl::WireUnownedResult<Echo::EchoTable> EchoTable(::fidl::BufferSpan request_buffer,
+                                                     wire::AllTypesTable value,
+                                                     ::fidl::StringView forward_to_server,
+                                                     ::fidl::BufferSpan response_buffer) {
     return client_.EchoTable(request_buffer, std::move(value), std::move(forward_to_server),
                              response_buffer);
   }
 
-  Echo::UnownedResultOf::EchoTableWithError EchoTableWithError(::fidl::BufferSpan request_buffer,
-                                                               wire::AllTypesTable value,
-                                                               wire::default_enum err,
-                                                               ::fidl::StringView forward_to_server,
-                                                               wire::RespondWith result_variant,
-                                                               ::fidl::BufferSpan response_buffer) {
+  fidl::WireUnownedResult<Echo::EchoTableWithError> EchoTableWithError(
+      ::fidl::BufferSpan request_buffer, wire::AllTypesTable value, wire::default_enum err,
+      ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
+      ::fidl::BufferSpan response_buffer) {
     return client_.EchoTableWithError(request_buffer, std::move(value), err,
                                       std::move(forward_to_server), result_variant,
                                       response_buffer);
   }
 
-  Echo::ResultOf::EchoXunions EchoXunions(::fidl::VectorView<wire::AllTypesXunion> value,
-                                          ::fidl::StringView forward_to_server) {
+  fidl::WireResult<Echo::EchoXunions> EchoXunions(::fidl::VectorView<wire::AllTypesXunion> value,
+                                                  ::fidl::StringView forward_to_server) {
     return client_.EchoXunions(std::move(value), std::move(forward_to_server));
   }
 
-  Echo::ResultOf::EchoXunionsWithError EchoXunionsWithError(
+  fidl::WireResult<Echo::EchoXunionsWithError> EchoXunionsWithError(
       ::fidl::VectorView<wire::AllTypesXunion> value, wire::default_enum err,
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
     return client_.EchoXunionsWithError(std::move(value), err, std::move(forward_to_server),

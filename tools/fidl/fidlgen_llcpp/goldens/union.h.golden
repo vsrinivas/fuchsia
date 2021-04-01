@@ -3147,35 +3147,6 @@ class TestProtocol final {
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using StrictXUnionHenceResponseMayBeStackAllocated =
-        ::fidl::WireResult<::fidl_test_union::TestProtocol::
-                               StrictXUnionHenceResponseMayBeStackAllocated>;
-    using FlexibleXUnionHenceResponseMustBeHeapAllocated =
-        ::fidl::WireResult<::fidl_test_union::TestProtocol::
-                               FlexibleXUnionHenceResponseMustBeHeapAllocated>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using StrictXUnionHenceResponseMayBeStackAllocated =
-        ::fidl::WireUnownedResult<
-            ::fidl_test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocated>;
-    using FlexibleXUnionHenceResponseMustBeHeapAllocated =
-        ::fidl::WireUnownedResult<
-            ::fidl_test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocated>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_union::TestProtocol>|,
   // avoiding setting up a client.

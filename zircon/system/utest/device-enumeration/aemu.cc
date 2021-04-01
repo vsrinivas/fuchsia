@@ -62,7 +62,7 @@ zx_status_t FetchTable(const zx::channel& channel, const TableInfo& table,
   }
 
   // Fetch the data.
-  Acpi::ResultOf::ReadNamedTable result =
+  fidl::WireResult<Acpi::ReadNamedTable> result =
       Acpi::Call::ReadNamedTable(channel.borrow(), table.name, 0, std::move(vmo_copy));
   if (!result.ok()) {
     return result.status();
@@ -86,7 +86,7 @@ zx_status_t FetchTable(const zx::channel& channel, const TableInfo& table,
 bool AcpiTableHasKeyword(const zx::channel& acpi_channel, std::string_view table_name,
                          const fbl::Array<uint8_t>& keyword) {
   // List ACPI entries.
-  Acpi::ResultOf::ListTableEntries result =
+  fidl::WireResult<Acpi::ListTableEntries> result =
       Acpi::Call::ListTableEntries(zx::unowned_channel(acpi_channel));
   if (!result.ok()) {
     fprintf(stderr, "Could not list ACPI table entries: %s.\n",

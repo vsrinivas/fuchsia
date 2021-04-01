@@ -392,7 +392,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -446,7 +446,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -616,7 +616,7 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -663,7 +663,7 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -715,7 +715,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -788,7 +788,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -905,7 +905,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -1044,7 +1044,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
@@ -1358,7 +1358,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     ddk::GpioProtocolClient unused_gpio;
     auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
     auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
-    audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+    fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
     audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
@@ -1384,7 +1384,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     ddk::GpioProtocolClient unused_gpio;
     auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
     auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
-    audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+    fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
     audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
@@ -1438,7 +1438,7 @@ TEST_F(AmlG12TdmTest, Inspect) {
   ddk::GpioProtocolClient unused_gpio;
   auto server = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
   auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();

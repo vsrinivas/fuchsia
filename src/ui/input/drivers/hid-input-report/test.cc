@@ -156,7 +156,8 @@ TEST_F(HidDevTest, GetReportDescTest) {
   ASSERT_OK(device_->Bind());
 
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
-  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
+      sync_client.GetDescriptor();
   ASSERT_OK(result.status());
 
   auto& desc = result.Unwrap()->descriptor;
@@ -180,7 +181,8 @@ TEST_F(HidDevTest, ReportDescInfoTest) {
   ASSERT_OK(device_->Bind());
 
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
-  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
+      sync_client.GetDescriptor();
   ASSERT_OK(result.status());
 
   hid_device_info_t info;
@@ -336,7 +338,8 @@ TEST_F(HidDevTest, SensorTest) {
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Get the report descriptor.
-  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
+      sync_client.GetDescriptor();
   ASSERT_OK(result.status());
   fuchsia_input_report::wire::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_sensor());
@@ -473,7 +476,8 @@ TEST_F(HidDevTest, GetTouchPadDescTest) {
   device_->Bind();
 
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
-  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
+      sync_client.GetDescriptor();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->descriptor.has_touch());
   ASSERT_TRUE(result->descriptor.touch().has_input());
@@ -554,7 +558,7 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   fuchsia_input_report::wire::OutputReport output_report(allocator);
   output_report.set_keyboard(allocator, std::move(fidl_keyboard));
   // Send the report.
-  fuchsia_input_report::InputDevice::ResultOf::SendOutputReport response =
+  fidl::WireResult<fuchsia_input_report::InputDevice::SendOutputReport> response =
       sync_client.SendOutputReport(std::move(output_report));
   ASSERT_OK(response.status());
   ASSERT_FALSE(response->result.is_err());
@@ -590,7 +594,8 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Get the report descriptor.
-  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
+      sync_client.GetDescriptor();
   ASSERT_OK(result.status());
   fuchsia_input_report::wire::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_consumer_control());

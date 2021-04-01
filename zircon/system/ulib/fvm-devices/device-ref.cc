@@ -143,7 +143,7 @@ zx_status_t RamdiskRef::Grow(uint64_t target_size) {
 }
 
 void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
-  fuchsia_io::File::ResultOf::WriteAt result =
+  fidl::WireResult<fuchsia_io::File::WriteAt> result =
       fuchsia_io::File::Call::WriteAt(device()->channel(), ToFidlVector(data), offset);
 
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
@@ -152,7 +152,7 @@ void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offse
 }
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
-  fuchsia_io::File::ResultOf::ReadAt result =
+  fidl::WireResult<fuchsia_io::File::ReadAt> result =
       fuchsia_io::File::Call::ReadAt(device()->channel(), out_data->size(), offset);
 
   ASSERT_OK(result.status(), "Failed to communicate with block device.");

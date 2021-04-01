@@ -923,29 +923,6 @@ class Transitional final {
   using SyncEventHandler =
       ::fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using Request =
-        ::fidl::WireResult<::fidl_test_protocols::Transitional::Request>;
-    using OneWay =
-        ::fidl::WireResult<::fidl_test_protocols::Transitional::OneWay>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using Request =
-        ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>;
-    using OneWay =
-        ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::OneWay>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::Transitional>|, avoiding setting up
@@ -1971,37 +1948,6 @@ class ChannelProtocol final {
   using SyncEventHandler =
       ::fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using MethodA =
-        ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA>;
-    using MethodB =
-        ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodB>;
-    using TakeHandle =
-        ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::TakeHandle>;
-    using MutateSocket = ::fidl::WireResult<
-        ::fidl_test_protocols::ChannelProtocol::MutateSocket>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using MethodA = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::ChannelProtocol::MethodA>;
-    using MethodB = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::ChannelProtocol::MethodB>;
-    using TakeHandle = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::ChannelProtocol::TakeHandle>;
-    using MutateSocket = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::ChannelProtocol::MutateSocket>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol>|, avoiding setting
@@ -4060,57 +4006,6 @@ class WithAndWithoutRequestResponse final {
   using SyncEventHandler = ::fidl::WireSyncEventHandler<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using NoRequestNoResponse = ::fidl::WireResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestNoResponse>;
-    using NoRequestEmptyResponse = ::fidl::WireResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestEmptyResponse>;
-    using NoRequestWithResponse = ::fidl::WireResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestWithResponse>;
-    using WithRequestNoResponse = ::fidl::WireResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestNoResponse>;
-    using WithRequestEmptyResponse = ::fidl::WireResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestEmptyResponse>;
-    using WithRequestWithResponse = ::fidl::WireResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestWithResponse>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using NoRequestNoResponse = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestNoResponse>;
-    using NoRequestEmptyResponse = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestEmptyResponse>;
-    using NoRequestWithResponse = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestWithResponse>;
-    using WithRequestNoResponse = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestNoResponse>;
-    using WithRequestEmptyResponse = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestEmptyResponse>;
-    using WithRequestWithResponse = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestWithResponse>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>|,
@@ -7057,33 +6952,6 @@ class WithErrorSyntax final {
   using ErrorAsEnumRequest =
       ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using ResponseAsStruct = ::fidl::WireResult<
-        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>;
-    using ErrorAsPrimitive = ::fidl::WireResult<
-        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
-    using ErrorAsEnum =
-        ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using ResponseAsStruct = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>;
-    using ErrorAsPrimitive = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
-    using ErrorAsEnum = ::fidl::WireUnownedResult<
-        ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax>|, avoiding setting

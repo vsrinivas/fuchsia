@@ -15,9 +15,9 @@ namespace test = ::llcpptest_flexible_test;
 
 // The only difference between StrictUnboundedXUnion and StrictBoundedXUnion is that
 // StrictBoundedXUnion limits the vector payload length to 200 bytes. Therefore, by observing that
-// sizeof(test::ReceiveStrictEnvelope::ResultOf::GetUnboundedXUnion) is less than 200, we can
-// guarantee that the response storage is not inlined. Rather, it is allocated on the heap.
-static_assert(sizeof(test::ReceiveStrictEnvelope::ResultOf::GetUnboundedXUnion) < 200,
+// sizeof(fidl::WireResult<test::ReceiveStrictEnvelope::GetUnboundedXUnion>) is less than 200, we
+// can guarantee that the response storage is not inlined. Rather, it is allocated on the heap.
+static_assert(sizeof(fidl::WireResult<test::ReceiveStrictEnvelope::GetUnboundedXUnion>) < 200,
               "Result of GetUnboundedXUnion should be stored as a pointer to heap allocation");
 
 // GetBoundedXUnion should be inlined, because it is smaller than 512, but bigger than 200, making
@@ -25,7 +25,7 @@ static_assert(sizeof(test::ReceiveStrictEnvelope::ResultOf::GetUnboundedXUnion) 
 // falls below 200, at which point we know it is physically incapable of holding a GetBoundedXUnion
 // inline, so probably used heap allocation. Here we are trying to test this without plumbing extra
 // flags which themselves need to be tested.
-static_assert(sizeof(test::ReceiveStrictEnvelope::ResultOf::GetBoundedXUnion) > 200,
+static_assert(sizeof(fidl::WireResult<test::ReceiveStrictEnvelope::GetBoundedXUnion>) > 200,
               "Result of GetBoundedXUnion should be inlined");
 
 // Implement a special server that returns xunion/tables with unknown ordinals.

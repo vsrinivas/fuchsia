@@ -180,29 +180,6 @@ class EmptyProtocol final {
   using SyncEventHandler =
       ::fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using Send =
-        ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send>;
-    using SendAndReceive = ::fidl::WireResult<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using Send =
-        ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::Send>;
-    using SendAndReceive = ::fidl::WireUnownedResult<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_emptystruct::EmptyProtocol>|, avoiding setting

@@ -162,7 +162,7 @@ int Paver::StreamBuffer() {
 
 namespace {
 
-using WriteFirmwareResult = fuchsia_paver::DataSink::ResultOf::WriteFirmware;
+using WriteFirmwareResult = fidl::WireResult<fuchsia_paver::DataSink::WriteFirmware>;
 
 zx_status_t ProcessWriteFirmwareResult(const WriteFirmwareResult& res, const char* firmware_type) {
   if (!res.ok()) {

@@ -113,7 +113,7 @@ TEST_F(PayloadStreamerTest, ReadEof) {
   EXPECT_OK(register_result.value().status);
 
   {
-    fuchsia_paver::PayloadStream::ResultOf::ReadData call_result = client_->ReadData();
+    fidl::WireResult<fuchsia_paver::PayloadStream::ReadData> call_result = client_->ReadData();
     ASSERT_OK(call_result.status());
     ASSERT_TRUE(call_result->result.is_info());
   }

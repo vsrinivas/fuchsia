@@ -291,7 +291,7 @@ zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
 
   auto keyboard_client = fidl::BindSyncClient(std::move(*client_end));
 
-  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result =
+  fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
       keyboard_client.GetDescriptor();
   if (result.status() != ZX_OK) {
     return result.status();

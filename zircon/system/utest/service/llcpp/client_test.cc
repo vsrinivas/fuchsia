@@ -128,7 +128,7 @@ TEST_F(ClientTest, ConnectsToDefault) {
   ASSERT_TRUE(connect_result.is_ok());
 
   Echo::SyncClient client = fidl::BindSyncClient(std::move(connect_result.value()));
-  Echo::ResultOf::EchoString echo_result = client.EchoString(fidl::StringView("hello"));
+  fidl::WireResult<Echo::EchoString> echo_result = client.EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
   auto response = echo_result.Unwrap();
@@ -149,7 +149,7 @@ TEST_F(ClientTest, ConnectsToOther) {
   ASSERT_TRUE(connect_result.is_ok());
 
   Echo::SyncClient client = fidl::BindSyncClient(std::move(connect_result.value()));
-  Echo::ResultOf::EchoString echo_result = client.EchoString(fidl::StringView("hello"));
+  fidl::WireResult<Echo::EchoString> echo_result = client.EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
   auto response = echo_result.Unwrap();

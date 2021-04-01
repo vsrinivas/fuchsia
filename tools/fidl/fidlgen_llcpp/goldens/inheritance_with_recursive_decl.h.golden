@@ -59,25 +59,6 @@ class Parent final {
   using FirstRequest = ::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using First = ::fidl::WireResult<
-        ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using First = ::fidl::WireUnownedResult<
-        ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>|,
@@ -527,29 +508,6 @@ class Child final {
   using SecondRequest = ::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Child::Second>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using First = ::fidl::WireResult<
-        ::fidl_test_inheritancewithrecursivedecl::Child::First>;
-    using Second = ::fidl::WireResult<
-        ::fidl_test_inheritancewithrecursivedecl::Child::Second>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using First = ::fidl::WireUnownedResult<
-        ::fidl_test_inheritancewithrecursivedecl::Child::First>;
-    using Second = ::fidl::WireUnownedResult<
-        ::fidl_test_inheritancewithrecursivedecl::Child::Second>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>|,

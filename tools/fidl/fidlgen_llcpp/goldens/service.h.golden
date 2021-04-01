@@ -67,25 +67,6 @@ class SecondProtocol final {
   using MethodOnSecondRequest =
       ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using MethodOnSecond =
-        ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using MethodOnSecond = ::fidl::WireUnownedResult<
-        ::fidl_test_service::SecondProtocol::MethodOnSecond>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_service::SecondProtocol>|, avoiding setting up
@@ -422,25 +403,6 @@ class FirstProtocol final {
   using MethodOnFirstRequest =
       ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>;
 #ifdef __Fuchsia__
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-
-   public:
-    using MethodOnFirst =
-        ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>;
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    using MethodOnFirst = ::fidl::WireUnownedResult<
-        ::fidl_test_service::FirstProtocol::MethodOnFirst>;
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_service::FirstProtocol>|,
   // avoiding setting up a client.

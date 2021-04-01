@@ -143,7 +143,7 @@ TEST(HdaStreamTest, GetStreamPropertiesDefaults) {
   ASSERT_OK(stream->Bind());
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   auto result = audio_fidl::StreamConfig::Call::GetProperties(ch->channel);
@@ -180,7 +180,7 @@ TEST(HdaStreamTest, SetAndGetGainDefaults) {
   ASSERT_OK(stream->Bind());
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   {
@@ -215,7 +215,7 @@ TEST(HdaStreamTest, WatchPlugStateDefaults) {
   ASSERT_OK(stream->Bind());
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   auto state = audio_fidl::StreamConfig::Call::WatchPlugState(ch->channel);
@@ -279,7 +279,7 @@ TEST(HdaStreamTest, GetStreamProperties) {
   ASSERT_OK(stream->Bind());
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   auto result = audio_fidl::StreamConfig::Call::GetProperties(ch->channel);
@@ -316,7 +316,7 @@ TEST(HdaStreamTest, SetAndGetGain) {
   ASSERT_OK(stream->Bind());
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   {
@@ -365,7 +365,7 @@ TEST(HdaStreamTest, WatchPlugState) {
   ASSERT_OK(stream->Bind());
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
   {
     auto state = audio_fidl::StreamConfig::Call::WatchPlugState(ch->channel);

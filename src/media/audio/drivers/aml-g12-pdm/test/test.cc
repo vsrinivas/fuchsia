@@ -102,7 +102,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     ASSERT_NOT_NULL(server);
 
     audio_fidl::Device::SyncClient client_wrap(tester_.FidlClient<audio_fidl::Device>());
-    audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+    fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
     ASSERT_EQ(channel_wrap.status(), ZX_OK);
 
     audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
@@ -140,7 +140,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
 
     auto stream = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
     auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
-    audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+    fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
     audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
@@ -207,7 +207,7 @@ TEST_F(AudioStreamInTest, Inspect) {
   ASSERT_NOT_NULL(server);
 
   audio_fidl::Device::SyncClient client_wrap(tester_.FidlClient<audio_fidl::Device>());
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
 
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));

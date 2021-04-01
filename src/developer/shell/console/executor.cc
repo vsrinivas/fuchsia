@@ -34,7 +34,7 @@ Err Executor::Execute(std::unique_ptr<Command> command,
     return Err(ZX_ERR_NEXT, zx_status_get_string(ZX_ERR_NEXT));
   }
   context_id_ += 1;
-  fuchsia_shell::Shell::ResultOf::CreateExecutionContext create_result =
+  fidl::WireResult<fuchsia_shell::Shell::CreateExecutionContext> create_result =
       client_->CreateExecutionContext(context_id_);
   if (!create_result.ok()) {
     return Err(create_result.status(), create_result.error());
@@ -42,13 +42,13 @@ Err Executor::Execute(std::unique_ptr<Command> command,
 
   // TODO: Make sure that add_result is small enough to fit in a single FIDL message.  Otherwise,
   // split it.
-  fuchsia_shell::Shell::ResultOf::AddNodes add_result =
+  fidl::WireResult<fuchsia_shell::Shell::AddNodes> add_result =
       client_->AddNodes(context_id_, command->nodes().DefsAsVectorView());
   if (!add_result.ok()) {
     return Err(add_result.status(), add_result.error());
   }
 
-  fuchsia_shell::Shell::ResultOf::ExecuteExecutionContext execute_result =
+  fidl::WireResult<fuchsia_shell::Shell::ExecuteExecutionContext> execute_result =
       client_->ExecuteExecutionContext(context_id_);
   if (!execute_result.ok()) {
     return Err(execute_result.status(), execute_result.error());

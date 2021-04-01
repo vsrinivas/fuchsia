@@ -85,26 +85,6 @@ class {{ .Name }} final {
   {{- end }}
 
 {{- IfdefFuchsia -}}
-  // Collection of return types of FIDL calls in this protocol.
-  class ResultOf final {
-    ResultOf() = delete;
-   public:
-    {{- range .ClientMethods -}}
-      using {{ .Name }}  = {{ .WireResult }};
-    {{- end }}
-  };
-
-  // Collection of return types of FIDL calls in this protocol,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-
-   public:
-    {{- range .ClientMethods -}}
-    using {{ .Name }} = {{ .WireUnownedResult }};
-    {{- end }}
-  };
-
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
   // avoiding setting up a client.
