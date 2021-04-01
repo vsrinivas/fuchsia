@@ -163,7 +163,8 @@ void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   auto result = camera::FakeLegacyStream::Create(std::move(stream), 0, loop_.dispatcher());
   if (result.is_error()) {
-    FX_PLOGS(ERROR, result.error());
+    // Failing to bind the stream is expected if the stream was destroyed before completing setup.
+    FX_PLOGS(INFO, result.error());
     return;
   }
   stream_ = result.take_value();
