@@ -80,13 +80,11 @@ class super final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_inheritance::super>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::super>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::super>;
   class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::super>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -533,6 +531,7 @@ class ::fidl::internal::WireCaller<::fidl_test_inheritance::super> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -540,6 +539,16 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::super>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritance::super> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -559,6 +568,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_inheritance::super>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritance::super> final {
@@ -686,13 +696,11 @@ class sub final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_inheritance::sub>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::sub>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::sub>;
   class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::sub>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -1133,6 +1141,7 @@ class ::fidl::internal::WireCaller<::fidl_test_inheritance::sub> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1140,6 +1149,16 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::sub>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritance::sub> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1159,6 +1178,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_inheritance::sub>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritance::sub> final {
@@ -1301,18 +1321,6 @@ static_assert(offsetof(::fidl::WireResponse<::fidl_test_inheritance::sub::foo>,
 namespace fidl_test_inheritance {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_inheritance
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::super>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritance::super> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_inheritance {
 
 class ::fidl_test_inheritance::super::fooResponseContext
     : public ::fidl::internal::ResponseContext {
@@ -1436,18 +1444,6 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::super> {
 namespace fidl_test_inheritance {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_inheritance
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::sub>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritance::sub> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_inheritance {
 
 class ::fidl_test_inheritance::sub::fooResponseContext
     : public ::fidl::internal::ResponseContext {

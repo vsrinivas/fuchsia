@@ -3182,14 +3182,12 @@ class TestProtocol final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_union::TestProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_union::TestProtocol>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>;
   class StrictXUnionHenceResponseMayBeStackAllocatedResponseContext;
   class FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_union::TestProtocol>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -4136,6 +4134,7 @@ class ::fidl::internal::WireCaller<::fidl_test_union::TestProtocol> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -4143,6 +4142,16 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_union::TestProtocol> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -4162,6 +4171,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_union::TestProtocol>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
@@ -4806,18 +4816,6 @@ static_assert(std::is_standard_layout_v<
 namespace fidl_test_union {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_union
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_union::TestProtocol> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_union {
 
 class ::fidl_test_union::TestProtocol::
     StrictXUnionHenceResponseMayBeStackAllocatedResponseContext

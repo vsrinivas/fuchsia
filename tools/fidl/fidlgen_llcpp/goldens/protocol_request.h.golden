@@ -135,14 +135,12 @@ class Parent final {
       ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Parent>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Parent>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>;
   class GetChildResponseContext;
   class GetChildRequestResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -1484,6 +1482,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Parent> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1491,6 +1490,16 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocolrequest::Parent> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1510,6 +1519,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocolrequest::Parent>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
@@ -1723,12 +1733,10 @@ class Child final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Child>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Child>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Child>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Child>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -1777,6 +1785,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Child> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1784,6 +1793,16 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocolrequest::Child> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1803,6 +1822,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocolrequest::Child>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Child> final {
@@ -1956,18 +1976,6 @@ static_assert(
 namespace fidl_test_protocolrequest {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_protocolrequest
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocolrequest::Parent> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_protocolrequest {
 
 class ::fidl_test_protocolrequest::Parent::GetChildResponseContext
     : public ::fidl::internal::ResponseContext {
@@ -2159,17 +2167,6 @@ namespace fidl_test_protocolrequest {
 
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocolrequest
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Child>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocolrequest::Child> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_protocolrequest {}  // namespace fidl_test_protocolrequest
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child> final
     : private ::fidl::internal::ClientBase {

@@ -89,13 +89,11 @@ class Top final {
 
   using SyncClient = fidl::WireSyncClient<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
-
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
   class GetFooResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
-
   using Interface = ::fidl::WireInterface<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
 
@@ -594,6 +592,7 @@ class ::fidl::internal::WireCaller<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
       client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -601,6 +600,17 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -623,6 +633,7 @@ class ::fidl::WireSyncEventHandler<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
           client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<
@@ -761,19 +772,6 @@ static_assert(
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 
 class ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
     GetFooResponseContext : public ::fidl::internal::ResponseContext {

@@ -396,14 +396,12 @@ class Protocol final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>;
-
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_requestflexibleenvelope::Protocol>;
   class RequestStrictResponseFlexibleResponseContext;
   class RequestFlexibleResponseStrictResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_requestflexibleenvelope::Protocol>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>;
 
@@ -1404,6 +1402,7 @@ class ::fidl::internal::WireCaller<
   ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
       client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1411,6 +1410,17 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_requestflexibleenvelope::Protocol> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1432,6 +1442,7 @@ class ::fidl::WireSyncEventHandler<
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
@@ -1696,19 +1707,6 @@ static_assert(
 namespace fidl_test_requestflexibleenvelope {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_requestflexibleenvelope
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_requestflexibleenvelope::Protocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_requestflexibleenvelope::Protocol> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_requestflexibleenvelope {
 
 class ::fidl_test_requestflexibleenvelope::Protocol::
     RequestStrictResponseFlexibleResponseContext

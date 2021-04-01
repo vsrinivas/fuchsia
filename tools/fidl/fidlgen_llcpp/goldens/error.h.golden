@@ -318,13 +318,11 @@ class Example final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_error::Example>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_error::Example>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>;
   class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_error::Example>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_error::Example>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -765,12 +763,23 @@ class ::fidl::internal::WireCaller<::fidl_test_error::Example> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_error::Example> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::fidl_test_error::Example> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_error::Example> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -790,6 +799,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_error::Example>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_error::Example> client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_error::Example> final {
@@ -932,18 +942,6 @@ static_assert(offsetof(::fidl::WireResponse<::fidl_test_error::Example::foo>,
 namespace fidl_test_error {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_error
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_error::Example> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_error {
 
 class ::fidl_test_error::Example::fooResponseContext
     : public ::fidl::internal::ResponseContext {

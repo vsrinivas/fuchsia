@@ -861,12 +861,10 @@ class Interface final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_doccomments::Interface>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_doccomments::Interface>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -1208,6 +1206,7 @@ class ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1221,6 +1220,16 @@ class ::fidl::internal::WireEventHandlerInterface<
   virtual void OnEvent(
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>*
           event) {}
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_doccomments::Interface> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1240,6 +1249,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
@@ -1497,17 +1507,6 @@ namespace fidl_test_doccomments {
 
 #ifdef __Fuchsia__
 }  // namespace fidl_test_doccomments
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_doccomments::Interface> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_doccomments {}  // namespace fidl_test_doccomments
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
     : private ::fidl::internal::ClientBase {

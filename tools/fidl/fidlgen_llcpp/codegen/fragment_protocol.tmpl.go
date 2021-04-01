@@ -112,7 +112,13 @@ class {{ .Name }} final {
 
   using SyncClient = fidl::WireSyncClient<{{ . }}>;
 
-{{ template "ClientForwardDeclaration" . }}
+  {{- IfdefFuchsia -}}
+    using AsyncEventHandler = {{ .WireAsyncEventHandler }};
+    {{- range .TwoWayMethods }}
+      class {{ .WireResponseContext.Self }};
+    {{- end }}
+    using ClientImpl = {{ .WireClientImpl }};
+  {{- EndifFuchsia -}}
 
   using Interface = {{ .WireInterface }};
   {{- if .ShouldEmitTypedChannelCascadingInheritance }}
@@ -232,35 +238,7 @@ class {{ .WireCaller }} final {
   ::fidl::UnownedClientEnd<{{ . }}> client_end_;
 };
 
-template<>
-class {{ .WireEventHandlerInterface }} {
-public:
-  {{ .WireEventHandlerInterface.Self }}() = default;
-  virtual ~{{ .WireEventHandlerInterface.Self }}() = default;
-  {{- range .Events -}}
-
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-  virtual void {{ .Name }}({{ .WireResponse }}* event) {}
-  {{- end }}
-};
-
-template<>
-class {{ .WireSyncEventHandler }} : public {{ .WireEventHandlerInterface }} {
-public:
-  {{ .WireSyncEventHandler.Self }}() = default;
-
-  // Method called when an unknown event is found. This methods gives the status which, in this
-  // case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<{{ . }}> client_end);
-};
+{{- template "ProtocolEventHandlerDeclaration" . }}
 
 template<>
 class {{ .WireSyncClient }} final {

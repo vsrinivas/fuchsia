@@ -5,28 +5,8 @@
 package codegen
 
 const fragmentClientTmpl = `
-{{- define "ClientForwardDeclaration" }}
-
-{{- IfdefFuchsia -}}
-  using AsyncEventHandler = {{ .WireAsyncEventHandler }};
-  {{- range .TwoWayMethods }}
-  class {{ .WireResponseContext.Self }};
-  {{- end }}
-  using ClientImpl = {{ .WireClientImpl }};
-{{- EndifFuchsia -}}
-{{- end }}
-
 {{- define "ClientDeclaration" }}
 {{- IfdefFuchsia -}}
-{{- EnsureNamespace "" }}
-template<>
-class {{ .WireAsyncEventHandler }} : public {{ .WireEventHandlerInterface }} {
- public:
- {{ .WireAsyncEventHandler.Self }}() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
 {{ EnsureNamespace . }}
 {{- range .TwoWayMethods }}
 {{ "" }}

@@ -184,13 +184,11 @@ class OnlyLibfuzzerAndDeps final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
   class LibfuzzerNeedsNonemptyProtocolResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
@@ -669,6 +667,7 @@ class ::fidl::internal::WireCaller<
   ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
       client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -676,6 +675,17 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -698,6 +708,7 @@ class ::fidl::WireSyncEventHandler<
           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
           client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -815,12 +826,10 @@ class OnlyCppAndDeps final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 
@@ -874,6 +883,7 @@ class ::fidl::internal::WireCaller<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
   ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
       client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -881,6 +891,17 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -901,6 +922,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
       ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
           client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
@@ -1007,19 +1029,6 @@ static_assert(
 namespace fidl_test_bindingsdenylist {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_bindingsdenylist
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_bindingsdenylist {
 
 class ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
     LibfuzzerNeedsNonemptyProtocolResponseContext
@@ -1154,18 +1163,6 @@ namespace fidl_test_bindingsdenylist {
 
 #ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_bindingsdenylist {}  // namespace fidl_test_bindingsdenylist
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>

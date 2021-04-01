@@ -87,12 +87,10 @@ class Parent final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>;
-
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_inheritancewithrecursivedecl::Parent>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_inheritancewithrecursivedecl::Parent>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>;
 
@@ -379,6 +377,7 @@ class ::fidl::internal::WireCaller<
   ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
       client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -386,6 +385,17 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Parent> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -407,6 +417,7 @@ class ::fidl::WireSyncEventHandler<
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
@@ -550,12 +561,10 @@ class Child final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>;
-
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_inheritancewithrecursivedecl::Child>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_inheritancewithrecursivedecl::Child>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>;
 
@@ -1073,6 +1082,7 @@ class ::fidl::internal::WireCaller<
   ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
       client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1080,6 +1090,17 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Child> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1101,6 +1122,7 @@ class ::fidl::WireSyncEventHandler<
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
           client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
@@ -1274,19 +1296,6 @@ namespace fidl_test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl
 template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Parent> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_inheritancewithrecursivedecl {
-}  // namespace fidl_test_inheritancewithrecursivedecl
-template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>
     final : private ::fidl::internal::ClientBase {
@@ -1389,19 +1398,6 @@ class ::fidl::internal::WireWeakEventSender<
 namespace fidl_test_inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_inheritancewithrecursivedecl
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Child> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_inheritancewithrecursivedecl {
 }  // namespace fidl_test_inheritancewithrecursivedecl
 template <>
 class ::fidl::internal::WireClientImpl<

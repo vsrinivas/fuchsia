@@ -905,13 +905,11 @@ class SimpleProtocol final {
       ::fidl::internal::WireCaller<::fidl_test_nullable::SimpleProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol>;
-
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_nullable::SimpleProtocol>;
   class AddResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>;
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -1367,6 +1365,7 @@ class ::fidl::internal::WireCaller<::fidl_test_nullable::SimpleProtocol> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> client_end_;
 };
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1374,6 +1373,16 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_nullable::SimpleProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_nullable::SimpleProtocol> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1394,6 +1403,7 @@ class ::fidl::WireSyncEventHandler<::fidl_test_nullable::SimpleProtocol>
       ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>
           client_end);
 };
+#endif  // __Fuchsia__
 
 template <>
 class ::fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol> final {
@@ -1747,18 +1757,6 @@ static_assert(sizeof(::fidl_test_nullable::wire::Int32Wrapper) ==
 namespace fidl_test_nullable {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_nullable
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_nullable::SimpleProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_nullable::SimpleProtocol> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-namespace fidl_test_nullable {
 
 class ::fidl_test_nullable::SimpleProtocol::AddResponseContext
     : public ::fidl::internal::ResponseContext {
