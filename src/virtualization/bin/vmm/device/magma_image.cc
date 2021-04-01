@@ -190,7 +190,7 @@ zx_status_t VulkanImageCreator::InitSysmem() {
     sysmem_allocator_ = fuchsia_sysmem::Allocator::SyncClient(std::move(*client_end));
   }
 
-  sysmem_allocator_.SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+  sysmem_allocator_.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                        fsl::GetCurrentProcessKoid());
 
   {
