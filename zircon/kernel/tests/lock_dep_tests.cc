@@ -278,7 +278,6 @@ static bool lock_dep_dynamic_analysis_tests() {
   using lockdep::LockFlagsReAcquireFatal;
   using lockdep::LockResult;
   using lockdep::ThreadLockState;
-  using lockdep::kInvalidLockClassId;
   using test::Bar;
   using test::Baz;
   using test::Foo;
