@@ -259,4 +259,60 @@ TEST_F(PassiveScanTest, ScanWhenFirmwareBusy) {
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
 }
 
+TEST_F(PassiveScanTest, ScanWhileAssocInProgress) {
+  // Scan request for driver should come before connection succeeds.
+  constexpr zx::duration kScanStartTime = zx::msec(3);
+  constexpr zx::duration kAssocStartTime = zx::msec(1);
+  constexpr zx::duration kDefaultTestDuration = zx::sec(100);
+  constexpr uint64_t kScanId = 0x1248;
+
+  // Create our simulated device
+  Init();
+
+  // Start up an AP for association.
+  StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
+
+  client_ifc_.AssociateWith(aps_.front()->ap_, kAssocStartTime);
+  // Request a future scan
+  env_->ScheduleNotification(
+      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
+      kScanStartTime);
+
+  env_->Run(kDefaultTestDuration);
+
+  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
+  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
+  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
+}
+
+TEST_F(PassiveScanTest, ScanAbortedInFirmware) {
+  // Assoc request for driver should come while scanning.
+  constexpr zx::duration kScanStartTime = zx::msec(1);
+  constexpr zx::duration kAssocStartTime = zx::msec(10);
+  constexpr zx::duration kDefaultTestDuration = zx::sec(100);
+  constexpr uint64_t kScanId = 0x1248;
+
+  // Create our simulated device
+  Init();
+
+  // Start up an AP for association.
+  StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
+
+  // Request a future scan
+  env_->ScheduleNotification(
+      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
+      kScanStartTime);
+
+  // Request an association right after the scan
+  client_ifc_.AssociateWith(aps_.front()->ap_, kAssocStartTime);
+
+  env_->Run(kDefaultTestDuration);
+
+  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
+  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
+  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(),
+            WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE);
+}
 }  // namespace wlan::brcmfmac

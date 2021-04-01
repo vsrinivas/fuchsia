@@ -67,7 +67,7 @@ TEST_F(TimeoutTest, ScanTimeout) {
   EXPECT_TRUE(result);
 
   // Verify result was an error code
-  EXPECT_EQ(*result, WLAN_SCAN_RESULT_INTERNAL_ERROR);
+  EXPECT_EQ(*result, WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE);
 
   // No results should have been seen
   auto bss_list = client_ifc_.ScanResultBssList(kDefaultScanTxnId);

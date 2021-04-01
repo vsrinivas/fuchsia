@@ -119,7 +119,7 @@ TEST_F(ScanAndApStartTest, ScanApStartInterference) {
   // Scan should have been cancelled by AP start operation
   auto result = client_ifc_.ScanResultCode(kFirstScanId);
   EXPECT_NE(result, std::nullopt);
-  EXPECT_EQ(*result, WLAN_SCAN_RESULT_INTERNAL_ERROR);
+  EXPECT_EQ(*result, WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE);
 
   // Make sure the AP iface started successfully.
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);
@@ -164,7 +164,7 @@ TEST_F(ScanAndApStartTest, ScanAbortFailure) {
   EXPECT_EQ(*second_result, WLAN_SCAN_RESULT_SUCCESS);
 }
 
-// This test verifies that when a scan request from SME is cancelled by the driver because of an AP
+// This test verifies that when a scan request from SME is canceled by the driver because of an AP
 // start request is ongoing, SME will receive a SHOULD_WAIT status code for scan result.
 TEST_F(ScanAndApStartTest, ScanWhileApStart) {
   Init();

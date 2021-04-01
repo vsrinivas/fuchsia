@@ -178,6 +178,7 @@ pub(super) fn convert_scan_result(
                 fidl_mlme::ScanResultCode::InvalidArgs => InvalidArgs,
                 fidl_mlme::ScanResultCode::InternalError => InternalError,
                 fidl_mlme::ScanResultCode::ShouldWait => InternalError,
+                fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware => InternalError,
                 // This shouldn't happen, but we'll just map it to InternalError
                 fidl_mlme::ScanResultCode::Success => InternalError,
             }),

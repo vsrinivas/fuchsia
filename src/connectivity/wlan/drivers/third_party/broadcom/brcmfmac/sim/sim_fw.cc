@@ -515,6 +515,12 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             return ZX_ERR_BAD_STATE;
           }
 
+          if (scan_state_.state == ScanState::SCANNING) {
+            BRCMF_DBG(SIM, "Scan in progress, aborting scan.");
+            hw_.RequestCallback(std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_ABORT),
+                                kAbortScanDelay);
+          }
+
           auto assoc_opts = std::make_unique<AssocOpts>();
           wlan_channel_t channel;
 
@@ -2406,9 +2412,7 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
   }
   hw_.EnableRx();
 
-  hw_.RequestCallback(std::bind(&SimFirmware::ScanContinue, this),
-
-                      scan_state_.opts->dwell_time);
+  hw_.RequestCallback(std::bind(&SimFirmware::ScanContinue, this), scan_state_.opts->dwell_time);
   return ZX_OK;
 }
 
@@ -2435,7 +2439,6 @@ void SimFirmware::ScanContinue() {
         simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
         hw_.Tx(probe_req_frame);
         hw_.RequestCallback(std::bind(&SimFirmware::ScanContinue, this),
-
                             scan_state_.opts->dwell_time);
         return;
       }
@@ -2455,7 +2458,6 @@ void SimFirmware::ScanContinue() {
           hw_.Tx(probe_req_frame);
         }
         hw_.RequestCallback(std::bind(&SimFirmware::ScanContinue, this),
-
                             scan_state_.opts->dwell_time);
       }
   }
@@ -2818,7 +2820,6 @@ void SimFirmware::RxBeacon(const wlan_channel_t& channel,
 
     hw_.RequestCallback(
         std::bind(&SimFirmware::ConductChannelSwitch, this, channel, csa_ie->channel_switch_mode_),
-
         SwitchDelay, &channel_switch_state_.switch_timer_id);
   }
 }
@@ -2991,9 +2992,7 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
 
   if (delay && delay->get() > 0) {
     // Setup the callback and return.
-    hw_.RequestCallback(std::bind(&brcmf_sim_rx_event, simdev_, buf),
-
-                        delay.value());
+    hw_.RequestCallback(std::bind(&brcmf_sim_rx_event, simdev_, buf), delay.value());
     return;
   } else {
     BRCMF_DBG(SIM, "Sending Event: %d", event_type);

@@ -68,6 +68,7 @@ enum ScanResultCode {
     INVALID_ARGS = 2;
     INTERNAL_ERROR = 3;
     SHOULD_WAIT = 4;
+    CANCELED_BY_DRIVER_OR_FIRMWARE = 5;
 };
 
 struct ScanResult {

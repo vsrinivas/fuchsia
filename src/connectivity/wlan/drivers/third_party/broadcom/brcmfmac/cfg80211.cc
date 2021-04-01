@@ -758,7 +758,7 @@ static zx_status_t brcmf_abort_escan(struct brcmf_if* ifp) {
 }
 
 static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                                        bool aborted) {
+                                        brcmf_fweh_event_status_t status) {
   BRCMF_DBG(SCAN, "Enter");
 
   struct net_device* ndev = cfg_to_ndev(cfg);
@@ -772,12 +772,24 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
   brcmf_scan_config_mpc(ifp, 1);
 
   if (cfg->scan_request) {
-    BRCMF_IFDBG(WLANIF, ndev, "ESCAN Completed scan: %s", aborted ? "Aborted" : "Done");
+    BRCMF_IFDBG(WLANIF, ndev, "ESCAN Completed scan: %s",
+                status == BRCMF_E_STATUS_SUCCESS ? "Done"
+                : status == BRCMF_E_STATUS_ABORT ? "Aborted"
+                                                 : "Errored");
     // Now that we're done with this scan_request we can remove it
     cfg->scan_request = nullptr;
+
+    if (status != BRCMF_E_STATUS_SUCCESS) {
+      BRCMF_WARN("Sending notification of failed scan: %d", status);
+    }
+
     brcmf_signal_scan_end(ndev, ndev->scan_txn_id,
-                          aborted ? WLAN_SCAN_RESULT_INTERNAL_ERROR : WLAN_SCAN_RESULT_SUCCESS);
+                          status == BRCMF_E_STATUS_SUCCESS ? WLAN_SCAN_RESULT_SUCCESS
+                          : status == BRCMF_E_STATUS_ABORT
+                              ? WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE
+                              : WLAN_SCAN_RESULT_INTERNAL_ERROR);
   }
+
   if (!brcmf_test_and_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
     BRCMF_DBG(SCAN, "Scan complete, probably P2P scan");
   }
@@ -1093,7 +1105,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
     BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)\n",
                vif->sme_state.load());
-    return ZX_ERR_UNAVAILABLE;
+    return ZX_ERR_SHOULD_WAIT;
   }
   if (brcmf_is_ap_start_pending(cfg)) {
     BRCMF_INFO("AP start request in progress, rejecting scan request, a retry is expected.");
@@ -2544,7 +2556,7 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
 static void brcmf_abort_scanning_immediately(struct brcmf_cfg80211_info* cfg) {
   brcmf_abort_scanning(cfg);
   if (cfg->scan_request) {
-    brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, true);
+    brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, BRCMF_E_STATUS_ABORT);
   }
 }
 
@@ -2589,7 +2601,6 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
   brcmf_fweh_event_status_t status = e->status;
   uint32_t escan_buflen;
   struct brcmf_bss_info_le* bss_info_le;
-  bool aborted;
   auto escan_result_le = static_cast<struct brcmf_escan_result_le*>(data);
 
   BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
@@ -2659,11 +2670,7 @@ chk_scan_end:
   if (status != BRCMF_E_STATUS_PARTIAL) {
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
     if (cfg->scan_request) {
-      aborted = status != BRCMF_E_STATUS_SUCCESS;
-      if (aborted) {
-        BRCMF_WARN("Sending notification of aborted scan: %d", status);
-      }
-      brcmf_notify_escan_complete(cfg, ifp, aborted);
+      brcmf_notify_escan_complete(cfg, ifp, status);
     } else {
       BRCMF_DBG(SCAN, "Ignored scan complete result 0x%x", status);
     }

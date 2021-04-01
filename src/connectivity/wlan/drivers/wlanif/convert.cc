@@ -353,6 +353,8 @@ wlan_mlme::ScanResultCode ConvertScanResultCode(uint8_t code) {
       return wlan_mlme::ScanResultCode::INTERNAL_ERROR;
     case WLAN_SCAN_RESULT_SHOULD_WAIT:
       return wlan_mlme::ScanResultCode::SHOULD_WAIT;
+    case WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE:
+      return wlan_mlme::ScanResultCode::CANCELED_BY_DRIVER_OR_FIRMWARE;
     default:
       ZX_ASSERT(0);
   }
