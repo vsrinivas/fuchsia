@@ -11,7 +11,7 @@
 #else
 #include <Weave/DeviceLayer/internal/GenericConnectivityManagerImpl_NoBLE.h>
 #endif
-#include <Weave/DeviceLayer/internal/GenericConnectivityManagerImpl_NoThread.h>
+#include <Weave/DeviceLayer/internal/GenericConnectivityManagerImpl_Thread.h>
 #include <Weave/Profiles/network-provisioning/NetworkProvisioning.h>
 #include <Weave/Profiles/weave-tunneling/WeaveTunnelCommon.h>
 #include <Weave/Profiles/weave-tunneling/WeaveTunnelConnectionMgr.h>
@@ -46,7 +46,7 @@ class NL_DLL_EXPORT ConnectivityManagerImpl final
 #else
       public Internal::GenericConnectivityManagerImpl_NoBLE<ConnectivityManagerImpl>,
 #endif
-      public Internal::GenericConnectivityManagerImpl_NoThread<ConnectivityManagerImpl> {
+      public Internal::GenericConnectivityManagerImpl_Thread<ConnectivityManagerImpl> {
 #if WEAVE_CONFIG_ENABLE_TUNNELING
   using TunnelConnNotifyReasons =
       ::nl::Weave::Profiles::WeaveTunnel::WeaveTunnelConnectionMgr::TunnelConnNotifyReasons;
@@ -89,6 +89,8 @@ class NL_DLL_EXPORT ConnectivityManagerImpl final
     ServiceTunnelMode GetServiceTunnelMode(void);
     // Gets the wifi interface name, if available.
     virtual std::optional<std::string> GetWiFiInterfaceName() = 0;
+    // Gets the mode of the Thread radio.
+    virtual ThreadMode GetThreadMode(void) = 0;
 
     enum Flags {
       kFlag_HaveIPv4InternetConnectivity = 0x0001,
@@ -155,6 +157,9 @@ class NL_DLL_EXPORT ConnectivityManagerImpl final
   bool _IsServiceTunnelRestricted(void);
   bool _HaveServiceConnectivityViaTunnel(void);
   bool _HaveServiceConnectivity(void);
+
+  // Thread Methods
+  ThreadMode _GetThreadMode(void);
 
   WEAVE_ERROR _Init(void);
   void _OnPlatformEvent(const WeaveDeviceEvent* event);

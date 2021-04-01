@@ -28,6 +28,7 @@ namespace testing {
 namespace {
 using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
+using nl::Weave::DeviceLayer::ConnectivityManager;
 using nl::Weave::DeviceLayer::ConnectivityManagerImpl;
 using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
 using nl::Weave::DeviceLayer::PlatformMgr;
@@ -51,6 +52,7 @@ class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate
   bool IsServiceTunnelRestricted() { return false; }
   void OnPlatformEvent(const WeaveDeviceEvent* event) {}
   std::optional<std::string> GetWiFiInterfaceName() { return std::nullopt; }
+  ConnectivityManager::ThreadMode GetThreadMode() { return ConnectivityManager::kThreadMode_NotSupported; }
 };
 
 // Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM

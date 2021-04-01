@@ -5,6 +5,7 @@
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConnectivityManager.h>
+#include <Weave/DeviceLayer/internal/GenericConnectivityManagerImpl_Thread.ipp>
 // clang-format on
 
 #include <lib/syslog/cpp/macros.h>
@@ -76,6 +77,10 @@ bool ConnectivityManagerImpl::Delegate::HaveIPv6InternetConnectivity(void) {
 
 std::optional<std::string> ConnectivityManagerImpl::GetWiFiInterfaceName() {
   return delegate_->GetWiFiInterfaceName();
+}
+
+ConnectivityManager::ThreadMode ConnectivityManagerImpl::_GetThreadMode(void) {
+  return delegate_->GetThreadMode();
 }
 
 }  // namespace DeviceLayer

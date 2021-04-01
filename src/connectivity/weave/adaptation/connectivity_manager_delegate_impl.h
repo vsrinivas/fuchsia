@@ -24,6 +24,7 @@ class NL_DLL_EXPORT ConnectivityManagerDelegateImpl : public ConnectivityManager
   bool IsServiceTunnelRestricted() override;
   void OnPlatformEvent(const WeaveDeviceEvent* event) override;
   std::optional<std::string> GetWiFiInterfaceName() override;
+  ConnectivityManager::ThreadMode GetThreadMode() override;
 
  private:
   // Initializes the service tunnel agent in OpenWeave. This function primarily

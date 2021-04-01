@@ -8,6 +8,7 @@
 #include <Weave/DeviceLayer/internal/BLEManager.h>
 #include <Weave/DeviceLayer/internal/DeviceNetworkInfo.h>
 #include <Weave/DeviceLayer/internal/ServiceTunnelAgent.h>
+#include <Weave/DeviceLayer/ThreadStackManager.h>
 #include <Weave/Profiles/WeaveProfiles.h>
 #include <Warm/Warm.h>
 
@@ -30,6 +31,12 @@ using namespace ::nl::Weave;
 using namespace ::nl::Weave::Profiles::WeaveTunnel;
 
 using Internal::ServiceTunnelAgent;
+
+using ThreadMode = ConnectivityManager::ThreadMode;
+
+constexpr ThreadMode kThreadMode_NotSupported = ConnectivityManager::kThreadMode_NotSupported;
+constexpr ThreadMode kThreadMode_Disabled = ConnectivityManager::kThreadMode_Disabled;
+constexpr ThreadMode kThreadMode_Enabled = ConnectivityManager::kThreadMode_Enabled;
 
 // Returns a pointer to the ServiceTunnelAgent instance.
 WeaveTunnelAgent* SrvTunnelAgent() { return &ServiceTunnelAgent; }
@@ -303,6 +310,14 @@ void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces:
 
 std::optional<std::string> ConnectivityManagerDelegateImpl::GetWiFiInterfaceName() {
   return wlan_interface_name_;
+}
+
+ThreadMode ConnectivityManagerDelegateImpl::GetThreadMode() {
+  if (!ThreadStackMgrImpl().IsThreadSupported()) {
+    return kThreadMode_NotSupported;
+  }
+
+  return ((ThreadStackMgrImpl()._IsThreadEnabled()) ? (kThreadMode_Enabled) : (kThreadMode_Disabled));
 }
 
 }  // namespace DeviceLayer
