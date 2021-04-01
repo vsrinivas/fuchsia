@@ -10,13 +10,9 @@
 
 namespace fs_test {
 
-class MinfsInstance;
-
 // Support for Minfs.
-class MinfsFilesystem : public FilesystemImplWithDefaultMake<MinfsFilesystem, MinfsInstance> {
+class MinfsFilesystem : public FilesystemImplWithDefaultMake<MinfsFilesystem> {
  public:
-  zx::status<std::unique_ptr<FilesystemInstance>> Open(
-      const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {
     static Traits traits{
         .name = "minfs",
@@ -33,6 +29,12 @@ class MinfsFilesystem : public FilesystemImplWithDefaultMake<MinfsFilesystem, Mi
     };
     return traits;
   }
+
+  std::unique_ptr<FilesystemInstance> Create(RamDevice device,
+                                             std::string device_path) const override;
+
+  zx::status<std::unique_ptr<FilesystemInstance>> Open(
+      const TestFilesystemOptions& options) const override;
 };
 
 // Returns a vector of minfs test options.
