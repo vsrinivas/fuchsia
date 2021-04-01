@@ -23,8 +23,7 @@ use {
     ffx_daemon_core::events::{self, EventHandler},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError, FastbootError,
-        TargetAddrInfo,
+        DaemonError, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError, TargetAddrInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
@@ -399,10 +398,7 @@ impl Daemon {
                 let target = match self.get_target(target).await {
                     Ok(t) => t,
                     Err(e) => {
-                        log::warn!("{:?}", e);
-                        responder
-                            .send(&mut Err(FastbootError::TargetError))
-                            .context("sending error response")?;
+                        responder.send(&mut Err(e)).context("sending error response")?;
                         return Ok(());
                     }
                 };
@@ -411,7 +407,7 @@ impl Daemon {
                     let nodename = target.nodename().await.unwrap_or("<No Nodename>".to_string());
                     log::warn!("Attempting to run fastboot on a non-fastboot target: {}", nodename);
                     responder
-                        .send(&mut Err(FastbootError::NonFastbootDevice))
+                        .send(&mut Err(DaemonError::NonFastbootDevice))
                         .context("sending error response")?;
                     return Ok(());
                 }
@@ -1157,7 +1153,7 @@ mod test {
         let (mut _ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
         let got = daemon_proxy.get_fastboot(None, fastboot_server_end).await?;
         match got {
-            Err(FastbootError::NonFastbootDevice) => Ok(()),
+            Err(DaemonError::NonFastbootDevice) => Ok(()),
             _ => bail!("Expecting non fastboot device error message."),
         }
     }

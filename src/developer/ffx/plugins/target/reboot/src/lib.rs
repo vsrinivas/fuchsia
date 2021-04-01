@@ -24,9 +24,9 @@ pub async fn reboot(
     if cmd.bootloader && cmd.recovery {
         ffx_bail!("Cannot specify booth bootloader and recovery switches at the same time.");
     }
-    match fastboot_proxy {
-        Ok(f) => reboot_fastboot(f, cmd).await,
-        Err(_) => reboot_target(admin_proxy?, cmd).await,
+    match admin_proxy {
+        Ok(a) => reboot_target(a, cmd).await,
+        Err(_) => reboot_fastboot(fastboot_proxy?, cmd).await,
     }
 }
 

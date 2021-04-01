@@ -10,9 +10,7 @@ use {
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonProxy, FastbootError, FastbootMarker, FastbootProxy,
-    },
+    fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
     futures::lock::Mutex,
@@ -192,7 +190,10 @@ async fn get_fastboot_proxy() -> Result<FastbootProxy> {
 
     match result {
         Ok(_) => Ok(fastboot_proxy),
-        Err(FastbootError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
+        Err(DaemonError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
+        Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
+        Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
+        Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
         Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
     }
 }

@@ -8,7 +8,9 @@ enum FastbootError {
     PROTOCOL_ERROR = 1;
     COMMUNICATION_ERROR = 2;
     REDISCOVERED_ERROR = 3;
+    [Deprecated]
     TARGET_ERROR = 4;
+    [Deprecated]
     NON_FASTBOOT_DEVICE = 5;
 };
 

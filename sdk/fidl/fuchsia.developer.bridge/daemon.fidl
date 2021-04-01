@@ -24,6 +24,9 @@ enum DaemonError {
     TARGET_NOT_FOUND = 7;
     /// When attempting to connect to RCS on a Fastboot device.
     TARGET_IN_FASTBOOT = 8;
+
+    /// Fastboot device expected.
+    NON_FASTBOOT_DEVICE = 9;
 };
 
 [Discoverable]
@@ -66,7 +69,7 @@ protocol Daemon {
     /// will wait until the client chooses to time out.
     GetFastboot(
         string:fuchsia.device.DEVICE_NAME_MAX? target,
-        request<Fastboot> fastboot) -> () error FastbootError;
+        request<Fastboot> fastboot) -> () error DaemonError;
 
     /// Attempts to get the SSH address for a given target.
     ///
