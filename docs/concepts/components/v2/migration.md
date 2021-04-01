@@ -44,9 +44,11 @@ The nature of migrations is that they may take a long time and happen in
 incremental steps. The final step for migrating a component from v1 to v2
 typically involves replacing a `.cmx` file with a `.cml` file.
 
+Please see the [self-service migration guide][migrating-sys-components].
+
 ## Latest status
 
-Last updated: **January 2021**
+Last updated: **April 2021**
 
 A high-level diagram of the system's component topology is shown below:
 
@@ -63,14 +65,16 @@ number of low-level system components that deal with various responsibilities,
 including in no particular order:
 
 *   Power management: device administration, thermals, power button, etc'.
-*   System diagnostics: logging, tracing, kernel counters etc'.
+*   System diagnostics: Archivist, Detect, and associated components.
 *   Device driver management.
 *   Filesystem management.
-*   Developer tools support, such as Remote Control Service and support for
-    serial debugging.
-*   Font provider.
-*   A (growing) subset of the Software Delivery stack.
-*   A (growing) subset of the Connectivity stack.
+*   Developer tools support, such as Remote Control Service and the serial
+    debugger bridge.
+*   The package resolver, package cache, and system update committer.
+*   The runtime for the [session framework][sfw].
+*   Various other system services such as the font provider, Stash system
+    configurations service, the DHCP daemon, activity service, last reboot
+    logger, etc'.
 
 ## Interoperability with v1 components
 
@@ -85,7 +89,7 @@ needs are routed to the `session_manager` from `appmgr`.
 
 ## Current areas of focus
 
-Last updated: **February 2021**
+Last updated: **April 2021**
 
 Components v2 migrations are happening throughout the system. However there is
 currently additional focus on:
@@ -95,9 +99,9 @@ currently additional focus on:
 -   The Netstack2 components, including migration of Netemul and associated
     tests to Test Runner Framework.
 -   The Bluetooth components and associated tests.
--   A subset of components under [sysmgr](/docs/glossary.md#sysmgr) that are
-    straightforward to migrate in terms of reimplementing their sandbox
-    capabilities in v2 terms.
+-   Components under [sysmgr](/docs/glossary.md#sysmgr) that are critical to
+    system functionality but each have a smaller footprint than the ones above,
+    tracked [here][label-cf-v2-migration].
 -   Scaling migrations by creating and expanding a
     [self-service guide][migrating-sys-components].
 
@@ -112,6 +116,8 @@ currently additional focus on:
 [fuchsia-sys]: https://fuchsia.dev/reference/fidl/fuchsia.sys
 [initial-processes]: /docs/concepts/booting/everything_between_power_on_and_your_component.md#initial-processes
 [intro]: /docs/concepts/components/v2/introduction.md
+[label-cf-v2-migration]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3Acf-v2-migration
 [migrating-sys-components]: /docs/development/components/v2/migration.md
 [session-framework]: /docs/concepts/session/introduction.md
+[sfw]: /docs/concepts/session/introduction.md
 [sysmgr]: /docs/glossary.md#sysmgr
