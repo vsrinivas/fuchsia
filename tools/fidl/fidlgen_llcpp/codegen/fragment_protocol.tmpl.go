@@ -155,8 +155,8 @@ class {{ .Name }} final {
 {{- end }}
 
 {{- range .ClientMethods -}}
-  {{- template "MethodResultOf" . }}
-  {{- template "MethodUnownedResultOf" . }}
+  {{- template "MethodResultDeclaration" . }}
+  {{- template "MethodUnownedResultDeclaration" . }}
 {{- end }}
 
 {{- EnsureNamespace "::" }}
@@ -485,10 +485,10 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range .ClientMethods -}}
 {{ "" }}
-    {{- template "SyncRequestManagedMethodDefinition" . }}
+    {{- template "MethodResultDefinition" . }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
-    {{- template "SyncRequestCallerAllocateMethodDefinition" . }}
+    {{- template "MethodUnownedResultDefinition" . }}
   {{- end }}
 {{ "" }}
 {{- end }}

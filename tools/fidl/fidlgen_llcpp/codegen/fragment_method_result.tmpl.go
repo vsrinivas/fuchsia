@@ -4,8 +4,8 @@
 
 package codegen
 
-const fragmentMethodResultOfTmpl = `
-{{- define "MethodResultOf" }}
+const fragmentMethodResultTmpl = `
+{{- define "MethodResultDeclaration" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireResult }} final : public ::fidl::Result {
@@ -59,5 +59,51 @@ class {{ .WireResult }} final : public ::fidl::Result {
 	   {{ .Response.ClientAllocation.ByteBufferType }} bytes_;
 	 {{- end }}
 };
+{{- end }}
+
+
+
+
+
+
+{{- define "MethodResultDefinition" }}
+{{- IfdefFuchsia -}}
+{{- EnsureNamespace "" }}
+{{ .WireResult }}::{{ .WireResult.Self }}(
+    ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
+    {{- .RequestArgs | CommaMessagePrototype }})
+   {
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
+    {{- .RequestArgs | CommaParamNames -}});
+  {{- if .HasResponse }}
+  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
+      _client,
+      bytes_.data(),
+      bytes_.size());
+  {{- else }}
+  _request.GetOutgoingMessage().Write(_client);
+  {{- end }}
+  status_ = _request.status();
+  error_ = _request.error();
+}
+  {{- if .HasResponse }}
+
+{{ .WireResult }}::{{ .WireResult.Self }}(
+    ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
+    {{- .RequestArgs | CommaMessagePrototype -}}
+    , zx_time_t _deadline)
+   {
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
+    {{- .RequestArgs | CommaParamNames -}});
+  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
+      _client,
+      bytes_.data(),
+      bytes_.size(),
+      _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+  {{- end }}
+{{- EndifFuchsia -}}
 {{- end }}
 `

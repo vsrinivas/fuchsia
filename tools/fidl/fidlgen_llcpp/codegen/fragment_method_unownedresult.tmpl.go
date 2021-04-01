@@ -4,8 +4,8 @@
 
 package codegen
 
-const fragmentMethodUnownedResultOfTmpl = `
-{{- define "MethodUnownedResultOf" }}
+const fragmentMethodUnownedResultTmpl = `
+{{- define "MethodUnownedResultDeclaration" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireUnownedResult }} final : public ::fidl::Result {
@@ -57,5 +57,42 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 	 uint8_t* bytes_;
 	 {{- end }}
 };
+{{- end }}
+
+
+
+
+{{- define "MethodUnownedResultDefinition" }}
+{{- IfdefFuchsia -}}
+{{- EnsureNamespace "" }}
+{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}(
+  ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
+  {{- if .RequestArgs -}}
+  , uint8_t* _request_bytes, uint32_t _request_byte_capacity
+  {{- end -}}
+  {{- .RequestArgs | CommaMessagePrototype }}
+  {{- if .HasResponse }}
+  , uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  {{- else }}
+  ) {
+  {{- end }}
+  {{- if .RequestArgs -}}
+  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request(
+    _request_bytes, _request_byte_capacity, 0
+  {{- else -}}
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
+  {{- end -}}
+    {{- .RequestArgs | CommaParamNames -}});
+  {{- if .HasResponse }}
+  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(_client, _response_bytes,
+                                                          _response_byte_capacity);
+  {{- else }}
+  _request.GetOutgoingMessage().Write(_client);
+  {{- end }}
+  status_ = _request.status();
+  error_ = _request.error();
+}
+{{- EndifFuchsia -}}
 {{- end }}
 `
