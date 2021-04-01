@@ -1,6 +1,12 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// This manual test is a basic integration test of the codec_factory +
+// amlogic_video_decoder driver.
+//
+// If this test breaks and it's not immediately obvoius why, please feel free to
+// involve dustingreen@ (me) in figuring it out.
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -20,22 +26,21 @@
 namespace {
 
 constexpr char kInputFilePath[] = "/pkg/data/bear.h264";
-constexpr int kInputFileFrameCount = 30;
-
-const char* kGoldenSha256 = "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8cd0b0aa5f152e1";
+constexpr int kInputFileFrameCount = -1;
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
   UseVideoDecoderTestParams test_params = {
-      .golden_sha256 = kGoldenSha256,
+      .frame_num_gaps = true,
+      .min_expected_output_frame_count = 10,
   };
   // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
-  constexpr uint32_t kMaxRetryCount = 2;
+  constexpr uint32_t kMaxRetryCount = 100;
   for (uint32_t try_ordinal = 0; try_ordinal < kMaxRetryCount; ++try_ordinal) {
-    if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_multi_decoder,
+    if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,
                                     /*min_output_buffer_count=*/0, &test_params)) {
       if (try_ordinal != 0) {

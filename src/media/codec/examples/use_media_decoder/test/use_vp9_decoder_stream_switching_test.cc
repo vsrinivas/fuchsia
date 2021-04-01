@@ -39,8 +39,9 @@ int main(int argc, char* argv[]) {
       .input_stop_stream_after_frame_ordinal = 20,
       .keep_stream_modulo = 4,
       .loop_stream_count = 127,
+      .golden_sha256 = kGoldenSha256,
   };
   return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_vp9_decoder,
                                 /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
+                                /*min_output_buffer_count=*/0, &test_params);
 }

@@ -62,7 +62,6 @@ std::string GetSha256SoFar(const SHA256_CTX* sha256_ctx) {
 int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
                            UseVideoDecoderFunction use_video_decoder, bool is_secure_output,
                            bool is_secure_input, uint32_t min_output_buffer_count,
-                           std::string golden_sha256,
                            const UseVideoDecoderTestParams* test_params) {
   const UseVideoDecoderTestParams default_test_params;
   if (!test_params) {
@@ -105,158 +104,184 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   bool emit_frame_failure_seen = false;
   // default 2
   const uint64_t keep_stream_modulo = test_params->keep_stream_modulo;
-  EmitFrame emit_frame =
-      [&sha256_ctx, &timestamps, &frame_index, &got_output_data, keep_stream_modulo, test_params,
-      input_file_path, expected_frame_count, use_video_decoder, is_secure_output, is_secure_input,
-      min_output_buffer_count, golden_sha256, &emit_frame_failure_seen](
-          uint64_t stream_lifetime_ordinal, uint8_t* i420_data, uint32_t width, uint32_t height,
-          uint32_t stride, bool has_timestamp_ish, uint64_t timestamp_ish) {
-        VLOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
-              " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
-              stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
-        // For debugging a flake:
-        if (test_params->loop_stream_count > 1) {
-          LOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
-               " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
-               stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
-        }
-        ZX_DEBUG_ASSERT(stream_lifetime_ordinal % 2 == 1);
-        ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
-        ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
-        auto increment_frame_index = fit::defer([&frame_index] { frame_index++; });
-        // For streams where this isn't true, we don't flush the input EOS, so there's no guarantee
-        // how many output frames we'll get.
-        if (stream_lifetime_ordinal % keep_stream_modulo != 1) {
-          // ~increment_frame_index
-          return;
-        }
-        if (emit_frame_failure_seen) {
-          // We only want to see LOGF()s about the first frame mismatch problem; subsequent frames
-          // will be computing a completely different cumulative hash.
-          return;
-        }
-        timestamps.push_back({has_timestamp_ish, timestamp_ish});
-        if (i420_data) {
-          got_output_data = true;
-          SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
-          std::string sha256_so_far = GetSha256SoFar(&sha256_ctx);
-          LOGF("frame_index: %u SHA256 so far: %s", frame_index, sha256_so_far.c_str());
-          if (test_params->per_frame_golden_sha256) {
-            ZX_ASSERT(test_params->per_frame_golden_sha256[frame_index]);
-            std::string expected_sha256(test_params->per_frame_golden_sha256[frame_index]);
-            if (sha256_so_far != expected_sha256) {
-              LOGF("does not match per_frame_golden_sha256 - actual: %s expected %s", sha256_so_far.c_str(), expected_sha256.c_str());
-              if (test_params->compare_to_sw_decode && !test_params->require_sw) {
-                // Grade sherlock video decoder's paper.
+  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, &got_output_data,
+                          keep_stream_modulo, test_params, input_file_path, expected_frame_count,
+                          use_video_decoder, is_secure_output, is_secure_input,
+                          min_output_buffer_count, &emit_frame_failure_seen](
+                             uint64_t stream_lifetime_ordinal, uint8_t* i420_data, uint32_t width,
+                             uint32_t height, uint32_t stride, bool has_timestamp_ish,
+                             uint64_t timestamp_ish) {
+    VLOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
+          " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
+          stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
+    // For debugging a flake:
+    if (test_params->loop_stream_count > 1) {
+      LOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
+           " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
+           stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
+    }
+    ZX_DEBUG_ASSERT(stream_lifetime_ordinal % 2 == 1);
+    ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
+    ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
+    auto increment_frame_index = fit::defer([&frame_index] { frame_index++; });
+    // For streams where this isn't true, we don't flush the input EOS, so there's no guarantee
+    // how many output frames we'll get.
+    if (stream_lifetime_ordinal % keep_stream_modulo != 1) {
+      // ~increment_frame_index
+      return;
+    }
+    if (emit_frame_failure_seen) {
+      // We only want to see LOGF()s about the first frame mismatch problem; subsequent frames
+      // will be computing a completely different cumulative hash.
+      return;
+    }
+    timestamps.push_back({has_timestamp_ish, timestamp_ish});
+    if (i420_data) {
+      got_output_data = true;
+      SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
+      std::string sha256_so_far = GetSha256SoFar(&sha256_ctx);
+      LOGF("frame_index: %u SHA256 so far: %s", frame_index, sha256_so_far.c_str());
+      if (test_params->per_frame_golden_sha256) {
+        ZX_ASSERT(test_params->per_frame_golden_sha256[frame_index]);
+        std::string expected_sha256(test_params->per_frame_golden_sha256[frame_index]);
+        if (sha256_so_far != expected_sha256) {
+          LOGF("does not match per_frame_golden_sha256 - actual: %s expected %s",
+               sha256_so_far.c_str(), expected_sha256.c_str());
+          if (test_params->compare_to_sw_decode && !test_params->require_sw) {
+            // Grade sherlock video decoder's paper.
 
-                UseVideoDecoderTestParams sw_decode_test_params = test_params->Clone();
+            UseVideoDecoderTestParams sw_decode_test_params = test_params->Clone();
 
-                sw_decode_test_params.compare_to_sw_decode = false;
-                sw_decode_test_params.require_sw = true;
+            sw_decode_test_params.compare_to_sw_decode = false;
+            sw_decode_test_params.require_sw = true;
 
-                FrameToCompare frame_to_compare{
-                  .data = i420_data,
-                  .ordinal = frame_index,
-                  .width = width,
-                  .height = height,
-                };
-                sw_decode_test_params.frame_to_compare = &frame_to_compare;
+            FrameToCompare frame_to_compare{
+                .data = i420_data,
+                .ordinal = frame_index,
+                .width = width,
+                .height = height,
+            };
+            sw_decode_test_params.frame_to_compare = &frame_to_compare;
 
-                LOGF("\n\n\n######## RECURSIVELY CALLING use_video_decoder_test TO GET EXPECTED FRAME; TEST WILL FAIL AFTER COMPARING FRAMES AND FINISHING UP ########\n\n\n");
-                if (0 != use_video_decoder_test(input_file_path, expected_frame_count, use_video_decoder, is_secure_output, is_secure_input, min_output_buffer_count, golden_sha256, &sw_decode_test_params)) {
-                  emit_frame_failure_seen = true;
-                }
-              }
+            LOGF(
+                "\n\n\n######## RECURSIVELY CALLING use_video_decoder_test TO GET EXPECTED FRAME; "
+                "TEST WILL FAIL AFTER COMPARING FRAMES AND FINISHING UP ########\n\n\n");
+            if (0 != use_video_decoder_test(input_file_path, expected_frame_count,
+                                            use_video_decoder, is_secure_output, is_secure_input,
+                                            min_output_buffer_count, &sw_decode_test_params)) {
               emit_frame_failure_seen = true;
-              LOGF("finished handling sha256 mis-match (%s)", test_params->frame_to_compare ? "inner" : "outer");
             }
           }
-          if (test_params->frame_to_compare && (frame_index == test_params->frame_to_compare->ordinal)) {
-            auto& frame_to_compare = *test_params->frame_to_compare;
-            ZX_ASSERT(frame_index == frame_to_compare.ordinal);
-            ZX_ASSERT(width = frame_to_compare.width);
-            ZX_ASSERT(height = frame_to_compare.height);
-            // If memcmp() returned 0, it'd mean the per-frame hash would have matched, which it
-            // didn't.
-            ZX_ASSERT(0 != memcmp(i420_data, frame_to_compare.data, width * height * 3 / 2));
-            int32_t luma_min_diff_x = static_cast<int32_t>(width);
-            int32_t luma_min_diff_y = static_cast<int32_t>(height);
-            int32_t luma_max_diff_x = -1;
-            int32_t luma_max_diff_y = -1;
-            int32_t u_min_diff_x = static_cast<int32_t>(width);
-            int32_t u_min_diff_y = static_cast<int32_t>(height);
-            int32_t u_max_diff_x = -1;
-            int32_t u_max_diff_y = -1;
-            int32_t v_min_diff_x = static_cast<int32_t>(width);
-            int32_t v_min_diff_y = static_cast<int32_t>(height);
-            int32_t v_max_diff_x = -1;
-            int32_t v_max_diff_y = -1;
-            for (int32_t y = 0; y < static_cast<int32_t>(height); ++y) {
-              for (int32_t x = 0; x < static_cast<int32_t>(width); ++x) {
-                uint8_t luma_sample_expected = i420_data[y * width + x];
-                uint8_t luma_sample_actual = frame_to_compare.data[y * width + x];
-                if (luma_sample_actual != luma_sample_expected) {
-                  luma_min_diff_x = std::min(luma_min_diff_x, x);
-                  luma_min_diff_y = std::min(luma_min_diff_y, y);
-                  luma_max_diff_x = std::max(luma_max_diff_x, x);
-                  luma_max_diff_y = std::max(luma_max_diff_y, y);
-                }
-                if (y % 2 == 0 && x % 2 == 0) {
-                  uint8_t u_sample_expected = i420_data[width * height + (y / 2) * (width / 2) + (x / 2)];
-                  uint8_t u_sample_actual = frame_to_compare.data[width * height + (y / 2) * (width / 2) + (x / 2)];
-                  if (u_sample_actual != u_sample_expected) {
-                    u_min_diff_x = std::min(u_min_diff_x, x);
-                    u_min_diff_y = std::min(u_min_diff_y, y);
-                    u_max_diff_x = std::max(u_max_diff_x, x);
-                    u_max_diff_y = std::max(u_max_diff_y, y);
-                  }
-                  uint8_t v_sample_expected = i420_data[width * height + (width / 2) * (height / 2) + (y / 2) * (width / 2) + (x / 2)];
-                  uint8_t v_sample_actual = frame_to_compare.data[width * height + (width / 2) * (height / 2) + (y / 2) * (width / 2) + (x / 2)];
-                  if (v_sample_actual != v_sample_expected) {
-                    v_min_diff_x = std::min(v_min_diff_x, x);
-                    v_min_diff_y = std::min(v_min_diff_y, y);
-                    v_max_diff_x = std::max(v_max_diff_x, x);
-                    v_max_diff_y = std::max(v_max_diff_y, y);
-                  }
-                }
+          emit_frame_failure_seen = true;
+          LOGF("finished handling sha256 mis-match (%s)",
+               test_params->frame_to_compare ? "inner" : "outer");
+        }
+      }
+      if (test_params->frame_to_compare &&
+          (frame_index == test_params->frame_to_compare->ordinal)) {
+        auto& frame_to_compare = *test_params->frame_to_compare;
+        ZX_ASSERT(frame_index == frame_to_compare.ordinal);
+        ZX_ASSERT(width = frame_to_compare.width);
+        ZX_ASSERT(height = frame_to_compare.height);
+        // If memcmp() returned 0, it'd mean the per-frame hash would have matched, which it
+        // didn't.
+        ZX_ASSERT(0 != memcmp(i420_data, frame_to_compare.data, width * height * 3 / 2));
+        int32_t luma_min_diff_x = static_cast<int32_t>(width);
+        int32_t luma_min_diff_y = static_cast<int32_t>(height);
+        int32_t luma_max_diff_x = -1;
+        int32_t luma_max_diff_y = -1;
+        int32_t u_min_diff_x = static_cast<int32_t>(width);
+        int32_t u_min_diff_y = static_cast<int32_t>(height);
+        int32_t u_max_diff_x = -1;
+        int32_t u_max_diff_y = -1;
+        int32_t v_min_diff_x = static_cast<int32_t>(width);
+        int32_t v_min_diff_y = static_cast<int32_t>(height);
+        int32_t v_max_diff_x = -1;
+        int32_t v_max_diff_y = -1;
+        for (int32_t y = 0; y < static_cast<int32_t>(height); ++y) {
+          for (int32_t x = 0; x < static_cast<int32_t>(width); ++x) {
+            uint8_t luma_sample_expected = i420_data[y * width + x];
+            uint8_t luma_sample_actual = frame_to_compare.data[y * width + x];
+            if (luma_sample_actual != luma_sample_expected) {
+              luma_min_diff_x = std::min(luma_min_diff_x, x);
+              luma_min_diff_y = std::min(luma_min_diff_y, y);
+              luma_max_diff_x = std::max(luma_max_diff_x, x);
+              luma_max_diff_y = std::max(luma_max_diff_y, y);
+            }
+            if (y % 2 == 0 && x % 2 == 0) {
+              uint8_t u_sample_expected =
+                  i420_data[width * height + (y / 2) * (width / 2) + (x / 2)];
+              uint8_t u_sample_actual =
+                  frame_to_compare.data[width * height + (y / 2) * (width / 2) + (x / 2)];
+              if (u_sample_actual != u_sample_expected) {
+                u_min_diff_x = std::min(u_min_diff_x, x);
+                u_min_diff_y = std::min(u_min_diff_y, y);
+                u_max_diff_x = std::max(u_max_diff_x, x);
+                u_max_diff_y = std::max(u_max_diff_y, y);
+              }
+              uint8_t v_sample_expected = i420_data[width * height + (width / 2) * (height / 2) +
+                                                    (y / 2) * (width / 2) + (x / 2)];
+              uint8_t v_sample_actual =
+                  frame_to_compare.data[width * height + (width / 2) * (height / 2) +
+                                        (y / 2) * (width / 2) + (x / 2)];
+              if (v_sample_actual != v_sample_expected) {
+                v_min_diff_x = std::min(v_min_diff_x, x);
+                v_min_diff_y = std::min(v_min_diff_y, y);
+                v_max_diff_x = std::max(v_max_diff_x, x);
+                v_max_diff_y = std::max(v_max_diff_y, y);
               }
             }
-            LOGF("luma_min_diff_x: %d luma_max_diff_x: %d luma_min_diff_y: %d luma_max_diff_y: %d", luma_min_diff_x, luma_max_diff_x, luma_min_diff_y, luma_max_diff_y);
-            LOGF("u_min_diff_x: %d u_max_diff_x: %d u_min_diff_y: %d u_max_diff_y: %d", u_min_diff_x, u_max_diff_x, u_min_diff_y, u_max_diff_y);
-            LOGF("v_min_diff_x: %d v_max_diff_x: %d v_min_diff_y: %d v_max_diff_y: %d", v_min_diff_x, v_max_diff_x, v_min_diff_y, v_max_diff_y);
-            for (int32_t y = luma_min_diff_y; y <= luma_max_diff_y; ++y) {
-              for (int32_t x = luma_min_diff_x; x <= luma_max_diff_x; ++x) {
-                int32_t expected = i420_data[y * width + x];
-                int32_t actual = frame_to_compare.data[y * width + x];
-                LOGF("luma diff - y: %d x: %d expected: 0x%02x actual: 0x%02x expected minus actual: %d", y, x, expected, actual, expected - actual);
-              }
-            }
-            for (int32_t y = u_min_diff_y; y <= u_max_diff_y; y += 2) {
-              for (int32_t x = u_min_diff_x; x <= u_max_diff_x; x += 2) {
-                uint8_t expected = i420_data[width * height + (y / 2) * (width / 2) + (x / 2)];
-                uint8_t actual = frame_to_compare.data[width * height + (y / 2) * (width / 2) + (x / 2)];
-                LOGF("u diff - y: %d x: %d expected: 0x%02x actual: 0x%02x expected minus actual: %d", y, x, expected, actual, expected - actual);
-              }
-            }
-            for (int32_t y = v_min_diff_y; y <= v_max_diff_y; y += 2) {
-              for (int32_t x = v_min_diff_x; x <= v_max_diff_x; x += 2) {
-                uint8_t expected = i420_data[width * height + (width / 2) * (height / 2) + (y / 2) * (width / 2) + (x / 2)];
-                uint8_t actual = frame_to_compare.data[width * height + (width / 2) * (height / 2) + (y / 2) * (width / 2) + (x / 2)];
-                LOGF("v diff - y: %d x: %d expected: 0x%02x actual: 0x%02x expected minus actual: %d", y, x, expected, actual, expected - actual);
-              }
-            }
-            LOGF("\n\n\nDECODED FRAME DIFFERS FROM EXPECTED - SEE ABOVE DIFFS - TEST WILL FAIL AFTER FINISHING UP\n\n\n");
-            emit_frame_failure_seen = true;
           }
         }
-        // ~increment_frame_index
-      };
+        LOGF("luma_min_diff_x: %d luma_max_diff_x: %d luma_min_diff_y: %d luma_max_diff_y: %d",
+             luma_min_diff_x, luma_max_diff_x, luma_min_diff_y, luma_max_diff_y);
+        LOGF("u_min_diff_x: %d u_max_diff_x: %d u_min_diff_y: %d u_max_diff_y: %d", u_min_diff_x,
+             u_max_diff_x, u_min_diff_y, u_max_diff_y);
+        LOGF("v_min_diff_x: %d v_max_diff_x: %d v_min_diff_y: %d v_max_diff_y: %d", v_min_diff_x,
+             v_max_diff_x, v_min_diff_y, v_max_diff_y);
+        for (int32_t y = luma_min_diff_y; y <= luma_max_diff_y; ++y) {
+          for (int32_t x = luma_min_diff_x; x <= luma_max_diff_x; ++x) {
+            int32_t expected = i420_data[y * width + x];
+            int32_t actual = frame_to_compare.data[y * width + x];
+            LOGF(
+                "luma diff - y: %d x: %d expected: 0x%02x actual: 0x%02x expected minus actual: %d",
+                y, x, expected, actual, expected - actual);
+          }
+        }
+        for (int32_t y = u_min_diff_y; y <= u_max_diff_y; y += 2) {
+          for (int32_t x = u_min_diff_x; x <= u_max_diff_x; x += 2) {
+            uint8_t expected = i420_data[width * height + (y / 2) * (width / 2) + (x / 2)];
+            uint8_t actual =
+                frame_to_compare.data[width * height + (y / 2) * (width / 2) + (x / 2)];
+            LOGF("u diff - y: %d x: %d expected: 0x%02x actual: 0x%02x expected minus actual: %d",
+                 y, x, expected, actual, expected - actual);
+          }
+        }
+        for (int32_t y = v_min_diff_y; y <= v_max_diff_y; y += 2) {
+          for (int32_t x = v_min_diff_x; x <= v_max_diff_x; x += 2) {
+            uint8_t expected = i420_data[width * height + (width / 2) * (height / 2) +
+                                         (y / 2) * (width / 2) + (x / 2)];
+            uint8_t actual = frame_to_compare.data[width * height + (width / 2) * (height / 2) +
+                                                   (y / 2) * (width / 2) + (x / 2)];
+            LOGF("v diff - y: %d x: %d expected: 0x%02x actual: 0x%02x expected minus actual: %d",
+                 y, x, expected, actual, expected - actual);
+          }
+        }
+        LOGF(
+            "\n\n\nDECODED FRAME DIFFERS FROM EXPECTED - SEE ABOVE DIFFS - TEST WILL FAIL AFTER "
+            "FINISHING UP\n\n\n");
+        emit_frame_failure_seen = true;
+      }
+    }
+    // ~increment_frame_index
+  };
 
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
                                 in_stream_peeker.get(), use_video_decoder, 0,
                                 min_output_buffer_count, is_secure_output, is_secure_input,
                                 std::move(emit_frame), test_params)) {
-    printf("decode_video_stream_test() failed. (%s)\n", test_params->frame_to_compare ? "inner" : "outer");
+    printf("decode_video_stream_test() failed. (%s)\n",
+           test_params->frame_to_compare ? "inner" : "outer");
     return -1;
   }
 
@@ -265,14 +290,27 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     return -1;
   }
 
-  const int frame_count = expected_frame_count != -1 ? expected_frame_count : timestamps.size();
+  if (test_params->min_expected_output_frame_count !=
+      UseVideoDecoderTestParams::kDefaultMinExpectedOutputFrameCount) {
+    ZX_ASSERT(test_params->min_expected_output_frame_count >= 0);
+    if (frame_index < static_cast<uint32_t>(test_params->min_expected_output_frame_count)) {
+      printf(
+          "frame_index < test_params->min_expected_output_frame_count -- frame_index: %d "
+          "min_expected_output_frame_count: %d",
+          frame_index, test_params->min_expected_output_frame_count);
+      return -1;
+    }
+  }
+
+  const int internal_expected_frame_count =
+      expected_frame_count != -1 ? expected_frame_count : frame_index;
   std::set<uint64_t> expected_timestamps;
 
   // default 0
   const int64_t first_expected_output_frame_ordinal =
       test_params->first_expected_output_frame_ordinal;
 
-  for (int i = first_expected_output_frame_ordinal; i < frame_count; i++) {
+  for (int i = first_expected_output_frame_ordinal; i < internal_expected_frame_count; i++) {
     expected_timestamps.insert(i);
   }
   for (size_t i = 0; i < timestamps.size(); i++) {
@@ -310,14 +348,16 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   if (got_output_data) {
     std::string actual_sha256 = GetSha256SoFar(&sha256_ctx);
     printf("Done decoding - computed sha256 is: %s\n", actual_sha256.c_str());
-    if (strcmp(actual_sha256.c_str(), golden_sha256.c_str())) {
-      printf("The sha256 doesn't match - expected: %s actual: %s\n", golden_sha256.c_str(),
-             actual_sha256.c_str());
-      return -1;
+    if (test_params->golden_sha256 != UseVideoDecoderTestParams::kDefaultGoldenSha256) {
+      if (strcmp(actual_sha256.c_str(), test_params->golden_sha256)) {
+        printf("The sha256 doesn't match - expected: %s actual: %s\n", test_params->golden_sha256,
+               actual_sha256.c_str());
+        return -1;
+      }
+      printf("The computed sha256 matches golden sha256.  Yay!\n");
     }
-    printf("The computed sha256 matches golden sha256.  Yay!\nPASS\n");
   } else if (is_secure_output) {
-    printf("Can't check output data sha256 because output is secure.\nPASS.\n");
+    printf("Can't check output data sha256 because output is secure.\n");
   } else {
     printf("No output data received");
     return -1;
@@ -328,6 +368,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   component_context = nullptr;
   fidl_loop.Shutdown();
 
+  printf("PASS\n");
   return 0;
 }
 

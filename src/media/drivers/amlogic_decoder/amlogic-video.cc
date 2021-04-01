@@ -476,6 +476,7 @@ void AmlogicVideo::TryToReschedule() {
   }
 
   if (current_instance_ && current_instance_->decoder()->test_hooks().force_context_save_restore) {
+    DLOG("force_context_save_restore");
     SwapOutCurrentInstance();
   }
 
