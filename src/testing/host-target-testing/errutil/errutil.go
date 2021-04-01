@@ -156,5 +156,6 @@ func run(ctx context.Context, serial net.Conn, cmd string) error {
 
 func shouldPrintThreads(err error) bool {
 	return errors.Is(err, context.DeadlineExceeded) ||
-		strings.Contains(err.Error(), "use of closed network connection")
+		strings.Contains(err.Error(), "use of closed network connection") ||
+		strings.Contains(err.Error(), "device failed to initialize")
 }
