@@ -6,6 +6,7 @@ package fint
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"io"
 	"os"
@@ -31,6 +32,18 @@ var (
 	// failureEndRegex indicates the end of Ninja's execution as a result of a
 	// build failure. When present, it will be the last line of stdout.
 	failureEndRegex = regexp.MustCompile(`^\s*ninja: build stopped:.*`)
+
+	// noWorkBytes in the Ninja output indicates a null build (i.e. all the
+	// requested targets have already been built).
+	noWorkString = "\nninja: no work to do."
+
+	// Allow dirty no-op builds, but only if they appear to be failing on these
+	// paths on Mac where the filesystem has a bug. See https://fxbug.dev/61784.
+	brokenMacPaths = []string{
+		"/usr/bin/env",
+		"/bin/ln",
+		"/bin/bash",
+	}
 )
 
 const (
@@ -143,4 +156,47 @@ func runNinja(
 
 	// No failure message necessary if Ninja succeeded.
 	return "", nil
+}
+
+// checkNinjaNoop runs `ninja explain` against a build directory to determine
+// whether an incremental build would be a no-op (i.e. all requested targets
+// have already been built). It returns true if the build would be a no-op,
+// false otherwise.
+func checkNinjaNoop(
+	ctx context.Context,
+	r subprocessRunner,
+	ninjaPath string,
+	buildDir string,
+	targets []string,
+	isMac bool,
+) (bool, error) {
+	// -n means dry-run.
+	cmd := []string{ninjaPath, "-C", buildDir, "-d", "explain", "--verbose", "-n"}
+	cmd = append(cmd, targets...)
+
+	var stdout, stderr bytes.Buffer
+	if err := r.Run(ctx, cmd, &stdout, &stderr); err != nil {
+		return false, err
+	}
+
+	outputContains := func(s string) bool {
+		b := []byte(s)
+		// Different versions of Ninja choose to emit "explain" logs to stderr
+		// instead of stdout, so check both streams.
+		return bytes.Contains(stdout.Bytes(), b) || bytes.Contains(stderr.Bytes(), b)
+	}
+
+	if !outputContains(noWorkString) {
+		if isMac {
+			// TODO(https://fxbug.dev/61784): Dirty builds should be an error even on Mac.
+			for _, path := range brokenMacPaths {
+				if outputContains(path) {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}
+
+	return true, nil
 }

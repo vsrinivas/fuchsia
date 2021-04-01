@@ -42,3 +42,8 @@ func name(goOS, goArch string) (string, error) {
 	}
 	return MakeName(os, arch), nil
 }
+
+// IsMac determines whether the code is running on a Mac.
+func IsMac() bool {
+	return runtime.GOOS == "darwin"
+}

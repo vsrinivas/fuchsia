@@ -52,4 +52,10 @@ message Context {
 
   // Use this many jobs if building with Goma (ignored otherwise).
   int32 goma_job_count = 12;
+
+  // If true, skip doing a Ninja no-op check even if the static spec indicates
+  // that we should do the check. This is to let the caller skip doing the check
+  // after an incremental builds with the same static spec but a different
+  // version of the code, which perfcompare builders do.
+  bool skip_ninja_noop_check = 13;
 }

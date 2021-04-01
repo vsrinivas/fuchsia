@@ -181,3 +181,51 @@ func normalize(s string) string {
 	s = strings.TrimRight(s, " ")
 	return s
 }
+
+func TestCheckNinjaNoop(t *testing.T) {
+	testCases := []struct {
+		name       string
+		isMac      bool
+		stdout     string
+		expectNoop bool
+	}{
+		{
+			name:       "no-op",
+			stdout:     "ninja: Entering directory /foo\nninja: no work to do.",
+			expectNoop: true,
+		},
+		{
+			name:       "dirty",
+			stdout:     "ninja: Entering directory /foo\n[1/1] STAMP foo.stamp",
+			expectNoop: false,
+		},
+		{
+			name:       "mac dirty",
+			isMac:      true,
+			stdout:     "ninja: Entering directory /foo\n[1/1] STAMP foo.stamp",
+			expectNoop: false,
+		},
+		{
+			name:       "broken mac path",
+			isMac:      true,
+			stdout:     "ninja: Entering directory /foo\nninja explain: ../../../../usr/bin/env is dirty",
+			expectNoop: true,
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &fakeSubprocessRunner{
+				mockStdout: []byte(tc.stdout),
+			}
+			noop, err := checkNinjaNoop(ctx, r, "ninja", t.TempDir(), []string{"foo"}, tc.isMac)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if noop != tc.expectNoop {
+				t.Errorf("Unexpected ninja no-op result: got %v, expected %v", noop, tc.expectNoop)
+			}
+		})
+	}
+}

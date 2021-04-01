@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
@@ -69,6 +70,29 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	if msg, err := runNinja(ctx, runner, ninjaPath, contextSpec.BuildDir, targets); err != nil {
 		artifacts.FailureSummary = msg
 		return artifacts, err
+	}
+
+	if !contextSpec.SkipNinjaNoopCheck {
+		noop, err := checkNinjaNoop(ctx, runner, ninjaPath, contextSpec.BuildDir, targets, hostplatform.IsMac())
+		if err != nil {
+			return nil, err
+		}
+		if !noop {
+			summaryLines := []string{
+				"Ninja build did not converge to no-op.",
+				"See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op",
+			}
+			if hostplatform.IsMac() {
+				summaryLines = append(
+					summaryLines,
+					"If this failure is specific to Mac, confirm that it's not related to fxbug.dev/61784.",
+				)
+			}
+			artifacts.FailureSummary = strings.Join(
+				summaryLines,
+				"\n",
+			)
+		}
 	}
 
 	return artifacts, nil
