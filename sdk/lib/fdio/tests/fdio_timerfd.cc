@@ -87,7 +87,7 @@ TEST(TimerFDTest, OneShotLifecycle) {
   const auto end = std::chrono::steady_clock::now();
 
   EXPECT_EQ(counter, 1u);
-  EXPECT_LE(std::chrono::milliseconds(5), end - start);
+  EXPECT_GE(end - start, std::chrono::milliseconds(5));
 
   EXPECT_EQ(timerfd_gettime(fd.get(), &value), 0);
   EXPECT_EQ(value.it_value.tv_sec, 0);
@@ -113,8 +113,10 @@ TEST(TimerFDTest, OneShotNonblocking) {
   EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), -1);
   ASSERT_ERRNO(EWOULDBLOCK);
 
+  constexpr time_t set_sec = 600;
+
   struct itimerspec value = {};
-  value.it_value.tv_sec = 600;
+  value.it_value.tv_sec = set_sec;
   EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, nullptr));
 
   EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), -1);
@@ -124,7 +126,7 @@ TEST(TimerFDTest, OneShotNonblocking) {
   value.it_value.tv_sec = 0;
   value.it_value.tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(5)).count();
   EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, &old_value));
-  EXPECT_GE(600, old_value.it_value.tv_sec);
+  EXPECT_LE(old_value.it_value.tv_sec, set_sec);
 
   fd_set rfds;
   FD_ZERO(&rfds);
@@ -161,7 +163,7 @@ TEST(TimerFDTest, RepeatingBlocking) {
   }
 
   const auto end = std::chrono::steady_clock::now();
-  EXPECT_LE(total * std::chrono::milliseconds(15), end - start);
+  EXPECT_GE(end - start, total * std::chrono::milliseconds(15));
 }
 
 TEST(TimerFDTest, Counter) {
@@ -176,17 +178,17 @@ TEST(TimerFDTest, Counter) {
   EXPECT_SUCCESS(timerfd_settime(fd.get(), 0, &value, nullptr));
   uint64_t counter = 2934;
   EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
-  EXPECT_LE(counter, 1u);
+  EXPECT_GE(counter, 1u);
 
   struct timespec sleep = {
       .tv_sec = 0, .tv_nsec = std::chrono::nanoseconds(std::chrono::milliseconds(20)).count()};
   EXPECT_EQ(nanosleep(&sleep, nullptr), 0);
 
   EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
-  EXPECT_LE(counter, 4u);
+  EXPECT_GE(counter, 4u);
 
   const auto end = std::chrono::steady_clock::now();
-  EXPECT_LE(5 * std::chrono::milliseconds(5), end - start);
+  EXPECT_GE(end - start, 5 * std::chrono::milliseconds(5));
 }
 
 TEST(TimerFDTest, RepeatingNonblocking) {
@@ -213,10 +215,10 @@ TEST(TimerFDTest, RepeatingNonblocking) {
 
     uint64_t counter = 2934;
     EXPECT_EQ(read(fd.get(), &counter, sizeof(counter)), ssize_t(sizeof(counter)));
-    EXPECT_LE(counter, 1u);
+    EXPECT_GE(counter, 1u);
     total += counter;
   }
 
   const auto end = std::chrono::steady_clock::now();
-  EXPECT_LE(total * std::chrono::milliseconds(15), end - start);
+  EXPECT_GE(end - start, total * std::chrono::milliseconds(15));
 }
