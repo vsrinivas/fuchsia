@@ -57,7 +57,7 @@ async fn main_inner() -> Result<(), Error> {
     let inspector = finspect::Inspector::new();
 
     let target_channel_manager =
-        channel::TargetChannelManager::new(connect::ServiceConnector, "/misc/ota");
+        channel::TargetChannelManager::new(connect::ServiceConnector, "/misc/ota", "/config/data");
     if let Err(e) = target_channel_manager.update().await {
         fx_log_err!("while updating the target channel: {:#}", anyhow!(e));
     }

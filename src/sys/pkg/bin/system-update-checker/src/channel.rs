@@ -25,6 +25,7 @@ use futures::{
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
 use std::io;
@@ -34,6 +35,8 @@ use thiserror::Error;
 
 static CURRENT_CHANNEL: &'static str = "current_channel.json";
 static TARGET_CHANNEL: &'static str = "target_channel.json";
+
+static CHANNEL_PACKAGE_MAP: &'static str = "channel_package_map.json";
 
 pub fn build_current_channel_manager_and_notifier<S: ServiceConnect>(
     service_connector: S,
@@ -199,15 +202,34 @@ pub struct TargetChannelManager<S = ServiceConnector> {
     service_connector: S,
     path: PathBuf,
     target_channel: Mutex<Option<String>>,
+    channel_package_map: HashMap<String, PkgUrl>,
 }
 
 impl<S: ServiceConnect> TargetChannelManager<S> {
-    pub fn new(service_connector: S, dir: impl Into<PathBuf>) -> Self {
+    /// Create a new |TargetChannelManager|.
+    ///
+    /// Arguments:
+    /// * `service_connector` - used to connect to fuchsia.pkg.RepositoryManager and
+    ///   fuchsia.boot.ArgumentsMarker.
+    /// * `dir` - directory containing mutable configuration files (current and target channel).
+    ///   Usually /data/misc/ota.
+    /// * `config_dir` - directory containing immutable configuration, usually /config/data.
+    pub fn new(
+        service_connector: S,
+        dir: impl Into<PathBuf>,
+        config_dir: impl Into<PathBuf>,
+    ) -> Self {
         let mut path = dir.into();
         path.push(TARGET_CHANNEL);
         let target_channel = Mutex::new(read_channel(&path).ok());
+        let mut config_path = config_dir.into();
+        config_path.push(CHANNEL_PACKAGE_MAP);
+        let channel_package_map = read_channel_mappings(&config_path).unwrap_or_else(|err| {
+            fx_log_warn!("Failed to load {}: {:?}", CHANNEL_PACKAGE_MAP, err);
+            HashMap::new()
+        });
 
-        Self { service_connector, path, target_channel }
+        Self { service_connector, path, target_channel, channel_package_map }
     }
 
     /// Fetch the target channel from vbmeta, if one is present.
@@ -257,9 +279,13 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         self.target_channel.lock().clone()
     }
 
+    /// Returns the update URL for the current target channel, if the channel exists.
     pub fn get_target_channel_update_url(&self) -> Option<String> {
-        let target_repo_url = self.get_target_channel()?;
-        return Some(format!("fuchsia-pkg://{}/update", target_repo_url));
+        let target_channel = self.get_target_channel()?;
+        match self.channel_package_map.get(&target_channel) {
+            Some(url) => Some(url.to_string()),
+            None => Some(format!("fuchsia-pkg://{}/update", target_channel)),
+        }
     }
 
     pub async fn set_target_channel(&self, channel: String) -> Result<(), anyhow::Error> {
@@ -285,11 +311,23 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
             }
             repo_configs.extend(repos);
         }
-        Ok(repo_configs
+        let mut channels: HashSet<String> = repo_configs
             .into_iter()
             .filter_map(|config| config.try_into().ok())
             .map(|config: RepositoryConfig| config.repo_url().host().to_string())
-            .collect())
+            .collect();
+
+        // We want to have the final list of channels include any user-added channels (e.g.
+        // "devhost"). To achieve this, only remove channels which have a corresponding entry in
+        // the channel->package map.
+        for (channel, package) in self.channel_package_map.iter() {
+            channels.remove(package.host());
+            channels.insert(channel.clone());
+        }
+
+        let mut result = channels.into_iter().collect::<Vec<String>>();
+        result.sort();
+        Ok(result)
     }
 }
 
@@ -326,6 +364,40 @@ fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(
         serde_json::to_writer(io::BufWriter::new(f), &channel)?;
     };
     fs::rename(temp_path, path)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "version", content = "content", deny_unknown_fields)]
+pub enum ChannelPackageMap {
+    #[serde(rename = "1")]
+    Version1(Vec<ChannelPackagePair>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChannelPackagePair {
+    channel: String,
+    package: PkgUrl,
+}
+
+fn read_channel_mappings(p: impl AsRef<Path>) -> Result<HashMap<String, PkgUrl>, Error> {
+    let f = fs::File::open(p.as_ref())?;
+    let mut result = HashMap::new();
+    match serde_json::from_reader(io::BufReader::new(f))? {
+        ChannelPackageMap::Version1(items) => {
+            for item in items.into_iter() {
+                if let Some(old_pkg) = result.insert(item.channel.clone(), item.package.clone()) {
+                    fx_log_err!(
+                        "Duplicate update package definition for channel {}: {} and {}.",
+                        item.channel,
+                        item.package,
+                        old_pkg
+                    );
+                }
+            }
+        }
+    };
+
+    Ok(result)
 }
 
 #[derive(Debug, Error)]
@@ -660,7 +732,7 @@ mod tests {
             Some("devhost".to_string()),
         );
         let target_channel_manager =
-            TargetChannelManager::new(target_connector.clone(), dir.path());
+            TargetChannelManager::new(target_connector.clone(), dir.path(), dir.path());
 
         let (current_connector, svc_dir) =
             NamespacedServiceConnector::bind("/test/current_channel_manager2/svc")
@@ -727,7 +799,7 @@ mod tests {
         let target_channel_path = dir.path().join(TARGET_CHANNEL);
 
         let connector = ArgumentsServiceConnector::new("fuchsia-pkg://devhost/update/0", None);
-        let channel_manager = TargetChannelManager::new(connector.clone(), dir.path());
+        let channel_manager = TargetChannelManager::new(connector.clone(), dir.path(), dir.path());
 
         // First write of the file with the correct data.
         assert_matches!(read_channel(&target_channel_path), Err(_));
@@ -757,7 +829,7 @@ mod tests {
 
         let connector =
             ArgumentsServiceConnector::new("fuchsia-pkg://devhost/update/0", Some("b".to_string()));
-        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
 
         assert!(read_channel(&target_channel_path).is_err());
         channel_manager.update().await.expect("channel update to succeed");
@@ -774,7 +846,7 @@ mod tests {
             "fuchsia-pkg://devhost/update/0",
             Some("not-target-channel".to_string()),
         );
-        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
         channel_manager.set_target_channel("target-channel".to_string()).await.unwrap();
         assert_eq!(channel_manager.get_target_channel(), Some("target-channel".to_string()));
         assert_eq!(read_channel(&target_channel_path).unwrap(), "target-channel");
@@ -788,7 +860,7 @@ mod tests {
             "fuchsia-pkg://devhost/update/0",
             Some("not-devhost".to_string()),
         );
-        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
         channel_manager.update().await.unwrap();
         assert_eq!(channel_manager.get_target_channel(), Some("not-devhost".to_string()));
     }
@@ -801,7 +873,7 @@ mod tests {
             "fuchsia-pkg://my-cool-package-server.example.com/update/0",
             None,
         );
-        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
         channel_manager.update().await.unwrap();
         assert_eq!(
             channel_manager.get_target_channel(),
@@ -872,11 +944,65 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_channel_manager_get_update_package_url() {
+        let dir = tempfile::tempdir().unwrap();
+        let connector = RepoMgrServiceConnector {
+            channels: vec!["asdfghjkl.example.com", "qwertyuiop.example.com", "devhost"],
+        };
+
+        let package_map_path = dir.path().join(CHANNEL_PACKAGE_MAP);
+
+        fs::write(&package_map_path,
+            r#"{"version":"1","content":[{"channel":"first","package":"fuchsia-pkg://asdfghjkl.example.com/update"}]}"#,
+        ).unwrap();
+
+        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
+        assert_eq!(channel_manager.get_target_channel_update_url(), None);
+        channel_manager.set_target_channel("first".to_owned()).await.unwrap();
+        assert_eq!(
+            channel_manager.get_target_channel_update_url(),
+            Some("fuchsia-pkg://asdfghjkl.example.com/update".to_owned())
+        );
+
+        channel_manager.set_target_channel("does_not_exist".to_owned()).await.unwrap();
+        assert_eq!(
+            channel_manager.get_target_channel_update_url(),
+            Some("fuchsia-pkg://does_not_exist/update".to_owned())
+        );
+
+        channel_manager.set_target_channel("qwertyuiop.example.com".to_owned()).await.unwrap();
+        assert_eq!(
+            channel_manager.get_target_channel_update_url(),
+            Some("fuchsia-pkg://qwertyuiop.example.com/update".to_owned())
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_channel_manager_get_channel_list_with_map() {
+        let dir = tempfile::tempdir().unwrap();
+        let connector = RepoMgrServiceConnector {
+            channels: vec!["asdfghjkl.example.com", "qwertyuiop.example.com", "devhost"],
+        };
+
+        let package_map_path = dir.path().join(CHANNEL_PACKAGE_MAP);
+
+        fs::write(&package_map_path,
+            r#"{"version":"1","content":[{"channel":"first","package":"fuchsia-pkg://asdfghjkl.example.com/update"}]}"#,
+        ).unwrap();
+
+        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
+        assert_eq!(
+            channel_manager.get_channel_list().await.unwrap(),
+            vec!["devhost", "first", "qwertyuiop.example.com"]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_channel_manager_get_channel_list() {
         let dir = tempfile::tempdir().unwrap();
         let connector =
             RepoMgrServiceConnector { channels: vec!["some-channel", "target-channel"] };
-        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
         assert_eq!(
             channel_manager.get_channel_list().await.unwrap(),
             vec!["some-channel", "target-channel"]
