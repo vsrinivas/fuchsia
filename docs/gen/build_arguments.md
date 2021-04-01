@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1543
+From //build/config/BUILDCONFIG.gn:1544
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -1086,7 +1086,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1300
+From //build/config/BUILDCONFIG.gn:1301
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1820,7 +1820,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1159
+From //build/config/BUILDCONFIG.gn:1160
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3152,7 +3152,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1533
+From //build/config/BUILDCONFIG.gn:1534
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3161,7 +3161,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1538
+From //build/config/BUILDCONFIG.gn:1539
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3205,7 +3205,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1346
+From //build/config/BUILDCONFIG.gn:1347
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3502,7 +3502,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1330
+From //build/config/BUILDCONFIG.gn:1331
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
