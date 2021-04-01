@@ -253,7 +253,7 @@ void FakeUsbAx88179Function::DdkRelease() { delete this; }
 
 zx_status_t FakeUsbAx88179Function::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_ax88179::Hooks::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_ax88179::Hooks>(this, msg, &transaction);
   return transaction.Status();
 }
 

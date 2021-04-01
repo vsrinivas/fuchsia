@@ -27,7 +27,7 @@ class AmlogicTestDevice : public fuchsia_hardware_mediacodec::Tester::Interface,
   void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    fuchsia_hardware_mediacodec::Tester::Dispatch(this, msg, &transaction);
+    fidl::WireDispatch<fuchsia_hardware_mediacodec::Tester>(this, msg, &transaction);
     return transaction.Status();
   }
 

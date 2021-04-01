@@ -47,7 +47,7 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   void Shutdown();
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    fuchsia_hardware_audio::DaiConnect::Dispatch(this, msg, &transaction);
+    fidl::WireDispatch<fuchsia_hardware_audio::DaiConnect>(this, msg, &transaction);
     return transaction.Status();
   }
 

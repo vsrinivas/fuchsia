@@ -139,7 +139,7 @@ void SpiChild::Exchange(sharedmemory::wire::SharedVmoBuffer tx_buffer,
 
 zx_status_t SpiChild::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_spi::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_spi::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

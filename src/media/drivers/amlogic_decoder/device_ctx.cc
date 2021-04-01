@@ -48,7 +48,7 @@ zx_status_t DeviceCtx::Bind() { return DdkAdd("amlogic_video"); }
 
 zx_status_t DeviceCtx::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction ddk_transaction(txn);
-  fuchsia_hardware_mediacodec::Device::Dispatch(this, msg, &ddk_transaction);
+  fidl::WireDispatch<fuchsia_hardware_mediacodec::Device>(this, msg, &ddk_transaction);
   return ddk_transaction.Status();
 }
 

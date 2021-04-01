@@ -42,7 +42,7 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
 
 zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_test::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_test::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

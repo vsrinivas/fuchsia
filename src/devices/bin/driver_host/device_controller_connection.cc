@@ -345,7 +345,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
     VLOGD(1, *dev(), "Opening device %p", dev().get());
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-    fuchsia_io::Directory::Dispatch(this, &fidl_msg, &txn);
+    fidl::WireDispatch<fuchsia_io::Directory>(this, &fidl_msg, &txn);
     if (status != ZX_OK) {
       return txn.Status();
     }
@@ -353,6 +353,6 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   }
 
   DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-  fuchsia_device_manager::DeviceController::Dispatch(this, &fidl_msg, &txn);
+  fidl::WireDispatch<fuchsia_device_manager::DeviceController>(this, &fidl_msg, &txn);
   return txn.Status();
 }

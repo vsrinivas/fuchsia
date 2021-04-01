@@ -43,7 +43,7 @@ namespace minfs {
 #ifdef __Fuchsia__
 
 void VnodeMinfs::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* transaction) {
-  fuchsia_minfs::Minfs::Dispatch(this, msg, transaction);
+  fidl::WireDispatch<fuchsia_minfs::Minfs>(this, msg, transaction);
 }
 
 #endif  // __Fuchsia__

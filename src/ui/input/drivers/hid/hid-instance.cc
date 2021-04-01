@@ -158,7 +158,7 @@ void HidInstance::DdkRelease() { delete this; }
 
 zx_status_t HidInstance::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_input::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_input::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

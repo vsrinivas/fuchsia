@@ -709,7 +709,7 @@ zx_off_t SkipBlockDevice::DdkGetSize() {
 
 zx_status_t SkipBlockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_skipblock::SkipBlock::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_skipblock::SkipBlock>(this, msg, &transaction);
   return transaction.Status();
 }
 

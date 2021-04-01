@@ -117,7 +117,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    audio_fidl::Device::Dispatch(this, msg, &transaction);
+    fidl::WireDispatch<audio_fidl::Device>(this, msg, &transaction);
     return transaction.Status();
   }
 

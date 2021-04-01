@@ -154,7 +154,7 @@ void SyncDevice::DdkRelease() { delete this; }
 
 zx_status_t SyncDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_goldfish::SyncDevice::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_goldfish::SyncDevice>(this, msg, &transaction);
   return transaction.Status();
 }
 

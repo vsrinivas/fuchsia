@@ -168,7 +168,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
 
 zx_status_t SerialDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_serial::NewDeviceProxy::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_serial::NewDeviceProxy>(this, msg, &transaction);
   return transaction.Status();
 }
 

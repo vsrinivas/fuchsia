@@ -43,7 +43,7 @@ void NoHardwareGpu::DdkRelease() { delete this; }
 
 zx_status_t NoHardwareGpu::DdkMessage(fidl_incoming_msg_t* message, fidl_txn_t* transaction) {
   DdkTransaction ddk_transaction(transaction);
-  fuchsia_gpu_magma::Device::Dispatch(this, message, &ddk_transaction);
+  fidl::WireDispatch<fuchsia_gpu_magma::Device>(this, message, &ddk_transaction);
   return ddk_transaction.Status();
 }
 

@@ -587,7 +587,7 @@ zx_status_t PerfmonDevice::DdkClose(uint32_t flags) {
 zx_status_t PerfmonDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   mtx_lock(&lock_);
-  fidl_perfmon::Controller::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fidl_perfmon::Controller>(this, msg, &transaction);
   mtx_unlock(&lock_);
 
   return transaction.Status();

@@ -260,7 +260,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
 
         auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
         RewriteTransaction txn(hdr->txid, zx::unowned_channel(async_wait_t::object));
-        test::ReceiveFlexibleEnvelope::Dispatch(this, &msg, &txn);
+        fidl::WireDispatch<test::ReceiveFlexibleEnvelope>(this, &msg, &txn);
       }
 
       // Will only get here if every single message was handled synchronously and successfully.

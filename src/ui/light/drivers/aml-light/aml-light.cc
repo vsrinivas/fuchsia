@@ -158,7 +158,7 @@ void AmlLight::SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync
 
 zx_status_t AmlLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  Light::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<Light>(this, msg, &transaction);
   return transaction.Status();
 }
 

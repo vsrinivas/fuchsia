@@ -134,7 +134,7 @@ void Sgm37603a::GetNormalizedBrightnessScale(
 
 zx_status_t Sgm37603a::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  FidlBacklight::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<FidlBacklight::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

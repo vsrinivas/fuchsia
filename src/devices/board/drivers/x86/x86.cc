@@ -199,7 +199,7 @@ bool X86::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
 
 zx_status_t X86::DdkMessage(fidl_incoming_msg* message, fidl_txn* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_acpi::Acpi::Dispatch(this, message, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_acpi::Acpi>(this, message, &transaction);
   return transaction.Status();
 }
 

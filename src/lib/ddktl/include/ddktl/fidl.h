@@ -73,7 +73,7 @@ inline Transaction Transaction::MoveTxn(fidl_txn_t* txn) {
 // designed to work with ::DdkMessage.  If can be used to reply synchronously as in:
 // zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 //     DdkTransaction transaction(txn);
-//     fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
+//     fidl::WireDispatch<fuchsia::hardware::serial::Device>(this, msg, &transaction);
 //     return transaction.Status();
 // }
 // void DdkFidlDevice::GetClass(GetClassCompleter::Sync& completer) {
@@ -84,7 +84,7 @@ inline Transaction Transaction::MoveTxn(fidl_txn_t* txn) {
 //
 // zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 //   DdkTransaction transaction(txn);
-//   fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
+//   fidl::WireDispatch<fuchsia::hardware::serial::Device>(this, msg, &transaction);
 //   return ZX_ERR_AYSNC; // Ownership of transaction was taken, can't use transaction.Status()
 //   here.
 // }

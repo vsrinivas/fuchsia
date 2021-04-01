@@ -259,7 +259,7 @@ zx_status_t Lp8556Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) 
       ::fidl::DispatchResult::kFound) {
     return transaction.Status();
   }
-  FidlPowerSensor::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<FidlPowerSensor::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

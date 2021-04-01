@@ -98,7 +98,7 @@ void LogTester::EmitLog(fuchsia_validate_logs::wire::RecordSpec spec,
 
 zx_status_t LogTester::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_validate_logs::LogSinkPuppet::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_validate_logs::LogSinkPuppet>(this, msg, &transaction);
   return transaction.Status();
 }
 

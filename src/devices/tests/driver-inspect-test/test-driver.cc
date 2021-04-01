@@ -33,7 +33,7 @@ class TestInspectDriver : public DeviceType,
   void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    TestInspect::Dispatch(this, msg, &transaction);
+    fidl::WireDispatch<TestInspect>(this, msg, &transaction);
     return transaction.Status();
   }
 

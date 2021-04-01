@@ -54,7 +54,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    fuchsia_device_power_test::TestDevice::Dispatch(this, msg, &transaction);
+    fidl::WireDispatch<fuchsia_device_power_test::TestDevice>(this, msg, &transaction);
     return transaction.Status();
   }
   void DdkInit(ddk::InitTxn txn);

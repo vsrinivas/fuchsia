@@ -14,7 +14,7 @@ namespace pci {
 
 zx_status_t Bus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  PciFidl::Bus::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<PciFidl::Bus>(this, msg, &transaction);
   return transaction.Status();
 }
 

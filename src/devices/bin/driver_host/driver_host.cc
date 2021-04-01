@@ -647,7 +647,7 @@ zx_status_t DevhostControllerConnection::HandleRead() {
 
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
   DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-  fuchsia_device_manager::DevhostController::Dispatch(this, &fidl_msg, &txn);
+  fidl::WireDispatch<fuchsia_device_manager::DevhostController>(this, &fidl_msg, &txn);
   return txn.Status();
 }
 

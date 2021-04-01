@@ -77,7 +77,7 @@ void DsiDwBase::SendCmd(fuchsia_hardware_dsi::wire::MipiDsiCmd cmd,
 
 zx_status_t DsiDwBase::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fidl_dsi::DsiBase::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fidl_dsi::DsiBase>(this, msg, &transaction);
   return transaction.Status();
 }
 

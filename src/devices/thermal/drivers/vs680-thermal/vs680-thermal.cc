@@ -101,7 +101,7 @@ void Vs680Thermal::DdkRelease() {
 
 zx_status_t Vs680Thermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_thermal::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_thermal::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

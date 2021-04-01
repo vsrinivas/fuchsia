@@ -351,7 +351,7 @@ void ConsoleDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync& compl
 
 zx_status_t ConsoleDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_virtioconsole::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_virtioconsole::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

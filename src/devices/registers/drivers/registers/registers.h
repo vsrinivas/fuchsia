@@ -56,7 +56,7 @@ class Register : public fuchsia_hardware_registers::Device::Interface,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    fuchsia_hardware_registers::Device::Dispatch(this, msg, &transaction);
+    fidl::WireDispatch<fuchsia_hardware_registers::Device>(this, msg, &transaction);
     return transaction.Status();
   }
   void DdkUnbind(ddk::UnbindTxn txn) {

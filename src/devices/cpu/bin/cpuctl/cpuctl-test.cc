@@ -110,7 +110,7 @@ zx_status_t FakeCpuDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
       ::fidl::DispatchResult::kFound) {
     return transaction.Status();
   }
-  fuchsia_device::Controller::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_device::Controller>(this, msg, &transaction);
   return transaction.Status();
 }
 

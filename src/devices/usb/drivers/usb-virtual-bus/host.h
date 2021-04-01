@@ -41,7 +41,7 @@ class Device : public DeviceType,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    fuchsia_hardware_usb_virtualbustest::BusTest::Dispatch(this, msg, &transaction);
+    fidl::WireDispatch<fuchsia_hardware_usb_virtualbustest::BusTest>(this, msg, &transaction);
     return transaction.Status();
   }
 

@@ -10,7 +10,7 @@ namespace optee {
 
 zx_status_t OpteeDeviceInfo::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_tee::DeviceInfo::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_tee::DeviceInfo>(this, msg, &transaction);
   return transaction.Status();
 }
 

@@ -256,7 +256,7 @@ void AddressSpaceDevice::DdkRelease() { delete this; }
 
 zx_status_t AddressSpaceDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_goldfish::AddressSpaceDevice::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_goldfish::AddressSpaceDevice>(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -399,7 +399,7 @@ void AddressSpaceChildDriver::Ping(
 // Device protocol implementation.
 zx_status_t AddressSpaceChildDriver::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_goldfish::AddressSpaceChildDriver::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_goldfish::AddressSpaceChildDriver>(this, msg, &transaction);
   return transaction.Status();
 }
 

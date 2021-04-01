@@ -193,7 +193,7 @@ zx_status_t FakeAmlThermal::Init(std::optional<zx::channel> remote) {
 
 zx_status_t FakeAmlThermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_thermal::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_thermal::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

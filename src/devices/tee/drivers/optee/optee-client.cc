@@ -313,7 +313,7 @@ zx_status_t OpteeClient::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   }
   DdkTransaction transaction(txn);
 
-  fuchsia_tee::Application::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_tee::Application>(this, msg, &transaction);
 
   return transaction.Status();
 }

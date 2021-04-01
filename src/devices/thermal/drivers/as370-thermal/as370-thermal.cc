@@ -93,7 +93,7 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t As370Thermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_thermal::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_thermal::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

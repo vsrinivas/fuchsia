@@ -46,7 +46,7 @@ zx_status_t TestBti::Create(void*, zx_device_t* parent) {
 
 zx_status_t TestBti::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_btitest::BtiDevice::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_btitest::BtiDevice>(this, msg, &transaction);
   return transaction.Status();
 }
 

@@ -783,7 +783,7 @@ void UsbDevice::SetConfiguration(uint8_t configuration,
 
 zx_status_t UsbDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_usb_device::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_usb_device::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

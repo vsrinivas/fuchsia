@@ -23,7 +23,7 @@ namespace fs_pty::internal {
 
 void DispatchPtyDeviceMessage(fuchsia_hardware_pty::Device::Interface* interface,
                               fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
-  fuchsia_hardware_pty::Device::Dispatch(interface, msg, txn);
+  fidl::WireDispatch<fuchsia_hardware_pty::Device>(interface, msg, txn);
 }
 
 // Return ZX_ERR_NOT_SUPPORTED for all of the PTY things we don't actually support

@@ -75,7 +75,7 @@ void Pl031::Set(FidlRtc::wire::Time rtc, SetCompleter::Sync& completer) {
 
 zx_status_t Pl031::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  FidlRtc::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<FidlRtc::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

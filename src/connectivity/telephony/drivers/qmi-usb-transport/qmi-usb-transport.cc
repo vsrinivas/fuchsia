@@ -291,7 +291,7 @@ void Device::SetSnoopChannel(::fidl::ClientEnd<fuchsia_telephony_snoop::Publishe
 
 zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  telephony_transport::Qmi::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<telephony_transport::Qmi>(this, msg, &transaction);
   return transaction.Status();
 }
 

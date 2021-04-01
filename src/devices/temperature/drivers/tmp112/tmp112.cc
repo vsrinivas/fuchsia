@@ -21,7 +21,7 @@ void Tmp112Device::DdkRelease() { delete this; }
 
 zx_status_t Tmp112Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  temperature_fidl::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<temperature_fidl::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

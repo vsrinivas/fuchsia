@@ -1113,7 +1113,7 @@ zx_status_t InsntraceDevice::DdkClose(uint32_t flags) {
 zx_status_t InsntraceDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   mtx_lock(&lock_);
-  fuchsia_insntrace::Controller::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_insntrace::Controller>(this, msg, &transaction);
   mtx_unlock(&lock_);
   return transaction.Status();
 }

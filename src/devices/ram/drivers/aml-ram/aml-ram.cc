@@ -160,7 +160,7 @@ void AmlRam::DdkRelease() {
 
 zx_status_t AmlRam::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ram_metrics::Device::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<ram_metrics::Device>(this, msg, &transaction);
   return transaction.Status();
 }
 

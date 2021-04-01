@@ -121,7 +121,7 @@ zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capaci
 
 zx_status_t RpmbDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_hardware_rpmb::Rpmb::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_rpmb::Rpmb>(this, msg, &transaction);
   return ZX_ERR_ASYNC;
 }
 

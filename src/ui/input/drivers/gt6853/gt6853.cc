@@ -116,7 +116,7 @@ zx_status_t Gt6853Device::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t Gt6853Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia_input_report::InputDevice::Dispatch(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_input_report::InputDevice>(this, msg, &transaction);
   return transaction.Status();
 }
 

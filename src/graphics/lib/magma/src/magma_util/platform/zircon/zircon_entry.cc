@@ -253,7 +253,7 @@ zx_status_t GpuDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   }
 
   DdkTransaction ddk_transaction(txn);
-  fuchsia_gpu_magma::Device::Dispatch(this, msg, &ddk_transaction);
+  fidl::WireDispatch<fuchsia_gpu_magma::Device>(this, msg, &ddk_transaction);
   return ddk_transaction.Status();
 }
 
