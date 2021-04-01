@@ -95,6 +95,10 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
                       fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
                       fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
+  // |fuchsia::ui::scenic::Scenic|
+  void CreateSessionT(fuchsia::ui::scenic::SessionEndpoints endpoints,
+                      CreateSessionTCallback callback) override;
+
   sys::ComponentContext* app_context() const { return app_context_; }
   inspect::Node* inspect_node() { return &inspect_node_; }
 
@@ -109,10 +113,7 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   fuchsia::ui::scenic::internal::Snapshot* snapshot() { return snapshot_.get(); }
 
  private:
-  void CreateSessionImmediately(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
-      fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser);
+  void CreateSessionImmediately(fuchsia::ui::scenic::SessionEndpoints endpoints);
 
   // If a System is not initially initialized, this method will be called when
   // it is ready.

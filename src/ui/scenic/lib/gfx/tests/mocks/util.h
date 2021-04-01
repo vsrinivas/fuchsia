@@ -58,6 +58,10 @@ class SessionWrapper {
   explicit SessionWrapper(scenic_impl::Scenic* scenic);
   explicit SessionWrapper(scenic_impl::Scenic* scenic,
                           fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser_request);
+  // The constructor will fill in |endpoints.session| and |endpoints.session_listener|; the caller
+  // should fill in the other endpoints.
+  explicit SessionWrapper(scenic_impl::Scenic* scenic,
+                          fuchsia::ui::scenic::SessionEndpoints endpoints);
   virtual ~SessionWrapper();
 
   scenic::Session* session() { return session_.get(); }

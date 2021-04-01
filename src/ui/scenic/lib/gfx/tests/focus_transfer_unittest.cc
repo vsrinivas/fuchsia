@@ -50,6 +50,8 @@ class FocusTransferTest : public scenic_impl::gfx::test::GfxSystemTest, public F
   struct ParentClient : public SessionWrapper {
     ParentClient(scenic_impl::Scenic* scenic, ViewFocuserRequest view_focuser_request)
         : SessionWrapper(scenic, std::move(view_focuser_request)) {}
+    ParentClient(scenic_impl::Scenic* scenic, fuchsia::ui::scenic::SessionEndpoints endpoints)
+        : SessionWrapper(scenic, std::move(endpoints)) {}
     std::unique_ptr<scenic::Compositor> compositor;
     std::unique_ptr<scenic::Renderer> renderer;
     std::unique_ptr<scenic::Scene> scene;  // Implicitly has the root ViewRef.
@@ -412,11 +414,77 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestConnected) {
         test->RequestToPresent(session);
       });
 
-  // TODO(fxbug.dev/42737): Remove when session update logic guarantees view tree updates in every
-  // session.
-  child_client.RunNow([test = this](scenic::Session* session, scenic::EntityNode* session_anchor) {
+  EXPECT_TRUE(RequestFocusChange(&parent_focuser, target));
+  ASSERT_EQ(CountReceivedFocusChains(), 3u);
+
+  ASSERT_TRUE(LastFocusChain()->has_focus_chain());
+  ASSERT_EQ(LastFocusChain()->focus_chain().size(), 2u);
+  EXPECT_EQ(utils::ExtractKoid(LastFocusChain()->focus_chain()[1]), utils::ExtractKoid(target));
+}
+
+TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestConnected_TableVariant) {
+  ViewFocuserPtr parent_focuser;
+  fuchsia::ui::scenic::SessionEndpoints endpoints;
+  endpoints.set_view_focuser(parent_focuser.NewRequest());
+  ParentClient parent_client(scenic(), std::move(endpoints));  // Use SessionEndpoints table.
+  ChildClient child_client(scenic());
+
+  auto token_pair = scenic::ViewTokenPair::New();  // parent-child view tokens
+  auto child_refs = scenic::ViewRefPair::New();    // child view's view ref pair
+
+  ViewRef target;
+  fidl::Clone(child_refs.view_ref, &target);
+
+  parent_client.RunNow([test = this, state = &parent_client](scenic::Session* session,
+                                                             scenic::EntityNode* session_anchor) {
+    state->compositor = std::make_unique<scenic::Compositor>(session);
+    scenic::LayerStack layer_stack(session);
+    state->compositor->SetLayerStack(layer_stack);
+
+    scenic::Layer layer(session);
+    layer.SetSize(5 /*px*/, 5 /*px*/);
+    layer_stack.AddLayer(layer);
+    state->renderer = std::make_unique<scenic::Renderer>(session);
+    layer.SetRenderer(*state->renderer);
+
+    // Created scene
+    state->scene = std::make_unique<scenic::Scene>(session);
+
+    // Connect scene
+    scenic::Camera camera(*state->scene);
+    state->renderer->SetCamera(camera);
+
+    state->scene->AddChild(*session_anchor);
+
     test->RequestToPresent(session);
   });
+
+  child_client.RunNow(
+      [test = this, state = &child_client, child_token = std::move(token_pair.view_token),
+       control_ref = std::move(child_refs.control_ref), view_ref = std::move(child_refs.view_ref)](
+          scenic::Session* session, scenic::EntityNode*) mutable {
+        state->view =
+            std::make_unique<scenic::View>(session, std::move(child_token), std::move(control_ref),
+                                           std::move(view_ref), "child view");
+        test->RequestToPresent(session);
+      });
+
+  parent_client.RunNow(
+      [test = this, state = &parent_client, parent_token = std::move(token_pair.view_holder_token)](
+          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
+        const std::array<float, 3> kZero = {0, 0, 0};
+        state->holder_child =
+            std::make_unique<scenic::ViewHolder>(session, std::move(parent_token), "child holder");
+        state->holder_child->SetViewProperties(kZero, {5, 5, 1}, kZero, kZero);
+
+        //
+        // Action: Connect view holder to Scene.
+        // Expect, with focus change request: focus change, with new focus chain.
+        //
+        session_anchor->Attach(*state->holder_child);
+
+        test->RequestToPresent(session);
+      });
 
   EXPECT_TRUE(RequestFocusChange(&parent_focuser, target));
   ASSERT_EQ(CountReceivedFocusChains(), 3u);

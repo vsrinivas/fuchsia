@@ -1170,12 +1170,6 @@ TEST_F(FocusChainTest, LateViewConnectTriggersViewTreeUpdate) {
         test->RequestToPresent(session);
       });
 
-  // TODO(fxbug.dev/42737): Remove when session update logic guarantees view tree updates in every
-  // session.
-  child_client.RunNow([test = this](scenic::Session* session, scenic::EntityNode* session_anchor) {
-    test->RequestToPresent(session);
-  });
-
   EXPECT_TRUE(RequestFocusChange(&parent_focuser, target));
   EXPECT_EQ(CountReceivedFocusChains(), 3u);
 }

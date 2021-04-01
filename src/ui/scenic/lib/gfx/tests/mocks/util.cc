@@ -12,6 +12,11 @@
 
 namespace scenic_impl::gfx::test {
 
+using fus_Event = fuchsia::ui::scenic::Event;
+using fus_SessionEndpoints = fuchsia::ui::scenic::SessionEndpoints;
+using fus_SessionListenerHandle = fuchsia::ui::scenic::SessionListenerHandle;
+using fus_SessionPtr = fuchsia::ui::scenic::SessionPtr;
+
 bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
   zx_signals_t pending = 0u;
   fence.wait_one(signal, zx::time(), &pending);
@@ -91,18 +96,17 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
 SessionWrapper::SessionWrapper(scenic_impl::Scenic* scenic) {
   FX_CHECK(scenic);
 
-  fuchsia::ui::scenic::SessionPtr session_ptr;
+  fus_SessionPtr session_ptr;
 
-  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
-  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> listener_request =
-      listener_handle.NewRequest();
+  fus_SessionListenerHandle listener_handle;
+  auto listener_request = listener_handle.NewRequest();
 
   scenic->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
   session_ = std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
   session_anchor_ = std::make_unique<scenic::EntityNode>(session_.get());
 
-  session_->set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
-    for (fuchsia::ui::scenic::Event& event : events) {
+  session_->set_event_handler([this](std::vector<fus_Event> events) {
+    for (fus_Event& event : events) {
       events_.push_back(std::move(event));
     }
   });
@@ -113,19 +117,42 @@ SessionWrapper::SessionWrapper(
     fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser_request) {
   FX_CHECK(scenic);
 
-  fuchsia::ui::scenic::SessionPtr session_ptr;
+  fus_SessionPtr session_ptr;
 
-  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
-  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> listener_request =
-      listener_handle.NewRequest();
+  fus_SessionListenerHandle listener_handle;
+  auto listener_request = listener_handle.NewRequest();
 
   scenic->CreateSession2(session_ptr.NewRequest(), std::move(listener_handle),
                          std::move(view_focuser_request));
   session_ = std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
   session_anchor_ = std::make_unique<scenic::EntityNode>(session_.get());
 
-  session_->set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
-    for (fuchsia::ui::scenic::Event& event : events) {
+  session_->set_event_handler([this](std::vector<fus_Event> events) {
+    for (fus_Event& event : events) {
+      events_.push_back(std::move(event));
+    }
+  });
+}
+
+SessionWrapper::SessionWrapper(scenic_impl::Scenic* scenic, fus_SessionEndpoints endpoints) {
+  FX_CHECK(scenic);
+  FX_CHECK(!endpoints.has_session());
+  FX_CHECK(!endpoints.has_session_listener());
+
+  fus_SessionPtr session_ptr;
+
+  fus_SessionListenerHandle listener_handle;
+  auto listener_request = listener_handle.NewRequest();
+
+  endpoints.set_session(session_ptr.NewRequest());
+  endpoints.set_session_listener(std::move(listener_handle));
+  scenic->CreateSessionT(std::move(endpoints), [] {});
+
+  session_ = std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
+  session_anchor_ = std::make_unique<scenic::EntityNode>(session_.get());
+
+  session_->set_event_handler([this](std::vector<fus_Event> events) {
+    for (fus_Event& event : events) {
       events_.push_back(std::move(event));
     }
   });

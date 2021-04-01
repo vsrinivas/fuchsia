@@ -10,6 +10,8 @@
 
 namespace scenic_impl {
 
+using fuchsia::ui::scenic::SessionEndpoints;
+
 Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
                fit::closure quit_callback)
     : app_context_(app_context),
@@ -81,34 +83,53 @@ void Scenic::OnFramePresented(
 
 void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
                            fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
-  post_initialization_runner_.RunAfterInitialized([this,
-                                                   session_request = std::move(session_request),
-                                                   listener = std::move(listener)]() mutable {
-    CreateSessionImmediately(std::move(session_request), std::move(listener),
-                             fidl::InterfaceRequest<fuchsia::ui::views::Focuser>(/*invalid*/));
-  });
+  SessionEndpoints endpoints;
+  endpoints.set_session(std::move(session_request));
+  endpoints.set_session_listener(std::move(listener));
+  post_initialization_runner_.RunAfterInitialized(
+      [this, endpoints = std::move(endpoints)]() mutable {
+        CreateSessionImmediately(std::move(endpoints));
+      });
 }
 
 void Scenic::CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
                             fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
                             fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+  SessionEndpoints endpoints;
+  endpoints.set_session(std::move(session_request));
+  endpoints.set_session_listener(std::move(listener));
+  endpoints.set_view_focuser(std::move(view_focuser));
   post_initialization_runner_.RunAfterInitialized(
-      [this, session_request = std::move(session_request), listener = std::move(listener),
-       view_focuser = std::move(view_focuser)]() mutable {
-        CreateSessionImmediately(std::move(session_request), std::move(listener),
-                                 std::move(view_focuser));
+      [this, endpoints = std::move(endpoints)]() mutable {
+        CreateSessionImmediately(std::move(endpoints));
       });
 }
 
-void Scenic::CreateSessionImmediately(
-    fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-    fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
-    fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+void Scenic::CreateSessionT(SessionEndpoints endpoints, CreateSessionTCallback callback) {
+  if (!endpoints.has_session()) {
+    // We need explicit handling of the missing Session request here, because
+    // CreateSessionImmediately will just make up a new one in endpoints.mutable_session().
+    // We can't cleanly "just close" the Scenic channel to the client, though, because all Scenic
+    // channels are bound to (and identified with) the singleton scenic_impl::Scenic object.
+    FX_LOGS(ERROR) << "Request failed, request<fuchsia.ui.scenic.Session> is required but missing.";
+    callback();
+    return;
+  }
+
+  post_initialization_runner_.RunAfterInitialized(
+      [this, endpoints = std::move(endpoints)]() mutable {
+        CreateSessionImmediately(std::move(endpoints));
+      });
+  callback();  // acknowledge this request
+}
+
+void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
   const SessionId session_id = scheduling::GetNextSessionId();
   auto destroy_session_function = [this, session_id](auto...) { CloseSession(session_id); };
 
   auto session = std::make_unique<scenic_impl::Session>(
-      session_id, std::move(session_request), std::move(listener), destroy_session_function);
+      session_id, std::move(*endpoints.mutable_session()),
+      std::move(*endpoints.mutable_session_listener()), destroy_session_function);
   FX_DCHECK(session_id == session->id());
 
   session->SetFrameScheduler(frame_scheduler_);
@@ -127,13 +148,17 @@ void Scenic::CreateSessionImmediately(
   FX_CHECK(sessions_.find(session_id) == sessions_.end());
   sessions_[session_id] = std::move(session);
 
-  if (view_focuser && view_focuser_registry_) {
-    view_focuser_registry_->RegisterViewFocuser(session_id, std::move(view_focuser));
-  } else if (!view_focuser) {
+  if (endpoints.has_view_focuser() && endpoints.view_focuser() && view_focuser_registry_) {
+    view_focuser_registry_->RegisterViewFocuser(session_id,
+                                                std::move(*endpoints.mutable_view_focuser()));
+  } else if (!endpoints.has_view_focuser() || !endpoints.view_focuser()) {
     FX_VLOGS(2) << "Invalid fuchsia.ui.views.Focuser request.";
   } else if (!view_focuser_registry_) {
     FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
   }
+
+  // TODO(fxbug.dev/52626): Implement handling for fuchsia.ui.views.ViewRefFocused.
+  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.TouchSource and MouseSource.
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {

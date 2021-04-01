@@ -60,6 +60,37 @@ TEST_F(ScenicTest, CreateAndDestroySession) {
   EXPECT_TRUE(update_scheduled);
 }
 
+TEST_F(ScenicTest, CreateAndDestroySession_TableVariant) {
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
+  const auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scenic()->SetFrameScheduler(frame_scheduler);
+  scenic()->SetInitialized();
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+
+  fuchsia::ui::scenic::SessionPtr session_ptr;
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
+  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> listener_request =
+      listener_handle.NewRequest();
+  fuchsia::ui::scenic::SessionEndpoints endpoints;
+  endpoints.set_session(session_ptr.NewRequest());
+  endpoints.set_session_listener(std::move(listener_handle));
+  scenic()->CreateSessionT(std::move(endpoints), [] {});
+  auto session =
+      std::make_unique<::scenic::Session>(std::move(session_ptr), std::move(listener_request));
+
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+  EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
+  EXPECT_NE(mock_system->GetLastSessionId(), -1);
+
+  // Closing the session should cause another update to be scheduled.
+  bool update_scheduled = false;
+  frame_scheduler->set_schedule_update_for_session_callback(
+      [&update_scheduled](auto...) { update_scheduled = true; });
+  scenic()->CloseSession(mock_system->GetLastSessionId());
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+  EXPECT_TRUE(update_scheduled);
+}
+
 TEST_F(ScenicTest, CreateAndDestroyMultipleSessions) {
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
   scenic()->SetInitialized();
@@ -104,6 +135,25 @@ TEST_F(ScenicTest, SessionCreatedAfterInitialization) {
   // Initializing Scenic allows the session to be created.
   scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
+}
+
+TEST_F(ScenicTest, InvalidEndpointTable) {
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
+  const auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scenic()->SetFrameScheduler(frame_scheduler);
+  scenic()->SetInitialized();
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+
+  fuchsia::ui::scenic::SessionEndpoints empty;  // Requires .session field, don't put one in.
+  bool ack = false;
+  scenic()->CreateSessionT(std::move(empty), [&ack] { ack = true; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(ack);
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+  EXPECT_EQ(mock_system->GetNumDispatchers(), 0U);
+  EXPECT_EQ(mock_system->GetLastSessionId(), -1);
 }
 
 TEST_F(ScenicTest, InvalidPresentCall_ShouldDestroySession) {
