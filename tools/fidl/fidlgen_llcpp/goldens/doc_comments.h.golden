@@ -883,15 +883,6 @@ class Interface final {
   static ::fidl::DispatchResult Dispatch(Interface* impl,
                                          fidl_incoming_msg_t* msg,
                                          ::fidl::Transaction* txn);
-
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
-  // Only used with |fidl::BindServer| to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static ::fidl::DispatchResult TypeErasedDispatch(void* impl,
-                                                   fidl_incoming_msg_t* msg,
-                                                   ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
-  }
 #endif  // __Fuchsia__
   using EventSender =
       ::fidl::WireEventSender<::fidl_test_doccomments::Interface>;
