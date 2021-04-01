@@ -7,8 +7,11 @@
 //! Library for constructing and serializing the VBMeta struct for verified boot.
 
 mod descriptor;
+mod header;
 mod key;
 mod test;
+mod vbmeta;
 
 pub use descriptor::{HashDescriptor, Salt, SaltError};
 pub use key::{Key, KeyError, SignFailure, Signature, SIGNATURE_SIZE};
+pub use vbmeta::VBMeta;

@@ -25,9 +25,11 @@ if (is_host) {
 
     sources = [
       "src/descriptor.rs",
+      "src/header.rs",
       "src/key.rs",
       "src/lib.rs",
       "src/test.rs",
+      "src/vbmeta.rs",
     ]
   }
 }
