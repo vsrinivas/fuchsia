@@ -111,19 +111,6 @@
         ]
       },
       {
-        "ordinal": 11,
-        "name": "magma_release_buffer_handle",
-        "type": "magma_status_t",
-        "description": "Releases the given handle.",
-        "arguments": [
-          {
-            "name": "buffer_handle",
-            "type": "magma_handle_t",
-            "description": "A valid handle."
-          }
-        ]
-      },
-      {
         "ordinal": 12,
         "name": "magma_get_buffer_id",
         "type": "uint64_t",

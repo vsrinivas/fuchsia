@@ -73,13 +73,6 @@ void magma_release_buffer(
     magma_buffer_t buffer);
 
 ///
-/// \brief Releases the given handle.
-/// \param buffer_handle A valid handle.
-///
-magma_status_t magma_release_buffer_handle(
-    magma_handle_t buffer_handle);
-
-///
 /// \brief Returns a unique id for the given buffer. For performance reasons it's recommended to
 ///        cache the id rather than call this repeatedly.
 /// \param buffer A valid buffer.

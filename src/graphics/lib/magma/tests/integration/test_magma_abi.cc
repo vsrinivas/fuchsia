@@ -259,16 +259,6 @@ class TestConnection {
     magma_release_buffer(connection_, buffer);
   }
 
-  void BufferReleaseHandle() {
-    if (is_virtmagma())
-      GTEST_SKIP();  // TODO(fxbug.dev/13278)
-
-    uint64_t id;
-    uint32_t handle;
-    BufferExport(&handle, &id);
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_release_buffer_handle(handle));
-  }
-
   void BufferImport(uint32_t handle, uint64_t id) {
     ASSERT_TRUE(connection_);
 
@@ -699,11 +689,11 @@ class TestConnection {
 
     magma_buffer_format_description_release(description);
 
-    uint32_t handle;
+    magma_handle_t handle;
     uint32_t offset;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_get_buffer_handle_from_collection(
                                    connection, collection, 0, &handle, &offset));
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_release_buffer_handle(handle));
+    EXPECT_EQ(ZX_OK, zx_handle_close(handle));
 
     magma_buffer_collection_release(connection, collection);
     magma_buffer_constraints_release(connection, constraints);
@@ -994,11 +984,6 @@ TEST(MagmaAbi, ReadNotificationChannel) {
 TEST(MagmaAbi, BufferMap) {
   TestConnection test;
   test.BufferMap();
-}
-
-TEST(MagmaAbi, BufferReleaseHandle) {
-  TestConnection test;
-  test.BufferReleaseHandle();
 }
 
 TEST(MagmaAbi, BufferImportExport) {

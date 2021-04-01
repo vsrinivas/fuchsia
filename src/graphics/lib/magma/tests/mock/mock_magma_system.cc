@@ -329,10 +329,6 @@ magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_release_buffer_handle(uint32_t buffer_handle) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_t size,
                                  magma_cache_operation_t operation) {
   return MAGMA_STATUS_UNIMPLEMENTED;

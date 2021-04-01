@@ -131,13 +131,6 @@ uint64_t magma_get_buffer_size(magma_buffer_t buffer) {
   return reinterpret_cast<magma::PlatformBuffer*>(buffer)->size();
 }
 
-magma_status_t magma_release_buffer_handle(uint32_t buffer_handle) {
-  if (!magma::PlatformHandle::Create(buffer_handle)) {
-    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-  }
-  return MAGMA_STATUS_OK;
-}
-
 uint32_t magma_get_notification_channel_handle(magma_connection_t connection) {
   return magma::PlatformConnectionClient::cast(connection)->GetNotificationChannelHandle();
 }
