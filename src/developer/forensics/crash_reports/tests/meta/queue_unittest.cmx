@@ -1,14 +1,15 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/connectivity/network/lib/net_interfaces/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/queue_unittest_exe"
     },
     "sandbox": {
         "features": [
-            "isolated-temp",
-            "isolated-cache-storage"
+            "isolated-cache-storage",
+            "isolated-temp"
         ]
-    } 
+    }
 }

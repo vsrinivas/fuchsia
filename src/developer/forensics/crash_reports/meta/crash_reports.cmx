@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/connectivity/network/lib/net_interfaces/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/crash_reports"
@@ -18,7 +19,6 @@
             "fuchsia.feedback.DeviceIdProvider",
             "fuchsia.net.NameLookup",
             "fuchsia.net.http.Loader",
-            "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.settings.Privacy",
             "fuchsia.update.channel.Provider"

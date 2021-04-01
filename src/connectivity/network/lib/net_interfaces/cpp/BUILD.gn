@@ -10,8 +10,20 @@ group("cpp") {
 }
 
 static_library("net-interfaces") {
-  public = [ "net_interfaces.h" ]
-  sources = [ "net_interfaces.cc" ]
+  public = [
+    "net_interfaces.h",
+    "reachability.h",
+  ]
+  sources = [
+    "net_interfaces.cc",
+    "reachability.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/connectivity/network/lib/net_interfaces:net_interfaces_includes",
+    "//src/lib/fxl",
+  ]
 
   public_deps = [ "//sdk/fidl/fuchsia.net.interfaces" ]
 }
@@ -19,10 +31,16 @@ static_library("net-interfaces") {
 test("net_interfaces_test") {
   testonly = true
 
-  sources = [ "net_interfaces_test.cc" ]
+  sources = [
+    "net_interfaces_test.cc",
+    "test_common.cc",
+    "test_common.h",
+  ]
 
   deps = [
-    ":net-interfaces",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/network/lib/net_interfaces/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",

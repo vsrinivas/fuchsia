@@ -83,6 +83,7 @@ executable("crash_reporter_unittest_exe") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:crash_reporter",
+    "//src/developer/forensics/crash_reports:network_watcher",
     "//src/developer/forensics/crash_reports/info:info",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -194,25 +195,6 @@ executable("inspect_manager_unittest_exe") {
   ]
 }
 
-executable("network_watcher_unittest_exe") {
-  testonly = true
-
-  # "network_watcher_unittest" is rather generic for the default_output_dir
-  # that is set to root_out_dir so instead we write the binary to
-  # target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [ "network_watcher_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/crash_reports:network_watcher",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:network_reachability_provider",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("queue_unittest_exe") {
   testonly = true
 
@@ -224,6 +206,7 @@ executable("queue_unittest_exe") {
 
   deps = [
     "//src/developer/forensics/crash_reports:constants",
+    "//src/developer/forensics/crash_reports:network_watcher",
     "//src/developer/forensics/crash_reports:queue",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -455,14 +438,6 @@ fuchsia_component("inspect_manager_unittest") {
   deps = [ ":inspect_manager_unittest_exe" ]
 }
 
-fuchsia_component("network_watcher_unittest") {
-  testonly = true
-
-  manifest = "meta/network_watcher_unittest.cmx"
-
-  deps = [ ":network_watcher_unittest_exe" ]
-}
-
 fuchsia_component("main_service_unittest") {
   testonly = true
 
@@ -535,7 +510,6 @@ fuchsia_test_package("crash-reports-tests") {
     ":reporting_policy_watcher_unittest",
     ":inspect_manager_unittest",
     ":main_service_unittest",
-    ":network_watcher_unittest",
     ":queue_unittest",
     ":report_util_unittest",
     ":sized_data_reader_unittest",

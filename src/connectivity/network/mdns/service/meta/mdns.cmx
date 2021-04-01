@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/connectivity/network/lib/net_interfaces/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/mdns"
@@ -12,7 +13,6 @@
         "services": [
             "fuchsia.device.NameProvider",
             "fuchsia.net.NameLookup",
-            "fuchsia.net.interfaces.State",
             "fuchsia.posix.socket.Provider"
         ]
     }

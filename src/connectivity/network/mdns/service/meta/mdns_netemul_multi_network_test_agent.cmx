@@ -1,13 +1,13 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/connectivity/network/lib/net_interfaces/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/mdns_netemul_multi_network_test_agent"
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.interfaces.State",
             "fuchsia.netemul.sync.SyncManager",
             "fuchsia.posix.socket.Provider"
         ]

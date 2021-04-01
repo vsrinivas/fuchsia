@@ -205,9 +205,10 @@ source_set("network_watcher") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
+    "//src/connectivity/network/lib/net_interfaces/cpp",
     "//src/lib/backoff",
     "//zircon/public/lib/async",
   ]
