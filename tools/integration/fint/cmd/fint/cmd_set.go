@@ -35,7 +35,7 @@ type SetCommand struct {
 
 func (*SetCommand) Name() string { return "set" }
 
-func (*SetCommand) Synopsis() string { return "runs gn gen with args based on the input specs." }
+func (*SetCommand) Synopsis() string { return "runs gn gen with args based on the input specs" }
 
 func (*SetCommand) Usage() string {
 	return `fint set -static <path> [-context <path>]

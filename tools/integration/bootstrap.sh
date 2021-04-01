@@ -83,7 +83,7 @@ main() {
   ln -s "$FUCHSIA_ROOT"/tools .
   readonly go_bin=$FUCHSIA_ROOT/prebuilt/third_party/go/$(host_platform)/bin/go
   GOPROXY=off $go_bin build \
-    -o "${output}" ./tools/integration/cmd/fint
+    -o "${output}" ./tools/integration/fint/cmd/fint
 }
 
 main "$@"

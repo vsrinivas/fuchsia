@@ -23,7 +23,7 @@ group("tools") {
     "//tools/fidl",
     "//tools/fidlcat:fidlcat_host",
     "//tools/fvdl:host($host_toolchain)",
-    "//tools/integration/cmd/fint($host_toolchain)",
+    "//tools/integration/fint($host_toolchain)",
     "//tools/jq5:install($host_toolchain)",
     "//tools/loglistener:host($host_toolchain)",
     "//tools/make-efi:host",

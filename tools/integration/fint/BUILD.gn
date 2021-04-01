@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/golden_go_proto.gni")
@@ -97,10 +98,44 @@ go_test("fint_lib_tests") {
   deps = [ ":fint_lib" ]
 }
 
+go_library("main") {
+  source_dir = "cmd/fint"
+  sources = [
+    "cmd_build.go",
+    "cmd_set.go",
+    "cmd_set_test.go",
+    "common.go",
+    "main.go",
+  ]
+
+  deps = [
+    ":fint_lib",
+    ":proto_lib",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//third_party/golibs:google.golang.org/protobuf",
+    "//tools/lib/color",
+    "//tools/lib/command",
+    "//tools/lib/jsonutil",
+    "//tools/lib/logger",
+    "//tools/lib/osmisc",
+  ]
+}
+
+go_test("main_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint" ]
+  deps = [ ":main" ]
+}
+
+go_binary("fint") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint"
+  deps = [ ":main" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":filetype_tests",
     ":fint_lib_tests",
+    ":main_tests",
   ]
 }

@@ -30,7 +30,7 @@ type BuildCommand struct {
 func (*BuildCommand) Name() string { return "build" }
 
 func (*BuildCommand) Synopsis() string {
-	return "runs ninja with targets based on the input specs."
+	return "runs ninja with targets based on the input specs"
 }
 
 func (*BuildCommand) Usage() string {
