@@ -138,7 +138,7 @@ static uint32_t zxio_flags_to_fdio(uint32_t flags) {
 // Possibly return an owned fdio_t corresponding to either the root,
 // the cwd, or, for the ...at variants, dirfd. In the absolute path
 // case, *path is also adjusted.
-static fdio_ptr fdio_iodir(const char** path, int dirfd) {
+fdio_ptr fdio_iodir(const char** path, int dirfd) {
   bool root = *path[0] == '/';
   if (root) {
     // Since we are sending a request to the root handle, the

@@ -170,6 +170,37 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
   return fdio_internal::remote::create(std::move(endpoints->client), zx::eventpair{});
 }
 
+zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const char* path,
+                                             uint32_t mask, uint32_t watch_descriptor,
+                                             zx::socket socket) const {
+  fbl::AutoLock lock(&lock_);
+  zx_status_t status = WalkLocked(&vn, &path);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (!vn->Remote().is_valid()) {
+    // The Vnode exists, but it has no remote object.
+    // we simply return a ZX_ERR_NOT_SUPPORTED
+    // as we do not support inotify for local-namespace filesystem
+    // at the time.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  size_t length;
+  status = fdio_validate_path(path, &length);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto event_mask = static_cast<::fuchsia_io2::wire::InotifyWatchMask>(mask);
+  // Active remote connections are immutable, so referencing remote here
+  // is safe. But we do not want to do a blocking call under the ns lock.
+  return fio::Directory::Call::AddInotifyFilter(vn->Remote(), fidl::unowned_str(path, length),
+                                                event_mask, watch_descriptor, std::move(socket))
+      .status();
+}
+
 zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer,
                                     size_t length, zxio_dirent_t** out_entry) const {
   fbl::AutoLock lock(&lock_);

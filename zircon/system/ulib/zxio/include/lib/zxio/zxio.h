@@ -253,6 +253,15 @@ zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size
 zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
                             size_t path_len, zx_handle_t request);
 
+// Adds a inotify filter on a file/directory relative to the given |directory|.
+// The events on server side are communicated to the client via |socket|.
+// The |watch_descriptor| is the unique ID used to identify the watch filters
+// by the the client.
+//
+// See io.fidl/io2.fidl for the available |mask|.
+zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, size_t path_len, uint32_t mask,
+                                    uint32_t watch_descriptor, zx_handle_t socket);
+
 // Remove an file relative to the given directory.
 zx_status_t zxio_unlink(zxio_t* directory, const char* path);
 

@@ -47,6 +47,8 @@ TEST(NullTest, Basic) {
 
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
             zxio_open_async(&io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zxio_add_inotify_filter(&io, "hello", strlen("hello"), 0u, 0, ZX_HANDLE_INVALID));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_unlink(&io, "hello"));
 
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_rename(&io, "one", ZX_HANDLE_INVALID, "two"));

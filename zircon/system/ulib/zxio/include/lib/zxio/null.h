@@ -48,6 +48,9 @@ zx_status_t zxio_default_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vm
                                  size_t* out_size);
 zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                                     size_t path_len, zx_handle_t request);
+zx_status_t zxio_default_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
+                                            uint32_t mask, uint32_t watch_descriptor,
+                                            zx_handle_t socket);
 zx_status_t zxio_default_unlink(zxio_t* io, const char* path);
 zx_status_t zxio_default_token_get(zxio_t* io, zx_handle_t* out_token);
 zx_status_t zxio_default_rename(zxio_t* io, const char* src_path, zx_handle_t dst_token,
@@ -84,6 +87,7 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .flags_set = zxio_default_flags_set,
     .vmo_get = zxio_default_vmo_get,
     .open_async = zxio_default_open_async,
+    .add_inotify_filter = zxio_default_add_inotify_filter,
     .unlink = zxio_default_unlink,
     .token_get = zxio_default_token_get,
     .rename = zxio_default_rename,

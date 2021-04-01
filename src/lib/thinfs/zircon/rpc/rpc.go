@@ -196,7 +196,7 @@ func (d *directoryWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAtt
 	return int32(errorToZx(d.dir.Touch(t, t))), nil
 }
 
-func (d *directoryWrapper) AddInotifyFilter(_ fidl.Context, filters io2.InotifyWatchMask, path string, wd uint32, socket zx.Socket, req io2.InotifierWithCtxInterfaceRequest) error {
+func (d *directoryWrapper) AddInotifyFilter(_ fidl.Context, path string, filters io2.InotifyWatchMask, wd uint32, socket zx.Socket) error {
 	return nil
 }
 

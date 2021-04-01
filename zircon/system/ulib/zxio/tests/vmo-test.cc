@@ -83,6 +83,8 @@ TEST_F(VmoTest, Basic) {
 
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
                 zxio_open_async(io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
+                zxio_add_inotify_filter(io, "hello", strlen("hello"), 0u, 0, ZX_HANDLE_INVALID));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_unlink(io, "hello"));
 }
 

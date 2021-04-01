@@ -15,6 +15,7 @@
 #include "private.h"
 
 namespace fio = fuchsia_io;
+namespace fio2 = fuchsia_io2;
 
 namespace {
 
@@ -747,6 +748,17 @@ zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, co
   return result.status();
 }
 
+zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
+                                           uint32_t mask, uint32_t watch_descriptor,
+                                           zx_handle_t socket_handle) {
+  Remote rio(io);
+  fio2::wire::InotifyWatchMask inotify_mask = static_cast<fio2::wire::InotifyWatchMask>(mask);
+  auto result = fio::Directory::Call::AddInotifyFilter(
+      rio.control(), fidl::unowned_str(path, path_len), inotify_mask, watch_descriptor,
+      zx::socket(socket_handle));
+  return result.status();
+}
+
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* path) {
   Remote rio(io);
   auto result = fio::Directory::Call::Unlink(rio.control(), fidl::StringView::FromExternal(path));
@@ -830,6 +842,7 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   ops.flags_set = zxio_remote_flags_set;
   ops.vmo_get = zxio_remote_vmo_get;
   ops.open_async = zxio_remote_open_async;
+  ops.add_inotify_filter = zxio_remote_add_inotify_filter;
   ops.unlink = zxio_remote_unlink;
   ops.token_get = zxio_remote_token_get;
   ops.rename = zxio_remote_rename;
@@ -899,6 +912,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.flags_get = zxio_remote_flags_get;
   ops.flags_set = zxio_remote_flags_set;
   ops.open_async = zxio_remote_open_async;
+  ops.add_inotify_filter = zxio_remote_add_inotify_filter;
   ops.unlink = zxio_remote_unlink;
   ops.token_get = zxio_remote_token_get;
   ops.rename = zxio_remote_rename;

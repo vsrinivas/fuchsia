@@ -245,9 +245,8 @@ class MockDirectoryAdminOpener : public fio::DirectoryAdmin::Interface {
             LinkCompleter::Sync& completer) override {}
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCompleter::Sync& completer) override {}
-  void AddInotifyFilter(fuchsia_io2::wire::InotifyWatchMask filters, fidl::StringView path,
+  void AddInotifyFilter(fidl::StringView path, fuchsia_io2::wire::InotifyWatchMask filters,
                         uint32_t watch_descriptor, zx::socket socket,
-                        fidl::ServerEnd<fuchsia_io2::Inotifier> controller,
                         AddInotifyFilterCompleter::Sync& completer) override {}
 
   // fuchsia.io/DirectoryAdmin:

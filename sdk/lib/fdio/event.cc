@@ -108,7 +108,7 @@ static zx_status_t fdio_event_writev(zxio_t* io, const zx_iovec_t* vector, size_
     // writable signal. The next read is not guaranteed to make enough room for this write, but
     // the documentation says we should wake up and try again regardless.
     //
-    // This design has an observable different from Linux. If you make a write()
+    // This design has an observable difference from Linux. If you make a write()
     // that goes down this codepath, this call will clear the POLLOUT bit, which
     // is observable using select() and similar functions, regardless of whether
     // the write is blocking or non-blocking. The Linux implementation

@@ -178,9 +178,8 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
 
   void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
             OpenCompleter::Sync& completer) override;
-  void AddInotifyFilter(fuchsia_io2::wire::InotifyWatchMask filters, fidl::StringView path,
+  void AddInotifyFilter(fidl::StringView path, fuchsia_io2::wire::InotifyWatchMask filters,
                         uint32_t watch_descriptor, zx::socket socket,
-                        fidl::ServerEnd<fuchsia_io2::Inotifier> controller,
                         AddInotifyFilterCompleter::Sync& completer) override {}
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
   void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override;

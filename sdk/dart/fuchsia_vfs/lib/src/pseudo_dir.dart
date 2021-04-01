@@ -398,12 +398,8 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<void> addInotifyFilter(
-      io2_fidl.InotifyWatchMask filters,
-      String path,
-      int wd,
-      Socket socket,
-      fidl.InterfaceRequest<io2_fidl.Inotifier> req) async {
+  Future<void> addInotifyFilter(String path, io2_fidl.InotifyWatchMask filters,
+      int wd, Socket socket) async {
     return;
   }
 

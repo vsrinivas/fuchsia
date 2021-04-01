@@ -250,7 +250,7 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path 
 	return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotFound}, dirState)
 }
 
-func (dirState *directoryState) AddInotifyFilter(_ fidl.Context, filters fidlio2.InotifyWatchMask, path string, wd uint32, socket zx.Socket, req fidlio2.InotifierWithCtxInterfaceRequest) error {
+func (dirState *directoryState) AddInotifyFilter(ctx fidl.Context, path string, filters fidlio2.InotifyWatchMask, wd uint32, socket zx.Socket) error {
 	return nil
 }
 

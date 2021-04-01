@@ -12,6 +12,13 @@ zx::status<fdio_ptr> fdio::open(const char* path, uint32_t flags, uint32_t mode)
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
+zx_status_t fdio::add_inotify_filter(const char* path, uint32_t mask, uint32_t watch_descriptor,
+                                     zx::socket socket) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio::clone(zx_handle_t* out_handle) { return ZX_ERR_NOT_SUPPORTED; }
+
 zx_status_t fdio::unwrap(zx_handle_t* out_handle) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t fdio::borrow_channel(zx_handle_t* out_handle) { return ZX_ERR_NOT_SUPPORTED; }

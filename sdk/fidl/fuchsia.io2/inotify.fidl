@@ -48,7 +48,7 @@ enum InotifyWatchMask : uint32 {
     ONESHOT = 0x80000000; // only send event once.
 };
 
-// Events returned from [`Inotifier.GetNext`].
+// Events returned from reading the inotifier file descriptor.
 struct InotifyEvent {
     // Watch descriptor for the file/directory. watch_descriptor identifies the watch for which
     // this event occurs. It is one of the watch descriptors (channel/connection to the

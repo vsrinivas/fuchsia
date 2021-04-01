@@ -76,6 +76,13 @@ struct local_connection : public base {
     return dir.fs->Open(fbl::RefPtr(dir.vn), path, flags, mode);
   }
 
+  zx_status_t add_inotify_filter(const char* path, uint32_t mask, uint32_t watch_descriptor,
+                                 zx::socket socket) override {
+    auto& dir = local_dir();
+    return dir.fs->AddInotifyFilter(fbl::RefPtr(dir.vn), path, mask, watch_descriptor,
+                                    std::move(socket));
+  }
+
   zx_status_t get_attr(zxio_node_attributes_t* out) override {
     zxio_node_attributes_t attr = {};
     ZXIO_NODE_ATTR_SET(attr, protocols, ZXIO_NODE_PROTOCOL_DIRECTORY);

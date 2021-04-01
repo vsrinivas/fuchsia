@@ -62,6 +62,12 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   zx::status<fdio_ptr> Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags,
                             uint32_t mode) const;
 
+  // Walk local namespace and send inotify filter request to remote server.
+  //
+  // This object may represent either a local node, or a remote object.
+  zx_status_t AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t mask,
+                               uint32_t watch_descriptor, zx::socket socket) const;
+
   // Connect to a remote object within the namespace.
   //
   // Returns an error if |path| does not exist.

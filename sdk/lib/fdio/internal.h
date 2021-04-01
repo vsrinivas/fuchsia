@@ -80,6 +80,8 @@ struct Errno {
 zx_status_t fdio_wait(const fdio_ptr& io, uint32_t events, zx::time deadline,
                       uint32_t* out_pending);
 
+fdio_ptr fdio_iodir(const char** path, int dirfd);
+
 fdio_ptr fdio_datagram_socket_create(zx::eventpair event,
                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
 
@@ -153,6 +155,8 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
 
   virtual zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode);
   virtual zx_status_t clone(zx_handle_t* out_handle) = 0;
+  virtual zx_status_t add_inotify_filter(const char* path, uint32_t mask, uint32_t watch_descriptor,
+                                         zx::socket socket);
 
   // |unwrap| releases the underlying handle if applicable.  The caller must ensure there are no
   // concurrent operations on |io|.

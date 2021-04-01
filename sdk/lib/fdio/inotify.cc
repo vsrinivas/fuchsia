@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <lib/fdio/inotify.h>
+#include <lib/fdio/private.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/null.h>
@@ -44,6 +45,7 @@ struct FdioInotify {
   mtx_t lock = {};
   // The zx::socket object that is shared across all the filters for a single inotify instance.
   zx::socket client;
+  // The zx::socket object that will be duplicated for different filters created.
   zx::socket server;
 
   // Monotonically increasing client-side watch descriptor generator. 0 value is reserved.
@@ -70,7 +72,7 @@ zx_status_t inotify_close(zxio_t* io) {
 
 zx_status_t inotify_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                           zxio_flags_t flags, size_t* out_actual) {
-  // TODO Implement readv.
+  // TODO manalib to be implemented in a followup.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -132,11 +134,20 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
     return ERRNO(EINVAL);
   }
 
-  std::string path = pathname;
-  if (path.length() >= PATH_MAX) {
-    return ERRNO(ENAMETOOLONG);
+  fdio_ptr iodir = fdio_iodir(&pathname, AT_FDCWD);
+  if (iodir == nullptr) {
+    return ERRNO(EBADF);
   }
 
+  // canonicalize path and clean it on client-side.
+  char buffer[PATH_MAX];
+  size_t outlen;
+  bool has_ending_slash;
+  zx_status_t status = __fdio_cleanpath(pathname, buffer, &outlen, &has_ending_slash);
+  if (status != ZX_OK) {
+    return STATUS(status);
+  }
+  std::string cleanpath(buffer);
   // TODO: Only include events which we will support initially.
   constexpr uint32_t allowed_events =
       IN_ACCESS | IN_MODIFY | IN_ATTRIB | IN_CLOSE_WRITE | IN_CLOSE_NOWRITE | IN_CLOSE | IN_OPEN |
@@ -165,21 +176,13 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
       std::make_unique<FdioInotifyWd>(mask, watch_descriptor_to_use);
 
   zx::socket dup_server_socket_per_filter;
-  zx_status_t status =
-      inotify->server.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_server_socket_per_filter);
-  if (status != ZX_OK) {
-    return ERROR(status);
-  }
-
-  // Create a new inotify request channel for the filter.
-  zx::channel server_request;
-  status = zx::channel::create(0, &wd->client_request, &server_request);
+  status = inotify->server.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_server_socket_per_filter);
   if (status != ZX_OK) {
     return ERROR(status);
   }
 
   // Check if filter already exists and simply needs modification.
-  auto res = inotify->filepath_to_filter->emplace(path, std::move(wd));
+  auto res = inotify->filepath_to_filter->emplace(cleanpath, std::move(wd));
 
   if (!res.second) {  // filter already present.
     uint32_t old_mask = res.first->second->mask;
@@ -192,13 +195,16 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
     inotify->watch_descriptors->erase(old_watch_descriptor);
 
     // Update filter.
-    inotify->filepath_to_filter->insert({path, std::move(wd)});
+    inotify->filepath_to_filter->insert({cleanpath, std::move(wd)});
   }
   // Update watch_descriptor to filepath mapping.
-  inotify->watch_descriptors->insert({watch_descriptor_to_use, path});
+  inotify->watch_descriptors->insert({watch_descriptor_to_use, cleanpath});
 
-  // TODO Call fidl fio::Directory::Call::AddInotifyFilter on current working directory to
-  // update VFS side for this filter.
+  status = iodir->add_inotify_filter(cleanpath.c_str(), mask, watch_descriptor_to_use,
+                                     std::move(dup_server_socket_per_filter));
+  if (status != ZX_OK) {
+    return ERROR(status);
+  }
 
   return watch_descriptor_to_use;
 }
