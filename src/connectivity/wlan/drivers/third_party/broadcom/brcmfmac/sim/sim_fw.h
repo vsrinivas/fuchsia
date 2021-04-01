@@ -47,8 +47,8 @@ constexpr zx::duration kAssocTimeout = zx::sec(1);
 // The amount of time we will wait for an authentication response after an authentication request
 constexpr zx::duration kAuthTimeout = zx::sec(1);
 // The amount of time we will wait for a beacon from an associated device before disassociating
-// Timing based off broadcom firmware black box testing
-constexpr zx::duration kBeaconTimeout = zx::sec(5);
+// Timing based off broadcom firmware default value
+constexpr uint32_t kBeaconTimeoutSeconds = 8;
 // Delay between receiving start AP request and sending E_LINK event
 constexpr zx::duration kStartAPConfDelay = zx::msec(10);
 // Delay before sending ASSOC event after client association
@@ -480,7 +480,7 @@ class SimFirmware {
   uint32_t assoc_max_retries_ = 0;
   bool dev_is_up_ = false;
   uint32_t mpc_ = 1;  // Read FW appears to be setting this to 1 by default.
-  zx::duration beacon_timeout_ = kBeaconTimeout;
+  uint32_t beacon_timeout_ = kBeaconTimeoutSeconds;
   std::atomic<unsigned long> error_inject_bits_ = 0;
   uint8_t assoc_resp_ies_[ASSOC_IES_MAX_LEN];
   size_t assoc_resp_ies_len_ = 0;

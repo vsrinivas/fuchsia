@@ -1897,6 +1897,15 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
     return ZX_OK;
   }
 
+  if (!std::strcmp(name, "bcn_timeout")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
+    auto bcn_timeout = reinterpret_cast<const uint32_t*>(value);
+    beacon_timeout_ = *bcn_timeout;
+    return ZX_OK;
+  }
+
   if (!std::strcmp(name, "assoc_mgr_cmd")) {
     BRCMF_DBG(SIM, "Receive assoc_mgr_cmd in sim-fw.");
     if (value_len < sizeof(assoc_mgr_cmd_t)) {
@@ -2217,6 +2226,13 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     }
     uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
     *result_ptr = iface_tbl_[ifidx].allmulti;
+  } else if (!std::strcmp(name, "bcn_timeout")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+    *result_ptr = beacon_timeout_;
+    return ZX_OK;
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'", name);
@@ -2582,7 +2598,8 @@ void SimFirmware::RestartBeaconWatchdog() {
   assoc_state_.is_beacon_watchdog_active = true;
   auto handler = std::make_unique<std::function<void()>>();
   *handler = std::bind(&SimFirmware::HandleBeaconTimeout, this);
-  hw_.RequestCallback(std::move(handler), beacon_timeout_, &assoc_state_.beacon_watchdog_id_);
+  hw_.RequestCallback(std::move(handler), zx::sec(beacon_timeout_),
+                      &assoc_state_.beacon_watchdog_id_);
 }
 
 void SimFirmware::DisableBeaconWatchdog() {
