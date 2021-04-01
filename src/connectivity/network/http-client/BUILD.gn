@@ -33,12 +33,23 @@ rustc_binary("http_client") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("component") {
+# TODO(fxbug.dev/72870): Remove v1 component once integration tests are no
+# longer using it.
+fuchsia_component("component_v1") {
   component_name = "http-client"
   manifest = "meta/http_client.cmx"
   deps = [ ":http_client" ]
 }
 
+fuchsia_component("component_v2") {
+  component_name = "http-client"
+  manifest = "meta/http_client.cml"
+  deps = [ ":http_client" ]
+}
+
 fuchsia_package("http-client") {
-  deps = [ ":component" ]
+  deps = [
+    ":component_v1",
+    ":component_v2",
+  ]
 }

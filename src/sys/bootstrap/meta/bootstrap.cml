@@ -792,8 +792,7 @@
         },
     ],
     expose: [
-        // This handle is used by component manager to resolve packages from the
-        // base package set.
+        // This handle is used by base_resolver to resolve packages from the base package set.
         {
             directory: "pkgfs-delayed",
             from: "#fshost",
@@ -804,6 +803,10 @@
         },
         {
             directory: "config-data",
+            from: "#fshost",
+        },
+        {
+            directory: "root-ssl-certificates",
             from: "#fshost",
         },
         {

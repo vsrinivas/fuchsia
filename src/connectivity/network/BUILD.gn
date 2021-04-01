@@ -37,7 +37,6 @@ group("config") {
     "dns:dns-resolver",
     "dns/sysmgr:config",
     "http-client",
-    "http-client/sysmgr:config",
   ]
 }
 

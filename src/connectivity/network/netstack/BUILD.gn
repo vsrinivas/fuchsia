@@ -33,6 +33,13 @@ fuchsia_component("component-debug") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component-debug-v2") {
+  testonly = true
+  component_name = "netstack-debug"
+  manifest = "meta/netstack_debug.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("netstack") {
   deps = [ ":component" ]
 }

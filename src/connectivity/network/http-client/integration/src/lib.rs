@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use {
-    fidl_fuchsia_net_http as http, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::StreamExt as _,
+    fidl_fuchsia_net_http as http, fuchsia_async as fasync,
+    fuchsia_component::client::ScopedInstance, fuchsia_zircon as zx, futures::StreamExt as _,
 };
 
 const ROOT_DOCUMENT: &str = "Root document\n";
@@ -53,15 +53,13 @@ async fn run<F: futures::Future<Output = ()>>(
         )
     })
     .expect("failed to create rouille server");
-    let launcher = fuchsia_component::client::launcher().expect("failed to open launcher service");
-    let http_client = fuchsia_component::client::launch(
-        &launcher,
-        "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/http-client.cmx".to_string(),
-        None,
-    )
-    .expect("failed to launch http client");
+    const HTTP_CLIENT_URL: &str =
+        "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/http-client.cm";
+    let http_client = ScopedInstance::new("coll".into(), HTTP_CLIENT_URL.into())
+        .await
+        .expect("failed to create http-client");
     let loader = http_client
-        .connect_to_service::<http::LoaderMarker>()
+        .connect_to_protocol_at_exposed_dir::<http::LoaderMarker>()
         .expect("failed to connect to http client");
 
     select! {

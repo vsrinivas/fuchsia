@@ -288,6 +288,10 @@
 
         // From v2 components
         {
+            protocol: "fuchsia.net.http.Loader",
+            path: "/svc_for_sys/fuchsia.net.http.Loader",
+        },
+        {
             protocol: "fuchsia.power.BatteryManager",
             path: "/svc_for_sys/fuchsia.power.BatteryManager",
         },

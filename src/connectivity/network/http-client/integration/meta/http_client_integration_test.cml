@@ -1,0 +1,41 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "test-driver",
+            url: "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/test-driver.cm",
+        },
+        {
+            name: "netstack-debug",
+            url: "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/netstack-debug.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#netstack-debug",
+            to: [ "#test-driver" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#netstack-debug",
+                "#test-driver",
+            ],
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [ "#test-driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+    ],
+}

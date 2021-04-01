@@ -41,6 +41,10 @@
             url: "fuchsia-pkg://fuchsia.com/triage-detect#meta/triage-detect.cm",
         },
         {
+            name: "http-client",
+            url: "fuchsia-pkg://fuchsia.com/http-client#meta/http-client.cm",
+        },
+        {
             name: "log-stats",
             url: "fuchsia-pkg://fuchsia.com/log-stats#meta/log-stats.cm",
         },
@@ -143,11 +147,6 @@
         {
             storage: "data",
             from: "self",
-            to: [ "#device_settings" ],
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
             to: [ "#device_settings" ],
         },
         {
@@ -362,8 +361,10 @@
                 "#battery_manager",
                 "#debug_serial",
                 "#detect",
+                "#device_settings",
                 "#dhcpd",
                 "#font_provider",
+                "#http-client",
                 "#last_reboot",
                 "#log-stats",
                 "#pkg-cache",
@@ -521,6 +522,11 @@
             as: "dev-thermal",
             to: [ "#temperature-logger" ],
             subdir: "class/thermal",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [ "#http-client" ],
         },
         {
             directory: "config-data",
@@ -686,6 +692,20 @@
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
             from: "#session-manager",
             to: [ "#appmgr" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.net.http.Loader",
+            from: "#http-client",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.NameLookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#appmgr",
+            to: [ "#http-client" ],
             dependency: "weak_for_migration",
         },
         {

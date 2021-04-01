@@ -42,7 +42,7 @@
             to: [ "#test_driver" ],
         },
         {
-            directory: "config-ssl",
+            directory: "root-ssl-certificates",
             from: "parent",
             to: [ "#test_driver" ],
         },

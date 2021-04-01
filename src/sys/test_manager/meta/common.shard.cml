@@ -149,7 +149,7 @@
             ],
         },
         {
-            directory: "config-ssl",
+            directory: "root-ssl-certificates",
             from: "parent",
             to: [ "#tests" ],
             rights: [ "r*" ],

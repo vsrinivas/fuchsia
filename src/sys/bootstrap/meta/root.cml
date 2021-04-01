@@ -115,6 +115,11 @@
             to: [ "#core" ],
         },
         {
+            directory: "root-ssl-certificates",
+            from: "#bootstrap",
+            to: [ "#core" ],
+        },
+        {
             directory: "system",
             from: "#bootstrap",
             to: [ "#core" ],

@@ -465,7 +465,7 @@ async fn get_realm(
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::directory("config-ssl", "", *READ_RIGHTS),
+            capability: Capability::directory("root-ssl-certificates", "", *READ_RIGHTS),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?

@@ -68,6 +68,11 @@
             path: "/delayed/fs/pkgfs/packages/config-data/0/meta/data",
         },
         {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/delayed/fs/pkgfs/packages/root_ssl_certificates/0/data",
+        },
+        {
             directory: "system",
             rights: [ "rx*" ],
             path: "/fs/system",
@@ -190,6 +195,10 @@
         },
         {
             directory: "config-data",
+            from: "self",
+        },
+        {
+            directory: "root-ssl-certificates",
             from: "self",
         },
         {

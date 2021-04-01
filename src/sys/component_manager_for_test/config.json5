@@ -10,28 +10,28 @@
         {
             directory: "dev-input-report",
             rights: [
-                "r*"
+                "r*",
             ],
             path: "/dev/class/input-report",
         },
         {
             directory: "config-data",
             rights: [
-                "r*"
+                "r*",
             ],
             path: "/pkgfs/packages/config-data/0/meta/data",
         },
         {
-            directory: "config-ssl",
+            directory: "root-ssl-certificates",
             rights: [
-                "r*"
+                "r*",
             ],
             path: "/config/ssl",
         },
         {
             directory: "tmp-debug-data",
             rights: [
-                "rw*"
+                "rw*",
             ],
             path: "/tmp",
         },
@@ -41,7 +41,7 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
             ],
-        }
+        },
     ],
     security_policy: {
         debug_registration_policy: [
@@ -50,8 +50,8 @@
                 environment_name: "test-env",
                 source_moniker: "/debug_data",
                 source_name: "fuchsia.debugdata.DebugData",
-                target_moniker: "/"
-            }
-        ]
+                target_moniker: "/",
+            },
+        ],
     },
 }
