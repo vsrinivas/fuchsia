@@ -102,7 +102,7 @@ async fn create_metric_logger() -> Option<MetricLogger> {
 async fn maintain(
     mut stats: LogManagerStats,
     archive: ArchiveAccessorProxy,
-    metric_logger: Option<MetricLogger>,
+    mut metric_logger: Option<MetricLogger>,
 ) {
     let reader = ArchiveReader::new().with_archive(archive);
 
@@ -121,7 +121,7 @@ async fn maintain(
         };
         stats.record_log(&log, source);
         stats.get_component_log_stats(&log.metadata.component_url).await.record_log(&log);
-        if let Some(ref metric_logger) = metric_logger {
+        if let Some(ref mut metric_logger) = metric_logger {
             let res = metric_logger.process(&log).await;
             if let Err(err) = res {
                 fx_log_warn!("MetricLogger failed: {}", err);

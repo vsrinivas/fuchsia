@@ -10,9 +10,11 @@ use {
     fidl_fuchsia_metrics::{
         MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec, Status,
     },
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    fuchsia_syslog::fx_log_warn,
     serde::Deserialize,
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
 };
 
@@ -20,13 +22,22 @@ use {
 pub struct MetricSpecs {
     customer_id: u32,
     project_id: u32,
-    metric_id: u32,
+    granular_error_count_metric_id: u32,
+    granular_error_interval_count_metric_id: u32,
+}
+
+#[derive(Hash, PartialEq, Eq, Clone)]
+struct LogIdentifierAndComponent {
+    log_identifier: LogIdentifier,
+    component_event_code: u32,
 }
 
 pub struct MetricLogger {
     specs: MetricSpecs,
     proxy: MetricEventLoggerProxy,
     component_map: ComponentEventCodeMap,
+    current_interval_errors: HashSet<LogIdentifierAndComponent>,
+    next_interval_index: u64,
 }
 
 type ComponentEventCodeMap = HashMap<String, u32>;
@@ -37,8 +48,19 @@ pub const OTHER_EVENT_CODE: u32 = 1_000_000;
 /// What file path to use if the source of the log is not known.
 pub const UNKNOWN_SOURCE_FILE_PATH: &str = "<Unknown source>";
 
-/// What line number to use if the source of the log is not known.
-pub const UNKNOWN_SOURCE_LINE_NUMBER: u64 = 0;
+/// The length of an interval for which we report every ERROR at most once.
+pub const INTERVAL_IN_MINUTES: u64 = 15;
+
+/// Maximum number of unique ERRORs reported in one interval. Once this limit is reached, we no
+/// longer log the interval count metric, but the error count metric is still logged. This is an
+/// arbitrary limit that ensures the set containing the errors doesn't get too large.
+pub const MAX_ERRORS_PER_INTERVAL: usize = 100;
+
+/// What file path to use for the ping message.
+pub const PING_FILE_PATH: &str = "<Ping>";
+
+/// What line number to use for the ping message or when the source is not known.
+pub const EMPTY_LINE_NUMBER: u64 = 0;
 
 impl MetricLogger {
     /// Create a MetricLogger that logs the given MetricSpecs.
@@ -55,36 +77,72 @@ impl MetricLogger {
 
         metric_logger_factory.create_metric_event_logger(project_spec, request).await?;
 
-        Ok(Self { specs, proxy, component_map })
+        Ok(Self {
+            specs,
+            proxy,
+            component_map,
+            current_interval_errors: HashSet::new(),
+            next_interval_index: 0,
+        })
     }
 
     /// Processes one line of log. Logs the metric if the severity is ERROR or FATAL and the file
     /// path and line number of the location that the log originated from is known.
-    pub async fn process(self: &Self, log: &LogsData) -> Result<(), anyhow::Error> {
+    pub async fn process(self: &mut Self, log: &LogsData) -> Result<(), anyhow::Error> {
+        self.maybe_clear_errors_and_send_ping().await?;
         if log.metadata.severity != Severity::Error && log.metadata.severity != Severity::Fatal {
             return Ok(());
         }
         let log_identifier = LogIdentifier::try_from(log).unwrap_or(LogIdentifier {
             file_path: UNKNOWN_SOURCE_FILE_PATH.to_string(),
-            line_no: UNKNOWN_SOURCE_LINE_NUMBER,
+            line_no: EMPTY_LINE_NUMBER,
         });
+        let event_code =
+            self.component_map.get(&log.metadata.component_url).unwrap_or(&OTHER_EVENT_CODE);
         let status = self
-            .log(&log.metadata.component_url, &log_identifier.file_path, log_identifier.line_no)
+            .proxy
+            .log_string(
+                self.specs.granular_error_count_metric_id,
+                &log_identifier.file_path,
+                &[log_identifier.line_no as u32, *event_code],
+            )
             .await?;
-        match status {
-            Status::Ok => Ok(()),
-            _ => Err(anyhow::format_err!("Cobalt returned error: {}", status as u8)),
+        if status != Status::Ok {
+            return Err(anyhow::format_err!("Cobalt returned error: {}", status as u8));
         }
+        if self.current_interval_errors.len() >= MAX_ERRORS_PER_INTERVAL {
+            fx_log_warn!("Received too many ERRORs. Will temporarily halt logging the metric.");
+            return Ok(());
+        }
+        let identifier_and_component =
+            LogIdentifierAndComponent { log_identifier, component_event_code: *event_code };
+        if !self.current_interval_errors.contains(&identifier_and_component) {
+            self.proxy
+                .log_string(
+                    self.specs.granular_error_interval_count_metric_id,
+                    &identifier_and_component.log_identifier.file_path,
+                    &[identifier_and_component.log_identifier.line_no as u32, *event_code],
+                )
+                .await?;
+            self.current_interval_errors.insert(identifier_and_component);
+        }
+        Ok(())
     }
 
-    /// Logs that an ERROR originating from |file_path| at |line_no| was observed.
-    fn log(
-        self: &Self,
-        component_url: &str,
-        file_path: &str,
-        line_no: u64,
-    ) -> fidl::client::QueryResponseFut<Status> {
-        let event_code = self.component_map.get(component_url).unwrap_or(&OTHER_EVENT_CODE);
-        self.proxy.log_string(self.specs.metric_id, file_path, &[line_no as u32, *event_code])
+    async fn maybe_clear_errors_and_send_ping(self: &mut Self) -> Result<(), anyhow::Error> {
+        let interval_index =
+            fasync::Time::now().into_nanos() as u64 / 1_000_000_000 / 60 / INTERVAL_IN_MINUTES;
+        if interval_index >= self.next_interval_index {
+            self.current_interval_errors.clear();
+            self.proxy
+                .log_string(
+                    self.specs.granular_error_interval_count_metric_id,
+                    &PING_FILE_PATH,
+                    &[EMPTY_LINE_NUMBER as u32, OTHER_EVENT_CODE],
+                )
+                .await?;
+            self.next_interval_index = interval_index + 1;
+        }
+        Ok(())
     }
 }
