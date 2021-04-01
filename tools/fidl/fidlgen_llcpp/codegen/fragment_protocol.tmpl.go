@@ -108,7 +108,7 @@ class {{ .Name }} final {
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
   // avoiding setting up a client.
-  using Call = {{ .WireCall }};
+  using Call = {{ .WireCaller }};
 
   using SyncClient = fidl::WireSyncClient<{{ . }}>;
 
@@ -165,42 +165,71 @@ class {{ .Name }} final {
 // const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
 // avoiding setting up a client.
 template<>
-class {{ .WireCall }} final {
-  {{ .WireCall.Self }}() = delete;
+class {{ .WireCaller }} final {
  public:
+  explicit {{ .WireCaller.Self }}(::fidl::UnownedClientEnd<{{ . }}> client_end) :
+    client_end_(client_end) {}
 {{ "" }}
   {{- /* Client-calling functions do not apply to events. */}}
   {{- range .ClientMethods -}}
     {{- range .DocComments }}
-  //{{ . }}
+      //{{ . }}
     {{- end }}
-  //{{ template "ClientAllocationComment" . }}
-  static {{ .WireResult }} {{ .Name }}(
+    //{{ template "ClientAllocationComment" . }}
+    static {{ .WireResult }} {{ .Name }}(
         ::fidl::UnownedClientEnd<{{ .Protocol }}> _client_end
         {{- .RequestArgs | CommaParams }}) {
-    return {{ .WireResult }}(_client_end
-      {{- .RequestArgs | CommaParamNames -}}
+      return {{ .WireResult }}(_client_end
+        {{- .RequestArgs | CommaParamNames -}}
       );
-  }
+    }
+
+    {{- range .DocComments }}
+      //{{ . }}
+    {{- end }}
+    //{{ template "ClientAllocationComment" . }}
+    {{ .WireResult }} {{ .Name }}({{- .RequestArgs | Params }}) && {
+      return {{ .WireResult }}(client_end_
+        {{- .RequestArgs | CommaParamNames -}}
+      );
+    }
 {{ "" }}
     {{- if or .RequestArgs .ResponseArgs }}
       {{- range .DocComments }}
-  //{{ . }}
+        //{{ . }}
       {{- end }}
-  // Caller provides the backing storage for FIDL message via request and response buffers.
-  static {{ .WireUnownedResult }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
-    return {{ .WireUnownedResult }}(_client_end
-      {{- if .RequestArgs -}}
-        , _request_buffer.data, _request_buffer.capacity
-      {{- end -}}
-        {{- .RequestArgs | CommaParamNames -}}
-      {{- if .HasResponse -}}
-        , _response_buffer.data, _response_buffer.capacity
-      {{- end -}});
-  }
+      // Caller provides the backing storage for FIDL message via request and response buffers.
+      static {{ .WireUnownedResult }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
+        return {{ .WireUnownedResult }}(_client_end
+          {{- if .RequestArgs -}}
+            , _request_buffer.data, _request_buffer.capacity
+          {{- end -}}
+            {{- .RequestArgs | CommaParamNames -}}
+          {{- if .HasResponse -}}
+            , _response_buffer.data, _response_buffer.capacity
+          {{- end -}});
+      }
+
+      {{- range .DocComments }}
+        //{{ . }}
+      {{- end }}
+      // Caller provides the backing storage for FIDL message via request and response buffers.
+      {{ .WireUnownedResult }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) && {
+        return {{ .WireUnownedResult }}(client_end_
+          {{- if .RequestArgs -}}
+            , _request_buffer.data, _request_buffer.capacity
+          {{- end -}}
+            {{- .RequestArgs | CommaParamNames -}}
+          {{- if .HasResponse -}}
+            , _response_buffer.data, _response_buffer.capacity
+          {{- end -}});
+      }
+
     {{- end }}
 {{ "" }}
   {{- end }}
+ private:
+  ::fidl::UnownedClientEnd<{{ . }}> client_end_;
 };
 
 template<>

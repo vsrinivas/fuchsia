@@ -82,8 +82,8 @@ class Parent final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>|,
   // avoiding setting up a client.
-  using Call =
-      ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Parent>;
+  using Call = ::fidl::internal::WireCaller<
+      ::fidl_test_inheritancewithrecursivedecl::Parent>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>;
@@ -317,10 +317,15 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>|, avoiding
 // setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Parent> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>
+    final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          client_end)
+      : client_end_(client_end) {}
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
@@ -332,6 +337,15 @@ class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Parent> final {
           request) {
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(_client_end,
+                                                                 request);
+  }
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>
+  First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+            request) && {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(client_end_,
                                                                  request);
   }
 
@@ -349,6 +363,21 @@ class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Parent> final {
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
         _client_end, _request_buffer.data, _request_buffer.capacity, request);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Parent::First>
+  First(::fidl::BufferSpan _request_buffer,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+            request) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+      client_end_;
 };
 
 template <>
@@ -516,8 +545,8 @@ class Child final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>|,
   // avoiding setting up a client.
-  using Call =
-      ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child>;
+  using Call = ::fidl::internal::WireCaller<
+      ::fidl_test_inheritancewithrecursivedecl::Child>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>;
@@ -933,10 +962,15 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>|, avoiding
 // setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<
+    ::fidl_test_inheritancewithrecursivedecl::Child>
+    final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          client_end)
+      : client_end_(client_end) {}
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
@@ -948,6 +982,15 @@ class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child> final {
           request) {
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(_client_end,
+                                                                request);
+  }
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>
+  First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+            request) && {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(client_end_,
                                                                 request);
   }
 
@@ -965,6 +1008,17 @@ class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child> final {
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(
         _client_end, _request_buffer.data, _request_buffer.capacity, request);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::First>
+  First(::fidl::BufferSpan _request_buffer,
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+            request) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, request);
+  }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -977,6 +1031,15 @@ class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child> final {
           request) {
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(_client_end,
+                                                                 request);
+  }
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::Second>
+  Second(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+             request) && {
+    return ::fidl::WireResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(client_end_,
                                                                  request);
   }
 
@@ -994,6 +1057,21 @@ class ::fidl::WireCall<::fidl_test_inheritancewithrecursivedecl::Child> final {
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
         _client_end, _request_buffer.data, _request_buffer.capacity, request);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_inheritancewithrecursivedecl::Child::Second>
+  Second(::fidl::BufferSpan _request_buffer,
+         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+             request) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+      client_end_;
 };
 
 template <>

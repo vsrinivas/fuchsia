@@ -134,7 +134,7 @@ TEST(MagicNumberTest, RequestWrite) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [local, remote] = std::move(*endpoints);
   std::string s = "hi";
-  test::Frobinator::Call::Frob(local, fidl::StringView::FromExternal(s));
+  WireCall(local).Frob(fidl::StringView::FromExternal(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -192,8 +192,8 @@ TEST(MagicNumberTest, ResponseWrite) {
 
   fidl::Buffer<test::Frobinator::GrobRequest> request;
   fidl::Buffer<test::Frobinator::GrobResponse> response;
-  auto result = test::Frobinator::Call::Grob(endpoints->client, request.view(),
-                                             fidl::StringView::FromExternal(s), response.view());
+  auto result = WireCall(endpoints->client)
+                    .Grob(request.view(), fidl::StringView::FromExternal(s), response.view());
   ASSERT_TRUE(result.ok());
   auto hdr = reinterpret_cast<fidl_message_header_t*>(response.data());
   ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial);

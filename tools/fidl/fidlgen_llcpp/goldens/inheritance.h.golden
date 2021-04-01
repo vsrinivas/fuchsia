@@ -77,7 +77,7 @@ class super final {
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::super>|,
   // avoiding setting up a client.
-  using Call = ::fidl::WireCall<::fidl_test_inheritance::super>;
+  using Call = ::fidl::internal::WireCaller<::fidl_test_inheritance::super>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::super>;
 
@@ -488,16 +488,25 @@ class ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo> final
 // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::super>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_inheritance::super> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_inheritance::super> final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> client_end)
+      : client_end_(client_end) {}
+
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   static ::fidl::WireResult<::fidl_test_inheritance::super::foo> foo(
       ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client_end,
       ::fidl::StringView s) {
     return ::fidl::WireResult<::fidl_test_inheritance::super::foo>(_client_end,
+                                                                   s);
+  }
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_inheritance::super::foo> foo(
+      ::fidl::StringView s) && {
+    return ::fidl::WireResult<::fidl_test_inheritance::super::foo>(client_end_,
                                                                    s);
   }
 
@@ -511,6 +520,18 @@ class ::fidl::WireCall<::fidl_test_inheritance::super> final {
         _client_end, _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo> foo(
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::super::foo>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> client_end_;
 };
 
 template <>
@@ -662,7 +683,7 @@ class sub final {
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::sub>|,
   // avoiding setting up a client.
-  using Call = ::fidl::WireCall<::fidl_test_inheritance::sub>;
+  using Call = ::fidl::internal::WireCaller<::fidl_test_inheritance::sub>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::sub>;
 
@@ -1067,16 +1088,25 @@ class ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo> final
 // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::sub>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_inheritance::sub> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_inheritance::sub> final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> client_end)
+      : client_end_(client_end) {}
+
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   static ::fidl::WireResult<::fidl_test_inheritance::sub::foo> foo(
       ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client_end,
       ::fidl::StringView s) {
     return ::fidl::WireResult<::fidl_test_inheritance::sub::foo>(_client_end,
+                                                                 s);
+  }
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_inheritance::sub::foo> foo(
+      ::fidl::StringView s) && {
+    return ::fidl::WireResult<::fidl_test_inheritance::sub::foo>(client_end_,
                                                                  s);
   }
 
@@ -1090,6 +1120,18 @@ class ::fidl::WireCall<::fidl_test_inheritance::sub> final {
         _client_end, _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo> foo(
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::sub::foo>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> client_end_;
 };
 
 template <>

@@ -950,7 +950,8 @@ class Transitional final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::Transitional>|, avoiding setting up
   // a client.
-  using Call = ::fidl::WireCall<::fidl_test_protocols::Transitional>;
+  using Call =
+      ::fidl::internal::WireCaller<::fidl_test_protocols::Transitional>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocols::Transitional>;
 
@@ -1655,10 +1656,12 @@ class ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::OneWay>
 // const reference to a |fidl::ClientEnd<::fidl_test_protocols::Transitional>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_protocols::Transitional> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_protocols::Transitional> final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client_end)
+      : client_end_(client_end) {}
+
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_protocols::Transitional::Request>
@@ -1667,6 +1670,13 @@ class ::fidl::WireCall<::fidl_test_protocols::Transitional> final {
       int64_t x) {
     return ::fidl::WireResult<::fidl_test_protocols::Transitional::Request>(
         _client_end, x);
+  }
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::Transitional::Request> Request(
+      int64_t x) && {
+    return ::fidl::WireResult<::fidl_test_protocols::Transitional::Request>(
+        client_end_, x);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1681,6 +1691,16 @@ class ::fidl::WireCall<::fidl_test_protocols::Transitional> final {
         _client_end, _request_buffer.data, _request_buffer.capacity, x,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>
+  Request(::fidl::BufferSpan _request_buffer, int64_t x,
+          ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::Transitional::Request>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, x,
+        _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1689,6 +1709,13 @@ class ::fidl::WireCall<::fidl_test_protocols::Transitional> final {
       int64_t x) {
     return ::fidl::WireResult<::fidl_test_protocols::Transitional::OneWay>(
         _client_end, x);
+  }
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::Transitional::OneWay> OneWay(
+      int64_t x) && {
+    return ::fidl::WireResult<::fidl_test_protocols::Transitional::OneWay>(
+        client_end_, x);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1701,6 +1728,17 @@ class ::fidl::WireCall<::fidl_test_protocols::Transitional> final {
         ::fidl_test_protocols::Transitional::OneWay>(
         _client_end, _request_buffer.data, _request_buffer.capacity, x);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::OneWay> OneWay(
+      ::fidl::BufferSpan _request_buffer, int64_t x) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::Transitional::OneWay>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, x);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client_end_;
 };
 
 template <>
@@ -1964,7 +2002,8 @@ class ChannelProtocol final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol>|, avoiding setting
   // up a client.
-  using Call = ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol>;
+  using Call =
+      ::fidl::internal::WireCaller<::fidl_test_protocols::ChannelProtocol>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol>;
@@ -3480,10 +3519,14 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol>|, avoiding setting
 // up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_protocols::ChannelProtocol>
+    final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
+          client_end)
+      : client_end_(client_end) {}
+
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA>
@@ -3492,6 +3535,13 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
           int64_t a, int64_t b) {
     return ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA>(
         _client_end, a, b);
+  }
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA> MethodA(
+      int64_t a, int64_t b) && {
+    return ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA>(
+        client_end_, a, b);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -3505,6 +3555,14 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
         ::fidl_test_protocols::ChannelProtocol::MethodA>(
         _client_end, _request_buffer.data, _request_buffer.capacity, a, b);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MethodA>
+  MethodA(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ChannelProtocol::MethodA>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, a, b);
+  }
 
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -3514,6 +3572,13 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
           int64_t a, int64_t b) {
     return ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodB>(
         _client_end, a, b);
+  }
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodB> MethodB(
+      int64_t a, int64_t b) && {
+    return ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodB>(
+        client_end_, a, b);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -3529,6 +3594,16 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
         _client_end, _request_buffer.data, _request_buffer.capacity, a, b,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MethodB>
+  MethodB(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
+          ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ChannelProtocol::MethodB>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, a, b,
+        _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -3538,6 +3613,13 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
              ::zx::handle h) {
     return ::fidl::WireResult<
         ::fidl_test_protocols::ChannelProtocol::TakeHandle>(_client_end, h);
+  }
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::TakeHandle>
+  TakeHandle(::zx::handle h) && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::ChannelProtocol::TakeHandle>(client_end_, h);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -3553,6 +3635,16 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
         _client_end, _request_buffer.data, _request_buffer.capacity, h,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::TakeHandle>
+  TakeHandle(::fidl::BufferSpan _request_buffer, ::zx::handle h,
+             ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ChannelProtocol::TakeHandle>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, h,
+        _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -3563,6 +3655,13 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
                ::zx::socket a) {
     return ::fidl::WireResult<
         ::fidl_test_protocols::ChannelProtocol::MutateSocket>(_client_end, a);
+  }
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MutateSocket>
+  MutateSocket(::zx::socket a) && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::ChannelProtocol::MutateSocket>(client_end_, a);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -3578,6 +3677,20 @@ class ::fidl::WireCall<::fidl_test_protocols::ChannelProtocol> final {
         _client_end, _request_buffer.data, _request_buffer.capacity, a,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::ChannelProtocol::MutateSocket>
+  MutateSocket(::fidl::BufferSpan _request_buffer, ::zx::socket a,
+               ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ChannelProtocol::MutateSocket>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, a,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol> client_end_;
 };
 
 template <>
@@ -3994,8 +4107,8 @@ class WithAndWithoutRequestResponse final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>|,
   // avoiding setting up a client.
-  using Call =
-      ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>;
+  using Call = ::fidl::internal::WireCaller<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
   using SyncClient = fidl::WireSyncClient<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
@@ -6288,11 +6401,15 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
+class ::fidl::internal::WireCaller<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
     final {
-  WireCall() = delete;
-
  public:
+  explicit WireCaller(::fidl::UnownedClientEnd<
+                      ::fidl_test_protocols::WithAndWithoutRequestResponse>
+                          client_end)
+      : client_end_(client_end) {}
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
@@ -6303,6 +6420,15 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             NoRequestNoResponse>(_client_end);
+  }
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
+  NoRequestNoResponse() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestNoResponse>(client_end_);
   }
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
@@ -6317,6 +6443,15 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             NoRequestEmptyResponse>(_client_end);
   }
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         NoRequestEmptyResponse>
+  NoRequestEmptyResponse() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestEmptyResponse>(client_end_);
+  }
 
   // Allocates 16 bytes of request buffer on the stack. Response is
   // heap-allocated.
@@ -6329,6 +6464,15 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             NoRequestWithResponse>(_client_end);
+  }
+  // Allocates 16 bytes of request buffer on the stack. Response is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         NoRequestWithResponse>
+  NoRequestWithResponse() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestWithResponse>(client_end_);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -6346,6 +6490,17 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
             NoRequestWithResponse>(_client_end, _response_buffer.data,
                                    _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponse>
+  NoRequestWithResponse(::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestWithResponse>(client_end_, _response_buffer.data,
+                                   _response_buffer.capacity);
+  }
 
   // Request is heap-allocated.
   static ::fidl::WireResult<
@@ -6359,6 +6514,14 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestNoResponse>(_client_end, arg);
+  }
+  // Request is heap-allocated.
+  ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         WithRequestNoResponse>
+  WithRequestNoResponse(::fidl::StringView arg) && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestNoResponse>(client_end_, arg);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -6376,6 +6539,18 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
             WithRequestNoResponse>(_client_end, _request_buffer.data,
                                    _request_buffer.capacity, arg);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestNoResponse>
+  WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
+                        ::fidl::StringView arg) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestNoResponse>(client_end_, _request_buffer.data,
+                                   _request_buffer.capacity, arg);
+  }
 
   // Allocates 16 bytes of response buffer on the stack. Request is
   // heap-allocated.
@@ -6390,6 +6565,15 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestEmptyResponse>(_client_end, arg);
+  }
+  // Allocates 16 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         WithRequestEmptyResponse>
+  WithRequestEmptyResponse(::fidl::StringView arg) && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestEmptyResponse>(client_end_, arg);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -6409,6 +6593,20 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
         _client_end, _request_buffer.data, _request_buffer.capacity, arg,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponse>
+  WithRequestEmptyResponse(::fidl::BufferSpan _request_buffer,
+                           ::fidl::StringView arg,
+                           ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestEmptyResponse>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, arg,
+        _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Request is heap-allocated. Response is heap-allocated.
   static ::fidl::WireResult<
@@ -6422,6 +6620,14 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestWithResponse>(_client_end, arg);
+  }
+  // Request is heap-allocated. Response is heap-allocated.
+  ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         WithRequestWithResponse>
+  WithRequestWithResponse(::fidl::StringView arg) && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestWithResponse>(client_end_, arg);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -6441,6 +6647,24 @@ class ::fidl::WireCall<::fidl_test_protocols::WithAndWithoutRequestResponse>
         _client_end, _request_buffer.data, _request_buffer.capacity, arg,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponse>
+  WithRequestWithResponse(::fidl::BufferSpan _request_buffer,
+                          ::fidl::StringView arg,
+                          ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestWithResponse>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, arg,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>
+      client_end_;
 };
 
 template <>
@@ -6847,7 +7071,8 @@ class WithErrorSyntax final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax>|, avoiding setting
   // up a client.
-  using Call = ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax>;
+  using Call =
+      ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax>;
@@ -8078,10 +8303,14 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax>|, avoiding setting
 // up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
+    final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
+          client_end)
+      : client_end_(client_end) {}
+
   // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
@@ -8091,6 +8320,13 @@ class ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax> final {
           _client_end) {
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(_client_end);
+  }
+  // Allocates 80 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
+  ResponseAsStruct() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(client_end_);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -8105,6 +8341,15 @@ class ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax> final {
         ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
         _client_end, _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
+  ResponseAsStruct(::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
+        client_end_, _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Allocates 64 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -8115,6 +8360,13 @@ class ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax> final {
           _client_end) {
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(_client_end);
+  }
+  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+  ErrorAsPrimitive() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(client_end_);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -8129,6 +8381,15 @@ class ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax> final {
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
         _client_end, _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+  ErrorAsPrimitive(::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
+        client_end_, _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Allocates 64 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -8137,6 +8398,13 @@ class ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax> final {
                   _client_end) {
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(_client_end);
+  }
+  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
+  ErrorAsEnum() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(client_end_);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -8150,6 +8418,17 @@ class ::fidl::WireCall<::fidl_test_protocols::WithErrorSyntax> final {
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
         _client_end, _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
+  ErrorAsEnum(::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
+        client_end_, _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax> client_end_;
 };
 
 template <>

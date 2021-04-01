@@ -179,8 +179,8 @@ class OnlyLibfuzzerAndDeps final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>|,
   // avoiding setting up a client.
-  using Call =
-      ::fidl::WireCall<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
+  using Call = ::fidl::internal::WireCaller<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
@@ -634,11 +634,15 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+class ::fidl::internal::WireCaller<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
     final {
-  WireCall() = delete;
-
  public:
+  explicit WireCaller(::fidl::UnownedClientEnd<
+                      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+                          client_end)
+      : client_end_(client_end) {}
+
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -651,6 +655,19 @@ class ::fidl::WireCall<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
             LibfuzzerNeedsNonemptyProtocol>(_client_end);
   }
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                         LibfuzzerNeedsNonemptyProtocol>
+  LibfuzzerNeedsNonemptyProtocol() && {
+    return ::fidl::WireResult<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>(client_end_);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+      client_end_;
 };
 
 template <>
@@ -793,7 +810,8 @@ class OnlyCppAndDeps final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>|, avoiding
   // setting up a client.
-  using Call = ::fidl::WireCall<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+  using Call = ::fidl::internal::WireCaller<
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
@@ -844,10 +862,17 @@ class OnlyCppAndDeps final {
 // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>|, avoiding
 // setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_bindingsdenylist::OnlyCppAndDeps> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+          client_end)
+      : client_end_(client_end) {}
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+      client_end_;
 };
 
 template <>

@@ -131,7 +131,8 @@ class Parent final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_protocolrequest::Parent>|, avoiding setting up
   // a client.
-  using Call = ::fidl::WireCall<::fidl_test_protocolrequest::Parent>;
+  using Call =
+      ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Parent>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Parent>;
 
@@ -1320,10 +1321,12 @@ class ::fidl::WireUnownedResult<
 // const reference to a |fidl::ClientEnd<::fidl_test_protocolrequest::Parent>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Parent> final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client_end)
+      : client_end_(client_end) {}
+
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>
@@ -1331,6 +1334,13 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
                _client_end) {
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
         _client_end);
+  }
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>
+  GetChild() && {
+    return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
+        client_end_);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1344,6 +1354,14 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
         ::fidl_test_protocolrequest::Parent::GetChild>(
         _client_end, _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
+  GetChild(::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocolrequest::Parent::GetChild>(
+        client_end_, _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1353,6 +1371,13 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
                       _client_end) {
     return ::fidl::WireResult<
         ::fidl_test_protocolrequest::Parent::GetChildRequest>(_client_end);
+  }
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
+  GetChildRequest() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocolrequest::Parent::GetChildRequest>(client_end_);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1366,6 +1391,15 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
         ::fidl_test_protocolrequest::Parent::GetChildRequest>(
         _client_end, _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocolrequest::Parent::GetChildRequest>
+  GetChildRequest(::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocolrequest::Parent::GetChildRequest>(
+        client_end_, _response_buffer.data, _response_buffer.capacity);
+  }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1375,6 +1409,13 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) {
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild>(
         _client_end, c);
+  }
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild> TakeChild(
+      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) && {
+    return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild>(
+        client_end_, c);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1389,6 +1430,15 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
         ::fidl_test_protocolrequest::Parent::TakeChild>(
         _client_end, _request_buffer.data, _request_buffer.capacity, c);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::TakeChild>
+  TakeChild(::fidl::BufferSpan _request_buffer,
+            ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocolrequest::Parent::TakeChild>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, c);
+  }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1399,6 +1449,13 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) {
     return ::fidl::WireResult<
         ::fidl_test_protocolrequest::Parent::TakeChildRequest>(_client_end, r);
+  }
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChildRequest>
+  TakeChildRequest(::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocolrequest::Parent::TakeChildRequest>(client_end_, r);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1413,6 +1470,19 @@ class ::fidl::WireCall<::fidl_test_protocolrequest::Parent> final {
         ::fidl_test_protocolrequest::Parent::TakeChildRequest>(
         _client_end, _request_buffer.data, _request_buffer.capacity, r);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_protocolrequest::Parent::TakeChildRequest>
+  TakeChildRequest(::fidl::BufferSpan _request_buffer,
+                   ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocolrequest::Parent::TakeChildRequest>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, r);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client_end_;
 };
 
 template <>
@@ -1650,7 +1720,7 @@ class Child final {
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_protocolrequest::Child>|,
   // avoiding setting up a client.
-  using Call = ::fidl::WireCall<::fidl_test_protocolrequest::Child>;
+  using Call = ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Child>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Child>;
 
@@ -1698,10 +1768,14 @@ class Child final {
 // const reference to a |fidl::ClientEnd<::fidl_test_protocolrequest::Child>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_protocolrequest::Child> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Child> final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> client_end)
+      : client_end_(client_end) {}
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> client_end_;
 };
 
 template <>

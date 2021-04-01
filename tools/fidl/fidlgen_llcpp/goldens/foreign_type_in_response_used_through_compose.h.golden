@@ -84,7 +84,7 @@ class Top final {
   // const reference to a
   // |fidl::ClientEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>|,
   // avoiding setting up a client.
-  using Call = ::fidl::WireCall<
+  using Call = ::fidl::internal::WireCaller<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
 
   using SyncClient = fidl::WireSyncClient<
@@ -537,11 +537,15 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+class ::fidl::internal::WireCaller<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
     final {
-  WireCall() = delete;
-
  public:
+  explicit WireCaller(::fidl::UnownedClientEnd<
+                      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+                          client_end)
+      : client_end_(client_end) {}
+
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
@@ -552,6 +556,15 @@ class ::fidl::WireCall<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
     return ::fidl::WireResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
         _client_end);
+  }
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo() && {
+    return ::fidl::WireResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        client_end_);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -566,6 +579,20 @@ class ::fidl::WireCall<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
         _client_end, _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo(::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        client_end_, _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+      client_end_;
 };
 
 template <>

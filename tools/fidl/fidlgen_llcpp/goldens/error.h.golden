@@ -315,7 +315,7 @@ class Example final {
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_error::Example>|,
   // avoiding setting up a client.
-  using Call = ::fidl::WireCall<::fidl_test_error::Example>;
+  using Call = ::fidl::internal::WireCaller<::fidl_test_error::Example>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_error::Example>;
 
@@ -722,16 +722,24 @@ class ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> final
 // const reference to a |fidl::ClientEnd<::fidl_test_error::Example>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::WireCall<::fidl_test_error::Example> final {
-  WireCall() = delete;
-
+class ::fidl::internal::WireCaller<::fidl_test_error::Example> final {
  public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_error::Example> client_end)
+      : client_end_(client_end) {}
+
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
   static ::fidl::WireResult<::fidl_test_error::Example::foo> foo(
       ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end,
       ::fidl::StringView s) {
     return ::fidl::WireResult<::fidl_test_error::Example::foo>(_client_end, s);
+  }
+  // Allocates 48 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_error::Example::foo> foo(
+      ::fidl::StringView s) && {
+    return ::fidl::WireResult<::fidl_test_error::Example::foo>(client_end_, s);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -744,6 +752,18 @@ class ::fidl::WireCall<::fidl_test_error::Example> final {
         _client_end, _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> foo(
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::BufferSpan _response_buffer) && {
+    return ::fidl::WireUnownedResult<::fidl_test_error::Example::foo>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_error::Example> client_end_;
 };
 
 template <>

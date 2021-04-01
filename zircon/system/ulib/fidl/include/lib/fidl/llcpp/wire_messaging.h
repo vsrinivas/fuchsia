@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_LLCPP_PROTOCOL_H_
-#define LIB_FIDL_LLCPP_PROTOCOL_H_
+#ifndef LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
+#define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
+
+#include <lib/fidl/llcpp/client_end.h>
 
 namespace fidl {
 
@@ -38,9 +40,6 @@ class WireRawChannelInterface;
 template <typename FidlProtocol>
 class WireEventSender;
 
-template <typename FidlProtocol>
-class WireCall;
-
 template <typename FidlMethod>
 struct WireRequest;
 
@@ -69,8 +68,28 @@ class WireClientImpl;
 template <typename FidlProtocol>
 class WireEventHandlerInterface;
 
+template <typename FidlProtocol>
+class WireCaller;
+
 }  // namespace internal
+
+// |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
+// without having to set up a client. Call it like:
+//   WireCall(client_end).Method(args...);
+template <typename FidlProtocol>
+fidl::internal::WireCaller<FidlProtocol> WireCall(const fidl::ClientEnd<FidlProtocol>& client_end) {
+  return fidl::internal::WireCaller<FidlProtocol>(client_end.borrow());
+}
+
+// |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
+// without having to set up a client. Call it like:
+//   WireCall(client_end).Method(args...);
+template <typename FidlProtocol>
+fidl::internal::WireCaller<FidlProtocol> WireCall(
+    const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
+  return fidl::internal::WireCaller<FidlProtocol>(client_end);
+}
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_LLCPP_PROTOCOL_H_
+#endif  // LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
