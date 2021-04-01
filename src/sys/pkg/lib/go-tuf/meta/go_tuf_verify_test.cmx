@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/go_tuf_verify_test"
-    }
-}

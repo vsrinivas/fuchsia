@@ -18,8 +18,8 @@ import (
 	"os"
 	"time"
 
-	tuf_data "github.com/flynn/go-tuf/data"
 	"github.com/pkg/sftp"
+	tuf_data "github.com/theupdateframework/go-tuf/data"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"

@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	tuf_data "github.com/flynn/go-tuf/data"
+	tuf_data "github.com/theupdateframework/go-tuf/data"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"

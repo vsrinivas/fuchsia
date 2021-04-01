@@ -23,8 +23,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 
-	tuf "github.com/flynn/go-tuf"
-	tufData "github.com/flynn/go-tuf/data"
+	tuf "github.com/theupdateframework/go-tuf"
+	tufData "github.com/theupdateframework/go-tuf/data"
 )
 
 var roles = []string{"timestamp", "targets", "snapshot"}

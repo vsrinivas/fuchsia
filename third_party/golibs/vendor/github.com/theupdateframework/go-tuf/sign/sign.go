@@ -4,8 +4,8 @@ import (
 	"crypto"
 	"crypto/rand"
 
-	"github.com/flynn/go-tuf/data"
-	"github.com/tent/canonical-json-go"
+	cjson "github.com/tent/canonical-json-go"
+	"github.com/theupdateframework/go-tuf/data"
 )
 
 type Signer interface {
@@ -52,7 +52,6 @@ func Sign(s *data.Signed, k Signer) error {
 	for _, id := range ids {
 		s.Signatures = append(s.Signatures, data.Signature{
 			KeyID:     id,
-			Method:    k.Type(),
 			Signature: sig,
 		})
 	}

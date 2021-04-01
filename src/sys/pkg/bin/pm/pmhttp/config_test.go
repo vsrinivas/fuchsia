@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	tuf_data "github.com/flynn/go-tuf/data"
+	tuf_data "github.com/theupdateframework/go-tuf/data"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 )

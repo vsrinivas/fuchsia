@@ -10,7 +10,7 @@ import (
 	"sort"
 	"testing"
 
-	tuf_data "github.com/flynn/go-tuf/data"
+	tuf_data "github.com/theupdateframework/go-tuf/data"
 )
 
 func TestMarshaling(t *testing.T) {

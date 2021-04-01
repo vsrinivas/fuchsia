@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	tuf_data "github.com/flynn/go-tuf/data"
+	tuf_data "github.com/theupdateframework/go-tuf/data"
 )
 
 // Config is a struct that mirrors an associated FIDL table

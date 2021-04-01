@@ -13,21 +13,6 @@ template("golib") {
   }
 }
 
-# Vendored dependencies do not include test files; we need these for go-tuf until we can move to
-# upstream (which has CI coverage).
-template("golib_old") {
-  name = target_name + "/..."
-  if (defined(invoker.source_dir)) {
-    source_dir = invoker.source_dir
-  } else {
-    source_dir = "//third_party/golibs/$name"
-  }
-  go_library(target_name) {
-    forward_variables_from(invoker, [ "deps" ])
-    allow_globbing = true
-  }
-}
-
 ##### NOTE: keep the following targets in alphabetical order.
 
 ### cloud.google.com/*
@@ -76,11 +61,9 @@ golib("github.com/dustin/go-humanize") {
 }
 golib("github.com/flynn/go-docopt") {
 }
-golib_old("github.com/flynn/go-tuf") {
+golib("github.com/theupdateframework/go-tuf") {
   deps = [
-    ":github.com/dustin/go-humanize",
     ":github.com/flynn/go-docopt",
-    ":github.com/syndtr/goleveldb",
     ":github.com/tent/canonical-json-go",
     ":golang.org/x/crypto",
   ]
@@ -112,8 +95,6 @@ golib("github.com/google/go-cmp") {
 }
 golib("github.com/golang/groupcache/lru") {
 }
-golib_old("github.com/golang/snappy") {
-}
 golib("github.com/google/shlex") {
 }
 golib("github.com/google/subcommands") {
@@ -137,9 +118,6 @@ golib("github.com/pkg/sftp") {
   ]
 }
 golib("github.com/spf13/pflag") {
-}
-golib_old("github.com/syndtr/goleveldb") {
-  deps = [ ":github.com/golang/snappy" ]
 }
 golib("github.com/tent/canonical-json-go") {
 }
@@ -259,12 +237,6 @@ golib("google.golang.org/api/transport") {
   ]
 }
 golib("google.golang.org/protobuf") {
-}
-
-### gopkg.in/*
-golib_old("gopkg.in/check.v1") {
-  source_dir = "//third_party/golibs/github.com/go-check/check"
-  deps = [ ":github.com/kr/pretty" ]
 }
 
 golib("gvisor.dev/gvisor") {

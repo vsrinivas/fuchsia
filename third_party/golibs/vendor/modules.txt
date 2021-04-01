@@ -16,14 +16,6 @@ github.com/creack/pty
 ## explicit
 github.com/dustin/go-humanize
 github.com/dustin/go-humanize/english
-# github.com/flynn/go-tuf v0.0.0-20201230183259-aee6270feb55 => fuchsia.googlesource.com/third_party/go-tuf.git v0.0.0-20200826175457-a90d70916791
-## explicit
-github.com/flynn/go-tuf
-github.com/flynn/go-tuf/data
-github.com/flynn/go-tuf/encrypted
-github.com/flynn/go-tuf/sign
-github.com/flynn/go-tuf/util
-github.com/flynn/go-tuf/verify
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit
 github.com/fsnotify/fsnotify
@@ -85,8 +77,15 @@ github.com/pkg/sftp
 ## explicit
 github.com/spf13/pflag
 # github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
-## explicit
 github.com/tent/canonical-json-go
+# github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
+## explicit
+github.com/theupdateframework/go-tuf
+github.com/theupdateframework/go-tuf/data
+github.com/theupdateframework/go-tuf/encrypted
+github.com/theupdateframework/go-tuf/sign
+github.com/theupdateframework/go-tuf/util
+github.com/theupdateframework/go-tuf/verify
 # go.opencensus.io v0.23.0
 go.opencensus.io
 go.opencensus.io/internal
@@ -370,4 +369,3 @@ gvisor.dev/gvisor/pkg/tcpip/transport/tcp
 gvisor.dev/gvisor/pkg/tcpip/transport/tcpconntrack
 gvisor.dev/gvisor/pkg/tcpip/transport/udp
 gvisor.dev/gvisor/pkg/waiter
-# github.com/flynn/go-tuf => fuchsia.googlesource.com/third_party/go-tuf.git v0.0.0-20200826175457-a90d70916791

@@ -13,7 +13,7 @@ import (
 	"math"
 	"net/http"
 
-	tuf_data "github.com/flynn/go-tuf/data"
+	tuf_data "github.com/theupdateframework/go-tuf/data"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 )

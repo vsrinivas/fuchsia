@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/flynn/go-tuf/data"
-	"github.com/flynn/go-tuf/encrypted"
-	"github.com/flynn/go-tuf/sign"
-	"github.com/flynn/go-tuf/util"
+	"github.com/theupdateframework/go-tuf/data"
+	"github.com/theupdateframework/go-tuf/encrypted"
+	"github.com/theupdateframework/go-tuf/sign"
+	"github.com/theupdateframework/go-tuf/util"
 )
 
 func MemoryStore(meta map[string]json.RawMessage, files map[string][]byte) LocalStore {
@@ -271,7 +271,7 @@ func (f *fileSystemStore) Commit(consistentSnapshot bool, versions map[string]in
 		if consistentSnapshot {
 			// strip out the hash
 			name := strings.SplitN(filepath.Base(path), ".", 2)
-			if name[1] == "" {
+			if len(name) != 2 || name[1] == "" {
 				return false
 			}
 			path = filepath.Join(filepath.Dir(path), name[1])
