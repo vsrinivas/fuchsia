@@ -5,7 +5,7 @@
 use {
     clonable_error::ClonableError,
     cm_rust::{CapabilityName, EventMode},
-    fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
+    fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
     moniker::{AbsoluteMoniker, PartialMoniker},
     thiserror::Error,
 };

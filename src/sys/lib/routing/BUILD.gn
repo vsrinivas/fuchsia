@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
@@ -11,6 +12,7 @@ rustc_library("routing") {
   edition = "2018"
 
   visibility = [
+    "//src/security/scrutiny/lib/plugins/*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/routing/*",
     "//tools/lib/cm_fidl_analyzer/*",
@@ -24,7 +26,7 @@ rustc_library("routing") {
     "//src/lib/error/clonable_error",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/from-enum",
-    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/sys/lib/cm_fidl_validator",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
@@ -45,10 +47,15 @@ rustc_library("routing") {
   ]
 }
 
-fuchsia_unittest_package("routing-tests") {
+fuchsia_unittest_package("fuchsia-routing-tests") {
   v2 = true
   deps = [
     ":routing_test",
     "//src/sys/test_runners:tmp_storage",
   ]
+}
+
+group("host-routing-tests") {
+  testonly = true
+  public_deps = [ ":routing_test($host_toolchain)" ]
 }
