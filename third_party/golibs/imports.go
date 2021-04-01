@@ -16,6 +16,7 @@ import (
 	_ "github.com/golang/glog"
 	_ "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/empty"
+	_ "github.com/golang/protobuf/ptypes/struct"
 	_ "github.com/google/go-cmp/cmp"
 	_ "github.com/google/go-cmp/cmp/cmpopts"
 	_ "github.com/google/shlex"
