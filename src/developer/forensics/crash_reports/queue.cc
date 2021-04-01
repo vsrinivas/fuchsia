@@ -93,6 +93,14 @@ bool Queue::Add(Report report) {
 
   for (const auto& id : garbage_collected_reports) {
     GarbageCollect(id);
+    pending_reports_.erase(std::remove_if(pending_reports_.begin(), pending_reports_.end(),
+                                          [&](const ReportId id) {
+                                            return std::find(garbage_collected_reports.cbegin(),
+                                                             garbage_collected_reports.cend(),
+                                                             report_id) !=
+                                                   garbage_collected_reports.cend();
+                                          }),
+                           pending_reports_.end());
   }
 
   if (!success) {
@@ -147,7 +155,6 @@ void Queue::GarbageCollect(const ReportId report_id) {
   FX_LOGST(INFO, tags_->Get(report_id)) << "Garbage collected local report";
   info_.MarkReportAsGarbageCollected(upload_attempts_[report_id]);
   FreeResources(report_id);
-  pending_reports_.erase(std::find(pending_reports_.begin(), pending_reports_.end(), report_id));
 }
 
 void Queue::FreeResources(const ReportId report_id) {
