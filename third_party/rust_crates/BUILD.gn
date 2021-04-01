@@ -31,6 +31,12 @@ group("async-channel") {
 }
 
 if (!(current_os == "fuchsia")) {
+  group("async-executor") {
+    deps = [ ":async-executor-v1_4_0" ]
+  }
+}
+
+if (!(current_os == "fuchsia")) {
   group("async-fs") {
     deps = [ ":async-fs-v1_5_0" ]
   }
@@ -1196,6 +1202,33 @@ rust_library("async-channel-v1_6_1") {
     "--edition=2018",
     "-Cmetadata=c9fb29c233c87151",
     "-Cextra-filename=-c9fb29c233c87151",
+  ]
+}
+
+rust_library("async-executor-v1_4_0") {
+  crate_name = "async_executor"
+  crate_root = "//third_party/rust_crates/vendor/async-executor/src/lib.rs"
+  output_name = "async_executor-51b5d0432e317abf"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":async-task-v4_0_3" ]
+  deps += [ ":concurrent-queue-v1_2_2" ]
+  deps += [ ":fastrand-v1_4_0" ]
+  deps += [ ":futures-lite-v1_11_3" ]
+  deps += [ ":once_cell-v1_5_2" ]
+  deps += [ ":vec-arena-v1_1_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=51b5d0432e317abf",
+    "-Cextra-filename=-51b5d0432e317abf",
   ]
 }
 

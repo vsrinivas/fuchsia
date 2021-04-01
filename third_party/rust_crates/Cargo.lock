@@ -110,6 +110,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-executor"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb877970c7b440ead138f6321a3b5395d6061183af779340b65e20c0fede9146"
+dependencies = [
+ "async-task 4.0.3",
+ "concurrent-queue",
+ "fastrand",
+ "futures-lite",
+ "once_cell",
+ "vec-arena",
+]
+
+[[package]]
 name = "async-fs"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1009,6 +1023,7 @@ dependencies = [
  "arc-swap",
  "argh",
  "async-channel",
+ "async-executor",
  "async-fs",
  "async-io",
  "async-lock",
