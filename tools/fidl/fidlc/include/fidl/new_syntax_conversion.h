@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERSION_H_
-#define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERSION_H_
+#ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_NEW_SYNTAX_CONVERSION_H_
+#define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_NEW_SYNTAX_CONVERSION_H_
 
 // A Conversion is an object that applies a specific translation from one syntax
 // to another.  Conversions may nest other conversions, such that they may use
@@ -265,4 +265,4 @@ class EnumDeclarationConversion : public BitsDeclarationConversion {
 
 }  // namespace fidl::conv
 
-#endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERSION_H_
+#endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_NEW_SYNTAX_CONVERSION_H_

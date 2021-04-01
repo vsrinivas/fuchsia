@@ -1,8 +1,8 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <fidl/conversion.h>
-#include <fidl/converter.h>
+#include <fidl/new_syntax_conversion.h>
+#include <fidl/new_syntax_converter.h>
 #include <zxtest/zxtest.h>
 
 #include "test_library.h"

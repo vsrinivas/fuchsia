@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERTER_H_
-#define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERTER_H_
+#ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_NEW_SYNTAX_CONVERTER_H_
+#define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_NEW_SYNTAX_CONVERTER_H_
 
 // The ConvertingTreeVisitor takes a raw::File, and translates its textual
 // representation from one syntax to another.
 #include <stack>
 
-#include "conversion.h"
 #include "flat/name.h"
 #include "flat_ast.h"
+#include "new_syntax_conversion.h"
 #include "tree_visitor.h"
 #include "underlying_type.h"
 
@@ -178,4 +178,4 @@ class Converting {
 
 }  // namespace fidl::conv
 
-#endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERTER_H_
+#endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_NEW_SYNTAX_CONVERTER_H_

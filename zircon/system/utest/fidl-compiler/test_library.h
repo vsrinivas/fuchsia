@@ -7,11 +7,11 @@
 
 #include <fstream>
 
-#include <fidl/converter.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
 #include <fidl/linter.h>
+#include <fidl/new_syntax_converter.h>
 #include <fidl/ordinals.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>

@@ -19,13 +19,13 @@
 #include <vector>
 
 #include <fidl/c_generator.h>
-#include <fidl/converter.h>
 #include <fidl/experimental_flags.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/json_schema.h>
 #include <fidl/lexer.h>
 #include <fidl/names.h>
+#include <fidl/new_syntax_converter.h>
 #include <fidl/ordinals.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>

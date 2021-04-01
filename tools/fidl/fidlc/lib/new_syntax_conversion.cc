@@ -5,7 +5,7 @@
 // The implementation for Conversion and its various subclasses.
 #include <vector>
 
-#include "fidl/converter.h"
+#include "fidl/new_syntax_converter.h"
 
 namespace fidl::conv {
 

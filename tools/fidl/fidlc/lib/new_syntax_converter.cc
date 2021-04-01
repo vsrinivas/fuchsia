@@ -4,7 +4,7 @@
 
 // The implementation for the ConvertingTreeVisitor that re-prints a raw::File
 // back into text format per some set of syntax rules.
-#include "fidl/converter.h"
+#include "fidl/new_syntax_converter.h"
 
 namespace fidl::conv {
 
