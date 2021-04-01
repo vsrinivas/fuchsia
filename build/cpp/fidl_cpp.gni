@@ -379,6 +379,7 @@ template("_fidl_cpp_fuzzer") {
   fuzzer_lib_name = "${target_name}_${bindings_flavor}${protocol_suffix}"
 
   fidl_cpp_library(fuzzer_lib_name) {
+    defines = library_defines
     library_name = invoker.library_name
     forward_variables_from(invoker,
                            [
@@ -390,7 +391,6 @@ template("_fidl_cpp_fuzzer") {
     output_stem = _libfuzzer_output_stem
     bindings_flavor = bindings_flavor
     additional_public_deps = [ ":${invoker.fidl_target_name}_libfuzzer" ]
-    defines = library_defines
     source_only = true
   }
 }
@@ -593,6 +593,7 @@ template("fidl_cpp_family") {
 
   # Define fuzzer targets.
   fidl_cpp_codegen("${target_name}_libfuzzer") {
+    testonly = true
     forward_variables_from(invoker, [ "fuzzers" ])
     forward_variables_from(common_options, "*")
     output_stem = _libfuzzer_output_stem
@@ -608,6 +609,7 @@ template("fidl_cpp_family") {
 
   # Define fuzzer header library.
   fidl_cpp_library("${target_name}_libfuzzer") {
+    testonly = true
     forward_variables_from(invoker,
                            [
                              "public_deps",
@@ -617,6 +619,7 @@ template("fidl_cpp_family") {
     output_stem = _libfuzzer_output_stem
     bindings_flavor = "libfuzzer"
     additional_public_deps = [
+      "//sdk/lib/fidl/cpp/fuzzing",
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
@@ -644,6 +647,7 @@ template("fidl_cpp_family") {
   if (defined(invoker.fuzzers)) {
     foreach(fuzzer, invoker.fuzzers) {
       _fidl_cpp_fuzzer(target_name) {
+        testonly = true
         forward_variables_from(invoker, "*")
         fidl_target_name = fidl_target_name
       }

@@ -47,6 +47,8 @@ void LastAs(const uint8_t** data, size_t* size, T* out) {
 
 constexpr uint64_t kMaxHandles = 2 * ZX_CHANNEL_MAX_MSG_HANDLES;
 
+using DecoderEncoderProgress = ::fidl::fuzzing::DecoderEncoderProgress;
+
 }  // namespace
 
 // This assertion guards `static_cast<uint32_t>(handle_infos.size())` below, where
@@ -93,19 +95,35 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (remaining_size > std::numeric_limits<uint32_t>::max())
     return 0;
 
-  // Decode/encode require non-const data pointer: Copy remaining data into (non-const) vector.
-  std::vector<uint8_t> message(remaining_data, remaining_data + remaining_size);
+  const uint8_t* const message_data = remaining_data;
+  const size_t message_size = remaining_size;
 
   for (auto decoder_encoder : fuzzing::conformance_decoder_encoders) {
+    // Decode/encode require non-const data pointer: Copy remaining data into (non-const) vector.
+    std::vector<uint8_t> message(message_data, message_data + message_size);
+
     // Result is unused on builds with assertions disabled.
     [[maybe_unused]] auto decode_encode_status =
         decoder_encoder(message.data(), static_cast<uint32_t>(message.size()), handle_infos.data(),
                         static_cast<uint32_t>(handle_infos.size()));
 
-    // TODO(fxbug.dev/72895): Re-enable this assertion once decode/encode symmetry has been fixed.
-    //
-    // When decode succeeds, (re-)encode should also succeed.
-    // assert(decode_encode_status.first != ZX_OK || decode_encode_status.second == ZX_OK);
+    // First encode successfully verified implies second encode success.
+    assert(decode_encode_status.progress < DecoderEncoderProgress::FirstEncodeVerified ||
+           decode_encode_status.progress >= DecoderEncoderProgress::SecondEncodeSuccess);
+
+    // TODO(fxbug.dev/72895): When type contains no flexible envelopes, first decode implies first
+    // encode.
+
+    // If encode/decode round trip completed, check resulting data.
+    if (decode_encode_status.progress >= DecoderEncoderProgress::SecondEncodeSuccess) {
+      assert(decode_encode_status.first_encoded_bytes.size() ==
+             decode_encode_status.second_encoded_bytes.size());
+      assert(memcmp(decode_encode_status.first_encoded_bytes.data(),
+                    decode_encode_status.second_encoded_bytes.data(),
+                    decode_encode_status.first_encoded_bytes.size()) == 0);
+
+      // TODO(fxbug.dev/72895): Check handle koids.
+    }
   }
 
   return 0;

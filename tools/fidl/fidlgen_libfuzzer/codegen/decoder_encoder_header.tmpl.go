@@ -15,20 +15,8 @@ const tmplDecoderEncoderHeader = `
 #include <{{ .WireBindingsHeader }}>
 {{ end }}
 
-// For ::fidl::fuzzing::DecoderEncoder.
+// For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
-// For ::std::array.
-#include <array>
-// For ::std::pair.
-#include <utility>
-// For uint*_t.
-#include <stdint.h>
-// For ZX_ERR_INTERNAL.
-#include <zircon/errors.h>
-// For zx_handle_info_t and zx_status_t.
-#include <zircon/types.h>
-// For fidl_outgoing_msg_t.
-#include <zircon/fidl.h>
 
 namespace fuzzing {
 
@@ -36,8 +24,8 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, {{ CountDecoderEn
 {{ range .Library }}{{ . }}_{{ end }}decoder_encoders = {
 {{ range .Decls }}
 {{- if Eq .Kind Kinds.Protocol -}}{{ template "ProtocolDecoderEncoders" . }}{{- end -}}
-{{- if Eq .Kind Kinds.Struct }}{{ template "DecoderEncoder" . }},{{- end -}}
-{{- if Eq .Kind Kinds.Table }}{{ template "DecoderEncoder" . }},{{- end -}}
+{{- if Eq .Kind Kinds.Struct }}{{ template "DecoderEncoder" . }}{{- end -}}
+{{- if Eq .Kind Kinds.Table }}{{ template "DecoderEncoder" . }}{{- end -}}
 {{- end }}
 };
 
