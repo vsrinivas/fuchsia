@@ -13,14 +13,14 @@ const tmplHeader = `
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
 
-{{ range .Headers -}}
-#include <{{ . }}/cpp/fidl.h>
-{{- end }}
-{{ if .FuzzerHeaders -}}
+{{- /* Import the HLCPP bindings that we are using to fuzz. */}}
+{{- if .HlcppBindingsHeader }}
+#include <{{ .HlcppBindingsHeader }}>
+{{ end -}}
+{{ if .Headers -}}
 {{ "" }}
-{{ $root := . -}}
-{{ range .FuzzerHeaders -}}
-#include <{{ . }}/{{ $root.IncludeStem }}.h>
+{{ range .Headers -}}
+#include <{{ . }}/{{ $.IncludeStem }}.h>
 {{ end -}}
 {{ end -}}
 

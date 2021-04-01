@@ -7,6 +7,14 @@ import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
+# Define the include patterns for various binding flavors.
+# Includes will be of the form <my/library/{output-stem}.h>
+_llcpp_output_stem = "llcpp/fidl"
+_hlcpp_output_stem = "cpp/fidl"
+_natural_types_output_stem = "cpp/natural_types"
+_unified_cpp_output_stem = "cpp/fidl_v2"
+_libfuzzer_output_stem = "cpp/libfuzzer"
+
 template("_fidl_cpp_codegen_impl") {
   generation_target_name = "${target_name}_generate"
   fidl_target_name = invoker.fidl_target_name
@@ -44,13 +52,16 @@ template("_fidl_cpp_codegen_impl") {
   }
 
   compiled_action(generation_target_name) {
-    # default experimental mode false when unspecified
+    # supply defaults for various options
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "experimental_split_generation_domain_objects",
                              "generates_test_base_header",
                              "generates_decoder_encoders",
+                             "additional_includes_natural_types",
+                             "additional_includes_hlcpp_bindings",
+                             "additional_includes_wire_bindings",
                            ])
     if (!defined(experimental_split_generation_domain_objects)) {
       experimental_split_generation_domain_objects = false
@@ -58,6 +69,16 @@ template("_fidl_cpp_codegen_impl") {
     if (!defined(generates_decoder_encoders)) {
       generates_decoder_encoders = false
     }
+    if (!defined(additional_includes_natural_types)) {
+      additional_includes_natural_types = false
+    }
+    if (!defined(additional_includes_hlcpp_bindings)) {
+      additional_includes_hlcpp_bindings = false
+    }
+    if (!defined(additional_includes_wire_bindings)) {
+      additional_includes_wire_bindings = false
+    }
+
     visibility = generation_visibility
 
     tool = invoker.fidlgen_tool
@@ -117,6 +138,25 @@ template("_fidl_cpp_codegen_impl") {
       args += [ "--experimental-split-generation-domain-objects" ]
     }
 
+    if (additional_includes_natural_types) {
+      args += [
+        "--natural-domain-objects-include-stem",
+        _natural_types_output_stem,
+      ]
+    }
+    if (additional_includes_hlcpp_bindings) {
+      args += [
+        "--hlcpp-bindings-include-stem",
+        _hlcpp_output_stem,
+      ]
+    }
+    if (additional_includes_wire_bindings) {
+      args += [
+        "--wire-bindings-include-stem",
+        _llcpp_output_stem,
+      ]
+    }
+
     deps = [ ":$fidl_target_name($fidl_toolchain)" ]
 
     metadata = {
@@ -166,6 +206,19 @@ template("_fidl_cpp_codegen_impl") {
 #   generates_decoder_encoders (optional)
 #     Specifies if the tool will generate fuzzer decoder encoder
 #     wrapper implementations.
+#
+#  additional_includes_natural_types (optional)
+#     If true, the generated code depends on the natural domain object types
+#     in addition to its own headers. Informs the tool the natural types
+#     include stem.
+#
+#  additional_includes_hlcpp_bindings (optional)
+#     If true, the generated code depends on the HLCPP bindings in addition to
+#     its own headers. Informs the tool the HLCPP bindings include stem.
+#
+#  additional_includes_wire_bindings (optional)
+#     If true, the generated code depends on the wire bindings in addition to
+#     its own headers. Informs the tool the wire bindings include stem.
 #
 template("fidl_cpp_codegen") {
   if (current_toolchain == fidl_toolchain) {
@@ -334,7 +387,7 @@ template("_fidl_cpp_fuzzer") {
                              "public_deps",
                              "fidl_target_name",
                            ])
-    output_stem = "cpp/libfuzzer"
+    output_stem = _libfuzzer_output_stem
     bindings_flavor = bindings_flavor
     additional_public_deps = [ ":${invoker.fidl_target_name}_libfuzzer" ]
     defines = library_defines
@@ -412,7 +465,7 @@ template("fidl_cpp_family") {
   # They are generated using the HLCPP backend.
   fidl_cpp_codegen("${target_name}_cpp_natural_types") {
     forward_variables_from(common_options, "*")
-    output_stem = "cpp/natural_types"
+    output_stem = _natural_types_output_stem
     bindings_flavor = "cpp_natural_types"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
     experimental_split_generation_domain_objects = true
@@ -426,7 +479,7 @@ template("fidl_cpp_family") {
                              "visibility",
                            ])
     forward_variables_from(common_options, "*")
-    output_stem = "cpp/natural_types"
+    output_stem = _natural_types_output_stem
     bindings_flavor = "cpp_natural_types"
     additional_public_deps = natural_types_public_deps
   }
@@ -437,7 +490,7 @@ template("fidl_cpp_family") {
   # target when the unified bindings and HLCPP are used in one program.
   fidl_cpp_codegen("${target_name}_hlcpp") {
     forward_variables_from(common_options, "*")
-    output_stem = "cpp/fidl"
+    output_stem = _hlcpp_output_stem
     bindings_flavor = "hlcpp"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
     generates_test_base_header = true
@@ -450,7 +503,7 @@ template("fidl_cpp_family") {
                              "visibility",
                            ])
     forward_variables_from(common_options, "*")
-    output_stem = "cpp/fidl"
+    output_stem = _hlcpp_output_stem
     bindings_flavor = "hlcpp"
     additional_public_deps = hlcpp_public_deps
   }
@@ -480,7 +533,7 @@ template("fidl_cpp_family") {
   if (llcpp_public_deps != []) {
     fidl_cpp_codegen("${target_name}_llcpp") {
       forward_variables_from(common_options, "*")
-      output_stem = "llcpp/fidl"
+      output_stem = _llcpp_output_stem
       bindings_flavor = "llcpp"
       fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
       generates_test_base_header = true
@@ -492,7 +545,7 @@ template("fidl_cpp_family") {
                                "visibility",
                              ])
       forward_variables_from(common_options, "*")
-      output_stem = "llcpp/fidl"
+      output_stem = _llcpp_output_stem
       bindings_flavor = "llcpp"
       additional_public_deps = llcpp_public_deps
     }
@@ -511,10 +564,12 @@ template("fidl_cpp_family") {
   if (llcpp_public_deps != []) {
     fidl_cpp_codegen("${target_name}_cpp") {
       forward_variables_from(common_options, "*")
-      output_stem = "cpp/fidl_v2"
+      output_stem = _unified_cpp_output_stem
       bindings_flavor = "cpp"
       fidlgen_tool = "//tools/fidl/fidlgen_cpp"
       generates_test_base_header = false
+      additional_includes_natural_types = true
+      additional_includes_wire_bindings = true
     }
     fidl_cpp_library("${target_name}_cpp") {
       forward_variables_from(invoker,
@@ -523,7 +578,7 @@ template("fidl_cpp_family") {
                                "visibility",
                              ])
       forward_variables_from(common_options, "*")
-      output_stem = "cpp/fidl_v2"
+      output_stem = _unified_cpp_output_stem
       bindings_flavor = "cpp"
       additional_public_deps = [
         ":${fidl_target_name}_cpp_natural_types",
@@ -540,13 +595,15 @@ template("fidl_cpp_family") {
   fidl_cpp_codegen("${target_name}_libfuzzer") {
     forward_variables_from(invoker, [ "fuzzers" ])
     forward_variables_from(common_options, "*")
-    output_stem = "cpp/libfuzzer"
+    output_stem = _libfuzzer_output_stem
     bindings_flavor = "libfuzzer"
     fidlgen_tool = "//tools/fidl/fidlgen_libfuzzer"
     generates_test_base_header = false
 
     # Note: Must have matching `includes_decoder_encoders` in `fidl_cpp_library` below.
     generates_decoder_encoders = true
+    additional_includes_hlcpp_bindings = true
+    additional_includes_wire_bindings = true
   }
 
   # Define fuzzer header library.
@@ -557,7 +614,7 @@ template("fidl_cpp_family") {
                              "visibility",
                            ])
     forward_variables_from(common_options, "*")
-    output_stem = "cpp/libfuzzer"
+    output_stem = _libfuzzer_output_stem
     bindings_flavor = "libfuzzer"
     additional_public_deps = [
       "//zircon/system/ulib/async-default",

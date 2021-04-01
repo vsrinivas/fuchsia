@@ -78,40 +78,46 @@ type Config interface {
 	Source() string
 	DecoderEncoderHeader() string
 	DecoderEncoderSource() string
+	HlcppBindingsIncludeStem() string
+	WireBindingsIncludeStem() string
 }
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl fidlgen.Root, c Config, clangFormatPath string) error {
-	options, headers := headerOptions(fidl.Name, c.IncludeStem())
+	options, err := headerOptions(fidl.Name, c)
+	if err != nil {
+		return err
+	}
 	tree := cpp.CompileLibFuzzer(fidl, options)
-	tree.Headers = headers
 	if err := os.MkdirAll(filepath.Dir(c.Header()), os.ModePerm); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(c.Source()), os.ModePerm); err != nil {
 		return err
 	}
-	if err := gen.GenerateFuzzer(fidl, tree, c, clangFormatPath); err != nil {
+	if err := gen.generateFuzzer(fidl, tree, c, clangFormatPath); err != nil {
 		return err
 	}
 
-	options, headers = headerOptionsForDecoderEncoders(fidl.Name, c.IncludeStem())
+	options, err = headerOptions(fidl.Name, decoderEncoderCodegenOptions{c})
+	if err != nil {
+		return err
+	}
 	tree.HeaderOptions = options
-	tree.Headers = headers
 	if err := os.MkdirAll(filepath.Dir(c.DecoderEncoderHeader()), os.ModePerm); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(c.DecoderEncoderSource()), os.ModePerm); err != nil {
 		return err
 	}
-	if err := gen.GenerateDecoderEncoders(fidl, tree, c, clangFormatPath); err != nil {
+	if err := gen.generateDecoderEncoders(fidl, tree, c, clangFormatPath); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (gen FidlGenerator) GenerateFuzzer(fidl fidlgen.Root, tree cpp.Root, c Config, clangFormatPath string) error {
+func (gen FidlGenerator) generateFuzzer(fidl fidlgen.Root, tree cpp.Root, c Config, clangFormatPath string) error {
 	headerFile, err := fidlgen.NewLazyWriter(c.Header())
 	if err != nil {
 		return err
@@ -156,7 +162,7 @@ func (gen FidlGenerator) GenerateFuzzer(fidl fidlgen.Root, tree cpp.Root, c Conf
 	return nil
 }
 
-func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidlgen.Root, tree cpp.Root, c Config, clangFormatPath string) error {
+func (gen FidlGenerator) generateDecoderEncoders(fidl fidlgen.Root, tree cpp.Root, c Config, clangFormatPath string) error {
 	headerFile, err := fidlgen.NewLazyWriter(c.DecoderEncoderHeader())
 	if err != nil {
 		return err
@@ -187,20 +193,17 @@ func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidlgen.Root, tree cpp.Roo
 	return gen.GenerateDecoderEncoderSource(sourceFormatterPipe, tree)
 }
 
-func headerOptions(name fidlgen.EncodedLibraryIdentifier, includeStem string) (cpp.HeaderOptions, []string) {
-	pkgPath := strings.Replace(string(name), ".", "/", -1)
+func headerOptions(name fidlgen.EncodedLibraryIdentifier, c Config) (cpp.HeaderOptions, error) {
+	primaryHeader, err := cpp.CalcPrimaryHeader(c, name.Parts())
+	if err != nil {
+		return cpp.HeaderOptions{}, err
+	}
 	return cpp.HeaderOptions{
-		PrimaryHeader: pkgPath + "/" + includeStem + ".h",
-		IncludeStem:   includeStem,
-	}, []string{pkgPath}
-}
-
-func headerOptionsForDecoderEncoders(name fidlgen.EncodedLibraryIdentifier, includeStem string) (cpp.HeaderOptions, []string) {
-	pkgPath := strings.Replace(string(name), ".", "/", -1)
-	return cpp.HeaderOptions{
-		PrimaryHeader: pkgPath + "/" + includeStem + "_decode_encode.h",
-		IncludeStem:   includeStem,
-	}, []string{pkgPath}
+		PrimaryHeader:            primaryHeader,
+		IncludeStem:              c.IncludeStem(),
+		HlcppBindingsIncludeStem: c.HlcppBindingsIncludeStem(),
+		WireBindingsIncludeStem:  c.WireBindingsIncludeStem(),
+	}, nil
 }
 
 func protocols(decls []cpp.Kinded) []cpp.Protocol {
@@ -234,4 +237,17 @@ func countDecoderEncoders(decls []cpp.Kinded) int {
 		}
 	}
 	return count
+}
+
+// decoderEncoderCodegenOptions is a forwarding CodegenOptions that changes the
+// primary header to the decoder-encoder header.
+type decoderEncoderCodegenOptions struct {
+	Config
+}
+
+var _ cpp.CodegenOptions = (*decoderEncoderCodegenOptions)(nil)
+
+func (o decoderEncoderCodegenOptions) Header() string {
+	// When generating decoder-encoders, the primary header is the decoder-encoder header.
+	return o.Config.DecoderEncoderHeader()
 }

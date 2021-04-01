@@ -16,8 +16,10 @@ import (
 
 type flagsDef struct {
 	cpp.CommonFlags
-	decoderEncoderHeader *string
-	decoderEncoderSource *string
+	decoderEncoderHeader     *string
+	decoderEncoderSource     *string
+	hlcppBindingsIncludeStem *string
+	wireBindingsIncludeStem  *string
 }
 
 var _ cpp.CodegenOptions = (*flagsDef)(nil)
@@ -47,6 +49,14 @@ func (f flagsDef) DecoderEncoderSource() string {
 	return *f.decoderEncoderSource
 }
 
+func (f flagsDef) HlcppBindingsIncludeStem() string {
+	return *f.hlcppBindingsIncludeStem
+}
+
+func (f flagsDef) WireBindingsIncludeStem() string {
+	return *f.wireBindingsIncludeStem
+}
+
 var flags = flagsDef{
 	CommonFlags: cpp.CommonFlags{
 		Json: flag.String("json", "",
@@ -68,6 +78,14 @@ var flags = flagsDef{
 		"the output path for the generated decoder-encoder header."),
 	decoderEncoderSource: flag.String("decoder-encoder-source", "",
 		"the output path for the generated decoder-encoder implementation."),
+	hlcppBindingsIncludeStem: flag.String("hlcpp-bindings-include-stem",
+		"cpp/fidl",
+		"[optional] the path stem when including the hlcpp bindings header. "+
+			"Includes will be of the form <my/library/{include-stem}.h>. "),
+	wireBindingsIncludeStem: flag.String("wire-bindings-include-stem",
+		"llcpp/fidl",
+		"[optional] the path stem when including the wire bindings header. "+
+			"Includes will be of the form <my/library/{include-stem}.h>. "),
 }
 
 func (f flagsDef) valid() bool {

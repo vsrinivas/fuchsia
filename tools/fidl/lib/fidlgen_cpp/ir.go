@@ -146,7 +146,6 @@ type Member interface {
 
 type Root struct {
 	Headers         []string
-	FuzzerHeaders   []string
 	HandleTypes     []string
 	RawLibrary      fidlgen.LibraryIdentifier
 	Library         fidlgen.LibraryIdentifier
@@ -164,8 +163,16 @@ func (r Root) NaturalDomainObjectsHeader() string {
 	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.RawLibrary), r.NaturalDomainObjectsIncludeStem)
 }
 
-// WireBindingsHeader computes the path to #include the natural domain
-// object header.
+// HlcppBindingsHeader computes the path to #include the high-level C++ bindings
+// header.
+func (r Root) HlcppBindingsHeader() string {
+	if r.HlcppBindingsIncludeStem == "" {
+		fidlgen.TemplateFatalf("High-level C++ bindings include stem was missing")
+	}
+	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.RawLibrary), r.HlcppBindingsIncludeStem)
+}
+
+// WireBindingsHeader computes the path to #include the wire bindings header.
 func (r Root) WireBindingsHeader() string {
 	if r.WireBindingsIncludeStem == "" {
 		fidlgen.TemplateFatalf("Wire bindings include stem was missing")
@@ -187,6 +194,10 @@ type HeaderOptions struct {
 	// NaturalDomainObjectsIncludeStem is the file stem of the natural
 	// domain object header, if it needs to be included by the generated code.
 	NaturalDomainObjectsIncludeStem string
+
+	// HlcppBindingsIncludeStem is the file stem of the high-level C++ bindings
+	// header, if it needs to be included by the generated code.
+	HlcppBindingsIncludeStem string
 
 	// WireBindingsIncludeStem is the file stem of the wire bindings (LLCPP)
 	// header, if it needs to be included by the generated code.
@@ -551,7 +562,6 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 		}
 		libraryIdent := fidlgen.ParseLibraryName(l.Name)
 		root.Headers = append(root.Headers, formatLibraryPath(libraryIdent))
-		root.FuzzerHeaders = append(root.FuzzerHeaders, formatLibraryPath(libraryIdent))
 	}
 
 	// zx::channel is always referenced by the protocols in llcpp bindings API

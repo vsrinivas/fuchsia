@@ -10,9 +10,10 @@ const tmplDecoderEncoderHeader = `
 
 #pragma once
 
-{{ range .Headers -}}
-#include <{{ . }}/llcpp/fidl.h>
-{{- end }}
+{{- /* Import the wire types and messaging API from the LLCPP bindings. */}}
+{{ if .WireBindingsHeader }}
+#include <{{ .WireBindingsHeader }}>
+{{ end }}
 
 // For ::fidl::fuzzing::DecoderEncoder.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
