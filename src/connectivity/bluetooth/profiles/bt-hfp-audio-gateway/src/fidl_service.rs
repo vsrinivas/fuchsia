@@ -5,12 +5,13 @@
 use {
     anyhow::{Context, Error},
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, HfpRequest, HfpRequestStream},
-    futures::{channel::mpsc::Sender, SinkExt, TryStreamExt},
+    fuchsia_component::server::{ServiceFs, ServiceObj},
+    futures::{channel::mpsc::Sender, SinkExt, StreamExt, TryStreamExt},
     log::info,
 };
 
 /// The maximum number of fidl service client connections that will be serviced concurrently.
-pub const MAX_CONCURRENT_CONNECTIONS: usize = 10;
+const MAX_CONCURRENT_CONNECTIONS: usize = 10;
 
 /// All FIDL services that are exposed by this component's ServiceFs.
 pub enum Services {
@@ -19,7 +20,7 @@ pub enum Services {
 
 /// Handle a new incoming Hfp protocol client connection. This async function completes when
 /// a client connection is closed.
-pub async fn handle_hfp_client_connection(
+async fn handle_hfp_client_connection(
     stream: HfpRequestStream,
     call_manager: Sender<CallManagerProxy>,
 ) {
@@ -44,6 +45,19 @@ async fn handle_hfp_client_connection_result(
         let proxy = manager.into_proxy().context("hfp FIDL client error")?;
         call_manager.send(proxy).await.context("component main loop halted")?;
     }
+    Ok(())
+}
+
+pub async fn run_services(
+    mut fs: ServiceFs<ServiceObj<'_, Services>>,
+    call_manager: Sender<CallManagerProxy>,
+) -> Result<(), Error> {
+    fs.dir("svc").add_fidl_service(Services::Hfp);
+    fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
+    fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, move |Services::Hfp(stream)| {
+        handle_hfp_client_connection(stream, call_manager.clone())
+    })
+    .await;
     Ok(())
 }
 
