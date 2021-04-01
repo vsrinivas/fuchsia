@@ -50,23 +50,27 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
     }
 
     /// Opens an existing tree from the provided handles to the layer objects.
-    pub fn open(
+    pub async fn open(
         merge_fn: merge::MergeFn<K, V>,
         handles: Box<[impl ObjectHandle + 'static]>,
-    ) -> Self {
-        LSMTree {
+    ) -> Result<Self, Error> {
+        Ok(LSMTree {
             data: RwLock::new(Inner {
                 mutable_layer: skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
-                layers: Self::layers_from_handles(handles),
+                layers: Self::layers_from_handles(handles).await?,
             }),
             merge_fn,
-        }
+        })
     }
 
     /// Replaces the immutable layers.
-    pub fn set_layers(&self, handles: Box<[impl ObjectHandle + 'static]>) {
-        let mut data = self.data.write().unwrap();
-        data.layers = Self::layers_from_handles(handles);
+    pub async fn set_layers(
+        &self,
+        handles: Box<[impl ObjectHandle + 'static]>,
+    ) -> Result<(), Error> {
+        let layers = Self::layers_from_handles(handles).await?;
+        self.data.write().unwrap().layers = layers;
+        Ok(())
     }
 
     /// Resets the immutable layers.
@@ -110,8 +114,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
             writer.flush().await?;
         }
 
-        self.set_layers(Box::new([object_handle]));
-        Ok(())
+        self.set_layers(Box::new([object_handle])).await
     }
 
     /// Compacts all the immutable layers.
@@ -186,19 +189,20 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
         })
     }
 
-    fn layers_from_handles(
+    async fn layers_from_handles(
         handles: Box<[impl ObjectHandle + 'static]>,
-    ) -> Vec<Arc<dyn Layer<K, V>>> {
-        handles
-            .into_vec()
-            .drain(..)
-            .map(|h| {
-                simple_persistent_layer::SimplePersistentLayer::new(
-                    h,
+    ) -> Result<Vec<Arc<dyn Layer<K, V>>>, Error> {
+        let mut layers = Vec::new();
+        for handle in Vec::from(handles) {
+            layers.push(
+                simple_persistent_layer::SimplePersistentLayer::open(
+                    handle,
                     SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
-                ) as Arc<dyn Layer<K, V>>
-            })
-            .collect()
+                )
+                .await? as Arc<dyn Layer<K, V>>,
+            );
+        }
+        Ok(layers)
     }
 }
 
@@ -306,7 +310,7 @@ mod tests {
         let handle = FakeObjectHandle::new(object.clone());
         tree.compact(handle).await.expect("compact failed");
         let handle = FakeObjectHandle::new(object.clone());
-        let tree = LSMTree::open(emit_left_merge_fn, [handle].into());
+        let tree = LSMTree::open(emit_left_merge_fn, [handle].into()).await.expect("open failed");
 
         let layers = tree.layer_set();
         let mut merger = layers.merger();

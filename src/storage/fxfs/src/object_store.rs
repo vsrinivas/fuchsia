@@ -339,7 +339,7 @@ impl ObjectStore {
                         parent_store.open_object(*object_id, HandleOptions::default()).await?,
                     );
                 }
-                self.tree.set_layers(handles.into());
+                self.tree.set_layers(handles.into()).await?;
                 let mut current_store_info = self.store_info.lock().unwrap();
                 if store_info.last_object_id > current_store_info.last_object_id {
                     current_store_info.last_object_id = store_info.last_object_id

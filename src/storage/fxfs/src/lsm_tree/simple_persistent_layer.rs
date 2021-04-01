@@ -7,8 +7,7 @@ use {
         lsm_tree::types::{
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, Value,
         },
-        object_handle::ObjectHandle,
-        object_store::transaction::Transaction,
+        object_handle::{ObjectHandle, ObjectHandleExt},
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
@@ -27,6 +26,7 @@ use {
 pub struct SimplePersistentLayer {
     object_handle: Arc<dyn ObjectHandle>,
     block_size: u32,
+    size: u64,
 }
 
 pub struct Iterator<'iter, K, V> {
@@ -58,7 +58,7 @@ impl<K, V> Iterator<'_, K, V> {
 impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
     async fn advance(&mut self) -> Result<(), Error> {
         if self.item_index >= self.item_count {
-            if self.pos >= self.layer.object_handle.get_size() {
+            if self.pos >= self.layer.size {
                 self.item = None;
                 return Ok(());
             }
@@ -71,7 +71,7 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
             log::debug!(
                 "pos={}, object size={}, object id={}",
                 self.pos,
-                self.layer.object_handle.get_size(),
+                self.layer.size,
                 self.layer.object_handle.object_id()
             );
             let mut reader = std::io::Cursor::new(vec.into());
@@ -105,8 +105,16 @@ impl SimplePersistentLayer {
     /// Opens an existing layer that is accessible via |object_handle| (which provides a read
     /// interface to the object).  The layer should have been written prior using
     /// SimplePersistentLayerWriter.
-    pub fn new(object_handle: impl ObjectHandle + 'static, block_size: u32) -> Arc<Self> {
-        Arc::new(SimplePersistentLayer { object_handle: Arc::new(object_handle), block_size })
+    pub async fn open(
+        object_handle: impl ObjectHandle + 'static,
+        block_size: u32,
+    ) -> Result<Arc<Self>, Error> {
+        let size = object_handle.get_size();
+        Ok(Arc::new(SimplePersistentLayer {
+            object_handle: Arc::new(object_handle),
+            block_size,
+            size,
+        }))
     }
 }
 
@@ -126,7 +134,7 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
             Bound::Excluded(_) => panic!("Excluded bound not supported"),
         }
         let mut left_offset = 0;
-        let mut right_offset = round_up(self.object_handle.get_size(), self.block_size);
+        let mut right_offset = round_up(self.size, self.block_size);
         let mut left = Iterator::new(self, left_offset);
         left.advance().await?;
         match left.get() {
@@ -202,9 +210,7 @@ impl<'a> SimplePersistentLayerWriter<'a> {
         let mut buf = self.object_handle.allocate_buffer(len);
         // TODO(csuter): Consider making BufferRef implement AsRef<[u8]> to make this a bit tidier.
         buf.as_mut_slice().copy_from_slice(&self.buf[..len]);
-        let mut transaction = Transaction::new();
-        self.object_handle.txn_write(&mut transaction, self.offset, buf.as_ref()).await?;
-        self.object_handle.commit_transaction(transaction).await;
+        self.object_handle.write(self.offset, buf.as_ref()).await?;
         log::debug!("wrote {} items, {} bytes", self.item_count, len);
         self.buf.drain(..len - 2); // 2 bytes are used for the next item count.
         self.item_count = 0;
@@ -274,7 +280,7 @@ mod tests {
             }
             writer.flush().await.expect("flush failed");
         }
-        let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
+        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
             let ItemRef { key, value } = iterator.get().expect("missing item");
@@ -297,7 +303,7 @@ mod tests {
             }
             writer.flush().await.expect("flush failed");
         }
-        let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
+        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         for i in 0..ITEM_COUNT {
             let mut iterator = layer.seek(Bound::Included(&i)).await.expect("failed to seek");
             let ItemRef { key, value } = iterator.get().expect("missing item");
@@ -328,7 +334,7 @@ mod tests {
             }
             writer.flush().await.expect("flush failed");
         }
-        let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
+        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("failed to seek");
         let ItemRef { key, value } = iterator.get().expect("missing item");
         assert_eq!((key, value), (&0, &0));
@@ -349,7 +355,7 @@ mod tests {
             writer.flush().await.expect("flush failed");
         }
 
-        let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
+        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         let iterator = (layer.as_ref() as &dyn Layer<i32, i32>)
             .seek(Bound::Unbounded)
             .await
@@ -372,7 +378,7 @@ mod tests {
             writer.flush().await.expect("flush failed");
         }
 
-        let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
+        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
             let ItemRef { key, value } = iterator.get().expect("missing item");

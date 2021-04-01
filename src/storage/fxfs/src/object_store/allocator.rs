@@ -159,7 +159,7 @@ impl SimpleAllocator {
                         .push(root_store.open_object(*object_id, HandleOptions::default()).await?);
                 }
                 self.inner.lock().unwrap().info = info;
-                self.tree.set_layers(handles.into_boxed_slice());
+                self.tree.set_layers(handles.into_boxed_slice()).await?;
             }
         }
 
