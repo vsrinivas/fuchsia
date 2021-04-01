@@ -4,3 +4,18 @@
 
 #include <fidl/test/bitsconstants/cpp/natural_types.h>
 #include <fidl/test/bitsconstants/llcpp/fidl.h>
+
+namespace fidl_test_bitsconstants {
+using BitsType = ::fidl::test::bitsconstants::BitsType;
+const static BitsType BitsTypeMask = ::fidl::test::bitsconstants::BitsTypeMask;
+
+constexpr ::fidl_test_bitsconstants::BitsType Const3 =
+    ::fidl::test::bitsconstants::Const3;
+
+constexpr ::fidl_test_bitsconstants::BitsType Const2 =
+    ::fidl::test::bitsconstants::Const2;
+
+constexpr ::fidl_test_bitsconstants::BitsType Const1 =
+    ::fidl::test::bitsconstants::Const1;
+
+}  // namespace fidl_test_bitsconstants

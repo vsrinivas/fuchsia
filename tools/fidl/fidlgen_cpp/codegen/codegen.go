@@ -22,6 +22,8 @@ func NewGenerator() *Generator {
 	tmpls := template.New("UnifiedCPPTemplates").
 		Funcs(cpp.CommonTemplateFuncs)
 	templates := []string{
+		fragmentConstTmpl,
+		fragmentTypeAliasTmpl,
 		fileHeaderTmpl,
 		fileSourceTmpl,
 	}

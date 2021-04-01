@@ -5,3 +5,8 @@
 #include <fidl/test/transitivedependencies/cpp/natural_types.h>
 #include <fidl/test/transitivedependencies/llcpp/fidl.h>
 #include <middle/cpp/fidl_v2.h>
+
+namespace fidl_test_transitivedependencies {
+using Baz = ::fidl::test::transitivedependencies::Baz;
+
+}  // namespace fidl_test_transitivedependencies

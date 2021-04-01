@@ -5,3 +5,23 @@
 #include <exampleusing/cpp/fidl_v2.h>
 #include <fidl/test/placementofattributes/cpp/natural_types.h>
 #include <fidl/test/placementofattributes/llcpp/fidl.h>
+
+namespace fidl_test_placementofattributes {
+using ExampleXUnion = ::fidl::test::placementofattributes::ExampleXUnion;
+
+using ExampleUnion = ::fidl::test::placementofattributes::ExampleUnion;
+
+using ExampleTable = ::fidl::test::placementofattributes::ExampleTable;
+
+using ExampleStruct = ::fidl::test::placementofattributes::ExampleStruct;
+
+using ExampleEnum = ::fidl::test::placementofattributes::ExampleEnum;
+
+using ExampleBits = ::fidl::test::placementofattributes::ExampleBits;
+const static ExampleBits ExampleBitsMask =
+    ::fidl::test::placementofattributes::ExampleBitsMask;
+
+constexpr uint32_t EXAMPLE_CONST =
+    ::fidl::test::placementofattributes::EXAMPLE_CONST;
+
+}  // namespace fidl_test_placementofattributes

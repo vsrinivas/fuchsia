@@ -4,3 +4,32 @@
 
 #include <fidl/test/unionsandwich/cpp/natural_types.h>
 #include <fidl/test/unionsandwich/llcpp/fidl.h>
+
+namespace fidl_test_unionsandwich {
+using UnionSize8Alignment4 = ::fidl::test::unionsandwich::UnionSize8Alignment4;
+
+using SandwichUnionSize8Alignment4 =
+    ::fidl::test::unionsandwich::SandwichUnionSize8Alignment4;
+
+using UnionSize36Alignment4 =
+    ::fidl::test::unionsandwich::UnionSize36Alignment4;
+
+using SandwichUnionSize36Alignment4 =
+    ::fidl::test::unionsandwich::SandwichUnionSize36Alignment4;
+
+using UnionSize12Alignment4 =
+    ::fidl::test::unionsandwich::UnionSize12Alignment4;
+
+using SandwichUnionSize12Alignment4 =
+    ::fidl::test::unionsandwich::SandwichUnionSize12Alignment4;
+
+using StructSize16Alignment8 =
+    ::fidl::test::unionsandwich::StructSize16Alignment8;
+
+using UnionSize24Alignment8 =
+    ::fidl::test::unionsandwich::UnionSize24Alignment8;
+
+using SandwichUnionSize24Alignment8 =
+    ::fidl::test::unionsandwich::SandwichUnionSize24Alignment8;
+
+}  // namespace fidl_test_unionsandwich

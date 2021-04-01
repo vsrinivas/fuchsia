@@ -4,3 +4,16 @@
 
 #include <fidl/test/table/cpp/natural_types.h>
 #include <fidl/test/table/llcpp/fidl.h>
+
+namespace fidl_test_table {
+using SimpleTable = ::fidl::test::table::SimpleTable;
+
+using ReverseOrdinalTable = ::fidl::test::table::ReverseOrdinalTable;
+
+using OlderSimpleTable = ::fidl::test::table::OlderSimpleTable;
+
+using NewerSimpleTable = ::fidl::test::table::NewerSimpleTable;
+
+using EmptyTable = ::fidl::test::table::EmptyTable;
+
+}  // namespace fidl_test_table

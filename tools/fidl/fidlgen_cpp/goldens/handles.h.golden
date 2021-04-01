@@ -5,3 +5,10 @@
 #include <fidl/test/handles/cpp/natural_types.h>
 #include <fidl/test/handles/llcpp/fidl.h>
 #include <zx/cpp/fidl_v2.h>
+
+namespace fidl_test_handles {
+using obj_type = ::fidl::test::handles::obj_type;
+
+using Handles = ::fidl::test::handles::Handles;
+
+}  // namespace fidl_test_handles

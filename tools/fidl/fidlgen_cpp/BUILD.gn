@@ -19,6 +19,8 @@ go_library("gopkg") {
     "codegen/codegen.go",
     "codegen/file_header.tmpl.go",
     "codegen/file_source.tmpl.go",
+    "codegen/fragment_const.tmpl.go",
+    "codegen/fragment_type_alias.tmpl.go",
     "main.go",
   ]
 }

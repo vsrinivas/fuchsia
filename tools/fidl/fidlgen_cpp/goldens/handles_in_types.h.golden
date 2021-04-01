@@ -4,3 +4,14 @@
 
 #include <fidl/test/handlesintypes/cpp/natural_types.h>
 #include <fidl/test/handlesintypes/llcpp/fidl.h>
+
+namespace fidl_test_handlesintypes {
+using obj_type = ::fidl::test::handlesintypes::obj_type;
+
+using UnionWithHandle = ::fidl::test::handlesintypes::UnionWithHandle;
+
+using TableWithHandle = ::fidl::test::handlesintypes::TableWithHandle;
+
+using HandlesInTypes = ::fidl::test::handlesintypes::HandlesInTypes;
+
+}  // namespace fidl_test_handlesintypes

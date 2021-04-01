@@ -4,3 +4,28 @@
 
 #include <fidl/test/protocols/cpp/natural_types.h>
 #include <fidl/test/protocols/llcpp/fidl.h>
+
+namespace fidl_test_protocols {
+using obj_type = ::fidl::test::protocols::obj_type;
+
+using WithErrorSyntax_ResponseAsStruct_Response =
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
+
+using WithErrorSyntax_ResponseAsStruct_Result =
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result;
+
+using WithErrorSyntax_ErrorAsPrimitive_Response =
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response;
+
+using WithErrorSyntax_ErrorAsPrimitive_Result =
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
+
+using WithErrorSyntax_ErrorAsEnum_Response =
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
+
+using ErrorEnun = ::fidl::test::protocols::ErrorEnun;
+
+using WithErrorSyntax_ErrorAsEnum_Result =
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
+
+}  // namespace fidl_test_protocols

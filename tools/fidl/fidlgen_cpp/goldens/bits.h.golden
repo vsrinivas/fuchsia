@@ -4,3 +4,14 @@
 
 #include <fidl/test/bits/cpp/natural_types.h>
 #include <fidl/test/bits/llcpp/fidl.h>
+
+namespace fidl_test_bits {
+using StrictBits = ::fidl::test::bits::StrictBits;
+const static StrictBits StrictBitsMask = ::fidl::test::bits::StrictBitsMask;
+
+using MyBits = ::fidl::test::bits::MyBits;
+const static MyBits MyBitsMask = ::fidl::test::bits::MyBitsMask;
+
+using FlexibleBits = ::fidl::test::bits::FlexibleBits;
+
+}  // namespace fidl_test_bits

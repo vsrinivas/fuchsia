@@ -4,3 +4,13 @@
 
 #include <fidl/test/enum/cpp/natural_types.h>
 #include <fidl/test/enum/llcpp/fidl.h>
+
+namespace fidl_test_enum {
+using MyStrictEnum = ::fidl::test::enum_::MyStrictEnum;
+
+using MyFlexibleEnumWithCustomUnknown =
+    ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown;
+
+using MyFlexibleEnum = ::fidl::test::enum_::MyFlexibleEnum;
+
+}  // namespace fidl_test_enum

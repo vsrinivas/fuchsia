@@ -204,7 +204,15 @@ type HeaderOptions struct {
 	WireBindingsIncludeStem string
 }
 
-// Holds information about error results on methods
+// SingleComponentLibraryName returns if the FIDL library name only consists of
+// a single identifier (e.g. "library foo;"). This is significant because the
+// unified namespace and the natural namespace are identical when the library
+// only has one component.
+func (r Root) SingleComponentLibraryName() bool {
+	return len(r.Library) == 1
+}
+
+// Result holds information about error results on methods.
 type Result struct {
 	ValueMembers    []Parameter
 	ResultDecl      NameVariants

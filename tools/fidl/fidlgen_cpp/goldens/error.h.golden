@@ -4,3 +4,10 @@
 
 #include <fidl/test/error/cpp/natural_types.h>
 #include <fidl/test/error/llcpp/fidl.h>
+
+namespace fidl_test_error {
+using Example_foo_Response = ::fidl::test::error::Example_foo_Response;
+
+using Example_foo_Result = ::fidl::test::error::Example_foo_Result;
+
+}  // namespace fidl_test_error

@@ -5,3 +5,30 @@
 #include <fidl/test/nullable/cpp/natural_types.h>
 #include <fidl/test/nullable/llcpp/fidl.h>
 #include <zx/cpp/fidl_v2.h>
+
+namespace fidl_test_nullable {
+using StructWithNullableVector =
+    ::fidl::test::nullable::StructWithNullableVector;
+
+using StructWithNullableUnion = ::fidl::test::nullable::StructWithNullableUnion;
+
+using StructWithNullableStruct =
+    ::fidl::test::nullable::StructWithNullableStruct;
+
+using StructWithNullableString =
+    ::fidl::test::nullable::StructWithNullableString;
+
+using StructWithNullableRequest =
+    ::fidl::test::nullable::StructWithNullableRequest;
+
+using StructWithNullableProtocol =
+    ::fidl::test::nullable::StructWithNullableProtocol;
+
+using StructWithNullableHandle =
+    ::fidl::test::nullable::StructWithNullableHandle;
+
+using SimpleUnion = ::fidl::test::nullable::SimpleUnion;
+
+using Int32Wrapper = ::fidl::test::nullable::Int32Wrapper;
+
+}  // namespace fidl_test_nullable

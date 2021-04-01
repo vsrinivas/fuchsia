@@ -5,3 +5,20 @@
 #include <fidl/test/encapsulatedstructs/cpp/natural_types.h>
 #include <fidl/test/encapsulatedstructs/llcpp/fidl.h>
 #include <zx/cpp/fidl_v2.h>
+
+namespace fidl_test_encapsulatedstructs {
+using NonInlineStructTestStruct =
+    ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct;
+
+using Int8Int32 = ::fidl::test::encapsulatedstructs::Int8Int32;
+
+using Int16Int8 = ::fidl::test::encapsulatedstructs::Int16Int8;
+
+using ArrayInt16Int8 = ::fidl::test::encapsulatedstructs::ArrayInt16Int8;
+
+using StructPaddingTestStruct =
+    ::fidl::test::encapsulatedstructs::StructPaddingTestStruct;
+
+using TopLevelStruct = ::fidl::test::encapsulatedstructs::TopLevelStruct;
+
+}  // namespace fidl_test_encapsulatedstructs

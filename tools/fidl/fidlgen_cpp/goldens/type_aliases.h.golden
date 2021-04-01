@@ -5,3 +5,10 @@
 #include <fidl/test/typealiases/cpp/natural_types.h>
 #include <fidl/test/typealiases/llcpp/fidl.h>
 #include <someotherlibrary/cpp/fidl_v2.h>
+
+namespace fidl_test_typealiases {
+using obj_type = ::fidl::test::typealiases::obj_type;
+
+using ExampleOfUseOfAliases = ::fidl::test::typealiases::ExampleOfUseOfAliases;
+
+}  // namespace fidl_test_typealiases

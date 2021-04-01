@@ -5,3 +5,8 @@
 #include <dependent/cpp/fidl_v2.h>
 #include <fidl/test/structdefaultvalueenumlibraryreference/cpp/natural_types.h>
 #include <fidl/test/structdefaultvalueenumlibraryreference/llcpp/fidl.h>
+
+namespace fidl_test_structdefaultvalueenumlibraryreference {
+using Foo = ::fidl::test::structdefaultvalueenumlibraryreference::Foo;
+
+}  // namespace fidl_test_structdefaultvalueenumlibraryreference

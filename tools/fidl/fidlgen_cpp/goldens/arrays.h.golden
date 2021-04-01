@@ -4,3 +4,18 @@
 
 #include <fidl/test/arrays/cpp/natural_types.h>
 #include <fidl/test/arrays/llcpp/fidl.h>
+
+namespace fidl_test_arrays {
+using UnionSmallArray = ::fidl::test::arrays::UnionSmallArray;
+
+using UnionLargeArray = ::fidl::test::arrays::UnionLargeArray;
+
+using TableSmallArray = ::fidl::test::arrays::TableSmallArray;
+
+using TableLargeArray = ::fidl::test::arrays::TableLargeArray;
+
+using StructSmallArray = ::fidl::test::arrays::StructSmallArray;
+
+using StructLargeArray = ::fidl::test::arrays::StructLargeArray;
+
+}  // namespace fidl_test_arrays

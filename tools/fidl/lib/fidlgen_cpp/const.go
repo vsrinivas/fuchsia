@@ -34,6 +34,8 @@ func (cv ConstantValue) String() string {
 		return string(cv.Natural)
 	case wireVariant:
 		return string(cv.Wire)
+	case unifiedVariant:
+		return string(cv.Natural)
 	}
 	panic("not reached")
 }

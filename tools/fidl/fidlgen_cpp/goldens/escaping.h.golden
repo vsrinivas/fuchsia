@@ -4,3 +4,9 @@
 
 #include <fidl/test/escaping/cpp/natural_types.h>
 #include <fidl/test/escaping/llcpp/fidl.h>
+
+namespace fidl_test_escaping {
+// "pleaseescapethisdocommentproperly"
+using DocCommentWithQuotes = ::fidl::test::escaping::DocCommentWithQuotes;
+
+}  // namespace fidl_test_escaping

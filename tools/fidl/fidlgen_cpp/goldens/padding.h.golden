@@ -4,3 +4,40 @@
 
 #include <fidl/test/padding/cpp/natural_types.h>
 #include <fidl/test/padding/llcpp/fidl.h>
+
+namespace fidl_test_padding {
+using Padding7ByteMiddle = ::fidl::test::padding::Padding7ByteMiddle;
+
+using Padding7ByteEnd = ::fidl::test::padding::Padding7ByteEnd;
+
+using Padding6ByteMiddle = ::fidl::test::padding::Padding6ByteMiddle;
+
+using Padding6ByteEnd = ::fidl::test::padding::Padding6ByteEnd;
+
+using Padding5ByteMiddle = ::fidl::test::padding::Padding5ByteMiddle;
+
+using Padding5ByteEnd = ::fidl::test::padding::Padding5ByteEnd;
+
+using Padding4ByteMiddle = ::fidl::test::padding::Padding4ByteMiddle;
+
+using Padding4ByteEnd = ::fidl::test::padding::Padding4ByteEnd;
+
+using Padding4ByteAlignmentLength12 =
+    ::fidl::test::padding::Padding4ByteAlignmentLength12;
+
+using Padding3ByteMiddle = ::fidl::test::padding::Padding3ByteMiddle;
+
+using Padding3ByteEnd = ::fidl::test::padding::Padding3ByteEnd;
+
+using Padding2ByteMiddle = ::fidl::test::padding::Padding2ByteMiddle;
+
+using Padding2ByteEnd = ::fidl::test::padding::Padding2ByteEnd;
+
+using Padding2ByteAlignmentLength6 =
+    ::fidl::test::padding::Padding2ByteAlignmentLength6;
+
+using Padding1ByteMiddle = ::fidl::test::padding::Padding1ByteMiddle;
+
+using Padding1ByteEnd = ::fidl::test::padding::Padding1ByteEnd;
+
+}  // namespace fidl_test_padding

@@ -4,3 +4,8 @@
 
 #include <fidl/test/byteandbytes/cpp/natural_types.h>
 #include <fidl/test/byteandbytes/llcpp/fidl.h>
+
+namespace fidl_test_byteandbytes {
+using ByteAndBytes = ::fidl::test::byteandbytes::ByteAndBytes;
+
+}  // namespace fidl_test_byteandbytes
