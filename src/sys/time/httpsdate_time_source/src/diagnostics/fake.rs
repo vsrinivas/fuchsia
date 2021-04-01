@@ -118,7 +118,7 @@ mod test {
         diagnostics.assert_events(vec![]);
     }
 
-    #[fuchsia::test]
+    #[test]
     #[should_panic]
     fn log_events_wrong_event_type() {
         let diagnostics = FakeDiagnostics::new();
@@ -128,7 +128,7 @@ mod test {
         diagnostics.assert_events(vec![TEST_FAILURE]);
     }
 
-    #[fuchsia::test]
+    #[test]
     #[should_panic]
     fn log_events_wrong_sample() {
         let diagnostics = FakeDiagnostics::new();
@@ -138,7 +138,7 @@ mod test {
         diagnostics.assert_events(vec![*TEST_SUCCESS_2]);
     }
 
-    #[fuchsia::test]
+    #[test]
     #[should_panic]
     fn log_events_wrong_event_count() {
         let diagnostics = FakeDiagnostics::new();
