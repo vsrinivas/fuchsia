@@ -492,7 +492,23 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
                                                   std::move(start.value()));
   auto bind_driver = fidl::BindServer<DriverComponent>(
       dispatcher_, std::move(controller), driver.get(),
-      [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
+      [this, name = driver_args.node->TopoName(), collection = DriverCollection(url)](
+          DriverComponent* driver, auto, auto) {
+        drivers_.erase(*driver);
+        auto destroy_callback = [name](fsys::Realm::DestroyChildResponse* response) {
+          if (response->result.is_err()) {
+            LOGF(ERROR, "Failed to destroy component '%s': %u", name.data(),
+                 response->result.err());
+          }
+        };
+        auto destroy =
+            realm_->DestroyChild(fsys::wire::ChildRef{.name = fidl::unowned_str(name),
+                                                      .collection = fidl::unowned_str(collection)},
+                                 std::move(destroy_callback));
+        if (!destroy.ok()) {
+          LOGF(ERROR, "Failed to destroy component '%s': %s", name.data(), destroy.error());
+        }
+      });
   if (bind_driver.is_error()) {
     LOGF(ERROR, "Failed to bind channel to ComponentController for driver '%.*s': %s", url.size(),
          url.data(), zx_status_get_string(bind_driver.error()));

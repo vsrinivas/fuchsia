@@ -81,6 +81,10 @@ class TestRealm : public fsys::testing::Realm_TestBase {
     callback(fsys::Realm_CreateChild_Result(fit::ok()));
   }
 
+  void DestroyChild(fsys::ChildRef child, DestroyChildCallback callback) override {
+    callback(fsys::Realm_DestroyChild_Result(fit::ok()));
+  }
+
   void NotImplemented_(const std::string& name) override {
     printf("Not implemented: Realm::%s\n", name.data());
   }
