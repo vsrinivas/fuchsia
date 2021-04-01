@@ -97,6 +97,8 @@ std::string GetReason(const LastReboot& last_reboot) {
         return "system update";
       case RebootReason::RETRY_SYSTEM_UPDATE:
         return "retry system update";
+      case RebootReason::ZBI_SWAP:
+        return "ZBI swap";
       case RebootReason::HIGH_TEMPERATURE:
         return "device too hot";
       case RebootReason::SESSION_FAILURE:

@@ -165,6 +165,7 @@ RebootReason DetermineRebootReason(const ZirconRebootReason zircon_reason,
         case GracefulRebootReason::kFdr:
           return RebootReason::kFdr;
         case GracefulRebootReason::kZbiSwap:
+          return RebootReason::kZbiSwap;
         case GracefulRebootReason::kNotSupported:
         case GracefulRebootReason::kNone:
         case GracefulRebootReason::kNotParseable:

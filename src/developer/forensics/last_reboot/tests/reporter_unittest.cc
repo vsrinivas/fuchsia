@@ -328,6 +328,11 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulReporterTest,
                                  cobalt::LastRebootReason::kSystemUpdate,
                              },
                              {
+                                 "ZbiSwap",
+                                 "ZBI SWAP",
+                                 cobalt::LastRebootReason::kZbiSwap,
+                             },
+                             {
                                  "HighTemperature",
                                  "HIGH TEMPERATURE",
                                  cobalt::LastRebootReason::kHighTemperature,

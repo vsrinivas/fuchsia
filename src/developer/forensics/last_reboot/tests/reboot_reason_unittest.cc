@@ -181,6 +181,15 @@ TEST(RebootReasonTest, RetrySystemUpdate) {
   EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::RETRY_SYSTEM_UPDATE);
 }
 
+TEST(RebootReasonTest, ZbiSwap) {
+  const auto reason = RebootReason::kZbiSwap;
+
+  EXPECT_FALSE(IsCrash(reason));
+  EXPECT_FALSE(IsFatal(reason));
+  EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kZbiSwap);
+  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::ZBI_SWAP);
+}
+
 TEST(RebootReasonTest, FDR) {
   const auto reason = RebootReason::kFdr;
 

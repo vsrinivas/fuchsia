@@ -82,6 +82,10 @@ know as base packages.
 A component responsible for system updates fails to apply an update, so the device
 reboots to try again (or possibly revert the update).
 
+### ZBI swap
+
+If the Zircon boot image is swapped, the device reboots to apply the change.
+
 ### High temperature
 
 A component responsible for power management detects that a device's temperature
@@ -141,6 +145,7 @@ Brief power loss             | `BRIEF POWER LOSS`            | `BriefPowerLoss` 
 User request                 | `USER_REQUEST`                | `UserRequest`              | N/A\*
 System update                | `SYSTEM_UPDATE`               | `SystemUpdate`             | N/A\*
 Retry system update          | `RETRY_SYSTEM_UPDATE`         | `RetrySystemUpdate`        | `fuchsia-retry-system-update`
+ZBI swap                     | `ZBI_SWAP`                    | `ZbiSwap`                  | N/A\*
 High temperature             | `HIGH_TEMPERATURE`            | `HighTemperature`          | N/A\*
 Session failure              | `SESSION_FAILURE`             | `SessionFailure`           | `fuchsia-session-failure`
 Sysmgr failure               | `SYSMGR_FAILURE`              | `SysmgrFailure`            | `fuchsia-sysmgr-failure`

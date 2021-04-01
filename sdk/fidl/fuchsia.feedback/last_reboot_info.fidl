@@ -91,4 +91,7 @@ enum RebootReason : uint16 {
     /// The device rebooted because a critical component managed by sysmgr has failed.
     // //src/sys/sysmgr/sysmgr-configuration.md defines what a critical component is.
     CRITICAL_COMPONENT_FAILURE = 16;
+
+    /// The device rebooted to apply the swap of Zircon boot images.
+    ZBI_SWAP = 18;
 };

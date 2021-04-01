@@ -37,6 +37,8 @@ std::string ToString(const RebootReason reason) {
       return "SYSTEM UPDATE";
     case RebootReason::kRetrySystemUpdate:
       return "RETRY SYSTEM UPDATE";
+    case RebootReason::kZbiSwap:
+      return "ZBI SWAP";
     case RebootReason::kHighTemperature:
       return "HIGH TEMPERATURE";
     case RebootReason::kSessionFailure:
@@ -67,6 +69,7 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
+    case RebootReason::kZbiSwap:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
@@ -90,6 +93,7 @@ bool IsFatal(const RebootReason reason) {
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
+    case RebootReason::kZbiSwap:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kSessionFailure:
@@ -104,6 +108,7 @@ std::optional<bool> OptionallyGraceful(const RebootReason reason) {
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kRetrySystemUpdate:
+    case RebootReason::kZbiSwap:
     case RebootReason::kHighTemperature:
     case RebootReason::kSessionFailure:
     case RebootReason::kSysmgrFailure:
@@ -135,6 +140,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
       return cobalt::LastRebootReason::kSystemUpdate;
     case RebootReason::kRetrySystemUpdate:
       return cobalt::LastRebootReason::kRetrySystemUpdate;
+    case RebootReason::kZbiSwap:
+      return cobalt::LastRebootReason::kZbiSwap;
     case RebootReason::kHighTemperature:
       return cobalt::LastRebootReason::kHighTemperature;
     case RebootReason::kSessionFailure:
@@ -189,6 +196,7 @@ std::string ToCrashSignature(const RebootReason reason) {
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
+    case RebootReason::kZbiSwap:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
@@ -217,6 +225,7 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
+    case RebootReason::kZbiSwap:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
@@ -236,6 +245,8 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
       return fuchsia::feedback::RebootReason::SYSTEM_UPDATE;
     case RebootReason::kRetrySystemUpdate:
       return fuchsia::feedback::RebootReason::RETRY_SYSTEM_UPDATE;
+    case RebootReason::kZbiSwap:
+      return fuchsia::feedback::RebootReason::ZBI_SWAP;
     case RebootReason::kHighTemperature:
       return fuchsia::feedback::RebootReason::HIGH_TEMPERATURE;
     case RebootReason::kSessionFailure:
