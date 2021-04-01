@@ -1,15 +1,4 @@
-# Fuchsia roadmap
-
-The Fuchsia project values transparency with our community. We are sharing our
-roadmap to give our community insight into the projects that are being actively
-explored by Fuchsia teams.
-
-The projects listed in this roadmap are subject to change and could be modified
-based on a change in priorities.
-
-While this list of projects is not exhaustive, it provides a high-level overview
-of active projects that inform the way that we’re currently thinking about
-Fuchsia.
+# Fuchsia 2020 roadmap overview
 
 ## FIDL
 

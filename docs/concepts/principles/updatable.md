@@ -53,7 +53,7 @@ without the need for individual product coordination.
 ## On the roadmap
 
 This section covers features on
-[Fuchsia's roadmap](/docs/contribute/roadmap.md).
+[Fuchsia's roadmap](/docs/contribute/roadmap/index.md).
 
 ### Update the system without modifying the driver
 

@@ -89,7 +89,7 @@ documentation reviews.
 
 ### Our roadmap is public
 
-**Fuchsia is a [work in progress](/docs/contribute/roadmap.md)**
+**Fuchsia is a [work in progress](/docs/contribute/roadmap/index.md)**
 
 As the project evolves,
 Fuchsia is striving to be as open as possible about the state of

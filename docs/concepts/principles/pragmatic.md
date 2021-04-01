@@ -57,7 +57,7 @@ if threads commonly blocked one another.
 ## On the roadmap
 
 This section covers features on
-[Fuchsia's roadmap](/docs/contribute/roadmap.md).
+[Fuchsia's roadmap](/docs/contribute/roadmap/index.md).
 
 ### Performance is a priority
 
@@ -74,4 +74,4 @@ to account for network latency.
 Fuchsia does not yet achieve its performance goals,
 but this is an area under active development.
 For example, performance related storage enhancements are on the
-[project roadmap](/docs/contribute/roadmap.md).
+[project roadmap](/docs/contribute/roadmap/index.md).

@@ -6,7 +6,7 @@ and stay informed about Fuchsia.
 ## Review the Fuchsia roadmap
 
 The Fuchsia project prioritizes features and enhancements that support our
-development community. Read the [Fuchsia roadmap](/docs/contribute/roadmap.md)
+development community. Read the [Fuchsia roadmap](/docs/contribute/roadmap/index.md)
 to get a high-level understanding of the various projects being considered
 within Fuchsia.
 

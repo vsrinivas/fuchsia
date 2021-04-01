@@ -190,7 +190,7 @@ previous point.
 [selectors]: https://docs.google.com/document/d/1gI3FizKlTlth9DL8l7Ja9f7xuY_GKDffa5x1uZesLMY/edit
 [inspect_overview]: /docs/development/diagnostics/inspect/README.md
 [Inspect codelab]: /docs/development/diagnostics/inspect/codelab.md
-[roadmap_drivers_components]: /docs/contribute/roadmap.md#implementing_drivers_as_components
+[roadmap_drivers_components]: /docs/contribute/roadmap/2020/overview.md#implementing_drivers_as_components
 [example_test_driver]: /src/devices/tests/driver-inspect-test/test-driver.cc
 [property_types]: /docs/development/diagnostics/inspect/README.md#property
 [inspect_codelab]: /docs/development/diagnostics/inspect/codelab/README.md
