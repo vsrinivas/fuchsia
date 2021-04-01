@@ -393,26 +393,33 @@ impl From<BindProgramEncodeError> for UserError {
                 None,
                 true,
             ),
-            BindProgramEncodeError::MissingStringInSymbolTable(str) => UserError::new(
+            BindProgramEncodeError::IncorrectTypesInValueComparison => UserError::new(
                 "E605",
+                "The LHS value must represent a key and the RHS value must represent a bool,
+                 string, number or enum value",
+                None,
+                true,
+            ),
+            BindProgramEncodeError::MissingStringInSymbolTable(str) => UserError::new(
+                "E606",
                 &format!("Missing string {} in symbol table", str),
                 None,
                 true,
             ),
             BindProgramEncodeError::DuplicateLabel(label_id) => UserError::new(
-                "E606",
+                "E607",
                 &format!("Duplicate label {} in instructions", label_id),
                 None,
                 true,
             ),
             BindProgramEncodeError::MissingLabel(label_id) => UserError::new(
-                "E607",
+                "E608",
                 &format!("Missing label {} in instructions", label_id),
                 None,
                 true,
             ),
             BindProgramEncodeError::InvalidGotoLocation(label_id) => UserError::new(
-                "E608",
+                "E609",
                 &format!(
                     "Bind program cannot move backwards. Label {} appears before Goto statement",
                     label_id
@@ -421,13 +428,13 @@ impl From<BindProgramEncodeError> for UserError {
                 true,
             ),
             BindProgramEncodeError::JumpOffsetOutOfRange(label_id) => UserError::new(
-                "E609",
+                "E610",
                 &format!("The jump offset for label {} exceeds 32 bits", label_id),
                 None,
                 true,
             ),
             BindProgramEncodeError::MatchNotSupported => UserError::new(
-                "E610",
+                "E611",
                 "Match instructions are not supported in the new bytecode",
                 None,
                 true,

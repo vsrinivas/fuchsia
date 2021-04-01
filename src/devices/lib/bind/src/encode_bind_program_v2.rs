@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::bind_library::ValueType;
 use crate::bind_program_v2_constants::*;
 use crate::compiler::{
     BindProgram, BindProgramEncodeError, Symbol, SymbolTable, SymbolicInstructionInfo,
@@ -248,9 +249,28 @@ impl<'a> Encoder<'a> {
         lhs: Symbol,
         rhs: Symbol,
     ) -> Result<(), BindProgramEncodeError> {
-        // For the comparison to be valid, the value types need to match.
-        if std::mem::discriminant(&lhs) != std::mem::discriminant(&rhs) {
-            return Err(BindProgramEncodeError::MismatchValueTypes(lhs, rhs));
+        // LHS value should represent a key.
+        if !is_symbol_key(&lhs) {
+            return Err(BindProgramEncodeError::IncorrectTypesInValueComparison);
+        }
+
+        let rhs_val_type = match rhs {
+            Symbol::NumberValue(_) => ValueType::Number,
+            Symbol::StringValue(_) => ValueType::Str,
+            Symbol::BoolValue(_) => ValueType::Bool,
+            Symbol::EnumValue => ValueType::Enum,
+            _ => {
+                // The RHS value should not represent a key.
+                return Err(BindProgramEncodeError::IncorrectTypesInValueComparison);
+            }
+        };
+
+        // If the LHS key contains a value type, compare it to the RHS value to ensure that the
+        // types match.
+        if let Symbol::Key(_, lhs_val_type) = lhs {
+            if lhs_val_type != rhs_val_type {
+                return Err(BindProgramEncodeError::MismatchValueTypes(lhs_val_type, rhs_val_type));
+            }
         }
 
         self.append_value(bytecode, lhs)?;
@@ -267,18 +287,29 @@ impl<'a> Encoder<'a> {
             Symbol::NumberValue(value) => Ok((RawValueType::NumberValue as u8, value as u32)),
             Symbol::BoolValue(value) => Ok((RawValueType::BoolValue as u8, value as u32)),
             Symbol::StringValue(value) => {
-                let key = self
-                    .encoded_symbols
-                    .get(&value)
-                    .ok_or(BindProgramEncodeError::MissingStringInSymbolTable(value.to_string()))?;
-                Ok((RawValueType::StringValue as u8, *key))
+                Ok((RawValueType::StringValue as u8, *self.lookup_symbol_table(value)?))
             }
+            Symbol::Key(key, _) => Ok((RawValueType::Key as u8, *self.lookup_symbol_table(key)?)),
+            Symbol::DeprecatedKey(key) => Ok((RawValueType::NumberValue as u8, key)),
             _ => unimplemented!("Unsupported symbol"),
         }?;
 
         bytecode.push(value_type);
         bytecode.extend_from_slice(&value.to_le_bytes());
         Ok(())
+    }
+
+    fn lookup_symbol_table(&self, value: String) -> Result<&u32, BindProgramEncodeError> {
+        self.encoded_symbols
+            .get(&value)
+            .ok_or(BindProgramEncodeError::MissingStringInSymbolTable(value.to_string()))
+    }
+}
+
+fn is_symbol_key(key: &Symbol) -> bool {
+    match key {
+        Symbol::DeprecatedKey(_) | Symbol::Key(_, _) => true,
+        _ => false,
     }
 }
 
@@ -300,7 +331,6 @@ pub fn encode_to_string_v2(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bind_library::ValueType;
     use crate::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
     use crate::make_identifier;
     use crate::parser_common::CompoundIdentifier;
@@ -317,6 +347,11 @@ mod test {
     const UNCOND_JMP_BYTES: u32 = OP_BYTES + OFFSET_BYTES;
     const COND_JMP_BYTES: u32 = OP_BYTES + OFFSET_BYTES + VALUE_BYTES + VALUE_BYTES;
     const JMP_PAD_BYTES: u32 = OP_BYTES;
+
+    struct EncodedValue {
+        value_type: RawValueType,
+        value: u32,
+    }
 
     struct BytecodeChecker {
         iter: std::vec::IntoIter<u8>,
@@ -354,9 +389,9 @@ mod test {
             self.verify_next_u8(0);
         }
 
-        fn verify_value(&mut self, expected_type: RawValueType, expected_value: u32) {
-            self.verify_next_u8(expected_type as u8);
-            self.verify_next_u32(expected_value);
+        fn verify_value(&mut self, val: EncodedValue) {
+            self.verify_next_u8(val.value_type as u8);
+            self.verify_next_u32(val.value);
         }
 
         pub fn verify_bind_program_header(&mut self) {
@@ -378,16 +413,16 @@ mod test {
             self.verify_next_u8(0x30);
         }
 
-        pub fn verify_abort_not_equal(&mut self, value_type: RawValueType, lhs: u32, rhs: u32) {
+        pub fn verify_abort_not_equal(&mut self, lhs: EncodedValue, rhs: EncodedValue) {
             self.verify_next_u8(0x01);
-            self.verify_value(value_type.clone(), lhs);
-            self.verify_value(value_type, rhs);
+            self.verify_value(lhs);
+            self.verify_value(rhs);
         }
 
-        pub fn verify_abort_equal(&mut self, value_type: RawValueType, lhs: u32, rhs: u32) {
+        pub fn verify_abort_equal(&mut self, lhs: EncodedValue, rhs: EncodedValue) {
             self.verify_next_u8(0x02);
-            self.verify_value(value_type.clone(), lhs);
-            self.verify_value(value_type, rhs);
+            self.verify_value(lhs);
+            self.verify_value(rhs);
         }
 
         pub fn verify_unconditional_jmp(&mut self, offset: u32) {
@@ -395,30 +430,23 @@ mod test {
             self.verify_next_u32(offset);
         }
 
-        pub fn verify_jmp_if_equal(
-            &mut self,
-            offset: u32,
-            value_type: RawValueType,
-            lhs: u32,
-            rhs: u32,
-        ) {
+        pub fn verify_jmp_if_equal(&mut self, offset: u32, lhs: EncodedValue, rhs: EncodedValue) {
             self.verify_next_u8(0x11);
             self.verify_next_u32(offset);
-            self.verify_value(value_type.clone(), lhs);
-            self.verify_value(value_type, rhs);
+            self.verify_value(lhs);
+            self.verify_value(rhs);
         }
 
         pub fn verify_jmp_if_not_equal(
             &mut self,
             offset: u32,
-            value_type: RawValueType,
-            lhs: u32,
-            rhs: u32,
+            lhs: EncodedValue,
+            rhs: EncodedValue,
         ) {
             self.verify_next_u8(0x12);
             self.verify_next_u32(offset);
-            self.verify_value(value_type.clone(), lhs);
-            self.verify_value(value_type, rhs);
+            self.verify_value(lhs);
+            self.verify_value(rhs);
         }
 
         pub fn verify_jmp_pad(&mut self) {
@@ -557,11 +585,11 @@ mod test {
     fn test_abort_instructions() {
         let instructions = vec![
             SymbolicInstruction::AbortIfNotEqual {
-                lhs: Symbol::NumberValue(5),
+                lhs: Symbol::DeprecatedKey(5),
                 rhs: Symbol::NumberValue(100),
             },
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::BoolValue(true),
+                lhs: Symbol::DeprecatedKey(1),
                 rhs: Symbol::BoolValue(false),
             },
         ];
@@ -576,16 +604,23 @@ mod test {
         checker.verify_sym_table_header(0);
 
         checker.verify_instructions_header(COND_ABORT_BYTES + COND_ABORT_BYTES);
-        checker.verify_abort_not_equal(RawValueType::NumberValue, 5, 100);
-        checker.verify_abort_equal(RawValueType::BoolValue, 1, 0);
+        checker.verify_abort_not_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 100 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 0 },
+        );
         checker.verify_end();
     }
 
     #[test]
-    fn test_mismatch_value_types() {
+    fn test_missing_string_in_symbol_table() {
+        // Test with missing string in the string value.
         let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
-            lhs: Symbol::NumberValue(5),
-            rhs: Symbol::BoolValue(true),
+            lhs: Symbol::DeprecatedKey(10),
+            rhs: Symbol::StringValue("treecreeper".to_string()),
         }];
 
         let bind_program = BindProgram {
@@ -594,34 +629,14 @@ mod test {
         };
 
         assert_eq!(
-            Err(BindProgramEncodeError::MismatchValueTypes(
-                Symbol::NumberValue(5),
-                Symbol::BoolValue(true)
-            )),
+            Err(BindProgramEncodeError::MissingStringInSymbolTable("treecreeper".to_string())),
             encode_to_bytecode_v2(bind_program)
         );
 
-        let bind_program = BindProgram {
-            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::AbortIfNotEqual {
-                lhs: Symbol::StringValue("5".to_string()),
-                rhs: Symbol::NumberValue(5),
-            }]),
-            symbol_table: HashMap::new(),
-        };
-        assert_eq!(
-            Err(BindProgramEncodeError::MismatchValueTypes(
-                Symbol::StringValue("5".to_string()),
-                Symbol::NumberValue(5)
-            )),
-            encode_to_bytecode_v2(bind_program)
-        );
-    }
-
-    #[test]
-    fn test_missing_string_in_symbol_table() {
+        // Test with missing string in the key.
         let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
-            lhs: Symbol::StringValue("wallcreeper".to_string()),
-            rhs: Symbol::StringValue("treecreeper".to_string()),
+            lhs: Symbol::Key("wallcreeper".to_string(), ValueType::Number),
+            rhs: Symbol::NumberValue(10),
         }];
 
         let bind_program = BindProgram {
@@ -663,13 +678,13 @@ mod test {
     fn test_jump_if_equal_statement() {
         let instructions = vec![
             SymbolicInstruction::JumpIfEqual {
-                lhs: Symbol::NumberValue(15),
+                lhs: Symbol::DeprecatedKey(15),
                 rhs: Symbol::NumberValue(12),
                 label: 1,
             },
             SymbolicInstruction::UnconditionalAbort,
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::NumberValue(10),
+                lhs: Symbol::DeprecatedKey(10),
                 rhs: Symbol::NumberValue(10),
             },
             SymbolicInstruction::Label(1),
@@ -690,12 +705,14 @@ mod test {
         );
         checker.verify_jmp_if_equal(
             UNCOND_ABORT_BYTES + COND_ABORT_BYTES,
-            RawValueType::NumberValue,
-            15,
-            12,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 15 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 12 },
         );
         checker.verify_unconditional_abort();
-        checker.verify_abort_equal(RawValueType::NumberValue, 10, 10);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+        );
         checker.verify_jmp_pad();
 
         checker.verify_end();
@@ -705,17 +722,17 @@ mod test {
     fn test_jump_if_not_equal_statement() {
         let instructions = vec![
             SymbolicInstruction::JumpIfNotEqual {
-                lhs: Symbol::BoolValue(false),
+                lhs: Symbol::DeprecatedKey(15),
                 rhs: Symbol::BoolValue(true),
                 label: 2,
             },
             SymbolicInstruction::UnconditionalAbort,
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::NumberValue(5),
+                lhs: Symbol::DeprecatedKey(5),
                 rhs: Symbol::NumberValue(7),
             },
             SymbolicInstruction::AbortIfNotEqual {
-                lhs: Symbol::BoolValue(false),
+                lhs: Symbol::DeprecatedKey(2),
                 rhs: Symbol::BoolValue(true),
             },
             SymbolicInstruction::UnconditionalAbort,
@@ -737,12 +754,22 @@ mod test {
 
         // Verify Jump If Not Equal.
         let expected_offset = (UNCOND_ABORT_BYTES * 2) + (COND_ABORT_BYTES * 2);
-        checker.verify_jmp_if_not_equal(expected_offset, RawValueType::BoolValue, 0, 1);
+        checker.verify_jmp_if_not_equal(
+            expected_offset,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 15 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 1 },
+        );
 
         // Verify abort statements.
         checker.verify_unconditional_abort();
-        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
-        checker.verify_abort_not_equal(RawValueType::BoolValue, 0, 1);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 7 },
+        );
+        checker.verify_abort_not_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 1 },
+        );
         checker.verify_unconditional_abort();
 
         checker.verify_jmp_pad();
@@ -753,12 +780,12 @@ mod test {
     fn test_instructions_with_strings() {
         let instructions = vec![
             SymbolicInstruction::JumpIfNotEqual {
-                lhs: Symbol::StringValue("shining sunbeam".to_string()),
+                lhs: Symbol::Key("shining sunbeam".to_string(), ValueType::Str),
                 rhs: Symbol::StringValue("bearded mountaineer".to_string()),
                 label: 1,
             },
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::StringValue("puffleg".to_string()),
+                lhs: Symbol::Key("puffleg".to_string(), ValueType::Str),
                 rhs: Symbol::StringValue("bearded mountaineer".to_string()),
             },
             SymbolicInstruction::Label(1),
@@ -805,15 +832,26 @@ mod test {
         checker.verify_instructions_header(COND_JMP_BYTES + COND_ABORT_BYTES + JMP_PAD_BYTES);
         checker.verify_jmp_if_not_equal(
             COND_ABORT_BYTES,
-            RawValueType::StringValue,
-            *sym_map.get(&"shining sunbeam".to_string()).unwrap(),
-            *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
+            EncodedValue {
+                value_type: RawValueType::Key,
+                value: *sym_map.get(&"shining sunbeam".to_string()).unwrap(),
+            },
+            EncodedValue {
+                value_type: RawValueType::StringValue,
+                value: *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
+            },
         );
         checker.verify_abort_equal(
-            RawValueType::StringValue,
-            *sym_map.get(&"puffleg".to_string()).unwrap(),
-            *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
+            EncodedValue {
+                value_type: RawValueType::Key,
+                value: *sym_map.get(&"puffleg".to_string()).unwrap(),
+            },
+            EncodedValue {
+                value_type: RawValueType::StringValue,
+                value: *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
+            },
         );
+
         checker.verify_jmp_pad();
         checker.verify_end();
     }
@@ -822,14 +860,14 @@ mod test {
     fn test_nested_jump_statement() {
         let instructions = vec![
             SymbolicInstruction::JumpIfEqual {
-                lhs: Symbol::NumberValue(10),
+                lhs: Symbol::DeprecatedKey(10),
                 rhs: Symbol::NumberValue(11),
                 label: 1,
             },
             SymbolicInstruction::UnconditionalAbort,
             SymbolicInstruction::UnconditionalJump { label: 2 },
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::NumberValue(5),
+                lhs: Symbol::DeprecatedKey(5),
                 rhs: Symbol::NumberValue(7),
             },
             SymbolicInstruction::UnconditionalAbort,
@@ -860,12 +898,19 @@ mod test {
 
         // Verify Jump If Equal.
         let jmp_offset = UNCOND_ABORT_BYTES + nested_jmp_block_bytes + UNCOND_ABORT_BYTES;
-        checker.verify_jmp_if_equal(jmp_offset, RawValueType::NumberValue, 10, 11);
+        checker.verify_jmp_if_equal(
+            jmp_offset,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 11 },
+        );
         checker.verify_unconditional_abort();
 
         // Verify the nested jump block.
         checker.verify_unconditional_jmp(COND_ABORT_BYTES + UNCOND_ABORT_BYTES);
-        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 7 },
+        );
         checker.verify_unconditional_abort();
         checker.verify_jmp_pad();
 
@@ -878,14 +923,14 @@ mod test {
     fn test_overlapping_jump_statements() {
         let instructions = vec![
             SymbolicInstruction::JumpIfEqual {
-                lhs: Symbol::NumberValue(10),
+                lhs: Symbol::DeprecatedKey(10),
                 rhs: Symbol::NumberValue(11),
                 label: 1,
             },
             SymbolicInstruction::UnconditionalAbort,
             SymbolicInstruction::UnconditionalJump { label: 2 },
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::NumberValue(5),
+                lhs: Symbol::DeprecatedKey(5),
                 rhs: Symbol::NumberValue(7),
             },
             SymbolicInstruction::Label(1),
@@ -912,12 +957,19 @@ mod test {
         checker.verify_instructions_header(instructions_bytes);
 
         let jmp_offset = UNCOND_ABORT_BYTES + UNCOND_JMP_BYTES + COND_ABORT_BYTES;
-        checker.verify_jmp_if_equal(jmp_offset, RawValueType::NumberValue, 10, 11);
+        checker.verify_jmp_if_equal(
+            jmp_offset,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 11 },
+        );
         checker.verify_unconditional_abort();
 
         let jmp_offset = COND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES;
         checker.verify_unconditional_jmp(jmp_offset);
-        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 7 },
+        );
 
         checker.verify_jmp_pad();
         checker.verify_unconditional_abort();
@@ -931,11 +983,11 @@ mod test {
         let instructions = vec![
             SymbolicInstruction::UnconditionalJump { label: 1 },
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::NumberValue(5),
+                lhs: Symbol::DeprecatedKey(5),
                 rhs: Symbol::NumberValue(7),
             },
             SymbolicInstruction::JumpIfEqual {
-                lhs: Symbol::NumberValue(10),
+                lhs: Symbol::DeprecatedKey(10),
                 rhs: Symbol::NumberValue(11),
                 label: 1,
             },
@@ -960,8 +1012,15 @@ mod test {
         checker.verify_instructions_header(instructions_bytes);
 
         checker.verify_unconditional_jmp(COND_ABORT_BYTES + COND_JMP_BYTES + UNCOND_ABORT_BYTES);
-        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
-        checker.verify_jmp_if_equal(UNCOND_ABORT_BYTES, RawValueType::NumberValue, 10, 11);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 7 },
+        );
+        checker.verify_jmp_if_equal(
+            UNCOND_ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 11 },
+        );
         checker.verify_unconditional_abort();
         checker.verify_jmp_pad();
         checker.verify_end();
@@ -972,7 +1031,7 @@ mod test {
         let instructions = vec![
             SymbolicInstruction::UnconditionalJump { label: 1 },
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::NumberValue(5),
+                lhs: Symbol::DeprecatedKey(5),
                 rhs: Symbol::NumberValue(7),
             },
             SymbolicInstruction::Label(1),
@@ -1049,6 +1108,71 @@ mod test {
 
         assert_eq!(
             Err(BindProgramEncodeError::MissingLabel(2)),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_mismatch_value_types() {
+        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
+            lhs: Symbol::Key("waxwing".to_string(), ValueType::Number),
+            rhs: Symbol::BoolValue(true),
+        }];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::MismatchValueTypes(ValueType::Number, ValueType::Bool)),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_invalid_lhs_symbol() {
+        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
+            lhs: Symbol::NumberValue(5),
+            rhs: Symbol::BoolValue(true),
+        }];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_invalid_rhs_symbol() {
+        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
+            lhs: Symbol::DeprecatedKey(5),
+            rhs: Symbol::DeprecatedKey(6),
+        }];
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+        assert_eq!(
+            Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
+            encode_to_bytecode_v2(bind_program)
+        );
+
+        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
+            lhs: Symbol::DeprecatedKey(5),
+            rhs: Symbol::Key("wagtail".to_string(), ValueType::Number),
+        }];
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+        assert_eq!(
+            Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
             encode_to_bytecode_v2(bind_program)
         );
     }
