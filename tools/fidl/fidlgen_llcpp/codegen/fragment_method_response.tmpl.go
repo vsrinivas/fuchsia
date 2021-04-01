@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentMethodResponseTmpl = `
-{{- define "MethodResponse" }}
+{{- define "MethodResponseDeclaration" }}
 {{- EnsureNamespace "" }}
 template<>
 struct {{ .WireResponse }} final {
@@ -164,5 +164,23 @@ public:
  private:
   void _InitHeader();
 };
+{{- end }}
+
+
+
+
+{{- define "MethodResponseDefinition" }}
+  {{- EnsureNamespace "" }}
+  void {{ .WireResponse }}::_InitHeader() {
+    fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
+  }
+
+  {{ if .Response.IsResource }}
+    void {{ .WireResponse }}::_CloseHandles() {
+      {{- range .ResponseArgs }}
+        {{- CloseHandles . false false }}
+      {{- end }}
+    }
+  {{- end }}
 {{- end }}
 `

@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentMethodRequestTmpl = `
-{{- define "MethodRequest" }}
+{{- define "MethodRequestDeclaration" }}
 {{- EnsureNamespace "" }}
 template<>
 struct {{ .WireRequest }} final {
@@ -172,4 +172,23 @@ struct {{ .WireRequest }} final {
     void _InitHeader(zx_txid_t _txid);
 };
 {{- end }}
-  `
+
+
+
+
+{{- define "MethodRequestDefinition" }}
+  {{- EnsureNamespace "" }}
+
+  void {{ .WireRequest }}::_InitHeader(zx_txid_t _txid) {
+    fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
+  }
+
+  {{ if .Request.IsResource }}
+    void {{ .WireRequest }}::_CloseHandles() {
+      {{- range .RequestArgs }}
+        {{- CloseHandles . false false }}
+      {{- end }}
+    }
+  {{- end }}
+{{- end }}
+`

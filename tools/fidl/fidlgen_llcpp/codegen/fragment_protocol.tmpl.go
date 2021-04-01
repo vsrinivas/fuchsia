@@ -147,10 +147,10 @@ class {{ .Name }} final {
 
 {{- range .Methods }}
   {{- if .HasRequest }}
-    {{- template "MethodRequest" . }}
+    {{- template "MethodRequestDeclaration" . }}
   {{- end }}
   {{- if .HasResponse }}
-    {{- template "MethodResponse" . }}
+    {{- template "MethodResponseDeclaration" . }}
   {{- end }}
 {{- end }}
 
@@ -535,37 +535,15 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ "" }}
   {{- end }}
 {{ "" }}
-{{- EnsureNamespace "" }}
+
   {{- range .Methods }}
-{{ "" }}
-    {{- if .HasRequest }}
-{{ "" }}
-    void {{ .WireRequest }}::_InitHeader(zx_txid_t _txid) {
-      fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
-    }
-      {{- if .Request.IsResource }}
 
-    void {{ .WireRequest }}::_CloseHandles() {
-      {{- range .RequestArgs }}
-        {{- CloseHandles . false false }}
-      {{- end }}
-    }
-      {{- end }}
-    {{- end }}
-    {{- if .HasResponse }}
-{{ "" }}
-    void {{ .WireResponse }}::_InitHeader() {
-      fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
-    }
-      {{- if .Response.IsResource }}
+    {{- if .HasRequest }}{{ template "MethodRequestDefinition" . }}{{ end }}
+    {{ "" }}
 
-    void {{ .WireResponse }}::_CloseHandles() {
-      {{- range .ResponseArgs }}
-          {{- CloseHandles . false false }}
-      {{- end }}
-    }
-      {{- end }}
-    {{- end }}
+    {{- if .HasResponse }}{{ template "MethodResponseDefinition" . }}{{ end }}
+    {{ "" }}
+
   {{- end }}
 {{- end }}
 
