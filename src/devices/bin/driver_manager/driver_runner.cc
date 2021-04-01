@@ -315,10 +315,14 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
       if (!symbol.has_name()) {
         LOGF(ERROR, "Failed to add Node '%.*s', a symbol is missing a name", name.size(),
              name.data());
+        completer.Close(ZX_ERR_INVALID_ARGS);
+        return;
       }
       if (!symbol.has_address()) {
         LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' is missing an address", name.size(),
              name.data(), symbol.name().size(), symbol.name().data());
+        completer.Close(ZX_ERR_INVALID_ARGS);
+        return;
       }
       auto inserted = names.emplace(symbol.name().data(), symbol.name().size()).second;
       if (!inserted) {
