@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -29,13 +29,15 @@ rustc_test("bin") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("recovery_integration_test") {
+fuchsia_test_component("recovery_integration_test_component") {
+  component_name = "recovery_integration_test"
+  manifest = "meta/recovery_integration_test.cmx"
   deps = [ ":bin" ]
+}
 
-  tests = [
-    {
-      name = "recovery_integration_test"
-      environments = [ nuc_env ]
-    },
-  ]
+fuchsia_test_package("recovery_integration_test") {
+  test_components = [ ":recovery_integration_test_component" ]
+  test_specs = {
+    environments = [ nuc_env ]
+  }
 }
