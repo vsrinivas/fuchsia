@@ -60,4 +60,24 @@ void main() {
         await ermine.driver.getText(find.text('AMERICA/LOS_ANGELES'));
     expect(selectedTimezone, 'AMERICA/LOS_ANGELES');
   });
+
+  test('verify can tap restart in quicksettings', () async {
+    await ermine.gotoOverview();
+
+    final button = find.text('RESTART');
+    await ermine.driver.waitFor(button);
+
+    // tap restart button to trigger restart
+    await ermine.driver.tap(button);
+    await Future.delayed(Duration(seconds: 1));
+
+    // wait for system to reboot and reconnect
+    // logic taken from `sl4f.reboot()`
+    await sl4f.stopServer();
+    await Future.delayed(Duration(seconds: 3));
+
+    // try to restart SL4F
+    await sl4f.startServer();
+    expect(await sl4f.isRunning(), isTrue);
+  }, timeout: Timeout(Duration(minutes: 1)));
 }
