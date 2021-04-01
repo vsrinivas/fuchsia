@@ -34,6 +34,7 @@ import("config.gni")
 #       - excluded     : the atom may not be included in SDKs;
 #       - experimental : the atom is available with no quality guarantee;
 #       - internal     : the atom is exposed within the Fuchsia tree;
+#       - cts          : the atom may be used in the Fuchsia Compatibility Test Suite;
 #       - partner      : the atom may be used by select partners;
 #       - public       : the atom may be included in published SDKs.
 #

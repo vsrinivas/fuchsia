@@ -36,10 +36,14 @@ class SdkCommonTests(unittest.TestCase):
     def test_categories(self):
         atoms = [_atom('hello', 'internal'), _atom('world', 'public')]
         self.assertFalse(detect_category_violations('internal', atoms))
+        atoms = [_atom('hello', 'internal'), _atom('world', 'cts')]
+        self.assertFalse(detect_category_violations('internal', atoms))
 
     def test_categories_failure(self):
         atoms = [_atom('hello', 'internal'), _atom('world', 'public')]
         self.assertTrue(detect_category_violations('partner', atoms))
+        atoms = [_atom('hello', 'internal'), _atom('world', 'public')]
+        self.assertTrue(detect_category_violations('cts', atoms))
 
     def test_category_name_bogus(self):
         atoms = [_atom('hello', 'foobarnotgood'), _atom('world', 'public')]

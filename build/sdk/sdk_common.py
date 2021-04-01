@@ -83,6 +83,7 @@ CATEGORIES = [
     'excluded',
     'experimental',
     'internal',
+    'cts',
     'partner',
     'public',
 ]
