@@ -585,6 +585,12 @@ fuchsia_test_package("fs-tests") {
     ":unlink-tests",
     ":watcher-tests",
   ]
+  deps = [
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+    "//zircon/third_party/uapp/fsck-msdosfs",
+    "//zircon/third_party/uapp/mkfs-msdosfs",
+  ]
 }
 
 test("directory_large_tests") {
@@ -652,6 +658,11 @@ fuchsia_test_package("large-fs-tests") {
     ":max-file-tests",
     ":sparse-large-tests",
     ":truncate-large-tests",
+  ]
+  deps = [
+    "//src/storage/bin/minfs",
+    "//zircon/third_party/uapp/fsck-msdosfs",
+    "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
   test_specs = {
     environments = [

@@ -99,6 +99,8 @@ isolated_devmgr_unittest_package("fvm-test") {
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
     "//src/storage/fvm/driver",
   ]
 }

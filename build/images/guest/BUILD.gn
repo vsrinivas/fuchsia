@@ -69,6 +69,7 @@ assemble_system("guest") {
     "//src/graphics/drivers/virtio:virtio_gpu",
     "//src/power/shutdown-shim:bootfs",
     "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
     "//src/storage/bin/dd",
     "//src/storage/bin/df",
     "//src/storage/bin/mount",

@@ -40,8 +40,12 @@ test("fs-management") {
     "//zircon/system/ulib/trace-engine",
   ]
   data_deps = [
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs",
+    "//zircon/third_party/uapp/fsck-msdosfs",
+    "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

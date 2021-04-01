@@ -238,4 +238,6 @@ fuchsia_test_package("minfs-tests") {
     ":minfs-unit-test",
     ":minfs-micro-benchmark-test",
   ]
+
+  deps = [ "//src/storage/bin/minfs" ]
 }
