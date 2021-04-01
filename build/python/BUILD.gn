@@ -59,7 +59,12 @@ group("interpreter") {
   ]
 }
 
+# These tests exercise the build rules we want to test.
 group("tests") {
   testonly = true
-  deps = [ "tests:py_host_test_with_lib($host_toolchain)" ]
+  deps = [
+    "tests:py_host_test_with_lib($host_toolchain)",
+    "tests/bin",
+    "tests/lib",
+  ]
 }

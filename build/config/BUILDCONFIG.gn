@@ -569,7 +569,8 @@ foreach(_target_type,
       # * If the script is Python, use the in-tree interpreter.
       #   This prevents the script from relying on the Python that happens to
       #   be in the PATH, making the build more hermetic.
-      if (get_path_info(invoker.script, "extension") == "py") {
+      ext = get_path_info(invoker.script, "extension")
+      if (ext == "py" || ext == "pyz") {
         _invoker_script = python_exe_src
         inputs += [ python_exe_src ]
 

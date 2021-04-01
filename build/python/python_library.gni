@@ -1,0 +1,64 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines a python library
+#
+# NOTE: Currently does NOT support depending on other python_libraries.
+# TODO(https://fxbug.dev/73542): Enable other python_libraries as deps when use
+# case show up.
+#
+# Example
+#
+# ```
+# python_library("lib") {
+#   library_name = "lib"
+#   sources = [
+#     "__init__.py",
+#     "lib.py",
+#   ]
+# }
+# ```
+#
+# Parameters
+#
+#   library_name (optional)
+#     Name of the library, Python scripts can import this library by this name.
+#     Type: string
+#     Default: ${target_name}
+#
+#   sources
+#
+# Metadata
+#
+#   library_info
+#     Exactly one scope including name of this library and its sources.
+#
+#   library_info_barrier
+#     Empty for stopping metadata walks.
+template("python_library") {
+  assert(defined(invoker.sources), "sources is required")
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    library_name = target_name
+    if (defined(invoker.library_name)) {
+      library_name = invoker.library_name
+    }
+
+    metadata = {
+      library_info = [
+        {
+          library_name = library_name
+          sources = rebase_path(invoker.sources, root_build_dir)
+        },
+      ]
+      library_info_barrier = []
+    }
+  }
+}
