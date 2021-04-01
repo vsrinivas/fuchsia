@@ -160,34 +160,38 @@ pub fn merge(
     if left.key().object_id != right.key().object_id {
         return MergeResult::EmitLeft;
     }
-    if let (
-        ObjectKey { object_id: _, data: ObjectKeyData::Extent(left_extent_key) },
-        ObjectKey { object_id: _, data: ObjectKeyData::Extent(right_extent_key) },
-        ObjectValue::Extent(left_extent),
-        ObjectValue::Extent(right_extent),
-    ) = (left.key(), right.key(), left.value(), right.value())
-    {
-        if let (None, None) = (left_extent.device_offset, right_extent.device_offset) {
-            if (left.layer_index as i32 - right.layer_index as i32).abs() == 1 {
-                // Two deletions in adjacent layers can be merged.
-                return merge_deleted_extents(
-                    left.key().object_id,
-                    left_extent_key,
-                    right_extent_key,
-                );
+    match (left.key(), right.key(), left.value(), right.value()) {
+        (
+            ObjectKey { object_id: _, data: ObjectKeyData::Extent(left_extent_key) },
+            ObjectKey { object_id: _, data: ObjectKeyData::Extent(right_extent_key) },
+            ObjectValue::Extent(left_extent),
+            ObjectValue::Extent(right_extent),
+        ) if left_extent_key.attribute_id == right_extent_key.attribute_id => {
+            if let (None, None) = (left_extent.device_offset, right_extent.device_offset) {
+                if (left.layer_index as i32 - right.layer_index as i32).abs() == 1 {
+                    // Two deletions in adjacent layers can be merged.
+                    return merge_deleted_extents(
+                        left.key().object_id,
+                        left_extent_key,
+                        right_extent_key,
+                    );
+                }
             }
+            return merge_extents(
+                left.key().object_id,
+                left.layer_index,
+                right.layer_index,
+                left_extent_key,
+                right_extent_key,
+                left_extent,
+                right_extent,
+            );
         }
-        return merge_extents(
-            left.key().object_id,
-            left.layer_index,
-            right.layer_index,
-            left_extent_key,
-            right_extent_key,
-            left_extent,
-            right_extent,
-        );
+        (left_key, right_key, _, _) if left_key == right_key => {
+            MergeResult::Other { emit: None, left: Keep, right: Discard }
+        }
+        _ => MergeResult::EmitLeft,
     }
-    MergeResult::EmitLeft
 }
 
 #[cfg(test)]
@@ -199,11 +203,27 @@ mod tests {
                 types::{Item, LayerIterator},
                 LSMTree,
             },
-            object_store::record::{ObjectKey, ObjectValue},
+            object_store::record::{ObjectItem, ObjectKey, ObjectValue},
         },
         anyhow::Error,
         fuchsia_async as fasync,
+        std::ops::Bound,
     };
+
+    async fn test_merge(left: ObjectItem, right: ObjectItem, expected: &[ObjectItem]) {
+        let tree = LSMTree::new(merge);
+        tree.insert(right).await;
+        tree.seal();
+        tree.insert(left).await;
+        let layer_set = tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
+        for e in expected {
+            assert_eq!(iter.get().expect("get failed"), e.as_item_ref());
+            iter.advance().await.expect("advance failed");
+        }
+        assert!(iter.get().is_none());
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_merge_extents_non_overlapping() -> Result<(), Error> {
@@ -846,5 +866,23 @@ mod tests {
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_size_records() {
+        let left = Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(5));
+        let right = Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(10));
+        test_merge(left.clone(), right, &[left]).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_different_attributes_not_merged() {
+        let left = Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(5));
+        let right = Item::new(ObjectKey::attribute(1, 1), ObjectValue::attribute(10));
+        test_merge(left.clone(), right.clone(), &[left, right]).await;
+
+        let left = Item::new(ObjectKey::extent(1, 0, 0..100), ObjectValue::extent(0));
+        let right = Item::new(ObjectKey::extent(1, 1, 0..100), ObjectValue::extent(1));
+        test_merge(left.clone(), right.clone(), &[left, right]).await;
     }
 }
