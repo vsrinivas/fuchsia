@@ -1,6 +1,12 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// This manual test is a basic integration test of the codec_factory +
+// amlogic_video_decoder driver.
+//
+// If this test breaks and it's not immediately obvoius why, please feel free to
+// involve dustingreen@ (me) in figuring it out.
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -20,36 +26,31 @@
 namespace {
 
 constexpr char kInputFilePath[] = "/pkg/data/bear.h264";
-constexpr int kInputFileFrameCount = 300;
-
-const char* kGoldenSha256 = "1cc5002b6d68f34f601813c5bbed775eb1a1033a8109bdf2fed59160f2edc207";
+constexpr int kInputFileFrameCount = -1;
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  const UseVideoDecoderTestParams test_params{
-      .keep_stream_modulo = 4,
-      // Only ~half of these get hashed.
-      .loop_stream_count = 20,
-      .golden_sha256 = kGoldenSha256,
+  UseVideoDecoderTestParams test_params = {
+      .frame_num_gaps = true,
+      .min_expected_output_frame_count = 10,
   };
   // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
   constexpr uint32_t kMaxRetryCount = 100;
-  for (uint32_t i = 0; i < kMaxRetryCount; ++i) {
-    if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_multi_decoder,
+  for (uint32_t try_ordinal = 0; try_ordinal < kMaxRetryCount; ++try_ordinal) {
+    if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,
                                     /*min_output_buffer_count=*/0, &test_params)) {
-      if (i != 0) {
-        printf("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u\n",
-               i);
+      if (try_ordinal != 0) {
+        LOGF("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u",
+             try_ordinal);
       }
       return 0;
     }
-    printf(
-        "WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)\n");
+    LOGF("WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)");
   }
-  printf("Incorrect hash seen every time despite de-flaking retries.  FAIL\n");
+  LOGF("Incorrect hash seen every time despite de-flaking retries.  FAIL");
   return -1;
 }

@@ -15,8 +15,7 @@
 int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
                            UseVideoDecoderFunction use_video_decoder, bool is_secure_output,
                            bool is_secure_input, uint32_t min_output_buffer_count,
-                           std::string golden_sha256,
-                           const UseVideoDecoderTestParams* test_params = nullptr);
+                           const UseVideoDecoderTestParams* test_params);
 
 // For tests that want to provide their own InStreamPeeker and EmitFrame.
 bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
@@ -25,6 +24,6 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
                               UseVideoDecoderFunction use_video_decoder,
                               uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
                               bool is_secure_output, bool is_secure_input, EmitFrame emit_frame,
-                              const UseVideoDecoderTestParams* test_params = nullptr);
+                              const UseVideoDecoderTestParams* test_params);
 
 #endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_TEST_USE_VIDEO_DECODER_TEST_H_

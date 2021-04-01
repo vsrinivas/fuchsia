@@ -95,11 +95,41 @@ struct UseVideoDecoderTestParams final {
     ZX_ASSERT(print_fps_modulus != 0);
 
     if (per_frame_debug_output != kDefaultPerFrameDebugOutput) {
-      printf("per_frame_debug_output: %u", per_frame_debug_output);
+      printf("per_frame_debug_output: %u\n", per_frame_debug_output);
     }
 
     if (require_sw != kDefaultRequireSw) {
       printf("require_sw: %u\n", require_sw);
+    }
+
+    if (frame_num_gaps != kDefaultFrameNumGaps) {
+      printf("frame_num_gaps: %u\n", frame_num_gaps);
+    }
+
+    if (min_expected_output_frame_count != kDefaultMinExpectedOutputFrameCount) {
+      printf("min_expected_ouput_frame_count: %d\n", min_expected_output_frame_count);
+    }
+
+    if (golden_sha256 != kDefaultGoldenSha256) {
+      printf("golden_sha256: %s\n", golden_sha256);
+    }
+
+    if (per_frame_golden_sha256 != kDefaultPerFrameGoldenSha256) {
+      uint32_t count = 0;
+      while (per_frame_golden_sha256[count]) {
+        ++count;
+      }
+      printf("per_frame_golden_sha256 provided - count: %u", count);
+    }
+
+    if (compare_to_sw_decode != kDefaultCompareToSwDecode) {
+      printf("compare_to_sw_decode: %u", compare_to_sw_decode);
+    }
+
+    if (frame_to_compare != kDefaultFrameToCompare) {
+      printf("frame_to_compare set");
+      // avoid recursion beyond 2
+      ZX_ASSERT(!compare_to_sw_decode);
     }
 
     magic_validated_ = kPrivateMagicValidated;
@@ -183,8 +213,60 @@ struct UseVideoDecoderTestParams final {
   static constexpr bool kDefaultPerFrameDebugOutput = true;
   bool per_frame_debug_output = kDefaultPerFrameDebugOutput;
 
+  // Require SW decode.
   static constexpr bool kDefaultRequireSw = false;
   bool require_sw = kDefaultRequireSw;
+
+  // Must be either nullptr, or point to a nullptr-terminated array.
+  static constexpr char** kDefaultPerFrameGoldenSha256 = nullptr;
+  const char** per_frame_golden_sha256 = nullptr;
+
+  // If true, a failure to match per_frame_golden_sha256 will decode up to the mis-matching frame,
+  // and then compare that frame pixel-by-pixel, with stderr output indicating the diff in Y, U, and
+  // V.  The SW decode for this purpose only occurs if a per_frame_golden_sha256 mis-match occurs
+  // first.
+  static constexpr bool kDefaultCompareToSwDecode = true;
+  bool compare_to_sw_decode = kDefaultCompareToSwDecode;
+
+  // So far, this is only used recursively to compare a HW-decoded frame to a SW-decoded frame.
+  //
+  // This is the "actual" HW-decoded frame to compare to the corresponding "expected" SW-decoded
+  // frame.
+  static constexpr FrameToCompare* kDefaultFrameToCompare = nullptr;
+  FrameToCompare* frame_to_compare = kDefaultFrameToCompare;
+
+  // Remove some of the frames, to force frame_num gap handling to run.  Do this for lots of frames
+  // to check if leaks happen.  We typically don't care what the golden_sha256 is in this case, nor
+  // do we expect that the hash would necessarily be consistent from decoder to decoder, as we don't
+  // require decoders to handle frame_num gaps in any particular way.  We test that a decoder
+  // doesn't get stuck or crash.  At least for now, we test that a decoder does not indicate
+  // failure.  The first missing frame_num will be the frame_num of the second picture (ordinal 1,
+  // cardinal 2, regardless of what the frame_num values are).  For now this only works with streams
+  // that have 1 slice per frame, as it doesn't actually parse the slices for the frame_num or first
+  // macroblock number.  But the intent is to skip all frame_num(s) of a picture, not skip slices
+  // within a picture (which can be a separate thing).
+  static constexpr bool kDefaultFrameNumGaps = false;
+  bool frame_num_gaps = kDefaultFrameNumGaps;
+
+  // When using frame_num_gaps true, we can expect a minimum number of output frames, to validate
+  // that the decoder outputs at least some frames after the first gap.  We don't require a
+  // specific number of frames however, since handling strategies can differ.  If the test stream
+  // only contains 1 IDR frame, then this verifies that the decoder doesn't require a new IDR frame
+  // to output pictures (which is desirable in that it provides slightly more visual motion
+  // continuity, but _will_ result in output pictures that are partly or fully corrupted visually.)
+  //
+  // None of this frame_num gap stuff is intended to condone input streams with corrupted/missing
+  // input data.  Decoders are not required to handle general corrupted/missing data, other than
+  // not crashing and not getting stuck.  It's fine if a decoder just indicates stream or codec
+  // failure on corrupted/missing input data other than frame_num gaps where exactly entire frames
+  // are missing.
+  static constexpr int32_t kDefaultMinExpectedOutputFrameCount = -1;
+  int32_t min_expected_output_frame_count = kDefaultMinExpectedOutputFrameCount;
+
+  // If non-nullptr, the expected sha256 hash of all the output frame data in I420 format with
+  // stride == width.
+  static constexpr char* kDefaultGoldenSha256 = nullptr;
+  const char* golden_sha256 = kDefaultGoldenSha256;
 
  private:
   // Client code should not exploit knowledge of this value, and should not directly initialize or

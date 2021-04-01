@@ -46,6 +46,7 @@ int main(int argc, char* argv[]) {
         .keep_stream_modulo = 4,
         .loop_stream_count = 20,
         .mime_type = "video/h264",
+        .golden_sha256 = kGoldenSha256,
     };
     int result[kThreadCount] = {};
     std::atomic_bool go = false;
@@ -55,10 +56,9 @@ int main(int argc, char* argv[]) {
         while (!go) {
           zx::nanosleep(zx::deadline_after(zx::usec(1)));
         }
-        result[i] =
-            use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
-                                   /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                   /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
+        result[i] = use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
+                                           /*is_secure_output=*/false, /*is_secure_input=*/false,
+                                           /*min_output_buffer_count=*/0, &test_params);
       });
     }
     go = true;

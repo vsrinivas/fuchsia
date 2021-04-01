@@ -45,16 +45,17 @@ int main(int argc, char* argv[]) {
       // This uses h264-multi, but sets a test hook flag that forces context switching to occur
       // every time context switching is possible.
       //
-      // TODO(fxbug.dev/13483): Plumb the ability to request special test flags via a different service to
-      // reduce which clients can set test flags.
+      // TODO(fxbug.dev/13483): Plumb the ability to request special test flags via a different
+      // service to reduce which clients can set test flags.
       .mime_type = "video/h264-multi/test/force-context-save-restore",
+      .golden_sha256 = kGoldenSha256,
   };
   uint32_t good_count = 0;
   uint32_t bad_count = 0;
   for (uint32_t i = 0; i < 500; ++i) {
     int result = use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                         /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                        /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
+                                        /*min_output_buffer_count=*/0, &test_params);
     if (result != 0) {
       ++bad_count;
     } else {

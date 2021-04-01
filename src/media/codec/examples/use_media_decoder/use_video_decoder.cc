@@ -202,9 +202,11 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
   // the start codes don't alias in the middle of NALs, so we just scan
   // for NALs and send them in to the decoder.
   uint64_t input_pts_counter = input_pts_counter_start;
-  uint64_t frame_count = 0;
+  uint64_t found_frame_ordinal = 0;
+  uint64_t kept_frame_ordinal = 0;
   std::vector<uint8_t> accumulator;
-  auto queue_access_unit = [this, stream_lifetime_ordinal, &input_pts_counter, &frame_count,
+  auto queue_access_unit = [this, stream_lifetime_ordinal, &input_pts_counter, &found_frame_ordinal,
+                            &kept_frame_ordinal,
                             &accumulator](uint8_t* bytes, size_t byte_count) -> bool {
     auto tvp = params_.input_copier;
 
@@ -212,6 +214,18 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
     ZX_ASSERT(is_start_code(bytes, byte_count, &start_code_size_bytes));
     ZX_ASSERT(start_code_size_bytes < byte_count);
     uint8_t nal_unit_type = bytes[start_code_size_bytes] & 0x1f;
+
+    auto increment_found_frame_ordinal = fit::defer([nal_unit_type, &found_frame_ordinal] {
+      if (IsSliceNalUnitType(nal_unit_type)) {
+        ++found_frame_ordinal;
+      }
+    });
+    constexpr uint32_t kFrameNumGapsModulus = 2;
+    if (params_.test_params->frame_num_gaps && IsSliceNalUnitType(nal_unit_type) &&
+        ((found_frame_ordinal + (kFrameNumGapsModulus - 1)) % kFrameNumGapsModulus == 0)) {
+      printf("frame_num_gaps skipping an input slice\n");
+      return true;
+    }
 
     size_t insert_offset = accumulator.size();
     size_t new_size = insert_offset + byte_count;
@@ -221,7 +235,7 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
     }
     accumulator.resize(insert_offset + byte_count);
     // Zero pad first few frames a lot to verify large frames can decode.
-    if (IsSliceNalUnitType(nal_unit_type) && frame_count < 5) {
+    if (IsSliceNalUnitType(nal_unit_type) && kept_frame_ordinal < 5) {
       ZX_DEBUG_ASSERT(byte_count < kInputLargeFrameSizeH264);
       uint32_t zero_padding_bytes = kInputLargeFrameSizeH264 - byte_count;
       accumulator.resize(accumulator.size() + zero_padding_bytes);
@@ -312,9 +326,9 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
       bytes_so_far += bytes_to_copy;
     }
     if (IsSliceNalUnitType(nal_unit_type)) {
-      frame_count++;
+      kept_frame_ordinal++;
     }
-    if (frame_count == params_.test_params->frame_count) {
+    if (kept_frame_ordinal == params_.test_params->frame_count) {
       return false;
     }
     return true;
