@@ -276,10 +276,18 @@ impl PeerTask {
                 _update = self.calls.select_next_some() => {
                     unimplemented!();
                 }
-                request = self.connection.select_next_some() => {
-                    match request {
-                        Ok(r) => self.procedure_request(r).await,
-                        Err(e) => warn!("SLC stream error: {:?}", e),
+                request = self.connection.next() => {
+                    if let Some(request) = request {
+                        match request {
+                            Ok(r) => self.procedure_request(r).await,
+                            Err(e) => {
+                                warn!("SLC stream error: {:?}", e);
+                                break;
+                            }
+                        }
+                    } else {
+                        debug!("Peer task channel closed");
+                        break;
                     }
                 }
                 update = self.network_updates.next() => {
@@ -371,7 +379,7 @@ mod tests {
         fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerRequest, SignalStrength},
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
-        futures::{future::ready, pin_mut, SinkExt},
+        futures::{future::ready, pin_mut, stream::FusedStream, SinkExt},
         proptest::prelude::*,
     };
 
@@ -634,5 +642,43 @@ mod tests {
         // Check that the task's network information contains the expected values
         // based on the updates provided by the call manager task.
         assert_eq!(task.network, expected_network);
+    }
+
+    #[test]
+    fn terminated_slc_ends_peer_task() {
+        let mut exec = fasync::Executor::new().unwrap();
+        let (connection, remote) = create_and_initialize_slc(SlcState::default());
+        let (peer, _sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+
+        // The peer task is pending with no futher work to do at this time.
+        let result = exec.run_until_stalled(&mut run_fut);
+        assert!(result.is_pending());
+
+        // Closing the SLC connection will result in the completion of the peer task.
+        drop(remote);
+
+        let result = exec.run_until_stalled(&mut run_fut);
+        let peer = result.expect("run to complete");
+        assert!(peer.connection.is_terminated());
+    }
+
+    #[test]
+    fn error_in_slc_ends_peer_task() {
+        let mut exec = fasync::Executor::new().unwrap();
+        let (connection, remote) = create_and_initialize_slc(SlcState::default());
+        let (peer, _sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+
+        // Produces an error when polling the ServiceLevelConnection stream.
+        assert!(remote.as_ref().half_close().is_ok());
+
+        // Error on the SLC connection will result in the completion of the peer task.
+        let result = exec.run_until_stalled(&mut run_fut);
+        assert!(result.is_ready());
     }
 }
