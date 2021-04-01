@@ -5,9 +5,7 @@
 //! A Fuchsia Driver Bind Program compiler
 
 use anyhow::{anyhow, Context, Error};
-use bind::compiler::{
-    self, encode_to_bytecode, BindProgram, SymbolicInstruction, SymbolicInstructionInfo,
-};
+use bind::compiler::{self, BindProgram, SymbolicInstruction, SymbolicInstructionInfo};
 use bind::encode_bind_program_v1::encode_to_string_v1;
 use bind::encode_bind_program_v2::encode_to_string_v2;
 use bind::{bind_library, linter, offline_debugger, test};
@@ -139,12 +137,9 @@ fn write_depfile(
     Ok(out)
 }
 
-fn write_bind_template<'a>(
-    bind_program: BindProgram<'a>,
-    use_new_bytecode: bool,
-) -> Result<String, Error> {
+fn write_bind_template<'a>(bind_program: BindProgram<'a>) -> Result<String, Error> {
     let mut output = String::new();
-    if use_new_bytecode {
+    if bind_program.use_new_bytecode {
         let (binding, byte_count) = encode_to_string_v2(bind_program)?;
         output
             .write_fmt(format_args!(
@@ -179,7 +174,7 @@ fn handle_command(command: Command) -> Result<(), Error> {
             let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
             let input = options.input.ok_or(anyhow!("The debug command requires an input."))?;
             let program = read_file(&input)?;
-            let bind_program = compiler::compile(&program, &includes, options.lint)?;
+            let bind_program = compiler::compile(&program, &includes, options.lint, false)?;
 
             let device = read_file(&device_file)?;
             let binds = offline_debugger::debug_from_str(&bind_program, &device)?;
@@ -272,12 +267,12 @@ fn handle_compile(
         let input = input.ok_or(anyhow!("An input is required when disable_autobind is false."))?;
         program = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        compiler::compile(&program, &includes, lint)?
+        compiler::compile(&program, &includes, lint, use_new_bytecode)?
     } else if let Some(input) = input {
         // Autobind is disabled but there are some bind rules for manual binding.
         program = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        let mut bind_program = compiler::compile(&program, &includes, lint)?;
+        let mut bind_program = compiler::compile(&program, &includes, lint, use_new_bytecode)?;
         bind_program.instructions.insert(0, SymbolicInstructionInfo::disable_autobind());
         bind_program
     } else {
@@ -296,14 +291,18 @@ fn handle_compile(
             ]
         };
 
-        BindProgram { instructions: instructions, symbol_table: HashMap::new() }
+        BindProgram {
+            instructions: instructions,
+            symbol_table: HashMap::new(),
+            use_new_bytecode: use_new_bytecode,
+        }
     };
 
     if output_bytecode {
-        let bytecode = encode_to_bytecode(bind_program, use_new_bytecode)?;
+        let bytecode = bind_program.encode_to_bytecode()?;
         output_writer.write_all(bytecode.as_slice()).context("Failed to write to output file")?;
     } else {
-        let template = write_bind_template(bind_program, use_new_bytecode)?;
+        let template = write_bind_template(bind_program)?;
         output_writer.write_all(template.as_bytes()).context("Failed to write to output file")?;
     };
 
@@ -467,13 +466,21 @@ mod tests {
 
     #[test]
     fn zero_instructions_v1() {
-        let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
+        let bind_program = BindProgram {
+            instructions: vec![],
+            symbol_table: HashMap::new(),
+            use_new_bytecode: false,
+        };
 
-        let bytecode = encode_to_bytecode(bind_program, false).unwrap();
+        let bytecode = bind_program.encode_to_bytecode().unwrap();
         assert!(bytecode.is_empty());
 
-        let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
-        let template = write_bind_template(bind_program, false).unwrap();
+        let bind_program = BindProgram {
+            instructions: vec![],
+            symbol_table: HashMap::new(),
+            use_new_bytecode: false,
+        };
+        let template = write_bind_template(bind_program).unwrap();
         assert!(
             template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 0)")
         );
@@ -487,9 +494,10 @@ mod tests {
                 instruction: SymbolicInstruction::UnconditionalBind,
             }],
             symbol_table: HashMap::new(),
+            use_new_bytecode: false,
         };
 
-        let bytecode = encode_to_bytecode(bind_program, false).unwrap();
+        let bytecode = bind_program.encode_to_bytecode().unwrap();
         assert_eq!(bytecode, vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
 
         let bind_program = BindProgram {
@@ -498,8 +506,9 @@ mod tests {
                 instruction: SymbolicInstruction::UnconditionalBind,
             }],
             symbol_table: HashMap::new(),
+            use_new_bytecode: false,
         };
-        let template = write_bind_template(bind_program, false).unwrap();
+        let template = write_bind_template(bind_program).unwrap();
         assert!(
             template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 1)")
         );
@@ -508,16 +517,24 @@ mod tests {
 
     #[test]
     fn zero_instructions_v2() {
-        let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
+        let bind_program = BindProgram {
+            instructions: vec![],
+            symbol_table: HashMap::new(),
+            use_new_bytecode: true,
+        };
         assert_eq!(
-            encode_to_bytecode(bind_program, true).unwrap(),
+            bind_program.encode_to_bytecode().unwrap(),
             vec![
                 66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 0, 0, 0, 0
             ]
         );
 
-        let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
-        let template = write_bind_template(bind_program, true).unwrap();
+        let bind_program = BindProgram {
+            instructions: vec![],
+            symbol_table: HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let template = write_bind_template(bind_program).unwrap();
         assert!(
             template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 24)")
         );
@@ -535,9 +552,10 @@ mod tests {
                 instruction: SymbolicInstruction::UnconditionalAbort,
             }],
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
         assert_eq!(
-            encode_to_bytecode(bind_program, true).unwrap(),
+            bind_program.encode_to_bytecode().unwrap(),
             vec![
                 66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 1, 0, 0, 0,
                 48
@@ -550,8 +568,9 @@ mod tests {
                 instruction: SymbolicInstruction::UnconditionalAbort,
             }],
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
-        let template = write_bind_template(bind_program, true).unwrap();
+        let template = write_bind_template(bind_program).unwrap();
         assert!(
             template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 25)")
         );
@@ -572,9 +591,10 @@ mod tests {
                 },
             ],
             symbol_table: HashMap::new(),
+            use_new_bytecode: false,
         };
 
-        let bytecode = encode_to_bytecode(bind_program, false).unwrap();
+        let bytecode = bind_program.encode_to_bytecode().unwrap();
         assert_eq!(bytecode[..12], [2, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0]);
 
         let bind_program = BindProgram {
@@ -586,8 +606,9 @@ mod tests {
                 },
             ],
             symbol_table: HashMap::new(),
+            use_new_bytecode: false,
         };
-        let template = write_bind_template(bind_program, false).unwrap();
+        let template = write_bind_template(bind_program).unwrap();
         assert!(
             template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 2)")
         );

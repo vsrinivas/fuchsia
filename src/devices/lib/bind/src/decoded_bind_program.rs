@@ -211,7 +211,11 @@ mod test {
         symbol_table
             .insert(make_identifier!("heliangelus"), Symbol::StringValue("sunangel".to_string()));
 
-        let bind_program = BindProgram { instructions: vec![], symbol_table: symbol_table.clone() };
+        let bind_program = BindProgram {
+            instructions: vec![],
+            symbol_table: symbol_table.clone(),
+            use_new_bytecode: true,
+        };
         let bytecode = encode_to_bytecode_v2(bind_program).unwrap();
 
         let bind_program = DecodedProgram::new(bytecode).unwrap();

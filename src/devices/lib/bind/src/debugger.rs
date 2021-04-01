@@ -382,7 +382,7 @@ mod test {
         statements: Vec<Statement>,
         symbol_table: SymbolTable,
     ) -> Vec<RawInstruction<[u32; 3]>> {
-        compiler::compile_statements(statements, symbol_table)
+        compiler::compile_statements(statements, symbol_table, false)
             .unwrap()
             .instructions
             .into_iter()

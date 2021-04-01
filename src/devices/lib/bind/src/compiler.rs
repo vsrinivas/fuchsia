@@ -80,17 +80,17 @@ impl fmt::Display for BindProgramDecodeError {
 pub struct BindProgram<'a> {
     pub symbol_table: SymbolTable,
     pub instructions: Vec<SymbolicInstructionInfo<'a>>,
+    pub use_new_bytecode: bool,
 }
 
-pub fn encode_to_bytecode(
-    bind_program: BindProgram,
-    use_new_bytecode: bool,
-) -> Result<Vec<u8>, BindProgramEncodeError> {
-    if use_new_bytecode {
-        return encode_to_bytecode_v2(bind_program);
-    }
+impl<'a> BindProgram<'a> {
+    pub fn encode_to_bytecode(self) -> Result<Vec<u8>, BindProgramEncodeError> {
+        if self.use_new_bytecode {
+            return encode_to_bytecode_v2(self);
+        }
 
-    encode_to_bytecode_v1(bind_program)
+        encode_to_bytecode_v1(self)
+    }
 }
 
 pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
@@ -99,6 +99,7 @@ pub fn compile<'a>(
     program_str: &'a str,
     libraries: &[String],
     lint: bool,
+    use_new_bytecode: bool,
 ) -> Result<BindProgram<'a>, CompilerError> {
     let ast = bind_program::Ast::try_from(program_str).map_err(CompilerError::BindParserError)?;
 
@@ -116,7 +117,7 @@ pub fn compile<'a>(
 
     let dependencies = resolve_dependencies(&ast, library_asts.iter())?;
     let symbol_table = construct_symbol_table(dependencies.into_iter())?;
-    compile_statements(ast.statements, symbol_table)
+    compile_statements(ast.statements, symbol_table, use_new_bytecode)
 }
 
 fn resolve_dependencies<'a>(
@@ -476,8 +477,9 @@ impl SymbolicInstruction {
 pub fn compile_statements<'a>(
     statements: Vec<Statement<'a>>,
     symbol_table: SymbolTable,
+    use_new_bytecode: bool,
 ) -> Result<BindProgram<'a>, CompilerError> {
-    let mut compiler = Compiler::new(symbol_table);
+    let mut compiler = Compiler::new(symbol_table, use_new_bytecode);
     compiler.compile_statements(statements)?;
     Ok(compiler.bind_program)
 }
@@ -488,9 +490,13 @@ struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    fn new(symbol_table: SymbolTable) -> Self {
+    fn new(symbol_table: SymbolTable, use_new_bytecode: bool) -> Self {
         Compiler {
-            bind_program: BindProgram { instructions: vec![], symbol_table: symbol_table },
+            bind_program: BindProgram {
+                instructions: vec![],
+                symbol_table: symbol_table,
+                use_new_bytecode: use_new_bytecode,
+            },
             next_label_id: 0,
         }
     }
@@ -522,10 +528,12 @@ impl<'a> Compiler<'a> {
         self.compile_block(statements)?;
 
         // If none of the statements caused an abort, then we should bind the driver.
-        self.bind_program.instructions.push(SymbolicInstructionInfo {
-            location: None,
-            instruction: SymbolicInstruction::UnconditionalBind,
-        });
+        if !self.bind_program.use_new_bytecode {
+            self.bind_program.instructions.push(SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::UnconditionalBind,
+            });
+        }
 
         Ok(())
     }
@@ -1053,7 +1061,7 @@ mod test {
         );
 
         assert_eq!(
-            compile_statements(program.statements, symbol_table).unwrap().instructions,
+            compile_statements(program.statements, symbol_table, false).unwrap().instructions,
             vec![
                 SymbolicInstructionInfo {
                     location: Some(AstLocation::ConditionStatement(condition_statement)),
@@ -1087,7 +1095,7 @@ mod test {
         );
 
         assert_eq!(
-            compile_statements(program.statements, symbol_table).unwrap().instructions,
+            compile_statements(program.statements, symbol_table, false).unwrap().instructions,
             vec![
                 SymbolicInstructionInfo {
                     location: Some(AstLocation::AcceptStatementValue {
@@ -1193,7 +1201,7 @@ mod test {
         );
 
         assert_eq!(
-            compile_statements(program.statements, symbol_table).unwrap().instructions,
+            compile_statements(program.statements, symbol_table, false).unwrap().instructions,
             vec![
                 SymbolicInstructionInfo {
                     location: Some(AstLocation::IfCondition(condition1)),
@@ -1308,7 +1316,7 @@ mod test {
         );
 
         assert_eq!(
-            compile_statements(program.statements, symbol_table),
+            compile_statements(program.statements, symbol_table, false),
             Err(CompilerError::IfStatementMustBeTerminal)
         );
     }
@@ -1322,7 +1330,7 @@ mod test {
         let symbol_table = HashMap::new();
 
         assert_eq!(
-            compile_statements(program.statements, symbol_table).unwrap().instructions,
+            compile_statements(program.statements, symbol_table, false).unwrap().instructions,
             vec![
                 SymbolicInstructionInfo {
                     location: Some(AstLocation::FalseStatement(abort_statement)),
@@ -1360,7 +1368,7 @@ mod test {
         );
 
         assert_eq!(
-            compile_statements(program.statements, symbol_table),
+            compile_statements(program.statements, symbol_table, false),
             Err(CompilerError::FalseStatementMustBeIsolated)
         );
     }
@@ -1389,7 +1397,7 @@ mod test {
         );
 
         assert_eq!(
-            compile_statements(program.statements, symbol_table),
+            compile_statements(program.statements, symbol_table, false),
             Err(CompilerError::TrueStatementMustBeIsolated)
         );
     }
@@ -1459,6 +1467,39 @@ mod test {
             Err(CompilerError::DependencyError(
                 dependency_graph::DependencyError::MissingDependency(make_identifier!("A", "B"))
             ))
+        );
+    }
+
+    #[test]
+    fn uncondition_bind_in_new_bytecode() {
+        let condition_statement = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("wheatear"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(8),
+            },
+        };
+
+        let program =
+            bind_program::Ast { using: vec![], statements: vec![condition_statement.clone()] };
+        let mut symbol_table = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("wheatear"),
+            Symbol::Key("wheatear".to_string(), bind_library::ValueType::Number),
+        );
+
+        // Instructions should not contain unconditional bind.
+        assert_eq!(
+            compile_statements(program.statements, symbol_table, true).unwrap().instructions,
+            vec![SymbolicInstructionInfo {
+                location: Some(AstLocation::ConditionStatement(condition_statement)),
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("wheatear".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(8)
+                }
+            },]
         );
     }
 }

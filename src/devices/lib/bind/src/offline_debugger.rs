@@ -550,7 +550,8 @@ mod test {
             make_identifier!("abc"),
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
-        let bind_program = compiler::compile_statements(statements, symbol_table.clone()).unwrap();
+        let bind_program =
+            compiler::compile_statements(statements, symbol_table.clone(), false).unwrap();
 
         // Binds when the device has the correct property.
         let properties =
@@ -611,7 +612,7 @@ mod test {
             make_identifier!("abc"),
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
-        let bind_program = compiler::compile_statements(statements, symbol_table).unwrap();
+        let bind_program = compiler::compile_statements(statements, symbol_table, false).unwrap();
 
         // Binds when the device has a different value for the property.
         let properties =
@@ -656,7 +657,7 @@ mod test {
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_program = compiler::compile_statements(statements, symbol_table).unwrap();
+        let bind_program = compiler::compile_statements(statements, symbol_table, false).unwrap();
 
         // Binds when the device has one of the accepted values for the property.
         let properties =
@@ -769,7 +770,7 @@ mod test {
             Symbol::Key("xyz".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_program = compiler::compile_statements(statements, symbol_table).unwrap();
+        let bind_program = compiler::compile_statements(statements, symbol_table, false).unwrap();
 
         // Binds when the if clause is satisfied.
         let properties = vec![
@@ -856,7 +857,7 @@ mod test {
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_program = compiler::compile_statements(statements, symbol_table).unwrap();
+        let bind_program = compiler::compile_statements(statements, symbol_table, false).unwrap();
 
         // Doesn't bind when abort statement is present.
         let properties =
@@ -931,7 +932,7 @@ mod test {
             Symbol::Key("VALUE".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_program = compiler::compile_statements(statements, symbol_table).unwrap();
+        let bind_program = compiler::compile_statements(statements, symbol_table, false).unwrap();
 
         // Binds when other properties are present as well.
         let properties = vec![
@@ -1003,7 +1004,7 @@ mod test {
             make_identifier!("pqr"),
             Symbol::Key("pqr".to_string(), bind_library::ValueType::Number),
         );
-        let bind_program = compiler::compile_statements(statements, symbol_table).unwrap();
+        let bind_program = compiler::compile_statements(statements, symbol_table, false).unwrap();
 
         // Aborts because if condition is true.
         let properties =

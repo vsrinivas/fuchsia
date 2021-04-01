@@ -305,6 +305,7 @@ mod tests {
                 },
             }],
             symbol_table: HashMap::new(),
+            use_new_bytecode: false,
         };
 
         assert_eq!(
@@ -321,6 +322,7 @@ mod tests {
                 },
             }],
             symbol_table: HashMap::new(),
+            use_new_bytecode: false,
         };
 
         assert_eq!(

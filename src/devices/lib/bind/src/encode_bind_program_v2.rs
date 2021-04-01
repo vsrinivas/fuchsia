@@ -498,6 +498,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: symbol_table,
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -522,6 +523,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -544,6 +546,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: symbol_table,
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -573,6 +576,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: symbol_table,
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -597,6 +601,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -626,6 +631,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -642,6 +648,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -661,6 +668,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -693,6 +701,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -742,6 +751,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -814,6 +824,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: symbol_table,
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -879,6 +890,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -941,6 +953,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -998,6 +1011,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -1042,6 +1056,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -1061,6 +1076,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
@@ -1085,6 +1101,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -1104,6 +1121,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -1122,6 +1140,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -1140,6 +1159,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
@@ -1157,6 +1177,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
         assert_eq!(
             Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
@@ -1170,6 +1191,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
         assert_eq!(
             Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
@@ -1185,6 +1207,7 @@ mod test {
         let bind_program = BindProgram {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
+            use_new_bytecode: true,
         };
 
         assert_eq!(
