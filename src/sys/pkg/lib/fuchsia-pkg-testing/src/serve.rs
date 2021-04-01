@@ -456,8 +456,8 @@ impl TryFrom<&http::HeaderValue> for HttpRange {
         let first = first.parse().context("valid range first_byte_pos")?;
         let last = last[1..].parse().context("valid range last_byte_pos")?;
 
-        if first >= last {
-            bail!("first_byte_pos {} >= last_byte_pos {}", first, last);
+        if first > last {
+            bail!("first_byte_pos {} > last_byte_pos {}", first, last);
         }
 
         Ok(HttpRange { first_byte_pos: first, last_byte_pos: last })
