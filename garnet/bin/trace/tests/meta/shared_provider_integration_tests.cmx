@@ -17,7 +17,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/shared_provider_integration_tests"
+        "binary": "bin/shared_provider_integration_tests"
     },
     "sandbox": {
         "features": [

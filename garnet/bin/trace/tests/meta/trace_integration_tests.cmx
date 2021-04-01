@@ -20,7 +20,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/trace_integration_tests"
+        "binary": "bin/trace_integration_tests"
     },
     "sandbox": {
         "features": [

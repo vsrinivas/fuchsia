@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -159,7 +159,6 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
 
 executable("trace_integration_tests") {
   testonly = true
-  output_name = "trace_integration_tests"
 
   sources = [ "trace_integration_tests.cc" ]
 
@@ -177,7 +176,6 @@ executable("trace_integration_tests") {
 
 executable("basic_integration_test_app") {
   testonly = true
-  output_name = "basic_integration_test_app"
 
   sources = [
     "basic_integration_tests.cc",
@@ -204,7 +202,6 @@ executable("basic_integration_test_app") {
 
 executable("two_providers_one_engine") {
   testonly = true
-  output_name = "two_providers_one_engine"
 
   sources = [ "two_providers_one_engine.cc" ]
 
@@ -240,7 +237,6 @@ shared_library("self_contained_provider") {
 
 executable("two_providers_two_engines_test_app") {
   testonly = true
-  output_name = "two_providers_two_engines_test_app"
 
   sources = [
     "integration_test_main.cc",
@@ -266,7 +262,6 @@ executable("two_providers_two_engines_test_app") {
 
 executable("nested_environment_test") {
   testonly = true
-  output_name = "nested_environment_test"
 
   sources = [
     "integration_test_main.cc",
@@ -286,14 +281,12 @@ executable("nested_environment_test") {
 
 executable("return_1234") {
   testonly = true
-  output_name = "return_1234"
 
   sources = [ "return_1234.cc" ]
 }
 
 executable("return_child_result_tests") {
   testonly = true
-  output_name = "return_child_result_tests"
 
   sources = [ "return_child_result_tests.cc" ]
 
@@ -308,7 +301,6 @@ executable("return_child_result_tests") {
 
 executable("run_awhile") {
   testonly = true
-  output_name = "run_awhile"
 
   sources = [ "run_awhile.cc" ]
 
@@ -317,7 +309,6 @@ executable("run_awhile") {
 
 executable("detach_tests") {
   testonly = true
-  output_name = "detach_tests"
 
   sources = [ "detach_tests.cc" ]
 
@@ -332,7 +323,6 @@ executable("detach_tests") {
 
 executable("ktrace_integration_tests") {
   testonly = true
-  output_name = "ktrace_integration_tests"
 
   sources = [ "ktrace_integration_tests.cc" ]
 
@@ -415,98 +405,101 @@ executable("provider_destruction_tests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("trace_tests") {
+fuchsia_test_component("detach_tests_component") {
+  component_name = "detach_tests"
+  manifest = "meta/detach_tests.cmx"
+  deps = [ ":detach_tests" ]
+}
+
+fuchsia_test_component("ktrace_integration_tests_component") {
+  component_name = "ktrace_integration_tests"
+  manifest = "meta/ktrace_integration_tests.cmx"
+  deps = [ ":ktrace_integration_tests" ]
+}
+
+fuchsia_test_component("provider_destruction_tests_component") {
+  component_name = "provider_destruction_tests"
+  manifest = "meta/provider_destruction_tests.cmx"
+  deps = [ ":provider_destruction_tests" ]
+}
+
+fuchsia_test_component("return_child_result_tests_component") {
+  component_name = "return_child_result_tests"
+  manifest = "meta/return_child_result_tests.cmx"
+  deps = [ ":return_child_result_tests" ]
+}
+
+fuchsia_test_component("shared_provider_integration_tests_component") {
+  component_name = "shared_provider_integration_tests"
+  manifest = "meta/shared_provider_integration_tests.cmx"
+  deps = [ ":shared_provider_integration_tests" ]
+}
+
+fuchsia_test_component("trace_integration_tests_component") {
+  component_name = "trace_integration_tests"
+  manifest = "meta/trace_integration_tests.cmx"
+  deps = [ ":trace_integration_tests" ]
+}
+
+fuchsia_test_component("trace_tests_component") {
+  component_name = "trace_tests"
+  manifest = "meta/trace_tests.cmx"
+  deps = [ ":trace_tests_bin" ]
+}
+
+fuchsia_component("basic_integration_test_app_component") {
+  testonly = true
+  component_name = "basic_integration_test_app"
+  manifest = "meta/basic_integration_test_app.cmx"
+  deps = [ ":basic_integration_test_app" ]
+}
+
+fuchsia_component("nested_environment_test_component") {
+  testonly = true
+  component_name = "nested_environment_test"
+  manifest = "meta/nested_environment_test.cmx"
+  deps = [ ":nested_environment_test" ]
+}
+
+fuchsia_component("provider_destruction_app_component") {
+  testonly = true
+  component_name = "provider_destruction_app"
+  manifest = "meta/provider_destruction_app.cmx"
+  deps = [ ":provider_destruction_app" ]
+}
+
+fuchsia_component("shared_provider_app_component") {
+  testonly = true
+  component_name = "shared_provider_app"
+  manifest = "meta/shared_provider_app.cmx"
+  deps = [ ":shared_provider_app" ]
+}
+
+fuchsia_component("two_providers_two_engines_test_app_component") {
+  testonly = true
+  component_name = "two_providers_two_engines_test_app"
+  manifest = "meta/two_providers_two_engines_test_app.cmx"
+  deps = [ ":two_providers_two_engines_test_app" ]
+}
+
+fuchsia_test_package("trace_tests") {
+  test_components = [
+    ":detach_tests_component",
+    ":ktrace_integration_tests_component",
+    ":provider_destruction_tests_component",
+    ":return_child_result_tests_component",
+    ":shared_provider_integration_tests_component",
+    ":trace_integration_tests_component",
+    ":trace_tests_component",
+  ]
   deps = [
-    ":basic_integration_test_app",
-    ":detach_tests",
-    ":ktrace_integration_tests",
-    ":nested_environment_test",
-    ":provider_destruction_app",
-    ":provider_destruction_tests",
+    ":basic_integration_test_app_component",
+    ":nested_environment_test_component",
+    ":provider_destruction_app_component",
     ":return_1234",
-    ":return_child_result_tests",
     ":run_awhile",
-    ":shared_provider_app",
-    ":shared_provider_integration_tests",
-    ":trace_integration_tests",
-    ":trace_tests_bin",
+    ":shared_provider_app_component",
     ":two_providers_one_engine",
-    ":two_providers_two_engines_test_app",
-  ]
-
-  tests = [
-    {
-      name = "detach_tests"
-    },
-    {
-      name = "ktrace_integration_tests"
-    },
-    {
-      name = "provider_destruction_tests"
-    },
-    {
-      name = "return_child_result_tests"
-    },
-    {
-      name = "shared_provider_integration_tests"
-    },
-    {
-      name = "trace_integration_tests"
-    },
-    {
-      name = "trace_tests"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "basic_integration_test_app"
-    },
-    {
-      name = "nested_environment_test"
-    },
-    {
-      name = "provider_destruction_app"
-    },
-    {
-      name = "return_1234"
-    },
-    {
-      name = "run_awhile"
-    },
-    {
-      name = "shared_provider_app"
-    },
-    {
-      name = "two_providers_one_engine"
-    },
-    {
-      name = "two_providers_two_engines_test_app"
-    },
-  ]
-
-  # Since this is a "test_package" there is no need to list the cmx files
-  # for the "tests" entries.
-  meta = [
-    {
-      path = rebase_path("meta/basic_integration_test_app.cmx")
-      dest = "basic_integration_test_app.cmx"
-    },
-    {
-      path = rebase_path("meta/nested_environment_test.cmx")
-      dest = "nested_environment_test.cmx"
-    },
-    {
-      path = rebase_path("meta/provider_destruction_app.cmx")
-      dest = "provider_destruction_app.cmx"
-    },
-    {
-      path = rebase_path("meta/shared_provider_app.cmx")
-      dest = "shared_provider_app.cmx"
-    },
-    {
-      path = rebase_path("meta/two_providers_two_engines_test_app.cmx")
-      dest = "two_providers_two_engines_test_app.cmx"
-    },
+    ":two_providers_two_engines_test_app_component",
   ]
 }

@@ -21,7 +21,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/return_child_result_tests"
+        "binary": "bin/return_child_result_tests"
     },
     "sandbox": {
         "features": [
