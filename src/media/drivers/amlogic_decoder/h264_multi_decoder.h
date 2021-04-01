@@ -34,6 +34,7 @@ class H264MultiDecoder : public VideoDecoder {
   struct ReferenceFrame {
     bool in_use = false;
     bool in_internal_use = false;
+    bool is_for_output = false;
     uint32_t index;
     std::shared_ptr<VideoFrame> frame;
     std::unique_ptr<CanvasEntry> y_canvas;
@@ -127,7 +128,7 @@ class H264MultiDecoder : public VideoDecoder {
   void OutputFrame(ReferenceFrame* reference_frame, uint32_t pts_id);
   void StartFrameDecode();
   bool IsUnusedReferenceFrameAvailable();
-  std::shared_ptr<ReferenceFrame> GetUnusedReferenceFrame();
+  std::shared_ptr<ReferenceFrame> GetUnusedReferenceFrame(bool is_for_output);
   bool is_hw_active() { return is_hw_active_; }
   bool is_decoder_started() { return is_decoder_started_; }
 
@@ -413,6 +414,7 @@ class H264MultiDecoder : public VideoDecoder {
   // from the same saved state later, this prevents us from telling H264Decoder about the same slice
   // more than once.
   int per_frame_seen_first_mb_in_slice_ = -1;
+  int per_frame_decoded_first_mb_in_slice_ = -1;
   int per_frame_attempt_seen_first_mb_in_slice_ = -1;
 
   // Not restricted to being a power of 2, but at least for now we do restrict to being a multiple

@@ -65,7 +65,8 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
     // Note that this may return nullptr if accelerator is not able to provide
     // any new pictures at given time. The decoder is expected to handle
     // this situation as normal and return from Decode() with kRanOutOfSurfaces.
-    virtual scoped_refptr<H264Picture> CreateH264Picture() = 0;
+    virtual scoped_refptr<H264Picture> CreateH264Picture(
+        bool is_for_output) = 0;
 
     // Submit metadata for the current frame, providing the current |sps| and
     // |pps| for it, |dpb| has to contain all the pictures in DPB for current
@@ -278,7 +279,7 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
 
   // Handle a gap in frame_num in the stream up to |frame_num|, by creating
   // "non-existing" pictures (see spec).
-  bool HandleFrameNumGap(int frame_num);
+  H264Accelerator::Status HandleFrameNumGap(int frame_num);
 
   // Start processing a new frame.
   H264Accelerator::Status StartNewFrame(const H264SliceHeader* slice_hdr);
