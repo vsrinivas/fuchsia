@@ -74,12 +74,12 @@ TEST_fx-set() {
 # ensure that "fx set product.board --with ..." calls gn with the expected args
 TEST_fx-set-with() {
   local output
-  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with "//bundles:tests")"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with //bundles:tests,//src:tests --with //tools:tests)"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=["//bundles:tests"'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=["//bundles:tests","//src:tests","//tools:tests"'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=[]'
 }
 

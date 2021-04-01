@@ -242,8 +242,9 @@ function main {
     *.*)
       local product_name="${1%.*}"
       local board_name="${1##*.}"
-      local product="$(find_config "products" "${product_name}")"
-      local board="$(find_config "boards" "${board_name}")"
+      local product board
+      product="$(find_config "products" "${product_name}")"
+      board="$(find_config "boards" "${board_name}")"
       if [[ "${product}" == "" ]] || [[ "${board}" == "" ]]; then
         exit 1
       fi
@@ -251,7 +252,7 @@ function main {
       gn_args+=" build_info_board=\"${board_name}\" build_info_product=\"${product_name}\""
       ;;
     *)
-      fx-error Unable to parse PRODUCT.BOARD goal \"$1\"
+      fx-error "Unable to parse PRODUCT.BOARD goal \"$1\""
       explain-goal-argument
       return 1
       ;;
@@ -289,7 +290,8 @@ function main {
           fx-command-help
           return 1
         fi
-        IFS=, base_packages+=("$2")
+        IFS="," read -r -a labels <<< "$2"
+        base_packages+=("${labels[@]}")
         shift
         ;;
       --with-cache)
@@ -297,7 +299,8 @@ function main {
           fx-command-help
           return 1
         fi
-        IFS=, cache_packages+=("$2")
+        IFS="," read -r -a labels <<< "$2"
+        cache_packages+=("${labels[@]}")
         shift
         ;;
       --with)
@@ -305,7 +308,8 @@ function main {
           fx-command-help
           return 1
         fi
-        IFS=, universe_packages+=("$2")
+        IFS="," read -r -a labels <<< "$2"
+        universe_packages+=("${labels[@]}")
         shift
         ;;
       --with-host)
@@ -313,7 +317,8 @@ function main {
           fx-command-help
           return 1
         fi
-        IFS=, host_labels+=("$2")
+        IFS="," read -r -a labels <<< "$2"
+        host_labels+=("${labels[@]}")
         shift
         ;;
       --cargo-toml-gen)
@@ -501,7 +506,7 @@ function main {
 # See: fx args --list=base_package_labels
 base_package_labels+=["
 
-  for package in ${base_packages[@]}; do
+  for package in "${base_packages[@]}"; do
     gn_args+="\"${package}\","
   done
   gn_args+="]
@@ -509,7 +514,7 @@ base_package_labels+=["
 # See: fx args --list=cache_package_labels
 cache_package_labels+=["
 
-  for package in ${cache_packages[@]}; do
+  for package in "${cache_packages[@]}"; do
     gn_args+="\"${package}\","
   done
   gn_args+="]
@@ -517,7 +522,7 @@ cache_package_labels+=["
 # See: fx args --list=universe_package_labels
 universe_package_labels+=["
 
-  for package in ${universe_packages[@]}; do
+  for package in "${universe_packages[@]}"; do
     gn_args+="\"${package}\","
   done
   gn_args+="]
@@ -525,7 +530,7 @@ universe_package_labels+=["
 # See: fx args --list=host_labels
 host_labels+=["
 
-  for label in ${host_labels[@]}; do
+  for label in "${host_labels[@]}"; do
     gn_args+="\"${label}\","
   done
   gn_args+="]"
