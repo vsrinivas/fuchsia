@@ -316,8 +316,11 @@ zx_status_t ProcessDispatcher::AddInitializedThread(ThreadDispatcher* t, bool in
 
   DEBUG_ASSERT(t->process() == this);
 
-  if (initial_thread)
+  if (initial_thread) {
+    DEBUG_ASSERT_MSG(start_time_ == 0, "start_time_ %ld", start_time_);
+    start_time_ = current_time();
     SetStateLocked(State::RUNNING);
+  }
 
   return ZX_OK;
 }
@@ -448,31 +451,58 @@ void ProcessDispatcher::FinishDeadTransition() {
   }
 }
 
-void ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
+void ProcessDispatcher::GetInfo(zx_info_process_v1_t* info) const {
+  canary_.Assert();
+
+  zx_info_process_v2_t v2_info{};
+  GetInfo(&v2_info);
+  *info = {
+      .return_code = v2_info.return_code,
+      .started = (v2_info.flags & ZX_INFO_PROCESS_FLAG_STARTED) != 0,
+      .exited = (v2_info.flags & ZX_INFO_PROCESS_FLAG_EXITED) != 0,
+      .debugger_attached = (v2_info.flags & ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED) != 0,
+      .padding1 = {},
+  };
+}
+
+void ProcessDispatcher::GetInfo(zx_info_process_v2_t* info) const {
   canary_.Assert();
 
   State state;
+  zx_time_t start_time;
+  int64_t return_code;
+  zx_info_process_flags_t flags = 0u;
   // retcode_ depends on the state: make sure they're consistent.
   {
     Guard<Mutex> guard{get_lock()};
     state = state_;
-    info->return_code = retcode_;
+    start_time = start_time_;
+    return_code = retcode_;
     // TODO: Protect with rights if necessary.
-    info->debugger_attached = debug_exceptionate_.HasValidChannel();
+    if (debug_exceptionate_.HasValidChannel()) {
+      flags |= ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED;
+    }
   }
 
   switch (state) {
     case State::DEAD:
     case State::DYING:
-      info->exited = true;
+      flags |= ZX_INFO_PROCESS_FLAG_EXITED;
       __FALLTHROUGH;
     case State::RUNNING:
-      info->started = true;
+      flags |= ZX_INFO_PROCESS_FLAG_STARTED;
       break;
     case State::INITIAL:
     default:
       break;
   }
+
+  *info = zx_info_process_v2_t{
+      .return_code = return_code,
+      .start_time = start_time,
+      .flags = flags,
+      .padding1 = {},
+  };
 }
 
 zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {

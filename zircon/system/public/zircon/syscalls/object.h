@@ -20,7 +20,9 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_NONE                        ((zx_object_info_topic_t)  0u)
 #define ZX_INFO_HANDLE_VALID                ((zx_object_info_topic_t)  1u)
 #define ZX_INFO_HANDLE_BASIC                ((zx_object_info_topic_t)  2u) // zx_info_handle_basic_t[1]
-#define ZX_INFO_PROCESS                     ((zx_object_info_topic_t)  3u) // zx_info_process_t[1]
+#define ZX_INFO_PROCESS_V1                  __ZX_INFO_TOPIC(3u, 0u)        // zx_info_process_v1_t[1]
+#define ZX_INFO_PROCESS_V2                  __ZX_INFO_TOPIC(3u, 1u)        // zx_info_process_v2_t[1]
+#define ZX_INFO_PROCESS ZX_INFO_PROCESS_V1
 #define ZX_INFO_PROCESS_THREADS             ((zx_object_info_topic_t)  4u) // zx_koid_t[n]
 #define ZX_INFO_VMAR                        ((zx_object_info_topic_t)  7u) // zx_info_vmar_t[1]
 #define ZX_INFO_JOB_CHILDREN                ((zx_object_info_topic_t)  8u) // zx_koid_t[n]
@@ -133,7 +135,9 @@ typedef struct zx_info_process_handle_stats {
     uint32_t handle_count[ZX_OBJ_TYPE_UPPER_BOUND];
 } zx_info_process_handle_stats_t;
 
-typedef struct zx_info_process {
+
+// TODO(fxbug.dev/30751): Deprecated in favor of zx_info_process_v2_t.
+typedef struct zx_info_process_v1 {
     // The process's return code; only valid if |exited| is true.
     // If the process was killed, it will be one of the ZX_TASK_RETCODE values.
     int64_t return_code;
@@ -149,7 +153,41 @@ typedef struct zx_info_process {
     bool debugger_attached;
 
     uint8_t padding1[5];
-} zx_info_process_t;
+} zx_info_process_v1_t;
+
+// TODO(fxbug.dev/30751): Aliased to the deprecated struct at this point in the
+// transition.
+typedef zx_info_process_v1_t zx_info_process_t;
+
+typedef uint32_t zx_info_process_flags_t;
+
+// Whether the process has started. `zx_process_info_t::start_time` is only
+// valid if this flag is set.
+#define ZX_INFO_PROCESS_FLAG_STARTED (zx_info_process_flags_t (1u << 0))
+
+// Whether the process has exited.
+#define ZX_INFO_PROCESS_FLAG_EXITED (zx_info_process_flags_t (1u << 1))
+
+// Whether a debugger is attached to the process.
+#define ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED (zx_info_process_flags_t (1u << 2))
+
+// TODO(fxbug.dev/30751): This will replace zx_info_process_v2_t and will be
+// renamed to `zx_info_process_t` later in the transition.
+typedef struct zx_info_process_v2 {
+    // The process's return code; only valid if the
+    // |ZX_PROCESS_INFO_FLAG_EXITED| flag is set. If the process was killed, it
+    // will be one of the |ZX_TASK_RETCODE| values.
+    int64_t return_code;
+
+    // The monotonic time at which `zx_process_start()` was called, only valid
+    // if the |ZX_INFO_PROCESS_FLAG_STARTED| flag is set.
+    zx_time_t start_time;
+
+    // Bitwise OR of ZX_INFO_PROCESS_FLAG_* values.
+    zx_info_process_flags_t flags;
+
+    uint8_t padding1[4];
+} zx_info_process_v2_t;
 
 typedef struct zx_info_job {
     // The job's return code; only valid if |exited| is true.

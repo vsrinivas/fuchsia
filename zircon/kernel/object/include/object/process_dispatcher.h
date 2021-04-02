@@ -114,7 +114,11 @@ class ProcessDispatcher final
   void Resume();
 
   // Syscall helpers
-  void GetInfo(zx_info_process_t* info) const;
+  //
+  // TODO(fxbug.dev/30751): The v1 GetInfo() signature is deprecated in favor
+  // of the v2 one.
+  void GetInfo(zx_info_process_v1_t* info) const;
+  void GetInfo(zx_info_process_v2_t* info) const;
   zx_status_t GetStats(zx_info_task_stats_t* stats) const;
 
   // Accumulate the runtime of all threads that previously ran or are currently running under this
@@ -278,6 +282,9 @@ class ProcessDispatcher final
 
   // This is a cache of aspace()->vdso_code_address().
   uintptr_t vdso_code_address_ = 0;
+
+  // The time at which the process was started.
+  zx_time_t start_time_ = 0;
 
   // The user-friendly process name. For debug purposes only. That
   // is, there is no mechanism to mint a handle to a process via this name.

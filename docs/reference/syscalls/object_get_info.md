@@ -182,11 +182,13 @@ typedef struct zx_info_job {
 } zx_info_job_t;
 ```
 
-### ZX_INFO_PROCESS
+### ZX_INFO_PROCESS (a.k.a. ZX_INFO_PROCESS_V1)
 
 *handle* type: **Process**
 
 *buffer* type: `zx_info_process_t[1]`
+
+TODO(fxbug.dev/30751): Deprecated in favor of ZX_INFO_PROCESS_V2.
 
 ```
 typedef struct zx_info_process {
@@ -204,6 +206,31 @@ typedef struct zx_info_process {
     // True if a debugger is attached to the process.
     bool debugger_attached;
 } zx_info_process_t;
+```
+
+### ZX_INFO_PROCESS_V2
+
+*handle* type: **Process**
+
+*buffer* type: `zx_info_process_v2_t[1]`
+
+TODO(fxbug.dev/30751): This will replace `ZX_INFO_PROCESS_V1` and will be
+renamed to `ZX_INFO_PROCESS` later in the transition.
+
+```
+typedef struct zx_info_process_v2 {
+    // The process's return code; only valid if the
+    // |ZX_PROCESS_INFO_FLAG_EXITED| flag is set. If the process was killed, it
+    // will be one of the |ZX_TASK_RETCODE| values.
+    int64_t return_code;
+
+    // The monotonic time at which `zx_process_start()` was called, only valid
+    // if the |ZX_INFO_PROCESS_FLAG_STARTED| flag is set.
+    zx_time_t start_time;
+
+    // Bitwise OR of ZX_INFO_PROCESS_FLAG_* values.
+    uint32_t flags;
+} zx_info_process_v2_t;
 ```
 
 ### ZX_INFO_PROCESS_THREADS

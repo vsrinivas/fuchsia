@@ -135,9 +135,16 @@ TEST(ProcessTest, ProcessStartNoHandle) {
   EXPECT_OK(zx_object_wait_one(proc, ZX_TASK_TERMINATED, zx_deadline_after(ZX_SEC(1)), &signals));
   EXPECT_EQ(signals, ZX_TASK_TERMINATED);
 
-  zx_info_process_t info{};
-  EXPECT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(info.return_code, int64_t{ZX_HANDLE_INVALID});
+  {
+    zx_info_process_v1_t info{};
+    EXPECT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V1, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.return_code, int64_t{ZX_HANDLE_INVALID});
+  }
+  {
+    zx_info_process_v2_t info{};
+    EXPECT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.return_code, int64_t{ZX_HANDLE_INVALID});
+  }
 
   zx_handle_close(proc);
 }
@@ -344,32 +351,73 @@ TEST(ProcessTest, InfoReflectsProcessState) {
   zx_handle_t thread;
   ASSERT_OK(zx_thread_create(proc, "th", 3u, 0u, &thread));
 
-  zx_info_process_t info;
-  ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
-  EXPECT_FALSE(info.started, "process should not appear as started");
-  EXPECT_FALSE(info.exited, "process should not appear as exited");
-  EXPECT_EQ(info.return_code, 0, "return code is zero");
+  {
+    zx_info_process_v1_t info;
+    ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V1, &info, sizeof(info), NULL, NULL));
+    EXPECT_FALSE(info.started, "process should not appear as started");
+    EXPECT_FALSE(info.exited, "process should not appear as exited");
+    EXPECT_EQ(info.return_code, 0, "return code is zero");
+  }
+
+  {
+    zx_info_process_v2_t info;
+    ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL));
+    EXPECT_FALSE(info.flags & ZX_INFO_PROCESS_FLAG_STARTED, "process should not appear as started");
+    EXPECT_FALSE(info.flags & ZX_INFO_PROCESS_FLAG_EXITED, "process should not appear as exited");
+    EXPECT_EQ(info.return_code, 0, "return code is zero");
+  }
+
+  const zx_time_t before_start = zx_clock_get_monotonic();
 
   zx_handle_t minip_chn;
   // Start the process and make (relatively) certain it's alive.
   ASSERT_OK(start_mini_process_etc(proc, thread, vmar, event, true, &minip_chn));
+
+  const zx_time_t after_start = zx_clock_get_monotonic();
+
   zx_signals_t signals;
   ASSERT_EQ(zx_object_wait_one(proc, ZX_TASK_TERMINATED, zx_deadline_after(kTimeoutNs), &signals),
             ZX_ERR_TIMED_OUT);
 
-  ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
-  EXPECT_TRUE(info.started, "process should appear as started");
-  EXPECT_FALSE(info.exited, "process should not appear as exited");
+  {
+    zx_info_process_v1_t info;
+    ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V1, &info, sizeof(info), NULL, NULL));
+    EXPECT_TRUE(info.started, "process should appear as started");
+    EXPECT_FALSE(info.exited, "process should not appear as exited");
+  }
+  {
+    zx_info_process_v2_t info;
+    ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL));
+    // `info.start_time` is only valid if the STARTED flag is set.
+    ASSERT_TRUE(info.flags & ZX_INFO_PROCESS_FLAG_STARTED, "process should appear as started");
+    EXPECT_FALSE(info.flags & ZX_INFO_PROCESS_FLAG_EXITED, "process should not appear as exited");
+    EXPECT_GE(info.start_time, before_start);
+    EXPECT_LE(info.start_time, after_start);
+  }
 
   // Kill the process and wait for it to terminate.
   ASSERT_OK(zx_task_kill(proc));
   ASSERT_OK(zx_object_wait_one(proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
   ASSERT_EQ(signals, ZX_TASK_TERMINATED);
 
-  ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
-  EXPECT_TRUE(info.started, "process should appear as started");
-  EXPECT_TRUE(info.exited, "process should appear as exited");
-  EXPECT_EQ(info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "process retcode invalid");
+  {
+    zx_info_process_v1_t info;
+    ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V1, &info, sizeof(info), NULL, NULL));
+    EXPECT_TRUE(info.started, "process should appear as started");
+    EXPECT_TRUE(info.exited, "process should appear as exited");
+    EXPECT_EQ(info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "process retcode invalid");
+  }
+
+  {
+    zx_info_process_v2_t info;
+    ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL));
+    // `info.start_time` is only valid if the STARTED flag is set.
+    ASSERT_TRUE(info.flags & ZX_INFO_PROCESS_FLAG_STARTED, "process should appear as started");
+    EXPECT_TRUE(info.flags & ZX_INFO_PROCESS_FLAG_EXITED, "process should appear as exited");
+    EXPECT_EQ(info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "process retcode invalid");
+    EXPECT_GE(info.start_time, before_start);
+    EXPECT_LE(info.start_time, after_start);
+  }
 }
 
 // Helper class to encapsulate starting a process with up to kNumThreads no-op child threads.
