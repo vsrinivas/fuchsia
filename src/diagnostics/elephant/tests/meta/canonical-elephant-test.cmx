@@ -20,7 +20,8 @@
         ],
         "services": [
             "fuchsia.diagnostics.ArchiveAccessor",
-            "fuchsia.diagnostics.persist.DataPersistence_test-service",
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            "fuchsia.diagnostics.persist.DataPersistence-test-service",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

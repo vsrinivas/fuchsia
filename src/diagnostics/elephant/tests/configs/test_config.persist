@@ -1,1 +1,10 @@
-[ {tag: 'test-component-metric', service_name: 'test-service', max_bytes: 10, repeat_seconds: 31, selectors: ['INSPECT:test_component.cmx:root:lazy-double']} ]
+[{
+    tag: 'test-component-metric',
+    service_name: 'test-service',
+    max_bytes: 10,
+    repeat_seconds: 1,
+    selectors: [
+        'INSPECT:test_component.cmx:root:extra_number',
+        'INSPECT:test_component.cmx:root:lazy-double'
+    ]
+}]

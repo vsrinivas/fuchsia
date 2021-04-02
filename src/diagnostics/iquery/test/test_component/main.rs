@@ -49,6 +49,10 @@ struct Options {
     // If set, only new-style Inspect will be published, not deprecated FIDL or VMO file.
     #[structopt(long = "only-new")]
     only_new: bool,
+
+    /// If set, publish a top-level number called "extra_number".
+    #[structopt(long = "extra-number")]
+    extra_number: Option<i64>,
 }
 
 #[fasync::run_singlethreaded]
@@ -159,6 +163,10 @@ async fn main() -> Result<(), Error> {
         }
         .boxed()
     });
+
+    if let Some(extra_number) = opts.extra_number {
+        root.record_int("extra_number", extra_number);
+    }
 
     let mut fs = ServiceFs::new();
 

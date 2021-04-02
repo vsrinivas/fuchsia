@@ -15,6 +15,7 @@ use {
     inspect_fetcher::InspectFetcher,
     log::*,
     parking_lot::Mutex,
+    serde_json::{self, json, Map, Value},
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -54,7 +55,7 @@ impl PersistServer {
             .collect::<HashMap<String, Fetcher>>();
 
         let unique_service_name =
-            format!("{}_{}", constants::PERSIST_SERVICE_NAME_PREFIX, self.service_name);
+            format!("{}-{}", constants::PERSIST_SERVICE_NAME_PREFIX, self.service_name);
 
         fs.dir("svc").add_fidl_service_at(
             unique_service_name,
@@ -66,7 +67,7 @@ impl PersistServer {
                     {
                         match fetchers.get_mut(&tag) {
                             None => {
-                                error!("Tag '{}' was requested but is not configured", tag);
+                                warn!("Tag '{}' was requested but is not configured", tag);
                                 let _ = responder.send(PersistResult::BadName);
                             }
                             Some(fetcher) => {
@@ -100,6 +101,43 @@ struct Fetcher {
     tag: String,
 }
 
+fn string_to_save(inspect_data: &str) -> String {
+    let json_inspect: Value = serde_json::from_str(&inspect_data).expect("parsing json failed.");
+    match json_inspect {
+        Value::Array(items) => {
+            let mut entries = Map::new();
+            items
+                .into_iter()
+                .map(|mut item| {
+                    let moniker = item["moniker"].take();
+                    let payload = item["payload"]["root"].take();
+                    match moniker {
+                        Value::String(moniker) => match (entries.get_mut(&moniker), payload) {
+                            (Some(Value::Object(root_map)), Value::Object(payload)) => {
+                                for (k, v) in payload.into_iter() {
+                                    root_map[&k] = v;
+                                }
+                            }
+                            (_, payload) => {
+                                entries.insert(moniker, payload);
+                            }
+                        },
+                        bad_moniker => {
+                            error!("Moniker {:?} wasn't string", bad_moniker);
+                        }
+                    }
+                })
+                .for_each(drop);
+            Value::Object(entries)
+        }
+        _ => {
+            error!("Inspect wasn't an array: {}", json_inspect);
+            json!("{}")
+        }
+    }
+    .to_string()
+}
+
 impl Fetcher {
     fn create(
         mut source: InspectFetcher,
@@ -116,7 +154,7 @@ impl Fetcher {
             loop {
                 if let Some(_) = receiver.next().await {
                     source.fetch().await.ok().map(|data| {
-                        file_handler::write(&service_name_copy, &tag_copy, &data);
+                        file_handler::write(&service_name_copy, &tag_copy, &string_to_save(&data));
                     });
                 } else {
                     break;
