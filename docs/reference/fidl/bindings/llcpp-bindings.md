@@ -703,10 +703,10 @@ int count = CountPlanets(result.Unwrap()->planets);
 Implementing a server for a FIDL protocol involves providing a concrete
 implementation of `TicTacToe`.
 
-The generated `TicTacToe::Interface` class has pure virtual methods
+The generated `fidl::WireInterface<TicTacToe>` class has pure virtual methods
 corresponding to the method calls defined in the FIDL protocol. Users implement
 a `TicTacToe` server by providing a concrete implementation of
-`TicTacToe::Interface`, which has the following pure virtual methods:
+`fidl::WireInterface<TicTacToe>`, which has the following pure virtual methods:
 
 * `virtual void StartGame(bool start_first, StartGameCompleter::Sync
   _completer)`
@@ -717,17 +717,19 @@ Refer to the [example LLCPP server][llcpp-server-example] for how to bind and
 set up a server implementation.
 
 The LLCPP bindings also provide functions for manually dispatching a message
-given an implementation, `TicTacToe::TryDispatch` and `TicTacToe::Dispatch`:
+given an implementation, `fidl::WireTryDispatch<TicTacToe>` and
+`fidl::WireDispatch<TicTacToe>`:
 
-* `static bool TryDispatch(Interface* impl, fidl_incoming_msg_t* msg,
-  ::fidl::Transaction* txn)`: Attempts to dispatch the incoming message. If
-  there is no matching handler, it returns false, leaving the message and
-  transaction intact. In all other cases, it consumes the message and returns
-  true.
-* `static bool Dispatch(Interface* impl, fidl_incoming_msg_t* msg,
-  ::fidl::Transaction* txn)`: Dispatches the incoming message. If there is no
-  matching handler, it closes all handles in the message and closes the
-  channel with a `ZX_ERR_NOT_SUPPORTED` epitaph, and returns false.
+* `bool fidl::WireTryDispatch<TicTacToe>(fidl::WireInterface<TicTacToe>* impl,
+  fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)`: Attempts to dispatch the
+  incoming message. If there is no matching handler, it returns false, leaving
+  the message and transaction intact. In all other cases, it consumes the
+  message and returns true.
+* `bool fidl::WireDispatch<TicTacToe>(fidl::WireInterface<TicTacToe>* impl,
+  fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)`: Dispatches the incoming
+  message. If there is no matching handler, it closes all handles in the message
+  and closes the channel with a `ZX_ERR_NOT_SUPPORTED` epitaph, and returns
+  false.
 
 #### Completers {#server-completers}
 
@@ -738,10 +740,10 @@ sending a reply, closing the channel with an epitaph, etc, and come in both
 synchronous and asynchronous versions (though the `::Sync` class is provided as
 an argument by default). In this example, this completers are:
 
-* `Interface::TicTacToe::StartGameCompleter::Sync`
-* `Interface::TicTacToe::StartGameCompleter::Async`
-* `Interface::TicTacToe::MakeMoveCompleter::Sync`
-* `Interface::TicTacToe::MakeMoveCompleter::Async`
+* `fidl::WireInterface<TicTacToe>::StartGameCompleter::Sync`
+* `fidl::WireInterface<TicTacToe>::StartGameCompleter::Async`
+* `fidl::WireInterface<TicTacToe>::MakeMoveCompleter::Sync`
+* `fidl::WireInterface<TicTacToe>::MakeMoveCompleter::Async`
 
 All completer classes provide the following methods:
 
