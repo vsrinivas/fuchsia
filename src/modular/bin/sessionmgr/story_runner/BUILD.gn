@@ -4,10 +4,12 @@
 
 import("//src/sys/build/components.gni")
 
+fuchsia_unittest_package("story_runner_unittests") {
+  deps = [ ":story_controller_impl_unittest" ]  # incomplete, for now.
+}
+
 source_set("story_runner") {
   sources = [
-    "annotation_controller_impl.cc",
-    "annotation_controller_impl.h",
     "module_context_impl.cc",
     "module_context_impl.h",
     "module_controller_impl.cc",
@@ -85,26 +87,6 @@ fuchsia_package_with_single_component("dev_story_shell") {
   deps = [ ":dev_story_shell_bin" ]
 }
 
-executable("annotation_controller_impl_unittest") {
-  testonly = true
-
-  sources = [ "annotation_controller_impl_unittest.cc" ]
-
-  deps = [
-    ":story_runner",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/bin/sessionmgr:annotations",
-    "//src/modular/bin/sessionmgr/testing:annotations_matchers",
-    "//src/modular/lib/testing:test_with_session_storage",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-fuchsia_unittest_component("annotation-controller-impl-unittest") {
-  deps = [ ":annotation_controller_impl_unittest" ]
-}
-
 executable("story_controller_impl_unittest") {
   testonly = true
 
@@ -115,16 +97,5 @@ executable("story_controller_impl_unittest") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",
-  ]
-}
-
-fuchsia_unittest_component("story-controller-impl-unittest") {
-  deps = [ ":story_controller_impl_unittest" ]
-}
-
-fuchsia_test_package("story_runner_unittests") {
-  test_components = [
-    ":annotation-controller-impl-unittest",
-    ":story-controller-impl-unittest",
   ]
 }

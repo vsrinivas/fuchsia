@@ -10,6 +10,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/modular/testing/cpp/fake_agent.h>
+#include <lib/modular/testing/cpp/fake_component.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
@@ -246,10 +247,7 @@ TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {
   // Add Event Listeners
   bool called_present_view = false;
   fake_graphical_presenter_->set_on_present_view(
-      [&](fuchsia::element::ViewSpec view_spec,
-          fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller) {
-        called_present_view = true;
-      });
+      [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
   bool called_dismiss = false;
   fake_graphical_presenter_->set_on_dismiss([&] {
@@ -285,7 +283,7 @@ TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {
                   fuchsia::modular::StoryState::STOPPING, fuchsia::modular::StoryState::STOPPED));
 }
 
-TEST_F(SessionmgrIntegrationTest, AnnotationsAreReflectedInAnnotationController) {
+TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
   LaunchTestHarness();
 
   constexpr char kTestAnnotationKey[] = "test_key";
@@ -294,19 +292,26 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsAreReflectedInAnnotationController)
 
   // Add Event Listeners
   bool called_present_view = false;
-  fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller_handle;
-  fake_graphical_presenter_->set_on_present_view(
-      [&](fuchsia::element::ViewSpec view_spec,
-          fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller) {
-        called_present_view = true;
-        ASSERT_TRUE(view_spec.has_annotations());
+  fake_graphical_presenter_->set_on_present_view([&](fuchsia::element::ViewSpec view_spec) {
+    called_present_view = true;
+    ASSERT_TRUE(view_spec.has_annotations());
+
+    auto expected_annotation = fuchsia::element::Annotation{
+        .key = modular::annotations::ToElementAnnotationKey(kTestAnnotationKey),
+        .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationValue)};
+    ASSERT_THAT(view_spec.annotations(), ElementsAre(AnnotationEq(ByRef(expected_annotation))));
+  });
+
+  bool called_on_annotate = false;
+  fake_graphical_presenter_->set_on_update_annotations(
+      [&](const std::vector<fuchsia::element::Annotation>& annotations_to_set,
+          const std::vector<fuchsia::element::AnnotationKey>& annotations_to_delete) {
+        called_on_annotate = true;
 
         auto expected_annotation = fuchsia::element::Annotation{
             .key = modular::annotations::ToElementAnnotationKey(kTestAnnotationKey),
-            .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationValue)};
-        ASSERT_THAT(view_spec.annotations(), ElementsAre(AnnotationEq(ByRef(expected_annotation))));
-
-        annotation_controller_handle = std::move(annotation_controller);
+            .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationUpdateValue)};
+        ASSERT_THAT(annotations_to_set, ElementsAre(AnnotationEq(ByRef(expected_annotation))));
       });
 
   // Create the story and add annotations
@@ -326,8 +331,10 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsAreReflectedInAnnotationController)
 
   LaunchMod();
 
-  // Wait for PresentView to be called
+  // Wait for PresentView to be called and and verify that on_annotate wasn't called since it
+  // should only be called when annotations are updated, not when initally set.
   RunLoopUntil([&] { return called_present_view; });
+  ASSERT_FALSE(called_on_annotate);
 
   // Update Annotations
   std::vector<fuchsia::modular::Annotation> annotation_update;
@@ -335,30 +342,13 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsAreReflectedInAnnotationController)
       .key = kTestAnnotationKey,
       .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(kTestAnnotationUpdateValue))});
-  bool updated_annotations{false};
   story_master->Annotate(std::move(annotation_update),
                          [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
                            ASSERT_FALSE(result.is_err());
-                           updated_annotations = true;
                          });
-  RunLoopUntil([&]() { return updated_annotations; });
 
-  // Get the annotations using the AnnotationController passed to PresentView
-  auto annotation_controller = annotation_controller_handle.Bind();
-  bool got_annotations{false};
-  std::vector<fuchsia::element::Annotation> annotations_to_check;
-  annotation_controller->GetAnnotations(
-      [&](fuchsia::element::AnnotationController_GetAnnotations_Result result) {
-        EXPECT_FALSE(result.is_err());
-        annotations_to_check = std::move(result.response().annotations);
-        got_annotations = true;
-      });
-  RunLoopUntil([&] { return got_annotations; });
+  RunLoopUntil([&] { return called_on_annotate; });
 
-  auto expected_annotation = fuchsia::element::Annotation{
-      .key = modular::annotations::ToElementAnnotationKey(kTestAnnotationKey),
-      .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationUpdateValue)};
-  EXPECT_THAT(annotations_to_check, ElementsAre(AnnotationEq(ByRef(expected_annotation))));
   StopStory();
 }
 
@@ -372,10 +362,7 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
 
   bool called_present_view = false;
   fake_graphical_presenter->set_on_present_view(
-      [&](fuchsia::element::ViewSpec view_spec,
-          fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller) {
-        called_present_view = true;
-      });
+      [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
   builder.InterceptSessionShell(fake_graphical_presenter->BuildInterceptOptions());
   builder.UseSessionShellForStoryShellFactory();
@@ -609,9 +596,10 @@ TEST_F(SessionmgrIntegrationTest, RestartSessionOnSessionAgentCrash) {
   modular_testing::TestHarnessBuilder builder(std::move(spec));
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
-  fake_agent_ = std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
-      .url = kFakeAgentUrl,
-      .sandbox_services = modular_testing::FakeAgent::GetDefaultSandboxServices()});
+  fake_agent_ =
+      std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
+          .url = kFakeAgentUrl,
+          .sandbox_services = modular_testing::FakeAgent::GetDefaultSandboxServices()});
   builder.InterceptComponent(fake_agent_->BuildInterceptOptions());
 
   builder.BuildAndRun(test_harness());
@@ -705,10 +693,7 @@ TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected
 
   bool called_present_view = false;
   fake_graphical_presenter->set_on_present_view(
-      [&](fuchsia::element::ViewSpec view_spec,
-          fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller) {
-        called_present_view = true;
-      });
+      [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
   bool graphical_presenter_connected = false;
   fake_graphical_presenter->set_on_graphical_presenter_connected(

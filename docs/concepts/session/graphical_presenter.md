@@ -20,22 +20,18 @@ Each element renders its graphical representation in what is known as a "view".
 
 A session will request the Element's view, and then pass that view to the
 Graphical Presenter to be displayed, along with optional [Element
-Annotations], used to communicate product-specific
+Annotations][element-annotations], used to communicate product-specific
 presentation properties.
 
 ## PresentView request {#present-view}
 
 The session calls the `GraphicalPresenter` method [`PresentView()`] to display a
-given view. `PresentView()` takes:
-1. A [`ViewSpec`], through which the session conveys where and how it wants the
-view to be displayed in the [`Scenic`] scene
-graph.
-2. An `AnnotationController`, which is a handle to the element's annotations, through
-which the presenter can update the respective element's annotations.
-
-In return, the caller is given a handle to
-the view, as a [`ViewController`]. The caller can destroy
-the view (remove it from the display) by releasing or closing its `ViewController`.
+given view. `PresentView()` takes a [`ViewSpec`], through which the session
+conveys where and how it wants the view to be displayed in the [`Scenic`] scene
+graph. In return, the caller is given a handle to the view, as a
+[`ViewController`]. The caller can request changes to the view via calls to the
+`ViewController`, or destroy the view (remove it from the display) by releasing
+or closing its `ViewController`.
 
 The developer guide includes an [example implementation of presenting an
 element's view][example-present-view].

@@ -35,14 +35,11 @@ protocol GraphicalPresenter {
     /// with an epitaph, `ViewControllerEpitaph`. See [`ViewController`].
     ///
     /// + `view_spec` describes the view to present
-    /// + `annotation_controller` a handle to make changes to the respective element's
-    ///    annotations
-    /// + `view_controller_request` an optional request for a controller for the view
+    /// + `view_controller` an optional request for a controller for the view
     /// * error `PresentViewError.INVALID_ARGS` if `spec.view_holder_token` or
     ///   `spec.view_ref` are missing or invalid
     /// * error `PresentViewError` if the view could not be presented
-    PresentView(ViewSpec view_spec, AnnotationController? annotation_controller,
-                request<ViewController>? view_controller_request)
+    PresentView(ViewSpec view_spec, request<ViewController>? view_controller)
         -> () error PresentViewError;
 };
 
@@ -94,6 +91,15 @@ resource table ViewSpec {
 ///
 /// * `ZX_OK` when the view is dismissed
 protocol ViewController {
+    // Provides control over the view's `annotations`.
+    //
+    // The presenter must observe incoming annotation requests and update
+    // the presentation accordingly.
+    //
+    // When calls to methods that update annotations return, clients can assume
+    // that the annotations have been incorporated into the presentation.
+    compose AnnotationController;
+
     /// Instructs the presenter to dismiss the associated view.
     ///
     /// This call results in the `ViewController` being closed with a

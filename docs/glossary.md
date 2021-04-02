@@ -965,7 +965,8 @@ A [FIDL](#fidl) protocol (see [`fuchsia.element.ViewController`]).
 
 A `ViewController` represents a handle to a remote View that was launched by
 calling `PresentView()` on a [`GraphicalPresenter`](#graphical-presenter). With
-this handle, the caller (often, the session) can control the View's lifecycle. Closing the
+this handle, the caller (often, the session) can request changes--such as to
+update annotations--and control the View's lifecycle. Closing the
 `ViewController` should close the presented view, and allow the system to
 reclaim its resources.
 

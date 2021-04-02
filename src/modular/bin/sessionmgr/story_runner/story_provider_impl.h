@@ -29,7 +29,6 @@
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
-#include "src/modular/bin/sessionmgr/story_runner/annotation_controller_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -241,8 +240,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // The key for this map is the story id
   std::unordered_map<std::string, std::vector<fuchsia::element::ViewControllerPtr>>
       view_controllers_;
-  std::unordered_map<std::string, std::unique_ptr<AnnotationControllerImpl>>
-      annotation_controllers_;
   std::unordered_map<std::string, std::vector<fit::function<void()>>> dismiss_callbacks_;
 
   // Container for arguments to AttachOrPresentView that occurred before a presentation protocol

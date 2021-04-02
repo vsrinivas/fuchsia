@@ -223,6 +223,18 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
         weak_this->OnStoryStorageUpdated(std::move(story_id), story_data);
         return WatchInterest::kContinue;
       });
+  session_storage_->SubscribeAnnotationsUpdated(
+      [weak_this = weak_factory_.GetWeakPtr()](
+          std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations,
+          const std::set<std::string>& annotation_keys_updated,
+          const std::set<std::string>& annotation_keys_deleted) {
+        if (!weak_this) {
+          return WatchInterest::kStop;
+        }
+        weak_this->OnAnnotationsUpdated(std::move(story_id), annotations, annotation_keys_updated,
+                                        annotation_keys_deleted);
+        return WatchInterest::kContinue;
+      });
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
@@ -496,7 +508,6 @@ void StoryProviderImpl::PresentView(std::string story_id,
       // Remove view controllers from the map
       weak_this->view_controllers_.erase(story_id);
       weak_this->dismiss_callbacks_.erase(story_id);
-      weak_this->annotation_controllers_.erase(story_id);
     };
 
     // Check if the story is already deleted, stopped, or stopping.
@@ -522,25 +533,10 @@ void StoryProviderImpl::PresentView(std::string story_id,
     }
   });
 
-  fuchsia::element::AnnotationControllerPtr annotation_controller;
-  annotation_controller.set_error_handler(
-      [weak_this = weak_factory_.GetWeakPtr(), story_id](zx_status_t status) {
-        if (!weak_this) {
-          return;
-        }
-
-        // Remove annotation controller from the map
-        weak_this->annotation_controllers_.erase(story_id);
-      });
-  auto annotation_controller_impl =
-      std::make_unique<AnnotationControllerImpl>(story_id, session_storage_);
-  annotation_controller_impl->Connect(annotation_controller.NewRequest());
-
   graphical_presenter->PresentView(
-      std::move(view_spec), std::move(annotation_controller), view_controller.NewRequest(),
+      std::move(view_spec), view_controller.NewRequest(),
       [weak_this = weak_factory_.GetWeakPtr(), story_id = std::move(story_id),
-       view_controller = std::move(view_controller),
-       annotation_controller_impl = std::move(annotation_controller_impl)](
+       view_controller = std::move(view_controller)](
           const fuchsia::element::GraphicalPresenter_PresentView_Result& result) mutable {
         if (!weak_this) {
           return;
@@ -559,7 +555,6 @@ void StoryProviderImpl::PresentView(std::string story_id,
         }
 
         weak_this->view_controllers_[story_id].push_back(std::move(view_controller));
-        weak_this->annotation_controllers_[story_id] = std::move(annotation_controller_impl);
       });
 }
 
@@ -597,7 +592,42 @@ void StoryProviderImpl::DismissView(std::string story_id, fit::function<void()> 
 
     view_controllers_.erase(story_id);
     dismiss_callbacks_.erase(story_id);
-    annotation_controllers_.erase(story_id);
+  }
+}
+
+void StoryProviderImpl::OnAnnotationsUpdated(
+    std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations,
+    const std::set<std::string>& annotation_keys_updated,
+    const std::set<std::string>& annotation_keys_deleted) {
+  for (const fuchsia::element::ViewControllerPtr& view_controller : view_controllers_[story_id]) {
+    // Convert Modular annotations that were updated to element annotations.
+    std::vector<fuchsia::element::Annotation> element_annotations;
+    for (const auto& modular_annotation : annotations) {
+      if (annotation_keys_updated.find(modular_annotation.key) != annotation_keys_updated.end()) {
+        element_annotations.push_back(annotations::ToElementAnnotation(modular_annotation));
+      }
+    }
+
+    // Convert keys of Modular annotations that were delete to element annotation keys.
+    std::vector<fuchsia::element::AnnotationKey> annotations_to_delete;
+    annotations_to_delete.reserve(annotation_keys_deleted.size());
+    for (const auto& deleted_key : annotation_keys_deleted) {
+      annotations_to_delete.push_back(annotations::ToElementAnnotationKey(deleted_key));
+    }
+
+    // Wait for the annotations to be updated and incorperated into the presentation before
+    // notifying of the change
+    view_controller->UpdateAnnotations(
+        std::move(element_annotations), std::move(annotations_to_delete),
+        [weak_this = weak_factory_.GetWeakPtr(),
+         story_id](const fuchsia::element::AnnotationController_UpdateAnnotations_Result& result) {
+          if (result.is_err()) {
+            FX_LOGS(ERROR) << "Error updating view annotations: UpdateAnnotationsError: "
+                           << static_cast<uint32_t>(result.err());
+            return;
+          }
+          weak_this->NotifyStoryStateChange(story_id);
+        });
   }
 }
 
