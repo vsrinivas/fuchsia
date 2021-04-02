@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Result};
+use fidl_fuchsia_input;
+use fidl_fuchsia_ui_input3;
 
 /// A codepoint returned by [hid_usage_to_code_point] for HID usages that do
 /// not have an associated code point, e.g. Alt.
@@ -146,20 +148,52 @@ pub const QWERTY_MAP: &[Option<(char, Option<char>)>] = &[
     Some(('.', None)),
 ];
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Tracks the current state of "significant" modifier keys.
+///
+/// Currently, a modifier key is "significant" if it affects the mapping of a
+/// Fuchsia key to a key meaning.
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ModifierState {
+    /// Whether the Caps Lock level modifier is active.  Caps Lock level modifier
+    /// may be active even if the key itself is not actuated.
     pub caps_lock: bool,
+    /// Whether the left shift modifier key is active.  Shift keys are normally
+    /// active only while they are actuated (held pressed).
     pub left_shift: bool,
+    /// Same as `left_shift`, but for the right shift key.
     pub right_shift: bool,
 }
 
-impl Default for ModifierState {
-    fn default() -> Self {
-        ModifierState { caps_lock: false, left_shift: false, right_shift: false }
-    }
-}
-
 impl ModifierState {
+    /// Update the modifier tracker state with this event.
+    /// An error is returned in the case the input is completely unexpectedly broken.
+    pub fn update(
+        &mut self,
+        event: fidl_fuchsia_ui_input3::KeyEventType,
+        key: fidl_fuchsia_input::Key,
+    ) {
+        match event {
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed => match key {
+                fidl_fuchsia_input::Key::LeftShift => self.left_shift = true,
+                fidl_fuchsia_input::Key::RightShift => self.right_shift = true,
+                fidl_fuchsia_input::Key::CapsLock => self.caps_lock = !self.caps_lock,
+                _ => {}
+            },
+            fidl_fuchsia_ui_input3::KeyEventType::Released => match key {
+                fidl_fuchsia_input::Key::LeftShift => self.left_shift = false,
+                fidl_fuchsia_input::Key::RightShift => self.right_shift = false,
+                _ => {}
+            },
+            _ => {
+                panic!(
+                    "ModifierState::update: unexpected event: {:?} - this is a programmer error",
+                    event
+                );
+            }
+        }
+    }
+
+    // Returns true if the "shift" level modifier is active.
     pub fn is_shift_active(&self) -> bool {
         self.caps_lock | self.left_shift | self.right_shift
     }
@@ -168,7 +202,7 @@ impl ModifierState {
 /// Converts a HID usage for a key to a Unicode code point where such a code point exists, based on
 /// a US QWERTY keyboard layout.  Returns EMPTY_CODEPOINT if a code point does not exist (e.g. Alt),
 /// and an error in case the mapping somehow fails.
-pub fn hid_usage_to_code_point(hid_usage: u32, modifier_state: ModifierState) -> Result<u32> {
+pub fn hid_usage_to_code_point(hid_usage: u32, modifier_state: &ModifierState) -> Result<u32> {
     if (hid_usage as usize) < QWERTY_MAP.len() {
         if let Some(map_entry) = QWERTY_MAP[hid_usage as usize] {
             if modifier_state.is_shift_active() {
@@ -197,29 +231,124 @@ mod tests {
     fn spotcheck_keymap() -> Result<()> {
         assert_eq!(
             'a' as u32,
-            hid_usage_to_code_point(HID_USAGE_KEY_A, ModifierState { ..Default::default() })?
+            hid_usage_to_code_point(HID_USAGE_KEY_A, &ModifierState { ..Default::default() })?
         );
         assert_eq!(
             'A' as u32,
             hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
-                ModifierState { caps_lock: true, ..Default::default() }
+                &ModifierState { caps_lock: true, ..Default::default() }
             )?
         );
         assert_eq!(
             'A' as u32,
             hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
-                ModifierState { right_shift: true, ..Default::default() }
+                &ModifierState { right_shift: true, ..Default::default() }
             )?
         );
         assert_eq!(
             'A' as u32,
             hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
-                ModifierState { left_shift: true, ..Default::default() }
+                &ModifierState { left_shift: true, ..Default::default() }
             )?
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_modifier_tracker() {
+        let mut modifier_state: ModifierState = Default::default();
+        assert!(!modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+            fidl_fuchsia_input::Key::LeftShift,
+        );
+        assert!(modifier_state.is_shift_active());
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
+            fidl_fuchsia_input::Key::LeftShift,
+        );
+        assert!(!modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+            fidl_fuchsia_input::Key::RightShift,
+        );
+        assert!(modifier_state.is_shift_active());
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
+            fidl_fuchsia_input::Key::RightShift,
+        );
+        assert!(!modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(modifier_state.is_shift_active());
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(modifier_state.is_shift_active());
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(!modifier_state.is_shift_active());
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(!modifier_state.is_shift_active());
+    }
+
+    // CapsLock  ________/""""""""""\___________________
+    // LeftShift ____________/"""""""""""\______________
+    #[test]
+    fn test_interleaved_caps_lock_and_shift() {
+        let mut modifier_state: ModifierState = Default::default();
+        assert!(!modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+            fidl_fuchsia_input::Key::LeftShift,
+        );
+        assert!(modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
+            fidl_fuchsia_input::Key::LeftShift,
+        );
+        // Caps Lock is still active...
+        assert!(modifier_state.is_shift_active());
+
+        // Press and release Caps Lock again.
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(!modifier_state.is_shift_active());
+
+        modifier_state.update(
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
+            fidl_fuchsia_input::Key::CapsLock,
+        );
+        assert!(!modifier_state.is_shift_active());
     }
 }

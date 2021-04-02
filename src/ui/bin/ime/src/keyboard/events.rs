@@ -115,7 +115,7 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
         let hid_usage = input3_key_to_hid_usage(event.key);
         let code_point = keymaps::hid_usage_to_code_point(
             hid_usage,
-            keymaps::ModifierState {
+            &keymaps::ModifierState {
                 caps_lock: caps_lock == ui_input::MODIFIER_CAPS_LOCK,
                 left_shift: left_shift == ui_input::MODIFIER_LEFT_SHIFT,
                 right_shift: right_shift == ui_input::MODIFIER_RIGHT_SHIFT,
