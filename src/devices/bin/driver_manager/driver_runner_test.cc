@@ -475,12 +475,6 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
   driver_host().SetStartHandler([this, &node_controller](fdf::DriverStartArgs start_args,
                                                          auto request) {
     Emplace(std::move(request));
-    auto& entries = start_args.program().entries();
-    EXPECT_EQ(2u, entries.size());
-    EXPECT_EQ("binary", entries[0].key);
-    EXPECT_EQ("driver/root-driver.so", entries[0].value->str());
-    EXPECT_EQ("colocate", entries[1].key);
-    EXPECT_EQ("false", entries[1].value->str());
 
     fdf::NodePtr root_node;
     EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
@@ -490,6 +484,61 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
         std::move(fdf::NodeSymbol().set_name("sym").set_address(0xfeed)));
     args.mutable_symbols()->emplace_back(
         std::move(fdf::NodeSymbol().set_name("sym").set_address(0xf00d)));
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
+  });
+  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", &driver_runner).is_ok());
+
+  loop().RunUntilIdle();
+  ASSERT_FALSE(node_controller.is_bound());
+}
+
+// Start the root driver, and add a child node that has a symbol without an
+// address.
+TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingAddress) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  DriverRunner driver_runner(ConnectToRealm(), std::move(driver_index_client.value()), inspector(),
+                             loop().dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  fdf::NodeControllerPtr node_controller;
+  driver_host().SetStartHandler([this, &node_controller](fdf::DriverStartArgs start_args,
+                                                         auto request) {
+    Emplace(std::move(request));
+
+    fdf::NodePtr root_node;
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("second");
+    args.mutable_symbols()->emplace_back(std::move(fdf::NodeSymbol().set_name("sym")));
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
+  });
+  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", &driver_runner).is_ok());
+
+  loop().RunUntilIdle();
+  ASSERT_FALSE(node_controller.is_bound());
+}
+
+// Start the root driver, and add a child node that has a symbol without a name.
+TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingName) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  DriverRunner driver_runner(ConnectToRealm(), std::move(driver_index_client.value()), inspector(),
+                             loop().dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  fdf::NodeControllerPtr node_controller;
+  driver_host().SetStartHandler([this, &node_controller](fdf::DriverStartArgs start_args,
+                                                         auto request) {
+    Emplace(std::move(request));
+
+    fdf::NodePtr root_node;
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("second");
+    args.mutable_symbols()->emplace_back(std::move(fdf::NodeSymbol().set_address(0xfeed)));
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
   ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", &driver_runner).is_ok());
