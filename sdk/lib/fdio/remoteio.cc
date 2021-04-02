@@ -147,7 +147,7 @@ zx::status<fdio_ptr> fdio::create_with_describe(fidl::ClientEnd<fio::Node> node)
 }
 
 zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) {
-  class EventHandler : public fio::Node::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
    public:
     explicit EventHandler(fidl::ClientEnd<fio::Node> client_end)
         : client_end_(std::move(client_end)) {}

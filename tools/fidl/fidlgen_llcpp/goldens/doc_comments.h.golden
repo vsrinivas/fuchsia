@@ -831,10 +831,6 @@ class Interface final {
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>;
   using OnEventResponse =
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>;
-  using EventHandlerInterface = ::fidl::internal::WireEventHandlerInterface<
-      ::fidl_test_doccomments::Interface>;
-  using SyncEventHandler =
-      ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_doccomments::Interface>|,
@@ -843,8 +839,6 @@ class Interface final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_doccomments::Interface>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>;
 

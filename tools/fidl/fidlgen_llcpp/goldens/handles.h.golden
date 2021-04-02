@@ -312,8 +312,6 @@ class SomeProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_handles::SomeProtocol>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_handles::SomeProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol>;
 

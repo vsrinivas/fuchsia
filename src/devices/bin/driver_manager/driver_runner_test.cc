@@ -42,7 +42,7 @@ class fake_context : public fit::context {
   }
 };
 
-class UnbindWatcher : public frunner::ComponentController::AsyncEventHandler {
+class UnbindWatcher : public fidl::WireAsyncEventHandler<frunner::ComponentController> {
  public:
   UnbindWatcher(size_t index, std::vector<size_t>& indices) : index_(index), indices_(indices) {}
 

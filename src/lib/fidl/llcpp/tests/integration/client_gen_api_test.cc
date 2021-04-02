@@ -118,7 +118,7 @@ TEST(GenAPITestCase, EventManaged) {
   ASSERT_OK(loop.StartThread());
 
   static constexpr char data[] = "OnEvent() managed";
-  class EventHandler : public Example::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<Example> {
    public:
     EventHandler() = default;
 
@@ -160,7 +160,7 @@ TEST(GenAPITestCase, Epitaph) {
 
   sync_completion_t unbound;
 
-  class EventHandler : public Example::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<Example> {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
@@ -237,7 +237,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
   ASSERT_OK(loop.StartThread());
   sync_completion_t done;
 
-  class EventHandler : public Example::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<Example> {
    public:
     EventHandler(sync_completion_t& done) : done_(done) {}
 

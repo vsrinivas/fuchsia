@@ -41,7 +41,7 @@ enum {
   kPortTerminate,
 };
 
-class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
+class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
  public:
   OtStackApp() = default;
 

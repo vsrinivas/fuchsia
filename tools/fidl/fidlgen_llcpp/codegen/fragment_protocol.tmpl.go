@@ -75,11 +75,6 @@ class {{ .Name }} final {
     {{- end }}
   {{- end }}
 
-  {{- if .Events }}
-    using EventHandlerInterface = {{ .WireEventHandlerInterface }};
-    using SyncEventHandler = {{ .WireSyncEventHandler }};
-  {{- end }}
-
 {{- IfdefFuchsia -}}
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
@@ -88,7 +83,6 @@ class {{ .Name }} final {
 
   using SyncClient = fidl::WireSyncClient<{{ . }}>;
 
-  using AsyncEventHandler = {{ .WireAsyncEventHandler }};
   using ClientImpl = {{ .WireClientImpl }};
 
   using Interface = {{ .WireInterface }};

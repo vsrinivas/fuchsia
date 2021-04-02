@@ -459,7 +459,7 @@ called when a FIDL event is received or when the client is unbound. If the
 virtual for a particular event is not overridden, the event is ignored.
 
 ```cpp
-class EventHandler : public TicTacToe::AsyncEventHandler {
+class EventHandler : public fidl::WireAsyncEventHandler<TicTacToe> {
  public:
   EventHandler() = default;
 

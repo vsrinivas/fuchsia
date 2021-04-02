@@ -250,7 +250,7 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
       fdio_service_connect_at(outgoing_dir.get(), path.data(), server_end.release());
   EXPECT_EQ(ZX_OK, status);
 
-  class EventHandler : public ftest::Outgoing::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<ftest::Outgoing> {
    public:
     EventHandler() = default;
 

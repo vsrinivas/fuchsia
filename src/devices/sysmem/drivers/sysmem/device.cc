@@ -516,7 +516,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
           return;
         }
 
-        class EventHandler : public fuchsia_sysmem2::Heap::AsyncEventHandler {
+        class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_sysmem2::Heap> {
          public:
           EventHandler(Device* device,
                        std::unique_ptr<fidl::Client<fuchsia_sysmem2::Heap>> heap_client,

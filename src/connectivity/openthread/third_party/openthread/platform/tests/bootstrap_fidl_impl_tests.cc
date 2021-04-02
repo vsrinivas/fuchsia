@@ -79,7 +79,7 @@ class BootstrapThreadImplTest : public gtest::TestLoopFixture {
   std::unique_ptr<TestableBootstrapThreadImpl> bootstrap_impl_;
 
   // Event handler on client side:
-  class EventHandler : public fuchsia_lowpan_bootstrap::Thread::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_lowpan_bootstrap::Thread> {
    public:
     EventHandler() = default;
 

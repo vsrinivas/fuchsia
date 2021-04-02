@@ -213,7 +213,7 @@ TEST(MagicNumberTest, EventRead) {
   encoded.Write(remote.channel());
   ASSERT_TRUE(encoded.ok());
 
-  class EventHandler : public test::Frobinator::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<test::Frobinator> {
    public:
     EventHandler() = default;
 
@@ -246,7 +246,7 @@ TEST(EventSenderTest, SendEvent) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  class EventHandler : public test::Frobinator::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<test::Frobinator> {
    public:
     EventHandler(async::Loop& loop) : loop_(loop) {}
 

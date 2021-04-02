@@ -29,93 +29,98 @@ namespace {
 
 class TestProtocol {
   TestProtocol() = delete;
-
- public:
-  // Generated code will define an AsyncEventHandler class.
-  class AsyncEventHandler {
-   public:
-    AsyncEventHandler() = default;
-    virtual ~AsyncEventHandler() = default;
-
-    virtual void Unbound(::fidl::UnbindInfo info) {}
-  };
-
-  class ClientImpl final : private internal::ClientBase {
-   public:
-    void PrepareAsyncTxn(internal::ResponseContext* context) {
-      internal::ClientBase::PrepareAsyncTxn(context);
-      std::unique_lock lock(lock_);
-      EXPECT_FALSE(txids_.count(context->Txid()));
-      txids_.insert(context->Txid());
-    }
-
-    void ForgetAsyncTxn(internal::ResponseContext* context) {
-      {
-        std::unique_lock lock(lock_);
-        txids_.erase(context->Txid());
-      }
-      internal::ClientBase::ForgetAsyncTxn(context);
-    }
-
-    void EraseTxid(internal::ResponseContext* context) {
-      {
-        std::unique_lock lock(lock_);
-        txids_.erase(context->Txid());
-      }
-    }
-
-    std::shared_ptr<internal::ChannelRef> GetChannel() {
-      return internal::ClientBase::GetChannel();
-    }
-
-    uint32_t GetEventCount() {
-      std::unique_lock lock(lock_);
-      return event_count_;
-    }
-
-    bool IsPending(zx_txid_t txid) {
-      std::unique_lock lock(lock_);
-      return txids_.count(txid);
-    }
-
-    size_t GetTxidCount() {
-      std::unique_lock lock(lock_);
-      EXPECT_EQ(internal::ClientBase::GetTransactionCount(), txids_.size());
-      return txids_.size();
-    }
-
-    AsyncEventHandler* event_handler() const { return event_handler_.get(); }
-
-   private:
-    friend class Client<TestProtocol>;
-    friend class internal::ControlBlock<TestProtocol>;
-
-    explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
-        : event_handler_(std::move(event_handler)) {}
-
-    // For each event, increment the event count.
-    std::optional<UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) override {
-      event_count_++;
-      return {};
-    }
-
-    std::shared_ptr<AsyncEventHandler> event_handler_;
-    std::mutex lock_;
-    std::unordered_set<zx_txid_t> txids_;
-    uint32_t event_count_ = 0;
-  };
 };
+}  // namespace
+}  // namespace fidl
+template <>
+class ::fidl::WireAsyncEventHandler<fidl::TestProtocol> {
+ public:
+  WireAsyncEventHandler() = default;
+  virtual ~WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
+
+template <>
+class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : private fidl::internal::ClientBase {
+ public:
+  void PrepareAsyncTxn(internal::ResponseContext* context) {
+    internal::ClientBase::PrepareAsyncTxn(context);
+    std::unique_lock lock(lock_);
+    EXPECT_FALSE(txids_.count(context->Txid()));
+    txids_.insert(context->Txid());
+  }
+
+  void ForgetAsyncTxn(internal::ResponseContext* context) {
+    {
+      std::unique_lock lock(lock_);
+      txids_.erase(context->Txid());
+    }
+    internal::ClientBase::ForgetAsyncTxn(context);
+  }
+
+  void EraseTxid(internal::ResponseContext* context) {
+    {
+      std::unique_lock lock(lock_);
+      txids_.erase(context->Txid());
+    }
+  }
+
+  std::shared_ptr<internal::ChannelRef> GetChannel() { return internal::ClientBase::GetChannel(); }
+
+  uint32_t GetEventCount() {
+    std::unique_lock lock(lock_);
+    return event_count_;
+  }
+
+  bool IsPending(zx_txid_t txid) {
+    std::unique_lock lock(lock_);
+    return txids_.count(txid);
+  }
+
+  size_t GetTxidCount() {
+    std::unique_lock lock(lock_);
+    EXPECT_EQ(internal::ClientBase::GetTransactionCount(), txids_.size());
+    return txids_.size();
+  }
+
+  fidl::WireAsyncEventHandler<fidl::TestProtocol>* event_handler() const {
+    return event_handler_.get();
+  }
+
+ private:
+  friend class Client<TestProtocol>;
+  friend class internal::ControlBlock<TestProtocol>;
+
+  explicit WireClientImpl(
+      std::shared_ptr<fidl::WireAsyncEventHandler<fidl::TestProtocol>> event_handler)
+      : event_handler_(std::move(event_handler)) {}
+
+  // For each event, increment the event count.
+  std::optional<UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) override {
+    event_count_++;
+    return {};
+  }
+
+  std::shared_ptr<fidl::WireAsyncEventHandler<fidl::TestProtocol>> event_handler_;
+  std::mutex lock_;
+  std::unordered_set<zx_txid_t> txids_;
+  uint32_t event_count_ = 0;
+};
+
+namespace fidl {
+namespace {
 
 class TestResponseContext : public internal::ResponseContext {
  public:
-  explicit TestResponseContext(TestProtocol::ClientImpl* client)
+  explicit TestResponseContext(fidl::internal::WireClientImpl<TestProtocol>* client)
       : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0),
         client_(client) {}
   void OnReply(uint8_t* reply) override { client_->EraseTxid(this); }
   void OnError() override {}
 
  private:
-  TestProtocol::ClientImpl* client_;
+  fidl::internal::WireClientImpl<TestProtocol>* client_;
 };
 
 TEST(ClientBindingTestCase, AsyncTxn) {
@@ -129,7 +134,7 @@ TEST(ClientBindingTestCase, AsyncTxn) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
         : unbound_(unbound), client_(client) {}
@@ -174,7 +179,7 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
         : unbound_(unbound), client_(client) {}
@@ -247,7 +252,7 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
         : unbound_(unbound), client_(client) {}
@@ -288,7 +293,7 @@ TEST(ClientBindingTestCase, Events) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
         : unbound_(unbound), client_(client) {}
@@ -335,7 +340,7 @@ TEST(ClientBindingTestCase, Unbind) {
 
   sync_completion_t unbound;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
@@ -367,7 +372,7 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
 
   sync_completion_t unbound;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
@@ -399,7 +404,7 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
 
   sync_completion_t unbound;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
@@ -439,7 +444,7 @@ TEST(ClientBindingTestCase, Clone) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
         : unbound_(unbound), client_(client) {}
@@ -495,7 +500,7 @@ TEST(ClientBindingTestCase, CloneCanExtendClientLifetime) {
   ASSERT_OK(endpoints.status_value());
 
   bool did_unbind = false;
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(bool& did_unbind) : did_unbind_(did_unbind) {}
 
@@ -512,7 +517,7 @@ TEST(ClientBindingTestCase, CloneCanExtendClientLifetime) {
   };
 
   {
-    TestProtocol::ClientImpl* client_ptr = nullptr;
+    fidl::internal::WireClientImpl<TestProtocol>* client_ptr = nullptr;
     fidl::Client<TestProtocol> outer_clone;
     ASSERT_NULL(outer_clone.get());
 
@@ -563,7 +568,7 @@ TEST(ClientBindingTestCase, CloneSupportsExplicitUnbind) {
   ASSERT_OK(endpoints.status_value());
 
   bool did_unbind = false;
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(bool& did_unbind) : did_unbind_(did_unbind) {}
 
@@ -604,7 +609,7 @@ TEST(ClientBindingTestCase, CloneSupportsWaitForChannel) {
   ASSERT_OK(endpoints.status_value());
 
   sync_completion_t did_unbind;
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(sync_completion_t& did_unbind) : did_unbind_(did_unbind) {}
 
@@ -711,7 +716,7 @@ TEST(ClientBindingTestCase, Epitaph) {
 
   sync_completion_t unbound;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
@@ -743,7 +748,7 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
 
   sync_completion_t unbound;
 
-  class EventHandler : public TestProtocol::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 

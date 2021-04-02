@@ -164,8 +164,6 @@ class OnlyLibfuzzerAndDeps final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
-  using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
@@ -790,8 +788,6 @@ class OnlyCppAndDeps final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 
-  using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
-      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 

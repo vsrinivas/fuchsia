@@ -45,7 +45,7 @@ static uint64_t SysmemModifierToDrmModifier(uint64_t modifier) {
 }
 
 // Use async fidl to receive epitaph on buffer collection.
-class AsyncHandler : public fuchsia_sysmem::BufferCollection::AsyncEventHandler {
+class AsyncHandler : public fidl::WireAsyncEventHandler<fuchsia_sysmem::BufferCollection> {
  public:
   AsyncHandler() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 

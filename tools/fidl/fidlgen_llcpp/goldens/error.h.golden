@@ -302,8 +302,6 @@ class Example final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_error::Example>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_error::Example>;
 

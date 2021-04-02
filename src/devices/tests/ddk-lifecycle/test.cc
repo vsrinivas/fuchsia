@@ -71,7 +71,7 @@ class LifecycleTest : public zxtest::Test {
 };
 
 void LifecycleTest::WaitPreRelease(uint64_t child_id) {
-  class EventHandler : public Lifecycle::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<Lifecycle> {
    public:
     EventHandler() = default;
 

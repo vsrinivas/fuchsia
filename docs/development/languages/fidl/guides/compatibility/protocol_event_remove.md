@@ -79,12 +79,12 @@ void sendEvents(fidl::Binding<fidl_test::Example>* server) {
 ### LLCPP {#llcpp-init}
 
 ```cpp
-class AsyncEventHandler : public fidl_test::Example::AsyncEventHandler {
+class AsyncEventHandler : public fidl::WireAsyncEventHandler<fidl_test::Example> {
   void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
   void OnOldEvent(fidl_test::Example::OnOldEventResponse* event) override {}
 };
 
-class SyncEventHandler : public fidl_test::Example::SyncEventHandler {
+class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
   void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
   void OnOldEvent(fidl_test::Example::OnOldEventResponse* event) override {}
 };
@@ -197,12 +197,12 @@ async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Erro
 - Remove any uses of the event being removed.
 
 ```diff
-  class AsyncEventHandler : public fidl_test::Example::AsyncEventHandler {
+  class AsyncEventHandler : public fidl::WireAsyncEventHandler<fidl_test::Example> {
     void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
 -   void OnOldEvent(fidl_test::Example::OnOldEventResponse* event) override {}
   };
   
-  class SyncEventHandler : public fidl_test::Example::SyncEventHandler {
+  class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
     void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
 -   void OnOldEvent(fidl_test::Example::OnOldEventResponse* event) override {}
   };

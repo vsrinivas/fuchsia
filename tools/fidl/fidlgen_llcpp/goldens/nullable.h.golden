@@ -888,8 +888,6 @@ class SimpleProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_nullable::SimpleProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>;
 

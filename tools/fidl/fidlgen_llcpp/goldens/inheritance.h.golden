@@ -64,8 +64,6 @@ class super final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::super>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::super>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super>;
 
@@ -657,8 +655,6 @@ class sub final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::sub>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::sub>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>;
 

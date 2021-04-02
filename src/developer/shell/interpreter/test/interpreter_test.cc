@@ -105,7 +105,7 @@ void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>
 }
 
 void InterpreterTest::Run(FinishAction action) {
-  class EventHandler : public fuchsia_shell::Shell::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<fuchsia_shell::Shell> {
    public:
     EventHandler(InterpreterTest* test, FinishAction action) : test_(test), action_(action) {}
 

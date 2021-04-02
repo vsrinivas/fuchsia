@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
   ZX_ASSERT(client_end.status_value() == ZX_OK);
 
   // Define the event handler for the client. The OnString event handler prints the event.
-  class EventHandler : public fuchsia_examples::Echo::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_examples::Echo> {
    public:
     explicit EventHandler(async::Loop& loop) : loop_(loop) {}
 
@@ -46,7 +46,8 @@ int main(int argc, const char** argv) {
   };
 
   // Create a client to the Echo protocol.
-  fidl::Client client(std::move(*client_end), dispatcher, std::make_shared<EventHandler>(loop));
+  fidl::Client<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher,
+                                              std::make_shared<EventHandler>(loop));
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
   auto result_async =

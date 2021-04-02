@@ -7,6 +7,7 @@
 
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 
 namespace fidl {
 
@@ -21,9 +22,10 @@ namespace internal {
 // for its unbinding via RAII.
 template <typename Protocol>
 class ControlBlock final {
+  using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
+
  public:
-  explicit ControlBlock(std::shared_ptr<typename Protocol::ClientImpl> client)
-      : client_(std::move(client)) {}
+  explicit ControlBlock(std::shared_ptr<ClientImpl> client) : client_(std::move(client)) {}
 
   // Triggers unbinding, which will cause any strong references to the
   // |ClientBase| to be released.
@@ -34,7 +36,7 @@ class ControlBlock final {
   }
 
  private:
-  std::shared_ptr<typename Protocol::ClientImpl> client_;
+  std::shared_ptr<ClientImpl> client_;
 };
 
 }  // namespace internal
@@ -83,6 +85,8 @@ class ControlBlock final {
 // wait for asynchronous calls, or panic when there are in-flight asynchronous calls.
 template <typename Protocol>
 class Client final {
+  using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
+
  public:
   // Create an uninitialized Client.
   //
@@ -94,8 +98,9 @@ class Client final {
 
   // Create an initialized Client which manages the binding of the client end of
   // a channel to a dispatcher.
+  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   Client(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
-         std::shared_ptr<typename Protocol::AsyncEventHandler> event_handler = nullptr) {
+         std::shared_ptr<AsyncEventHandler> event_handler = nullptr) {
     auto status = Bind(std::move(client_end), dispatcher, std::move(event_handler));
     ZX_ASSERT_MSG(status == ZX_OK, "%s: Failed Bind() with status %d.", __func__, status);
   }
@@ -130,7 +135,7 @@ class Client final {
   // Re-binding a |Client| to a different channel is equivalent to replacing
   // the |Client| with a new instance.
   zx_status_t Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
-                   std::shared_ptr<typename Protocol::AsyncEventHandler> event_handler = nullptr) {
+                   std::shared_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler = nullptr) {
     if (client_) {
       // This way, the current |Client| will effectively start from a clean slate.
       // If this |Client| were the only instance for that particular channel,
@@ -140,7 +145,7 @@ class Client final {
     }
 
     // Cannot use |std::make_shared| because the |ClientImpl| constructor is private.
-    client_.reset(new typename Protocol::ClientImpl(event_handler));
+    client_.reset(new ClientImpl(event_handler));
     zx_status_t status = client_->Bind(std::reinterpret_pointer_cast<internal::ClientBase>(client_),
                                        client_end.TakeChannel(), dispatcher,
                                        [event_handler](UnbindInfo unbind_info) {
@@ -153,13 +158,13 @@ class Client final {
   }
 
   // Begins to unbind the channel from the dispatcher. May be called from any
-  // thread. If provided, the |Protocol::AsyncEventHandler::Unbound| is invoked
+  // thread. If provided, the |fidl::WireAsyncEventHandler<Protocol>::Unbound| is invoked
   // asynchronously on a dispatcher thread.
   //
   // NOTE: |Bind| must have been called before this.
   //
   // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe
-  // to wait on the |Protocol::AsyncEventHandler::Unbound| from a dispatcher
+  // to wait on the |fidl::WireAsyncEventHandler<Protocol>::Unbound| from a dispatcher
   // thread, as that will likely deadlock.
   //
   // Unbinding can happen automatically via RAII. |Client|s will release
@@ -192,17 +197,17 @@ class Client final {
   // Return the Client interface for making outgoing FIDL calls. If the client
   // has been unbound, calls on the interface return error with status
   // |ZX_ERR_CANCELED|.
-  typename Protocol::ClientImpl* get() const { return client_.get(); }
-  typename Protocol::ClientImpl* operator->() const { return get(); }
-  typename Protocol::ClientImpl& operator*() const { return *get(); }
+  ClientImpl* get() const { return client_.get(); }
+  ClientImpl* operator->() const { return get(); }
+  ClientImpl& operator*() const { return *get(); }
 
  private:
   // Used to clone a |Client|.
-  Client(std::shared_ptr<typename Protocol::ClientImpl> client,
+  Client(std::shared_ptr<ClientImpl> client,
          std::shared_ptr<internal::ControlBlock<Protocol>> control)
       : client_(std::move(client)), control_(std::move(control)) {}
 
-  std::shared_ptr<typename Protocol::ClientImpl> client_;
+  std::shared_ptr<ClientImpl> client_;
   std::shared_ptr<internal::ControlBlock<Protocol>> control_;
 };
 

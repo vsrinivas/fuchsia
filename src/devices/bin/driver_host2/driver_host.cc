@@ -20,7 +20,7 @@ namespace frunner = fuchsia_component_runner;
 
 namespace {
 
-class FileEventHandler : public fio::File::AsyncEventHandler {
+class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
  public:
   explicit FileEventHandler(const std::string& binary_value) : binary_value_(binary_value) {}
 

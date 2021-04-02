@@ -3154,8 +3154,6 @@ class TestProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_union::TestProtocol>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>;
 

@@ -34,7 +34,7 @@ void ExceptionHandler::SetUpClient() {
     return;
   }
 
-  class EventHandler : public fuchsia_exception::Handler::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_exception::Handler> {
    public:
     EventHandler(ExceptionHandler* handler) : handler_(handler) {}
 

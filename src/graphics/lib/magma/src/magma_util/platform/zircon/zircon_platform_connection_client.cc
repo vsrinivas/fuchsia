@@ -74,7 +74,7 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
       return DRET(MAGMA_STATUS_CONNECTION_LOST);
     }
 
-    class EventHandler : public fuchsia_gpu_magma::PerformanceCounterEvents::SyncEventHandler {
+    class EventHandler : public fidl::WireSyncEventHandler<fuchsia_gpu_magma::PerformanceCounterEvents> {
      public:
       EventHandler(uint32_t* trigger_id_out, uint64_t* buffer_id_out, uint32_t* buffer_offset_out,
                    uint64_t* time_out, uint32_t* result_flags_out)
@@ -410,7 +410,7 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
     if ((pending & ZX_CHANNEL_READABLE) == 0)
       return;
 
-    class EventHandler : public fuchsia_gpu_magma::Primary::SyncEventHandler {
+    class EventHandler : public fidl::WireSyncEventHandler<fuchsia_gpu_magma::Primary> {
      public:
       explicit EventHandler(PrimaryWrapper* primary_wrapper) : primary_wrapper_(primary_wrapper) {}
 

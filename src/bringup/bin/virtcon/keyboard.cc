@@ -226,7 +226,7 @@ zx_status_t Keyboard::StartReading() {
     return result.status();
   }
 
-  class EventHandler : public fuchsia_input_report::InputReportsReader::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_input_report::InputReportsReader> {
    public:
     explicit EventHandler(Keyboard* keyboard) : keyboard_(keyboard) {}
 

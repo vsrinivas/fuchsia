@@ -224,7 +224,7 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   // Helper method to monitor the OnOpen event, used by the tests below
   auto expect_on_open = [](zx::unowned_channel channel,
                            fit::function<void(fio::wire::NodeInfo)> cb) {
-    class EventHandler : public fio::Node::SyncEventHandler {
+    class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
      public:
       explicit EventHandler(fit::function<void(fio::wire::NodeInfo)>& cb) : cb_(cb) {}
 

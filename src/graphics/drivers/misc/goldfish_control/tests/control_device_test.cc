@@ -205,7 +205,7 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
   }
 
  private:
-  class SysmemHeapEventHandler : public fuchsia_sysmem2::Heap::SyncEventHandler {
+  class SysmemHeapEventHandler : public fidl::WireSyncEventHandler<fuchsia_sysmem2::Heap> {
    public:
     SysmemHeapEventHandler() = default;
     void OnRegister(fuchsia_sysmem2::Heap::OnRegisterResponse* message) override {

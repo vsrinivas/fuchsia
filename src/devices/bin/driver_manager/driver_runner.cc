@@ -80,7 +80,7 @@ std::string DriverCollection(std::string_view url) {
 
 }  // namespace
 
-class EventHandler : public fdf::DriverHost::AsyncEventHandler {
+class EventHandler : public fidl::WireAsyncEventHandler<fdf::DriverHost> {
  public:
   EventHandler(DriverHostComponent* component,
                fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)

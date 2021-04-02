@@ -115,7 +115,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  class EventHandler : public fuchsia_device_manager::DeviceController::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_device_manager::DeviceController> {
    public:
     explicit EventHandler(DeviceControllerConnectionTest* connection) : connection_(connection) {}
 

@@ -57,7 +57,7 @@ TEST(ServerEnd, Close) {
   auto endpoints = fidl::CreateEndpoints<llcpp_test::Frobinator>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
-  class EventHandler : public llcpp_test::Frobinator::AsyncEventHandler {
+  class EventHandler : public fidl::WireAsyncEventHandler<llcpp_test::Frobinator> {
    public:
     EventHandler() = default;
 

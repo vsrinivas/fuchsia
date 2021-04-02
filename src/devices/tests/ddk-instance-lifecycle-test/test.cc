@@ -65,7 +65,7 @@ class InstanceLifecycleTest : public zxtest::Test {
 
 void InstanceLifecycleTest::WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifecycle_client,
                                          Event expected_event) {
-  class EventHandler : public Lifecycle::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<Lifecycle> {
    public:
     explicit EventHandler(Event expected_event) : expected_event_(expected_event) {}
 

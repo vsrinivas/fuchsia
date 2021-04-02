@@ -6,12 +6,12 @@
 namespace fidl_test = fidl_test_protocoleventremove;
 
 // [START contents]
-class AsyncEventHandler : public fidl_test::Example::AsyncEventHandler {
+class AsyncEventHandler : public fidl::WireAsyncEventHandler<fidl_test::Example> {
   void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
   void OnOldEvent(fidl_test::Example::OnOldEventResponse* event) override {}
 };
 
-class SyncEventHandler : public fidl_test::Example::SyncEventHandler {
+class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
   void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
   void OnOldEvent(fidl_test::Example::OnOldEventResponse* event) override {}
 };

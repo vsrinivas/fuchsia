@@ -132,7 +132,7 @@ static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
 //
 // This is useful for synchronously awaiting the result of an `Open` request.
 static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
-  class EventHandler : public fuchsia_io::Node::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<fuchsia_io::Node> {
    public:
     EventHandler() = default;
 

@@ -105,8 +105,6 @@ class Parent final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Parent>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>;
 
@@ -1682,8 +1680,6 @@ class Child final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Child>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Child>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child>;
 

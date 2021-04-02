@@ -561,7 +561,7 @@ void CallerAllocateOneWayDirents() {
 
 template <typename DirentArray>
 void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dirents) {
-  class EventHandler : public gen::DirEntTestInterface::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<gen::DirEntTestInterface> {
    public:
     explicit EventHandler(const DirentArray& expected_dirents)
         : expected_dirents_(expected_dirents) {}

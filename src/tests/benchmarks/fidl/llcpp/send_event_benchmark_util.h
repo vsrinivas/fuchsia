@@ -29,7 +29,7 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   auto endpoints = fidl::CreateEndpoints<ProtocolType>();
   ZX_ASSERT(endpoints.is_ok());
 
-  class EventHandler : public ProtocolType::SyncEventHandler {
+  class EventHandler : public fidl::WireSyncEventHandler<ProtocolType> {
    public:
     EventHandler(perftest::RepeatState* state, bool& ready, std::mutex& mu,
                  std::condition_variable& cond)

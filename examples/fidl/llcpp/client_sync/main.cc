@@ -39,7 +39,7 @@ int main(int argc, const char** argv) {
     // Check that the request was sent successfully.
     ZX_ASSERT(result.ok());
 
-    class EventHandler : public fuchsia_examples::Echo::SyncEventHandler {
+    class EventHandler : public fidl::WireSyncEventHandler<fuchsia_examples::Echo> {
      public:
       EventHandler() = default;
 

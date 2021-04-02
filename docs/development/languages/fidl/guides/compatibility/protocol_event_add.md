@@ -68,11 +68,11 @@ void sendEvents(fidl::Binding<fidl_test::Example>* server) { server->events().On
 ### LLCPP {#llcpp-init}
 
 ```cpp
-class AsyncEventHandler : public fidl_test::Example::AsyncEventHandler {
+class AsyncEventHandler : public fidl::WireAsyncEventHandler<fidl_test::Example> {
   void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
 };
 
-class SyncEventHandler : public fidl_test::Example::SyncEventHandler {
+class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
   void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
 };
 
@@ -209,12 +209,12 @@ async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Erro
 - You can start receiving the new event in any clients.
 
 ```diff
-  class AsyncEventHandler : public fidl_test::Example::AsyncEventHandler {
+  class AsyncEventHandler : public fidl::WireAsyncEventHandler<fidl_test::Example> {
     void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
 +   void OnNewEvent(fidl_test::Example::OnNewEventResponse* event) override {}
   };
   
-  class SyncEventHandler : public fidl_test::Example::SyncEventHandler {
+  class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
     void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
 +   void OnNewEvent(fidl_test::Example::OnNewEventResponse* event) override {}
   };

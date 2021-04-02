@@ -76,8 +76,6 @@ class SecondProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_service::SecondProtocol>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>;
 
@@ -412,8 +410,6 @@ class FirstProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_service::FirstProtocol>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol>;
 

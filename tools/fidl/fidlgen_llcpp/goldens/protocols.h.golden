@@ -918,10 +918,6 @@ class Transitional final {
       ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>;
   using EventResponse =
       ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>;
-  using EventHandlerInterface = ::fidl::internal::WireEventHandlerInterface<
-      ::fidl_test_protocols::Transitional>;
-  using SyncEventHandler =
-      ::fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -932,8 +928,6 @@ class Transitional final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocols::Transitional>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>;
 
@@ -1944,10 +1938,6 @@ class ChannelProtocol final {
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>;
   using MutateSocketRequest =
       ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>;
-  using EventHandlerInterface = ::fidl::internal::WireEventHandlerInterface<
-      ::fidl_test_protocols::ChannelProtocol>;
-  using SyncEventHandler =
-      ::fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -1959,8 +1949,6 @@ class ChannelProtocol final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>;
 
@@ -4001,10 +3989,6 @@ class WithAndWithoutRequestResponse final {
       ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
   using OnWithResponseResponse = ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>;
-  using EventHandlerInterface = ::fidl::internal::WireEventHandlerInterface<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-  using SyncEventHandler = ::fidl::WireSyncEventHandler<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -4016,8 +4000,6 @@ class WithAndWithoutRequestResponse final {
   using SyncClient = fidl::WireSyncClient<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
-  using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
@@ -6960,8 +6942,6 @@ class WithErrorSyntax final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax>;
 
-  using AsyncEventHandler =
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>;
 
