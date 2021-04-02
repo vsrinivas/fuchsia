@@ -56,12 +56,11 @@ impl Router {
         Ok(())
     }
 
-    /// Normalize shortcuts for input2 and input3 APIs.
+    /// Normalize shortcuts for input3 APIs.
     /// Those are safe to compose since they operate of different set of
     /// shortcut parameters.
     async fn normalize_shortcut(&self, mut shortcut: &mut ui_shortcut::Shortcut) {
         self.environment.registry_service.normalize_shortcut(&mut shortcut);
-        self.environment.input2_service.lock().await.normalize_shortcut(&mut shortcut);
     }
 
     /// Handles requests to `fuchsia.ui.shortcut.Registry` interface.
@@ -112,18 +111,9 @@ impl Router {
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await.context("error running manager server")? {
             match req {
-                // Handle input2 key events for input2 shortcuts.
-                ui_shortcut::ManagerRequest::HandleKeyEvent { event, responder } => {
-                    let was_handled = {
-                        let mut input2_service = self.environment.input2_service.lock().await;
-                        input2_service
-                            .handle_key_event(event)
-                            .await
-                            .context("handle input2 event")?
-                    };
-                    responder
-                        .send(was_handled)
-                        .context("Error sending response for HandleKeyEvent")?;
+                ui_shortcut::ManagerRequest::HandleKeyEvent { .. } => {
+                    // TODO(fxb/47689): Remove.
+                    fx_log_err!("HandleKeyEvent deprecated!");
                 }
                 // Handle input3 key events for input3 shortcuts.
                 ui_shortcut::ManagerRequest::HandleKey3Event { event, responder } => {

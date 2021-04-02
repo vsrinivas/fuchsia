@@ -10,13 +10,11 @@ use {
 };
 
 use crate::{
-    input2_service::Input2Service,
     registry::RegistryStore,
     router::Router,
     service::{ManagerService, RegistryService},
 };
 
-mod input2_service;
 mod registry;
 mod router;
 mod service;
@@ -26,7 +24,6 @@ const SERVER_THREADS: usize = 2;
 /// Environment consists of FIDL services handlers and shortcut storage.
 pub struct Environment {
     store: RegistryStore,
-    input2_service: Arc<Mutex<Input2Service>>,
     registry_service: RegistryService,
     manager_service: Arc<Mutex<ManagerService>>,
 }
@@ -36,7 +33,6 @@ impl Environment {
         let store = RegistryStore::new();
         Environment {
             store: store.clone(),
-            input2_service: Arc::new(Mutex::new(Input2Service::new(store.clone()))),
             registry_service: RegistryService::new(),
             manager_service: Arc::new(Mutex::new(ManagerService::new(store))),
         }

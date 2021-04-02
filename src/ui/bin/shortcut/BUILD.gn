@@ -33,7 +33,6 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus-rustc",
-    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
@@ -50,7 +49,6 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/input2_service.rs",
     "src/main.rs",
     "src/registry.rs",
     "src/router.rs",
@@ -75,7 +73,6 @@ rustc_test("shortcut_integration_test_bin") {
     ":bin",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus-rustc",
-    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
@@ -94,7 +91,6 @@ rustc_test("shortcut_integration_test_bin") {
   sources = [
     "tests/test_helpers.rs",
     "tests/tests.rs",
-    "tests/v2_tests.rs",
   ]
 }
 

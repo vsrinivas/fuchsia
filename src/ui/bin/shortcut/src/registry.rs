@@ -66,7 +66,9 @@ impl RegistryStore {
     /// Returned reference contains `MutexGuard`, and as a result it prevents
     /// other uses of client registry store (e.g. adding new, removing) until goes
     /// out of scope.
-    pub async fn get_registries<'a>(&'a self) -> LockedRegistries<'a> {
+    /// Is only used for testing.
+    #[cfg(test)]
+    async fn get_registries<'a>(&'a self) -> LockedRegistries<'a> {
         LockedRegistries(MutexGuard::map(self.inner.lock().await, |r| &mut r.registries))
     }
 
@@ -217,12 +219,6 @@ mod tests {
     async fn shortcut_populates_keys_hash() {
         let fidl_shortcut = ui_shortcut::Shortcut {
             keys_required: Some(vec![input::Key::A, input::Key::B]),
-            id: None,
-            modifiers: None,
-            key: None,
-            use_priority: None,
-            trigger: None,
-            key3: None,
             ..ui_shortcut::Shortcut::EMPTY
         };
         let shortcut = Shortcut::new(fidl_shortcut);

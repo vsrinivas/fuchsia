@@ -17,7 +17,6 @@ use {
 use crate::test_helpers::{ManagerService, RegistryService, ShortcutBuilder};
 
 mod test_helpers;
-mod v2_tests;
 
 static TEST_SHORTCUT_ID: u32 = 123;
 static TEST_SHORTCUT_2_ID: u32 = 321;

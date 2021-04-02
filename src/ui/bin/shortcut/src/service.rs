@@ -248,24 +248,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn normalize_shortcut() {
-        let mut shortcut = ui_shortcut::Shortcut {
-            keys_required: None,
-            id: None,
-            modifiers: None,
-            key: None,
-            use_priority: None,
-            trigger: None,
-            key3: None,
-            ..ui_shortcut::Shortcut::EMPTY
-        };
+        let mut shortcut = ui_shortcut::Shortcut { ..ui_shortcut::Shortcut::EMPTY };
         let normalized_shortcut = ui_shortcut::Shortcut {
-            keys_required: None,
-            id: None,
-            modifiers: None,
-            key: None,
             use_priority: Some(false),
             trigger: Some(ui_shortcut::Trigger::KeyPressed),
-            key3: None,
             ..ui_shortcut::Shortcut::EMPTY
         };
         let registry_service = RegistryService::new();

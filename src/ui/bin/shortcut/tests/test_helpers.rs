@@ -4,13 +4,11 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::client::QueryResponseFut,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_focus as ui_focus,
-    fidl_fuchsia_ui_input2 as ui_input2, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_shortcut as ui_shortcut, fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_shortcut as ui_shortcut,
+    fidl_fuchsia_ui_views as ui_views,
     fuchsia_component::client::connect_to_service,
     fuchsia_scenic as scenic,
-    futures::StreamExt,
     std::sync::Once,
 };
 
@@ -24,26 +22,13 @@ pub struct ShortcutBuilder {
 #[allow(dead_code)]
 impl ShortcutBuilder {
     pub fn new() -> Self {
-        Self {
-            shortcut: ui_shortcut::Shortcut {
-                id: None,
-                modifiers: None,
-                key: None,
-                use_priority: None,
-                trigger: None,
-                key3: None,
-                keys_required: None,
-                ..ui_shortcut::Shortcut::EMPTY
-            },
-        }
+        Self { shortcut: ui_shortcut::Shortcut { ..ui_shortcut::Shortcut::EMPTY } }
     }
 
     /// Creates a new instance of fuchsia.ui.shortcut.Shortcut.
     pub fn build(&self) -> ui_shortcut::Shortcut {
         ui_shortcut::Shortcut {
             id: self.shortcut.id,
-            modifiers: self.shortcut.modifiers,
-            key: self.shortcut.key,
             use_priority: self.shortcut.use_priority,
             trigger: self.shortcut.trigger,
             key3: self.shortcut.key3,
@@ -54,16 +39,6 @@ impl ShortcutBuilder {
 
     pub fn set_id(mut self, id: u32) -> Self {
         self.shortcut.id = Some(id);
-        self
-    }
-
-    pub fn set_modifiers(mut self, modifiers: ui_input2::Modifiers) -> Self {
-        self.shortcut.modifiers = Some(modifiers);
-        self
-    }
-
-    pub fn set_key(mut self, key: ui_input2::Key) -> Self {
-        self.shortcut.key = Some(key);
         self
     }
 
@@ -122,22 +97,6 @@ impl RegistryService {
     pub async fn register_shortcut(&self, shortcut: ui_shortcut::Shortcut) -> Result<(), Error> {
         self.registry.register_shortcut(shortcut).check()?.await.map_err(Into::into)
     }
-
-    /// Expects next FIDL request from Registry service to be a shortcut activation.
-    /// `handler` is called to handle the shortcut activation.
-    /// Return value from handler is routed to the shortcut registry service.
-    pub async fn handle_shortcut_activation<HandleFunc>(&mut self, mut handler: HandleFunc)
-    where
-        HandleFunc: FnMut(u32) -> bool,
-    {
-        if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. })) =
-            self.listener.next().await
-        {
-            responder.send(handler(id)).expect("responding from shortcut listener")
-        } else {
-            panic!("Error from listener.next() on shortcut activation");
-        };
-    }
 }
 
 /// Test helper for FIDL fuchsia.ui.shortcut.Manager service.
@@ -158,46 +117,6 @@ impl ManagerService {
             .context("Failed to connect to Shortcut manager service")?;
 
         Ok(Self { manager })
-    }
-
-    /// Emulates a key press event using input2 interface.
-    /// Returns a future that resolves to a FIDL response from manager service.
-    pub fn press_key2(
-        &self,
-        key: ui_input2::Key,
-        modifiers: Option<ui_input2::Modifiers>,
-    ) -> QueryResponseFut<bool> {
-        // Process key event that triggers a shortcut.
-        let event = ui_input2::KeyEvent {
-            key: Some(key),
-            modifiers: modifiers,
-            phase: Some(ui_input2::KeyEventPhase::Pressed),
-            physical_key: None,
-            semantic_key: None,
-            ..ui_input2::KeyEvent::EMPTY
-        };
-
-        self.manager.handle_key_event(event)
-    }
-
-    /// Emulates a key release event using input2 interface.
-    /// Returns a future that resolves to a FIDL response from manager service.
-    pub fn release_key2(
-        &self,
-        key: ui_input2::Key,
-        modifiers: Option<ui_input2::Modifiers>,
-    ) -> QueryResponseFut<bool> {
-        // Process key event that triggers a shortcut.
-        let event = ui_input2::KeyEvent {
-            key: Some(key),
-            modifiers: modifiers,
-            phase: Some(ui_input2::KeyEventPhase::Released),
-            physical_key: None,
-            semantic_key: None,
-            ..ui_input2::KeyEvent::EMPTY
-        };
-
-        self.manager.handle_key_event(event)
     }
 
     /// Emulates a key press event using input3 interface.
