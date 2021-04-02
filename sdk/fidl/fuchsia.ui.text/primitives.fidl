@@ -4,8 +4,9 @@
 
 library fuchsia.ui.text;
 
-/// Indicates a character position in a text field, either between two grapheme clusters
-/// or at the very edge of the document.
+/// Indicates a character position in a text field, either between two unicode code points
+/// or at the very edge of the document. This is an opaque identifier generated and
+/// maintained by the TextField.
 ///
 /// Any valid Position is a place a typing caret could appear, and vice-versa.
 /// Instead of using absolute character indexes, each Position has a
@@ -19,19 +20,13 @@ struct Position {
     uint64 id;
 };
 
-/// A selection is the current range of the text that is selected by the user,
-/// or the current position of the blinking input caret.
-///
-/// A zero-length selection is a caret. Affinity only has an effect on carets.
-///
-/// Even in mixed RTL and LTR text situations, a selection is still just the
-/// string-wise slice between `focus` and `anchor` - graphical representations
-/// of selections flip directions when crossing the RTL/LTR boundary, but no
-/// special code is needed to handle crossing the boundary in the model.
-struct Selection {
-    Range range;
-    SelectionAnchor anchor;
-    Affinity affinity;
+/// A range is the unicode code points between `start` and `end`. When sending
+/// ranges to clients, TextField must ensure `start` is always upstream of
+/// `end`. However, when receiving ranges from clients, it should accept
+/// `start` and `end` in any order.
+struct Range {
+    Position start;
+    Position end;
 };
 
 /// Selection anchor states which edge of the selection is the anchor, and which
@@ -43,15 +38,6 @@ enum SelectionAnchor {
     ANCHORED_AT_END = 2;
 };
 
-/// A range is the grapheme clusters between `start` and `end`. When sending
-/// ranges to clients, TextField must ensure `start` is always upstream of
-/// `end`. However, when receiving ranges from clients, it should accept
-/// `start` and `end` in any order.
-struct Range {
-    Position start;
-    Position end;
-};
-
 /// Whether a Position is visually upstream or downstream when ambiguous.
 ///
 /// For example, when a position exists at a soft line break, a single offset has
@@ -61,4 +47,19 @@ struct Range {
 enum Affinity {
     UPSTREAM = 0;
     DOWNSTREAM = 1;
+};
+
+/// A selection is the current range of the text that is selected by the user,
+/// or the current position of the input caret.
+///
+/// A zero-length selection is a caret. Affinity only has an effect on carets.
+///
+/// Even in mixed RTL and LTR text situations, a selection is still just the
+/// string-wise slice between `focus` and `anchor` — graphical representations
+/// of selections flip directions when crossing the RTL/LTR boundary, but no
+/// special code is needed to handle crossing the boundary in the model.
+struct Selection {
+    Range range;
+    SelectionAnchor anchor;
+    Affinity affinity;
 };
