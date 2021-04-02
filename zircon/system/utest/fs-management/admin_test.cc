@@ -101,7 +101,7 @@ class OutgoingDirectoryTest : public zxtest::Test {
 
     fio::File::SyncClient file_client(std::move(test_file));
     std::vector<uint8_t> content{1, 2, 3, 4};
-    auto resp = file_client.Write(fidl::unowned_vec(content));
+    auto resp = file_client.Write(fidl::VectorView<uint8_t>::FromExternal(content));
     ASSERT_OK(resp.status());
     ASSERT_OK(resp.value().s);
     ASSERT_EQ(resp.value().actual, content.size());
@@ -223,12 +223,12 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   uint32_t file_flags =
       fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE | fio::wire::OPEN_FLAG_CREATE;
   ASSERT_OK(fio::Directory::Call::Open(std::move(export_root), file_flags, 0,
-                                       fidl::unowned_str(test_file_name),
+                                       fidl::StringView::FromExternal(test_file_name),
                                        std::move(test_file_server))
                 .status());
 
   fio::File::SyncClient file_client(std::move(test_file));
   std::vector<uint8_t> content{1, 2, 3, 4};
-  auto resp = file_client.Write(fidl::unowned_vec(content));
+  auto resp = file_client.Write(fidl::VectorView<uint8_t>::FromExternal(content));
   ASSERT_EQ(resp.status(), ZX_ERR_PEER_CLOSED);
 }
