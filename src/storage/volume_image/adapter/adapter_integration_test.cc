@@ -97,7 +97,7 @@ TEST(AdapterTest, BlobfsPartitonInFvmImageFromFvmDescriptorPassesFsck) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
   // 500 MB fvm image.
   fvm_options.target_volume_size = kImageSize;
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(blobfs_reader_or.is_ok()) << blobfs_reader_or.error();
@@ -162,7 +162,7 @@ TEST(AdapterTest, MinfsPartitonInFvmImageFromFvmDescriptorPassesFsck) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
   // 500 MB fvm image.
   fvm_options.target_volume_size = kImageSize;
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(minfs_reader_or.is_ok()) << minfs_reader_or.error();
@@ -227,7 +227,7 @@ TEST(AdapterTest, BlobfsAndMinfsPartitonInFvmImageFromFvmDescriptorPassesFsck) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
   // 500 MB fvm image.
   fvm_options.target_volume_size = kImageSize;
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(minfs_reader_or.is_ok()) << minfs_reader_or.error();

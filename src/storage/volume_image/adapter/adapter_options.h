@@ -10,7 +10,7 @@
 
 namespace storage::volume_image {
 
-struct AdapterOptions {
+struct PartitionOptions {
   // The generated partition, must contain enough bytes in the mapping containing inodes to host
   // |min_inode_count| at least. This is a lowerbound for the size of the mapping.
   std::optional<uint64_t> min_inode_count;

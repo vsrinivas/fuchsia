@@ -48,7 +48,7 @@ struct PartitionParams {
   bool encrypted = false;
 
   // Custom partition options.
-  AdapterOptions options;
+  PartitionOptions options;
 
   PartitionImageFormat format;
 };

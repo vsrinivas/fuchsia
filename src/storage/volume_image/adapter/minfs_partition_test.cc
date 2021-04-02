@@ -58,7 +58,7 @@ class FakeReader final : public Reader {
 
 TEST(MinfsPartitionTest, SliceSizeNotMultipleOfMinfsBlockSizeIsError) {
   auto fvm_options = MakeFvmOptions(minfs::kMinfsBlockSize - 1);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto fake_reader = std::make_unique<FakeReader>();
   ASSERT_TRUE(
@@ -67,7 +67,7 @@ TEST(MinfsPartitionTest, SliceSizeNotMultipleOfMinfsBlockSizeIsError) {
 
 TEST(MinfsPartitionTest, ImageWithBadMagicIsError) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto fake_reader = std::make_unique<FakeReader>();
   fake_reader->superblock().magic0 = minfs::kMinfsMagic0;
@@ -185,7 +185,7 @@ std::optional<SuperBlocks> ReadSuperblocks(const Partition& partition, const Rea
 
 void CheckSuperblock(const minfs::Superblock& actual_superblock,
                      const minfs::Superblock& original_superblock, const FvmOptions& fvm_options,
-                     const AdapterOptions& partition_options) {
+                     const PartitionOptions& partition_options) {
   // This should not be altered at all.
   EXPECT_EQ(actual_superblock.magic0, original_superblock.magic0);
   EXPECT_EQ(actual_superblock.magic1, original_superblock.magic1);
@@ -288,7 +288,7 @@ void CheckNoNSuperBlockMappingContents(const Partition& partition, const Reader&
 
 TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrect) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(original_minfs_reader_or.is_ok()) << original_minfs_reader_or.error();
@@ -320,7 +320,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrect) {
 
 TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountHigherThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(original_minfs_reader_or.is_ok()) << original_minfs_reader_or.error();
@@ -369,7 +369,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountHig
 
 TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountLowerThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(original_minfs_reader_or.is_ok()) << original_minfs_reader_or.error();
@@ -406,7 +406,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountLow
 
 TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesHigherThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(original_minfs_reader_or.is_ok()) << original_minfs_reader_or.error();
@@ -454,7 +454,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesHigh
 
 TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesLowerThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(original_minfs_reader_or.is_ok()) << original_minfs_reader_or.error();
@@ -486,7 +486,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesLowe
 
 TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMaxBytesHigherThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(original_minfs_reader_or.is_ok()) << original_minfs_reader_or.error();
@@ -522,7 +522,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMaxBytesHigherThanIm
 
 TEST(MinfsPartitionTest, ExceedingMaxBytesIsError) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_minfs_reader_or = FdReader::Create(kMinfsImagePath);
   ASSERT_TRUE(original_minfs_reader_or.is_ok()) << original_minfs_reader_or.error();

@@ -65,7 +65,7 @@ class FakeReader final : public Reader {
 
 TEST(BlobfsPartitionTest, BackupSuperblockDoesntFitInFirstSliceIsError) {
   auto fvm_options = MakeFvmOptions(blobfs::kBlobfsBlockSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto fake_reader = std::make_unique<FakeReader>();
   ASSERT_TRUE(
@@ -74,7 +74,7 @@ TEST(BlobfsPartitionTest, BackupSuperblockDoesntFitInFirstSliceIsError) {
 
 TEST(BlobfsPartitionTest, SliceSizeNotMultipleOfBlobfsBlockSizeIsError) {
   auto fvm_options = MakeFvmOptions(blobfs::kBlobfsBlockSize - 1);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto fake_reader = std::make_unique<FakeReader>();
   ASSERT_TRUE(
@@ -83,7 +83,7 @@ TEST(BlobfsPartitionTest, SliceSizeNotMultipleOfBlobfsBlockSizeIsError) {
 
 TEST(BlobfsPartitionTest, ImageWithBadMagicIsError) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto fake_reader = std::make_unique<FakeReader>();
   fake_reader->superblock().magic0 = blobfs::kBlobfsMagic0;
@@ -111,7 +111,7 @@ std::optional<AddressMap> FindMappingStartingAt(uint64_t target_offset,
 
 void CheckSuperblock(const blobfs::Superblock& actual_superblock,
                      const blobfs::Superblock& original_superblock, const FvmOptions& fvm_options,
-                     const AdapterOptions& partition_options) {
+                     const PartitionOptions& partition_options) {
   // This should not be altered at all.
   EXPECT_EQ(actual_superblock.magic0, original_superblock.magic0);
   EXPECT_EQ(actual_superblock.magic1, original_superblock.magic1);
@@ -313,7 +313,7 @@ std::optional<SuperBlocks> ReadSuperblocks(const Reader& original_blobfs,
 
 TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrect) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(original_blobfs_reader_or.is_ok()) << original_blobfs_reader_or.error();
@@ -346,7 +346,7 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrect) {
 
 TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountHigherThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(original_blobfs_reader_or.is_ok()) << original_blobfs_reader_or.error();
@@ -397,7 +397,7 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountHi
 
 TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountLowerThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
   partition_options.min_inode_count = 0;
 
   auto original_blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
@@ -433,7 +433,7 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountLo
 
 TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesHigherThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(original_blobfs_reader_or.is_ok()) << original_blobfs_reader_or.error();
@@ -481,7 +481,7 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesHig
 
 TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytessLowerThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(original_blobfs_reader_or.is_ok()) << original_blobfs_reader_or.error();
@@ -520,7 +520,7 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytessLo
 TEST(BlobfsPartitionTest,
      PartitionDataAndReaderIsCorrectWithMaxAllocatedBytesForLeftOverHigherThanImage) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(original_blobfs_reader_or.is_ok()) << original_blobfs_reader_or.error();
@@ -564,7 +564,7 @@ TEST(BlobfsPartitionTest,
 
 TEST(BlobfsPartitionTest, ExceedingMaxBytesIsError) {
   auto fvm_options = MakeFvmOptions(kSliceSize);
-  AdapterOptions partition_options;
+  PartitionOptions partition_options;
 
   auto original_blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   ASSERT_TRUE(original_blobfs_reader_or.is_ok()) << original_blobfs_reader_or.error();
