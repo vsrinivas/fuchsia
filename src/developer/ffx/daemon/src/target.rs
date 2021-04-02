@@ -1544,7 +1544,25 @@ impl TargetCollection {
         // produce an actionable error to the user.
         if let TargetQuery::First = target_query {
             // PERFORMANCE: it's possible to avoid the discarded clones here, with more work.
-            if self.targets().await.len() > 1 {
+
+            // This is a stop-gap UX check. The other option is to
+            // just display disconnected targets in `ffx target list` to make it
+            // clear that an ambiguous target error is about having more than
+            // one target in the cache rather than giving an ambiguous target
+            // error around targets that cannot be displayed in the frontend.
+            let targets = &self.inner.read().await.named;
+            let targets =
+                futures::future::join_all(
+                    targets
+                        .values()
+                        .map(|t| async move {
+                            t.inner.state.lock().await.connection_state.is_connected()
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .await;
+            let targets = targets.iter().filter(|&&t| t).collect::<Vec<_>>();
+            if targets.len() > 1 {
                 return Err(DaemonError::TargetAmbiguous);
             }
         }
@@ -1578,7 +1596,7 @@ impl TargetCollection {
         // lifetime tracking is implemented). If a name isn't specified it's
         // possible a secondary/tertiary target showed up, and those cases are
         // handled here.
-        self.get(matcher).await.ok_or(DaemonError::TargetNotFound)
+        self.get_connected(matcher).await.ok_or(DaemonError::TargetNotFound)
     }
 
     pub async fn get_connected<TQ>(&self, t: TQ) -> Option<Target>
@@ -2670,5 +2688,30 @@ mod test {
 
         assert_eq!(ip, "::1".parse::<IpAddr>().unwrap());
         assert_eq!(port, 8022);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_no_ambiguous_target_when_disconnected() {
+        // While this is an implementation detail, the naming of these targets
+        // are important. The match order of the targets, if not filtering by
+        // whether they are connected, is such that the disconnected target
+        // would come first. With filtering, though, the "this-is-connected"
+        // target would be found.
+        let t = Target::new_autoconnected("this-is-connected").await;
+        let t2 = Target::new("this-is-not-connected");
+        let tc = TargetCollection::new_with_queue().await;
+        tc.merge_insert(clone_target(&t2).await).await;
+        tc.merge_insert(clone_target(&t).await).await;
+        let found_target = tc.wait_for_match(None).await.expect("should match");
+        assert_eq!(
+            "this-is-connected",
+            found_target.nodename().await.expect("target should have nodename")
+        );
+        let found_target =
+            tc.wait_for_match(Some("connected".to_owned())).await.expect("should match");
+        assert_eq!(
+            "this-is-connected",
+            found_target.nodename().await.expect("target should have nodename")
+        );
     }
 }
