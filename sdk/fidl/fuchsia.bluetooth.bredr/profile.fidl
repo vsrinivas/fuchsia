@@ -69,6 +69,12 @@ table ChannelParameters {
     /// established. If a peer cannot provide the requirements, the channel is closed.
     /// Optional. If not provided, then the only security property guaranteed is encryption.
     3: SecurityRequirements security_requirements;
+    /// The flush timeout indicates the maximum amount of time a data packet should be buffered
+    /// in the controller before it is dropped. A flush timeout of infinity can be used to mark
+    /// packets as flushable without any particular flush timeout.
+    /// Range: 1ms - 1,279ms (or ∞). Rounded down.
+    /// Optional. If not provided, no flush timeout and packets are not flushable.
+    4: zx.duration flush_timeout;
 };
 
 /// A channel opened to a peer.
@@ -85,6 +91,12 @@ resource table Channel {
     /// Audio Direction priority extension. See `AudioDirectionExt`.
     /// Present only if supported by the host.
     4: AudioDirectionExt ext_direction;
+    // Duration after which packets are dropped from the controller.
+    // Present only if a flush timeout was successfully configured.
+    5: zx.duration flush_timeout;
+    /// L2CAP parameter extension. See `L2capParametersExt`.
+    /// Always present for L2CAP Channels, never present for other Channels.
+    6: L2capParametersExt ext_l2cap;
 };
 
 /// A2DP packet priority used in `AudioDirectionExt`. `NORMAL` should be used whenever audio is not
@@ -100,6 +112,17 @@ enum A2dpDirectionPriority {
 /// source or sink direction.
 protocol AudioDirectionExt {
     SetPriority(A2dpDirectionPriority priority) -> () error fuchsia.bluetooth.ErrorCode;
+};
+
+/// L2CAP Parameters Extension. Used to configure L2CAP channel parameters on an open channel.
+protocol L2capParametersExt {
+    /// Request a L2CAP channel parameter update. `request` indicates the
+    /// desired parameters, and `new` indicates the new parameters
+    /// (which may differ from the requested parameters if they are
+    /// rejected/modified).
+    /// Currently only the following parameters can be changed:
+    /// - flush_timeout
+    RequestParameters(ChannelParameters request) -> (ChannelParameters new);
 };
 
 /// Represents a service which is registered by this profile.  Closing this protocol will remove the
