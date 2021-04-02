@@ -4,7 +4,7 @@
 
 # [START imports]
 import("//build/intl/intl_strings.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 # [END imports]
 
@@ -19,6 +19,7 @@ group("example") {
 # [START exec]
 executable("src_intl_example_bin") {
   sources = [ "main.cc" ]
+  output_name = "src_intl_example"
 
   # [START deps]
   deps = [
@@ -39,60 +40,55 @@ executable("src_intl_example_bin") {
 # [START exec]
 
 # [START pkg]
-package("pkg") {
+fuchsia_unittest_package("pkg") {
   package_name = "src-intl-example"
+  component_name = package_name
+  manifest = "meta/src-intl-example.cmx"
 
   # [START pkg_deps]
   deps = [
     # The binary to bundle in the package
     ":src_intl_example_bin",
-
-    # For the localized resources.
-    ":l10n",
-    ":l10n_l10n_assets",
   ]
 
   # [END pkg_deps]
-  binaries = [
-    {
-      name = "src_intl_example_bin"
-      dest = "src_intl_example"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/src-intl-example.cmx"
-      dest = "src-intl-example.cmx"
-    },
-  ]
-
   # [START resources]
-  resources = [
+  deps += [
     # These declaration works, but need to be maintained manually.  Work is
     # underway to make the "package" target collect and apply the locale files
     # automatically.
-    {
-      path = rebase_path("$target_gen_dir/en/l10n.json")
-      dest = "assets/locales/en/l10n.json"
-    },
-    {
-      path = rebase_path("$target_gen_dir/fr/l10n.json")
-      dest = "assets/locales/fr/l10n.json"
-    },
-    {
-      path = rebase_path("$target_gen_dir/es/l10n.json")
-      dest = "assets/locales/es/l10n.json"
-    },
+    ":en-strings",
+    ":es-strings",
+    ":fr-strings",
 
     # Contains the necessary ICU data.
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+    ":icudtl",
   ]
 
   # [END resources]
+}
+
+resource("en-strings") {
+  data_deps = [ ":l10n" ]
+  sources = [ "$target_gen_dir/en/l10n.json" ]
+  outputs = [ "data/assets/locales/en/l10n.json" ]
+}
+
+resource("fr-strings") {
+  data_deps = [ ":l10n" ]
+  sources = [ "$target_gen_dir/fr/l10n.json" ]
+  outputs = [ "data/assets/locales/fr/l10n.json" ]
+}
+
+resource("es-strings") {
+  data_deps = [ ":l10n" ]
+  sources = [ "$target_gen_dir/es/l10n.json" ]
+  outputs = [ "data/assets/locales/es/l10n.json" ]
+}
+
+resource("icudtl") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
 }
 
 # [END pkg]

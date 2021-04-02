@@ -31,7 +31,7 @@ C++ program that uses generated strings constants.
 
 Before you build:
 
-1. Make sure your `fx set` command has `--with=//src/intl/example`. 
+1. Make sure your `fx set` command has `--with=//src/intl/example`.
 1. Make sure `fx serve` is running.
 
 ```
@@ -45,7 +45,7 @@ Before you test:
 1. Make sure `fx serve` is running.
 
 ```
-fx test src/intl/example
+fx test //src/intl/example
 ```
 
 ## Running
