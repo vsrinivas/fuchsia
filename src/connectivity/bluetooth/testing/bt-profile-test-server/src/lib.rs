@@ -144,47 +144,6 @@ impl MockPeer {
             .await
     }
 
-    /// Expects a connection request between this MockPeer and the `other` peer.
-    ///
-    /// Returns Ok on success, Error if there was no connection request on the observer or
-    /// the request was for a different peer.
-    pub async fn expect_observer_connection_request(&mut self, other: PeerId) -> Result<(), Error> {
-        let request = self.expect_observer_request().await?;
-        match request {
-            PeerObserverRequest::PeerConnected { peer_id, responder, .. } => {
-                responder.send().unwrap();
-                if other == peer_id.into() {
-                    Ok(())
-                } else {
-                    Err(format_err!("Connection request for unexpected peer: {:?}", peer_id))
-                }
-            }
-            x => Err(format_err!("Expected PeerConnected but got: {:?}", x)),
-        }
-    }
-
-    /// Expects this MockPeer to discover the services of the `other` peer.
-    ///
-    /// Returns Ok on success, Error if there was no ServiceFound request on the observer or
-    /// the request was for a different peer.
-    pub async fn expect_observer_service_found_request(
-        &mut self,
-        other: PeerId,
-    ) -> Result<(), Error> {
-        let request = self.expect_observer_request().await?;
-        match request {
-            PeerObserverRequest::ServiceFound { peer_id, responder, .. } => {
-                responder.send().unwrap();
-                if other == peer_id.into() {
-                    Ok(())
-                } else {
-                    Err(format_err!("ServiceFound request for unexpected peer: {:?}", peer_id))
-                }
-            }
-            x => Err(format_err!("Expected PeerConnected but got: {:?}", x)),
-        }
-    }
-
     /// Register a service search by a `profile_client` for services that match `svc_id`.
     ///
     /// Returns a stream of search results that can be polled to receive new requests.

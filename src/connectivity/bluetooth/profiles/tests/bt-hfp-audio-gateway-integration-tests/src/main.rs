@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Error},
-    at_commands::{self as at, SerDe},
     bitflags::bitflags,
     bt_profile_test_server_client::{MockPeer, ProfileTestHarness},
     fidl::{
@@ -14,12 +13,10 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::HfpMarker,
     fidl_fuchsia_sys::EnvironmentOptions,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceObj},
-    fuchsia_zircon::Duration,
     futures::{stream::StreamExt, TryFutureExt},
-    matches::assert_matches,
     std::convert::TryInto,
     test_call_manager::{TestCallManager, HFP_AG_URL},
 };
@@ -28,15 +25,6 @@ use {
 /// Defined in Assigned Numbers for SDP
 /// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
 const ATTR_ID_HFP_SUPPORTED_FEATURES: u16 = 0x0311;
-
-/// Timeout for data received over a Channel.
-///
-/// This time is expected to be:
-///   a) sufficient to avoid flakes due to infra or resource contention
-///   b) short enough to still provide useful feedback in those cases where asynchronous operations
-///      fail
-///   c) short enough to fail before the overall infra-imposed test timeout (currently 5 minutes)
-const CHANNEL_TIMEOUT: Duration = Duration::from_seconds(2 * 60);
 
 bitflags! {
     /// Defined in HFP v1.8, Table 5.2
@@ -97,10 +85,10 @@ async fn test_hfp_ag_service_advertisement() {
 
     // Create MockPeer #1 to be driven by the test.
     let id1 = PeerId(1);
-    let remote_peer = test_harness.register_peer(id1).await.unwrap();
+    let mock_peer1 = test_harness.register_peer(id1).await.unwrap();
 
     // Peer #1 adds a search for HFP AG in the piconet.
-    let mut results_requests = remote_peer
+    let mut results_requests = mock_peer1
         .register_service_search(
             bredr::ServiceClassProfileIdentifier::HandsfreeAudioGateway,
             vec![],
@@ -110,8 +98,8 @@ async fn test_hfp_ag_service_advertisement() {
 
     // MockPeer #2 is the profile-under-test: HFP.
     let id2 = PeerId(2);
-    let hfp_under_test = test_harness.register_peer(id2).await.unwrap();
-    hfp_under_test.launch_profile(hfp_launch_info()).await.expect("launch profile should be ok");
+    let mock_peer2 = test_harness.register_peer(id2).await.unwrap();
+    mock_peer2.launch_profile(hfp_launch_info()).await.expect("launch profile should be ok");
 
     // We expect Peer #1 to discover HFP's service advertisement.
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
@@ -147,21 +135,6 @@ async fn connect_profile_to_peer(
     Ok(())
 }
 
-/// Expects a connection request on the `connect_requests` stream from the `other` peer.
-/// Returns the Channel.
-#[track_caller]
-async fn expect_connection(
-    connect_requests: &mut bredr::ConnectionReceiverRequestStream,
-    other: PeerId,
-) -> Channel {
-    match connect_requests.select_next_some().await.unwrap() {
-        bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } => {
-            assert_eq!(other, peer_id.into());
-            channel.try_into().unwrap()
-        }
-    }
-}
-
 /// Tests that HFP correctly searches for Handsfree, discovers a mock peer
 /// providing it, and attempts to connect to the mock peer.
 #[fasync::run_singlethreaded(test)]
@@ -170,215 +143,47 @@ async fn test_hfp_search_and_connect() {
 
     // MockPeer #1 is driven by the test.
     let id1 = PeerId(0x1111);
-    let mut remote_peer = test_harness.register_peer(id1).await.unwrap();
+    let mut mock_peer1 = test_harness.register_peer(id1).await.unwrap();
 
     // Peer #1 advertises an HFP HF service.
     let service_defs = vec![hfp_hf_service_definition()];
     let mut connect_requests =
-        remote_peer.register_service_advertisement(service_defs).await.unwrap();
+        mock_peer1.register_service_advertisement(service_defs).await.unwrap();
 
     // MockPeer #2 is the profile-under-test: HFP.
     let id2 = PeerId(0x2222);
-    let mut hfp_under_test = test_harness.register_peer(id2).await.unwrap();
+    let mut mock_peer2 = test_harness.register_peer(id2).await.unwrap();
 
     // Launch hfp component and wire it up to MockPeer #2
     let (mut fs, _env, app) = launch_hfp(HFP_AG_URL);
-    connect_profile_to_peer(&mut hfp_under_test, &mut fs).await.unwrap();
+    connect_profile_to_peer(&mut mock_peer2, &mut fs).await.unwrap();
 
     let proxy = app.connect_to_service::<HfpMarker>().unwrap();
     let facade = TestCallManager::new();
     facade.register_manager(proxy).await.unwrap();
 
     // We expect HFP to discover Peer #1's service advertisement.
-    assert_matches!(hfp_under_test.expect_observer_service_found_request(id1).await, Ok(()));
+    if let bredr::PeerObserverRequest::ServiceFound { peer_id, responder, .. } =
+        mock_peer2.expect_observer_request().await.unwrap()
+    {
+        assert_eq!(id1, peer_id.into());
+        responder.send().unwrap();
+    }
 
     // We then expect HFP to attempt to connect to Peer #1.
-    let _channel = expect_connection(&mut connect_requests, id2).await;
+    let _channel: Channel = match connect_requests.select_next_some().await.unwrap() {
+        bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } => {
+            assert_eq!(id2, peer_id.into());
+            channel.try_into().unwrap()
+        }
+    };
 
     // The observer of Peer #1 should be relayed of the connection attempt.
-    assert_matches!(remote_peer.expect_observer_connection_request(id2).await, Ok(()));
-}
-
-/// Expects data on the provided `channel` and verifies the contents with the `expected` AT
-/// messages.
-#[track_caller]
-async fn expect_data(channel: &mut Channel, expected: Vec<at::Response>) {
-    let _expected_bytes: Vec<u8> = expected
-        .into_iter()
-        .map(|exp| {
-            let mut bytes = Vec::new();
-            exp.serialize(&mut bytes).expect("serialization should succeed");
-            bytes
-        })
-        .flatten()
-        .collect();
-
-    let mut actual_bytes = Vec::new();
-    let read_result = channel
-        .read_datagram(&mut actual_bytes)
-        .on_timeout(CHANNEL_TIMEOUT.after_now(), move || Err(fidl::Status::TIMED_OUT))
-        .await;
-    assert_matches!(read_result, Ok(_));
-
-    // TODO(fxbug.dev/73568): Uncomment and update this assert when AT library deserialization
-    // supports parsing multiple AT commands in the same buffer. We should change the assert
-    // to parse `actual_bytes` into at::Responses and compare them to `expected`. This will allow
-    // us to use assert_matches! to validate the _type_ of the response, but not necessarily the
-    // contents since that is implementation specific.
-    // assert_eq!(actual_bytes, expected_bytes);
-}
-
-/// Serializes and sends the provided AT `command` using the `channel` and then
-/// expects the `expected` response.
-#[track_caller]
-async fn send_command_and_expect_response(
-    channel: &mut Channel,
-    command: at::Command,
-    expected: Vec<at::Response>,
-) {
-    // Serialize and send.
-    let mut bytes = Vec::new();
-    command.serialize(&mut bytes).expect("serialization should succeed");
-    let _ = channel.as_ref().write(&bytes);
-
-    // Expect the `expected` data as a response.
-    expect_data(channel, expected).await;
-}
-
-/// Tests that HFP correctly responds to the SLC Initialization procedure after the
-/// RFCOMM channel has been connected.
-/// Note: This integration test validates that the expected responses are received, but
-/// does not validate individual field values (e.g the exact features or exact indicators) as
-/// this is implementation specific.
-#[fasync::run_singlethreaded(test)]
-async fn test_hfp_full_slc_init_procedure() {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
-
-    // MockPeer #1 is driven by the test.
-    let id1 = PeerId(0x55);
-    let mut remote_peer = test_harness.register_peer(id1).await.unwrap();
-
-    // Peer #1 advertises an HFP HF service.
-    let service_defs = vec![hfp_hf_service_definition()];
-    let mut connect_requests =
-        remote_peer.register_service_advertisement(service_defs).await.unwrap();
-
-    // MockPeer #2 is the profile-under-test: HFP.
-    let id2 = PeerId(0x66);
-    let mut hfp_under_test = test_harness.register_peer(id2).await.unwrap();
-
-    // Launch hfp component and wire it up to MockPeer #2
-    let (mut fs, _env, app) = launch_hfp(HFP_AG_URL);
-    connect_profile_to_peer(&mut hfp_under_test, &mut fs).await.unwrap();
-
-    let proxy = app.connect_to_service::<HfpMarker>().unwrap();
-    let facade = TestCallManager::new();
-    facade.register_manager(proxy).await.unwrap();
-
-    // We expect HFP to discover Peer #1's service advertisement.
-    assert_matches!(hfp_under_test.expect_observer_service_found_request(id1).await, Ok(()));
-
-    // We then expect HFP to attempt to connect to Peer #1.
-    let mut remote = expect_connection(&mut connect_requests, id2).await;
-    // The observer of Peer #1 should be relayed of the connection attempt.
-    assert_matches!(remote_peer.expect_observer_connection_request(id2).await, Ok(()));
-
-    // Peer sends its HF features to the HFP component (AG) - we expect HFP to send
-    // its AG features back.
-    // TODO: We shouldn't need to assert on the specific features in the response.
-    let hf_features_cmd = at::Command::Brsf { features: 0b11_1111_1111_1111 };
-    send_command_and_expect_response(
-        &mut remote,
-        hf_features_cmd,
-        vec![at::success(at::Success::Brsf { features: 3955i64 }), at::Response::Ok],
-    )
-    .await;
-
-    // Peer sends its supported codecs - expect OK back.
-    let peer_supported_codecs_cmd = at::Command::Bac { codecs: vec![] };
-    send_command_and_expect_response(
-        &mut remote,
-        peer_supported_codecs_cmd,
-        vec![at::Response::Ok],
-    )
-    .await;
-
-    let indicator_test_cmd = at::Command::CindTest {};
-    let expected3 = at::success(at::Success::Cind {
-        service: true,
-        call: true,
-        callsetup: true,
-        callheld: true,
-        roam: true,
-        signal: 0,
-        battchg: 0,
-    });
-    send_command_and_expect_response(
-        &mut remote,
-        indicator_test_cmd,
-        vec![expected3, at::Response::Ok],
-    )
-    .await;
-
-    let indicator_read_cmd = at::Command::CindRead {};
-    let expected4 = at::success(at::Success::Cind {
-        service: false,
-        call: false,
-        callsetup: false,
-        callheld: false,
-        roam: false,
-        signal: 0,
-        battchg: 5,
-    });
-    send_command_and_expect_response(
-        &mut remote,
-        indicator_read_cmd,
-        vec![expected4, at::Response::Ok],
-    )
-    .await;
-
-    // Peer enables indicator reporting (ind = 1).
-    let peer_enable_ind_reporting_cmd = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
-    send_command_and_expect_response(
-        &mut remote,
-        peer_enable_ind_reporting_cmd,
-        vec![at::Response::Ok],
-    )
-    .await;
-
-    let call_hold_info_cmd = at::Command::ChldTest {};
-    let expected6 = at::success(at::Success::Chld { commands: vec![] });
-    send_command_and_expect_response(
-        &mut remote,
-        call_hold_info_cmd,
-        vec![expected6, at::Response::Ok],
-    )
-    .await;
-
-    let peer_supported_indicators_cmd =
-        at::Command::Bind { indicators: vec![at::BluetoothHFIndicator::BatteryLevel] };
-    send_command_and_expect_response(
-        &mut remote,
-        peer_supported_indicators_cmd,
-        vec![at::Response::Ok],
-    )
-    .await;
-
-    let peer_request_indicators_cmd = at::Command::BindTest {};
-    let expected8 = at::success(at::Success::Bind { indicators: vec![] });
-    send_command_and_expect_response(
-        &mut remote,
-        peer_request_indicators_cmd,
-        vec![expected8, at::Response::Ok],
-    )
-    .await;
-
-    let peer_request_ind_status_cmd = at::Command::BindRead {};
-    let expected9 = at::success(at::Success::Bind { indicators: vec![] });
-    send_command_and_expect_response(
-        &mut remote,
-        peer_request_ind_status_cmd,
-        vec![expected9, at::Response::Ok],
-    )
-    .await;
+    match mock_peer1.expect_observer_request().await.unwrap() {
+        bredr::PeerObserverRequest::PeerConnected { peer_id, responder, .. } => {
+            assert_eq!(id2, peer_id.into());
+            responder.send().unwrap();
+        }
+        x => panic!("Expected PeerConnected but got: {:?}", x),
+    }
 }
