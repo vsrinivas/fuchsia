@@ -191,6 +191,11 @@ TEST_F(MainServiceTest, CheckInspect) {
                                           UintIs("current_num_connections", 0u),
                                       })))),
                 }))),
+          AllOf(NodeMatches(
+                    AllOf(NameMatches("inspect_budget"), PropertyList(UnorderedElementsAreArray({
+                                                             StringIs("is_budget_enabled", "false"),
+                                                         })))),
+                ChildrenMatch(IsEmpty())),
       })));
 }
 

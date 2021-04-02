@@ -14,6 +14,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -136,7 +137,11 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 // connecting through FIDL.
 class DataProviderTest : public UnitTestFixture {
  public:
-  DataProviderTest() : inspect_data_budget_("non-existent_path") {}
+  DataProviderTest() {
+    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
+    inspect_data_budget_ =
+        std::make_unique<InspectDataBudget>("non-existent_path", inspect_node_manager_.get());
+  }
 
   void SetUp() override {
     // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the
@@ -154,10 +159,10 @@ class DataProviderTest : public UnitTestFixture {
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
         PreviousBootFile::FromData(/*is_first_instance=*/true, "empty_boot_id.txt"),
-        &inspect_data_budget_);
+        inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), clock_, /*is_first_instance=*/true, annotation_allowlist,
-        attachment_allowlist, cobalt_.get(), datastore_.get(), &inspect_data_budget_);
+        attachment_allowlist, cobalt_.get(), datastore_.get(), inspect_data_budget_.get());
   }
 
   void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {
@@ -222,7 +227,8 @@ class DataProviderTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<stubs::ScenicBase> scenic_server_;
-  InspectDataBudget inspect_data_budget_;
+  std::unique_ptr<InspectNodeManager> inspect_node_manager_;
+  std::unique_ptr<InspectDataBudget> inspect_data_budget_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {

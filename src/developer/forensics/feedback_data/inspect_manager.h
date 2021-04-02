@@ -33,6 +33,8 @@ class InspectManager {
   // Register creating or closing a connection to DeviceIdProvider.
   void UpdateDeviceIdProviderProtocolStats(InspectProtocolStatsUpdateFn update);
 
+  InspectNodeManager* GetNodeManager() { return &node_manager_; }
+
  private:
   InspectNodeManager node_manager_;
 

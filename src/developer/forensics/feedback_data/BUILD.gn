@@ -256,11 +256,16 @@ source_set("inspect_budget") {
     "inspect_data_budget.h",
   ]
 
-  public_deps = [ "//src/developer/forensics/utils:archive" ]
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/forensics/utils:archive",
+    "//src/developer/forensics/utils:inspect_node_manager",
+  ]
 
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:inspect_protocol_stats",
   ]
 }
 

@@ -22,10 +22,26 @@ const size_t kStartingInspectDataBudgetInBytes = kMaxInspectDataBudgetInBytes;
 
 }  // namespace
 
-InspectDataBudget::InspectDataBudget(const char* limit_data_flag_path) {
+InspectDataBudget::InspectDataBudget(const char* limit_data_flag_path, InspectNodeManager* node)
+    : inspect_node_(node) {
   limit_data_flag_ = std::filesystem::exists(limit_data_flag_path);
-  data_budget_ = limit_data_flag_ ? std::make_optional<size_t>(kStartingInspectDataBudgetInBytes)
-                                  : std::nullopt;
+  inspect_budget_enabled_ =
+      inspect_node_->Get("/inspect_budget")
+          .CreateString("is_budget_enabled", limit_data_flag_ ? "true" : "false");
+
+  if (!limit_data_flag_) {
+    data_budget_ = std::nullopt;
+    return;
+  }
+
+  data_budget_ = kStartingInspectDataBudgetInBytes;
+
+  inspect_min_budget_ = inspect_node_->Get("/inspect_budget")
+                            .CreateUint("min_input_budget_bytes", kMinInspectDataBudgetInBytes);
+  inspect_max_budget_ = inspect_node_->Get("/inspect_budget")
+                            .CreateUint("max_input_budget_bytes", kMaxInspectDataBudgetInBytes);
+  inspect_target_size_ = inspect_node_->Get("/inspect_budget")
+                             .CreateUint("target_snapshot_size_bytes", kTargetZipSizeInBytes);
 }
 
 void InspectDataBudget::UpdateBudget(
@@ -50,6 +66,19 @@ void InspectDataBudget::UpdateBudget(
   const double ratio = (double)kTargetZipSizeInBytes / (double)previous_zip_size;
   const size_t new_budget = (size_t)((double)data_budget_.value() * ratio);
   data_budget_ = std::clamp(new_budget, kMinInspectDataBudgetInBytes, kMaxInspectDataBudgetInBytes);
+
+  // Add new budget data to Inspect.
+  auto entry =
+      inspect_node_->Get("/inspect_budget/last_ten_input_budget_previous_snapshot_size_bytes")
+          .CreateUintArray(std::to_string(next_reading_idx_++), 2);
+  entry.Set(0, data_budget_.value());
+  entry.Set(1, previous_zip_size);
+  inspect_last_ten_readings_.push_back(std::move(entry));
+
+  // We only keep the last 10 readings.
+  if (inspect_last_ten_readings_.size() > 10) {
+    inspect_last_ten_readings_.pop_front();
+  }
 }
 
 }  // namespace forensics::feedback_data

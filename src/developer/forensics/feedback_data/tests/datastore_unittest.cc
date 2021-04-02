@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <gmock/gmock.h>
@@ -71,7 +72,11 @@ const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
 
 class DatastoreTest : public UnitTestFixture {
  public:
-  DatastoreTest() : executor_(dispatcher()), inspect_data_budget_("non-existent_path") {}
+  DatastoreTest() : executor_(dispatcher()) {
+    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
+    inspect_data_budget_ =
+        std::make_unique<InspectDataBudget>("non-existent_path", inspect_node_manager_.get());
+  }
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -91,7 +96,7 @@ class DatastoreTest : public UnitTestFixture {
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
         PreviousBootFile::FromData(/*is_first_instance=*/true, kBootIdFileName),
-        &inspect_data_budget_);
+        inspect_data_budget_.get());
     FX_CHECK(files::WriteFile(files::JoinPath("/data/", kBootIdFileName), "current_boot_id"));
   }
 
@@ -181,7 +186,8 @@ class DatastoreTest : public UnitTestFixture {
   async::Executor executor_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   std::unique_ptr<Datastore> datastore_;
-  InspectDataBudget inspect_data_budget_;
+  std::unique_ptr<InspectNodeManager> inspect_node_manager_;
+  std::unique_ptr<InspectDataBudget> inspect_data_budget_;
 
   // Stubs servers.
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
