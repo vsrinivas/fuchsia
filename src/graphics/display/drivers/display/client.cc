@@ -93,7 +93,7 @@ void Client::ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, 
   }
   if (status == ZX_OK) {
     fbl::AllocChecker ac;
-    auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo),
+    auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo), is_vc_,
                                                single_buffer_framebuffer_stride_, &proxy_->node()));
     if (!ac.check()) {
       controller_->dc()->ReleaseImage(&dc_image);
@@ -164,7 +164,7 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
 
   fbl::AllocChecker ac;
   auto image = fbl::AdoptRef(
-      new (&ac) Image(controller_, dc_image, std::move(vmo), stride, &proxy_->node()));
+      new (&ac) Image(controller_, dc_image, std::move(vmo), is_vc_, stride, &proxy_->node()));
   if (!ac.check()) {
     zxlogf(DEBUG, "Alloc checker failed while constructing Image.\n");
     _completer.Reply(ZX_ERR_NO_MEMORY, 0);
@@ -838,7 +838,8 @@ void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t
     });
 
     fbl::AllocChecker ac;
-    auto image = fbl::AdoptRef(new (&ac) Image(controller_, capture_image, &proxy_->node()));
+    auto image =
+        fbl::AdoptRef(new (&ac) Image(controller_, capture_image, is_vc_, &proxy_->node()));
     if (!ac.check()) {
       _completer.ReplyError(ZX_ERR_NO_MEMORY);
       return;

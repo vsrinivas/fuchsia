@@ -5,8 +5,13 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
 
+// NOTE: this header is included first on purpose to avoid clashing with
+// Banjo-generated ones below.
+// clang-format off
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
+// clang-format on
+
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
@@ -31,12 +36,13 @@ typedef struct image_node {
 
 class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image>> {
  public:
-  Image(Controller* controller, const image_t& info, zx::vmo vmo, uint32_t stride_px,
-        inspect::Node* parent_node);
-  Image(Controller* controller, const image_t& info, inspect::Node* parent_node);
+  Image(Controller* controller, const image_t& info, zx::vmo vmo, bool is_virtcon,
+        uint32_t stride_px, inspect::Node* parent_node);
+  Image(Controller* controller, const image_t& info, bool is_virtcon, inspect::Node* parent_node);
   ~Image();
 
   image_t& info() { return info_; }
+  bool is_virtcon() const { return is_virtcon_; }
   uint32_t stride_px() const { return stride_px_; }
 
   // Marks the image as in use.
@@ -93,6 +99,7 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   void InitializeInspect(inspect::Node* parent_node);
 
   image_t info_;
+  bool is_virtcon_ = false;
   uint32_t stride_px_;
   Controller* const controller_;
 

@@ -581,7 +581,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     }
   }
 
-  std::vector<uint64_t> images(handle_count);
+  std::vector<uint64_t> primary_images, virtcon_images;
   image_node_t* cur;
   list_for_every_entry (&info->images, cur, image_node_t, link) {
     for (unsigned i = 0; i < handle_count; i++) {
@@ -591,7 +591,11 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
         // NOTE: If changing this flow name or ID, please also do so in the
         // corresponding FLOW_BEGIN in display_swapchain.cc.
         TRACE_FLOW_END("gfx", "present_image", cur->self->id);
-        images[i] = cur->self->id;
+        if (cur->self->is_virtcon()) {
+          virtcon_images.push_back(cur->self->id);
+        } else {
+          primary_images.push_back(cur->self->id);
+        }
         found_handles++;
         break;
       }
@@ -606,7 +610,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (vc_applied_ && vc_client_) {
-    vc_client_->OnDisplayVsync(display_id, timestamp, images.data(), handle_count);
+    vc_client_->OnDisplayVsync(display_id, timestamp, virtcon_images.data(), virtcon_images.size());
   } else if (!vc_applied_ && primary_client_) {
     // A previous client applied a config and then disconnected before the vsync. Don't send garbage
     // image IDs to the new primary client.
@@ -616,7 +620,8 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
              "but client[%d] is currently active.\n",
              applied_client_id_, primary_client_->id());
     } else {
-      primary_client_->OnDisplayVsync(display_id, timestamp, images.data(), handle_count);
+      primary_client_->OnDisplayVsync(display_id, timestamp, primary_images.data(),
+                                      primary_images.size());
     }
   }
 }

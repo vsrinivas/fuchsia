@@ -62,6 +62,8 @@ class TestFidlClient {
     return vsync_count_;
   }
 
+  const std::vector<uint64_t>& recent_vsync_images() const { return recent_vsync_images_; }
+
   uint64_t get_cookie() const { return cookie_; }
 
   fbl::Mutex* mtx() const { return &mtx_; }
@@ -71,6 +73,7 @@ class TestFidlClient {
   async_dispatcher_t* dispatcher_ = nullptr;
   uint64_t vsync_count_ TA_GUARDED(mtx()) = 0;
   uint64_t cookie_ = 0;
+  std::vector<uint64_t> recent_vsync_images_;
 
   zx_status_t ImportImageWithSysmemLocked(
       const fuchsia_hardware_display::wire::ImageConfig& image_config, uint64_t* image_id)

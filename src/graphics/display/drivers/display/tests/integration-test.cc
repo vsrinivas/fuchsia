@@ -721,4 +721,55 @@ TEST_F(IntegrationTest, ClampRgb) {
                                         zx::sec(1)));
 }
 
+TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient) {
+  // Create and bind virtcon client.
+  TestFidlClient vc_client(sysmem_.get());
+  ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
+  {
+    fbl::AutoLock lock(vc_client.mtx());
+    EXPECT_EQ(ZX_OK, vc_client.dc_
+                         ->SetVirtconMode(static_cast<uint8_t>(
+                             fuchsia_hardware_display::wire::VirtconMode::FALLBACK))
+                         .status());
+  }
+  ASSERT_TRUE(vc_client.Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
+
+  // Present an image from virtcon client
+  EXPECT_OK(vc_client.PresentImage());
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, id = vc_client.display_id()]() {
+        fbl::AutoLock lock(controller()->mtx());
+        auto info = display_info(id);
+        return info->vsync_layer_count == 1;
+      },
+      zx::sec(1)));
+  auto vc_vsync_count = vc_client.vsync_count();
+  display()->SendVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = &vc_client, vc_vsync_count]() { return p->vsync_count() > vc_vsync_count; },
+      zx::sec(1)));
+  EXPECT_EQ(1u, vc_client.recent_vsync_images().size());
+
+  // Create and bind primary client.
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  // Since at this moment the displayed images are all from virtcon clients,
+  // the Vsync event received by primary client should not contain any image
+  // handles.
+  auto primary_vsync_count = primary_client->vsync_count();
+  display()->SendVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
+      },
+      zx::sec(1)));
+  EXPECT_EQ(0u, primary_client->recent_vsync_images().size());
+}
+
 }  // namespace display
