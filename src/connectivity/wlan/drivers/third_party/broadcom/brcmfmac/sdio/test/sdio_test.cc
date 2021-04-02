@@ -21,13 +21,13 @@
 #include <fuchsia/hardware/sdio/c/banjo.h>
 #include <fuchsia/hardware/sdio/cpp/banjo-mock.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <array>
 #include <tuple>
 
-#include <lib/ddk/metadata.h>
 #include <wifi/wifi-config.h>
 #include <zxtest/zxtest.h>
 
@@ -133,9 +133,14 @@ TEST(Sdio, IntrRegister) {
   gpio.VerifyAndClear();
   sdio1.VerifyAndClear();
   sdio2.VerifyAndClear();
+
+  // Manually join the ISR thread created when the interrupt is registered.
+  int retval = 0;
+  zx_handle_close(sdio_dev.irq_handle);
+  thrd_join(sdio_dev.isr_thread, &retval);
 }
 
-TEST(Sdio, IntrUnregister) {
+TEST(Sdio, IntrDeregister) {
   FakeSdioDevice device;
   brcmf_sdio_dev sdio_dev = {};
   sdio_func func1 = {};
@@ -147,6 +152,11 @@ TEST(Sdio, IntrUnregister) {
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
   sdio_dev.drvr = device.drvr();
   sdio_dev.oob_irq_requested = true;
+
+  // Create a dummy ISR thread for the interrupt deregistration to join.
+  int status = thrd_create_with_name(
+      &sdio_dev.isr_thread, [](void* arg) { return 0; }, nullptr, "brcmf-sdio-test-dummy-isr");
+  EXPECT_EQ(thrd_success, status);
 
   sdio1.ExpectDoVendorControlRwByte(ZX_OK, true, 0xf2, 0, 0).ExpectDisableFnIntr(ZX_OK);
   sdio2.ExpectDisableFnIntr(ZX_OK);

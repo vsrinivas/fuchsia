@@ -19,6 +19,7 @@
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/align.h>
@@ -31,7 +32,6 @@
 #include <atomic>
 #include <limits>
 
-#include <lib/ddk/metadata.h>
 #include <wifi/wifi-config.h>
 
 #ifndef _ALL_SOURCE
@@ -151,11 +151,6 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
       BRCMF_ERR("thrd_create_with_name failed: %d", status);
       return ZX_ERR_INTERNAL;
     }
-    status = thrd_detach(sdiodev->isr_thread);
-    if (status != thrd_success) {
-      BRCMF_ERR("thrd_detach failed: %d", status);
-      return ZX_ERR_INTERNAL;
-    }
     sdiodev->oob_irq_requested = true;
     ret = enable_irq_wake(sdiodev->irq_handle);
     if (ret != ZX_OK) {
@@ -221,6 +216,11 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
       sdiodev->irq_wake = false;
     }
     zx_handle_close(sdiodev->irq_handle);
+    int retval = 0;
+    int status = thrd_join(sdiodev->isr_thread, &retval);
+    if (status != thrd_success) {
+      BRCMF_ERR("thrd_join failed: %d", status);
+    }
     sdiodev->oob_irq_requested = false;
   }
 
