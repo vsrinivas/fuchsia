@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//build/images/vbmeta.gni")
 import("//build/rust/rustc_library.gni")
 
 if (is_host) {
@@ -32,9 +33,131 @@ if (is_host) {
       "src/vbmeta.rs",
     ]
   }
+
+  test_avb_key = "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"
+  test_avb_atx_metadata =
+      "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
+
+  salt = "56ebac2038b220d37b9b27e91c9e7afb3d7b7910c03775812c7a16cc01a8b380"
+
+  generated_file("test_image") {
+    outputs = [ "$target_out_dir/test_image" ]
+    contents = "0123456789ABCDEF0123456789ABCDEF"
+  }
+
+  test_image_outputs = get_target_outputs(":test_image")
+  test_image = test_image_outputs[0]
+  test_image_path = rebase_path(test_image)
+
+  action("expected_descriptor") {
+    hermetic_deps = false
+    testonly = true
+    script = "//third_party/android/platform/external/avb/avbtool.py"
+    deps = [ ":test_image" ]
+
+    output_file = target_name + ".vbmeta"
+    output_file = "$target_out_dir/$output_file"
+    outputs = [ output_file ]
+
+    inputs = [ test_image ]
+
+    args = [
+      "add_hash_footer",
+      "--image",
+      rebase_path(test_image, root_build_dir),
+      "--salt",
+      salt,
+      "--partition_name",
+      "zircon",
+      "--do_not_append_vbmeta_image",
+      "--output_vbmeta_image",
+      rebase_path(outputs[0], root_build_dir),
+      "--partition_size",
+
+      # we are not going to add footer into image,
+      # so, we do not care about a partition size checking.
+      # `partition_size' is a mandatory option, thus let
+      # use obviously big number for the partition size to pass
+      # verification. 200M should be good enough.
+      # TODO (dmitryya@) fix avbtool to do not check partition
+      # size if --do_not_append_vbmeta_image is specified.
+      "209715200",
+    ]
+  }
+
+  action("expected_vbmeta") {
+    testonly = true
+    script = "//third_party/android/platform/external/avb/avbtool.py"
+    deps = [ ":expected_descriptor" ]
+
+    output_file = target_name + ".vbmeta"
+    output_file = "$target_out_dir/$output_file"
+    outputs = [ output_file ]
+
+    vbmeta_descriptor_outputs = get_target_outputs(":expected_descriptor")
+    vbmeta_descriptor = vbmeta_descriptor_outputs[0]
+    inputs = [
+      test_avb_key,
+      test_avb_atx_metadata,
+      vbmeta_descriptor,
+    ]
+
+    args = [
+      "make_vbmeta_image",
+      "--output",  # output of VBMETA image
+      rebase_path(outputs[0], root_build_dir),
+      "--key",  # a key for signing
+      rebase_path(test_avb_key, root_build_dir),
+      "--algorithm",  # an algorithm for signing
+      avb_algorithm,
+      "--public_key_metadata",  # avb metadata
+      rebase_path(test_avb_atx_metadata, root_build_dir),
+      "--include_descriptors_from_image",
+      rebase_path(vbmeta_descriptor, root_build_dir),
+    ]
+  }
+
+  avb_key_path = rebase_path(test_avb_key)
+  avb_metadata_path = rebase_path(test_avb_atx_metadata)
+
+  avb_outputs = get_target_outputs(":expected_vbmeta")
+  expected_vbmeta_path = rebase_path(avb_outputs[0])
+
+  config("integration_test_assets") {
+    rustenv = [
+      "AVB_KEY=$avb_key_path",
+      "AVB_METADATA=$avb_metadata_path",
+      "EXPECTED_VBMETA=$expected_vbmeta_path",
+      "SALT=" + salt,
+      "IMAGE=$test_image_path",
+    ]
+  }
+
+  rustc_test("integration_test") {
+    source_root = "tests/integration_test.rs"
+    sources = [ "tests/integration_test.rs" ]
+    deps = [
+      ":vbmeta",
+      "//third_party/rust_crates:hex",
+    ]
+    non_rust_deps = [
+      ":expected_vbmeta",
+      ":test_image",
+    ]
+    configs += [ ":integration_test_assets" ]
+    inputs = [
+      avb_key_path,
+      avb_metadata_path,
+      test_image_path,
+      expected_vbmeta_path,
+    ]
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":vbmeta_test($host_toolchain)" ]
+  deps = [
+    ":integration_test($host_toolchain)",
+    ":vbmeta_test($host_toolchain)",
+  ]
 }
