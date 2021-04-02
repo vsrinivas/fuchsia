@@ -104,24 +104,29 @@ fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo_Sync(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_error::Example::fooResponseContext::fooResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_error::Example::foo>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<::fidl_test_error::Example::foo>::Type,
           ::fidl_test_error::kExample_foo_Ordinal) {}
 
-void ::fidl_test_error::Example::fooResponseContext::OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<::fidl_test_error::Example::foo>::OnReply(
+    uint8_t* reply) {
   OnReply(
       reinterpret_cast<::fidl::WireResponse<::fidl_test_error::Example::foo>*>(
           reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo(
     ::fidl::StringView s,
     ::fit::callback<
         void(::fidl::WireResponse<::fidl_test_error::Example::foo>* response)>
         _cb) {
   class ResponseContext final
-      : public ::fidl_test_error::Example::fooResponseContext {
+      : public ::fidl::WireResponseContext<::fidl_test_error::Example::foo> {
    public:
     ResponseContext(
         ::fit::callback<void(
@@ -153,7 +158,7 @@ void ::fidl_test_error::Example::fooResponseContext::OnReply(uint8_t* reply) {
 
 ::fidl::Result fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-    ::fidl_test_error::Example::fooResponseContext* _context) {
+    ::fidl::WireResponseContext<::fidl_test_error::Example::foo>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_error::Example::foo>::UnownedEncodedMessage

@@ -88,13 +88,8 @@ class {{ .Name }} final {
 
   using SyncClient = fidl::WireSyncClient<{{ . }}>;
 
-  {{- IfdefFuchsia -}}
-    using AsyncEventHandler = {{ .WireAsyncEventHandler }};
-    {{- range .TwoWayMethods }}
-      class {{ .WireResponseContext.Self }};
-    {{- end }}
-    using ClientImpl = {{ .WireClientImpl }};
-  {{- EndifFuchsia -}}
+  using AsyncEventHandler = {{ .WireAsyncEventHandler }};
+  using ClientImpl = {{ .WireClientImpl }};
 
   using Interface = {{ .WireInterface }};
   {{- if .ShouldEmitTypedChannelCascadingInheritance }}
@@ -317,6 +312,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
   {{- end }}
   {{- if .HasResponse }}
 {{ "" }}
+    {{- template "MethodResponseContextDefinition" . }}
     {{- template "ClientAsyncRequestManagedMethodDefinition" . }}
   {{- end }}
 {{- end }}

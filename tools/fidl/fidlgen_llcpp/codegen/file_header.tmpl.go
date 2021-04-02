@@ -92,14 +92,15 @@ const fileHeaderTmpl = `
 {{- end }}
 
 {{- range .Decls }}
-
-{{- if Eq .Kind Kinds.Protocol }}
-{{ EnsureNamespace . }}
-{{ template "ClientDeclaration" . }}
-{{ "" }}
-{{ template "EventSenderDeclaration" . }}
-{{ "" }}
-{{- end }}
+    {{- if Eq .Kind Kinds.Protocol }}
+        {{- range .TwoWayMethods }}
+            {{ template "MethodResponseContextDeclaration" . }}
+        {{- end }}
+        {{ template "ClientDeclaration" . }}
+        {{ "" }}
+        {{ template "EventSenderDeclaration" . }}
+        {{ "" }}
+    {{- end }}
 {{- end }}
 {{ "" }}
 

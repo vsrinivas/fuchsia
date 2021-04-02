@@ -4,7 +4,7 @@
 
 package codegen
 
-// fragmentProtocolEventHandlerTmpl contains the definition for:
+// fragmentProtocolEventHandlerTmpl contains the definitions for:
 //  * fidl::internal::WireEventHandlerInterface<Protocol>
 //  * fidl::WireAsyncEventHandler<Protocol>
 //  * fidl::WireSyncEventHandler<Protocol>

@@ -887,11 +887,12 @@ class SimpleProtocol final {
       ::fidl::internal::WireCaller<::fidl_test_nullable::SimpleProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_nullable::SimpleProtocol>;
-  class AddResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1730,14 +1731,13 @@ static_assert(offsetof(::fidl_test_nullable::wire::Int32Wrapper, val) == 0);
 static_assert(sizeof(::fidl_test_nullable::wire::Int32Wrapper) ==
               ::fidl_test_nullable::wire::Int32Wrapper::PrimarySize);
 }  // namespace fidl
-namespace fidl_test_nullable {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_nullable::SimpleProtocol::AddResponseContext
+template <>
+class ::fidl::WireResponseContext<::fidl_test_nullable::SimpleProtocol::Add>
     : public ::fidl::internal::ResponseContext {
  public:
-  AddResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>*
@@ -1746,7 +1746,10 @@ class ::fidl_test_nullable::SimpleProtocol::AddResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_nullable
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
     final : private ::fidl::internal::ClientBase {
@@ -1767,7 +1770,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
   // or |OnReply| are called on it.
   ::fidl::Result Add(
       ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
-      ::fidl_test_nullable::SimpleProtocol::AddResponseContext* _context);
+      ::fidl::WireResponseContext<::fidl_test_nullable::SimpleProtocol::Add>*
+          _context);
 
   // Synchronous variant of |SimpleProtocol.Add()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -1805,10 +1809,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
       ::fidl::WireAsyncEventHandler<::fidl_test_nullable::SimpleProtocol>>
       event_handler_;
 };
-namespace fidl_test_nullable {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_nullable
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the SimpleProtocol protocol, and can send events in that protocol.

@@ -63,11 +63,12 @@ class super final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_inheritance::super>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::super>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::super>;
-  class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::super>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -655,11 +656,12 @@ class sub final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_inheritance::sub>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::sub>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::sub>;
-  class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::sub>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1270,14 +1272,13 @@ static_assert(
 static_assert(offsetof(::fidl::WireResponse<::fidl_test_inheritance::sub::foo>,
                        y) == 16);
 }  // namespace fidl
-namespace fidl_test_inheritance {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_inheritance::super::fooResponseContext
+template <>
+class ::fidl::WireResponseContext<::fidl_test_inheritance::super::foo>
     : public ::fidl::internal::ResponseContext {
  public:
-  fooResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_inheritance::super::foo>* message) = 0;
@@ -1285,7 +1286,10 @@ class ::fidl_test_inheritance::super::fooResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_inheritance
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super> final
     : private ::fidl::internal::ClientBase {
@@ -1304,7 +1308,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super> final
   // or |OnReply| are called on it.
   ::fidl::Result foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl_test_inheritance::super::fooResponseContext* _context);
+      ::fidl::WireResponseContext<::fidl_test_inheritance::super::foo>*
+          _context);
 
   // Synchronous variant of |super.foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is
@@ -1340,10 +1345,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super> final
   std::shared_ptr<::fidl::WireAsyncEventHandler<::fidl_test_inheritance::super>>
       event_handler_;
 };
-namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the super protocol, and can send events in that protocol.
@@ -1393,14 +1396,13 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::super> {
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_inheritance {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_inheritance::sub::fooResponseContext
+template <>
+class ::fidl::WireResponseContext<::fidl_test_inheritance::sub::foo>
     : public ::fidl::internal::ResponseContext {
  public:
-  fooResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>* message) = 0;
@@ -1408,7 +1410,10 @@ class ::fidl_test_inheritance::sub::fooResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_inheritance
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub> final
     : private ::fidl::internal::ClientBase {
@@ -1427,7 +1432,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub> final
   // or |OnReply| are called on it.
   ::fidl::Result foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl_test_inheritance::sub::fooResponseContext* _context);
+      ::fidl::WireResponseContext<::fidl_test_inheritance::sub::foo>* _context);
 
   // Synchronous variant of |sub.foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is
@@ -1463,10 +1468,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub> final
   std::shared_ptr<::fidl::WireAsyncEventHandler<::fidl_test_inheritance::sub>>
       event_handler_;
 };
-namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the sub protocol, and can send events in that protocol.

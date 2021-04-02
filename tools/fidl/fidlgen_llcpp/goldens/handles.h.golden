@@ -311,10 +311,12 @@ class SomeProtocol final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_handles::SomeProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_handles::SomeProtocol>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_handles::SomeProtocol>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -512,11 +514,8 @@ static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
               ::fidl_test_handles::wire::Handles::PrimarySize);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace fidl_test_handles {
-
 #ifdef __Fuchsia__
-}  // namespace fidl_test_handles
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol> final
     : private ::fidl::internal::ClientBase {
@@ -544,10 +543,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol> final
       ::fidl::WireAsyncEventHandler<::fidl_test_handles::SomeProtocol>>
       event_handler_;
 };
-namespace fidl_test_handles {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_handles
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the SomeProtocol protocol, and can send events in that protocol.

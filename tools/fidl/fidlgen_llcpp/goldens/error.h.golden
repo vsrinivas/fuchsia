@@ -301,11 +301,12 @@ class Example final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_error::Example>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_error::Example>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>;
-  class fooResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_error::Example>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_error::Example>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -915,14 +916,13 @@ static_assert(
 static_assert(offsetof(::fidl::WireResponse<::fidl_test_error::Example::foo>,
                        result) == 16);
 }  // namespace fidl
-namespace fidl_test_error {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_error::Example::fooResponseContext
+template <>
+class ::fidl::WireResponseContext<::fidl_test_error::Example::foo>
     : public ::fidl::internal::ResponseContext {
  public:
-  fooResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_error::Example::foo>* message) = 0;
@@ -930,7 +930,10 @@ class ::fidl_test_error::Example::fooResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_error
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
     : private ::fidl::internal::ClientBase {
@@ -947,8 +950,9 @@ class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-                     ::fidl_test_error::Example::fooResponseContext* _context);
+  ::fidl::Result foo(
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::WireResponseContext<::fidl_test_error::Example::foo>* _context);
 
   // Synchronous variant of |Example.foo()|.
   // Allocates 48 bytes of response buffer on the stack. Request is
@@ -983,10 +987,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
   std::shared_ptr<::fidl::WireAsyncEventHandler<::fidl_test_error::Example>>
       event_handler_;
 };
-namespace fidl_test_error {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_error
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Example protocol, and can send events in that protocol.

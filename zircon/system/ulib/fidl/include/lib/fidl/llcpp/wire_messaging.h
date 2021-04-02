@@ -50,6 +50,9 @@ template <typename FidlMethod>
 struct WireResponse;
 
 template <typename FidlMethod>
+class WireResponseContext;
+
+template <typename FidlMethod>
 class WireResult;
 
 template <typename FidlMethod>

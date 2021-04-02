@@ -28,6 +28,7 @@ go_library("gopkg") {
     "codegen/fragment_event_sender.tmpl.go",
     "codegen/fragment_method_request.tmpl.go",
     "codegen/fragment_method_response.tmpl.go",
+    "codegen/fragment_method_response_context.tmpl.go",
     "codegen/fragment_method_result.tmpl.go",
     "codegen/fragment_method_unownedresult.tmpl.go",
     "codegen/fragment_protocol.tmpl.go",

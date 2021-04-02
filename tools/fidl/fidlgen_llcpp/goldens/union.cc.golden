@@ -304,9 +304,10 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_union::TestProtocol::
-    StrictXUnionHenceResponseMayBeStackAllocatedResponseContext::
-        StrictXUnionHenceResponseMayBeStackAllocatedResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_union::TestProtocol::
+        StrictXUnionHenceResponseMayBeStackAllocated>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_union::TestProtocol::
@@ -315,14 +316,16 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
               kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal) {
 }
 
-void ::fidl_test_union::TestProtocol::
-    StrictXUnionHenceResponseMayBeStackAllocatedResponseContext::OnReply(
-        uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_union::TestProtocol::
+        StrictXUnionHenceResponseMayBeStackAllocated>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_union::TestProtocol::
                   StrictXUnionHenceResponseMayBeStackAllocated>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
     StrictXUnionHenceResponseMayBeStackAllocated(
         ::fit::callback<
@@ -331,8 +334,9 @@ void ::fidl_test_union::TestProtocol::
                      StrictXUnionHenceResponseMayBeStackAllocated>* response)>
             _cb) {
   class ResponseContext final
-      : public ::fidl_test_union::TestProtocol::
-            StrictXUnionHenceResponseMayBeStackAllocatedResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_union::TestProtocol::
+                StrictXUnionHenceResponseMayBeStackAllocated> {
    public:
     ResponseContext(
         ::fit::callback<
@@ -371,9 +375,9 @@ void ::fidl_test_union::TestProtocol::
 
 ::fidl::Result fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
     StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl_test_union::TestProtocol::
-            StrictXUnionHenceResponseMayBeStackAllocatedResponseContext*
-                _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_union::TestProtocol::
+                StrictXUnionHenceResponseMayBeStackAllocated>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::
@@ -423,9 +427,10 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_union::TestProtocol::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext::
-        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_union::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocated>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_union::TestProtocol::
@@ -434,14 +439,17 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
               kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal) {
 }
 
-void ::fidl_test_union::TestProtocol::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext::OnReply(
-        uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_union::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocated>::OnReply(uint8_t*
+                                                                     reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_union::TestProtocol::
                   FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
         ::fit::callback<
@@ -450,8 +458,9 @@ void ::fidl_test_union::TestProtocol::
                      FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)>
             _cb) {
   class ResponseContext final
-      : public ::fidl_test_union::TestProtocol::
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_union::TestProtocol::
+                FlexibleXUnionHenceResponseMustBeHeapAllocated> {
    public:
     ResponseContext(
         ::fit::callback<
@@ -490,9 +499,9 @@ void ::fidl_test_union::TestProtocol::
 
 ::fidl::Result fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl_test_union::TestProtocol::
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext*
-                _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_union::TestProtocol::
+                FlexibleXUnionHenceResponseMustBeHeapAllocated>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::

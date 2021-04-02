@@ -369,12 +369,12 @@ class Protocol final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_requestflexibleenvelope::Protocol>;
-  class RequestStrictResponseFlexibleResponseContext;
-  class RequestFlexibleResponseStrictResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_requestflexibleenvelope::Protocol>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>;
 
@@ -1675,15 +1675,14 @@ static_assert(
                                       Protocol::RequestFlexibleResponseStrict>,
              f) == 16);
 }  // namespace fidl
-namespace fidl_test_requestflexibleenvelope {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_requestflexibleenvelope::Protocol::
-    RequestStrictResponseFlexibleResponseContext
+template <>
+class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestStrictResponseFlexible>
     : public ::fidl::internal::ResponseContext {
  public:
-  RequestStrictResponseFlexibleResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
@@ -1692,12 +1691,16 @@ class ::fidl_test_requestflexibleenvelope::Protocol::
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_requestflexibleenvelope::Protocol::
-    RequestFlexibleResponseStrictResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestFlexibleResponseStrict>
     : public ::fidl::internal::ResponseContext {
  public:
-  RequestFlexibleResponseStrictResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
@@ -1706,7 +1709,10 @@ class ::fidl_test_requestflexibleenvelope::Protocol::
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_requestflexibleenvelope
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_requestflexibleenvelope::Protocol>
@@ -1728,8 +1734,9 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl_test_requestflexibleenvelope::Protocol::
-          RequestStrictResponseFlexibleResponseContext* _context);
+      ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestStrictResponseFlexible>*
+          _context);
 
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // Request is heap-allocated. Response is heap-allocated.
@@ -1764,8 +1771,9 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl_test_requestflexibleenvelope::Protocol::
-          RequestFlexibleResponseStrictResponseContext* _context);
+      ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestFlexibleResponseStrict>*
+          _context);
 
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // Request is heap-allocated. Response is heap-allocated.
@@ -1806,10 +1814,8 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_requestflexibleenvelope::Protocol>>
       event_handler_;
 };
-namespace fidl_test_requestflexibleenvelope {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_requestflexibleenvelope
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Protocol protocol, and can send events in that protocol.

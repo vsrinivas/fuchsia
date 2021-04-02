@@ -63,7 +63,7 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
 }
 
 TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
-  class ResponseContext final : public Example::TwoWayResponseContext {
+  class ResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
    public:
     ResponseContext(sync_completion_t* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}

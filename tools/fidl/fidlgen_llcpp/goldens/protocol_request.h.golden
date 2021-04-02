@@ -104,12 +104,12 @@ class Parent final {
       ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Parent>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Parent>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>;
-  class GetChildResponseContext;
-  class GetChildRequestResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1681,10 +1681,12 @@ class Child final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Child>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Child>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Child>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Child>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1915,14 +1917,13 @@ static_assert(
                  ::fidl_test_protocolrequest::Parent::TakeChildRequest>,
              r) == 16);
 }  // namespace fidl
-namespace fidl_test_protocolrequest {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_protocolrequest::Parent::GetChildResponseContext
+template <>
+class ::fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>
     : public ::fidl::internal::ResponseContext {
  public:
-  GetChildResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*
@@ -1931,11 +1932,16 @@ class ::fidl_test_protocolrequest::Parent::GetChildResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocolrequest::Parent::GetChildRequest>
     : public ::fidl::internal::ResponseContext {
  public:
-  GetChildRequestResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<
@@ -1944,7 +1950,10 @@ class ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_protocolrequest
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
     final : private ::fidl::internal::ClientBase {
@@ -1963,7 +1972,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   ::fidl::Result GetChild(
-      ::fidl_test_protocolrequest::Parent::GetChildResponseContext* _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocolrequest::Parent::GetChild>* _context);
 
   // Synchronous variant of |Parent.GetChild()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
@@ -1991,8 +2001,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   ::fidl::Result GetChildRequest(
-      ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocolrequest::Parent::GetChildRequest>* _context);
 
   // Synchronous variant of |Parent.GetChildRequest()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
@@ -2050,10 +2060,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
       ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>>
       event_handler_;
 };
-namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Parent protocol, and can send events in that protocol.
@@ -2105,10 +2113,8 @@ class ::fidl::internal::WireWeakEventSender<
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocolrequest {
-
 #ifdef __Fuchsia__
-}  // namespace fidl_test_protocolrequest
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child> final
     : private ::fidl::internal::ClientBase {
@@ -2136,10 +2142,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child> final
       ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Child>>
       event_handler_;
 };
-namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Child protocol, and can send events in that protocol.

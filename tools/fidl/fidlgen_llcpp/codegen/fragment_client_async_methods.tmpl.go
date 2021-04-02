@@ -28,12 +28,6 @@ The request and callback are allocated on the heap.
 
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
 {{- IfdefFuchsia -}}
-{{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()
-    : ::fidl::internal::ResponseContext({{ .WireResponse }}::Type, {{ .OrdinalName }}) {}
-
-void {{ .WireResponseContext }}::OnReply(uint8_t* reply) {
-  OnReply(reinterpret_cast<{{ .WireResponse }}*>(reply));
-}
 
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
     {{ template "ClientAsyncRequestManagedMethodArguments" . }}) {

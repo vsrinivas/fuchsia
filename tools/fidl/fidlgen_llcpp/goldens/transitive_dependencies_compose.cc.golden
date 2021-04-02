@@ -106,19 +106,22 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext::
-    GetFooResponseContext()
+
+::fidl::WireResponseContext<::fidl_test_transitivedependenciescompose::Top::
+                                GetFoo>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_transitivedependenciescompose::Top::GetFoo>::Type,
           ::fidl_test_transitivedependenciescompose::kTop_GetFoo_Ordinal) {}
 
-void ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext::
-    OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<::fidl_test_transitivedependenciescompose::
+                                     Top::GetFoo>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_transitivedependenciescompose::Top::GetFoo>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
         ::fit::callback<void(
@@ -126,8 +129,8 @@ void ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext::
                                      Top::GetFoo>* response)>
             _cb) {
   class ResponseContext final
-      : public ::fidl_test_transitivedependenciescompose::Top::
-            GetFooResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_transitivedependenciescompose::Top::GetFoo> {
    public:
     ResponseContext(
         ::fit::callback<void(
@@ -162,8 +165,8 @@ void ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext::
 
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
-        ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext*
-            _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_transitivedependenciescompose::Top::GetFoo>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::

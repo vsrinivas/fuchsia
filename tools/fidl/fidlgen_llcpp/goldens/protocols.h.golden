@@ -931,11 +931,12 @@ class Transitional final {
       ::fidl::internal::WireCaller<::fidl_test_protocols::Transitional>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocols::Transitional>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>;
-  class RequestResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_protocols::Transitional>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1957,13 +1958,12 @@ class ChannelProtocol final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>;
-  class MethodBResponseContext;
-  class TakeHandleResponseContext;
-  class MutateSocketResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>;
 
@@ -4015,14 +4015,12 @@ class WithAndWithoutRequestResponse final {
 
   using SyncClient = fidl::WireSyncClient<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-  class NoRequestEmptyResponseResponseContext;
-  class NoRequestWithResponseResponseContext;
-  class WithRequestEmptyResponseResponseContext;
-  class WithRequestWithResponseResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
+
   using Interface = ::fidl::WireInterface<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
@@ -6961,13 +6959,12 @@ class WithErrorSyntax final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>;
-  class ResponseAsStructResponseContext;
-  class ErrorAsPrimitiveResponseContext;
-  class ErrorAsEnumResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>;
 
@@ -9189,14 +9186,13 @@ static_assert(offsetof(::fidl::WireResponse<
                            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>,
                        result) == 16);
 }  // namespace fidl
-namespace fidl_test_protocols {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_protocols::Transitional::RequestResponseContext
+template <>
+class ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>
     : public ::fidl::internal::ResponseContext {
  public:
-  RequestResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*
@@ -9205,7 +9201,10 @@ class ::fidl_test_protocols::Transitional::RequestResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
     final : private ::fidl::internal::ClientBase {
@@ -9226,7 +9225,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
   // or |OnReply| are called on it.
   ::fidl::Result Request(
       ::fidl::BufferSpan _request_buffer, int64_t x,
-      ::fidl_test_protocols::Transitional::RequestResponseContext* _context);
+      ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>*
+          _context);
 
   // Synchronous variant of |Transitional.Request()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -9271,10 +9271,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>>
       event_handler_;
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Transitional protocol, and can send events in that protocol.
@@ -9346,14 +9344,14 @@ class ::fidl::internal::WireWeakEventSender<
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::MethodB>
     : public ::fidl::internal::ResponseContext {
  public:
-  MethodBResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>*
@@ -9362,11 +9360,16 @@ class ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::TakeHandle>
     : public ::fidl::internal::ResponseContext {
  public:
-  TakeHandleResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>*
@@ -9375,11 +9378,16 @@ class ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::MutateSocket>
     : public ::fidl::internal::ResponseContext {
  public:
-  MutateSocketResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<
@@ -9388,7 +9396,10 @@ class ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
     final : private ::fidl::internal::ClientBase {
@@ -9409,7 +9420,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
   // or |OnReply| are called on it.
   ::fidl::Result MethodB(
       ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
-      ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext* _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::ChannelProtocol::MethodB>* _context);
 
   // Synchronous variant of |ChannelProtocol.MethodB()|.
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
@@ -9440,8 +9452,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
   // or |OnReply| are called on it.
   ::fidl::Result TakeHandle(
       ::fidl::BufferSpan _request_buffer, ::zx::handle h,
-      ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>* _context);
 
   // Synchronous variant of |ChannelProtocol.TakeHandle()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
@@ -9472,8 +9484,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
   // or |OnReply| are called on it.
   ::fidl::Result MutateSocket(
       ::fidl::BufferSpan _request_buffer, ::zx::socket a,
-      ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>* _context);
 
   // Synchronous variant of |ChannelProtocol.MutateSocket()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -9520,10 +9532,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>>
       event_handler_;
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the ChannelProtocol protocol, and can send events in that protocol.
@@ -9596,15 +9606,14 @@ class ::fidl::internal::WireWeakEventSender<
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    NoRequestEmptyResponseResponseContext
-    : public ::fidl::internal::ResponseContext {
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponse> : public ::fidl::internal::ResponseContext {
  public:
-  NoRequestEmptyResponseResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(::fidl::WireResponse<
                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -9613,12 +9622,16 @@ class ::fidl_test_protocols::WithAndWithoutRequestResponse::
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    NoRequestWithResponseResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
     : public ::fidl::internal::ResponseContext {
  public:
-  NoRequestWithResponseResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(::fidl::WireResponse<
                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -9627,12 +9640,16 @@ class ::fidl_test_protocols::WithAndWithoutRequestResponse::
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    WithRequestEmptyResponseResponseContext
-    : public ::fidl::internal::ResponseContext {
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponse> : public ::fidl::internal::ResponseContext {
  public:
-  WithRequestEmptyResponseResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(::fidl::WireResponse<
                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -9641,12 +9658,16 @@ class ::fidl_test_protocols::WithAndWithoutRequestResponse::
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    WithRequestWithResponseResponseContext
-    : public ::fidl::internal::ResponseContext {
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponse> : public ::fidl::internal::ResponseContext {
  public:
-  WithRequestWithResponseResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(::fidl::WireResponse<
                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -9655,7 +9676,10 @@ class ::fidl_test_protocols::WithAndWithoutRequestResponse::
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>
@@ -9677,8 +9701,9 @@ class ::fidl::internal::WireClientImpl<
   // |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result NoRequestEmptyResponse(
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestEmptyResponseResponseContext* _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponse>* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 32
@@ -9703,8 +9728,9 @@ class ::fidl::internal::WireClientImpl<
   // |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result NoRequestWithResponse(
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestWithResponseResponseContext* _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestWithResponse>* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Allocates 16 bytes
@@ -9739,8 +9765,9 @@ class ::fidl::internal::WireClientImpl<
   // are called on it.
   ::fidl::Result WithRequestEmptyResponse(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestEmptyResponseResponseContext* _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestEmptyResponse>* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Allocates 16
@@ -9777,8 +9804,9 @@ class ::fidl::internal::WireClientImpl<
   // are called on it.
   ::fidl::Result WithRequestWithResponse(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestWithResponseResponseContext* _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestWithResponse>* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Request is
@@ -9833,10 +9861,8 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>>
       event_handler_;
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the WithAndWithoutRequestResponse protocol, and can send events in that
@@ -9926,14 +9952,14 @@ class ::fidl::internal::WireWeakEventSender<
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocols {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
     : public ::fidl::internal::ResponseContext {
  public:
-  ResponseAsStructResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<
@@ -9943,11 +9969,16 @@ class ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
     : public ::fidl::internal::ResponseContext {
  public:
-  ErrorAsPrimitiveResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<
@@ -9957,11 +9988,16 @@ class ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
     : public ::fidl::internal::ResponseContext {
  public:
-  ErrorAsEnumResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*
@@ -9970,7 +10006,10 @@ class ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_protocols
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
     final : private ::fidl::internal::ClientBase {
@@ -9989,8 +10028,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   ::fidl::Result ResponseAsStruct(
-      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>* _context);
 
   // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
   // Allocates 80 bytes of message buffer on the stack. No heap allocation
@@ -10019,8 +10058,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   ::fidl::Result ErrorAsPrimitive(
-      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>* _context);
 
   // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
   // Allocates 64 bytes of message buffer on the stack. No heap allocation
@@ -10049,8 +10088,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   ::fidl::Result ErrorAsEnum(
-      ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* _context);
 
   // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
   // Allocates 64 bytes of message buffer on the stack. No heap allocation
@@ -10087,10 +10126,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>>
       event_handler_;
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the WithErrorSyntax protocol, and can send events in that protocol.

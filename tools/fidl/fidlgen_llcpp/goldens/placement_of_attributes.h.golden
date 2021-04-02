@@ -632,10 +632,12 @@ class ExampleProtocol final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_placementofattributes::ExampleProtocol>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_placementofattributes::ExampleProtocol>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>;
 
@@ -1088,11 +1090,9 @@ static_assert(
     offsetof(::fidl::WireRequest<
                  ::fidl_test_placementofattributes::ExampleProtocol::Method>,
              arg) == 16);
-}  // namespace fidl
-namespace fidl_test_placementofattributes {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_placementofattributes
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_placementofattributes::ExampleProtocol>
@@ -1131,10 +1131,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_placementofattributes::ExampleProtocol>>
       event_handler_;
 };
-namespace fidl_test_placementofattributes {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_placementofattributes
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the ExampleProtocol protocol, and can send events in that protocol.

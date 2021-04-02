@@ -7,20 +7,6 @@ package codegen
 const fragmentClientTmpl = `
 {{- define "ClientDeclaration" }}
 {{- IfdefFuchsia -}}
-{{ EnsureNamespace . }}
-{{- range .TwoWayMethods }}
-{{ "" }}
-class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
- public:
-  {{ .WireResponseContext.Self }}();
-
-  virtual void OnReply({{ .WireResponse }}* message) = 0;
-
- private:
-  void OnReply(uint8_t* reply) override;
-};
-{{- end }}
-
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {

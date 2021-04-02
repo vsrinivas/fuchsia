@@ -3153,12 +3153,12 @@ class TestProtocol final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_union::TestProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_union::TestProtocol>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>;
-  class StrictXUnionHenceResponseMayBeStackAllocatedResponseContext;
-  class FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_union::TestProtocol>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -4777,15 +4777,15 @@ struct IsUnion<::fidl_test_union::wire::XUnionContainingEmptyStruct>
 static_assert(std::is_standard_layout_v<
               ::fidl_test_union::wire::XUnionContainingEmptyStruct>);
 }  // namespace fidl
-namespace fidl_test_union {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_union::TestProtocol::
-    StrictXUnionHenceResponseMayBeStackAllocatedResponseContext
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_union::TestProtocol::
+        StrictXUnionHenceResponseMayBeStackAllocated>
     : public ::fidl::internal::ResponseContext {
  public:
-  StrictXUnionHenceResponseMayBeStackAllocatedResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_union::TestProtocol::
@@ -4795,12 +4795,17 @@ class ::fidl_test_union::TestProtocol::
  private:
   void OnReply(uint8_t* reply) override;
 };
+#endif  // __Fuchsia__
 
-class ::fidl_test_union::TestProtocol::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_union::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocated>
     : public ::fidl::internal::ResponseContext {
  public:
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_union::TestProtocol::
@@ -4810,7 +4815,10 @@ class ::fidl_test_union::TestProtocol::
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_union
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
     : private ::fidl::internal::ClientBase {
@@ -4831,9 +4839,9 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   // of |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl_test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocatedResponseContext*
-              _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>* _context);
 
   // Synchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 88
@@ -4868,9 +4876,9 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   // of |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl_test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext*
-              _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>* _context);
 
   // Synchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
@@ -4910,10 +4918,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
       ::fidl::WireAsyncEventHandler<::fidl_test_union::TestProtocol>>
       event_handler_;
 };
-namespace fidl_test_union {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_union
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the TestProtocol protocol, and can send events in that protocol.

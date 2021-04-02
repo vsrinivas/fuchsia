@@ -182,6 +182,7 @@ func NewGenerator() *Generator {
 		fragmentEventSenderTmpl,
 		fragmentMethodRequestTmpl,
 		fragmentMethodResponseTmpl,
+		fragmentMethodResponseContextTmpl,
 		fragmentMethodResultTmpl,
 		fragmentMethodUnownedResultTmpl,
 		fragmentProtocolTmpl,

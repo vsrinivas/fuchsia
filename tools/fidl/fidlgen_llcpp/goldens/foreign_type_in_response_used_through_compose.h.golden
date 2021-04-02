@@ -70,11 +70,12 @@ class Top final {
 
   using SyncClient = fidl::WireSyncClient<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
-  class GetFooResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
+
   using Interface = ::fidl::WireInterface<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
 
@@ -748,14 +749,14 @@ static_assert(
             ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
         foo) == 16);
 }  // namespace fidl
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-    GetFooResponseContext : public ::fidl::internal::ResponseContext {
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    : public ::fidl::internal::ResponseContext {
  public:
-  GetFooResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<
@@ -765,7 +766,10 @@ class ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
@@ -785,8 +789,10 @@ class ::fidl::internal::WireClientImpl<
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result GetFoo(::fidl_test_foreigntypeinresponseusedthroughcompose::
-                            Top::GetFooResponseContext* _context);
+  ::fidl::Result GetFoo(
+      ::fidl::WireResponseContext<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+          _context);
 
   // Synchronous variant of |Top.GetFoo()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
@@ -827,10 +833,8 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>>
       event_handler_;
 };
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Top protocol, and can send events in that protocol.

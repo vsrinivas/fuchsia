@@ -189,11 +189,12 @@ class EmptyProtocol final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>;
-  class SendAndReceiveResponseContext;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>;
 
@@ -1262,14 +1263,14 @@ static_assert(
                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>,
              e) == 16);
 }  // namespace fidl
-namespace fidl_test_emptystruct {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
     : public ::fidl::internal::ResponseContext {
  public:
-  SendAndReceiveResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<
@@ -1278,7 +1279,10 @@ class ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_emptystruct
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
     final : private ::fidl::internal::ClientBase {
@@ -1300,8 +1304,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
   ::fidl::Result SendAndReceive(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_emptystruct::wire::Empty e,
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* _context);
 
   // Synchronous variant of |EmptyProtocol.SendAndReceive()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -1349,10 +1353,8 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
       ::fidl::WireAsyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>>
       event_handler_;
 };
-namespace fidl_test_emptystruct {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_emptystruct
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the EmptyProtocol protocol, and can send events in that protocol.

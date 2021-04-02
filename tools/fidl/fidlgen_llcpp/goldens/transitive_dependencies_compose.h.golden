@@ -70,11 +70,12 @@ class Top final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_transitivedependenciescompose::Top>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_transitivedependenciescompose::Top>;
-  class GetFooResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_transitivedependenciescompose::Top>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>;
 
@@ -719,14 +720,14 @@ static_assert(
                  ::fidl_test_transitivedependenciescompose::Top::GetFoo>,
              foo) == 16);
 }  // namespace fidl
-namespace fidl_test_transitivedependenciescompose {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_transitivedependenciescompose::Top::GetFoo>
     : public ::fidl::internal::ResponseContext {
  public:
-  GetFooResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<
@@ -735,7 +736,10 @@ class ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_transitivedependenciescompose
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_transitivedependenciescompose::Top>
@@ -755,8 +759,8 @@ class ::fidl::internal::WireClientImpl<
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   ::fidl::Result GetFoo(
-      ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext*
-          _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_transitivedependenciescompose::Top::GetFoo>* _context);
 
   // Synchronous variant of |Top.GetFoo()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
@@ -793,10 +797,8 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_transitivedependenciescompose::Top>>
       event_handler_;
 };
-namespace fidl_test_transitivedependenciescompose {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_transitivedependenciescompose
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Top protocol, and can send events in that protocol.

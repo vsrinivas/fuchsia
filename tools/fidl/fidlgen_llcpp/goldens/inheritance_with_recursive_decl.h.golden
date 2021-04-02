@@ -68,10 +68,12 @@ class Parent final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_inheritancewithrecursivedecl::Parent>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_inheritancewithrecursivedecl::Parent>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>;
 
@@ -517,10 +519,12 @@ class Child final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_inheritancewithrecursivedecl::Child>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_inheritancewithrecursivedecl::Child>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>;
 
@@ -1244,11 +1248,9 @@ static_assert(
     offsetof(::fidl::WireRequest<
                  ::fidl_test_inheritancewithrecursivedecl::Child::Second>,
              request) == 16);
-}  // namespace fidl
-namespace fidl_test_inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_inheritancewithrecursivedecl
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>
@@ -1289,10 +1291,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_inheritancewithrecursivedecl::Parent>>
       event_handler_;
 };
-namespace fidl_test_inheritancewithrecursivedecl {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_inheritancewithrecursivedecl
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Parent protocol, and can send events in that protocol.
@@ -1349,10 +1351,8 @@ class ::fidl::internal::WireWeakEventSender<
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_inheritancewithrecursivedecl {
-
 #ifdef __Fuchsia__
-}  // namespace fidl_test_inheritancewithrecursivedecl
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Child>
@@ -1405,10 +1405,8 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_inheritancewithrecursivedecl::Child>>
       event_handler_;
 };
-namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Child protocol, and can send events in that protocol.

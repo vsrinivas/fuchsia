@@ -165,20 +165,23 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::Transitional::RequestResponseContext::
-    RequestResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::Transitional::Request>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::Transitional::Request>::Type,
           ::fidl_test_protocols::kTransitional_Request_Ordinal) {}
 
-void ::fidl_test_protocols::Transitional::RequestResponseContext::OnReply(
-    uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::Transitional::Request>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<
           ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*>(
       reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
     int64_t x,
@@ -187,7 +190,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
                  response)>
         _cb) {
   class ResponseContext final
-      : public ::fidl_test_protocols::Transitional::RequestResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::Transitional::Request> {
    public:
     ResponseContext(
         ::fit::callback<void(
@@ -223,7 +227,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
     ::fidl::BufferSpan _request_buffer, int64_t x,
-    ::fidl_test_protocols::Transitional::RequestResponseContext* _context) {
+    ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>*
+        _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>::
@@ -819,19 +824,22 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::ChannelProtocol::MethodBResponseContext::
-    MethodBResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::MethodB>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
           ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal) {}
 
-void ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext::OnReply(
-    uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::MethodB>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::ChannelProtocol::MethodB>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
     int64_t a, int64_t b,
@@ -840,7 +848,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
             response)>
         _cb) {
   class ResponseContext final
-      : public ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::ChannelProtocol::MethodB> {
    public:
     ResponseContext(
         ::fit::callback<
@@ -876,7 +885,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
     ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
-    ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext* _context) {
+    ::fidl::WireResponseContext<
+        ::fidl_test_protocols::ChannelProtocol::MethodB>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>::
@@ -923,19 +933,23 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext::
-    TakeHandleResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::TakeHandle>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
           ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal) {}
 
-void ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext::OnReply(
-    uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::TakeHandle>::OnReply(uint8_t*
+                                                                     reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::ChannelProtocol>::TakeHandle(
         ::zx::handle h,
@@ -943,8 +957,9 @@ void ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext::OnReply(
             void(::fidl::WireResponse<
                  ::fidl_test_protocols::ChannelProtocol::TakeHandle>* response)>
             _cb) {
-  class ResponseContext final : public ::fidl_test_protocols::ChannelProtocol::
-                                    TakeHandleResponseContext {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandle> {
    public:
     ResponseContext(
         ::fit::callback<
@@ -980,8 +995,8 @@ void ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext::OnReply(
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::ChannelProtocol>::TakeHandle(
         ::fidl::BufferSpan _request_buffer, ::zx::handle h,
-        ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext*
-            _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandle>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
@@ -1028,19 +1043,23 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext::
-    MutateSocketResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::MutateSocket>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
           ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal) {}
 
-void ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext::
-    OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::MutateSocket>::OnReply(uint8_t*
+                                                                       reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MutateSocket(
         ::zx::socket a,
@@ -1048,8 +1067,9 @@ void ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext::
             void(::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::
                                           MutateSocket>* response)>
             _cb) {
-  class ResponseContext final : public ::fidl_test_protocols::ChannelProtocol::
-                                    MutateSocketResponseContext {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket> {
    public:
     ResponseContext(::fit::callback<
                     void(::fidl::WireResponse<
@@ -1087,8 +1107,8 @@ void ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext::
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MutateSocket(
         ::fidl::BufferSpan _request_buffer, ::zx::socket a,
-        ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext*
-            _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>::
@@ -1861,9 +1881,10 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::WithAndWithoutRequestResponse::
-    NoRequestEmptyResponseResponseContext::
-        NoRequestEmptyResponseResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1871,13 +1892,16 @@ fidl::internal::WireClientImpl<
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal) {}
 
-void ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    NoRequestEmptyResponseResponseContext::OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponse>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
                   NoRequestEmptyResponse>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestEmptyResponse(
@@ -1887,8 +1911,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
                      NoRequestEmptyResponse>* response)>
             _cb) {
   class ResponseContext final
-      : public ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestEmptyResponseResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponse> {
    public:
     ResponseContext(::fit::callback<
                     void(::fidl::WireResponse<
@@ -1925,8 +1950,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestEmptyResponse(
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestEmptyResponseResponseContext* _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponse>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1980,8 +2006,10 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::WithAndWithoutRequestResponse::
-    NoRequestWithResponseResponseContext::NoRequestWithResponseResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1989,13 +2017,16 @@ fidl::internal::WireClientImpl<
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal) {}
 
-void ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    NoRequestWithResponseResponseContext::OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponse>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
                   NoRequestWithResponse>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponse(
@@ -2005,8 +2036,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
                      NoRequestWithResponse>* response)>
             _cb) {
   class ResponseContext final
-      : public ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            NoRequestWithResponseResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponse> {
    public:
     ResponseContext(::fit::callback<
                     void(::fidl::WireResponse<
@@ -2042,8 +2074,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
 
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    NoRequestWithResponse(::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestWithResponseResponseContext* _context) {
+    NoRequestWithResponse(::fidl::WireResponseContext<
+                          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              NoRequestWithResponse>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2138,9 +2171,10 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::WithAndWithoutRequestResponse::
-    WithRequestEmptyResponseResponseContext::
-        WithRequestEmptyResponseResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2149,13 +2183,16 @@ fidl::internal::WireClientImpl<
               kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal) {
 }
 
-void ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    WithRequestEmptyResponseResponseContext::OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponse>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
                   WithRequestEmptyResponse>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestEmptyResponse(
@@ -2166,8 +2203,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
                      WithRequestEmptyResponse>* response)>
             _cb) {
   class ResponseContext final
-      : public ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestEmptyResponseResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponse> {
    public:
     ResponseContext(::fit::callback<
                     void(::fidl::WireResponse<
@@ -2205,8 +2243,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestEmptyResponse(
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestEmptyResponseResponseContext* _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponse>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2265,9 +2304,10 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::WithAndWithoutRequestResponse::
-    WithRequestWithResponseResponseContext::
-        WithRequestWithResponseResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2275,13 +2315,16 @@ fidl::internal::WireClientImpl<
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal) {}
 
-void ::fidl_test_protocols::WithAndWithoutRequestResponse::
-    WithRequestWithResponseResponseContext::OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponse>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
                   WithRequestWithResponse>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponse(
@@ -2292,8 +2335,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
                      WithRequestWithResponse>* response)>
             _cb) {
   class ResponseContext final
-      : public ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestWithResponseResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponse> {
    public:
     ResponseContext(::fit::callback<
                     void(::fidl::WireResponse<
@@ -2331,8 +2375,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponse(
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-            WithRequestWithResponseResponseContext* _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponse>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -3109,28 +3154,33 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext::
-    ResponseAsStructResponseContext()
+
+::fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::
+                                ResponseAsStruct>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::Type,
           ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal) {}
 
-void ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext::
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
     OnReply(uint8_t* reply) {
   OnReply(
       reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ResponseAsStruct(
         ::fit::callback<
             void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
                                           ResponseAsStruct>* response)>
             _cb) {
-  class ResponseContext final : public ::fidl_test_protocols::WithErrorSyntax::
-                                    ResponseAsStructResponseContext {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct> {
    public:
     ResponseContext(
         ::fit::callback<
@@ -3166,7 +3216,8 @@ void ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext::
 
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ResponseAsStruct(
-        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext*
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
             _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
@@ -3212,28 +3263,33 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext::
-    ErrorAsPrimitiveResponseContext()
+
+::fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::
+                                ErrorAsPrimitive>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Type,
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal) {}
 
-void ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext::
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
     OnReply(uint8_t* reply) {
   OnReply(
       reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitive(
         ::fit::callback<
             void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
                                           ErrorAsPrimitive>* response)>
             _cb) {
-  class ResponseContext final : public ::fidl_test_protocols::WithErrorSyntax::
-                                    ErrorAsPrimitiveResponseContext {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
    public:
     ResponseContext(
         ::fit::callback<
@@ -3269,7 +3325,8 @@ void ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext::
 
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitive(
-        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext*
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
             _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
@@ -3314,27 +3371,32 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
-    ErrorAsEnumResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::Type,
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal) {}
 
-void ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
-    OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::OnReply(uint8_t*
+                                                                      reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnum(
         ::fit::callback<void(
             ::fidl::WireResponse<
                 ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* response)>
             _cb) {
-  class ResponseContext final : public ::fidl_test_protocols::WithErrorSyntax::
-                                    ErrorAsEnumResponseContext {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum> {
    public:
     ResponseContext(
         ::fit::callback<void(
@@ -3369,8 +3431,8 @@ void ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
 
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnum(
-        ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext*
-            _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::

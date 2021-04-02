@@ -112,8 +112,10 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-    GetFooResponseContext::GetFooResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
+    WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
@@ -121,14 +123,17 @@ fidl::internal::WireClientImpl<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::
               kTop_GetFoo_Ordinal) {}
 
-void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-    GetFooResponseContext::OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
+    OnReply(uint8_t* reply) {
   OnReply(
       reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
           reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo(::fit::callback<
@@ -137,8 +142,8 @@ void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
                     GetFoo>* response)>
                _cb) {
   class ResponseContext final
-      : public ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-            GetFooResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
    public:
     ResponseContext(::fit::callback<
                     void(::fidl::WireResponse<
@@ -176,8 +181,9 @@ void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
 
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
-    GetFoo(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-               GetFooResponseContext* _context) {
+    GetFoo(::fidl::WireResponseContext<
+           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+               _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<

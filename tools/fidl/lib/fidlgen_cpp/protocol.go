@@ -101,6 +101,7 @@ type unifiedMessagingDetails struct {
 // These correspond to templated classes forward-declared in
 // /zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
 var (
+	// Protocol related
 	WireSyncClient            = fidlNs.Member("WireSyncClient")
 	WireClient                = fidlNs.Member("WireClient")
 	WireEventHandlerInterface = internalNs.Member("WireEventHandlerInterface")
@@ -111,13 +112,15 @@ var (
 	WireEventSender           = fidlNs.Member("WireEventSender")
 	WireWeakEventSender       = internalNs.Member("WireWeakEventSender")
 	WireClientImpl            = internalNs.Member("WireClientImpl")
+	WireCaller                = internalNs.Member("WireCaller")
+	WireDispatcher            = internalNs.Member("WireDispatcher")
 
-	WireCaller        = internalNs.Member("WireCaller")
-	WireDispatcher    = internalNs.Member("WireDispatcher")
-	WireRequest       = fidlNs.Member("WireRequest")
-	WireResponse      = fidlNs.Member("WireResponse")
-	WireResult        = fidlNs.Member("WireResult")
-	WireUnownedResult = fidlNs.Member("WireUnownedResult")
+	// MethodRelated
+	WireRequest         = fidlNs.Member("WireRequest")
+	WireResponse        = fidlNs.Member("WireResponse")
+	WireResult          = fidlNs.Member("WireResult")
+	WireUnownedResult   = fidlNs.Member("WireUnownedResult")
+	WireResponseContext = fidlNs.Member("WireResponseContext")
 )
 
 type wireTypeNames struct {
@@ -339,7 +342,7 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker Name, me
 		WireRequestAlias:    m.AppendName("Request"),
 		WireResponse:        WireResponse.Template(methodMarker),
 		WireResponseAlias:   m.AppendName("Response"),
-		WireResponseContext: m.AppendName("ResponseContext"),
+		WireResponseContext: WireResponseContext.Template(methodMarker),
 		WireResult:          WireResult.Template(methodMarker),
 		WireUnownedResult:   WireUnownedResult.Template(methodMarker),
 	}

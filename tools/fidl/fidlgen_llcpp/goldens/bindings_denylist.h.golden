@@ -163,11 +163,12 @@ class OnlyLibfuzzerAndDeps final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-  class LibfuzzerNeedsNonemptyProtocolResponseContext;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
@@ -788,10 +789,12 @@ class OnlyCppAndDeps final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+
   using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
   using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
+
   using Interface =
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 
@@ -983,15 +986,15 @@ struct IsUnion<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
 static_assert(
     std::is_standard_layout_v<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>);
 }  // namespace fidl
-namespace fidl_test_bindingsdenylist {
-
 #ifdef __Fuchsia__
 
-class ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-    LibfuzzerNeedsNonemptyProtocolResponseContext
+template <>
+class ::fidl::WireResponseContext<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>
     : public ::fidl::internal::ResponseContext {
  public:
-  LibfuzzerNeedsNonemptyProtocolResponseContext();
+  WireResponseContext();
 
   virtual void OnReply(
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -1000,7 +1003,10 @@ class ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
  private:
   void OnReply(uint8_t* reply) override;
 };
-}  // namespace fidl_test_bindingsdenylist
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -1021,8 +1027,9 @@ class ::fidl::internal::WireClientImpl<
   // |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result LibfuzzerNeedsNonemptyProtocol(
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocolResponseContext* _context);
+      ::fidl::WireResponseContext<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>* _context);
 
   // Synchronous variant of
   // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Allocates 32 bytes
@@ -1056,10 +1063,8 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>
       event_handler_;
 };
-namespace fidl_test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the OnlyLibfuzzerAndDeps protocol, and can send events in that protocol.
@@ -1116,10 +1121,8 @@ class ::fidl::internal::WireWeakEventSender<
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_bindingsdenylist {
-
 #ifdef __Fuchsia__
-}  // namespace fidl_test_bindingsdenylist
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
@@ -1147,10 +1150,8 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>
       event_handler_;
 };
-namespace fidl_test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the OnlyCppAndDeps protocol, and can send events in that protocol.

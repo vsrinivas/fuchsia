@@ -842,10 +842,12 @@ class Interface final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_doccomments::Interface>;
+
   using AsyncEventHandler =
       ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>;
   using ClientImpl =
       ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>;
+
   using Interface = ::fidl::WireInterface<::fidl_test_doccomments::Interface>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1477,11 +1479,9 @@ struct IsUnion<::fidl_test_doccomments::wire::FlexibleUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_doccomments::wire::FlexibleUnion>);
-}  // namespace fidl
-namespace fidl_test_doccomments {
 
 #ifdef __Fuchsia__
-}  // namespace fidl_test_doccomments
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
     : private ::fidl::internal::ClientBase {
@@ -1517,10 +1517,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
       ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>>
       event_handler_;
 };
-namespace fidl_test_doccomments {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl_test_doccomments
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Interface protocol, and can send events in that protocol.

@@ -195,19 +195,22 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
-    SendAndReceiveResponseContext()
+
+::fidl::WireResponseContext<::fidl_test_emptystruct::EmptyProtocol::
+                                SendAndReceive>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::Type,
           ::fidl_test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal) {}
 
-void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
-    OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<::fidl_test_emptystruct::EmptyProtocol::
+                                     SendAndReceive>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
         ::fidl_test_emptystruct::wire::Empty e,
@@ -215,8 +218,9 @@ void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
             void(::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
                                           SendAndReceive>* response)>
             _cb) {
-  class ResponseContext final : public ::fidl_test_emptystruct::EmptyProtocol::
-                                    SendAndReceiveResponseContext {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive> {
    public:
     ResponseContext(
         ::fit::callback<
@@ -253,8 +257,8 @@ void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
     WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
         ::fidl::BufferSpan _request_buffer,
         ::fidl_test_emptystruct::wire::Empty e,
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext*
-            _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::

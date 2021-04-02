@@ -244,20 +244,23 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocolrequest::Parent::GetChildResponseContext::
-    GetChildResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocolrequest::Parent::GetChild>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocolrequest::Parent::GetChild>::Type,
           ::fidl_test_protocolrequest::kParent_GetChild_Ordinal) {}
 
-void ::fidl_test_protocolrequest::Parent::GetChildResponseContext::OnReply(
-    uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocolrequest::Parent::GetChild>::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<
           ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*>(
       reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
     ::fit::callback<void(
@@ -265,7 +268,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
             response)>
         _cb) {
   class ResponseContext final
-      : public ::fidl_test_protocolrequest::Parent::GetChildResponseContext {
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocolrequest::Parent::GetChild> {
    public:
     ResponseContext(
         ::fit::callback<void(
@@ -302,7 +306,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
 
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
-    ::fidl_test_protocolrequest::Parent::GetChildResponseContext* _context) {
+    ::fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>*
+        _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
@@ -345,27 +350,32 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext::
-    GetChildRequestResponseContext()
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocolrequest::Parent::GetChildRequest>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl::WireResponse<
               ::fidl_test_protocolrequest::Parent::GetChildRequest>::Type,
           ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal) {}
 
-void ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext::
-    OnReply(uint8_t* reply) {
+void ::fidl::WireResponseContext<
+    ::fidl_test_protocolrequest::Parent::GetChildRequest>::OnReply(uint8_t*
+                                                                       reply) {
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocolrequest::Parent::GetChildRequest>*>(reply));
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChildRequest(
         ::fit::callback<
             void(::fidl::WireResponse<::fidl_test_protocolrequest::Parent::
                                           GetChildRequest>* response)>
             _cb) {
-  class ResponseContext final : public ::fidl_test_protocolrequest::Parent::
-                                    GetChildRequestResponseContext {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest> {
    public:
     ResponseContext(::fit::callback<
                     void(::fidl::WireResponse<
@@ -402,8 +412,8 @@ void ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext::
 
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChildRequest(
-        ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext*
-            _context) {
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
