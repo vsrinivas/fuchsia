@@ -119,6 +119,8 @@ impl Device for BlockDevice {
 
     async fn read(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<(), Error> {
         assert_eq!(offset % self.block_size() as u64, 0);
+        assert_eq!(buffer.range().start % self.block_size() as usize, 0);
+        assert_eq!((offset + buffer.len() as u64) % self.block_size() as u64, 0);
         self.remote
             .read_at(
                 MutableBufferSlice::new_with_vmo_id(
@@ -133,6 +135,8 @@ impl Device for BlockDevice {
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
         assert_eq!(offset % self.block_size() as u64, 0);
+        assert_eq!(buffer.range().start % self.block_size() as usize, 0);
+        assert_eq!((offset + buffer.len() as u64) % self.block_size() as u64, 0);
         self.remote
             .write_at(
                 BufferSlice::new_with_vmo_id(

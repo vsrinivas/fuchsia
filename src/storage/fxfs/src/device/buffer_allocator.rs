@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::buffer::{round_up, Buffer},
+    super::buffer::{round_down, round_up, Buffer},
     std::any::Any,
     std::cell::UnsafeCell,
+    std::collections::BTreeMap,
     std::ops::Range,
     std::pin::Pin,
     std::sync::Mutex,
@@ -53,7 +54,9 @@ impl BufferSource for MemBufferSource {
     }
 
     unsafe fn sub_slice(&self, range: &Range<usize>) -> &mut [u8] {
-        assert!(range.start < self.size() && range.end <= self.size());
+        if range.start >= self.size() || range.end > self.size() {
+            panic!("Invalid range {:?} (BufferSource is {} bytes)", range, self.size());
+        }
         assert!(range.start % std::mem::align_of::<u8>() == 0);
         let data = (&mut *self.data.get())[..].as_mut_ptr();
         std::slice::from_raw_parts_mut(
@@ -71,13 +74,22 @@ impl BufferSource for MemBufferSource {
     }
 }
 
+// Stores a list of offsets into a BufferSource. The size of the free ranges is determined by which
+// FreeList we are looking at.
+// FreeLists are sorted.
+type FreeList = Vec<usize>;
+
 #[derive(Debug)]
 struct Inner {
-    next_free: u64,
+    // The index corresponds to the order of free memory blocks in the free list.
+    free_lists: Vec<FreeList>,
+    // Maps offsets to allocated length (the actual length, not the size requested by the client).
+    allocation_map: BTreeMap<usize, usize>,
 }
 
 /// BufferAllocator creates Buffer objects to be used for block device I/O requests.
-/// TODO(jfsulliv): Improve the allocation strategy (buddy allocation, perhaps).
+///
+/// This is implemented through a simple buddy allocation scheme.
 #[derive(Debug)]
 pub struct BufferAllocator {
     block_size: usize,
@@ -85,9 +97,57 @@ pub struct BufferAllocator {
     inner: Mutex<Inner>,
 }
 
+// Returns the smallest order which is at least |size| bytes.
+fn order(size: usize, block_size: usize) -> usize {
+    if size <= block_size {
+        return 0;
+    }
+    let nblocks = round_up(size, block_size) / block_size;
+    nblocks.next_power_of_two().trailing_zeros() as usize
+}
+
+// Returns the largest order which is no more than |size| bytes.
+fn order_fit(size: usize, block_size: usize) -> usize {
+    assert!(size >= block_size);
+    let nblocks = round_up(size, block_size) / block_size;
+    if nblocks.is_power_of_two() {
+        nblocks.trailing_zeros() as usize
+    } else {
+        nblocks.next_power_of_two().trailing_zeros() as usize - 1
+    }
+}
+
+fn size_for_order(order: usize, block_size: usize) -> usize {
+    block_size * (1 << (order as u32))
+}
+
+fn initial_free_lists(size: usize, block_size: usize) -> Vec<FreeList> {
+    let size = round_down(size, block_size);
+    assert!(block_size <= size);
+    assert!(block_size.is_power_of_two());
+    let max_order = order_fit(size, block_size);
+    let mut free_lists = Vec::new();
+    for _ in 0..max_order + 1 {
+        free_lists.push(FreeList::new())
+    }
+    let mut offset = 0;
+    while offset < size {
+        let order = order_fit(size - offset, block_size);
+        let size = size_for_order(order, block_size);
+        free_lists[order].push(offset);
+        offset += size;
+    }
+    free_lists
+}
+
 impl BufferAllocator {
     pub fn new(block_size: usize, source: Box<dyn BufferSource>) -> Self {
-        Self { block_size, source, inner: Mutex::new(Inner { next_free: 0 }) }
+        let free_lists = initial_free_lists(source.size(), block_size);
+        Self {
+            block_size,
+            source,
+            inner: Mutex::new(Inner { free_lists, allocation_map: BTreeMap::new() }),
+        }
     }
 
     pub fn block_size(&self) -> usize {
@@ -103,35 +163,124 @@ impl BufferAllocator {
         self.source
     }
 
-    /// Allocates a Buffer with capacity for |size| bytes.
+    /// Allocates a Buffer with capacity for |size| bytes. Panics if the allocation cannot be
+    /// satisfied.
+    ///
+    /// The allocated buffer will be block-aligned and the padding up to block alignment can also
+    /// be used by the buffer.
+    ///
+    /// Allocation is O(lg(N) + M), where N = size and M = number of allocations.
     pub fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+        // TODO(jfsulliv): Wait until a buffer is free, rather than asserting.
+        self.try_allocate_buffer(size).expect(&format!("Unable to allocate {} bytes", size))
+    }
+
+    /// Like |allocate_buffer|, but returns None if the allocation cannot be satisfied.
+    pub fn try_allocate_buffer(&self, size: usize) -> Option<Buffer<'_>> {
         if size > self.source.size() {
             panic!("Allocation of {} bytes would exceed limit {}", size, self.source.size());
         }
-        assert!(size <= self.source.size());
+
         let mut inner = self.inner.lock().unwrap();
-        let range = inner.next_free as usize..inner.next_free as usize + size;
-        inner.next_free += round_up(size, self.block_size) as u64;
+        let requested_order = order(size, self.block_size());
+        assert!(requested_order < inner.free_lists.len());
+        // Pick the smallest possible order with a free entry.
+        let mut order = {
+            let mut idx = requested_order;
+            loop {
+                if idx >= inner.free_lists.len() {
+                    return None;
+                }
+                if !inner.free_lists[idx].is_empty() {
+                    break idx;
+                }
+                idx += 1;
+            }
+        };
+
+        // Split the free region until it's the right size.
+        let offset = inner.free_lists[order].pop().unwrap();
+        while order > requested_order {
+            order -= 1;
+            assert!(inner.free_lists[order].is_empty());
+            inner.free_lists[order].push(offset + self.size_for_order(order));
+        }
+
+        inner.allocation_map.insert(offset, self.size_for_order(order));
+        let range = offset..offset + size;
+        log::debug!("Allocated range {:?} ({:?} bytes used)", range, self.size_for_order(order));
+
         // Safety is ensured by the allocator not double-allocating any regions.
-        Buffer::new(unsafe { self.source.sub_slice(&range) }, range, &self)
+        Some(Buffer::new(unsafe { self.source.sub_slice(&range) }, range, &self))
     }
 
+    /// Deallocation is O(lg(N) + M), where N = size and M = number of allocations.
     #[doc(hidden)]
-    pub fn free_buffer(&self, range: Range<usize>) {
+    pub(super) fn free_buffer(&self, range: Range<usize>) {
         let mut inner = self.inner.lock().unwrap();
-        if inner.next_free == range.end as u64 {
-            inner.next_free = range.start as u64;
+        let mut offset = range.start;
+        let size = inner
+            .allocation_map
+            .remove(&offset)
+            .expect(&format!("No allocation record found for {:?}", range));
+        assert!(range.end - range.start <= size);
+        log::debug!("Freeing range {:?} (using {:?} bytes)", range, size);
+
+        // Merge as many free slots as we can.
+        let mut order = order(size, self.block_size());
+        while order < inner.free_lists.len() - 1 {
+            let buddy = self.find_buddy(offset, order);
+            let idx = if let Ok(idx) = inner.free_lists[order].binary_search(&buddy) {
+                idx
+            } else {
+                break;
+            };
+            inner.free_lists[order].remove(idx);
+            offset = std::cmp::min(offset, buddy);
+            order += 1;
         }
-        // TODO(jfsulliv): Actually free the range in the nontrivial cases.
+
+        let idx = inner.free_lists[order]
+            .binary_search(&offset)
+            .expect_err(&format!("Unexpectedly found {} in free list {}", offset, order));
+        inner.free_lists[order].insert(idx, offset);
+    }
+
+    fn size_for_order(&self, order: usize) -> usize {
+        size_for_order(order, self.block_size)
+    }
+
+    fn find_buddy(&self, offset: usize, order: usize) -> usize {
+        offset ^ self.size_for_order(order)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        crate::device::buffer_allocator::{BufferAllocator, MemBufferSource},
+        crate::device::{
+            buffer::Buffer,
+            buffer_allocator::{order, BufferAllocator, MemBufferSource},
+        },
         fuchsia_async as fasync,
+        rand::{prelude::SliceRandom, thread_rng, Rng},
+        std::sync::Arc,
     };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_odd_sized_buffer_source() {
+        let source = Box::new(MemBufferSource::new(123));
+        let allocator = BufferAllocator::new(2, source);
+
+        // 123 == 64 + 32 + 16 + 8 + 2 + 1. (The last byte is unusable.)
+        let sizes = vec![64, 32, 16, 8, 2];
+        let bufs: Vec<Buffer<'_>> =
+            sizes.iter().map(|size| allocator.allocate_buffer(*size)).collect();
+        for (expected_size, buf) in sizes.iter().zip(bufs.iter()) {
+            assert_eq!(*expected_size, buf.len());
+        }
+        assert!(allocator.try_allocate_buffer(2).is_none());
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocate_buffer_read_write() {
@@ -186,6 +335,88 @@ mod tests {
         let mut vec = vec![0 as u8; 1024 * 1024];
         vec.copy_from_slice(buf.as_slice());
         assert_eq!(vec, vec![0xaa as u8; 1024 * 1024]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_allocate_large_buffer_after_smaller_buffers() {
+        let source = Box::new(MemBufferSource::new(1024 * 1024));
+        let allocator = BufferAllocator::new(8192, source);
+
+        {
+            let mut buffers = vec![];
+            while let Some(buffer) = allocator.try_allocate_buffer(8192) {
+                buffers.push(buffer);
+            }
+        }
+        let buf = allocator.allocate_buffer(1024 * 1024);
+        assert_eq!(buf.len(), 1024 * 1024);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_allocate_at_limits() {
+        let source = Box::new(MemBufferSource::new(1024 * 1024));
+        let allocator = BufferAllocator::new(8192, source);
+
+        let mut buffers = vec![];
+        while let Some(buffer) = allocator.try_allocate_buffer(8192) {
+            buffers.push(buffer);
+        }
+        // Deallocate a single buffer, and reallocate a single one back.
+        buffers.pop();
+        let buf = allocator.allocate_buffer(8192);
+        assert_eq!(buf.len(), 8192);
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_random_allocs_deallocs() {
+        let source = Box::new(MemBufferSource::new(16 * 1024 * 1024));
+        let bs = 512;
+        let allocator = Arc::new(BufferAllocator::new(bs, source));
+
+        let mut alloc_tasks = vec![];
+        for _ in 0..10 {
+            let allocator = allocator.clone();
+            alloc_tasks.push(fasync::Task::spawn(async move {
+                let mut rng = thread_rng();
+                enum Op {
+                    Alloc,
+                    Dealloc,
+                }
+                let ops = vec![Op::Alloc, Op::Dealloc];
+                let mut buffers = vec![];
+                for _ in 0..1000 {
+                    match ops.choose(&mut rng).unwrap() {
+                        Op::Alloc => {
+                            // Rather than a uniform distribution 1..64K, first pick an order and
+                            // then pick a size within that. For example, we might pick order 3,
+                            // which would give us 8 * 512..16 * 512 as our possible range.
+                            // This way we don't bias towards larger allocations too much.
+                            let order: usize = rng.gen_range(order(1, bs), order(65536 + 1, bs));
+                            let size: usize = rng.gen_range(
+                                bs * 2_usize.pow(order as u32),
+                                bs * 2_usize.pow(order as u32 + 1),
+                            );
+                            if let Some(mut buf) = allocator.try_allocate_buffer(size) {
+                                let val = rng.gen::<u8>();
+                                buf.as_mut_slice().fill(val);
+                                for v in buf.as_slice() {
+                                    assert_eq!(v, &val);
+                                }
+                                buffers.push(buf);
+                            }
+                        }
+                        Op::Dealloc if !buffers.is_empty() => {
+                            let idx = rng.gen_range(0, buffers.len());
+                            buffers.remove(idx);
+                        }
+                        _ => {}
+                    };
+                }
+            }));
+        }
+        for task in &mut alloc_tasks {
+            task.await;
+        }
     }
 
     #[fasync::run_singlethreaded(test)]

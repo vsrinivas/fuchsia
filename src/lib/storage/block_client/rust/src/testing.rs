@@ -73,7 +73,6 @@ impl BlockClient for FakeBlockClient {
             MutableBufferSlice::VmoId { vmo_id, offset, length } => {
                 ensure!(offset % self.block_size as u64 == 0, "Bad alignment");
                 ensure!(length % self.block_size as u64 == 0, "Bad alignment");
-                ensure!(offset + length <= inner.data.len() as u64, "Invalid range");
                 let vmo = inner
                     .vmo_registry
                     .get(&vmo_id.id())
@@ -102,7 +101,6 @@ impl BlockClient for FakeBlockClient {
             BufferSlice::VmoId { vmo_id, offset, length } => {
                 ensure!(offset % self.block_size as u64 == 0, "Bad alignment");
                 ensure!(length % self.block_size as u64 == 0, "Bad alignment");
-                ensure!(offset + length <= inner.data.len() as u64, "Invalid range");
                 let vmo = inner
                     .vmo_registry
                     .get(&vmo_id.id())
