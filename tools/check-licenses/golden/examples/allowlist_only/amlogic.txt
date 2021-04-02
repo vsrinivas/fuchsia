@@ -51,3 +51,36 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Copyright (C) 2019 Amlogic, Inc. All rights reserved.
+
+All information contained herein is Amlogic confidential.
+
+This software is provided to you pursuant to a separate Software License
+Agreement (SLA) dated August 10, 2017, between Google LLC and Amlogic Inc.
+("Amlogic"). This software may be used only in accordance with the terms of this
+notice and agreement.
+
+Redistribution and use of this software in source and binary forms, with or
+without modification, is strictly prohibited without prior written permission
+from Amlogic.  
+
+Additionally, this software may not be (a) copied, (b) using and/or transferred
+to any third party apart from the Google LLC product on which it is implemented,
+(c) modified, (d) reverse engineered, decompiled, or disassembled, or (e)
+exported in contravention of any applicable U.S. or foreign export laws and
+regulations
+
+This software is licensed, not sold, and title to and ownership of this software
+and any portion hereof remain with Amlogic or its licensors, as applicable.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS, INCLUDING
+AMLOGIC, BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
