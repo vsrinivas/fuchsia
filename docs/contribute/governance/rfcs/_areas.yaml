@@ -21,6 +21,7 @@
 - General
 - Governance
 - Graphics
+- HCI
 - HWinfo
 - Identity
 - Internationalization
@@ -35,6 +36,6 @@
 - Storage
 - System
 - Testing
-- UI
+- View System
 - Virtualization
 - Zircon
