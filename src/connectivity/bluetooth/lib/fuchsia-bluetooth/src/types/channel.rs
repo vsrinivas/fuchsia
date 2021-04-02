@@ -4,10 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::{
-        encoding::Decodable,
-        endpoints::{ClientEnd, Proxy},
-    },
+    fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         io,
@@ -19,6 +16,7 @@ use {
         fmt,
         ops::Deref,
         pin::Pin,
+        sync::{Arc, Mutex},
         task::{Context, Poll},
     },
 };
@@ -82,7 +80,9 @@ pub struct Channel {
     socket: fasync::Socket,
     mode: ChannelMode,
     max_tx_size: usize,
+    flush_timeout: Arc<Mutex<Option<zx::Duration>>>,
     audio_direction_ext: Option<bredr::AudioDirectionExtProxy>,
+    l2cap_parameters_ext: Option<bredr::L2capParametersExtProxy>,
     terminated: bool,
 }
 
@@ -94,7 +94,9 @@ impl Channel {
             socket: fasync::Socket::from_socket(socket)?,
             mode: ChannelMode::Basic,
             max_tx_size,
+            flush_timeout: Arc::new(Mutex::new(None)),
             audio_direction_ext: None,
+            l2cap_parameters_ext: None,
             terminated: false,
         })
     }
@@ -129,6 +131,10 @@ impl Channel {
         &self.mode
     }
 
+    pub fn flush_timeout(&self) -> Option<zx::Duration> {
+        self.flush_timeout.lock().unwrap().clone()
+    }
+
     /// Returns a future which will set the audio priority of the channel.
     /// The future will return Err if setting the priority is not supported.
     pub fn set_audio_priority(
@@ -147,6 +153,39 @@ impl Channel {
         }
     }
 
+    /// Attempt to set the flush timeout for this channel.
+    /// If the timeout is not already set within 1ms of `duration`, we attempt to set it using the
+    /// L2cap parameter extension.
+    /// `duration` can be infinite to set packets flushable without a timeout.
+    /// Returns a future that when polled will set the flush timeout and return the new timeout,
+    /// or return an error setting the parameter is not supported.
+    pub fn set_flush_timeout(
+        &self,
+        duration: Option<zx::Duration>,
+    ) -> impl Future<Output = Result<Option<zx::Duration>, Error>> {
+        let flush_timeout = self.flush_timeout.clone();
+        let current = self.flush_timeout.lock().unwrap().clone();
+        let proxy = self.l2cap_parameters_ext.clone();
+        async move {
+            match (current, duration) {
+                (None, None) => return Ok(None),
+                (Some(old), Some(new)) if (old - new).into_millis().abs() < 2 => {
+                    return Ok(current)
+                }
+                _ => {}
+            };
+            let proxy = proxy.ok_or(format_err!("L2Cap parameter changing not supported"))?;
+            let parameters = bredr::ChannelParameters {
+                flush_timeout: duration.clone().map(zx::Duration::into_nanos),
+                ..bredr::ChannelParameters::EMPTY
+            };
+            let new_params = proxy.request_parameters(parameters).await?;
+            let new_timeout = new_params.flush_timeout.map(zx::Duration::from_nanos);
+            *(flush_timeout.lock().unwrap()) = new_timeout.clone();
+            Ok(new_timeout)
+        }
+    }
+
     pub fn closed<'a>(&'a self) -> impl Future<Output = Result<(), zx::Status>> + 'a {
         let close_signals = zx::Signals::SOCKET_PEER_CLOSED;
         let close_wait = fasync::OnSignals::new(&self.socket, close_signals);
@@ -162,7 +201,9 @@ impl TryFrom<fidl_fuchsia_bluetooth_bredr::Channel> for Channel {
             socket: fasync::Socket::from_socket(fidl.socket.ok_or(zx::Status::INVALID_ARGS)?)?,
             mode: fidl.channel_mode.unwrap_or(bredr::ChannelMode::Basic).into(),
             max_tx_size: fidl.max_tx_sdu_size.ok_or(zx::Status::INVALID_ARGS)? as usize,
+            flush_timeout: Arc::new(Mutex::new(fidl.flush_timeout.map(zx::Duration::from_nanos))),
             audio_direction_ext: fidl.ext_direction.and_then(|e| e.into_proxy().ok()),
+            l2cap_parameters_ext: fidl.ext_l2cap.and_then(|e| e.into_proxy().ok()),
             terminated: false,
         })
     }
@@ -173,21 +214,35 @@ impl TryFrom<Channel> for bredr::Channel {
 
     fn try_from(channel: Channel) -> Result<Self, Self::Error> {
         let socket = channel.socket.into_zx_socket().map_err(|_| format_err!("socket in use"))?;
-        let ext_direction = match channel.audio_direction_ext {
-            None => None,
-            Some(proxy) => {
-                let chan = proxy
-                    .into_channel()
-                    .map_err(|_| format_err!("Audio Direction proxy in use"))?;
-                Some(ClientEnd::new(chan.into()))
-            }
-        };
+        let ext_direction = channel
+            .audio_direction_ext
+            .map(|proxy| {
+                let chan = proxy.into_channel()?;
+                Ok(ClientEnd::new(chan.into()))
+            })
+            .transpose()
+            .map_err(|_: bredr::AudioDirectionExtProxy| {
+                format_err!("Audio Direction proxy in use")
+            })?;
+        let ext_l2cap = channel
+            .l2cap_parameters_ext
+            .map(|proxy| {
+                let chan = proxy.into_channel()?;
+                Ok(ClientEnd::new(chan.into()))
+            })
+            .transpose()
+            .map_err(|_: bredr::L2capParametersExtProxy| {
+                format_err!("L2cap parameters proxy in use")
+            })?;
+        let flush_timeout = channel.flush_timeout.lock().unwrap().map(zx::Duration::into_nanos);
         Ok(bredr::Channel {
             socket: Some(socket),
             channel_mode: Some(channel.mode.into()),
             max_tx_sdu_size: Some(channel.max_tx_size as u16),
             ext_direction,
-            ..Decodable::new_empty()
+            flush_timeout,
+            ext_l2cap,
+            ..bredr::Channel::EMPTY
         })
     }
 }
@@ -269,7 +324,7 @@ mod tests {
     #[test]
     fn test_channel_from_fidl() {
         let _exec = fasync::Executor::new().unwrap();
-        let empty = bredr::Channel::new_empty();
+        let empty = bredr::Channel::EMPTY;
         assert!(Channel::try_from(empty).is_err());
 
         let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
@@ -278,7 +333,7 @@ mod tests {
             socket: Some(remote),
             channel_mode: Some(bredr::ChannelMode::Basic),
             max_tx_sdu_size: Some(1004),
-            ..Decodable::new_empty()
+            ..bredr::Channel::EMPTY
         };
 
         let chan = Channel::try_from(okay).expect("okay channel to be converted");
@@ -312,7 +367,7 @@ mod tests {
             socket: Some(remote),
             channel_mode: Some(bredr::ChannelMode::Basic),
             max_tx_sdu_size: Some(1004),
-            ..Decodable::new_empty()
+            ..bredr::Channel::EMPTY
         };
         let channel = Channel::try_from(no_ext).unwrap();
 
@@ -329,7 +384,7 @@ mod tests {
             channel_mode: Some(bredr::ChannelMode::Basic),
             max_tx_sdu_size: Some(1004),
             ext_direction: Some(client_end),
-            ..Decodable::new_empty()
+            ..bredr::Channel::EMPTY
         };
 
         let channel = Channel::try_from(ext).unwrap();
@@ -377,5 +432,95 @@ mod tests {
             Poll::Ready(Err(_)) => {}
             _x => panic!("Expected error result from audio direction response"),
         };
+    }
+
+    #[test]
+    fn test_flush_timeout() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let no_ext = bredr::Channel {
+            socket: Some(remote),
+            channel_mode: Some(bredr::ChannelMode::Basic),
+            max_tx_sdu_size: Some(1004),
+            flush_timeout: Some(50_000_000), // 50 milliseconds
+            ..bredr::Channel::EMPTY
+        };
+        let channel = Channel::try_from(no_ext).unwrap();
+
+        assert_eq!(Some(zx::Duration::from_millis(50)), channel.flush_timeout());
+
+        // Within 2 milliseconds, doesn't change.
+        let res =
+            exec.run_singlethreaded(channel.set_flush_timeout(Some(zx::Duration::from_millis(49))));
+        assert_eq!(Some(zx::Duration::from_millis(50)), res.expect("shouldn't error"));
+        let res =
+            exec.run_singlethreaded(channel.set_flush_timeout(Some(zx::Duration::from_millis(51))));
+        assert_eq!(Some(zx::Duration::from_millis(50)), res.expect("shouldn't error"));
+
+        assert!(exec
+            .run_singlethreaded(channel.set_flush_timeout(Some(zx::Duration::from_millis(200))))
+            .is_err());
+        assert!(exec.run_singlethreaded(channel.set_flush_timeout(None)).is_err());
+
+        let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (client_end, mut l2cap_request_stream) =
+            create_request_stream::<bredr::L2capParametersExtMarker>().unwrap();
+        let ext = bredr::Channel {
+            socket: Some(remote),
+            channel_mode: Some(bredr::ChannelMode::Basic),
+            max_tx_sdu_size: Some(1004),
+            flush_timeout: None,
+            ext_l2cap: Some(client_end),
+            ..bredr::Channel::EMPTY
+        };
+
+        let channel = Channel::try_from(ext).unwrap();
+
+        {
+            let flush_timeout_fut = channel.set_flush_timeout(None);
+            pin_mut!(flush_timeout_fut);
+
+            // Requesting no change returns right away with no change.
+            match exec.run_until_stalled(&mut flush_timeout_fut) {
+                Poll::Ready(Ok(None)) => {}
+                x => panic!("Expected no flush timeout to not stall, got {:?}", x),
+            }
+        }
+
+        let req_duration = zx::Duration::from_millis(42);
+
+        {
+            let flush_timeout_fut = channel.set_flush_timeout(Some(req_duration));
+            pin_mut!(flush_timeout_fut);
+
+            assert!(exec.run_until_stalled(&mut flush_timeout_fut).is_pending());
+
+            match exec.run_until_stalled(&mut l2cap_request_stream.next()) {
+                Poll::Ready(Some(Ok(bredr::L2capParametersExtRequest::RequestParameters {
+                    request,
+                    responder,
+                }))) => {
+                    assert_eq!(Some(req_duration.into_nanos()), request.flush_timeout);
+                    // Send a different response
+                    let params = bredr::ChannelParameters {
+                        flush_timeout: Some(50_000_000), // 50ms
+                        ..bredr::ChannelParameters::EMPTY
+                    };
+                    responder.send(params).expect("response to send cleanly");
+                }
+                x => panic!("Expected a item to be ready on the request stream, got {:?}", x),
+            };
+
+            match exec.run_until_stalled(&mut flush_timeout_fut) {
+                Poll::Ready(Ok(Some(duration))) => {
+                    assert_eq!(zx::Duration::from_millis(50), duration)
+                }
+                x => panic!("Expected ready result from params response, got {:?}", x),
+            };
+        }
+
+        // Channel should have recorded the new flush timeout.
+        assert_eq!(Some(zx::Duration::from_millis(50)), channel.flush_timeout());
     }
 }
