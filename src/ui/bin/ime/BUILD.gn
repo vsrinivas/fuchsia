@@ -24,7 +24,6 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
@@ -54,7 +53,6 @@ rustc_binary("bin") {
     "src/index_convert.rs",
     "src/integration_tests.rs",
     "src/keyboard/events.rs",
-    "src/keyboard/keyboard2.rs",
     "src/keyboard/keyboard3.rs",
     "src/keyboard/mod.rs",
     "src/keyboard/service.rs",
@@ -70,19 +68,13 @@ rustc_binary("bin") {
 fuchsia_component("ime_service_comp") {
   component_name = "ime_service"
   manifest = "meta/ime_service.cmx"
-  deps = [
-    ":bin",
-    ":us-json",
-  ]
+  deps = [ ":bin" ]
 }
 
 fuchsia_component("default_hardware_ime_comp") {
   component_name = "default_hardware_ime"
   manifest = "//src/ui/bin/default_hardware_ime/meta/default_hardware_ime.cmx"
-  deps = [
-    ":us-json",
-    "//src/ui/bin/default_hardware_ime:bin",
-  ]
+  deps = [ "//src/ui/bin/default_hardware_ime:bin" ]
 }
 
 fuchsia_package("ime_service") {
@@ -104,31 +96,6 @@ fuchsia_component("ime_service_bin_test") {
 
 fuchsia_test_package("ime_test") {
   test_components = [ ":ime_service_bin_test" ]
-}
-
-rustc_test("keyboard_test_bin_bin") {
-  output_name = "keyboard_test_bin"
-  edition = "2018"
-
-  deps = [
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
-  ]
-  source_root = "tests/keyboard.rs"
-
-  sources = [ "tests/keyboard.rs" ]
 }
 
 rustc_test("keyboard3_integration_test_bin") {
@@ -210,15 +177,6 @@ rustc_test("legacy_ime_integration_test_bin") {
   ]
 }
 
-fuchsia_component("keyboard_test_bin") {
-  testonly = true
-  deps = [
-    ":en-us-json",
-    ":keyboard_test_bin_bin",
-  ]
-  manifest = "meta/keyboard_test_bin.cmx"
-}
-
 fuchsia_component("keyboard3_integration_test") {
   testonly = true
   deps = [
@@ -242,19 +200,8 @@ fuchsia_component("legacy_ime_integration_test") {
 
 fuchsia_test_package("keyboard_test") {
   test_components = [
-    ":keyboard_test_bin",
     ":keyboard3_integration_test",
     ":ime_service_integration_test",
     ":legacy_ime_integration_test",
   ]
-}
-
-resource("us-json") {
-  sources = [ "//src/ui/bin/default_hardware_ime/assets/us.json" ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
-resource("en-us-json") {
-  sources = [ "tests/goldens/en-us.json" ]
-  outputs = [ "data/goldens/{{source_file_part}}" ]
 }

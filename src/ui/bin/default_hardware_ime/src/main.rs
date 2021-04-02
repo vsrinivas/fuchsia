@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_ui_input as uii;
-use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
-use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::prelude::*;
@@ -19,8 +17,6 @@ use std::convert::TryInto;
 use std::fs;
 use std::sync::Arc;
 use text::text_field_state::TextFieldStateLegacy;
-
-mod keymap;
 
 const ENABLE_TEXTFIELD: bool = false;
 const LEGACY_LAYOUT_PATH: &'static str = "/pkg/data/us-legacy.json";
@@ -324,7 +320,6 @@ enum Keymapping {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["default-hardware-ime"]).expect("syslog init should not fail");
-    serve_keymap(keymap::KeymapService::new()?).await.context("error serving keymap")?;
 
     if ENABLE_TEXTFIELD {
         let ime = DefaultHardwareIme::new()?;
@@ -371,21 +366,6 @@ async fn serve_textfield(ime: DefaultHardwareIme) -> Result<(), Error> {
         }
     }
     Ok(())
-}
-
-async fn serve_keymap(keymap_service: keymap::KeymapService) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(|stream: ui_input::KeyboardLayoutStateRequestStream| {
-        let keymap_service = keymap_service.clone();
-        fuchsia_async::Task::spawn(
-            keymap::handle_watch_keymap(stream, keymap_service)
-                .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        )
-        .detach();
-    });
-    fs.take_and_serve_directory_handle()?;
-
-    Ok(fs.collect().await)
 }
 
 fn clone_range(range: &txt::Range) -> txt::Range {
