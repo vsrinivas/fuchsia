@@ -16,7 +16,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs-management/mount.h>
+#include <fs-management/format.h>
 
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/host.h"
