@@ -64,7 +64,8 @@ async fn elephant() -> App {
 async fn setup() -> App {
     create_dir(INJECTED_STORAGE_DIR).unwrap();
 
-    let arguments = vec!["--rows=5".to_string(), "--columns=3".to_string()];
+    let arguments =
+        vec!["--rows=5".to_string(), "--columns=3".to_string(), "--only-new".to_string()];
 
     let example_app =
         AppBuilder::new(INSPECT_PROVIDER_URL).args(arguments).spawn(&launcher().unwrap()).unwrap();
@@ -175,34 +176,6 @@ fn expected_text() -> String {
       "root": {
         "lazy-double": 3.14
       }
-    },
-    "version": 1
-  },
-  {
-    "data_source": "Inspect",
-    "metadata": {
-      "component_url": "fuchsia-pkg://fuchsia.com/elephant-integration-tests#meta/test_component.cmx",
-      "errors": null,
-      "filename": "fuchsia.inspect.deprecated.Inspect",
-      "timestamp": 0
-    },
-    "moniker": "test_component.cmx",
-    "payload": {
-      "root": {}
-    },
-    "version": 1
-  },
-  {
-    "data_source": "Inspect",
-    "metadata": {
-      "component_url": "fuchsia-pkg://fuchsia.com/elephant-integration-tests#meta/test_component.cmx",
-      "errors": null,
-      "filename": "root.inspect",
-      "timestamp": 0
-    },
-    "moniker": "test_component.cmx",
-    "payload": {
-      "root": {}
     },
     "version": 1
   }
