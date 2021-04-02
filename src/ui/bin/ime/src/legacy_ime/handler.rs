@@ -5,7 +5,7 @@
 //! This module contains an implementation of `LegacyIme` itself.
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{format_err, Context as _, Error, Result},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_ui_input::{self as uii, InputMethodEditorRequest as ImeReq},
     fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_text as txt,
@@ -269,7 +269,7 @@ impl LegacyIme {
     }
 
     /// Handles a request from the legancy IME API, an InputMethodEditorRequest.
-    async fn handle_ime_message(&self, msg: uii::InputMethodEditorRequest) -> Result<(), Error> {
+    async fn handle_ime_message(&self, msg: uii::InputMethodEditorRequest) -> Result<()> {
         match msg {
             ImeReq::SetKeyboardType { keyboard_type, .. } => {
                 let mut state = self.0.lock().await;

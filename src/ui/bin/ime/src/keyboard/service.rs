@@ -27,6 +27,58 @@ impl Service {
         Ok(Service { ime_service, keyboard3 })
     }
 
+    /// Starts a task that processes `fuchsia.ui.input3.KeyEventInjector` requests.
+    /// This method returns immediately without blocking.
+    pub fn spawn_key_event_injector(&self, mut stream: ui_input3::KeyEventInjectorRequestStream) {
+        let mut keyboard3 = self.keyboard3.clone();
+        let mut ime_service = self.ime_service.clone();
+        fuchsia_async::Task::spawn(
+            async move {
+                while let Some(msg) = stream.try_next().await.context(concat!(
+                    "keyboard::Service::spawn_key_event_injector: ",
+                    "error while reading the request stream for ",
+                    "fuchsia.ui.input3.KeyEventInjector"
+                ))? {
+                    match msg {
+                        ui_input3::KeyEventInjectorRequest::Inject {
+                            key_event, responder, ..
+                        } => {
+                            let key_event_obj =
+                                KeyEvent::new(&key_event, keyboard3.get_keys_pressed().await)?;
+                            ime_service.inject_input(key_event_obj.clone()).await.unwrap_or_else(
+                                |e| {
+                                    fx_log_warn!(
+                                        concat!(
+                                            "keyboard::Service::spawn_key_event_injector: ",
+                                            "error injecting input into IME: {:?}"
+                                        ),
+                                        e
+                                    )
+                                },
+                            );
+                            let was_handled = if keyboard3
+                                .handle_key_event(key_event)
+                                .await
+                                .context("error handling input3 keyboard event")?
+                            {
+                                ui_input3::KeyEventStatus::Handled
+                            } else {
+                                ui_input3::KeyEventStatus::NotHandled
+                            };
+                            responder.send(was_handled).context(concat!(
+                                "keyboard::Service::spawn_key_event_injector: ",
+                                "error while sending response"
+                            ))?;
+                        }
+                    }
+                }
+                Ok(())
+            }
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
+        )
+        .detach();
+    }
+
     pub fn spawn_ime_service(&self, mut stream: ui_input::ImeServiceRequestStream) {
         let mut keyboard3 = self.keyboard3.clone();
         let mut ime_service = self.ime_service.clone();
@@ -45,6 +97,8 @@ impl Service {
                             keyboard3.handle_focus_change(view_ref).await;
                             responder.send()?;
                         }
+                        // TODO(fxbug.dev/73274): This arm is to be removed in favor of
+                        // `spawn_key_event_injector` above.
                         ui_input::ImeServiceRequest::DispatchKey3 { event, responder, .. } => {
                             let key_event =
                                 KeyEvent::new(&event, keyboard3.get_keys_pressed().await)?;

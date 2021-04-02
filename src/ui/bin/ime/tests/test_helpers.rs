@@ -6,8 +6,9 @@
 // Not all helper methods are used in each test.
 #![allow(dead_code)]
 
+use async_trait::async_trait;
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Result},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input as ui_input,
     fidl_fuchsia_ui_input3 as ui_input3,
     futures::{
@@ -40,7 +41,7 @@ pub async fn setup_ime(
     text: &str,
     base: i64,
     extent: i64,
-) -> Result<(), Error> {
+) -> Result<()> {
     let mut state = default_state();
     state.text = text.to_string();
     state.selection.base = base;
@@ -52,8 +53,7 @@ pub async fn setup_ime(
 // Bind a new IME to the service.
 pub fn bind_editor(
     ime_service: &ui_input::ImeServiceProxy,
-) -> Result<(ui_input::InputMethodEditorProxy, ui_input::InputMethodEditorClientRequestStream), Error>
-{
+) -> Result<(ui_input::InputMethodEditorProxy, ui_input::InputMethodEditorClientRequestStream)> {
     let (ime, ime_server_end) =
         fidl::endpoints::create_proxy::<ui_input::InputMethodEditorMarker>().unwrap();
     let (editor_client_end, editor_request_stream) =
@@ -69,27 +69,132 @@ pub fn bind_editor(
     Ok((ime, editor_request_stream))
 }
 
-// Simulate keypress by injecting into IME service.
-pub async fn simulate_keypress(
-    ime_service: &ui_input::ImeServiceProxy,
-    key: input::Key,
-) -> Result<(), Error> {
-    ime_service
-        .dispatch_key3(ui_input3::KeyEvent {
+/// Provides a method for dispatching keys, in case the tests need to vary
+/// them.
+#[async_trait]
+pub trait KeyDispatcher {
+    async fn dispatch(&self, event: ui_input3::KeyEvent) -> Result<bool>;
+}
+
+/// A [KeyDispatcher] that uses `ImeService` to dispatch keypresses.
+pub struct ImeServiceKeyDispatcher<'a> {
+    pub ime_service: &'a ui_input::ImeServiceProxy,
+}
+
+#[async_trait]
+impl<'a> KeyDispatcher for ImeServiceKeyDispatcher<'a> {
+    async fn dispatch(&self, event: ui_input3::KeyEvent) -> Result<bool> {
+        Ok(self.ime_service.dispatch_key3(event).await?)
+    }
+}
+
+/// A [KeyDispatcher] that uses `fuchsia.ui.input.InputMethodEditor` to dispatch keypresses.
+pub struct InputMethodEditorDispatcher<'a> {
+    pub ime: &'a ui_input::InputMethodEditorProxy,
+}
+
+#[async_trait]
+impl<'a> KeyDispatcher for InputMethodEditorDispatcher<'a> {
+    async fn dispatch(&self, event: ui_input3::KeyEvent) -> Result<bool> {
+        Ok(self.ime.dispatch_key3(event).await?)
+    }
+}
+
+/// A [KeyDispatcher] that uses `fuchsia.ui.input3.KeyEventInjector` to dispatch keypresses.
+pub struct KeyEventInjectorDispatcher<'a> {
+    pub key_event_injector: &'a ui_input3::KeyEventInjectorProxy,
+}
+
+#[async_trait]
+impl<'a> KeyDispatcher for KeyEventInjectorDispatcher<'a> {
+    async fn dispatch(&self, event: ui_input3::KeyEvent) -> Result<bool> {
+        Ok(self.key_event_injector.inject(event).await? == ui_input3::KeyEventStatus::Handled)
+    }
+}
+
+/// A fixture that can use different services to send key events.  Use [KeySimulator::new] to
+/// create a new instance.
+///
+/// # Example
+///
+/// ```ignore
+/// let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
+///     .context("Failed to connect to IME Service")?;
+/// let key_dispatcher = test_helpers::ImeServiceKeyDispatcher { ime_service: &ime_service };
+/// let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
+/// // Thereafter...
+/// key_simulator.dispatch(fidl_fuchsia_ui_input3::KeyEvent{...}).await?;
+/// ```
+pub struct KeySimulator<'a> {
+    dispatcher: &'a dyn KeyDispatcher,
+}
+
+impl<'a> KeySimulator<'a> {
+    pub fn new(dispatcher: &'a dyn KeyDispatcher) -> Self {
+        KeySimulator { dispatcher }
+    }
+
+    pub async fn dispatch(&self, event: ui_input3::KeyEvent) -> Result<bool> {
+        self.dispatcher.dispatch(event).await
+    }
+
+    // Simulate keypress by injecting into IME service.
+    pub async fn simulate_keypress(&self, key: input::Key) -> Result<()> {
+        self.dispatch(ui_input3::KeyEvent {
             type_: Some(ui_input3::KeyEventType::Pressed),
             key: Some(key),
             ..ui_input3::KeyEvent::EMPTY
         })
         .await?;
-    ime_service
-        .dispatch_key3(ui_input3::KeyEvent {
+        self.dispatch(ui_input3::KeyEvent {
             type_: Some(ui_input3::KeyEventType::Released),
             key: Some(key),
             ..ui_input3::KeyEvent::EMPTY
         })
         .await?;
+        Ok(())
+    }
 
-    Ok(())
+    // Simulate keypress by injecting into IME.
+    pub async fn simulate_ime_keypress(&self, key: input::Key) {
+        self.simulate_ime_keypress_with_held_keys(key, Vec::new()).await
+    }
+
+    // Simulate keypress by injecting into IME, with `held_keys` pressed down.
+    pub async fn simulate_ime_keypress_with_held_keys(
+        &self,
+        key: input::Key,
+        held_keys: Vec<input::Key>,
+    ) {
+        let held_keys_down =
+            held_keys.iter().map(|k| (ui_input3::KeyEventType::Pressed, *k)).into_iter();
+        let held_keys_up =
+            held_keys.iter().map(|k| (ui_input3::KeyEventType::Released, *k)).into_iter();
+        let key_press_and_release =
+            vec![(ui_input3::KeyEventType::Pressed, key), (ui_input3::KeyEventType::Released, key)]
+                .into_iter();
+        let sequence = held_keys_down.chain(key_press_and_release).chain(held_keys_up);
+        stream::iter(sequence)
+            .for_each(|(type_, key)| {
+                self.dispatch(ui_input3::KeyEvent {
+                    type_: Some(type_),
+                    key: Some(key),
+                    ..ui_input3::KeyEvent::EMPTY
+                })
+                .map(|_| ())
+            })
+            .await;
+    }
+}
+
+// Simulate keypress by injecting into IME service.
+pub async fn simulate_keypress(
+    ime_service: &ui_input::ImeServiceProxy,
+    key: input::Key,
+) -> Result<()> {
+    let key_dispatcher = ImeServiceKeyDispatcher { ime_service: &ime_service };
+    let key_simulator = KeySimulator::new(&key_dispatcher);
+    key_simulator.simulate_keypress(key).await
 }
 
 // Simulate keypress by injecting into IME.
@@ -103,30 +208,15 @@ pub async fn simulate_ime_keypress_with_held_keys(
     key: input::Key,
     held_keys: Vec<input::Key>,
 ) {
-    let held_keys_down =
-        held_keys.iter().map(|k| (ui_input3::KeyEventType::Pressed, *k)).into_iter();
-    let held_keys_up =
-        held_keys.iter().map(|k| (ui_input3::KeyEventType::Released, *k)).into_iter();
-    let key_press_and_release =
-        vec![(ui_input3::KeyEventType::Pressed, key), (ui_input3::KeyEventType::Released, key)]
-            .into_iter();
-    let sequence = held_keys_down.chain(key_press_and_release).chain(held_keys_up);
-    stream::iter(sequence)
-        .for_each(|(type_, key)| {
-            ime.dispatch_key3(ui_input3::KeyEvent {
-                type_: Some(type_),
-                key: Some(key),
-                ..ui_input3::KeyEvent::EMPTY
-            })
-            .map(|_| ())
-        })
-        .await;
+    let key_dispatcher = InputMethodEditorDispatcher { ime: &ime };
+    let key_simulator = KeySimulator::new(&key_dispatcher);
+    key_simulator.simulate_ime_keypress_with_held_keys(key, held_keys).await
 }
 
 // Get next IME message, assuming it's a `InputMethodEditorClientRequest::DidUpdateState`.
 pub async fn get_state_update(
     editor_stream: &mut ui_input::InputMethodEditorClientRequestStream,
-) -> Result<(ui_input::TextInputState, Option<ui_input::KeyboardEvent>), Error> {
+) -> Result<(ui_input::TextInputState, Option<ui_input::KeyboardEvent>)> {
     editor_stream
         .map(|request| match request {
             Ok(ui_input::InputMethodEditorClientRequest::DidUpdateState {
@@ -152,7 +242,7 @@ pub async fn get_state_update(
 // Get next IME message, assuming it's a `InputMethodEditorClientRequest::OnAction`.
 pub async fn get_action(
     editor_stream: &mut ui_input::InputMethodEditorClientRequestStream,
-) -> Result<ui_input::InputMethodAction, Error> {
+) -> Result<ui_input::InputMethodAction> {
     editor_stream
         .map(|request| match request {
             Ok(ui_input::InputMethodEditorClientRequest::OnAction { action, .. }) => Ok(action),

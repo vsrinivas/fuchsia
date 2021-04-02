@@ -13,6 +13,9 @@ group("tests") {
     ":ime_service",
     ":ime_test",
     ":keyboard_test",
+
+    # Needed for starting up the test suite fixture.
+    "//src/ui/testing/text:text_test_suite",
   ]
 }
 
@@ -115,12 +118,16 @@ rustc_test("keyboard3_integration_test_bin") {
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
   ]
   source_root = "tests/keyboard3.rs"
 
-  sources = [ "tests/keyboard3.rs" ]
+  sources = [
+    "tests/keyboard3.rs",
+    "tests/test_helpers.rs",
+  ]
 }
 
 rustc_test("ime_service_integration_test_bin") {
@@ -139,6 +146,7 @@ rustc_test("ime_service_integration_test_bin") {
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/ui/input-synthesis",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
   ]
@@ -166,6 +174,7 @@ rustc_test("legacy_ime_integration_test_bin") {
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/ui/input-synthesis",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
   ]
