@@ -92,6 +92,8 @@ bool GfxBufferCollectionImporter::ImportBufferCollection(
     image_constraints_info.minBufferCount = 1;
     image_constraints_info.minBufferCountForDedicatedSlack = 0;
     image_constraints_info.minBufferCountForSharedSlack = 0;
+    if (escher_->allow_protected_memory())
+      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIA::eProtectedOptional;
 
     // Set constraints.
     vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
@@ -194,6 +196,14 @@ fxl::RefPtr<GpuImage> GfxBufferCollectionImporter::ExtractImage(
     return nullptr;
   }
 
+  // Check if allocated buffers are backed by protected memory.
+  bool is_protected =
+      (escher_->vk_physical_device()
+           .getMemoryProperties()
+           .memoryTypes[escher::CountTrailingZeros(properties.memoryTypeBits)]
+           .propertyFlags &
+       vk::MemoryPropertyFlagBits::eProtected) == vk::MemoryPropertyFlagBits::eProtected;
+
   // Setup vk::ImageCreateInfo.
   vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
   collection_image_info.collection = vk_buffer_collection;
@@ -202,7 +212,7 @@ fxl::RefPtr<GpuImage> GfxBufferCollectionImporter::ExtractImage(
       kPreferredImageFormats[properties.createInfoIndex]);
   create_info.setPNext(&collection_image_info);
   create_info.extent = vk::Extent3D{metadata.width, metadata.height, 1};
-  if (properties.memoryTypeBits & VK_MEMORY_PROPERTY_PROTECTED_BIT)
+  if (is_protected)
     create_info.flags = vk::ImageCreateFlagBits::eProtected;
 
   // Create vk::Image.
