@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/dist/distribution_manifest.gni")
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 # Generate a manifest providing all of the .fidl.json files exported by the
 # core SDK (and any other FIDL files we might want).
@@ -57,31 +56,19 @@ distribution_entries_file("fidl_json") {
   file = file[0]
 }
 
-test_package("josh-tests") {
+fuchsia_test_component("josh-tests-component") {
+  component_name = "josh_tests_bin"
+  manifest = "meta/josh_tests_bin.cmx"
+  deps = [ "//src/developer/shell/josh:josh_tests_bin" ]
+}
+
+fuchsia_test_package("josh-tests") {
+  test_components = [ ":josh-tests-component" ]
   deps = [
-    "//src/developer/shell/josh:bin",
-    "//src/developer/shell/josh:josh_tests_bin",
-    "//src/developer/shell/josh/lib:spawn_child_test_util",
-  ]
-  resource_deps = [
     ":fidl_json",
     "josh/lib:js_libs",
-  ]
-
-  binaries = [
-    {
-      name = "spawn_child_test_util"
-    },
-    {
-      name = "josh"
-    },
-  ]
-
-  tests = [
-    {
-      name = "josh_tests_bin"
-      environments = basic_envs
-    },
+    "//src/developer/shell/josh:bin",
+    "//src/developer/shell/josh/lib:spawn_child_test_util",
   ]
 }
 
@@ -99,32 +86,22 @@ group("tests") {
 }
 
 # "josh" is Javascript Object SHell.
-package("josh") {
+fuchsia_shell_package("josh") {
   # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
   testonly = true
-  deps = [ "//src/developer/shell/josh:bin" ]
-  resource_deps = [
+  deps = [
     ":fidl_json",
     "josh/lib:js_libs",
-  ]
-  binaries = [
-    {
-      name = "josh"
-      shell = true
-    },
+    "//src/developer/shell/josh:bin",
   ]
 }
 
 # "cliff" is the CLI For Fuchsia.  Need a better name.
-package("cliff") {
+fuchsia_shell_package("cliff") {
   # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
   testonly = true
-  deps = [ "//src/developer/shell/console:bin" ]
-  binaries = [
-    {
-      name = "cliff"
-      shell = true
-    },
+  deps = [
+    ":fidl_json",
+    "//src/developer/shell/console:bin",
   ]
-  resource_deps = [ ":fidl_json" ]
 }

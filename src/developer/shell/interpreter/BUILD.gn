@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 static_library("shell_interpreter") {
   public = [
@@ -61,21 +61,9 @@ executable("bin") {
   ]
 }
 
-package("shell_server") {
+fuchsia_package_with_single_component("shell_server") {
+  manifest = "../meta/shell_server.cmx"
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "shell_server"
-      dest = "shell_server"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("../meta/shell_server.cmx")
-      dest = "shell_server.cmx"
-    },
-  ]
 }
 
 executable("shell_interpreter_test_bin") {
@@ -121,20 +109,19 @@ executable("shell_server_test_bin") {
   ]
 }
 
-test_package("shell-interpreter-tests") {
-  deps = [
-    ":shell_interpreter_test_bin",
-    ":shell_server_test_bin",
-  ]
-  tests = [
-    {
-      name = "shell_interpreter_test_bin"
-      environments = basic_envs
-    },
-    {
-      name = "shell_server_test_bin"
-      environments = basic_envs
-    },
+fuchsia_unittest_component("shell-interpreter-test") {
+  deps = [ ":shell_interpreter_test_bin" ]
+}
+
+fuchsia_unittest_component("shell-server-test") {
+  manifest = "meta/shell_server_test_bin.cmx"
+  deps = [ ":shell_server_test_bin" ]
+}
+
+fuchsia_test_package("shell-interpreter-tests") {
+  test_components = [
+    ":shell-interpreter-test",
+    ":shell-server-test",
   ]
 }
 
