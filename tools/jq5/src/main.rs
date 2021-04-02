@@ -143,7 +143,7 @@ async fn run(
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
-    eprintln!("{}", "This tool is a work in progress: do not use for large-scale changes.\n");
+    eprintln!("{}", "This tool is a work in progress: use with caution.\n");
     let args = Opt::from_args();
 
     if args.files.len() == 0 {
@@ -163,7 +163,7 @@ async fn main() -> Result<(), anyhow::Error> {
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "jq5",
-    about = "An extension of jq to work on json5 objects. \nThis tool is a work in progress: do not use for large-scale changes."
+    about = "An extension of jq to work on json5 objects. \nThis tool is a work in progress: use with caution."
 )]
 struct Opt {
     // TODO(72435) Add relevant options from jq
