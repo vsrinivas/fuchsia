@@ -31,6 +31,9 @@ pub struct ValidPlayerStatus {
     pub error: Option<sessions2::Error>,
 }
 
+/// Interval to poll Get Play Status on the remote AVRCP peer.
+const AVRCP_GET_PLAY_STATUS_POLL_INTERVAL: zx::Duration = zx::Duration::from_seconds(2);
+
 impl ValidPlayerStatus {
     /// Sets the `player_state` given a state from AVRCP.
     fn set_state_from_avrcp(&mut self, avrcp_status: avrcp::PlaybackStatus) {
@@ -127,10 +130,13 @@ impl AvrcpRelay {
         building.player_status = Some(last_player_status.clone().into());
 
         let mut avrcp_notify_stream = controller.take_event_stream();
+        let mut status_update_interval =
+            fasync::Interval::new(AVRCP_GET_PLAY_STATUS_POLL_INTERVAL).fuse();
 
         loop {
             let mut player_request_fut = player_request_stream.next();
             let mut avrcp_notify_fut = avrcp_notify_stream.next();
+            let mut update_status_fut = status_update_interval.next();
 
             select! {
                 request = player_request_fut => {
@@ -204,6 +210,13 @@ impl AvrcpRelay {
 
                     // Notify that the notification is handled so we can receive another one.
                     let _ = controller.notify_notification_handled().context("acknowledging notification")?;
+                }
+                _event = update_status_fut => {
+                    if let Err(e) = update_status(&controller, &mut last_player_status).await {
+                        info!("Couldn't update AVRCP status: {:?}", e);
+                    }
+                    let building = staged_info.get_or_insert(sessions2::PlayerInfoDelta::EMPTY);
+                    building.player_status = Some(last_player_status.clone().into());
                 }
                 complete => unreachable!(),
             }
@@ -288,9 +301,8 @@ async fn connect_avrcp(
     controller.set_notification_filter(
         avrcp::Notifications::PlaybackStatus
             | avrcp::Notifications::Track
-            | avrcp::Notifications::TrackPos
             | avrcp::Notifications::Connection,
-        5,
+        0,
     )?;
 
     Ok(controller)
@@ -390,6 +402,11 @@ mod tests {
         expect_play_status_request(&mut exec, &mut controller_request_stream)?;
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
+        // Expect play status timer interval request.
+        exec.wake_next_timer();
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_play_status_request(&mut exec, &mut controller_request_stream)?;
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
         // At this point, the relay is set up and should be waiting for requests from
         // player_client, and sending commands / getting notifications from avrcp.
         Ok(controller_request_stream)
