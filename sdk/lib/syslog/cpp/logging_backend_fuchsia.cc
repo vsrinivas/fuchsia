@@ -400,16 +400,12 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
     encoder.AppendArgumentKey(record, SliceFromString(kMessageFieldName));
     encoder.AppendArgumentValue(record, SliceFromString(msg));
   }
-
-  // TODO(fxbug.dev/56051): Enable this everywhere once doing so won't spam everything.
-  if (severity >= syslog::LOG_ERROR) {
-    if (file_name) {
-      encoder.AppendArgumentKey(record, SliceFromString(kFileFieldName));
-      encoder.AppendArgumentValue(record, SliceFromString(file_name));
-    }
-    encoder.AppendArgumentKey(record, SliceFromString(kLineFieldName));
-    encoder.AppendArgumentValue(record, static_cast<uint64_t>(line));
+  if (file_name) {
+    encoder.AppendArgumentKey(record, SliceFromString(kFileFieldName));
+    encoder.AppendArgumentValue(record, SliceFromString(file_name));
   }
+  encoder.AppendArgumentKey(record, SliceFromString(kLineFieldName));
+  encoder.AppendArgumentValue(record, static_cast<uint64_t>(line));
 }
 
 void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,

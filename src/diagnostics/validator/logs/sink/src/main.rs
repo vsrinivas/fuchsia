@@ -31,13 +31,16 @@ struct Opt {
     /// required arg: The URL of the puppet
     #[argh(option, long = "url")]
     puppet_url: String,
+    /// set to true if you want to use the new file/line rules (where file and line numbers are always included)
+    #[argh(switch)]
+    new_file_line_rules: bool,
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).unwrap();
-    let Opt { puppet_url } = argh::from_env();
-    Puppet::launch(&puppet_url).await?.test().await
+    let Opt { puppet_url, new_file_line_rules } = argh::from_env();
+    Puppet::launch(&puppet_url, new_file_line_rules).await?.test().await
 }
 
 struct Puppet {
@@ -47,10 +50,11 @@ struct Puppet {
     proxy: LogSinkPuppetProxy,
     _app_watchdog: Task<()>,
     _env: EnvironmentControllerProxy,
+    new_file_line_rules: bool,
 }
 
 impl Puppet {
-    async fn launch(puppet_url: &str) -> Result<Self, Error> {
+    async fn launch(puppet_url: &str, new_file_line_rules: bool) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
         fs.add_fidl_service(|s: LogSinkRequestStream| s);
 
@@ -97,11 +101,12 @@ impl Puppet {
                 start_time,
                 _app_watchdog,
                 _env,
+                new_file_line_rules,
             };
 
             assert_eq!(
-                puppet.read_record().await?,
-                RecordAssertion::new(&puppet.info, Severity::Info)
+                puppet.read_record(new_file_line_rules).await?,
+                RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
                     .add_string("message", "Puppet started.")
                     .build(puppet.start_time..zx::Time::get_monotonic())
             );
@@ -112,10 +117,10 @@ impl Puppet {
         }
     }
 
-    async fn read_record(&self) -> Result<TestRecord, Error> {
+    async fn read_record(&self, new_file_line_rules: bool) -> Result<TestRecord, Error> {
         let mut buf: Vec<u8> = vec![];
         let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
-        TestRecord::parse(&buf[0..bytes_read])
+        TestRecord::parse(&buf[0..bytes_read], new_file_line_rules)
     }
 
     async fn test(&self) -> Result<(), Error> {
@@ -134,10 +139,12 @@ impl Puppet {
         // all the test cases and we can still use async to communicate with the puppet.
         // TODO(https://github.com/AltSysrq/proptest/pull/185) proptest async support
         let puppet_info = self.info.clone();
+        let new_file_line_rules = self.new_file_line_rules; // needed for lambda capture
         let proptest_thread = std::thread::spawn(move || {
             runner
                 .run(&TestVector::arbitrary(), |vector| {
-                    let TestCycle { spec, mut assertion } = TestCycle::new(&puppet_info, vector);
+                    let TestCycle { spec, mut assertion } =
+                        TestCycle::new(&puppet_info, vector, new_file_line_rules);
 
                     tx_specs.send(spec).unwrap();
                     let (observed, valid_times) = rx_records.recv().unwrap();
@@ -159,7 +166,7 @@ impl Puppet {
         });
 
         for spec in rx_specs {
-            let result = self.run_spec(spec).await?;
+            let result = self.run_spec(spec, self.new_file_line_rules).await?;
             tx_records.send(result)?;
         }
 
@@ -169,11 +176,15 @@ impl Puppet {
         Ok(())
     }
 
-    async fn run_spec(&self, mut spec: RecordSpec) -> Result<(TestRecord, Range<zx::Time>), Error> {
+    async fn run_spec(
+        &self,
+        mut spec: RecordSpec,
+        new_file_line_rules: bool,
+    ) -> Result<(TestRecord, Range<zx::Time>), Error> {
         let before = zx::Time::get_monotonic();
         self.proxy.emit_log(&mut spec).await?;
         let after = zx::Time::get_monotonic();
-        let record = self.read_record().await?;
+        let record = self.read_record(new_file_line_rules).await?;
         Ok((record, before..after))
     }
 }
@@ -240,9 +251,9 @@ struct TestCycle {
 }
 
 impl TestCycle {
-    fn new(info: &PuppetInfo, vector: TestVector) -> Self {
+    fn new(info: &PuppetInfo, vector: TestVector, new_file_line_rules: bool) -> Self {
         let spec = RecordSpec { file: "test".to_string(), line: 25, record: vector.record() };
-        let mut assertion = RecordAssertion::new(&info, vector.severity);
+        let mut assertion = RecordAssertion::new(&info, vector.severity, new_file_line_rules);
         for (name, value) in vector.args {
             match value {
                 Value::Text(t) => assertion.add_string(&name, &t),
@@ -268,12 +279,12 @@ struct TestRecord {
 }
 
 impl TestRecord {
-    fn parse(buf: &[u8]) -> Result<Self, Error> {
+    fn parse(buf: &[u8], new_file_line_rules: bool) -> Result<Self, Error> {
         let Record { timestamp, severity, arguments } = parse_record(buf)?.0;
 
         let mut sorted_args = BTreeMap::new();
         for Argument { name, value } in arguments {
-            if severity >= Severity::Error {
+            if severity >= Severity::Error || new_file_line_rules {
                 if name == "file" {
                     sorted_args.insert(name, Value::Text(STUB_ERROR_FILENAME.to_owned()));
                     continue;
@@ -303,19 +314,21 @@ struct RecordAssertion {
 }
 
 impl RecordAssertion {
-    fn new(info: &PuppetInfo, severity: Severity) -> RecordAssertionBuilder {
+    fn new(
+        info: &PuppetInfo,
+        severity: Severity,
+        new_file_line_rules: bool,
+    ) -> RecordAssertionBuilder {
         let mut builder = RecordAssertionBuilder { severity, arguments: BTreeMap::new() };
         if let Some(tag) = &info.tag {
             builder.add_string("tag", tag);
         }
         builder.add_unsigned("pid", info.pid);
         builder.add_unsigned("tid", info.tid);
-
-        if severity >= Severity::Error {
+        if severity >= Severity::Error || new_file_line_rules {
             builder.add_string("file", STUB_ERROR_FILENAME);
             builder.add_unsigned("line", STUB_ERROR_LINE);
         }
-
         builder
     }
 }
