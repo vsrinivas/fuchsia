@@ -18,11 +18,8 @@ public:
   {{ .WireEventHandlerInterface.Self }}() = default;
   virtual ~{{ .WireEventHandlerInterface.Self }}() = default;
   {{- range .Events -}}
-
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-  virtual void {{ .Name }}({{ .WireResponse }}* event) {}
+    {{- .Docs }}
+    virtual void {{ .Name }}({{ .WireResponse }}* event) {}
   {{- end }}
 };
 

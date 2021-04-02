@@ -9,7 +9,7 @@ import (
 )
 
 type Enum struct {
-	fidlgen.Attributes
+	Attributes
 	fidlgen.Strictness
 	NameVariants
 	Enum    fidlgen.Enum
@@ -28,6 +28,7 @@ func (e Enum) UnknownValueForTmpl() interface{} {
 }
 
 type EnumMember struct {
+	Attributes
 	fidlgen.EnumMember
 	Name  string
 	Value ConstantValue
@@ -36,7 +37,7 @@ type EnumMember struct {
 func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 	name := c.compileNameVariants(val.Name)
 	r := Enum{
-		Attributes:   val.Attributes,
+		Attributes:   Attributes{val.Attributes},
 		Strictness:   val.Strictness,
 		NameVariants: name,
 		Enum:         val,
@@ -44,6 +45,7 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
+			Attributes: Attributes{v.Attributes},
 			EnumMember: v,
 			Name:       changeIfReserved(v.Name),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we

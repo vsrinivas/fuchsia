@@ -11,7 +11,7 @@ import (
 )
 
 type Union struct {
-	fidlgen.Attributes
+	Attributes
 	fidlgen.Strictness
 	fidlgen.Resourceness
 	NameVariants
@@ -36,7 +36,7 @@ func (Union) Kind() declKind {
 var _ Kinded = (*Union)(nil)
 
 type UnionMember struct {
-	fidlgen.Attributes
+	Attributes
 	Ordinal           uint64
 	Type              Type
 	Name              string
@@ -60,7 +60,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	tagEnum := name.Nest("Tag")
 	wireOrdinalEnum := name.Wire.Nest("Ordinal")
 	u := Union{
-		Attributes:         val.Attributes,
+		Attributes:         Attributes{val.Attributes},
 		Strictness:         val.Strictness,
 		Resourceness:       val.Resourceness,
 		NameVariants:       name,
@@ -83,7 +83,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		n := changeIfReserved(mem.Name)
 		t := fmt.Sprintf("k%s", fidlgen.ToUpperCamelCase(n))
 		u.Members = append(u.Members, UnionMember{
-			Attributes:        mem.Attributes,
+			Attributes:        Attributes{mem.Attributes},
 			Ordinal:           uint64(mem.Ordinal),
 			Type:              c.compileType(mem.Type),
 			Name:              n,

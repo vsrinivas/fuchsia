@@ -19,9 +19,7 @@ class {{ .Name }};
 {{- end }}
 
 extern "C" const fidl_type_t {{ .CodingTableType }};
-{{ range .DocComments }}
-//{{ . }}
-{{- end }}
+{{ .Docs }}
 class {{ .Name }} final {
 public:
   // Returns whether no field is set.
@@ -31,9 +29,7 @@ public:
 
 {{- range .Members }}
 {{ "" }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
+  {{- .Docs }}
   const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;

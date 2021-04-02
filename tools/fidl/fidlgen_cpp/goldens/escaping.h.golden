@@ -6,7 +6,7 @@
 #include <fidl/test/escaping/llcpp/fidl.h>
 
 namespace fidl_test_escaping {
-// "pleaseescapethisdocommentproperly"
+/// "pleaseescapethisdocommentproperly"
 using DocCommentWithQuotes = ::fidl::test::escaping::DocCommentWithQuotes;
 
 }  // namespace fidl_test_escaping

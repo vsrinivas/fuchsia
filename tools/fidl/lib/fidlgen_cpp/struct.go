@@ -12,7 +12,7 @@ import (
 )
 
 type Struct struct {
-	fidlgen.Attributes
+	Attributes
 	fidlgen.Resourceness
 	NameVariants
 	CodingTableType string
@@ -39,7 +39,7 @@ func (Struct) Kind() declKind {
 var _ Kinded = (*Struct)(nil)
 
 type StructMember struct {
-	fidlgen.Attributes
+	Attributes
 	Type              Type
 	Name              string
 	DefaultValue      ConstantValue
@@ -69,7 +69,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	}
 
 	return StructMember{
-		Attributes:        val.Attributes,
+		Attributes:        Attributes{val.Attributes},
 		Type:              t,
 		Name:              changeIfReserved(val.Name),
 		DefaultValue:      defaultValue,
@@ -82,7 +82,7 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
-		Attributes:      val.Attributes,
+		Attributes:      Attributes{val.Attributes},
 		Resourceness:    val.Resourceness,
 		NameVariants:    name,
 		CodingTableType: codingTableType,

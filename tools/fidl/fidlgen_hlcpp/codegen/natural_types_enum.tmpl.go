@@ -8,21 +8,15 @@ const enumTemplate = `
 {{- define "EnumForwardDeclaration" }}
 {{ EnsureNamespace . }}
 {{ if .IsStrict }}
-{{ range .DocComments }}
-///{{ . }}
-{{- end }}
+{{ .Docs }}
 enum class {{ .Name }} : {{ .Type }} {
   {{- range .Members }}
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
-  {{ .Name }} = {{ .Value }},
+    {{ .Docs }}
+    {{ .Name }} = {{ .Value }},
   {{- end }}
 };
 {{ else }}
-{{ range .DocComments }}
-///{{ . }}
-{{- end }}
+{{ .Docs }}
 class {{ .Name }} final {
 public:
   constexpr {{ .Name }}() : value_(0) {}
@@ -48,10 +42,8 @@ public:
   }
 
   {{- range .Members }}
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
-  static const {{ $.Name }} {{ .Name }};
+    {{ .Docs }}
+    static const {{ $.Name }} {{ .Name }};
   {{- end }}
 
 private:

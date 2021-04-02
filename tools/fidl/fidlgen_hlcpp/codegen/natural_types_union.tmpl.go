@@ -17,9 +17,7 @@ class {{ .Name }};
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
-{{- range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }} final {
  public:
  static const fidl_type_t* FidlType;
@@ -85,16 +83,12 @@ class {{ .Name }} final {
   {{- range .Members }}
 
   bool is_{{ .Name }}() const { return tag_ == {{ .TagName }}; }
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
+  {{ .Docs }}
   {{ .Type }}& {{ .Name }}() {
     EnsureStorageInitialized({{ .TagName }});
     return {{ .StorageName }};
   }
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
+  {{ .Docs }}
   const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT(is_{{ .Name }}());
     return {{ .StorageName }};

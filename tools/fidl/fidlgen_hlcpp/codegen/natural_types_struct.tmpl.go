@@ -17,9 +17,7 @@ class {{ .Name }};
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
-{{- range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
@@ -54,9 +52,7 @@ class {{ .Name }} final {
   {{- end }}
 
   {{- range .Members }}
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
+  {{ .Docs }}
   {{ .Type }} {{ .Name }}{{ if .DefaultValue.IsSet }} = {{ .DefaultValue }}{{ else }}{}{{ end }};
   {{- end }}
 

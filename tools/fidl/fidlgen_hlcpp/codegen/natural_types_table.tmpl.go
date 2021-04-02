@@ -17,18 +17,14 @@ class {{ .Name }};
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
-{{- range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
   {{- range .Members }}
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
+  {{ .Docs }}
   const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT({{ .FieldPresenceIsSet }});
     return {{ .FieldDataName }}.value;
@@ -36,9 +32,7 @@ class {{ .Name }} final {
   bool {{ .MethodHasName }}() const {
     return {{ .FieldPresenceIsSet }};
   }
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
+  {{ .Docs }}
   {{ .Type }}* mutable_{{ .Name }}() {
     if (!{{ .FieldPresenceIsSet }}) {
       {{ .FieldPresenceSet }};

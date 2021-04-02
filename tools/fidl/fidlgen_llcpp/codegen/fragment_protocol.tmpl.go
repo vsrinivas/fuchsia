@@ -48,9 +48,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ "" }}
 {{ EnsureNamespace . }}
 
-{{- range .DocComments }}
-//{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }} final {
   {{ .Name }}() = delete;
  public:
@@ -60,9 +58,7 @@ class {{ .Name }} final {
 
   {{ "" }}
   {{- range .Methods }}
-    {{- range .DocComments }}
-      //{{ . }}
-    {{- end }}
+    {{- .Docs }}
     class {{ .Marker.Self }} final {
       {{ .Marker.Self }}() = delete;
     };
@@ -143,9 +139,7 @@ class {{ .WireCaller }} final {
 {{ "" }}
   {{- /* Client-calling functions do not apply to events. */}}
   {{- range .ClientMethods -}}
-    {{- range .DocComments }}
-      //{{ . }}
-    {{- end }}
+    {{- .Docs }}
     //{{ template "ClientAllocationComment" . }}
     static {{ .WireResult }} {{ .Name }}(
         ::fidl::UnownedClientEnd<{{ .Protocol }}> _client_end
@@ -155,9 +149,7 @@ class {{ .WireCaller }} final {
       );
     }
 
-    {{- range .DocComments }}
-      //{{ . }}
-    {{- end }}
+    {{- .Docs }}
     //{{ template "ClientAllocationComment" . }}
     {{ .WireResult }} {{ .Name }}({{- .RequestArgs | Params }}) && {
       return {{ .WireResult }}(client_end_
@@ -166,9 +158,7 @@ class {{ .WireCaller }} final {
     }
 {{ "" }}
     {{- if or .RequestArgs .ResponseArgs }}
-      {{- range .DocComments }}
-        //{{ . }}
-      {{- end }}
+      {{- .Docs }}
       // Caller provides the backing storage for FIDL message via request and response buffers.
       static {{ .WireUnownedResult }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
         return {{ .WireUnownedResult }}(_client_end
@@ -181,9 +171,7 @@ class {{ .WireCaller }} final {
           {{- end -}});
       }
 
-      {{- range .DocComments }}
-        //{{ . }}
-      {{- end }}
+      {{- .Docs }}
       // Caller provides the backing storage for FIDL message via request and response buffers.
       {{ .WireUnownedResult }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) && {
         return {{ .WireUnownedResult }}(client_end_
@@ -225,9 +213,7 @@ class {{ .WireSyncClient }} final {
 {{ "" }}
    {{- /* Client-calling functions do not apply to events. */}}
    {{- range .ClientMethods -}}
-     {{- range .DocComments }}
-   //{{ . }}
-     {{- end }}
+   {{- .Docs }}
    //{{ template "ClientAllocationComment" . }}
    {{ .WireResult }} {{ .Name }}({{ .RequestArgs | Params }}) {
      return {{ .WireResult }}(this->client_end()
@@ -235,9 +221,7 @@ class {{ .WireSyncClient }} final {
    }
 {{ "" }}
      {{- if or .RequestArgs .ResponseArgs }}
-       {{- range .DocComments }}
-   //{{ . }}
-       {{- end }}
+       {{- .Docs }}
    // Caller provides the backing storage for FIDL message via request and response buffers.
    {{ .WireUnownedResult }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
      return {{ .WireUnownedResult }}(this->client_end()

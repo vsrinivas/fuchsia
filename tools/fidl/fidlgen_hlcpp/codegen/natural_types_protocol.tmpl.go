@@ -8,9 +8,7 @@ const protocolTemplateNaturalTypes = `
 {{- define "ProtocolForwardDeclaration/NaturalTypes" }}
 {{ EnsureNamespace . }}
 {{- IfdefFuchsia -}}
-{{- range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }};
 using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 {{- EndifFuchsia -}}

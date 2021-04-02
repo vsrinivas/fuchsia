@@ -29,9 +29,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   {{- range .TwoWayMethods }}
 
     {{- /* Async managed flavor */}}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
+    {{- .Docs }}
     {{- if .DocComments }}
   //
     {{- end }}
@@ -41,9 +39,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{ "" }}
 
     {{- /* Async caller-allocate flavor */}}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
+    {{- .Docs }}
     {{- if .DocComments }}
   //
     {{- end }}
@@ -55,9 +51,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{ "" }}
 
     {{- /* Sync managed flavor */}}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
+    {{- .Docs }}
     {{- if .DocComments }}
   //
     {{- end }}
@@ -68,9 +62,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
     {{- /* Sync caller-allocate flavor */}}
     {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
-      {{- range .DocComments }}
-  //{{ . }}
-      {{- end }}
+      {{- .Docs }}
       {{- if .DocComments }}
   //
       {{- end }}
@@ -86,9 +78,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   {{- /* There is no distinction between sync vs async for one-way methods . */}}
   {{- range .OneWayMethods }}
     {{- /* Managed flavor */}}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
+    {{- .Docs }}
     {{- if .DocComments }}
   //
     {{- end }}
@@ -98,9 +88,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
     {{- /* Caller-allocate flavor */}}
     {{- if .RequestArgs }}
 {{ "" }}
-      {{- range .DocComments }}
-  //{{ . }}
-      {{- end }}
+      {{- .Docs }}
       {{- if .DocComments }}
   //
       {{- end }}

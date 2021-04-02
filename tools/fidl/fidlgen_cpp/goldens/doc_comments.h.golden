@@ -6,51 +6,51 @@
 #include <fidl/test/doccomments/llcpp/fidl.h>
 
 namespace fidl_test_doccomments {
-// table comment #1
-//
-// table comment #3
+/// table comment #1
+///
+/// table comment #3
 using Table = ::fidl::test::doccomments::Table;
 
-// struct comment #1
-//
-// struct comment #3
+/// struct comment #1
+///
+/// struct comment #3
 using Struct = ::fidl::test::doccomments::Struct;
 
-// strict union comment #1
-//
-// strict union comment #3
+/// strict union comment #1
+///
+/// strict union comment #3
 using StrictUnion = ::fidl::test::doccomments::StrictUnion;
 
-// strict enum comment #1.
-//
-// strict enum comment #2.
+/// strict enum comment #1.
+///
+/// strict enum comment #2.
 using MyStrictEnum = ::fidl::test::doccomments::MyStrictEnum;
 
-// strict bits comment #1
-//
-// strict bits comment #2
+/// strict bits comment #1
+///
+/// strict bits comment #2
 using MyStrictBits = ::fidl::test::doccomments::MyStrictBits;
 const static MyStrictBits MyStrictBitsMask =
     ::fidl::test::doccomments::MyStrictBitsMask;
 
-// flexible enum comment #1.
-//
-// flexible enum comment #2.
+/// flexible enum comment #1.
+///
+/// flexible enum comment #2.
 using MyFlexibleEnum = ::fidl::test::doccomments::MyFlexibleEnum;
 
-// flexible bits comment #1
-//
-// flexible bits comment #2
+/// flexible bits comment #1
+///
+/// flexible bits comment #2
 using MyFlexibleBits = ::fidl::test::doccomments::MyFlexibleBits;
 
-// flexible union comment #1
-//
-// flexible union comment #3
+/// flexible union comment #1
+///
+/// flexible union comment #3
 using FlexibleUnion = ::fidl::test::doccomments::FlexibleUnion;
 
-// const comment #1
-//
-// const comment #3
+/// const comment #1
+///
+/// const comment #3
 constexpr int32_t C = ::fidl::test::doccomments::C;
 
 }  // namespace fidl_test_doccomments

@@ -39,18 +39,14 @@ class {{ .WireEventSender }} {
 {{ "" }}
   {{- /* Events have no "request" part of the call; they are unsolicited. */}}
   {{- range .Events }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-  zx_status_t {{ template "SendEventManagedMethodSignature" . }};
+    {{- .Docs }}
+    zx_status_t {{ template "SendEventManagedMethodSignature" . }};
 
     {{- if .ResponseArgs }}
 {{ "" }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-  // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }};
+    {{- .Docs }}
+    // Caller provides the backing storage for FIDL message via response buffers.
+    zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }};
     {{- end }}
 {{ "" }}
   {{- end }}
@@ -63,21 +59,17 @@ class {{ .WireWeakEventSender }} {
 {{- $protocol := . }}
  public:
   {{- range .Events }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-  zx_status_t {{ template "SendEventManagedMethodSignature" . }} {
-    if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}({{ .ResponseArgs | ParamMoveNames }});
+    {{- .Docs }}
+    zx_status_t {{ template "SendEventManagedMethodSignature" . }} {
+      if (auto _binding = binding_.lock()) {
+        return _binding->event_sender().{{ .Name }}({{ .ResponseArgs | ParamMoveNames }});
+      }
+      return ZX_ERR_CANCELED;
     }
-    return ZX_ERR_CANCELED;
-  }
 
     {{- if .ResponseArgs }}
 {{ "" }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
+    {{- .Docs }}
   // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }} {
     if (auto _binding = binding_.lock()) {

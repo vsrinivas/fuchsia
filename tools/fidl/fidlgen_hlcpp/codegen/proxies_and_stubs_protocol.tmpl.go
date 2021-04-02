@@ -8,9 +8,7 @@ const protocolTemplateProxiesAndStubs = `
 {{- define "ProtocolForwardDeclaration/ProxiesAndStubs" }}
 {{ EnsureNamespace . }}
 {{- IfdefFuchsia -}}
-{{- range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .Proxy.Name }};
 class {{ .Stub.Name }};
@@ -68,9 +66,7 @@ constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal | printf "%#x" }}lu;
 {{- define "ProtocolDeclaration/ProxiesAndStubs" }}
 {{- IfdefFuchsia -}}
 
-{{- range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }} {
  public:
   using Proxy_ = {{ .Proxy }};
@@ -88,9 +84,7 @@ class {{ .Name }} {
       {{ .CallbackWrapper }}<void({{ template "ParamTypes" .ResponseArgs }})>;
     {{- end }}
     {{- if .HasRequest }}
-      {{ range .DocComments }}
-      ///{{ . }}
-      {{- end }}
+      {{ .Docs }}
       {{- if .Transitional }}
   virtual void {{ template "RequestMethodSignature" . }} { }
       {{- else }}

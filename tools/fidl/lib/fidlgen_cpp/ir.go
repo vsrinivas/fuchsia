@@ -5,11 +5,26 @@
 package fidlgen_cpp
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
+
+type Attributes struct {
+	fidlgen.Attributes
+}
+
+// Docs returns C++ documentation comments.
+func (a Attributes) Docs() string {
+	var buf bytes.Buffer
+	for _, c := range a.DocComments() {
+		buf.WriteString("\n///")
+		buf.WriteString(c)
+	}
+	return buf.String()
+}
 
 type declKind namespacedEnumMember
 

@@ -18,9 +18,7 @@ class {{ .Name }};
 {{- IfdefFuchsia -}}
 {{- end }}
 extern "C" const fidl_type_t {{ .CodingTableType }};
-{{ range .DocComments }}
-//{{ . }}
-{{- end }}
+{{ .Docs }}
 class {{ .Name }} {
   public:
   {{ .Name }}() : ordinal_({{ .WireInvalidOrdinal }}), envelope_{} {}
@@ -57,9 +55,7 @@ class {{ .Name }} {
     return result;
   }
 {{ "" }}
-  {{- range .DocComments }}
-  //{{ . }}
-  {{- end }}
+  {{- .Docs }}
   void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ordinal_ = {{ .WireOrdinalName }};
     envelope_.data = ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
@@ -71,9 +67,7 @@ class {{ .Name }} {
     set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...));
   }
 {{ "" }}
-  {{- range .DocComments }}
-  //{{ . }}
-  {{- end }}
+  {{- .Docs }}
   {{ .Type }}& mutable_{{ .Name }}() {
     ZX_ASSERT(ordinal_ == {{ .WireOrdinalName }});
     return *static_cast<{{ .Type }}*>(envelope_.data.get());

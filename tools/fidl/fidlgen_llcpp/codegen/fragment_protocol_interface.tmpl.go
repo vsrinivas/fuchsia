@@ -57,9 +57,7 @@ class {{ .WireInterface }} : public ::fidl::internal::IncomingMessageDispatcher 
       {{- end }}
 
 {{ "" }}
-      {{- range .DocComments }}
-  //{{ . }}
-      {{- end }}
+  {{- .Docs }}
   virtual void {{ .Name }}(
       {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
       {{- if .Transitional -}}

@@ -7,9 +7,7 @@ package codegen
 const fragmentBitsTmpl = `
 {{- define "BitsForwardDeclaration" }}
 {{ EnsureNamespace . }}
-{{- range .DocComments }}
-//{{ . }}
-{{- end }}
+{{- .Docs }}
 {{- if .IsStrict }}
 // |{{ .Name }}| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.

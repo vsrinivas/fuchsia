@@ -50,25 +50,25 @@ class Interface;
 class Service;
 namespace wire {
 
-// strict enum comment #1.
-//
-// strict enum comment #2.
+/// strict enum comment #1.
+///
+/// strict enum comment #2.
 enum class MyStrictEnum : uint32_t {
 
-  // FOO member comment #1
-  //
-  // FOO member comment #3
+  /// FOO member comment #1
+  ///
+  /// FOO member comment #3
   FOO = 1u,
 
-  // BAR member comment #1
-  //
-  // BAR member comment #3
+  /// BAR member comment #1
+  ///
+  /// BAR member comment #3
   BAR = 2u,
 };
 
-// strict bits comment #1
-//
-// strict bits comment #2
+/// strict bits comment #1
+///
+/// strict bits comment #2
 // |MyStrictBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -173,9 +173,9 @@ constexpr inline void MyStrictBits::operator^=(
   this->value_ ^= other.value_;
 }
 
-// flexible enum comment #1.
-//
-// flexible enum comment #2.
+/// flexible enum comment #1.
+///
+/// flexible enum comment #2.
 class MyFlexibleEnum final {
  public:
   constexpr MyFlexibleEnum() : value_(0) {}
@@ -199,14 +199,14 @@ class MyFlexibleEnum final {
     return MyFlexibleEnum(0xffffffff);
   }
 
-  // FOO member comment #1
-  //
-  // FOO member comment #3
+  /// FOO member comment #1
+  ///
+  /// FOO member comment #3
   static const MyFlexibleEnum FOO;
 
-  // BAR member comment #1
-  //
-  // BAR member comment #3
+  /// BAR member comment #1
+  ///
+  /// BAR member comment #3
   static const MyFlexibleEnum BAR;
 
  private:
@@ -217,9 +217,9 @@ constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
 constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
     MyFlexibleEnum::BAR = ::fidl_test_doccomments::wire::MyFlexibleEnum(2u);
 
-// flexible bits comment #1
-//
-// flexible bits comment #2
+/// flexible bits comment #1
+///
+/// flexible bits comment #2
 // |MyFlexibleBits| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class MyFlexibleBits final {
@@ -333,9 +333,9 @@ class FlexibleUnion;
 
 extern "C" const fidl_type_t fidl_test_doccomments_TableTable;
 
-// table comment #1
-//
-// table comment #3
+/// table comment #1
+///
+/// table comment #3
 class Table final {
  public:
   // Returns whether no field is set.
@@ -343,9 +343,9 @@ class Table final {
 
   class Frame;
 
-  // table field comment #1
-  //
-  // table field comment #3
+  /// table field comment #1
+  ///
+  /// table field comment #3
   const int32_t& Field() const {
     ZX_ASSERT(has_Field());
     return *frame_ptr_->Field_.data;
@@ -512,9 +512,9 @@ class Table final {
 
 extern "C" const fidl_type_t fidl_test_doccomments_StrictUnionTable;
 
-// strict union comment #1
-//
-// strict union comment #3
+/// strict union comment #1
+///
+/// strict union comment #3
 class StrictUnion {
  public:
   StrictUnion()
@@ -553,9 +553,9 @@ class StrictUnion {
     return result;
   }
 
-  // union member comment #1
-  //
-  // union member comment #3
+  /// union member comment #1
+  ///
+  /// union member comment #3
   void set_Field(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
     envelope_.data =
@@ -569,9 +569,9 @@ class StrictUnion {
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
-  // union member comment #1
-  //
-  // union member comment #3
+  /// union member comment #1
+  ///
+  /// union member comment #3
   int32_t& mutable_Field() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField);
@@ -609,9 +609,9 @@ class StrictUnion {
 
 extern "C" const fidl_type_t fidl_test_doccomments_FlexibleUnionTable;
 
-// flexible union comment #1
-//
-// flexible union comment #3
+/// flexible union comment #1
+///
+/// flexible union comment #3
 class FlexibleUnion {
  public:
   FlexibleUnion()
@@ -652,9 +652,9 @@ class FlexibleUnion {
     return result;
   }
 
-  // union member comment #1
-  //
-  // union member comment #3
+  /// union member comment #1
+  ///
+  /// union member comment #3
   void set_Field(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
     envelope_.data =
@@ -668,9 +668,9 @@ class FlexibleUnion {
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
-  // union member comment #1
-  //
-  // union member comment #3
+  /// union member comment #1
+  ///
+  /// union member comment #3
   int32_t& mutable_Field() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField);
@@ -704,9 +704,9 @@ class FlexibleUnion {
 
 extern "C" const fidl_type_t fidl_test_doccomments_StructTable;
 
-// struct comment #1
-//
-// struct comment #3
+/// struct comment #1
+///
+/// struct comment #3
 struct Struct {
   static constexpr const fidl_type_t* Type = &fidl_test_doccomments_StructTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -714,9 +714,9 @@ struct Struct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  // struct member comment #1
-  //
-  // struct member comment #3
+  /// struct member comment #1
+  ///
+  /// struct member comment #3
   int32_t Field = {};
 
   class UnownedEncodedMessage final {
@@ -807,22 +807,22 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
 
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
-// interface comment #1
-//
-// interface comment #3
+/// interface comment #1
+///
+/// interface comment #3
 class Interface final {
   Interface() = delete;
 
  public:
-  // method comment #1
-  //
-  // method comment #3
+  /// method comment #1
+  ///
+  /// method comment #3
   class Method final {
     Method() = delete;
   };
-  // event comment #1
-  //
-  // event comment #3
+  /// event comment #1
+  ///
+  /// event comment #3
   class OnEvent final {
     OnEvent() = delete;
   };
@@ -1157,9 +1157,9 @@ class ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface> final {
       ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end)
       : client_end_(client_end) {}
 
-  // method comment #1
-  //
-  // method comment #3
+  /// method comment #1
+  ///
+  /// method comment #3
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method(
@@ -1168,9 +1168,9 @@ class ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface> final {
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
         _client_end);
   }
-  // method comment #1
-  //
-  // method comment #3
+  /// method comment #1
+  ///
+  /// method comment #3
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method() && {
@@ -1189,9 +1189,9 @@ class ::fidl::internal::WireEventHandlerInterface<
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
-  // event comment #1
-  //
-  // event comment #3
+  /// event comment #1
+  ///
+  /// event comment #3
   virtual void OnEvent(
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>*
           event) {}
@@ -1250,9 +1250,9 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
-  // method comment #1
-  //
-  // method comment #3
+  /// method comment #1
+  ///
+  /// method comment #3
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method() {
@@ -1291,9 +1291,9 @@ class ::fidl::WireInterface<::fidl_test_doccomments::Interface>
 
   using MethodCompleter = ::fidl::Completer<>;
 
-  // method comment #1
-  //
-  // method comment #3
+  /// method comment #1
+  ///
+  /// method comment #3
   virtual void Method(MethodCompleter::Sync& _completer) = 0;
 
  private:
@@ -1303,9 +1303,9 @@ class ::fidl::WireInterface<::fidl_test_doccomments::Interface>
 
 namespace fidl_test_doccomments {
 
-// service comment #1
-//
-// service comment #3
+/// service comment #1
+///
+/// service comment #3
 class Service final {
   Service() = default;
 
@@ -1383,9 +1383,9 @@ class Service final {
 };
 namespace wire {
 
-// const comment #1
-//
-// const comment #3
+/// const comment #1
+///
+/// const comment #3
 constexpr int32_t C = 4u;
 
 }  // namespace wire
@@ -1486,9 +1486,9 @@ template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
     : private ::fidl::internal::ClientBase {
  public:
-  // method comment #1
-  //
-  // method comment #3
+  /// method comment #1
+  ///
+  /// method comment #3
   //
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1549,9 +1549,9 @@ class ::fidl::WireEventSender<::fidl_test_doccomments::Interface> {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  // event comment #1
-  //
-  // event comment #3
+  /// event comment #1
+  ///
+  /// event comment #3
   zx_status_t OnEvent() const;
 
  private:
@@ -1562,9 +1562,9 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_doccomments::Interface> {
  public:
-  // event comment #1
-  //
-  // event comment #3
+  /// event comment #1
+  ///
+  /// event comment #3
   zx_status_t OnEvent() const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().OnEvent();

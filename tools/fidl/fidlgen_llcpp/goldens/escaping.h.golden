@@ -42,7 +42,7 @@ struct DocCommentWithQuotes;
 
 extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
 
-// "pleaseescapethisdocommentproperly"
+/// "pleaseescapethisdocommentproperly"
 struct DocCommentWithQuotes {
   static constexpr const fidl_type_t* Type =
       &fidl_test_escaping_DocCommentWithQuotesTable;

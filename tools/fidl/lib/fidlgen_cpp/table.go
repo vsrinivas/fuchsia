@@ -13,7 +13,7 @@ import (
 type TableFrameItem *TableMember
 
 type Table struct {
-	fidlgen.Attributes
+	Attributes
 	fidlgen.Resourceness
 	NameVariants
 	CodingTableType string
@@ -36,7 +36,7 @@ func (Table) Kind() declKind {
 var _ Kinded = (*Table)(nil)
 
 type TableMember struct {
-	fidlgen.Attributes
+	Attributes
 	Type               Type
 	Name               string
 	DefaultValue       ConstantValue
@@ -64,7 +64,7 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 	}
 
 	return TableMember{
-		Attributes:         val.Attributes,
+		Attributes:         Attributes{val.Attributes},
 		Type:               t,
 		Name:               changeIfReserved(val.Name),
 		DefaultValue:       defaultValue,
@@ -84,7 +84,7 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Table{
-		Attributes:      val.Attributes,
+		Attributes:      Attributes{val.Attributes},
 		Resourceness:    val.Resourceness,
 		NameVariants:    name,
 		CodingTableType: codingTableType,

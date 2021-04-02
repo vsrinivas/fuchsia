@@ -177,9 +177,9 @@ inline zx_status_t Clone(::fidl::test::doccomments::MyFlexibleEnum value,
   return ZX_OK;
 }
 
-// flexible bits comment #1
-//
-// flexible bits comment #2
+/// flexible bits comment #1
+///
+/// flexible bits comment #2
 // |MyFlexibleBits| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class MyFlexibleBits final {

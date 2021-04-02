@@ -162,7 +162,7 @@ func newWireTypeNames(protocolVariants NameVariants) wireTypeNames {
 // protocolInner contains information about a Protocol that should be
 // filled out by the compiler.
 type protocolInner struct {
-	fidlgen.Attributes
+	Attributes
 	// TODO(fxbug.dev/72798): This should be replaced by ProtocolMarker in hlMessagingDetails
 	// and wireMessagingDetails. In particular, the unified bindings do not declare
 	// protocol marker classes.
@@ -355,7 +355,7 @@ type methodInner struct {
 	requestTypeShape    fidlgen.TypeShape
 	responseTypeShape   fidlgen.TypeShape
 
-	fidlgen.Attributes
+	Attributes
 	Name         string
 	Ordinal      uint64
 	HasRequest   bool
@@ -529,7 +529,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			requestTypeShape:    v.RequestTypeShapeV1,
 			responseTypeShape:   v.ResponseTypeShapeV1,
 			wireMethod:          newWireMethod(name, wireTypeNames, protocolName.Wire, methodMarker.Wire),
-			Attributes:          v.Attributes,
+			Attributes:          Attributes{v.Attributes},
 			Name:                name,
 			Ordinal:             v.Ordinal,
 			HasRequest:          v.HasRequest,
@@ -551,7 +551,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(p.Name), ".", "_"), "/", "_")
 	r := newProtocol(protocolInner{
-		Attributes:       p.Attributes,
+		Attributes:       Attributes{p.Attributes},
 		NameVariants:     protocolName,
 		hlMessaging:      hlMessaging,
 		wireTypeNames:    wireTypeNames,

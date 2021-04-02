@@ -18,9 +18,7 @@ struct {{ .Name }};
 {{- IfdefFuchsia -}}
 {{- end }}
 extern "C" const fidl_type_t {{ .CodingTableType }};
-{{ range .DocComments }}
-//{{ . }}
-{{- end }}
+{{ .Docs }}
 struct {{ .Name }} {
   static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
@@ -31,10 +29,8 @@ struct {{ .Name }} {
 
   {{- range .Members }}
 {{ "" }}
-  {{- range .DocComments }}
-  //{{ . }}
-  {{- end }}
-  {{ .Type }} {{ .Name }} = {};
+    {{- .Docs }}
+    {{ .Type }} {{ .Name }} = {};
   {{- end }}
 
   {{- if .IsResourceType }}

@@ -9,7 +9,7 @@ import (
 )
 
 type Bits struct {
-	fidlgen.Attributes
+	Attributes
 	fidlgen.Strictness
 	NameVariants
 	Type     NameVariants
@@ -25,7 +25,7 @@ func (Bits) Kind() declKind {
 var _ Kinded = (*Bits)(nil)
 
 type BitsMember struct {
-	fidlgen.Attributes
+	Attributes
 	Name  string
 	Value ConstantValue
 }
@@ -33,7 +33,7 @@ type BitsMember struct {
 func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	name := c.compileNameVariants(val.Name)
 	r := Bits{
-		Attributes:   val.Attributes,
+		Attributes:   Attributes{val.Attributes},
 		Strictness:   val.Strictness,
 		NameVariants: name,
 		Type:         c.compileType(val.Type).NameVariants,
@@ -42,7 +42,7 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
-			v.Attributes,
+			Attributes{v.Attributes},
 			changeIfReserved(v.Name),
 			c.compileConstant(v.Value, nil, val.Type),
 		})

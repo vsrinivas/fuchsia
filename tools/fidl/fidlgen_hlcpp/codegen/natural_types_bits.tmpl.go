@@ -9,14 +9,10 @@ const bitsTemplate = `
 {{ EnsureNamespace . }}
 {{- if .IsStrict }}
 {{- /* strict bits */}}
-{{- range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 enum class {{ .Name }} : {{ .Type }} {
   {{- range .Members }}
-  {{ range .DocComments }}
-  ///{{ . }}
-  {{- end }}
+  {{ .Docs }}
   {{ .Name }} = {{ .Value }},
   {{- end }}
 };
@@ -65,9 +61,7 @@ constexpr inline {{ . }} operator~({{ . }} _value) {
 
 {{- else }}
 {{- /* flexible bits */}}
-{{- range .DocComments }}
-//{{ . }}
-{{- end }}
+{{- .Docs }}
 // |{{ .Name }}| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class {{ .Name }} final {

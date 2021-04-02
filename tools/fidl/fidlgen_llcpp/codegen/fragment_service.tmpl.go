@@ -13,9 +13,7 @@ class {{ .Name }};
 {{- define "ServiceDeclaration" }}
 {{ EnsureNamespace . }}
 {{ "" }}
-{{- range .DocComments }}
-//{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }} final {
   {{ .Name }}() = default;
  public:

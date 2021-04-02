@@ -7,9 +7,7 @@ package codegen
 const fragmentConstTmpl = `
 {{- define "ConstDeclaration" }}
 {{ EnsureNamespace . }}
-{{ range .DocComments }}
-//{{ . }}
-{{- end }}
+{{ .Docs }}
 {{- if .Extern }}
 extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- else }}

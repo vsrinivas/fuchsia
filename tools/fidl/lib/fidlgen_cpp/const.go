@@ -71,7 +71,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Ty
 }
 
 type Const struct {
-	fidlgen.Attributes
+	Attributes
 	NameVariants
 	Extern    bool
 	Decorator string
@@ -87,7 +87,8 @@ var _ Kinded = (*Const)(nil)
 
 func (c *compiler) compileConst(val fidlgen.Const) Const {
 	n := c.compileNameVariants(val.Name)
-	v := Const{Attributes: val.Attributes,
+	v := Const{
+		Attributes:   Attributes{val.Attributes},
 		NameVariants: n,
 	}
 	if val.Type.Kind == fidlgen.StringType {

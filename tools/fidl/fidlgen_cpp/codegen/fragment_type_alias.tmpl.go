@@ -8,9 +8,7 @@ const fragmentTypeAliasTmpl = `
 {{- define "NaturalTypeAlias" }}
 {{ EnsureNamespace . }}
 
-{{- range .DocComments }}
-//{{ . }}
-{{- end }}
+{{- .Docs }}
 using {{ .Name }} = {{ .Natural }};
 
 {{- /* Natural types strict bits is a simple enum class, hence the mask is

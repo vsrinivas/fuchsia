@@ -15,9 +15,7 @@ class {{ .Name }};
 {{- define "ServiceDeclaration" }}
 {{ EnsureNamespace . }}
 {{- IfdefFuchsia -}}
-{{ range .DocComments }}
-///{{ . }}
-{{- end }}
+{{- .Docs }}
 class {{ .Name }} final {
  public:
   class Handler;
