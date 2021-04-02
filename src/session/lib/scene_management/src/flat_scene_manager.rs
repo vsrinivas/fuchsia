@@ -150,6 +150,25 @@ impl SceneManager for FlatSceneManager {
         Ok(viewref_dup)
     }
 
+    async fn set_root_view(
+        &mut self,
+        view_provider: ui_app::ViewProviderProxy,
+    ) -> Result<ui_views::ViewRef, Error> {
+        let token_pair = scenic::ViewTokenPair::new()?;
+        let mut viewref_pair = scenic::ViewRefPair::new()?;
+        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        view_provider.create_view_with_view_ref(
+            token_pair.view_token.value,
+            &mut viewref_pair.control_ref,
+            &mut viewref_pair.view_ref,
+        )?;
+        let view_holder_node =
+            self.create_view_holder_node(token_pair.view_holder_token, Some("root".to_string()));
+        self.root_node.add_child(&view_holder_node);
+
+        Ok(viewref_dup)
+    }
+
     fn session(&self) -> scenic::SessionPtr {
         return self.session.clone();
     }

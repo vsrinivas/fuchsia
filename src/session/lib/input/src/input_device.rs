@@ -71,7 +71,7 @@ pub enum InputDeviceDescriptor {
     Touch(touch::TouchDeviceDescriptor),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum InputDeviceType {
     Keyboard,
     MediaButtons,

@@ -63,6 +63,14 @@ pub trait SceneManager: Sized {
         name: Option<String>,
     ) -> Result<ui_views::ViewRef, Error>;
 
+    /// Sets the root view for the scene.
+    ///
+    /// Removes any previous root view, as well as all of its descendants.
+    async fn set_root_view(
+        &mut self,
+        view_provider: ui_app::ViewProviderProxy,
+    ) -> Result<ui_views::ViewRef, Error>;
+
     /// Requests the scenic session from the scene_manager.
     ///
     /// # Returns
