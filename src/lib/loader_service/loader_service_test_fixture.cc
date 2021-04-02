@@ -7,7 +7,6 @@
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/object.h>
@@ -113,7 +112,7 @@ void LoaderServiceTest::AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& ro
 
 void LoaderServiceTest::LoadObject(fldsvc::Loader::SyncClient& client, std::string name,
                                    zx::status<std::string> expected) {
-  auto result = client.LoadObject(fidl::unowned_str(name));
+  auto result = client.LoadObject(fidl::StringView::FromExternal(name));
   ASSERT_TRUE(result.ok());
   auto response = result.Unwrap();
   ASSERT_EQ(expected.status_value(), response->rv);
@@ -133,7 +132,7 @@ void LoaderServiceTest::LoadObject(fldsvc::Loader::SyncClient& client, std::stri
 
 void LoaderServiceTest::Config(fldsvc::Loader::SyncClient& client, std::string config,
                                zx::status<zx_status_t> expected) {
-  auto result = client.Config(fidl::StringView(fidl::unowned_ptr(config.data()), config.size()));
+  auto result = client.Config(fidl::StringView::FromExternal(config));
   ASSERT_EQ(result.status(), expected.status_value());
   if (expected.is_ok()) {
     ASSERT_EQ(result.Unwrap()->rv, expected.value());
