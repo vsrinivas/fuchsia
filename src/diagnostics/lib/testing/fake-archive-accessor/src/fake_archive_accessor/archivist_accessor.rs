@@ -48,7 +48,7 @@ fn validate_and_parse_inspect_selectors(
 impl ArchiveAccessor {
     pub fn validate_stream_request(
         params: fidl_fuchsia_diagnostics::StreamParameters,
-    ) -> Result<(), ServerError> {
+    ) -> Result<Vec<Selector>, ServerError> {
         let format = params.format.ok_or(ServerError::MissingFormat)?;
         if !matches!(format, Format::Json) {
             return Err(ServerError::UnsupportedFormat);
@@ -65,14 +65,13 @@ impl ArchiveAccessor {
             params.client_selector_configuration.ok_or(ServerError::MissingSelectors)?;
         match selectors {
             ClientSelectorConfiguration::Selectors(selectors) => {
-                validate_and_parse_inspect_selectors(selectors)?;
+                validate_and_parse_inspect_selectors(selectors)
             }
             ClientSelectorConfiguration::SelectAll(_) => {
-                return Err(ServerError::InvalidSelectors("Don't ask for all Inspect data"));
+                Err(ServerError::InvalidSelectors("Don't ask for all Inspect data"))
             }
-            _ => Err(ServerError::InvalidSelectors("unrecognized selectors"))?,
-        };
-        Ok(())
+            _ => Err(ServerError::InvalidSelectors("unrecognized selectors")),
+        }
     }
 
     /// Run synchronously an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open

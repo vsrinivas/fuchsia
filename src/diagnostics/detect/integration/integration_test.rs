@@ -214,7 +214,8 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
 
     let event_signaler =
         Box::new(ArchiveEventSignaler::new(events_sender.clone(), done_waiter.get_signaler()));
-    let archive_capability = FakeArchiveAccessor::new(&test_data.inspect_data, event_signaler);
+    let archive_capability =
+        FakeArchiveAccessor::new(&test_data.inspect_data, Some(event_signaler));
     archive_capability
         .inject(&event_source, EventMatcher::ok().capability_name(ARCHIVE_ACCESSOR_CAPABILITY_NAME))
         .await;

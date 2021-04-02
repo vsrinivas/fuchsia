@@ -17,6 +17,8 @@ use {
     fidl_fuchsia_diagnostics as diagnostics,
     futures::StreamExt,
     log::*,
+    parking_lot::Mutex,
+    std::collections::BTreeSet,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -39,9 +41,11 @@ pub trait EventSignaler: Send + Sync {
 /// On each ArchiveAccessor fetch, one of the strings in the [inspect_data] will be returned
 /// to the program. Strings should be JSON-formatted Inspect data.
 pub struct FakeArchiveAccessor {
-    event_signaler: Box<dyn EventSignaler>,
+    event_signaler: Option<Box<dyn EventSignaler>>,
     inspect_data: Vec<String>,
     next_data: AtomicUsize,
+    // behind a mutex for interior mutability
+    selectors_requested: Mutex<Vec<BTreeSet<String>>>,
 }
 
 impl FakeArchiveAccessor {
@@ -51,12 +55,13 @@ impl FakeArchiveAccessor {
     /// event_signaler: Callbacks to report events.
     pub fn new(
         inspect_data: &Vec<String>,
-        event_signaler: Box<dyn EventSignaler>,
+        event_signaler: Option<Box<dyn EventSignaler>>,
     ) -> Arc<FakeArchiveAccessor> {
         Arc::new(FakeArchiveAccessor {
             inspect_data: inspect_data.clone(),
             event_signaler,
             next_data: AtomicUsize::new(0),
+            selectors_requested: Mutex::new(vec![]),
         })
     }
 
@@ -71,24 +76,59 @@ impl FakeArchiveAccessor {
             result_stream,
             control_handle: _,
         } = request;
-        ArchiveAccessor::validate_stream_request(stream_parameters)?;
-        self.event_signaler.signal_fetch().await;
+        let selectors = ArchiveAccessor::validate_stream_request(stream_parameters)?;
+        self.selectors_requested.lock().push(
+            selectors
+                .into_iter()
+                .map(|s| selectors::selector_to_string(s))
+                .collect::<Result<BTreeSet<_>, Error>>()?,
+        );
+        if let Some(s) = self.event_signaler.as_ref() {
+            s.signal_fetch().await;
+        }
         let data_index = self.next_data.fetch_add(1, Ordering::Relaxed);
         if data_index >= self.inspect_data.len() {
             // We've run out of data to send. The test is done. Signal that it's time
             // to evaluate the data. Don't even respond to the Detect program.
-            self.event_signaler.signal_done().await;
+            if let Some(s) = self.event_signaler.as_ref() {
+                s.signal_done().await;
+            }
         } else {
             if let Err(problem) =
                 ArchiveAccessor::send(result_stream, &self.inspect_data[data_index]).await
             {
-                self.event_signaler.signal_done().await;
+                if let Some(s) = self.event_signaler.as_ref() {
+                    s.signal_done().await;
+                    s.signal_error(&format!("{}", problem)).await;
+                }
                 error!("Problem in request: {}", problem);
-                self.event_signaler.signal_error(&format!("{}", problem)).await;
                 return Err(problem);
             }
         }
         Ok(())
+    }
+
+    pub async fn serve_stream(
+        &self,
+        mut request_stream: diagnostics::ArchiveAccessorRequestStream,
+    ) -> Result<(), Error> {
+        loop {
+            match request_stream.next().await {
+                Some(Ok(request)) => self.handle_fidl_request(request).await?,
+                Some(Err(e)) => {
+                    if let Some(s) = self.event_signaler.as_ref() {
+                        s.signal_done().await;
+                    }
+                    bail!("{}", e);
+                }
+                None => break,
+            }
+        }
+        Ok(())
+    }
+
+    pub fn get_selectors_requested(&self) -> Vec<BTreeSet<String>> {
+        self.selectors_requested.lock().clone()
     }
 }
 
@@ -98,18 +138,8 @@ impl ProtocolInjector for FakeArchiveAccessor {
 
     async fn serve(
         self: Arc<Self>,
-        mut request_stream: diagnostics::ArchiveAccessorRequestStream,
+        request_stream: diagnostics::ArchiveAccessorRequestStream,
     ) -> Result<(), Error> {
-        loop {
-            match request_stream.next().await {
-                Some(Ok(request)) => self.handle_fidl_request(request).await?,
-                Some(Err(e)) => {
-                    self.event_signaler.signal_done().await;
-                    bail!("{}", e);
-                }
-                None => break,
-            }
-        }
-        Ok(())
+        self.serve_stream(request_stream).await
     }
 }
