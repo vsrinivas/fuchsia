@@ -13,15 +13,31 @@ _environment_service_account =
 #
 # Parameters
 #
-#   release_builder
-#   - Required: Builder from which build artifacts will be downloaded. This has
-#     the the form of `project/bucket/builder id`, like
-#     `fuchsia/ci/fuchsia-x64-release`. Conflicts with `release_build_id`.
+#   downgrade_release_builder
+#   - Required: Builder from which the downgrade build artifacts will be
+#     downloaded and installed on the device. This has the form of
+#     `project/bucket/builder id`, like `fuchsia/ci/fuchsia-x64-release`.
+#     Conflicts with `downgrade_release_build_id`.
 #   - Type: string
 #
-#   release_build_id
-#   - Required: Build ID from which build artifacts will be downloaded. This has
-#     the the form of `1234...`. Conflicts with `release_builder`.
+#   downgrade_release_build_id
+#   - Required: Build ID from which the downgrade build artifacts will be
+#     downloaded and installed on the device. This has the form of `1234...`.
+#     Conflicts with `downgrade_release_builder`.
+#   - Type: string
+#
+#   upgrade_release_builder
+#   - Optional: Builder from which the upgrade build artifacts will be
+#     downloaded and upgraded to on the device, rather than from the current
+#     build. This has the form of `project/bucket/builder id`, like
+#     `fuchsia/ci/fuchsia-x64-release`.
+#     Conflicts with `upgrade_release_build_id`.
+#   - Type: string
+#
+#   upgrade_release_build_id
+#   - Optional: Build ID from which the upgrade build artifacts will be
+#     downloaded and upgraded to on the device, rather than from the current
+#     build. This has the form of `1234...`. Conflicts with `release_builder`.
 #   - Type: string
 #
 #   installer
@@ -56,11 +72,41 @@ _environment_service_account =
 #   - Type: integer string
 template("system_test_upgrade_suite") {
   assert(is_linux || is_mac, "system_tests are for linux/mac only")
-  assert(defined(invoker.release_builder) || defined(invoker.release_build_id),
-         "release_builder or release_build_id must be defined for $target_name")
+
+  # FIXME: remove after migration to the new name is complete.
+  if (defined(invoker.release_builder)) {
+    assert(
+        !defined(invoker.downgrade_release_builder),
+        "downgrade_release_builder and release_builder are mutually exclusive")
+    _downgrade_release_builder = invoker.release_builder
+  } else if (defined(invoker.downgrade_release_builder)) {
+    _downgrade_release_builder = invoker.downgrade_release_builder
+  }
+
+  # FIXME: remove after migration to the new name is complete.
+  if (defined(invoker.release_build_id)) {
+    assert(
+        !defined(invoker.downgrade_release_build_id),
+        "downgrade_release_build_id and release_build_id are mutually exclusive")
+    _downgrade_release_build_id = invoker.release_build_id
+  } else if (defined(invoker.downgrade_release_build_id)) {
+    _downgrade_release_build_id = invoker.downgrade_release_build_id
+  }
+
   assert(
-      !(defined(invoker.release_builder) && defined(invoker.release_build_id)),
-      "release_builder and release_build_id are mutually exclusive for $target_name")
+      defined(_downgrade_release_builder) ||
+          defined(_downgrade_release_build_id),
+      "downgrade_release_builder or downgrade_release_build_id must be defined for $target_name")
+  assert(
+      !(defined(_downgrade_release_builder) &&
+            defined(_downgrade_release_build_id)),
+      "downgrade_release_builder and downgrade_release_build_id are mutually exclusive for $target_name")
+
+  assert(
+      !(defined(invoker.upgrade_release_builder) &&
+            defined(invoker.upgrade_release_build_id)),
+      "upgrade_release_builder and upgrade_release_build_id are mutually exclusive for $target_name")
+
   assert(defined(invoker.environments),
          "environments must be defined for $target_name")
 
@@ -77,17 +123,31 @@ template("system_test_upgrade_suite") {
 
     _args = [ "-test.v" ]  # Print test detailed case status
 
-    if (defined(invoker.release_builder)) {
+    if (defined(_downgrade_release_builder)) {
       _args += [
         "-downgrade-builder-name",
-        invoker.release_builder,
+        _downgrade_release_builder,
       ]
     }
 
-    if (defined(invoker.release_build_id)) {
+    if (defined(_downgrade_release_build_id)) {
       _args += [
         "-downgrade-build-id",
-        invoker.release_build_id,
+        _downgrade_release_build_id,
+      ]
+    }
+
+    if (defined(invoker.upgrade_release_builder)) {
+      _args += [
+        "-upgrade-builder-name",
+        invoker.upgrade_release_builder,
+      ]
+    }
+
+    if (defined(invoker.upgrade_release_build_id)) {
+      _args += [
+        "-upgrade-build-id",
+        invoker.upgrade_release_build_id,
       ]
     }
 
@@ -169,6 +229,19 @@ template("system_test_upgrade_suite") {
 #
 # Parameters
 #
+#   release_builder
+#   - Optional: Builder from which build artifacts will be downloaded and
+#     installed on the device, instead of from the current build. This has
+#     the form of `project/bucket/builder id`, like
+#     `fuchsia/ci/fuchsia-x64-release`. Conflicts with `release_build_id`.
+#   - Type: string
+#
+#   release_build_id
+#   - Optional: Build ID from which build artifacts will be downloaded and
+#     installed on the device, instead of from the current build. This has
+#     the form of `1234...`. Conflicts with `release_builder`.
+#   - Type: string
+#
 #   environments
 #   - Required: What environments this test should target.
 #   - Type: see //build/testing/test_spec.gni for more details. Note that
@@ -188,6 +261,11 @@ template("system_test_upgrade_suite") {
 #   - Type: integer string
 template("system_test_reboot_suite") {
   assert(is_linux || is_mac, "system_test_reboot_suite is for linux/mac only")
+
+  assert(
+      !(defined(invoker.release_builder) && defined(invoker.release_build_id)),
+      "release_builder and release_build_id are mutually exclusive for $target_name")
+
   assert(defined(invoker.environments),
          "environments must be defined for $target_name")
 
@@ -203,6 +281,20 @@ template("system_test_reboot_suite") {
     _deps += [ ":${_host_test_target_name}" ]
 
     _args = [ "-test.v" ]  # Print test detailed case status
+
+    if (defined(invoker.release_builder)) {
+      _args += [
+        "-builder-name",
+        invoker.release_builder,
+      ]
+    }
+
+    if (defined(invoker.release_build_id)) {
+      _args += [
+        "-build-id",
+        invoker.release_build_id,
+      ]
+    }
 
     if (defined(invoker.timeout)) {
       assert(invoker.timeout != "",
