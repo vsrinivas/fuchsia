@@ -24,8 +24,8 @@ command { AT+CIND? }
 response { +CIND:
     service: BoolAsInt,
     call: BoolAsInt,
-    callsetup: BoolAsInt,
-    callheld: BoolAsInt,
+    callsetup: Integer,
+    callheld: Integer,
     signal: Integer,
     roam: BoolAsInt,
     battchg: Integer,

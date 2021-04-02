@@ -188,11 +188,12 @@ impl PeerTask {
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
             InformationRequest::GetAgIndicatorStatus { response } => {
+                let call_ind = self.calls.indicators();
                 let status = Indicators {
                     service: self.network.service_available.unwrap_or(false),
-                    call: false,
-                    callsetup: (),
-                    callheld: (),
+                    call: call_ind.call,
+                    callsetup: call_ind.callsetup,
+                    callheld: call_ind.callheld,
                     signal: self.network.signal_strength.map(|ss| ss as u8).unwrap_or(0),
                     roam: self.network.roaming.unwrap_or(false),
                     battchg: 5, // TODO: Retrieve battery status from Fuchsia power service.
