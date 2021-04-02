@@ -2,19 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zx_library.gni")
+config("headers_config") {
+  include_dirs = [ "include" ]
+}
 
 if (is_fuchsia) {
-  zx_library("fs-management") {
-    sdk = "shared"
-    sdk_headers = [
-      "fs-management/admin.h",
-      "fs-management/format.h",
-      "fs-management/fvm.h",
-      "fs-management/launch.h",
-      "fs-management/mount.h",
+  shared_library("fs-management") {
+    public_configs = [ ":headers_config" ]
+    public = [
+      "include/fs-management/admin.h",
+      "include/fs-management/format.h",
+      "include/fs-management/fvm.h",
+      "include/fs-management/launch.h",
+      "include/fs-management/mount.h",
     ]
-    shared = true
     configs += [ "//build/config:all_source" ]
     sources = [
       "admin.cc",
@@ -45,7 +46,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fzl",
     ]
-    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
     # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
     # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
@@ -53,10 +53,6 @@ if (is_fuchsia) {
     configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
   }
 } else {
-  config("headers_config") {
-    include_dirs = [ "include" ]
-  }
-
   source_set("fs-management") {
     public = [
       "include/fs-management/format.h",
