@@ -392,6 +392,19 @@
   submitted: '2021-02-26'
   reviewed: '2021-03-25'
 
+- name: 'RFC-0079'
+  title: 'Detecting debuglog data loss'
+  short_description: 'A revised mechanism for detecting debuglog data loss.'
+  authors: ['maniscalco@google.com']
+  file: '0079_detecting_debuglog_data_loss.md'
+  area: ['Zircon', 'Diagnostics']
+  issue: ['69290']
+  gerrit_change_id: ['487876']
+  status: 'Accepted'
+  reviewers: ['adamperry@google.com', 'adanis@google.com', 'cpu@google.com']
+  submitted: '2021-02-17'
+  reviewed: '2021-03-25'
+
 - name: 'RFC-0080'
   title: 'Detecting VMO Immutability'
   short_description: 'This RFC proposes a new flag `ZX_INFO_VMO_IMMUTABLE` that makes it possible to determine if a VMO is immutable and has been since creation.'
