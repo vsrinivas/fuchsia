@@ -516,7 +516,7 @@ impl From<DisplayInfoV3> for DisplayInfoV4 {
             manual_brightness_value: v3.manual_brightness_value,
             screen_enabled: v3.screen_enabled,
             low_light_mode: v3.low_light_mode,
-            // In v4, the field formally known as theme_mode was renamed to
+            // In v4, the field formerly known as theme_mode was renamed to
             // theme_type.
             theme_type: ThemeType::from(v3.theme_mode),
         }
@@ -544,77 +544,172 @@ impl DeviceStorageCompatible for DisplayInfoV4 {
 
 #[test]
 fn test_display_migration_v1_to_v2() {
-    const BRIGHTNESS_VALUE: f32 = 0.6;
-    let mut v1 = DisplayInfoV1::default_value();
-    v1.manual_brightness_value = BRIGHTNESS_VALUE;
+    let v1 = DisplayInfoV1 {
+        manual_brightness_value: 0.6,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+    };
 
     let serialized_v1 = v1.serialize_to();
-
     let v2 = DisplayInfoV2::deserialize_from(&serialized_v1);
 
-    assert_eq!(v2.manual_brightness_value, BRIGHTNESS_VALUE);
-    assert_eq!(v2.theme_mode, ThemeModeV1::Unknown);
+    assert_eq!(
+        v2,
+        DisplayInfoV2 {
+            manual_brightness_value: v1.manual_brightness_value,
+            auto_brightness: v1.auto_brightness,
+            low_light_mode: v1.low_light_mode,
+            theme_mode: DisplayInfoV2::default_value().theme_mode,
+        }
+    );
 }
 
 #[test]
-fn test_display_migration_v2_to_current() {
-    const BRIGHTNESS_VALUE: f32 = 0.6;
-    let mut v2 = DisplayInfoV2::default_value();
-    v2.manual_brightness_value = BRIGHTNESS_VALUE;
+fn test_display_migration_v2_to_v3() {
+    let v2 = DisplayInfoV2 {
+        manual_brightness_value: 0.7,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+        theme_mode: ThemeModeV1::Default,
+    };
 
     let serialized_v2 = v2.serialize_to();
+    let v3 = DisplayInfoV3::deserialize_from(&serialized_v2);
 
-    let current = DisplayInfo::deserialize_from(&serialized_v2);
+    assert_eq!(
+        v3,
+        DisplayInfoV3 {
+            manual_brightness_value: v2.manual_brightness_value,
+            auto_brightness: v2.auto_brightness,
+            screen_enabled: DisplayInfoV3::default_value().screen_enabled,
+            low_light_mode: v2.low_light_mode,
+            theme_mode: v2.theme_mode,
+        }
+    );
+}
 
-    assert_eq!(current.manual_brightness_value, BRIGHTNESS_VALUE);
-    assert_eq!(current.screen_enabled, true);
+#[test]
+fn test_display_migration_v3_to_v4() {
+    let v3 = DisplayInfoV3 {
+        manual_brightness_value: 0.7,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+        theme_mode: ThemeModeV1::Light,
+        screen_enabled: false,
+    };
+
+    let serialized_v3 = v3.serialize_to();
+    let v4 = DisplayInfoV4::deserialize_from(&serialized_v3);
+
+    // In v4, the field formally known as theme_mode is theme_type.
+    assert_eq!(
+        v4,
+        DisplayInfoV4 {
+            manual_brightness_value: v3.manual_brightness_value,
+            auto_brightness: v3.auto_brightness,
+            low_light_mode: v3.low_light_mode,
+            theme_type: ThemeType::Light,
+            screen_enabled: v3.screen_enabled,
+        }
+    );
 }
 
 #[test]
 fn test_display_migration_v1_to_current() {
-    const BRIGHTNESS_VALUE: f32 = 0.6;
-    let mut v1 = DisplayInfoV1::default_value();
-    v1.manual_brightness_value = BRIGHTNESS_VALUE;
+    let v1 = DisplayInfoV1 {
+        manual_brightness_value: 0.6,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+    };
 
     let serialized_v1 = v1.serialize_to();
-
     let current = DisplayInfo::deserialize_from(&serialized_v1);
 
-    assert_eq!(current.manual_brightness_value, BRIGHTNESS_VALUE);
-    assert_eq!(current.theme.expect("theme not present").theme_type, Some(ThemeType::Unknown));
-    assert_eq!(current.screen_enabled, true);
+    assert_eq!(
+        current,
+        DisplayInfo {
+            manual_brightness_value: v1.manual_brightness_value,
+            auto_brightness: v1.auto_brightness,
+            low_light_mode: v1.low_light_mode,
+            theme: Some(Theme::new(Some(ThemeType::Unknown), ThemeMode::empty())),
+            // screen_enabled was added in v3.
+            screen_enabled: DisplayInfoV3::default_value().screen_enabled,
+        }
+    );
+}
+
+#[test]
+fn test_display_migration_v2_to_current() {
+    let v2 = DisplayInfoV2 {
+        manual_brightness_value: 0.6,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+        theme_mode: ThemeModeV1::Light,
+    };
+
+    let serialized_v2 = v2.serialize_to();
+    let current = DisplayInfo::deserialize_from(&serialized_v2);
+
+    assert_eq!(
+        current,
+        DisplayInfo {
+            manual_brightness_value: v2.manual_brightness_value,
+            auto_brightness: v2.auto_brightness,
+            low_light_mode: v2.low_light_mode,
+            theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::empty())),
+            // screen_enabled was added in v3.
+            screen_enabled: DisplayInfoV3::default_value().screen_enabled,
+        }
+    );
 }
 
 #[test]
 fn test_display_migration_v3_to_current() {
-    let mut v3 = DisplayInfoV3::default_value();
-    // In v4 ThemeMode type was renamed to ThemeType, but the field in v3 is
-    // still mode.
-    v3.theme_mode = ThemeModeV1::Light;
-    v3.screen_enabled = false;
+    let v3 = DisplayInfoV3 {
+        manual_brightness_value: 0.6,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+        theme_mode: ThemeModeV1::Light,
+        screen_enabled: false,
+    };
 
     let serialized_v3 = v3.serialize_to();
-
     let current = DisplayInfo::deserialize_from(&serialized_v3);
 
-    // In v4, the field formally known as theme_mode is theme_type.
-    assert_eq!(current.theme.expect("theme not present").theme_type, Some(ThemeType::Light));
-    assert_eq!(current.screen_enabled, false);
+    assert_eq!(
+        current,
+        DisplayInfo {
+            manual_brightness_value: v3.manual_brightness_value,
+            auto_brightness: v3.auto_brightness,
+            low_light_mode: v3.low_light_mode,
+            theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::empty())),
+            // screen_enabled was added in v3.
+            screen_enabled: v3.screen_enabled,
+        }
+    );
 }
 
 #[test]
 fn test_display_migration_v4_to_current() {
-    const THEME_TYPE: ThemeType = ThemeType::Auto;
-    let mut v4 = DisplayInfoV4::default_value();
-    v4.theme_type = THEME_TYPE;
+    let v4 = DisplayInfoV4 {
+        manual_brightness_value: 0.6,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+        theme_type: ThemeType::Light,
+        screen_enabled: false,
+    };
 
     let serialized_v4 = v4.serialize_to();
-
     let current = DisplayInfo::deserialize_from(&serialized_v4);
 
-    assert_eq!(current.theme.expect("theme not present").theme_type, Some(THEME_TYPE));
     assert_eq!(
-        current.theme.expect("theme not present").theme_mode & ThemeMode::AUTO,
-        ThemeMode::AUTO
+        current,
+        DisplayInfo {
+            manual_brightness_value: v4.manual_brightness_value,
+            auto_brightness: v4.auto_brightness,
+            low_light_mode: v4.low_light_mode,
+            theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::empty())),
+            screen_enabled: v4.screen_enabled,
+        }
     );
 }
