@@ -12,6 +12,7 @@ ffx_plugin("ffx_session") {
     "add:ffx_session_add",
     "launch:ffx_session_launch",
     "restart:ffx_session_restart",
+    "show:ffx_session_show",
     "//src/sys/run_test_suite/ffx:ffx_test",
   ]
   sources = [ "src/args.rs" ]
@@ -25,5 +26,6 @@ group("tests") {
     "add:ffx_session_add_tests",
     "launch:ffx_session_launch_tests",
     "restart:ffx_session_restart_tests",
+    "show:ffx_session_show_tests",
   ]
 }
