@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, HandleBased, Status},
-    parking_lot::RwLock,
-    std::sync::Arc,
-};
+use fidl_fuchsia_io as fio;
+use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, HandleBased, Status};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 use crate::types::*;
+use crate::fs::FdTable;
 
 pub struct ProgramBreak {
     vmar: zx::Vmar,
@@ -124,11 +123,18 @@ pub struct SecurityContext {
     pub egid: uid_t,
 }
 
+// TODO(tbodt): merge ProcessContext and ThreadContext into a single struct corresponding to struct
+// task_struct in Linux
+
 pub struct ProcessContext {
     pub handle: zx::Process,
-    pub exceptions: fasync::Channel,
+    pub exceptions: zx::Channel,
     pub security: SecurityContext,
     pub mm: MemoryManager,
+    // TODO: Replace with a real VFS. This can't last long.
+    pub root: fio::DirectoryProxy,
+    /// Corresponds to struct task_struct->files in Linux.
+    pub fd_table: FdTable,
 }
 
 impl ProcessContext {
@@ -138,6 +144,13 @@ impl ProcessContext {
             return Err(EFAULT);
         }
         Ok(())
+    }
+
+    pub fn read_c_string<'a>(&self, addr: UserAddress, buffer: &'a mut [u8]) -> Result<&'a [u8], Errno> {
+        let actual = self.handle.read_memory(addr.ptr(), buffer).map_err(|_| EFAULT)?;
+        let buffer = &mut buffer[..actual];
+        let null_index = memchr::memchr(b'\0', buffer).ok_or(ENAMETOOLONG)?;
+        Ok(&buffer[..null_index])
     }
 
     pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {

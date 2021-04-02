@@ -21,6 +21,7 @@ pub type ino_t = u64;
 pub type mode_t = u16;
 pub type off_t = i64;
 
+#[derive(Debug)]
 pub struct Errno(i32);
 
 impl Errno {
@@ -231,6 +232,7 @@ pub const SYS_FSTAT: syscall_number_t = 5;
 pub const SYS_MMAP: syscall_number_t = 9;
 pub const SYS_MPROTECT: syscall_number_t = 10;
 pub const SYS_BRK: syscall_number_t = 12;
+pub const SYS_PREAD64: syscall_number_t = 17;
 pub const SYS_WRITEV: syscall_number_t = 20;
 pub const SYS_ACCESS: syscall_number_t = 21;
 pub const SYS_GETPID: syscall_number_t = 39;
@@ -241,9 +243,11 @@ pub const SYS_GETUID: syscall_number_t = 102;
 pub const SYS_GETGID: syscall_number_t = 104;
 pub const SYS_GETEUID: syscall_number_t = 107;
 pub const SYS_GETEGID: syscall_number_t = 108;
+pub const SYS_FSTATFS: syscall_number_t = 138;
 pub const SYS_SCHED_GETSCHEDULER: syscall_number_t = 145;
 pub const SYS_ARCH_PRCTL: syscall_number_t = 158;
 pub const SYS_EXIT_GROUP: syscall_number_t = 231;
+pub const SYS_OPENAT: syscall_number_t = 257;
 pub const SYS_GETRANDOM: syscall_number_t = 318;
 
 pub const ARCH_SET_GS: i32 = 0x1001;
@@ -253,6 +257,7 @@ pub const AT_NULL: u64 = 0;
 pub const AT_PHDR: u64 = 3;
 pub const AT_PHNUM: u64 = 5;
 pub const AT_PAGESZ: u64 = 6;
+pub const AT_ENTRY: u64 = 9;
 pub const AT_BASE: u64 = 7;
 pub const AT_UID: u64 = 11;
 pub const AT_EUID: u64 = 12;
@@ -316,5 +321,26 @@ pub const MAP_SHARED: i32 = 0x1;
 pub const MAP_PRIVATE: i32 = 0x2;
 pub const MAP_FIXED: i32 = 0x10;
 pub const MAP_ANONYMOUS: i32 = 0x20;
+pub const MAP_NORESERVE: i32 = 0x4000;
 
 pub const SCHED_OTHER: i32 = 0;
+
+pub const AT_FDCWD: i32 = -100;
+pub const PATH_MAX: usize = 4096;
+
+#[derive(Debug, Default, AsBytes)]
+#[repr(C)]
+pub struct statfs {
+    f_type: i64,
+    f_bsize: i64,
+    f_blocks: i64,
+    f_bfree: i64,
+    f_bavail: i64,
+    f_files: i64,
+    f_ffree: i64,
+    f_fsid: i64,
+    f_namelen: i64,
+    f_frsize: i64,
+    f_flags: i64,
+    f_spare: [i64; 4],
+}

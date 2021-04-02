@@ -19,6 +19,11 @@ impl FromSyscallArg for usize {
         arg as usize
     }
 }
+impl FromSyscallArg for u64 {
+    fn from_arg(arg: u64) -> u64 {
+        arg
+    }
+}
 impl FromSyscallArg for UserAddress {
     fn from_arg(arg: u64) -> UserAddress {
         UserAddress::from(arg)
@@ -40,10 +45,10 @@ where
 macro_rules! syscall_match {
     {
         $ctx:ident; $syscall_number:ident; $args:ident;
-        $($call:ident => $func:ident[$num_args:tt],)*
+        $($call:ident => $func:ident $arg_spec:tt,)*
     } => {
         match $syscall_number {
-            $($call => syscall_match!(@call $ctx; $args; $func[$num_args]),)*
+            $($call => syscall_match!(@call $ctx; $args; $func $arg_spec),)*
             _ => sys_unknown($ctx, $syscall_number),
         }
     };
@@ -69,6 +74,7 @@ pub fn dispatch_syscall(
         SYS_MMAP => sys_mmap[6],
         SYS_MPROTECT => sys_mprotect[3],
         SYS_BRK => sys_brk[1],
+        SYS_PREAD64 => sys_pread64[4],
         SYS_WRITEV => sys_writev[3],
         SYS_ACCESS => sys_access[2],
         SYS_GETPID => sys_getpid[0],
@@ -79,9 +85,11 @@ pub fn dispatch_syscall(
         SYS_GETGID => sys_getgid[0],
         SYS_GETEUID => sys_geteuid[0],
         SYS_GETEGID => sys_getegid[0],
+        SYS_FSTATFS => sys_fstatfs[2],
         SYS_SCHED_GETSCHEDULER => sys_sched_getscheduler[1],
         SYS_ARCH_PRCTL => sys_arch_prctl[2],
         SYS_EXIT_GROUP => sys_exit_group[1],
+        SYS_OPENAT => sys_openat[4],
         SYS_GETRANDOM => sys_getrandom[3],
     }
 }

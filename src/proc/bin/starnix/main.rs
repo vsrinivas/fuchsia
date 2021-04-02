@@ -14,6 +14,7 @@ use {
         self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
         sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
         sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
+        AsHandleRef,
     },
     futures::{StreamExt, TryStreamExt},
     io_util::directory,
@@ -24,6 +25,7 @@ use {
 };
 
 mod executive;
+mod fs;
 mod loader;
 mod syscall_table;
 mod syscalls;
@@ -42,10 +44,20 @@ fn as_exception_info(buffer: &zx::MessageBuf) -> zx_exception_info_t {
     unsafe { mem::transmute(tmp) }
 }
 
-async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
+fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(), zx::Status> {
+    let res = chan.read(buf);
+    if let Err(zx::Status::SHOULD_WAIT) = res {
+        chan.wait_handle(zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE)?;
+        chan.read(buf)
+    } else {
+        res
+    }
+}
+
+fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
     let exceptions = &process.exceptions;
     let mut buffer = zx::MessageBuf::new();
-    while exceptions.recv_msg(&mut buffer).await.is_ok() {
+    while read_channel_sync(exceptions, &mut buffer).is_ok() {
         let info = as_exception_info(&buffer);
         assert!(buffer.n_handles() == 1);
         let exception = zx::Exception::from(buffer.take_handle(0).unwrap());
@@ -149,8 +161,13 @@ async fn start_component(
         environ: vec![],
     };
 
-    run_process(Arc::new(load_executable(&job, executable_vmo, ldsvc_client, &params).await?))
-        .await?;
+    std::thread::spawn(move || {
+        let err = (|| -> Result<(), Error> {
+            let proc = block_on(load_executable(&job, executable_vmo, ldsvc_client, &params, root_proxy))?;
+            run_process(Arc::new(proc))
+        })();
+        err.unwrap();
+    });
     Ok(())
 }
 
@@ -187,4 +204,9 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
     Ok(())
+}
+
+pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
+    info!("awen lili");
+    fuchsia_async::Executor::new().unwrap().run_singlethreaded(fut)
 }

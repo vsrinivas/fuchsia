@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Error};
-use fidl::endpoints::ClientEnd;
+use fidl::endpoints::{ClientEnd};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_ldsvc as fldsvc;
-use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef, Status, Task};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 
 use crate::executive::*;
 use crate::types::*;
+use crate::fs::{FdTable, StdioFile};
 
 pub struct ProcessParameters {
     pub name: CString,
@@ -99,19 +100,24 @@ fn load_elf(vmo: &zx::Vmo, vmar: &zx::Vmar) -> Result<LoadedElf, Error> {
     // This randomizes the load address without loading into a sub-vmar and breaking mprotect.
     // This is different from how Linux actually lays out the address space. We might need to
     // rewrite it eventually.
-    let (temp_vmar, base) = vmar.allocate(0, elf_info.high - elf_info.low, zx::VmarFlags::empty()).context("Couldn't allocate temporary VMAR")?;
+    let (temp_vmar, base) = vmar
+        .allocate(0, elf_info.high - elf_info.low, zx::VmarFlags::empty())
+        .context("Couldn't allocate temporary VMAR")?;
     unsafe { temp_vmar.destroy()? }; // Not unsafe, the vmar is not in the current process
     let bias = base.wrapping_sub(elf_info.low);
-    elf_load::map_elf_segments(&vmo, &headers, &vmar, vmar.info()?.base, bias).context("map_elf_segments failed")?;
+    elf_load::map_elf_segments(&vmo, &headers, &vmar, vmar.info()?.base, bias)
+        .context("map_elf_segments failed")?;
     Ok(LoadedElf { headers, base, bias })
 }
 
-// When it's time to implement execve, this should be changed to return an errno.
+// TODO(tbodt): change to return an errno when it's time to implement execve
+// TODO(tbodt): passing the root to this function doesn't make any sense
 pub async fn load_executable(
     job: &zx::Job,
     executable: zx::Vmo,
     loader_service: ClientEnd<fldsvc::LoaderMarker>,
     params: &ProcessParameters,
+    root: fio::DirectoryProxy,
 ) -> Result<ProcessContext, Error> {
     let loader_service = loader_service.into_proxy()?;
 
@@ -136,19 +142,29 @@ pub async fn load_executable(
     let entry_elf = (&interp_elf).as_ref().unwrap_or(&main_elf);
     let entry = entry_elf.headers.file_header().entry.wrapping_add(entry_elf.bias);
 
-    let stack_size: usize = 0x4000;
+    let stack_size: usize = 0x5000;
     let stack_vmo = zx::Vmo::create(stack_size as u64)?;
     stack_vmo.set_name(CStr::from_bytes_with_nul(b"[stack]\0")?)?;
-    let stack_base = root_vmar.map(0, &stack_vmo, 0, stack_size, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE).context("failed to map stack")?;
+    let stack_base = root_vmar
+        .map(0, &stack_vmo, 0, stack_size, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE)
+        .context("failed to map stack")?;
     let stack = stack_base + stack_size - 8;
 
-    let exceptions = fasync::Channel::from_channel(process.create_exception_channel()?)?;
+    let exceptions = process.create_exception_channel()?;
     let process = ProcessContext {
         handle: process,
         exceptions,
         mm: MemoryManager::new(root_vmar),
         security: SecurityContext { uid: 3, gid: 3, euid: 3, egid: 3 },
+        root,
+        fd_table: FdTable::new(),
     };
+
+    // TODO(tbodt): this would fit better elsewhere
+    let stdio = StdioFile::new();
+    assert!(process.fd_table.install_fd(stdio.clone()).unwrap() == 0);
+    assert!(process.fd_table.install_fd(stdio.clone()).unwrap() == 1);
+    assert!(process.fd_table.install_fd(stdio).unwrap() == 2);
 
     let auxv = vec![
         (AT_UID, process.security.uid as u64),
@@ -158,6 +174,7 @@ pub async fn load_executable(
         (AT_BASE, interp_elf.map_or(0, |interp| interp.base as u64)),
         (AT_PHDR, main_elf.bias.wrapping_add(main_elf.headers.file_header().phoff) as u64),
         (AT_PHNUM, main_elf.headers.file_header().phnum as u64),
+        (AT_ENTRY, main_elf.bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
         (AT_SECURE, 0),
     ];
     let stack = populate_initial_stack(&stack_vmo, &params, auxv, stack_base, stack)?;
@@ -170,6 +187,7 @@ pub async fn load_executable(
 
 #[cfg(test)]
 mod tests {
+    use fuchsia_async as fasync;
     use super::*;
 
     #[fasync::run_singlethreaded(test)]

@@ -137,6 +137,27 @@ pub async fn open_file(
     node::verify_file_describe_event(file).await
 }
 
+/// Opens the given `path` from the given `parent` directory as a [`NodeProxy`], verifying that the
+/// target implements the fuchsia.io.Node protocol.
+pub async fn open_node(
+    parent: &DirectoryProxy,
+    path: &str,
+    flags: u32,
+    mode: u32,
+) -> Result<NodeProxy, OpenError> {
+    let (file, server_end) =
+        fidl::endpoints::create_proxy::<NodeMarker>().map_err(OpenError::CreateProxy)?;
+
+    let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
+
+    parent
+        .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
+        .map_err(OpenError::SendOpenRequest)?;
+
+    // wait for the file to open and report success.
+    node::verify_node_describe_event(file).await
+}
+
 /// Opens the given `path` from the given `parent` directory as a [`NodeProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Node protocol.
 pub fn open_node_no_describe(
