@@ -7,12 +7,14 @@ library fuchsia.ui.input;
 using fuchsia.ui.views;
 
 /// A method of obtaining global pointer events, regardless of view focus.
+/// DEPRECATED: Do not add new uses of this protocol.
 protocol PointerCaptureListener {
     OnPointerEvent(PointerEvent event) -> ();
 };
 
 /// Injects a listener protocol, along with a ViewRef that defines the coordinate space of the
 /// captured pointer events.
+/// DEPRECATED: Do not add new uses of this protocol.
 [Discoverable]
 protocol PointerCaptureListenerRegistry {
     /// This protocol will be subsumed by gesture disambiguation.
