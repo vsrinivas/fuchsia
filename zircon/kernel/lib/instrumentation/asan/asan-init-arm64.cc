@@ -81,7 +81,8 @@ void asan_map_shadow_for(uintptr_t start, size_t size) {
     ZX_ASSERT_MSG(status == ZX_OK, "could not allocate page (%d)", status);
     size_t mapped = 0;
     status = g_kasan_shadow_vmar->aspace()->arch_aspace().Map(
-        vaddr, &paddr, 1, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, &mapped);
+        vaddr, &paddr, 1, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+        ArchVmAspaceInterface::ExistingEntryAction::Error, &mapped);
     ZX_ASSERT_MSG(status == ZX_OK, "could not map page 0x%016lx (%d)\n", vaddr, status);
     ZX_ASSERT(mapped == 1);
     arch_zero_page(reinterpret_cast<void*>(vaddr));
