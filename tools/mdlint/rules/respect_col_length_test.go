@@ -89,3 +89,18 @@ code code code code code code code code code code code code code code code code 
 		},
 	}.runOverTokens(t, newRespectColLength)
 }
+
+func TestRespectColLength_multiLineToken(t *testing.T) {
+	backtick := "`"
+	ruleTestCase{
+		files: map[string]string{
+			"example.md": `
+This line is long long long long long long long long long long long [But it
+only] exceeds the maximum if you count "only]".
+
+This line is long long long long long long long long long long long ` + backtick + `But it
+only` + backtick + ` exceeds the maximum if you count "only(backtick)".
+`,
+		},
+	}.runOverTokens(t, newRespectColLength)
+}

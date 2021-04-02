@@ -6,6 +6,7 @@ package rules
 
 import (
 	"go.fuchsia.dev/fuchsia/tools/mdlint/core"
+	"strings"
 )
 
 func init() {
@@ -39,19 +40,24 @@ func (rule *respectColLength) OnDocStart(_ *core.Doc) {
 func (rule *respectColLength) OnNext(tok core.Token) {
 	switch tok.Kind {
 	case core.Space:
-		return
+		// Do nothing.
 	case core.Newline:
 		rule.countStartingAtCol = 1
-		return
 	case core.Header, core.List:
 		rule.countStartingAtCol = len(tok.Content) + 1
-		return
 	default:
-		if tok.Ln != rule.lastReportedLine {
-			if endCol := tok.Col + len(tok.Content) - rule.countStartingAtCol; tok.Col != 1 && colSizeLimit < endCol {
-				rule.reporter.Warnf(tok, "line over %d column limit", colSizeLimit)
-				rule.lastReportedLine = tok.Ln
-			}
+		if tok.Ln == rule.lastReportedLine || tok.Col == 1 {
+			break
+		}
+		var length int
+		if i := strings.IndexRune(tok.Content, '\n'); i >= 0 {
+			length = i
+		} else {
+			length = len(tok.Content)
+		}
+		if endCol := tok.Col + length - rule.countStartingAtCol; endCol > colSizeLimit {
+			rule.reporter.Warnf(tok, "line over %d column limit", colSizeLimit)
+			rule.lastReportedLine = tok.Ln
 		}
 	}
 }
