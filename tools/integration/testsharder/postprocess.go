@@ -164,6 +164,12 @@ func MultiplyShards(
 						int(float64(targetDuration)/float64(expectedDuration)),
 						multipliedTestMaxRuns,
 					)
+					if match.test.Runs == 0 {
+						// In the case where the TotalRuns is not set and the targetDuration is
+						// less than the expectedDuration, the calculated runs will be 0, but we
+						// still want to run the test so we should set the runs to 1.
+						match.test.Runs = 1
+					}
 				} else if targetTestCount > 0 {
 					match.test.Runs = targetTestCount
 				} else {
@@ -440,7 +446,14 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 		return duration1 > duration2
 	})
 
-	h := (subshardHeap)(make([]subshard, numNewShards))
+	var h subshardHeap
+	for i := 0; i < numNewShards; i++ {
+		// Initialize each subshard to have an empty list of tests so that it will
+		// be properly outputted in the json output file as a list instead of a nil
+		// value if the shard ends up with zero tests.
+		s := subshard{tests: []Test{}}
+		h = append(h, s)
+	}
 
 	for _, test := range shard.Tests {
 		runsPerShard := divRoundUp(test.minRequiredRuns(), numNewShards)

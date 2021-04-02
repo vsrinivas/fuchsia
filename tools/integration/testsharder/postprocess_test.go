@@ -167,6 +167,22 @@ func TestMultiplyShards(t *testing.T) {
 			},
 		},
 		{
+			name: "runs at least once even if duration is longer than target duration",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 0),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: 10 * time.Second},
+			},
+			targetDuration: 2 * time.Second,
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1, 1, 2),
+			},
+		},
+		{
 			name: "uses regex matches if no tests match exactly",
 			shards: []*Shard{
 				shard(env1, "fuchsia", 210),

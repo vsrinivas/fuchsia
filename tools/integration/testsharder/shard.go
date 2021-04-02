@@ -74,7 +74,7 @@ func MakeShards(specs []build.TestSpec, opts *ShardOptions) []*Shard {
 		sort.Slice(specs, func(i, j int) bool {
 			return specs[i].Test.Name < specs[j].Test.Name
 		})
-		var tests []Test
+		tests := []Test{}
 		for _, spec := range specs {
 			tests = append(tests, Test{Test: spec.Test, Runs: 1})
 		}
