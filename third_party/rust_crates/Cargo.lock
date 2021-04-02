@@ -1155,7 +1155,6 @@ dependencies = [
  "rust_icu_uenum",
  "rust_icu_uloc",
  "rust_icu_ustring",
- "rust_icu_utext",
  "rustc-demangle",
  "rustc-hash",
  "rustls",
@@ -3027,17 +3026,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1364683d94544dc995e502790179e9455ca3d5f25e005001eefd7f2df0ea1335"
 dependencies = [
  "log 0.4.11",
- "paste",
- "rust_icu_common",
- "rust_icu_sys",
-]
-
-[[package]]
-name = "rust_icu_utext"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "046474053d8896fc64cd781596fb8edce4001ea256e817cc5e9400f5a7487f1f"
-dependencies = [
  "paste",
  "rust_icu_common",
  "rust_icu_sys",

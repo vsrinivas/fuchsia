@@ -624,12 +624,6 @@ if (current_os == "fuchsia") {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("rust_icu_utext") {
-    deps = [ ":rust_icu_utext-v0_4_1" ]
-  }
-}
-
 group("rustc-demangle") {
   deps = [ ":rustc-demangle-v0_1_16" ]
 }
@@ -8049,33 +8043,6 @@ rust_library("rust_icu_ustring-v0_4_1") {
     "-Cmetadata=48284c7e1b9382a0",
     "-Cextra-filename=-48284c7e1b9382a0",
     "--cfg=feature=\"icu_version_67_plus\"",
-    "--cfg=feature=\"icu_version_in_env\"",
-    "--cfg=feature=\"renaming\"",
-  ]
-}
-
-rust_library("rust_icu_utext-v0_4_1") {
-  crate_name = "rust_icu_utext"
-  crate_root = "//third_party/rust_crates/vendor/rust_icu_utext/src/lib.rs"
-  output_name = "rust_icu_utext-e3b480b75052d1ed"
-  configs += [ "//src/lib/icu:version" ]
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":paste-v1_0_0($host_toolchain)" ]
-  deps += [ ":rust_icu_common-v0_4_1" ]
-  deps += [ ":rust_icu_sys-v0_4_1" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=e3b480b75052d1ed",
-    "-Cextra-filename=-e3b480b75052d1ed",
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
