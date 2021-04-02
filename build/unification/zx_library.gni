@@ -67,7 +67,10 @@ import("//build/unification/global_variables.gni")
 #
 #   sdk_publishable
 #     Optional: Indicates that this library can be added to the Fuchsia SDK.
-#     Type: bool
+#     When false, the library is not added to the SDK. When true, it is added
+#     to the SDK with a "partner" category. Otherwise, a string value may be
+#     used to specify another category (e.g. `sdk_publishable` = "cts"`).
+#     Type: bool, or a string indicating an SDK category.
 #     Default: false
 #
 #   sdk_headers
@@ -201,7 +204,15 @@ template("zx_library") {
         "The `sdk` argument is needed to build a zx_library() with a Fuchsia or host toolchain ($current_toolchain)")
     shape = invoker.sdk
 
-    sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
+    sdkable =
+        defined(invoker.sdk_publishable) && invoker.sdk_publishable != false
+    if (sdkable) {
+      if (invoker.sdk_publishable == true) {
+        sdk_category = "partner"
+      } else {
+        sdk_category = invoker.sdk_publishable
+      }
+    }
 
     extra_target_args = {
     }
@@ -209,7 +220,7 @@ template("zx_library") {
       if (sdkable) {
         target_type = "sdk_source_set"
         extra_target_args = {
-          category = "partner"
+          category = sdk_category
           api = "//sdk/lib/$target_name/$target_name.api"
           sdk_name = target_name
           build_as_static = true
@@ -221,7 +232,7 @@ template("zx_library") {
       if (sdkable) {
         target_type = "sdk_static_library"
         extra_target_args = {
-          category = "partner"
+          category = sdk_category
           api = "//sdk/lib/$target_name/$target_name.api"
           sdk_name = target_name
           libcxx_linkage = "static"
@@ -233,7 +244,7 @@ template("zx_library") {
       if (sdkable) {
         target_type = "sdk_shared_library"
         extra_target_args = {
-          category = "partner"
+          category = sdk_category
           api = "//sdk/lib/$target_name/$target_name.api"
           symbols_api = "//sdk/lib/$target_name/$target_name.symbols.api"
           sdk_name = target_name
