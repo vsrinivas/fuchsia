@@ -13,7 +13,8 @@ namespace feedback_data {
 
 // Synchronously fetches the static annotations, i.e. the annotations that don't change during a
 // boot cycle.
-Annotations GetStaticAnnotations(const AnnotationKeys& allowlist, PreviousBootFile boot_id_file);
+Annotations GetStaticAnnotations(const AnnotationKeys& allowlist, PreviousBootFile boot_id_file,
+                                 PreviousBootFile build_version_file);
 
 }  // namespace feedback_data
 }  // namespace forensics

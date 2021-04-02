@@ -62,7 +62,8 @@ class MainService {
  private:
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
               std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node, Config config,
-              PreviousBootFile boot_id_file, bool is_first_instance);
+              PreviousBootFile boot_id_file, PreviousBootFile build_version_file,
+              bool is_first_instance);
 
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;

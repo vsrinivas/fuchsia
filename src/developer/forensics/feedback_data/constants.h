@@ -37,6 +37,7 @@ constexpr char kAnnotationBuildIsDebug[] = "build.is_debug";
 constexpr char kAnnotationBuildLatestCommitDate[] = "build.latest-commit-date";
 constexpr char kAnnotationBuildProduct[] = "build.product";
 constexpr char kAnnotationBuildVersion[] = "build.version";
+constexpr char kAnnotationBuildVersionPreviousBoot[] = "build.version.previous-boot";
 constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
 constexpr char kAnnotationDeviceFeedbackId[] = "device.feedback-id";
 constexpr char kAnnotationDeviceUptime[] = "device.uptime";
@@ -95,6 +96,12 @@ constexpr char kDeviceIdPath[] = "/data/device_id.txt";
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 constexpr char kBootIdFileName[] = "boot_id.txt";
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Build version
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+constexpr char kBuildVersionFileName[] = "build_version.txt";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // UTC-monotonic difference

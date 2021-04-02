@@ -5,6 +5,7 @@
         "build.latest-commit-date",
         "build.product",
         "build.version",
+        "build.version.previous-boot",
         "device.board-name",
         "device.feedback-id",
         "device.uptime",

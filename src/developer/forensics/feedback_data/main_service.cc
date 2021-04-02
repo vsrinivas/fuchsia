@@ -73,6 +73,16 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
     files::WriteFile(boot_id_file.CurrentBootPath(), uuid::Generate());
   }
 
+  // Move the previous boot build version and write the new one.
+  PreviousBootFile build_version_file =
+      PreviousBootFile::FromData(is_first_instance, kBuildVersionFileName);
+  if (is_first_instance) {
+    std::string build_version;
+    if (files::ReadFileToString("/config/build-info/version", &build_version)) {
+      files::WriteFile(build_version_file.CurrentBootPath(), build_version);
+    }
+  }
+
   Config config;
   if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
@@ -81,15 +91,16 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
     return nullptr;
   }
 
-  return std::unique_ptr<MainService>(new MainService(dispatcher, std::move(services),
-                                                      std::move(cobalt), root_node, config,
-                                                      boot_id_file, is_first_instance));
+  return std::unique_ptr<MainService>(
+      new MainService(dispatcher, std::move(services), std::move(cobalt), root_node, config,
+                      boot_id_file, build_version_file, is_first_instance));
 }
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services,
                          std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node,
-                         Config config, PreviousBootFile boot_id_file, const bool is_first_instance)
+                         Config config, PreviousBootFile boot_id_file,
+                         PreviousBootFile build_version_file, const bool is_first_instance)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
       cobalt_(std::move(cobalt)),
@@ -97,7 +108,8 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       inspect_data_budget_(kUserBuildFlagPath, inspect_manager_.GetNodeManager()),
       device_id_manager_(dispatcher_, kDeviceIdPath),
       datastore_(dispatcher_, services, cobalt_.get(), config.annotation_allowlist,
-                 config.attachment_allowlist, boot_id_file, &inspect_data_budget_),
+                 config.attachment_allowlist, boot_id_file, build_version_file,
+                 &inspect_data_budget_),
       data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
                      config.attachment_allowlist, cobalt_.get(), &datastore_,
                      &inspect_data_budget_),

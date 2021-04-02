@@ -163,6 +163,26 @@ TEST_F(MainServiceTest, NoMovesPreviousIdAfterFirstInstance) {
   EXPECT_EQ(ReadFile(files::JoinPath("/data/", kBootIdFileName)), previous_boot_id);
 }
 
+TEST_F(MainServiceTest, MovesPreviousBuildVersionAndCopiesCurrentBuildVersion) {
+  const std::string previous_build_version = "previous_build_version";
+  WriteFile(files::JoinPath("/data/", kBuildVersionFileName), previous_build_version);
+
+  CreateMainService(/*is_first_instance=*/true);
+
+  EXPECT_EQ(ReadFile(files::JoinPath("/tmp/", kBuildVersionFileName)), previous_build_version);
+  EXPECT_EQ(ReadFile(files::JoinPath("/data/", kBuildVersionFileName)),
+            ReadFile("/config/build-info/version"));
+}
+
+TEST_F(MainServiceTest, NoMovesPreviousBuildVersionAfterFirstInstance) {
+  const std::string previous_build_version = "previous_build_version";
+  WriteFile(files::JoinPath("/data/", kBuildVersionFileName), previous_build_version);
+
+  CreateMainService(/*is_first_instance=*/false);
+
+  EXPECT_EQ(ReadFile(files::JoinPath("/data/", kBuildVersionFileName)), previous_build_version);
+}
+
 TEST_F(MainServiceTest, CheckInspect) {
   CreateMainService(/*is_first_instance=*/true);
   EXPECT_THAT(

@@ -22,14 +22,9 @@ namespace feedback_data {
 namespace {
 
 const AnnotationKeys kSupportedAnnotations = {
-    kAnnotationBuildBoard,
-    kAnnotationBuildProduct,
-    kAnnotationBuildLatestCommitDate,
-    kAnnotationBuildVersion,
-    kAnnotationBuildIsDebug,
-    kAnnotationDeviceBoardName,
-    kAnnotationSystemBootIdCurrent,
-    kAnnotationSystemBootIdPrevious,
+    kAnnotationBuildBoard,      kAnnotationBuildProduct,         kAnnotationBuildLatestCommitDate,
+    kAnnotationBuildVersion,    kAnnotationBuildVersionPreviousBoot, kAnnotationBuildIsDebug,
+    kAnnotationDeviceBoardName, kAnnotationSystemBootIdCurrent,  kAnnotationSystemBootIdPrevious,
 };
 
 AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
@@ -45,7 +40,8 @@ AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key, const std::s
   return value;
 }
 
-AnnotationOr BuildAnnotationOr(const AnnotationKey& key, const PreviousBootFile boot_id_file) {
+AnnotationOr BuildAnnotationOr(const AnnotationKey& key, const PreviousBootFile boot_id_file,
+                               const PreviousBootFile build_version_file) {
   if (key == kAnnotationBuildBoard) {
     return ReadAnnotationOrFromFilepath(key, "/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {
@@ -53,7 +49,9 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key, const PreviousBootFile 
   } else if (key == kAnnotationBuildLatestCommitDate) {
     return ReadAnnotationOrFromFilepath(key, "/config/build-info/latest-commit-date");
   } else if (key == kAnnotationBuildVersion) {
-    return ReadAnnotationOrFromFilepath(key, "/config/build-info/version");
+    return ReadAnnotationOrFromFilepath(key, build_version_file.CurrentBootPath());
+  } else if (key == kAnnotationBuildVersionPreviousBoot) {
+    return ReadAnnotationOrFromFilepath(key, build_version_file.PreviousBootPath());
   } else if (key == kAnnotationBuildIsDebug) {
 #ifndef NDEBUG
     return AnnotationOr("true");
@@ -75,11 +73,12 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key, const PreviousBootFile 
 }  // namespace
 
 Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
-                                 const PreviousBootFile boot_id_file) {
+                                 const PreviousBootFile boot_id_file,
+                                 const PreviousBootFile build_version_file) {
   Annotations annotations;
 
   for (const auto& key : RestrictAllowlist(allowlist, kSupportedAnnotations)) {
-    annotations.insert({key, BuildAnnotationOr(key, boot_id_file)});
+    annotations.insert({key, BuildAnnotationOr(key, boot_id_file, build_version_file)});
   }
   return annotations;
 }
