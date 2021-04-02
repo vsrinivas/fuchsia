@@ -28,13 +28,14 @@ namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
 constexpr char kTmpfsPath[] = "/tmp-inotify";
 
-class TestServer final : public fio::Directory::RawChannelInterface {
+class TestServer final : public fio::Directory::Interface {
  public:
   TestServer() = default;
 
   void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {
+  void Clone(uint32_t flags, ::fidl::ServerEnd<::fuchsia_io::Node> object,
+             CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -53,8 +54,8 @@ class TestServer final : public fio::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object,
-            OpenCompleter::Sync& completer) override {
+  void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
+            ::fidl::ServerEnd<::fuchsia_io::Node> object, OpenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -105,8 +106,9 @@ class InotifyAddFilter : public zxtest::Test {
     // client-server channel logic
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_OK(endpoints.status_value());
-    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(endpoints->server),
-                                           server_.get()));
+    auto result =
+        fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server), server_.get());
+    ASSERT_EQ(result.is_ok(), true);
 
     // install namespace for local-filesystem.
     ASSERT_OK(fdio_ns_get_installed(&namespace_));
