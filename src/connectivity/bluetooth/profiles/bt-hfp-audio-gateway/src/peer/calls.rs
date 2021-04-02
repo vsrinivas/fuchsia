@@ -300,8 +300,6 @@ impl Calls {
     }
 
     /// Return a Vec of the current call state for every call that `Calls` is tracking.
-    ///
-    /// The items in this list are guaranteed to be identical to the
     pub fn current_calls(&self) -> Vec<Call> {
         self.current_calls
             .calls()
@@ -316,7 +314,6 @@ impl Calls {
     }
 
     /// Returns true if the state of any calls requires ringing.
-    #[cfg(test)]
     pub fn should_ring(&self) -> bool {
         self.calls().any(|c| c.1.state == CallState::IncomingRinging)
     }

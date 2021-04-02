@@ -41,7 +41,6 @@ impl Default for Ringer {
 
 impl Ringer {
     /// Set the Ringer to `ring`.
-    #[cfg(test)]
     pub fn ring(&mut self, ring: bool) {
         self.ringing = ring;
     }

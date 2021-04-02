@@ -24,8 +24,8 @@ use {
 };
 
 use super::{
-    calls::Calls, gain_control::GainControl, service_level_connection::ServiceLevelConnection,
-    PeerRequest,
+    calls::Calls, gain_control::GainControl, ringer::Ringer,
+    service_level_connection::ServiceLevelConnection, PeerRequest,
 };
 use crate::{
     config::AudioGatewayFeatureSupport,
@@ -48,6 +48,7 @@ pub(super) struct PeerTask {
     calls: Calls,
     gain_control: GainControl,
     connection: ServiceLevelConnection,
+    ringer: Ringer,
 }
 
 impl PeerTask {
@@ -66,6 +67,7 @@ impl PeerTask {
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
             connection: ServiceLevelConnection::new(),
+            ringer: Ringer::default(),
         })
     }
 
@@ -274,8 +276,11 @@ impl PeerTask {
                     unimplemented!();
                 }
                 // A new call state has been received from the call service
-                _update = self.calls.select_next_some() => {
-                    unimplemented!();
+                update = self.calls.select_next_some() => {
+                    self.ringer.ring(self.calls.should_ring());
+                    for status in update.to_vec() {
+                        self.phone_status_update(status).await;
+                    }
                 }
                 request = self.connection.next() => {
                     if let Some(request) = request {
@@ -297,6 +302,11 @@ impl PeerTask {
                     } else {
                         break;
                     }
+                }
+                _ = self.ringer.select_next_some() => {
+                    // TODO (fxbug.dev/64550):
+                    // Send RING and CLIP information via the ServiceLevelConnection to
+                    // the procedure handling the incoming call.
                 }
                 complete => break,
             }
@@ -377,7 +387,9 @@ mod tests {
         super::*,
         async_utils::PollExt,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
-        fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerRequest, SignalStrength},
+        fidl_fuchsia_bluetooth_hfp::{
+            CallState, PeerHandlerMarker, PeerHandlerRequest, SignalStrength,
+        },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
         futures::{future::ready, pin_mut, stream::FusedStream, SinkExt},
@@ -681,5 +693,82 @@ mod tests {
         // Error on the SLC connection will result in the completion of the peer task.
         let result = exec.run_until_stalled(&mut run_fut);
         assert!(result.is_ready());
+    }
+
+    #[test]
+    fn call_updates_update_ringer_state() {
+        // Set up the executor, peer, and background call manager task
+        let mut exec = fasync::Executor::new().unwrap();
+
+        // Setup the peer task with the specified SlcState to enable indicator events.
+        let state = SlcState {
+            indicator_events_reporting: IndicatorsReporting::new_enabled(),
+            ..SlcState::default()
+        };
+        let (connection, mut remote) = create_and_initialize_slc(state);
+        let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+
+        fasync::Task::local(async move {
+            // Send the network information immediately so the peer can make progress.
+            match stream.next().await {
+                Some(Ok(PeerHandlerRequest::WatchNetworkInformation { responder })) => {
+                    responder
+                        .send(NetworkInformation::EMPTY)
+                        .expect("Successfully send network information");
+                }
+                x => panic!("Expected watch network information request: {:?}", x),
+            };
+
+            // A vec to hold all the stream items we don't care about for this test.
+            let mut junk_drawer = vec![];
+
+            // Filter out all items that are irrelevant to this particular test, placing them in
+            // the junk_drawer.
+            let mut stream = stream.filter_map(move |item| {
+                let item = match item {
+                    Ok(PeerHandlerRequest::WaitForCall { responder }) => Some(responder),
+                    x => {
+                        junk_drawer.push(x);
+                        None
+                    }
+                };
+                ready(item)
+            });
+
+            // Send the incoming call
+            let responder = stream.next().await.unwrap();
+            let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
+            responder
+                .send(client_end, "1234567", CallState::IncomingRinging)
+                .expect("Successfully send call information");
+
+            // Expect to send the Call Setup indicator to the peer.
+            let expected_data1 = vec![Indicator::CallSetup(1).into()];
+            expect_data_received_by_peer(&mut remote, expected_data1).await;
+
+            // Call manager should collect all further requests, without responding.
+            stream.collect::<Vec<_>>().await;
+        })
+        .detach();
+
+        // Pass in the client end connected to the call manager
+        let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
+        assert!(result.is_ok());
+
+        // Run the PeerTask until it has no more work to do.
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+        let result = exec.run_until_stalled(&mut run_fut);
+        assert!(result.is_pending());
+
+        // Drop the peer task sender to force the PeerTask's run future to complete
+        drop(sender);
+        let task = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+
+        // Check that the task's ringer has an active call with the expected call index.
+        assert!(task.ringer.ringing());
     }
 }

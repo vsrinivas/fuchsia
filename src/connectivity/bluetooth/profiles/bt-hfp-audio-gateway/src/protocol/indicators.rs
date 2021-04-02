@@ -364,7 +364,6 @@ impl CallIndicatorsUpdates {
     }
 
     /// Returns a Vec of all updated indicators. This vec is ordered by Indicator index.
-    #[cfg(test)]
     pub fn to_vec(&self) -> Vec<Indicator> {
         let mut v = vec![];
         v.extend(self.call.map(|i| Indicator::Call(i as u8)));
