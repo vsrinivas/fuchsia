@@ -90,10 +90,7 @@ async fn run_jq5(
 ) -> Result<String, anyhow::Error> {
     let jq_out = run_jq(&filter, json_string, jq_path).await?;
     let mut parsed_json = ParsedDocument::from_string(jq_out, None)?;
-    traverser::fill_comments(
-        &parsed_json5.content.items().next().unwrap(),
-        &mut parsed_json.content.items_mut().next().unwrap(),
-    )?;
+    traverser::fill_comments(&parsed_json5.content, &mut parsed_json.content)?;
 
     let format = Json5Format::new()?;
     Ok(format.to_string(&parsed_json)?)

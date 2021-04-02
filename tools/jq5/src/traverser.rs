@@ -23,10 +23,7 @@ use std::mem::discriminant;
 /// stdout from a jq call. While it may actually contain comments, it is
 /// presumed that it will not. If it does, many will likely be deleted,
 /// especially if it is similar in structure to `json5_val`.
-pub(crate) fn fill_comments(
-    json5_val: &Value,
-    jq_output_val: &mut Value,
-) -> Result<(), anyhow::Error> {
+fn fill_comments_helper(json5_val: &Value, jq_output_val: &mut Value) -> Result<(), anyhow::Error> {
     match json5_val {
         Value::Object { val, comments } => {
             match jq_output_val {
@@ -43,7 +40,7 @@ pub(crate) fn fill_comments(
                             if discriminant(&property.value())
                                 == discriminant(&out_properties[i].value())
                             {
-                                fill_comments(
+                                fill_comments_helper(
                                     &property.value(),
                                     &mut out_properties[i].value_mut(),
                                 )?;
@@ -53,7 +50,7 @@ pub(crate) fn fill_comments(
                 }
                 _ => {
                     return Err(anyhow::anyhow!(
-                      "fill_comments was called on mismatched Value variants.\njson5_val was: {:?}\njq_output_val was: {:?}",
+                      "fill_comments_helper was called on mismatched Value variants.\njson5_val was: {:?}\njq_output_val was: {:?}",
                       json5_val,
                       jq_output_val
                   ))
@@ -68,7 +65,7 @@ pub(crate) fn fill_comments(
                     for (sub_val, mut out_sub_val) in val.items().zip(out_val.items_mut()) {
                         if discriminant(&(*sub_val)) == discriminant(&(*out_sub_val))
                         {
-                            fill_comments(
+                            fill_comments_helper(
                                 &sub_val,
                                 &mut out_sub_val,
                             )?;
@@ -77,7 +74,7 @@ pub(crate) fn fill_comments(
                 }
                 _ => {
                     return Err(anyhow::anyhow!(
-                      "fill_comments was called on mismatched Value variants.\njson5_val was: {:?}\njq_output_val was: {:?}",
+                      "fill_comments_helper was called on mismatched Value variants.\njson5_val was: {:?}\njq_output_val was: {:?}",
                       json5_val,
                       jq_output_val
                   ))
@@ -90,7 +87,7 @@ pub(crate) fn fill_comments(
             }
             _ => {
                 return Err(anyhow::anyhow!(
-                    "fill_comments was called on mismatched Value variants.\njson5_val was: {:?}\njq_output_val was: {:?}",
+                    "fill_comments_helper was called on mismatched Value variants.\njson5_val was: {:?}\njq_output_val was: {:?}",
                     json5_val,
                     jq_output_val
                 ))
@@ -98,6 +95,21 @@ pub(crate) fn fill_comments(
         },
     };
     Ok(())
+}
+
+/// Transfers the comments at the bottom of the document below the json5 object
+/// and calls `fill_comments_helper` to transfer the rest of the comments.
+#[inline]
+pub(crate) fn fill_comments(
+    json5_content: &Array,
+    jq_output_content: &mut Array,
+) -> Result<(), anyhow::Error> {
+    *jq_output_content.trailing_comments_mut() = json5_content.trailing_comments().clone();
+
+    fill_comments_helper(
+        &json5_content.items().next().unwrap(),
+        &mut jq_output_content.items_mut().next().unwrap(),
+    )
 }
 
 #[cfg(test)]
@@ -137,11 +149,7 @@ mod tests {
         let mut parsed_json5_target =
             json5format::ParsedDocument::from_str(&json5_target[..], None).unwrap();
 
-        fill_comments(
-            &parsed_json5_original.content.items().next().unwrap(),
-            &mut parsed_json5_target.content.items_mut().next().unwrap(),
-        )
-        .unwrap();
+        fill_comments(&parsed_json5_original.content, &mut parsed_json5_target.content).unwrap();
 
         let format = json5format::Json5Format::new().unwrap();
 
@@ -189,11 +197,7 @@ mod tests {
         let mut parsed_json5_target =
             json5format::ParsedDocument::from_str(&json5_target[..], None).unwrap();
 
-        fill_comments(
-            &parsed_json5_original.content.items().next().unwrap(),
-            &mut parsed_json5_target.content.items_mut().next().unwrap(),
-        )
-        .unwrap();
+        fill_comments(&parsed_json5_original.content, &mut parsed_json5_target.content).unwrap();
 
         let format = json5format::Json5Format::new().unwrap();
 
@@ -242,11 +246,7 @@ mod tests {
         let mut parsed_json5_target =
             json5format::ParsedDocument::from_str(&json5_target[..], None).unwrap();
 
-        fill_comments(
-            &parsed_json5_original.content.items().next().unwrap(),
-            &mut parsed_json5_target.content.items_mut().next().unwrap(),
-        )
-        .unwrap();
+        fill_comments(&parsed_json5_original.content, &mut parsed_json5_target.content).unwrap();
 
         let format = json5format::Json5Format::new().unwrap();
         let expected_outcome = String::from(
@@ -309,11 +309,7 @@ mod tests {
         let mut parsed_json5_target =
             json5format::ParsedDocument::from_str(&json5_target[..], None).unwrap();
 
-        fill_comments(
-            &parsed_json5_original.content.items().next().unwrap(),
-            &mut parsed_json5_target.content.items_mut().next().unwrap(),
-        )
-        .unwrap();
+        fill_comments(&parsed_json5_original.content, &mut parsed_json5_target.content).unwrap();
 
         let format = json5format::Json5Format::new().unwrap();
         let expected_outcome = String::from(
@@ -380,11 +376,7 @@ mod tests {
         let mut parsed_json5_target =
             json5format::ParsedDocument::from_str(&json5_target[..], None).unwrap();
 
-        fill_comments(
-            &parsed_json5_original.content.items().next().unwrap(),
-            &mut parsed_json5_target.content.items_mut().next().unwrap(),
-        )
-        .unwrap();
+        fill_comments(&parsed_json5_original.content, &mut parsed_json5_target.content).unwrap();
 
         let format = json5format::Json5Format::new().unwrap();
         let expected_outcome = String::from(
@@ -433,6 +425,7 @@ mod tests {
   "deleted_field1": "bye, world!"
   //Comment at end of first object.
 }
+// Comment at end of document.
 "##,
         );
         let json5_target = String::from(
@@ -465,11 +458,7 @@ mod tests {
         let mut parsed_json5_target =
             json5format::ParsedDocument::from_str(&json5_target[..], None).unwrap();
 
-        fill_comments(
-            &parsed_json5_original.content.items().next().unwrap(),
-            &mut parsed_json5_target.content.items_mut().next().unwrap(),
-        )
-        .unwrap();
+        fill_comments(&parsed_json5_original.content, &mut parsed_json5_target.content).unwrap();
 
         let format = json5format::Json5Format::new().unwrap();
         let expected_outcome = String::from(
@@ -499,6 +488,7 @@ mod tests {
   "new_field1": "hello, world!"
   //Comment at end of first object.
 }
+// Comment at end of document.
 "##,
         );
         assert_eq!(
