@@ -232,12 +232,26 @@ fuchsia_test_package("minfs-tests") {
   }
 
   test_components = [
-    ":minfs-integration-test",
     ":minfs-dirty-cache-integration-test",
     ":minfs-power-test",
     ":minfs-unit-test",
     ":minfs-micro-benchmark-test",
   ]
+
+  # TODO(https://fxbug.dev/73218): Re-enable minfs-integration-test in profile build
+  # when it stops flaking.
+  if (select_variant + [
+        "coverage",
+        "profile",
+        "rustcoverage",
+      ] -
+      [
+        "coverage",
+        "profile",
+        "rustcoverage",
+      ] == select_variant) {
+    test_components += [ ":minfs-integration-test" ]
+  }
 
   deps = [ "//src/storage/bin/minfs" ]
 }
