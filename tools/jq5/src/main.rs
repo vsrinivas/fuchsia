@@ -146,7 +146,7 @@ async fn run(
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
-    println!("{}", "This tool is a work in progress: do not use for large-scale changes.\n");
+    eprintln!("{}", "This tool is a work in progress: do not use for large-scale changes.\n");
     let args = Opt::from_args();
 
     if args.files.len() == 0 {
