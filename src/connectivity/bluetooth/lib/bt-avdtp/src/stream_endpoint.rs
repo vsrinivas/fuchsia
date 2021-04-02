@@ -232,6 +232,10 @@ impl StreamEndpoint {
         Some(&self.configuration)
     }
 
+    // 100 milliseconds chosen based on end of range testing, to allow for recovery after normal
+    // packet delivery continues.
+    const SRC_FLUSH_TIMEOUT: Duration = Duration::from_millis(100);
+
     /// When a L2CAP channel is received after an Open command is accepted, it should be
     /// delivered via receive_channel.
     /// Returns true if this Endpoint expects more channels to be established before
@@ -243,6 +247,7 @@ impl StreamEndpoint {
             return Err(Error::InvalidState);
         }
         self.transport = Some(Arc::new(RwLock::new(c)));
+        self.try_flush_timeout(Self::SRC_FLUSH_TIMEOUT);
         self.stream_held = Arc::new(Mutex::new(false));
         // TODO(jamuraa, fxbug.dev/1009, fxbug.dev/1010): Reporting and Recovery channels
         self.set_state(StreamState::Open);
@@ -283,6 +288,18 @@ impl StreamEndpoint {
         let fut = match self.transport.as_ref().unwrap().try_read() {
             Err(_) => return,
             Ok(channel) => channel.set_audio_priority(priority).map(|_| ()),
+        };
+        Task::spawn(fut).detach();
+    }
+
+    /// Attempts to set the flush timeout for the MediaTransport channel, for source endpoints.
+    pub fn try_flush_timeout(&self, timeout: Duration) {
+        if self.endpoint_type != EndpointType::Source {
+            return;
+        }
+        let fut = match self.transport.as_ref().unwrap().try_write() {
+            Err(_) => return,
+            Ok(channel) => channel.set_flush_timeout(Some(timeout)).map(|_| ()),
         };
         Task::spawn(fut).detach();
     }
@@ -530,7 +547,6 @@ mod tests {
         Request,
     };
 
-    use fidl::encoding::Decodable;
     use fidl::endpoints::create_request_stream;
     use fidl_fuchsia_bluetooth_bredr as bredr;
     use fuchsia_async as fasync;
@@ -617,13 +633,11 @@ mod tests {
         assert_eq!(None, s.codec_type());
     }
 
-    #[test]
-    fn stream_configure_reconfigure() {
-        let _exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
+    fn test_endpoint(r#type: EndpointType) -> StreamEndpoint {
+        StreamEndpoint::new(
             REMOTE_ID_VAL,
             MediaType::Audio,
-            EndpointType::Sink,
+            r#type,
             vec![
                 ServiceCapability::MediaTransport,
                 ServiceCapability::MediaCodec {
@@ -633,7 +647,13 @@ mod tests {
                 },
             ],
         )
-        .unwrap();
+        .unwrap()
+    }
+
+    #[test]
+    fn stream_configure_reconfigure() {
+        let _exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut s = test_endpoint(EndpointType::Sink);
 
         // Can't configure items that aren't in range.
         assert_matches!(
@@ -715,13 +735,7 @@ mod tests {
     #[test]
     fn stream_establishment() {
         let _exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
-            REMOTE_ID_VAL,
-            MediaType::Audio,
-            EndpointType::Sink,
-            vec![ServiceCapability::MediaTransport],
-        )
-        .unwrap();
+        let mut s = test_endpoint(EndpointType::Sink);
 
         let (remote, transport) = Channel::create();
 
@@ -761,13 +775,7 @@ mod tests {
     #[test]
     fn stream_release_without_abort() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
-            REMOTE_ID_VAL,
-            MediaType::Audio,
-            EndpointType::Sink,
-            vec![ServiceCapability::MediaTransport],
-        )
-        .unwrap();
+        let mut s = test_endpoint(EndpointType::Sink);
 
         assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
@@ -794,13 +802,7 @@ mod tests {
     #[test]
     fn test_mediastream() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
-            REMOTE_ID_VAL,
-            MediaType::Audio,
-            EndpointType::Sink,
-            vec![ServiceCapability::MediaTransport],
-        )
-        .unwrap();
+        let mut s = test_endpoint(EndpointType::Sink);
 
         assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
@@ -864,13 +866,7 @@ mod tests {
     #[test]
     fn stream_release_with_abort() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
-            REMOTE_ID_VAL,
-            MediaType::Audio,
-            EndpointType::Sink,
-            vec![ServiceCapability::MediaTransport],
-        )
-        .unwrap();
+        let mut s = test_endpoint(EndpointType::Sink);
 
         assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
         let _remote_transport = establish_stream(&mut s);
@@ -902,13 +898,7 @@ mod tests {
     #[test]
     fn start_and_suspend() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
-            REMOTE_ID_VAL,
-            MediaType::Audio,
-            EndpointType::Sink,
-            vec![ServiceCapability::MediaTransport],
-        )
-        .unwrap();
+        let mut s = test_endpoint(EndpointType::Sink);
 
         // Can't start or suspend until configured and open.
         assert_matches!(s.start(), Err(ErrorCode::BadState));
@@ -932,7 +922,7 @@ mod tests {
             channel_mode: Some(bredr::ChannelMode::Basic),
             max_tx_sdu_size: Some(1004),
             ext_direction: Some(client_end),
-            ..Decodable::new_empty()
+            ..bredr::Channel::EMPTY
         };
         let transport = Channel::try_from(ext).unwrap();
         assert_matches!(s.receive_channel(transport), Ok(false));
@@ -996,25 +986,66 @@ mod tests {
         assert_matches!(s.suspend(), Err(ErrorCode::BadState));
     }
 
+    fn receive_l2cap_params_channel(
+        s: &mut StreamEndpoint,
+    ) -> (zx::Socket, bredr::L2capParametersExtRequestStream) {
+        assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
+        assert_matches!(s.establish(), Ok(()));
+
+        let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (client_end, l2cap_params_requests) =
+            create_request_stream::<bredr::L2capParametersExtMarker>().unwrap();
+        let ext = bredr::Channel {
+            socket: Some(local),
+            channel_mode: Some(bredr::ChannelMode::Basic),
+            max_tx_sdu_size: Some(1004),
+            ext_l2cap: Some(client_end),
+            ..bredr::Channel::EMPTY
+        };
+        let transport = Channel::try_from(ext).unwrap();
+        assert_matches!(s.receive_channel(transport), Ok(false));
+        (remote, l2cap_params_requests)
+    }
+
+    #[test]
+    fn sets_flush_timeout_for_source_transports() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut s = test_endpoint(EndpointType::Source);
+        let (_remote, mut l2cap_params_requests) = receive_l2cap_params_channel(&mut s);
+
+        // Should request to set the flush timeout.
+        match exec.run_until_stalled(&mut l2cap_params_requests.next()) {
+            Poll::Ready(Some(Ok(bredr::L2capParametersExtRequest::RequestParameters {
+                request,
+                responder,
+            }))) => {
+                assert_eq!(
+                    Some(StreamEndpoint::SRC_FLUSH_TIMEOUT.into_nanos()),
+                    request.flush_timeout
+                );
+                responder.send(request).expect("response to send cleanly");
+            }
+            x => panic!("Expected a item to be ready on the request stream, got {:?}", x),
+        };
+    }
+
+    #[test]
+    fn no_flush_timeout_for_sink_transports() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut s = test_endpoint(EndpointType::Sink);
+        let (_remote, mut l2cap_params_requests) = receive_l2cap_params_channel(&mut s);
+
+        // Should NOT request to set the flush timeout.
+        match exec.run_until_stalled(&mut l2cap_params_requests.next()) {
+            Poll::Pending => {}
+            x => panic!("Expected no request to set flush timeout, got {:?}", x),
+        };
+    }
+
     #[test]
     fn get_configuration() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
-            REMOTE_ID_VAL,
-            MediaType::Audio,
-            EndpointType::Sink,
-            vec![
-                ServiceCapability::MediaTransport,
-                ServiceCapability::Reporting,
-                ServiceCapability::MediaCodec {
-                    media_type: MediaType::Audio,
-                    codec_type: MediaCodecType::new(0),
-                    // Nonesense codec information elements.
-                    codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
-                },
-            ],
-        )
-        .unwrap();
+        let mut s = test_endpoint(EndpointType::Sink);
 
         // Can't get configuration if we aren't configured.
         assert!(s.get_configuration().is_none());
@@ -1070,13 +1101,7 @@ mod tests {
     #[test]
     fn update_callback() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut s = StreamEndpoint::new(
-            REMOTE_ID_VAL,
-            MediaType::Audio,
-            EndpointType::Sink,
-            vec![ServiceCapability::MediaTransport],
-        )
-        .unwrap();
+        let mut s = test_endpoint(EndpointType::Sink);
         let (cb, call_count) = call_count_callback();
         s.set_update_callback(cb);
 
