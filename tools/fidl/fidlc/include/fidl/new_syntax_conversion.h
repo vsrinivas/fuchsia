@@ -133,13 +133,11 @@ class NameAndTypeConversion : public Conversion {
 class MemberedDeclarationConversion : public Conversion {
  public:
   MemberedDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
-                                const std::optional<types::Strictness>& strictness,
                                 const types::Resourceness& resourceness)
-      : identifier_(identifier), strictness_(strictness), resourceness_(resourceness) {}
+      : identifier_(identifier), resourceness_(resourceness) {}
   ~MemberedDeclarationConversion() override = default;
 
   const std::unique_ptr<raw::Identifier>& identifier_;
-  const std::optional<types::Strictness> strictness_;
   const types::Resourceness resourceness_;
   std::vector<std::string> members_;
 
@@ -149,20 +147,42 @@ class MemberedDeclarationConversion : public Conversion {
 
  protected:
   virtual std::string get_fidl_type() = 0;
+  virtual std::string get_modifiers(fidl::utils::Syntax syntax) {
+    return resourceness_ == types::Resourceness::kResource ? "resource " : "";
+  }
 
-  std::string get_decl_str() {
-    std::string decl;
-    if (resourceness_ == types::Resourceness::kResource) {
-      decl += "resource ";
-    }
-    if (strictness_ != std::nullopt) {
+  std::string get_decl_str(fidl::utils::Syntax syntax) {
+    return get_modifiers(syntax) + get_fidl_type();
+  }
+};
+
+class FlexibleTypeConversion : public MemberedDeclarationConversion {
+ public:
+  FlexibleTypeConversion(const std::unique_ptr<raw::Identifier>& identifier,
+                         const types::Resourceness& resourceness,
+                         const std::optional<types::Strictness>& strictness)
+      : MemberedDeclarationConversion(identifier, resourceness), strictness_(strictness) {}
+
+  // this represents the modifier specified in source rather than the actual
+  // underlying strictness of the type, which is why the optional is required
+  // to represent the state of "no strictness specified".
+  std::optional<types::Strictness> strictness_;
+
+ protected:
+  std::string get_modifiers(fidl::utils::Syntax syntax) override {
+    std::string modifiers = MemberedDeclarationConversion::get_modifiers(syntax);
+    if (syntax == fidl::utils::Syntax::kNew) {
+      modifiers += ((strictness_.value_or(types::Strictness::kStrict) == types::Strictness::kStrict)
+                        ? "strict "
+                        : "");
+    } else if (strictness_ != std::nullopt) {
       if (strictness_.value() == types::Strictness::kStrict) {
-        decl += "strict ";
+        modifiers += "strict ";
       } else if (strictness_.value() == types::Strictness::kFlexible) {
-        decl += "flexible ";
+        modifiers += "flexible ";
       }
     }
-    return decl + get_fidl_type();
+    return modifiers;
   }
 };
 
@@ -176,7 +196,7 @@ class StructDeclarationConversion : public MemberedDeclarationConversion {
  public:
   StructDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
                               const types::Resourceness& resourceness)
-      : MemberedDeclarationConversion(identifier, std::nullopt, resourceness) {}
+      : MemberedDeclarationConversion(identifier, resourceness) {}
 
  private:
   std::string get_fidl_type() override { return "struct"; }
@@ -191,9 +211,8 @@ class StructDeclarationConversion : public MemberedDeclarationConversion {
 class TableDeclarationConversion : public MemberedDeclarationConversion {
  public:
   TableDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
-                             const std::optional<types::Strictness>& strictness,
                              const types::Resourceness& resourceness)
-      : MemberedDeclarationConversion(identifier, strictness, resourceness) {}
+      : MemberedDeclarationConversion(identifier, resourceness) {}
 
  private:
   std::string get_fidl_type() override { return "table"; }
@@ -205,12 +224,12 @@ class TableDeclarationConversion : public MemberedDeclarationConversion {
 //
 // The individual union member conversions are meant to be nested within this
 // one as NameAndTypeConversions using the AddChildText() method.
-class UnionDeclarationConversion : public MemberedDeclarationConversion {
+class UnionDeclarationConversion : public FlexibleTypeConversion {
  public:
   UnionDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
                              const std::optional<types::Strictness>& strictness,
                              const types::Resourceness& resourceness)
-      : MemberedDeclarationConversion(identifier, strictness, resourceness) {}
+      : FlexibleTypeConversion(identifier, resourceness, strictness) {}
 
  private:
   std::string get_fidl_type() override { return "union"; }
@@ -220,14 +239,14 @@ class UnionDeclarationConversion : public MemberedDeclarationConversion {
 // It is similar to the MemberedDeclarationConversion that it wraps, but has to
 // account for the possibility that a declaration contains an (optional)
 // wrapped type, like "bits NAME : WRAPPED_TYPE {..."
-class BitsDeclarationConversion : public MemberedDeclarationConversion {
+class BitsDeclarationConversion : public FlexibleTypeConversion {
  public:
   BitsDeclarationConversion(
       const std::unique_ptr<raw::Identifier>& identifier,
       const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>&
           maybe_wrapped_type,
       const std::optional<types::Strictness>& strictness)
-      : MemberedDeclarationConversion(identifier, strictness, types::Resourceness::kValue),
+      : FlexibleTypeConversion(identifier, types::Resourceness::kValue, strictness),
         maybe_wrapped_type_(maybe_wrapped_type) {}
 
   const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>

@@ -118,9 +118,9 @@ std::string NameAndTypeConversion::Write(fidl::utils::Syntax syntax) {
 std::string MemberedDeclarationConversion::Write(fidl::utils::Syntax syntax) {
   std::string out;
   if (syntax == fidl::utils::Syntax::kOld) {
-    out += prefix() + get_decl_str() + " " + identifier_->copy_to_str();
+    out += prefix() + get_decl_str(syntax) + " " + identifier_->copy_to_str();
   } else {
-    out += prefix() + "type " + identifier_->copy_to_str() + " = " + get_decl_str();
+    out += prefix() + "type " + identifier_->copy_to_str() + " = " + get_decl_str(syntax);
   }
   for (const std::string& member : members_) {
     out += member;
@@ -136,9 +136,9 @@ std::string BitsDeclarationConversion::Write(fidl::utils::Syntax syntax) {
   std::string name = std::string(start_pos, end_pos);
 
   if (syntax == fidl::utils::Syntax::kOld) {
-    out += prefix() + get_decl_str() + " " + name + get_wrapped_type();
+    out += prefix() + get_decl_str(syntax) + " " + name + get_wrapped_type();
   } else {
-    out += prefix() + "type " + name + " = " + get_decl_str() + get_wrapped_type();
+    out += prefix() + "type " + name + " = " + get_decl_str(syntax) + get_wrapped_type();
   }
   for (const std::string& member : members_) {
     out += member;

@@ -190,7 +190,7 @@ bits Foo {
 library example;
 
 /// Doc comment.
-type Foo = bits {
+type Foo = strict bits {
   SMALLEST = 1;
   BIGGEST = 0x80000000;
 };
@@ -215,7 +215,7 @@ flexible bits Foo {
 library example;
 
 /// Doc comment.
-type Foo = flexible bits {
+type Foo = bits {
   SMALLEST = 1;
   BIGGEST = 0x80000000;
 };
@@ -265,7 +265,7 @@ bits Foo : uint64 {
 library example;
 
 /// Doc comment.
-type Foo = bits : uint64 {
+type Foo = strict bits : uint64 {
   SMALLEST = 1;
   BIGGEST = 0x8000000000000000;
 };
@@ -290,7 +290,7 @@ flexible bits Foo : uint64 {
 library example;
 
 /// Doc comment.
-type Foo = flexible bits : uint64 {
+type Foo = bits : uint64 {
   SMALLEST = 1;
   BIGGEST = 0x8000000000000000;
 };
@@ -361,7 +361,7 @@ enum Foo {
 library example;
 
 /// Doc comment.
-type Foo = enum {
+type Foo = strict enum {
   FOO = 1;
   BAR = 2;
 };
@@ -386,7 +386,7 @@ flexible enum Foo {
 library example;
 
 /// Doc comment.
-type Foo = flexible enum {
+type Foo = enum {
   FOO = 1;
   BAR = 2;
 };
@@ -436,7 +436,7 @@ enum Foo : uint64 {
 library example;
 
 /// Doc comment.
-type Foo = enum : uint64 {
+type Foo = strict enum : uint64 {
   FOO = 1;
   BAR = 2;
 };
@@ -461,7 +461,7 @@ flexible enum Foo : uint64 {
 library example;
 
 /// Doc comment.
-type Foo = flexible enum : uint64 {
+type Foo = enum : uint64 {
   FOO = 1;
   BAR = 2;
 };
@@ -1219,7 +1219,7 @@ union U {
   std::string new_version = R"FIDL(
 library example;
 
-type U = union {
+type U = strict union {
   1: a int32;
 };
 )FIDL";
@@ -1240,7 +1240,7 @@ flexible union U {
   std::string new_version = R"FIDL(
 library example;
 
-type U = flexible union {
+type U = union {
   1: a int32;
 };
 )FIDL";
@@ -1283,7 +1283,7 @@ flexible union U {
   std::string new_version = R"FIDL(
 library example;
 
-type U = flexible union {
+type U = union {
   1: reserved;
   2: a int32;
 };
@@ -1310,7 +1310,7 @@ library example;
 
 protocol P {};
 
-type U = resource union {
+type U = resource strict union {
   1: p client_end:P;
   2: r server_end:P;
 };
@@ -1334,7 +1334,7 @@ union U {
   std::string new_version = R"FIDL(
 library example;
 
-type U = union {
+type U = strict union {
   1: v1 vector<uint8>;
   2: v2 vector<array<uint8,4>>:16;
   3: v3 vector<vector<array<uint8,4>>:<optional,16>>:32;
@@ -1361,7 +1361,7 @@ library example;
 
 using zx;
 
-type U = resource union {
+type U = resource strict union {
   1: h zx.handle:VMO;
 };
 )FIDL";
@@ -1386,7 +1386,7 @@ library example;
 
 using zx;
 
-type U = resource flexible union {
+type U = resource union {
   1: h zx.handle:VMO;
 };
 )FIDL";
@@ -1436,7 +1436,7 @@ library example;
 
 using zx;
 
-type U = resource union {
+type U = resource strict union {
   1: h zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 };
 )FIDL";
@@ -1479,7 +1479,7 @@ library example;
 // Top-level comments should be retained.
 /// Top-level doc comments should be retained.
 // Top-level comments after doc comments should be retained.
-type U = union {
+type U = strict union {
   // Inner comments should be retained.
   /// So should inner doc comments.
   1: a string;
@@ -1566,10 +1566,10 @@ library example;
 
 using zx;
 
-type B = bits {
+type B = strict bits {
   BM = 1;
 };
-type E = enum : uint64 {
+type E = strict enum : uint64 {
   EM = 1;
 };
 type T = table {
@@ -1652,10 +1652,10 @@ library example;
 
 using zx;
 
-type bool = bits {
+type bool = strict bits {
   int8 = 1;
 };
-type int8 = enum : uint64 {
+type int8 = strict enum : uint64 {
   bool = 1;
 };
 type int16 = table {
@@ -1749,10 +1749,10 @@ library example;
 
 using zx;
 
-type BB = bits {
+type BB = strict bits {
   BM = 1;
 };
-type EE = enum : uint64 {
+type EE = strict enum : uint64 {
   EM = 1;
 };
 type TT = table {
@@ -1872,10 +1872,10 @@ library example;
 
 using zx;
 
-type BBB = bits {
+type BBB = strict bits {
   BM = 1;
 };
-type EEE = enum : uint64 {
+type EEE = strict enum : uint64 {
   EM = 1;
 };
 type TTT = table {

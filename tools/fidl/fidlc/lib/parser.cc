@@ -1881,6 +1881,7 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
     return More;
   };
 
+  auto checkpoint = reporter_->Checkpoint();
   while (parse_member() == More) {
     if (!Ok()) {
       const auto result = RecoverToEndOfMember();
@@ -1895,6 +1896,24 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   }
   if (!Ok())
     return Fail();
+
+  // avoid returning a "must have non reserved member" error if there was en
+  // error while parsing the members
+  if (!checkpoint.NoNewErrors())
+    return nullptr;
+
+  if (kind == raw::Layout::Kind::kUnion) {
+    bool contains_non_reserved_member = false;
+    for (const std::unique_ptr<raw::LayoutMember>& member : members) {
+      assert(member->kind == raw::LayoutMember::Kind::kOrdinaled &&
+             "unions should only have ordinaled members");
+      const auto& union_member = static_cast<raw::OrdinaledLayoutMember*>(member.get());
+      if (!union_member->reserved)
+        contains_non_reserved_member = true;
+    }
+    if (!contains_non_reserved_member)
+      return Fail(ErrMustHaveNonReservedMember);
+  }
 
   return std::make_unique<raw::Layout>(
       scope.GetSourceElement(), kind, std::move(members), modifiers.strictness,

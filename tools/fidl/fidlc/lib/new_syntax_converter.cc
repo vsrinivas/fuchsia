@@ -233,8 +233,8 @@ void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMemb
 
 void ConvertingTreeVisitor::OnTableDeclaration(
     const std::unique_ptr<raw::TableDeclaration>& element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<TableDeclarationConversion>(
-      element->identifier, std::nullopt, element->resourceness);
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<TableDeclarationConversion>(element->identifier, element->resourceness);
   Converting converting(this, std::move(conv), *element->decl_start_token,
                         element->identifier->end_);
   TreeVisitor::OnTableDeclaration(element);

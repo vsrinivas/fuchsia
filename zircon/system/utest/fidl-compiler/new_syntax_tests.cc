@@ -445,7 +445,7 @@ TEST(NewSyntaxTests, TypeDeclDisallowPartialModifiers) {
   TestLibrary library(R"FIDL(
 library example;
 
-type t1 = union{};
+type t1 = union { 1: foo uint8; };
 type t2 = strict t1;
 )FIDL",
                       std::move(experimental_flags));

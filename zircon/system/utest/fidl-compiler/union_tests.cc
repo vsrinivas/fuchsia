@@ -29,7 +29,7 @@ union Foo {
     4: struct member;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(UnionTests, RecursiveUnion) {
@@ -41,7 +41,7 @@ union Value {
   2: vector<Value?> list_value;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(UnionTests, MutuallyRecursive) {
@@ -56,7 +56,7 @@ struct Bar {
   Foo? foo;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(UnionTests, FlexibleUnion) {
@@ -67,7 +67,7 @@ flexible union Foo {
   1: string bar;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(UnionTests, StrictUnion) {
@@ -78,10 +78,10 @@ strict union Foo {
   1: string bar;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(UnionTests, MustHaveExplicitOrdinals) {
+TEST(UnionTests, MustHaveExplicitOrdinalsOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -97,6 +97,25 @@ union Foo {
   ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
 }
 
+TEST(UnionTests, MustHaveExplicitOrdinals) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Foo = strict union {
+    foo int64;
+    bar vector<uint32>:10;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 2u);
+  ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
+}
+
 TEST(UnionTests, ExplicitOrdinals) {
   TestLibrary library(R"FIDL(
 library test;
@@ -106,7 +125,7 @@ union Foo {
   2: vector<uint32>:10 bar;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto fidl_union = library.LookupUnion("Foo");
   ASSERT_NOT_NULL(fidl_union);
@@ -132,7 +151,7 @@ union Foo {
   5: reserved;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto fidl_union = library.LookupUnion("Foo");
   ASSERT_NOT_NULL(fidl_union);
@@ -167,7 +186,7 @@ union Foo {
   4: uint32 baz;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto fidl_union = library.LookupUnion("Foo");
   ASSERT_NOT_NULL(fidl_union);
@@ -190,7 +209,7 @@ union Foo {
   EXPECT_EQ(member4.ordinal->value, 4);
 }
 
-TEST(UnionTests, OrdinalOutOfBounds) {
+TEST(UnionTests, OrdinalOutOfBoundsOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -201,7 +220,21 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrOrdinalOutOfBound);
 }
 
-TEST(UnionTests, OrdinalsMustBeUnique) {
+TEST(UnionTests, OrdinalOutOfBounds) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Foo = strict union {
+  -1: uint32 foo;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrOrdinalOutOfBound);
+}
+
+TEST(UnionTests, OrdinalsMustBeUniqueOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -213,7 +246,22 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
-TEST(UnionTests, MemberNamesMustBeUnique) {
+TEST(UnionTests, OrdinalsMustBeUnique) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Foo = strict union {
+  1: reserved;
+  1: uint64 x;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberOrdinal);
+}
+
+TEST(UnionTests, MemberNamesMustBeUniqueOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -225,7 +273,22 @@ union Duplicates {
   ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberName);
 }
 
-TEST(UnionTests, CannotStartAtZero) {
+TEST(UnionTests, MemberNamesMustBeUnique) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Duplicates = strict union {
+    1: s string;
+    2: s int32;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberName);
+}
+
+TEST(UnionTests, CannotStartAtZeroOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -237,7 +300,22 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
-TEST(UnionTests, DefaultNotAllowed) {
+TEST(UnionTests, CannotStartAtZero) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Foo = strict union {
+  0: foo uint32;
+  1: bar uint64;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrOrdinalsMustStartAtOne);
+}
+
+TEST(UnionTests, DefaultNotAllowedOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -249,7 +327,25 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrDefaultsOnUnionsNotSupported);
 }
 
-TEST(UnionTests, MustBeDense) {
+// NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
+TEST(UnionTests, DefaultNotAllowed) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Foo = strict union {
+    1: t int64 = 1;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 2u);
+  ASSERT_ERR(library.errors()[0], fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(UnionTests, MustBeDenseOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -263,7 +359,24 @@ union Example {
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
-TEST(UnionTests, MustHaveNonReservedMember) {
+TEST(UnionTests, MustBeDense) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Example = strict union {
+    1: first int64;
+    3: third int64;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
+  ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
+}
+
+TEST(UnionTests, MustHaveNonReservedMemberOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -276,7 +389,23 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, NoNullableMembers) {
+TEST(UnionTests, MustHaveNonReservedMember) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = strict union {
+  2: reserved;
+  1: reserved;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
+}
+
+TEST(UnionTests, NoNullableMembersOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -288,7 +417,23 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
 }
 
-TEST(UnionTests, NoDirectlyRecursiveUnions) {
+TEST(UnionTests, NoNullableMembers) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = strict union {
+  1: bar string:optional;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  // NOTE(fxbug.dev/72924): we get a more general error in the new syntax
+  ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
+}
+
+TEST(UnionTests, NoDirectlyRecursiveUnionsOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -300,7 +445,22 @@ union Value {
   ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
 }
 
-TEST(UnionTests, InvalidEmptyUnion) {
+TEST(UnionTests, NoDirectlyRecursiveUnions) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Value = strict union {
+  1: value Value;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
+}
+
+TEST(UnionTests, InvalidEmptyUnionOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -310,7 +470,20 @@ union Foo {};
   ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, ErrorSyntaxExplicitOrdinals) {
+TEST(UnionTests, InvalidEmptyUnion) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = strict union {};
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
+}
+
+TEST(UnionTests, ErrorSyntaxExplicitOrdinalsOld) {
   TestLibrary error_library(R"FIDL(
 library example;
 protocol Example {
@@ -324,7 +497,24 @@ protocol Example {
   ASSERT_EQ(error_union->members.back().ordinal->value, 2);
 }
 
-TEST(UnionTests, NoSelector) {
+TEST(UnionTests, ErrorSyntaxExplicitOrdinals) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary error_library(R"FIDL(
+library example;
+protocol Example {
+  Method() -> () error int32;
+};
+)FIDL",
+                            std::move(experimental_flags));
+  ASSERT_TRUE(error_library.Compile());
+  const fidl::flat::Union* error_union = error_library.LookupUnion("Example_Method_Result");
+  ASSERT_NOT_NULL(error_union);
+  ASSERT_EQ(error_union->members.front().ordinal->value, 1);
+  ASSERT_EQ(error_union->members.back().ordinal->value, 2);
+}
+
+TEST(UnionTests, NoSelectorOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -337,6 +527,26 @@ union Foo {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Selector");
 }
 
+TEST(UnionTests, NoSelector) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = strict union {
+  [Selector = "v2"] 1: v string;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  // TODO(fxbug.dev/72924): this should become ErrInvalidAttributePlacement
+  // as before once attributes are implemented.
+  ASSERT_ERRORED(library, fidl::ErrMissingOrdinalBeforeType);
+}
+
+// TODO(fxbug.dev/70247): as we clean up the migration, it will probably have
+// been long enough that we can remove this error and the special handling for
+// "xunion"
 TEST(UnionTests, DeprecatedXUnionError) {
   {
     TestLibrary library(R"FIDL(
