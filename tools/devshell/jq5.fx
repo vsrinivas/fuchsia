@@ -4,5 +4,7 @@
 
 #### CATEGORY=Build
 #### EXECUTABLE=${HOST_TOOLS_DIR}/jq5
-### JQ for JSON5
-## Usage: fx jq5
+### Extends the functionality of jq to json5 objects.
+## Usage: run `fx jq5 -h`
+## 
+## Or see the README at `tools/jq5/README.md`
