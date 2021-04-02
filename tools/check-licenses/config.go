@@ -103,7 +103,6 @@ func (c *Config) Merge(other *Config) {
 	c.StrictTextExtensionList = append(c.StrictTextExtensionList, other.StrictTextExtensionList...)
 	c.StrictAnalysis = c.StrictAnalysis || other.StrictAnalysis
 	c.SingleLicenseFiles = append(c.SingleLicenseFiles, other.SingleLicenseFiles...)
-	c.NoticeFiles = append(c.NoticeFiles, other.NoticeFiles...)
 	c.StopLicensePropagation = append(c.StopLicensePropagation, other.StopLicensePropagation...)
 
 	c.ProhibitedLicenseTypes = append(c.ProhibitedLicenseTypes, other.ProhibitedLicenseTypes...)

@@ -88,13 +88,21 @@ func NewCustomLicense(name string) *License {
 	}
 }
 
+func (l *License) CheckAllowList(path string) bool {
+	allowed := true
+	if len(l.AllowedDirs) > 0 && !contains(l.AllowedDirs, path) {
+		allowed = false
+		if l.ValidType {
+			l.BadLicenseUsage = append(l.BadLicenseUsage, path)
+		}
+	}
+	return allowed
+}
+
 // Search the given data slice for text that matches this License pattern.
 func (l *License) Search(data []byte, file string) (bool, *Match) {
-	if len(l.AllowedDirs) > 0 && !contains(l.AllowedDirs, file) {
-		return false, nil
-	}
-
 	if m := l.pattern.FindSubmatch(data); m != nil {
+		l.CheckAllowList(file)
 		match := NewMatch(m, file, l.pattern)
 		l.Lock()
 		key := hash(match.Text)

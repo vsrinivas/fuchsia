@@ -155,7 +155,8 @@
       "prebuilt/media/firmware/amlogic-decoder"
     ],
     "cryptsoft.lic": [
-      "prebuilt/third_party/flutter"
+      "prebuilt/third_party/flutter",
+      "third_party/boringssl"
     ],
     "ctsai.lic": [
       "prebuilt/third_party/flutter"
@@ -173,10 +174,20 @@
       "prebuilt/third_party/flutter"
     ],
     "khronos.lic": [
-      "prebuilt/third_party/flutter"
+      "garnet/test_data/media/third_party/chromium_media_test_data/COPYING",
+      "prebuilt/third_party/flutter",
+      "third_party/android",
+      "third_party/glslang",
+      "third_party/glfw",
+      "third_party/mesa",
+      "third_party/shaderc",
+      "third_party/spirv-cross",
+      "third_party/spirv-headers",
+      "third_party/spirv-tools"
     ],
     "llvm_project3.lic": [
-      "prebuilt/third_party/flutter"
+      "prebuilt/third_party/flutter",
+      "third_party/scudo"
     ],
     "mit5.lic": [
       "prebuilt/third_party/flutter"
@@ -191,13 +202,16 @@
       "prebuilt/third_party/flutter"
     ],
     "nokia.lic": [
-      "prebuilt/third_party/flutter"
+      "prebuilt/third_party/flutter",
+      "third_party/boringssl"
     ],
     "openssl_cryptsoft.lic": [
-      "prebuilt/third_party/flutter"
+      "prebuilt/third_party/flutter",
+      "third_party/boringssl"
     ],
     "openssl_short.lic": [
-      "prebuilt/third_party/flutter"
+      "prebuilt/third_party/flutter",
+      "third_party/boringssl"
     ],
     "unicode_ibm.lic": [
       "prebuilt/third_party/flutter"

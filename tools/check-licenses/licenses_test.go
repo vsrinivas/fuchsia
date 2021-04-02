@@ -33,10 +33,9 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 	l.MatchSingleLicenseFile(data, "foo.rs", metrics, ft)
 	data = []byte("BSD much.\nCopyright Bar Inc\n")
 	l.MatchSingleLicenseFile(data, "bar.rs", metrics, ft)
-	// Shouldn't add to num_single_license_file_match
 	l.MatchSingleLicenseFile(data, "baz.rs", metrics, ft)
 
-	if metrics.values["num_single_license_file_match"] != 2 {
+	if metrics.values["num_single_license_file_match"] != 3 {
 		t.Error(metrics.values["num_single_license_file_match"])
 	}
 }
@@ -65,12 +64,11 @@ func TestLicensesMatchFile(t *testing.T) {
 	if !ok {
 		t.Error("Apache didn't match")
 	}
-	// Shouldn't add to num_licensed
 	ok, _, _ = l.MatchFile(data, "baz.rs", metrics)
-	if ok {
-		t.Error("BSD shouldn't have matched")
+	if !ok {
+		t.Error("BSD didn't match")
 	}
-	if metrics.values["num_licensed"] != 2 {
+	if metrics.values["num_licensed"] != 3 {
 		t.Error(metrics.values["num_licensed"])
 	}
 }
@@ -107,16 +105,16 @@ func TestCheckLicenseAllowList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
-	if !CheckLicenseAllowList(l.licenses[0], "bar.rs") {
+	if !l.licenses[0].CheckAllowList("bar.rs") {
 		t.Errorf("%s was not able to be used in bar.rs", l.licenses[0].Category)
 	}
-	if !CheckLicenseAllowList(l.licenses[1], "foo.rs") {
+	if !l.licenses[1].CheckAllowList("foo.rs") {
 		t.Errorf("%s was not able to be used in foo.rs", l.licenses[1].Category)
 	}
-	if CheckLicenseAllowList(l.licenses[0], "foo.rs") {
+	if l.licenses[0].CheckAllowList("foo.rs") {
 		t.Errorf("%s should not be able to be used in foo.rs", l.licenses[0].Category)
 	}
-	if CheckLicenseAllowList(l.licenses[1], "bar.rs") {
+	if l.licenses[1].CheckAllowList("bar.rs") {
 		t.Errorf("%s should not able to be used in bar.rs", l.licenses[0].Category)
 	}
 }
