@@ -35,12 +35,12 @@ struct {{ .WireDispatcher }} final {
           reinterpret_cast<{{ .Protocol }}::Interface*>(interface)->{{ .Name }}(
                 {{- range $index, $param := .RequestArgs }}
                   std::move(message->{{ $param.Name }}),
-                {{- end }}            
-                completer);        
+                {{- end }}
+                completer);
         },
       },
     {{- end }}
-  };  
+  };
   return ::fidl::internal::TryDispatch(
       impl, msg, txn,
       entries, entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
