@@ -35,7 +35,8 @@ class JSONHelper {
 class FuchsiaConfigurationData {
  public:
   explicit FuchsiaConfigurationData(const std::string& config_dir = kDefaultConfigDir,
-                                    const std::string& environment_dir = kDefaultEnvironmentDir);
+                                    const std::string& environment_dir = kDefaultEnvironmentDir,
+                                    const std::string& build_type_dir = kDefaultBuildDir);
 
   // Get the backend environment to write to.
   config::Environment GetBackendEnvironment() const;
@@ -48,6 +49,8 @@ class FuchsiaConfigurationData {
 
   // Get the Clearcut Log Source ID that Cobalt should write its logs to.
   int32_t GetLogSourceId() const;
+
+  SystemProfile_BuildType GetBuildType() const;
 
   cobalt::ReleaseStage GetReleaseStage() const;
 
@@ -63,6 +66,7 @@ class FuchsiaConfigurationData {
  private:
   static const char kDefaultConfigDir[];
   static const char kDefaultEnvironmentDir[];
+  static const char kDefaultBuildDir[];
   config::Environment backend_environment_;
   config::ConfigurationData backend_configuration_;
   std::string api_key_;
@@ -72,6 +76,7 @@ class FuchsiaConfigurationData {
   cobalt::CobaltServiceInterface::DataCollectionPolicy data_collection_policy_;
   bool watch_for_user_consent_;
   bool enable_replacement_metrics_;
+  SystemProfile_BuildType build_type_;
 };
 
 }  // namespace cobalt

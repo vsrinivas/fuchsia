@@ -189,6 +189,33 @@ TEST(ConfigTest, GetApiKey) {
   EXPECT_EQ(api_key, "\xDE\xAD\xBE\xEF");
 }
 
+TEST(ConfigTest, GetBuildType) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+
+  EXPECT_TRUE(WriteFile("type", "eng"));
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir, kTestDir);
+  auto build_type = config_data.GetBuildType();
+  EXPECT_EQ(build_type, SystemProfile::ENG);
+}
+
+TEST(ConfigTest, GetBuildTypeMissingFile) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir, kTestDir);
+  auto build_type = config_data.GetBuildType();
+  EXPECT_EQ(build_type, SystemProfile::UNKNOWN_TYPE);
+}
+
+TEST(ConfigTest, GetBuildTypeInvalidType) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+
+  EXPECT_TRUE(WriteFile("type", "invalid"));
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir, kTestDir);
+  auto build_type = config_data.GetBuildType();
+  EXPECT_EQ(build_type, SystemProfile::OTHER_TYPE);
+}
+
 TEST(JSONHelper, FailsToReadInvalidConfig) {
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
   EXPECT_TRUE(files::CreateDirectory(kTestDir));

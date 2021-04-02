@@ -22,11 +22,14 @@ using cobalt::util::Status;
 
 const char FuchsiaConfigurationData::kDefaultEnvironmentDir[] = "/pkg/data";
 const char FuchsiaConfigurationData::kDefaultConfigDir[] = "/config/data";
+const char FuchsiaConfigurationData::kDefaultBuildDir[] = "/config/build";
 
 namespace {
 
 constexpr char kCobaltEnvironmentFile[] = "cobalt_environment";
 const config::Environment kDefaultEnvironment = config::Environment::PROD;
+
+constexpr char kBuildTypeFile[] = "type";
 
 constexpr char kConfigFile[] = "config.json";
 
@@ -218,10 +221,33 @@ bool LookupEnableReplacementMetrics(const JSONHelper& json_helper) {
   return enable_replacement_metrics;
 }
 
+SystemProfile::BuildType LookupBuildType(const std::string& build_type_dir) {
+  auto build_type_path = files::JoinPath(build_type_dir, kBuildTypeFile);
+  std::string build_type;
+  if (!files::ReadFileToString(build_type_path, &build_type)) {
+    FX_LOGS(ERROR) << "Failed to read build type " << build_type_path
+                   << ". Falling back to default type: " << SystemProfile::UNKNOWN_TYPE;
+    return SystemProfile::UNKNOWN_TYPE;
+  }
+  if (build_type == "eng") {
+    return SystemProfile::ENG;
+  }
+  if (build_type == "user") {
+    return SystemProfile::USER;
+  }
+  if (build_type == "userdebug") {
+    return SystemProfile::USER_DEBUG;
+  }
+  FX_LOGS(ERROR) << "Unexpected contents of build type file " << build_type_path << ": "
+                 << build_type << ". Falling back to default type: " << SystemProfile::OTHER_TYPE;
+  return SystemProfile::OTHER_TYPE;
+}
+
 }  // namespace
 
 FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir,
-                                                   const std::string& environment_dir)
+                                                   const std::string& environment_dir,
+                                                   const std::string& build_type_dir)
     : backend_environment_(LookupCobaltEnvironment(environment_dir)),
       backend_configuration_(config::ConfigurationData(backend_environment_)),
       api_key_(LookupApiKeyOrDefault(config_dir)),
@@ -229,7 +255,8 @@ FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir
       release_stage_(LookupReleaseStage(json_helper_)),
       data_collection_policy_(LookupDataCollectionPolicy(json_helper_)),
       watch_for_user_consent_(LookupWatchForUserConsent(json_helper_)),
-      enable_replacement_metrics_(LookupEnableReplacementMetrics(json_helper_)) {}
+      enable_replacement_metrics_(LookupEnableReplacementMetrics(json_helper_)),
+      build_type_(LookupBuildType(build_type_dir)) {}
 
 config::Environment FuchsiaConfigurationData::GetBackendEnvironment() const {
   return backend_environment_;
@@ -262,6 +289,8 @@ const char* FuchsiaConfigurationData::ShufflerPublicKeyPath() const {
 int32_t FuchsiaConfigurationData::GetLogSourceId() const {
   return backend_configuration_.GetLogSourceId();
 }
+
+SystemProfile_BuildType FuchsiaConfigurationData::GetBuildType() const { return build_type_; }
 
 cobalt::ReleaseStage FuchsiaConfigurationData::GetReleaseStage() const { return release_stage_; }
 
