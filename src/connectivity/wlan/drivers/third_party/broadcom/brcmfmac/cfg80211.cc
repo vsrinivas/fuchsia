@@ -1948,7 +1948,36 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
 
   // Increase inspect counter when the rx freeze counter first reach threshold.
   if (ndev->stats.rx_freeze_count == BRCMF_RX_FREEZE_THRESHOLD / BRCMF_CONNECT_LOG_DUR) {
+    // Note the rx freeze in the inspect logs
     ifp->drvr->inspect->LogRxFreeze();
+
+    // Trigger a deauth, unless we have exceeded our maximum rate
+    // (BRCMF_RX_FREEZE_MAX_DEAUTHS_PER_HOUR)
+    bool trigger_deauth = false;
+    zx_time_t current_time = zx::clock::get_monotonic().get();
+    std::list<zx_time_t>* deauth_times = &ndev->stats.rx_freeze_deauth_times;
+
+    if (deauth_times->size() < BRCMF_RX_FREEZE_MAX_DEAUTHS_PER_HOUR) {
+      // Our total number of deauth's is less than the per-hour limit
+      trigger_deauth = true;
+    } else {
+      zx_time_t oldest_deauth_time = deauth_times->front();
+      if ((current_time - oldest_deauth_time) > ZX_HOUR(1)) {
+        // It has been more than an hour since our oldest recorded deauth
+        trigger_deauth = true;
+        deauth_times->pop_front();
+      }
+    }
+
+    if (trigger_deauth) {
+      // Disassociate, using an otherwise-unused reason code that will uniquely identify this
+      // trigger.
+      BRCMF_ERR("No rx frames received in %zu seconds, triggering deauthentication",
+                static_cast<size_t>(BRCMF_RX_FREEZE_THRESHOLD) / ZX_SEC(1));
+      brcmf_link_down(ifp->vif, WLANIF_REASON_CODE_MESH_PATH_ERROR_NO_PROXY_INFORMATION,
+                      BRCMF_E_DEAUTH_IND);
+      deauth_times->push_back(current_time);
+    }
   }
 
   BRCMF_INFO("Driver Stats: Rx - Good: %d Bad: %d; Tx - Sent to FW: %d Conf: %d Drop: %d Bad: %d",

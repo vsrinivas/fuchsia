@@ -57,7 +57,9 @@
 // Connect log will be printed out in the Signal report timer handler every 5 minutes.
 #define BRCMF_CONNECT_LOG_COUNT           (BRCMF_CONNECT_LOG_DUR / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS)
 // The time threshold to distinguish whether the device encounters an rx freeze.
-#define BRCMF_RX_FREEZE_THRESHOLD         ZX_MIN(2)
+#define BRCMF_RX_FREEZE_THRESHOLD         ZX_MIN(1)
+// Maximum number of times we can trigger a deauth for an rx freeze per hour
+#define BRCMF_RX_FREEZE_MAX_DEAUTHS_PER_HOUR 2
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
