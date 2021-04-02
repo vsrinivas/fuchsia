@@ -66,8 +66,7 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 HIGHLEVEL_COMMAND_TYPE,
                 &command.type_name(),
                 *is_extension,
-                arguments.as_ref(),
-                true,
+                Some(arguments),
             )?;
         }
         Command::Read { name, type_name: _, is_extension } => {
@@ -81,7 +80,6 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 &command.type_name(),
                 *is_extension,
                 None::<&ExecuteArguments>,
-                false,
             )?;
         }
         Command::Test { name, type_name: _, is_extension } => {
@@ -95,7 +93,6 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 &command.type_name(),
                 *is_extension,
                 None::<&ExecuteArguments>,
-                false,
             )?;
         }
     };
@@ -140,7 +137,6 @@ fn codegen_successes<W: io::Write>(
                         &type_name,
                         *is_extension,
                         Some(arguments),
-                        true,
                     )?;
                     write_newline(sink)?;
                 };
@@ -163,11 +159,6 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
     highlevel_variant: &str,
     is_extension: bool,
     arguments: Option<&A>,
-    // TODO(fxb/66041) This is a hack, to distinguish between match arms that have no arguments
-    // and those whose enum variants don't even allow arguments.  This really needs to be cleaned up,
-    // in both raise and lower, probably by changing the above argument to be something more
-    // descriptive than just an option.
-    add_empty_argument_field: bool,
 ) -> Result {
     write_indented!(sink, indent, "highlevel::{}::{} {{", highlevel_type, highlevel_variant,)?;
 
@@ -197,10 +188,7 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
 
         if let Some(arguments) = arguments {
             arguments.codegen_arguments_lowlevel_parameters(sink, indent + TABSTOP)?;
-        } else if add_empty_argument_field {
-            write!(sink, ", arguments: None")?;
         }
-        // else there's no argument field at all.
         write!(sink, " }}\n")?;
     }
     write_indented!(sink, indent, "}},")?;
@@ -532,10 +520,15 @@ impl CodegenArguments for ExecuteArguments {
         sink: &mut W,
         _indent: u64,
     ) -> Result {
-        let ExecuteArguments { nonstandard_delimiter, .. } = self;
-        write!(sink,
-            ", arguments: Some(lowlevel::ExecuteArguments {{ nonstandard_delimiter: {:?}, arguments }})",
-            nonstandard_delimiter
+        let ExecuteArguments { delimiter, .. } = self;
+        let delimiter_string = match delimiter {
+            Some(del) => format!("Some(String::from(\"{}\"))", del),
+            None => String::from("None"),
+        };
+        write!(
+            sink,
+            ", arguments: lowlevel::ExecuteArguments {{ delimiter: {}, arguments }}",
+            delimiter_string
         )?;
 
         Ok(())

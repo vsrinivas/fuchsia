@@ -17,7 +17,7 @@ pub enum Command {
         name: String,
         type_name: Option<String>,
         is_extension: bool,
-        arguments: Option<ExecuteArguments>,
+        arguments: ExecuteArguments,
     },
     Read {
         name: String,
@@ -34,14 +34,6 @@ pub enum Command {
 impl Command {
     pub fn type_name(&self) -> String {
         match self {
-            Command::Execute {
-                name,
-                type_name,
-                arguments: Some(ExecuteArguments { nonstandard_delimiter: Some(_), .. }),
-                ..
-            } => {
-                type_name.clone().unwrap_or_else(|| format!("{}Special", to_initial_capital(name)))
-            }
             Command::Execute { name, type_name, .. } => {
                 type_name.clone().unwrap_or_else(|| to_initial_capital(name.as_str()))
             }
@@ -57,7 +49,7 @@ impl Command {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExecuteArguments {
-    pub nonstandard_delimiter: Option<String>,
+    pub delimiter: Option<String>,
     pub arguments: Arguments,
 }
 

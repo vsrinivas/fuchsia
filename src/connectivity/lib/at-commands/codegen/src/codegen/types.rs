@@ -152,19 +152,14 @@ fn codegen_execute_command<W: io::Write>(
     sink: &mut W,
     indent: u64,
     type_name: &str,
-    arguments: &Option<ExecuteArguments>,
+    arguments: &ExecuteArguments,
 ) -> Result {
     codegen_block(
         sink,
         indent,
         None,
         type_name,
-        |sink, indent| {
-            arguments
-                .as_ref()
-                .map(|args| codegen_execute_arguments(sink, indent, args))
-                .unwrap_or(Ok(()))
-        },
+        |sink, indent| codegen_execute_arguments(sink, indent, arguments),
         Some(","),
     )
 }
@@ -182,7 +177,7 @@ fn codegen_execute_arguments<W: io::Write>(
     indent: u64,
     execute_arguments: &ExecuteArguments,
 ) -> Result {
-    let ExecuteArguments { nonstandard_delimiter: _, arguments } = execute_arguments;
+    let ExecuteArguments { delimiter: _, arguments } = execute_arguments;
     codegen_arguments(sink, indent, arguments)
 }
 

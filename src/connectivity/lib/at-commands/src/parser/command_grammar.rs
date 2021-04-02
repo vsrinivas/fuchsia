@@ -16,8 +16,8 @@ read =    { "AT" ~ optional_extension ~ command_name ~ "?" }
 test =    { "AT" ~ optional_extension ~ command_name ~ "=?" }
 execute = { "AT" ~ optional_extension ~ command_name ~ execute_arguments? }
 
-execute_arguments = { execute_argument_delimiter ~ arguments }
-execute_argument_delimiter = { "=" | ">" }
+execute_arguments = { optional_execute_argument_delimiter ~ arguments }
+optional_execute_argument_delimiter = { ("=" | ">")? }
 
 optional_extension = { "+"? }
 
@@ -29,7 +29,7 @@ key_value_argument = { primitive_argument ~ "=" ~ primitive_argument }
 primitive_argument = { integer | string }
 
 command_name = @{ ASCII_ALPHA_UPPER+ }
-string = @{ (!(WHITE_SPACE | "," | "=" | ")") ~ ASCII)+ }
+string = @{ (!(WHITE_SPACE | "," | "=" | ">" | ")") ~ ASCII)+ }
 integer = @{ ASCII_DIGIT+ }
 
 WHITESPACE = _{ WHITE_SPACE }

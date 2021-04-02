@@ -68,7 +68,7 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 HIGHLEVEL_COMMAND_TYPE,
                 &command.type_name(),
                 *is_extension,
-                arguments.as_ref(),
+                Some(arguments),
             )?;
         }
         Command::Read { name, is_extension, .. } => {
@@ -536,17 +536,23 @@ impl CodegenArguments for ExecuteArguments {
         sink: &mut W,
         _indent: u64,
     ) -> Result {
-        let ExecuteArguments { nonstandard_delimiter, .. } = self;
-        write!(sink,
-            ", arguments: Some(lowlevel::ExecuteArguments {{ nonstandard_delimiter: {:?}, arguments }})",
-            nonstandard_delimiter
-        )?;
+        let ExecuteArguments { delimiter: _, arguments } = self;
+        if arguments.is_empty() {
+            write!(sink, ", arguments: lowlevel::ExecuteArguments {{ delimiter, .. }}",)?;
+        } else {
+            write!(sink, ", arguments: lowlevel::ExecuteArguments {{ delimiter, arguments }}",)?;
+        }
 
         Ok(())
     }
 
     fn codegen_arguments_lowlevel_match<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result {
-        let ExecuteArguments { arguments, .. } = self;
+        let ExecuteArguments { arguments, delimiter } = self;
+        let delimiter_string = match delimiter {
+            Some(del) => format!("&Some(String::from(\"{}\"))", del),
+            None => String::from("&None"),
+        };
+        write_indented!(sink, indent, "&& delimiter == {}\n", delimiter_string)?;
         arguments.codegen_arguments_lowlevel_match(sink, indent)
     }
 

@@ -16,6 +16,12 @@ command { AT+TESTEXEXTFI=field: Integer }
 # Extension execute command with one argument, with trailing comma
 command { AT+TESTEXEXTFIC=field: Integer, }
 
+# Extension execute command with a nonstandard delimiter
+command { AT+TESTNSD>field: Integer, }
+
+# Extension execute command with no delimiter
+command { AT+TESTNODfield: Integer, }
+
 # Extension execute command with one argument, no trailing comma
 command { AT+TESTEXEXTFS=field: String, }
 

@@ -17,7 +17,7 @@ use {
 pub enum Command {
     /// A command for executing some procedure or setting state.  They may have arguments.
     /// For example `AT+EXAMPLE=1,2,3`.
-    Execute { name: String, is_extension: bool, arguments: Option<ExecuteArguments> },
+    Execute { name: String, is_extension: bool, arguments: ExecuteArguments },
     /// A command for reading some state.  For example `AT+EXAMPLE?`.
     Read { name: String, is_extension: bool },
     /// A command for querying the capabilities of the remote side.  For example `AT+EXAMPLE=?`.
@@ -50,8 +50,7 @@ impl WriteTo for Command {
         }
         sink.write_all(self.name().as_bytes())?;
         match self {
-            Command::Execute { arguments: Some(args), .. } => args.write_to(sink)?,
-            Command::Execute { arguments: None, .. } => (),
+            Command::Execute { arguments: args, .. } => args.write_to(sink)?,
             Command::Read { .. } => sink.write_all(b"?")?,
             Command::Test { .. } => sink.write_all(b"=?")?,
         };
@@ -63,20 +62,20 @@ impl WriteTo for Command {
 /// Arguments to an execute command.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExecuteArguments {
-    /// A character setting off arguments from the command with something other than `=`.
-    /// This is currently only `>` in the `ATD>n` command, specified in HFP v1.8 4.19.
-    pub nonstandard_delimiter: Option<String>,
+    /// A character setting off arguments from the command.  This is normally `=`, but
+    /// could be ">" or absent. These latter are currently only in the variants of  the
+    /// `ATD` command, specified in HFP v1.8 4.19.
+    pub delimiter: Option<String>,
     /// The actual arguments to the execute commmand.
     pub arguments: arguments::Arguments,
 }
 
 impl WriteTo for ExecuteArguments {
     fn write_to<W: io::Write>(&self, sink: &mut W) -> io::Result<()> {
-        let ExecuteArguments { nonstandard_delimiter, arguments } = self;
-        match nonstandard_delimiter {
-            Some(string) => sink.write_all(string.as_bytes())?,
-            _ => sink.write_all(b"=")?,
-        }
+        let ExecuteArguments { delimiter, arguments } = self;
+        if let Some(string) = delimiter {
+            sink.write_all(string.as_bytes())?;
+        };
         arguments.write_to(sink)
     }
 }

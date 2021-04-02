@@ -27,7 +27,14 @@ fn test_write(command_to_serialize: Command, expected_string: String) {
 #[test]
 fn exec_no_args() {
     test_write(
-        Command::Execute { name: String::from("TEST"), is_extension: false, arguments: None },
+        Command::Execute {
+            name: String::from("TEST"),
+            is_extension: false,
+            arguments: ExecuteArguments {
+                delimiter: None,
+                arguments: Arguments::ArgumentList(vec![]),
+            },
+        },
         cr_terminate("ATTEST"),
     )
 }
@@ -36,7 +43,14 @@ fn exec_no_args() {
 #[test]
 fn exec_ext_no_args() {
     test_write(
-        Command::Execute { name: String::from("TEST"), is_extension: true, arguments: None },
+        Command::Execute {
+            name: String::from("TEST"),
+            is_extension: true,
+            arguments: ExecuteArguments {
+                delimiter: None,
+                arguments: Arguments::ArgumentList(vec![]),
+            },
+        },
         cr_terminate("AT+TEST"),
     )
 }
@@ -48,12 +62,12 @@ fn exec_one_int_arg() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
-            }),
+            },
         },
         cr_terminate("AT+TEST=1"),
     )
@@ -66,12 +80,12 @@ fn exec_one_int_arg_nonstandard_delimiter() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: Some(String::from(">")),
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
-            }),
+            },
         },
         cr_terminate("AT+TEST>1"),
     )
@@ -83,12 +97,12 @@ fn exec_one_string_arg() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::String(String::from("abc")),
                 )]),
-            }),
+            },
         },
         cr_terminate("AT+TEST=abc"),
     )
@@ -101,13 +115,13 @@ fn exec_one_kv_arg() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
                     key: PrimitiveArgument::Integer(1),
                     value: PrimitiveArgument::String(String::from("abc")),
                 }]),
-            }),
+            },
         },
         cr_terminate("AT+TEST=1=abc"),
     )
@@ -120,13 +134,13 @@ fn exec_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![
                     Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]),
-            }),
+            },
         },
         cr_terminate("AT+TEST=abc,1"),
     )
@@ -139,12 +153,12 @@ fn paren_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]]),
-            }),
+            },
         },
         cr_terminate("AT+TEST=(1)"),
     )
@@ -157,8 +171,8 @@ fn multiple_paren_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument::PrimitiveArgument(PrimitiveArgument::Integer(1))],
                     vec![
@@ -166,7 +180,7 @@ fn multiple_paren_args() {
                         Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     ],
                 ]),
-            }),
+            },
         },
         cr_terminate("AT+TEST=(1)(2,abc)"),
     )
@@ -179,8 +193,8 @@ fn multiple_paren_kv_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
+            arguments: ExecuteArguments {
+                delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument::KeyValueArgument {
                         key: PrimitiveArgument::Integer(1),
@@ -194,7 +208,7 @@ fn multiple_paren_kv_args() {
                         },
                     ],
                 ]),
-            }),
+            },
         },
         cr_terminate("AT+TEST=(1=abc)(2,xyz=3)"),
     )

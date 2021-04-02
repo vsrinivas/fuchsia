@@ -14,8 +14,8 @@ use {
             arguments_parser::ArgumentsParser,
             command_grammar::{Grammar, Rule},
             common::{
-                next_match, next_match_one_of, next_match_option, parse_name, ParseError,
-                ParseResult,
+                next_match, next_match_one_of, next_match_option, parse_name, parse_string,
+                ParseError, ParseResult,
             },
         },
     },
@@ -71,48 +71,40 @@ fn parse_execute(execute: Pair<'_, Rule>) -> ParseResult<Command, Rule> {
     let name = next_match(&mut execute_elements, Rule::command_name)?;
     let parsed_name = parse_name(name)?;
 
-    let execute_arguments_option =
-        next_match_option(&mut execute_elements, Rule::execute_arguments)?;
-    let parsed_execute_arguments_option = match execute_arguments_option {
-        None => None,
-        Some(execute_arguments) => parse_execute_arguments(execute_arguments)?,
-    };
+    let execute_arguments = next_match(&mut execute_elements, Rule::execute_arguments)?;
+    let parsed_execute_arguments = parse_execute_arguments(execute_arguments)?;
 
     Ok(Command::Execute {
         name: parsed_name,
         is_extension: parsed_optional_extension,
-        arguments: parsed_execute_arguments_option,
+        arguments: parsed_execute_arguments,
     })
 }
 
 fn parse_execute_arguments(
     execute_arguments: Pair<'_, Rule>,
-) -> ParseResult<Option<ExecuteArguments>, Rule> {
+) -> ParseResult<ExecuteArguments, Rule> {
     let mut execute_arguments_elements = execute_arguments.into_inner();
 
-    let execute_argument_delimiter =
-        next_match(&mut execute_arguments_elements, Rule::execute_argument_delimiter)?;
-    let parsed_execute_argument_delimiter =
-        parse_execute_argument_delimiter(execute_argument_delimiter)?;
+    let execute_argument_delimiter_option = next_match_option(
+        &mut execute_arguments_elements,
+        Rule::optional_execute_argument_delimiter,
+    )?;
+    let parsed_execute_argument_delimiter_option = match execute_argument_delimiter_option {
+        Some(delimiter) => {
+            let string = parse_string(delimiter)?;
+            (!string.is_empty()).then(|| string)
+        }
+        None => None,
+    };
 
     let arguments = next_match(&mut execute_arguments_elements, Rule::arguments)?;
     let parsed_arguments = ARGUMENTS_PARSER.parse_arguments(arguments)?;
 
-    Ok(Some(ExecuteArguments {
-        nonstandard_delimiter: parsed_execute_argument_delimiter,
+    Ok(ExecuteArguments {
+        delimiter: parsed_execute_argument_delimiter_option,
         arguments: parsed_arguments,
-    }))
-}
-
-fn parse_execute_argument_delimiter(
-    execute_argument_delimiter: Pair<'_, Rule>,
-) -> ParseResult<Option<String>, Rule> {
-    let execute_argument_delimiter_str = execute_argument_delimiter.as_span().as_str();
-    if execute_argument_delimiter_str == "=" {
-        Ok(None) // Standard delimiter
-    } else {
-        Ok(Some(execute_argument_delimiter_str.to_string())) // Nonstanded delimiter
-    }
+    })
 }
 
 fn parse_read(read: Pair<'_, Rule>) -> ParseResult<Command, Rule> {

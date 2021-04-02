@@ -17,8 +17,8 @@ read =    { "AT" ~ optional_extension ~ command_name ~ "?" }
 test =    { "AT" ~ optional_extension ~ command_name ~ "=?" }
 execute = { "AT" ~ optional_extension ~ command_name ~ execute_arguments? }
 
-execute_arguments = { execute_argument_delimiter ~ arguments }
-execute_argument_delimiter = { "=" | ">" }
+execute_arguments = { optional_execute_argument_delimiter ~ arguments }
+optional_execute_argument_delimiter = { ("=" | ">")? }
 
 response = { "response" ~ optional_type_name ~ "{" ~ optional_extension ~ command_name ~ ":" ~ arguments ~ "}" }
 
