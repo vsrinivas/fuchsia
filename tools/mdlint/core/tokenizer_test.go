@@ -484,6 +484,27 @@ var tokenizerTestCases = []tokenizerTestCase{
 			{Kind: EOF, Content: ""},
 		},
 	},
+	{
+		input: "some {{ var }} and {% code %} here {{ } }} then {##}",
+		tokens: []expectedToken{
+			{Kind: Text, Content: "some"},
+			{Kind: Space, Content: " "},
+			{Kind: JinjaExpression, Content: "{{ var }}"},
+			{Kind: Space, Content: " "},
+			{Kind: Text, Content: "and"},
+			{Kind: Space, Content: " "},
+			{Kind: JinjaStatement, Content: "{% code %}"},
+			{Kind: Space, Content: " "},
+			{Kind: Text, Content: "here"},
+			{Kind: Space, Content: " "},
+			{Kind: JinjaExpression, Content: "{{ } }}"},
+			{Kind: Space, Content: " "},
+			{Kind: Text, Content: "then"},
+			{Kind: Space, Content: " "},
+			{Kind: JinjaComment, Content: "{##}"},
+			{Kind: EOF, Content: ""},
+		},
+	},
 
 	// codebase examples
 

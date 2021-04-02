@@ -29,19 +29,27 @@ const (
 	Space
 	Text
 	URL
+
+	// See https://jinja.palletsprojects.com/en/2.11.x/templates/
+	JinjaStatement
+	JinjaExpression
+	JinjaComment
 )
 
 var tokenKindStrings = map[TokenKind]string{
-	Anchor:  "Anchor",
-	Code:    "Code",
-	EOF:     "EOF",
-	Header:  "Header",
-	Link:    "Link",
-	List:    "List",
-	Newline: "Newline",
-	Space:   "Space",
-	Text:    "Text",
-	URL:     "URL",
+	Anchor:          "Anchor",
+	Code:            "Code",
+	EOF:             "EOF",
+	Header:          "Header",
+	Link:            "Link",
+	List:            "List",
+	Newline:         "Newline",
+	Space:           "Space",
+	Text:            "Text",
+	URL:             "URL",
+	JinjaStatement:  "JinjaStatement",
+	JinjaExpression: "JinjaExpression",
+	JinjaComment:    "JinjaComment",
 }
 
 func (kind TokenKind) String() string {
@@ -293,7 +301,7 @@ func (t *tokenizer) next() (Token, error) {
 			return t.newToken(Link), nil
 		}
 		if r == '(' && t.context.followingLink {
-			if err := t.readUntil(true, func(r rune) bool { return r != ')' }); err != nil {
+			if err := t.readUntilEscapeSeq(')'); err != nil {
 				return Token{}, err
 			}
 			return t.newToken(URL), nil
@@ -313,16 +321,40 @@ func (t *tokenizer) next() (Token, error) {
 				return t.newToken(List), nil
 			}
 		}
-		if r == '{' && t.context.isHeaderLine {
-			if err := t.readUntil(true, func(r rune) bool { return r != '}' }); err != nil {
+		if r == '{' {
+			peek, err := t.doc.peekRune(1)
+			if err != nil {
 				return Token{}, err
 			}
-			return t.newToken(Anchor), nil
+			switch peek[0] {
+			case '{':
+				if err := t.readUntilEscapeSeq('}', '}'); err != nil {
+					return Token{}, err
+				}
+				return t.newToken(JinjaExpression), nil
+			case '%':
+				if err := t.readUntilEscapeSeq('%', '}'); err != nil {
+					return Token{}, err
+				}
+				return t.newToken(JinjaStatement), nil
+			case '#':
+				if err := t.readUntilEscapeSeq('}'); err != nil {
+					return Token{}, err
+				}
+				tok := t.newToken(Text)
+				if tok.Content[len(tok.Content)-2:] == "#}" {
+					tok.Kind = JinjaComment
+				} else if t.context.isHeaderLine {
+					tok.Kind = Anchor
+				}
+				return tok, nil
+			}
 		}
 		// TODO(fxbug.dev/62964): We need to handle more than three backticks,
 		// and possibly tildes (~). See
 		// https://spec.commonmark.org/0.29/#fenced-code-blocks.
 		if r == '`' {
+			seqToRead := []rune{'`'}
 			peek, err := t.doc.peekRune(2)
 			if err != nil {
 				return Token{}, err
@@ -334,32 +366,9 @@ func (t *tokenizer) next() (Token, error) {
 						panic("peek(2) followed by read failed; something is off")
 					}
 				}
-				var ticksReadBefore int
-				if err := t.readUntil(true, func(r rune) bool {
-					if r == '`' {
-						if ticksReadBefore == 2 {
-							return false
-						}
-						ticksReadBefore++
-					} else {
-						ticksReadBefore = 0
-					}
-					return true
-				}); err != nil {
-					return Token{}, err
-				}
-				return t.newToken(Code), nil
+				seqToRead = append(seqToRead, '`', '`')
 			}
-			var nextStopDone bool
-			if err := t.readUntil(false, func(r rune) bool {
-				if nextStopDone {
-					return false
-				}
-				if r == '`' {
-					nextStopDone = true
-				}
-				return true
-			}); err != nil {
+			if err := t.readUntilEscapeSeq(seqToRead...); err != nil {
 				return Token{}, err
 			}
 			return t.newToken(Code), nil
@@ -414,6 +423,18 @@ func (t *tokenizer) readUntil(includeLast bool, shouldContinue func(rune) bool) 
 		}
 		t.buf.WriteRune(r)
 	}
+}
+
+func (t *tokenizer) readUntilEscapeSeq(seqToRead ...rune) error {
+	var index int
+	return t.readUntil(true, func(r rune) bool {
+		if r == seqToRead[index] {
+			index++
+		} else {
+			index = 0
+		}
+		return len(seqToRead) != index
+	})
 }
 
 func isSeparatorSpace(r rune) bool {

@@ -21,3 +21,14 @@ func TestCasingOfAnchors(t *testing.T) {
 		},
 	}.runOverTokens(t, newCasingOfAnchors)
 }
+
+func TestCasingOfAnchors_fuchsiaDevExt(t *testing.T) {
+	ruleTestCase{
+		files: map[string]string{
+			"example.md": `
+We have extensions in fuchsia.dev. They should not trigger errors:
+
+# {{ rfc.name }} - {{ rfc.title }}`,
+		},
+	}.runOverTokens(t, newCasingOfAnchors)
+}
