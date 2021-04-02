@@ -4,12 +4,19 @@
 
 package summarize
 
-import "strings"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"strings"
+)
 
 // Strictness is whether an aggregate is strict or flexible.
 type Strictness string
 
 var (
+	// noStrict denotes no defined strictness for this element.
+	noStrict Strictness = ""
 	// isStrict strictness value.
 	isStrict Strictness = "strict"
 	// isFlexible strictness value.
@@ -26,19 +33,20 @@ var (
 	isResource Resourceness = "resource"
 )
 
-// Kind is the encoding of the type, e.g. const
+// Kind is the encoding of the type, e.g. 'const'.
 type Kind string
 
-// Decl is the encoding of the type declaration.
+// Decl is the underlying type declaration.  For `enum Foo : int32`,
+// this will be `int32`.
 type Decl string
 
 // Name is the fully qualified name of the element.
 type Name string
 
-// elementStr is a generic stringly-typed view of an Element. The aim is to
+// ElementStr is a generic stringly-typed view of an Element. The aim is to
 // keep the structure as flat as possible, and omit fields which have no
 // bearing to the Kind of element represented.
-type elementStr struct {
+type ElementStr struct {
 	Name         `json:"name"`
 	Kind         `json:"kind"`
 	Decl         `json:"declaration,omitempty"`
@@ -46,7 +54,7 @@ type elementStr struct {
 	Resourceness `json:"resourceness,omitempty"`
 }
 
-func (e elementStr) String() string {
+func (e ElementStr) String() string {
 	var p []string
 	if e.Resourceness != "" {
 		p = append(p, string(e.Resourceness))
@@ -59,4 +67,38 @@ func (e elementStr) String() string {
 		p = append(p, string(e.Decl))
 	}
 	return strings.Join(p, " ")
+}
+
+func (e ElementStr) Less(other ElementStr) bool {
+	n1 := newFqn(Name(e.Name))
+	n2 := newFqn(Name(other.Name))
+	return n1.Less(n2)
+}
+
+// IsStrict returns true of this element is strict. The result makes sense only
+// on elements that have a defined strictness.
+func (e ElementStr) IsStrict() bool {
+	return e.Strictness == isStrict
+}
+
+// HasStrictness returns true if this ElementStr has a notion of strictness, as
+// not all ElementStrs do.
+func (e ElementStr) HasStrictness() bool {
+	return e.Strictness != noStrict
+}
+
+// LoadSummariesJSON loads several the API summaries in the JSON format from
+// the given reader readers. Returns the respective summaries in the order of
+// supplied readers, or the first encountered error.
+func LoadSummariesJSON(rs ...io.Reader) ([][]ElementStr, error) {
+	var rets [][]ElementStr
+	for _, r := range rs {
+		var ret []ElementStr
+		d := json.NewDecoder(r)
+		if err := d.Decode(&ret); err != nil {
+			return nil, fmt.Errorf("while decoding the summary: %w", err)
+		}
+		rets = append(rets, ret)
+	}
+	return rets, nil
 }

@@ -34,7 +34,7 @@ func (p protocol) String() string {
 	return p.Serialize().String()
 }
 
-func (p protocol) Serialize() elementStr {
+func (p protocol) Serialize() ElementStr {
 	e := p.named.Serialize()
 	e.Kind = protocolKind
 	return e
@@ -91,7 +91,7 @@ func (m method) getTypeSignature() Decl {
 	return Decl(strings.Join(parlist, " "))
 }
 
-func (m method) Serialize() elementStr {
+func (m method) Serialize() ElementStr {
 	e := m.membership.Serialize()
 	e.Kind = "protocol/member"
 	e.Decl = m.getTypeSignature()

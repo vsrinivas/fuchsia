@@ -29,8 +29,8 @@ func newNamed(name fidlgen.EncodedCompoundIdentifier) named {
 	return named{name: Name(name)}
 }
 
-func (l named) Serialize() elementStr {
-	var e elementStr
+func (l named) Serialize() ElementStr {
+	var e ElementStr
 	e.Name = l.Name()
 	return e
 }
@@ -64,7 +64,7 @@ func (i isMember) String() string {
 	return i.Serialize().String()
 }
 
-func (i isMember) Serialize() elementStr {
+func (i isMember) Serialize() ElementStr {
 	e := i.named.Serialize()
 	e.Kind = Kind(fmt.Sprintf("%v/member", i.parentType))
 	return e
@@ -85,8 +85,22 @@ func (m notMember) Member() bool {
 type aggregate struct {
 	named
 	notMember
+	// Not all aggregates have strictness.  Union has it, but tables and
+	// structs don't, for example.  So we allow Strictness to be a
+	// tri-state.
+	Strictness
 	resourceness fidlgen.Resourceness
 	typeName     fidlgen.DeclType
+}
+
+func newAggregateWithStrictness(
+	name fidlgen.EncodedCompoundIdentifier,
+	resourceness fidlgen.Resourceness,
+	typeName fidlgen.DeclType,
+	s fidlgen.Strictness) aggregate {
+	a := newAggregate(name, resourceness, typeName)
+	a.Strictness = strictness(s)
+	return a
 }
 
 func newAggregate(
@@ -112,9 +126,10 @@ func resourceness(resourceness fidlgen.Resourceness) Resourceness {
 	return isValue
 }
 
-func (s aggregate) Serialize() elementStr {
+func (s aggregate) Serialize() ElementStr {
 	e := s.named.Serialize()
 	e.Resourceness = resourceness(s.resourceness)
+	e.Strictness = s.Strictness
 	e.Kind = Kind(s.typeName)
 	return e
 }
@@ -152,7 +167,7 @@ func (s member) Name() Name {
 	return s.m.Name()
 }
 
-func (s member) Serialize() elementStr {
+func (s member) Serialize() ElementStr {
 	e := s.m.Serialize()
 	e.Decl = fidlTypeString(s.memberType)
 	return e

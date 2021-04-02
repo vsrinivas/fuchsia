@@ -28,7 +28,7 @@ type Element interface {
 	// "library/protocol.Method".
 	Name() Name
 	// Serialize converts an Element into a serializable representation.
-	Serialize() elementStr
+	Serialize() ElementStr
 }
 
 // All implementers of Element.
@@ -69,7 +69,8 @@ func (s *summarizer) addUnions(unions []fidlgen.Union) {
 				st.Name, m.Name, m.Type, fidlgen.UnionDeclType))
 		}
 		s.addElement(
-			newAggregate(st.Name, st.Resourceness, fidlgen.UnionDeclType))
+			newAggregateWithStrictness(
+				st.Name, st.Resourceness, fidlgen.UnionDeclType, st.Strictness))
 	}
 }
 
@@ -120,8 +121,8 @@ func WriteJSON(root fidlgen.Root, out io.Writer) error {
 	return e.Encode(serialize(Elements(root)))
 }
 
-func serialize(e []Element) []elementStr {
-	var ret []elementStr
+func serialize(e []Element) []ElementStr {
+	var ret []ElementStr
 	for _, l := range e {
 		ret = append(ret, l.Serialize())
 	}

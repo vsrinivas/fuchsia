@@ -31,7 +31,7 @@ func (b wraparoundType) String() string {
 	return b.Serialize().String()
 }
 
-func (b wraparoundType) Serialize() elementStr {
+func (b wraparoundType) Serialize() ElementStr {
 	e := b.named.Serialize()
 	e.Kind = Kind(b.parentType)
 	e.Strictness = strictness(b.strictness)

@@ -93,7 +93,11 @@ func (f fqn) library() string {
 }
 
 func (this fqn) Less(that fqn) bool {
-	// Special: library is always last
+	// Libraries compare regularly.
+	if this.isLibrary() && that.isLibrary() {
+		return this.Name < that.Name
+	}
+	// Special: library is always last if compared to a declaration.
 	if this.isLibrary() {
 		return false
 	}

@@ -33,7 +33,7 @@ func (c aConst) String() string {
 	return c.Serialize().String()
 }
 
-func (c aConst) Serialize() elementStr {
+func (c aConst) Serialize() ElementStr {
 	e := c.named.Serialize()
 	e.Kind = Kind(aConstType)
 	e.Decl = Decl(fidlTypeString(c.aType))

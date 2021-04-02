@@ -360,7 +360,7 @@ union Either {
 `,
 			expected: `union/member l/Either.left l/Left
 union/member l/Either.right l/Right
-union l/Either
+strict union l/Either
 struct l/Left
 struct l/Right
 library l
@@ -438,7 +438,7 @@ protocol l/P
 struct l/P_F3_Response
 union/member l/P_F3_Result.err int32
 union/member l/P_F3_Result.response l/P_F3_Response
-union l/P_F3_Result
+strict union l/P_F3_Result
 library l
 `,
 		},
@@ -526,7 +526,7 @@ table T {
 };
 `,
 			expected: `union/member l/E.e int32
-union l/E
+strict union l/E
 table/member l/T.e int32
 table l/T
 library l
@@ -1109,7 +1109,8 @@ union Either {
   },
   {
     "name": "l/Either",
-    "kind": "union"
+    "kind": "union",
+    "strictness": "strict"
   },
   {
     "name": "l/Left",
@@ -1291,7 +1292,8 @@ protocol P {
   },
   {
     "name": "l/P_F3_Result",
-    "kind": "union"
+    "kind": "union",
+    "strictness": "strict"
   },
   {
     "name": "l",
@@ -1459,7 +1461,8 @@ table T {
   },
   {
     "name": "l/E",
-    "kind": "union"
+    "kind": "union",
+    "strictness": "strict"
   },
   {
     "name": "l/T.e",

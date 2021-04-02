@@ -21,7 +21,7 @@ func (a alias) String() string {
 	return a.Serialize().String()
 }
 
-func (a alias) Serialize() elementStr {
+func (a alias) Serialize() ElementStr {
 	e := a.named.Serialize()
 	e.Kind = aliasType
 	return e

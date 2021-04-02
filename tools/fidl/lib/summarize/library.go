@@ -26,8 +26,8 @@ func (l library) Name() Name {
 	return Name(l.r.Name)
 }
 
-func (l library) Serialize() elementStr {
-	var e elementStr
+func (l library) Serialize() ElementStr {
+	var e ElementStr
 	e.Name = l.Name()
 	e.Kind = libraryKind
 	return e

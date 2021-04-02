@@ -8,6 +8,7 @@ group("fidl") {
   public_deps = [
     ":fidl-lint",
     ":fidlfmt",
+    "fidl_api_diff:host",
     "fidl_api_summarize:host",
     "fidlc:host",
     "fidlcparsequality:host",
@@ -43,6 +44,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "fidl_api_diff:tests",
     "fidl_api_summarize:tests",
     "fidlc:tests",
     "fidldoc:tests",
