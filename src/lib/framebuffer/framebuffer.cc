@@ -163,10 +163,9 @@ static zx_status_t create_buffer_collection(
                "Failed to bind collection");
 
   constexpr uint32_t kNamePriority = 1000000;
-  const char* kNameString = "framebuffer";
-  CHECKED_CALL(
-      collection->SetName(kNamePriority, fidl::unowned_str(kNameString, strlen(kNameString))),
-      "Failed to set framebuffer name");
+  const char kNameString[] = "framebuffer";
+  CHECKED_CALL(collection->SetName(kNamePriority, fidl::StringView(kNameString)),
+               "Failed to set framebuffer name");
 
   sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu = sysmem::wire::cpuUsageWriteOften | sysmem::wire::cpuUsageRead;
@@ -273,7 +272,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
 
   sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
   sysmem_allocator->SetDebugClientInfo(
-      fidl::unowned_str(fsl::GetCurrentProcessName() + "-framebuffer"),
+      fidl::StringView::FromExternal(fsl::GetCurrentProcessName() + "-framebuffer"),
       fsl::GetCurrentProcessKoid());
   auto close_sysmem_handle = fit::defer([]() { sysmem_allocator.reset(); });
 
@@ -328,7 +327,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   }
 
   auto layers_rsp = dc_client->SetDisplayLayers(
-      display_id, fidl::VectorView<uint64_t>(fidl::unowned_ptr(&create_layer_rsp->layer_id), 1));
+      display_id, fidl::VectorView<uint64_t>::FromExternal(&create_layer_rsp->layer_id, 1));
   if (!layers_rsp.ok()) {
     *err_msg_out = layers_rsp.error();
     return layers_rsp.status();

@@ -94,7 +94,7 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
 
     sysmem_allocator_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
     sysmem_allocator_->SetDebugClientInfo(
-        fidl::unowned_str(fsl::GetCurrentProcessName() + "-debug-client"),
+        fidl::StringView::FromExternal(fsl::GetCurrentProcessName() + "-debug-client"),
         fsl::GetCurrentProcessKoid());
   }
 
@@ -295,9 +295,9 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
 void SendInitialDisplay(const fhd::Controller::EventSender& event_sender, fhd::wire::Mode* mode,
                         uint32_t pixel_format) {
   fhd::wire::Info info;
-  info.pixel_format = fidl::VectorView(fidl::unowned_ptr(&pixel_format), 1);
-  info.modes = fidl::VectorView(fidl::unowned_ptr(mode), 1);
-  fidl::VectorView<fhd::wire::Info> added(fidl::unowned_ptr(&info), 1);
+  info.pixel_format = fidl::VectorView<uint32_t>::FromExternal(&pixel_format, 1);
+  info.modes = fidl::VectorView<fhd::wire::Mode>::FromExternal(mode, 1);
+  auto added = fidl::VectorView<fhd::wire::Info>::FromExternal(&info, 1);
   fidl::VectorView<uint64_t> removed;
 
   ASSERT_OK(event_sender.OnDisplaysChanged(std::move(added), std::move(removed)));
