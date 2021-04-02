@@ -32,6 +32,9 @@ if (is_host) {
       ":src",
       "//src/lib/fxl",
     ]
+
+    # TODO(fxbug.dev/73487): Fix the leaks and remove this.
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 
   sdk_host_tool("sdk") {
