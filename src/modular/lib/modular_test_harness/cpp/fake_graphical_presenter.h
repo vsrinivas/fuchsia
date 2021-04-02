@@ -17,14 +17,6 @@ class FakeViewController : public fuchsia::element::ViewController {
   explicit FakeViewController(FakeGraphicalPresenter* fake_graphical_presenter)
       : fake_graphical_presenter_(fake_graphical_presenter) {}
 
-  // |ViewController| (composed |AnnotationController|)
-  void UpdateAnnotations(std::vector<fuchsia::element::Annotation> annotations_to_set,
-                         std::vector<fuchsia::element::AnnotationKey> annotations_to_delete,
-                         UpdateAnnotationsCallback callback) override;
-
-  // |ViewController| (composed |AnnotationController|)
-  void GetAnnotations(GetAnnotationsCallback callback) override;
-
   // |ViewController|
   void Dismiss() override;
 
@@ -93,15 +85,11 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
   }
 
   void set_on_present_view(
-      fit::function<void(fuchsia::element::ViewSpec view_spec)> on_present_view) {
+      fit::function<void(
+          fuchsia::element::ViewSpec view_spec,
+          ::fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller)>
+          on_present_view) {
     on_present_view_ = std::move(on_present_view);
-  }
-
-  void set_on_update_annotations(
-      fit::function<void(std::vector<fuchsia::element::Annotation> annotations_to_set,
-                         std::vector<fuchsia::element::AnnotationKey> annotations_to_delete)>
-          on_update_annotations) {
-    on_update_annotations_ = std::move(on_update_annotations);
   }
 
   void set_on_dismiss(fit::function<void()> on_dismiss) { on_dismiss_ = std::move(on_dismiss); }
@@ -116,6 +104,7 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
   // |fuchsia::element::GraphicalPresenter|
   void PresentView(
       fuchsia::element::ViewSpec view_spec,
+      ::fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller,
       ::fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller_request,
       PresentViewCallback callback) override;
 
@@ -131,12 +120,12 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
   fit::function<void()> on_destroy_;
   fit::function<void()> on_graphical_presenter_connected_;
   fit::function<void(zx_status_t)> on_graphical_presenter_error_;
-  fit::function<void(fuchsia::element::ViewSpec view_spec)> on_present_view_;
+  fit::function<void(
+      fuchsia::element::ViewSpec view_spec,
+      ::fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller)>
+      on_present_view_;
 
  public:
-  fit::function<void(std::vector<fuchsia::element::Annotation> annotations_to_set,
-                     std::vector<fuchsia::element::AnnotationKey> annotations_to_delete)>
-      on_update_annotations_;
   fit::function<void()> on_dismiss_ = [&]() { CloseAllViewControllers(); };
 };
 

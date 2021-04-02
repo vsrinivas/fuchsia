@@ -57,7 +57,7 @@ resource struct Annotation {
     AnnotationValue value;
 };
 
-/// A list of annotations on an element or its graphical view.
+/// A list of annotations on an element.
 alias Annotations = vector<Annotation>:MAX_ANNOTATIONS_PER_ELEMENT;
 
 /// A list of annotation keys.

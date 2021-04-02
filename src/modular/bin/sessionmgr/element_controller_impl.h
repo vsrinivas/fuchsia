@@ -12,6 +12,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
+#include "src/modular/bin/sessionmgr/story_runner/annotation_controller_impl.h"
 
 namespace modular {
 
@@ -35,6 +36,8 @@ class ElementControllerImpl : public fuchsia::element::Controller {
   std::string story_id_;
 
   SessionStorage* const session_storage_;  // Not owned.
+
+  std::unique_ptr<AnnotationControllerImpl> annotation_controller_;
 
   fidl::BindingSet<fuchsia::element::Controller> bindings_;
 

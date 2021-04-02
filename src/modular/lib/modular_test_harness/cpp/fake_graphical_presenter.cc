@@ -10,24 +10,6 @@
 
 namespace modular_testing {
 
-void FakeViewController::UpdateAnnotations(
-    std::vector<fuchsia::element::Annotation> annotations_to_set,
-    std::vector<fuchsia::element::AnnotationKey> annotations_to_delete,
-    UpdateAnnotationsCallback callback) {
-  if (fake_graphical_presenter_->on_update_annotations_) {
-    fake_graphical_presenter_->on_update_annotations_(std::move(annotations_to_set),
-                                                      std::move(annotations_to_delete));
-  }
-
-  if (callback) {
-    fuchsia::element::AnnotationController_UpdateAnnotations_Result result;
-    result.set_response({});
-    callback(std::move(result));
-  }
-}
-
-void FakeViewController::GetAnnotations(GetAnnotationsCallback callback) { FX_NOTIMPLEMENTED(); };
-
 void FakeViewController::Dismiss() {
   if (fake_graphical_presenter_->on_dismiss_) {
     fake_graphical_presenter_->on_dismiss_();
@@ -87,6 +69,7 @@ void FakeGraphicalPresenter::OnDestroy() {
 
 void FakeGraphicalPresenter::PresentView(
     fuchsia::element::ViewSpec view_spec,
+    ::fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller,
     ::fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller_request,
     PresentViewCallback callback) {
   auto view_controller = std::make_shared<FakeViewController>(this);
@@ -94,7 +77,7 @@ void FakeGraphicalPresenter::PresentView(
   view_controllers_.push_back(std::move(view_controller));
 
   if (on_present_view_) {
-    on_present_view_(std::move(view_spec));
+    on_present_view_(std::move(view_spec), std::move(annotation_controller));
   }
 
   fuchsia::element::GraphicalPresenter_PresentView_Result result;
