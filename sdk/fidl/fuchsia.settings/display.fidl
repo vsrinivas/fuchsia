@@ -44,13 +44,18 @@ protocol Display {
 
 /// DisplaySettings are used to determine the output state of the display.
 /// The display can be toggled between two modes, auto-brightness on and
-/// auto-brightness off. When auto-brightness is off the display brightness is set
-/// manually by setting brightness_value. The value can be set at any time to
-/// persist settings for the off auto-brightness mode.
+/// auto-brightness off.
+///
+/// Adjusted_auto_brightness is used to set a specific brightness level for the
+/// current lighting conditions. Auto-brightness will continue to make the
+/// screen darker and brighter as the surrounding light changes.
+///
+/// Brightness_value is used in manual mode to set a specific brightness level
+/// for the screen. This level will be maintained while in manual mode.
 table DisplaySettings {
     /// Auto brightness enabled
     1: bool auto_brightness;
-    /// Manually set brightness value [0.0 - 1.0]
+    /// Manual brightness value [0.0 - 1.0]
     2: float32 brightness_value;
     3: reserved;
     /// The low light mode state of the device.
@@ -59,6 +64,8 @@ table DisplaySettings {
     5: bool screen_enabled;
     /// Theme to be used for the device's user interface.
     6: Theme theme;
+    /// Brightness value to adjust auto-brightness to [0.0 - 1.0].
+    7: float32 adjusted_auto_brightness;
 };
 
 table LightSensorData {
