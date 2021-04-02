@@ -7,9 +7,7 @@ package codegen
 const fragmentSyncRequestCallerAllocateTmpl = `
 {{- define "CallerBufferParams" -}}
 {{- if . -}}
-::fidl::BufferSpan _request_buffer, {{ range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type }} {{ $param.Name }}
-  {{- end -}}
+::fidl::BufferSpan _request_buffer {{ . | CommaParams }}
 {{- end -}}
 {{- end }}
 
