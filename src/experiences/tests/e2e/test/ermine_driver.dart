@@ -190,6 +190,8 @@ class ErmineDriver {
   Future<Map<String, dynamic>> waitForView(String viewUrl,
       [Duration timeout = waitForTimeout]) async {
     return waitFor(() async {
+      await _driver.waitUntilNoTransientCallbacks(
+          timeout: Duration(seconds: 2));
       final views = await launchedViews();
       final view = views.firstWhere((view) => view['url'] == viewUrl,
           orElse: () => null);

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter_driver/flutter_driver.dart';
+import 'dart:math';
+
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -11,6 +12,7 @@ import 'ermine_driver.dart';
 void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
+  Input input;
 
   const kTransientWait = Duration(seconds: 2);
 
@@ -20,6 +22,8 @@ void main() {
 
     ermine = ErmineDriver(sl4f);
     await ermine.setUp();
+
+    input = Input(sl4f);
   });
 
   tearDownAll(() async {
@@ -55,77 +59,27 @@ void main() {
     await ermine.isStopped(componentUrl);
   });
 
-  test('Switch workspaces', () async {
-    // Launch terminal in workspace 0.
-    final title = find.descendant(
-        of: find.byType('TileChrome'), matching: find.byType('Text'));
-
+  // TODO(https://fxbug.dev/73501): Enable once tap gesture is implemented.
+  test('Switch focus using pointer', () async {
+    // Launch terminal.
+    const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
     await ermine.launch(terminalUrl);
-    expect(
-        await ermine.waitFor(() async {
-          await ermine.driver
-              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
-          final viewRect = await ermine.getViewRect(terminalUrl);
-          return viewRect.width > 0;
-        }),
-        isTrue);
-    await ermine.driver.waitUntilNoTransientCallbacks(timeout: kTransientWait);
-    expect(await ermine.driver.getText(title), 'terminal.cmx');
+    await ermine.waitForView(terminalUrl);
 
-    print(' Launched terminal');
+    // Launch spinning_square_view, it should have focus.
+    const spinningSquareViewUrl =
+        'fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx';
+    await ermine.launch(spinningSquareViewUrl);
+    var view = await ermine.waitForView(spinningSquareViewUrl);
+    expect(view['focused'], isTrue);
 
-    // Switch to workspace 1, which should be empty.
-    expect(
-        await ermine.waitFor(() async {
-          await ermine.driver.requestData('nextCluster');
-          await ermine.driver
-              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
-          final viewRect = await ermine.getViewRect(terminalUrl);
-          return viewRect.width == 0;
-        }),
-        isTrue);
-    print(' Switched to workspace 1');
+    // Tap on terminal to switch focus to it. Terminal view should be left half
+    // of the screen. [input.tap] assumes screen resolution as 1000 x 1000.
+    await input.tap(Point(250, 500));
+    await ermine.driver.waitUntilNoTransientCallbacks();
 
-    // Launch simple browser in workspace 1.
-    await ermine.launch(simpleBrowserUrl);
-    expect(
-        await ermine.waitFor(() async {
-          await ermine.driver
-              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
-          final viewRect = await ermine.getViewRect(simpleBrowserUrl);
-          return viewRect.width > 0;
-        }),
-        isTrue);
-    await ermine.driver.waitUntilNoTransientCallbacks(timeout: kTransientWait);
-    expect(await ermine.driver.getText(title), 'simple-browser.cmx');
-    expect(await ermine.isRunning(simpleBrowserUrl), isTrue);
-
-    print(' Launched simple_browser');
-
-    // Switch back to workspace 0, which should show terminal and hide browser.
-    expect(
-        await ermine.waitFor(() async {
-          await ermine.driver.requestData('previousCluster');
-          await ermine.driver
-              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
-          final viewRect = await ermine.getViewRect(simpleBrowserUrl);
-          return viewRect.width == 0;
-        }),
-        isTrue);
-    expect(
-        await ermine.waitFor(() async {
-          await ermine.driver
-              .waitUntilNoTransientCallbacks(timeout: kTransientWait);
-          final viewRect = await ermine.getViewRect(terminalUrl);
-          return viewRect.width > 0;
-        }),
-        isTrue);
-
-    print(' Switched to workspace 0');
-
-    // Close terminal and simple-browser
-    await ermine.driver.requestData('closeAll');
-    await ermine.isStopped(simpleBrowserUrl);
-    await ermine.isStopped(terminalUrl);
-  });
+    // Terminal should now have focus.
+    view = await ermine.waitForView(terminalUrl);
+    expect(view['focused'], isTrue);
+  }, skip: true);
 }
