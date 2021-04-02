@@ -42,7 +42,6 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override {}
   void OnSourceElementStart(const raw::SourceElement& element) override {}
   void OnSourceElementEnd(const raw::SourceElement& element) override {}
-  void OnUsing(std::unique_ptr<raw::Using> const& element) override {}
 
   // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
   //   the moment it serves as a useful list of TreeVisitor methods that are
@@ -92,6 +91,9 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // Unions.
   void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override;
   void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override;
+
+  // Using.
+  void OnUsing(std::unique_ptr<raw::Using> const& element) override;
 
   // Used to return a string with the converted output upon converter
   // completion.

@@ -290,6 +290,16 @@ void ConvertingTreeVisitor::OnUnionMember(const std::unique_ptr<raw::UnionMember
   }
 }
 
+void ConvertingTreeVisitor::OnUsing(const std::unique_ptr<raw::Using>& element) {
+  if (element->maybe_type_ctor != nullptr) {
+    std::unique_ptr<Conversion> conv =
+        std::make_unique<UsingKeywordConversion>(element->using_path, element->maybe_type_ctor);
+    Converting converting(this, std::move(conv), *element->decl_start_token,
+                          element->maybe_type_ctor->end_);
+  }
+  TreeVisitor::OnUsing(element);
+}
+
 Converting::Converting(ConvertingTreeVisitor* ctv, std::unique_ptr<Conversion> conversion,
                        const Token& start, const Token& end)
     : ctv_(ctv) {

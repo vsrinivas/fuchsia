@@ -462,8 +462,9 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
   if (!Ok())
     return Fail();
+  auto decl_start_token = decl_token.value();
 
-  ValidateModifiers</* none */>(modifiers, decl_token.value());
+  ValidateModifiers</* none */>(modifiers, decl_start_token);
 
   auto using_path = ParseCompoundIdentifier();
   if (!Ok())
@@ -489,9 +490,9 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
       return Fail();
   }
 
-  return std::make_unique<raw::Using>(scope.GetSourceElement(), std::move(attributes),
-                                      std::move(using_path), std::move(maybe_alias),
-                                      std::move(maybe_type_ctor));
+  return std::make_unique<raw::Using>(
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
+      std::move(using_path), std::move(maybe_alias), std::move(maybe_type_ctor));
 }
 
 std::unique_ptr<raw::TypeConstructorOld> Parser::ParseTypeConstructorOld() {
