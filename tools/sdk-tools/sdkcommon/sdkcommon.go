@@ -314,11 +314,7 @@ func (sdk SDKProperties) GetPackageSourcePath(version string, bucket string, ima
 // the stdout.
 func (sdk SDKProperties) RunFFXDoctor() (string, error) {
 	args := []string{"doctor"}
-	output, err := RunFFX(sdk, args)
-	if err != nil {
-		return "", err
-	}
-	return string(output), nil
+	return sdk.RunFFX(args, false)
 }
 
 // GetAddressByName returns the IPv6 address of the device.
@@ -347,7 +343,7 @@ func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 	}
 	// TODO(fxb/69008): use ffx json output.
 	args := []string{"target", "list", "--format", "a", deviceName}
-	output, err := RunFFX(sdk, args)
+	output, err := sdk.RunFFX(args, false)
 	if err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
@@ -356,7 +352,7 @@ func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 			return "", err
 		}
 	}
-	return strings.TrimSpace(string(output)), nil
+	return strings.TrimSpace(output), nil
 }
 
 func (f *FuchsiaDevice) String() string {
@@ -395,7 +391,7 @@ func (sdk SDKProperties) FindDeviceByIP(ipAddr string) (*FuchsiaDevice, error) {
 func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
 	var devices []*FuchsiaDevice
 	var err error
-	var output []byte
+	var output string
 	// Uses ffx disovery workflow by default. The legacy device-finder
 	// workflow can be enabled by setting the environment variable FUCHSIA_DISABLED_ffx_discovery=1.
 	FUCHSIA_DISABLED_FFX_DISCOVERY := os.Getenv("FUCHSIA_DISABLED_ffx_discovery")
@@ -408,7 +404,7 @@ func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
 
 		args := []string{"list", "--full", "-ipv4=false"}
 
-		output, err = ExecCommand(cmd, args...).Output()
+		outputAsBytes, err := ExecCommand(cmd, args...).Output()
 		if err != nil {
 			var exitError *exec.ExitError
 			if errors.As(err, &exitError) {
@@ -416,15 +412,16 @@ func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
 			}
 			return nil, err
 		}
+		output = string(outputAsBytes)
 	} else {
 		args := []string{"target", "list", "--format", "s"}
-		output, err = RunFFX(sdk, args)
+		output, err = sdk.RunFFX(args, false)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	for _, line := range strings.Split(string(output), "\n") {
+	for _, line := range strings.Split(output, "\n") {
 		parts := strings.Split(line, " ")
 		if len(parts) == 2 {
 			devices = append(devices, &FuchsiaDevice{
@@ -957,7 +954,7 @@ func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
 
 	args := []string{"config", "remove", "--level", "global", dataKey}
 
-	if _, err := RunFFX(sdk, args); err != nil {
+	if _, err := sdk.RunFFX(args, false); err != nil {
 		return fmt.Errorf("Error removing %s configuration: %v", deviceName, err)
 	}
 
@@ -1025,13 +1022,13 @@ func initFFXGlobalConfig(sdk SDKProperties) error {
 	args := []string{"config", "env"}
 	var (
 		err    error
-		output []byte
+		output string
 		line   string
 	)
-	if output, err = RunFFX(sdk, args); err != nil {
+	if output, err = sdk.RunFFX(args, false); err != nil {
 		return fmt.Errorf("Error getting config environment %v", err)
 	}
-	reader := bufio.NewReader(bytes.NewReader(output))
+	reader := bufio.NewReader(bytes.NewReader([]byte(output)))
 	hasGlobal := false
 	for !hasGlobal {
 		line, err = reader.ReadString('\n')
@@ -1067,7 +1064,7 @@ func initFFXGlobalConfig(sdk SDKProperties) error {
 			return fmt.Errorf("Cannot initialize property config, global file name is empty: %v", sdk)
 		}
 		args := []string{"config", "env", "set", sdk.globalPropertiesFilename, "--level", "global"}
-		if _, err := RunFFX(sdk, args); err != nil {
+		if _, err := sdk.RunFFX(args, false); err != nil {
 			return fmt.Errorf("Error initializing global properties environment: %v", err)
 		}
 	}
@@ -1077,8 +1074,8 @@ func initFFXGlobalConfig(sdk SDKProperties) error {
 // writeConfigurationData calls `ffx` to store the value at the specified key.
 func writeConfigurationData(sdk SDKProperties, key string, value string) error {
 	args := []string{"config", "set", "--level", "global", key, value}
-	if output, err := RunFFX(sdk, args); err != nil {
-		return fmt.Errorf("Error writing %v = %v: %v %v", key, value, err, string(output))
+	if output, err := sdk.RunFFX(args, false); err != nil {
+		return fmt.Errorf("Error writing %v = %v: %v %v", key, value, err, output)
 	}
 	return nil
 }
@@ -1088,17 +1085,17 @@ func getDeviceConfigurationData(sdk SDKProperties, key string) (map[string]inter
 	var (
 		data   map[string]interface{}
 		err    error
-		output []byte
+		output string
 	)
 
 	args := []string{"config", "get", key}
 
-	if output, err = RunFFX(sdk, args); err != nil {
+	if output, err = sdk.RunFFX(args, false); err != nil {
 		// Exit code of 2 means no value was found.
 		if exiterr, ok := err.(*exec.ExitError); ok && exiterr.ExitCode() == 2 {
 			return data, nil
 		}
-		return data, fmt.Errorf("Error reading %v: %v %v", key, err, string(output))
+		return data, fmt.Errorf("Error reading %v: %v %v", key, err, output)
 	}
 
 	if len(output) > 0 {
@@ -1116,20 +1113,25 @@ func getDeviceConfigurationData(sdk SDKProperties, key string) (map[string]inter
 
 // RunFFX executes ffx with the given args, returning stdout. If there is an error,
 // the error will usually be of type *ExitError.
-func RunFFX(sdk SDKProperties, args []string) ([]byte, error) {
+func (sdk SDKProperties) RunFFX(args []string, interactive bool) (string, error) {
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
-		return []byte{}, fmt.Errorf("Could not determine tools directory %v", err)
+		return "", fmt.Errorf("Could not determine tools directory %v", err)
 	}
 	cmd := filepath.Join(toolsDir, "ffx")
 
 	ffx := ExecCommand(cmd, args...)
-
+	if interactive {
+		ffx.Stderr = os.Stderr
+		ffx.Stdout = os.Stdout
+		ffx.Stdin = os.Stdin
+		return "", ffx.Run()
+	}
 	output, err := ffx.Output()
 	if err != nil {
-		return []byte{}, err
+		return "", err
 	}
-	return output, nil
+	return string(output), err
 }
 
 // isReservedProperty used to differenciate between properties used
