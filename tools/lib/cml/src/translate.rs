@@ -16,14 +16,18 @@ pub fn translate_capabilities(
 ) -> Result<Vec<fsys::CapabilityDecl>, Error> {
     let mut out_capabilities = vec![];
     for capability in capabilities_in {
-        if let Some(n) = &capability.service {
-            let source_path =
-                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-            out_capabilities.push(fsys::CapabilityDecl::Service(fsys::ServiceDecl {
-                name: Some(n.clone().into()),
-                source_path: Some(source_path.into()),
-                ..fsys::ServiceDecl::EMPTY
-            }));
+        if let Some(service) = &capability.service {
+            for n in service.to_vec() {
+                let source_path = capability
+                    .path
+                    .clone()
+                    .unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+                out_capabilities.push(fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                    name: Some(n.clone().into()),
+                    source_path: Some(source_path.into()),
+                    ..fsys::ServiceDecl::EMPTY
+                }));
+            }
         } else if let Some(protocol) = &capability.protocol {
             for n in protocol.to_vec() {
                 let source_path = capability

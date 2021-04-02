@@ -541,14 +541,16 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure that services exposed from self are defined in `capabilities`.
-        if let Some(service_name) = &expose.service {
+        if let Some(service) = expose.service.as_ref() {
             self.features.check(Feature::Services)?;
-            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
-                if !self.all_services.contains(service_name) {
-                    return Err(Error::validate(format!(
+            for service in service {
+                if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                    if !self.all_services.contains(service) {
+                        return Err(Error::validate(format!(
                        "Service \"{}\" is exposed from self, so it must be declared as a \"service\" in \"capabilities\"",
-                       service_name
+                       service
                    )));
+                    }
                 }
             }
         }
@@ -651,22 +653,24 @@ impl<'a> ValidationContext<'a> {
         // TODO: Many of these checks are repititious, see if we can unify them
 
         // Ensure that services offered from self are defined in `services`.
-        if let Some(service_name) = &offer.service {
+        if let Some(service) = offer.service.as_ref() {
             self.features.check(Feature::Services)?;
-            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                if !self.all_services.contains(service_name) {
-                    return Err(Error::validate(format!(
-                        "Service \"{}\" is offered from self, so it must be declared as a \
+            for service in service {
+                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                    if !self.all_services.contains(service) {
+                        return Err(Error::validate(format!(
+                            "Service \"{}\" is offered from self, so it must be declared as a \
                        \"service\" in \"capabilities\"",
-                        service_name
-                    )));
+                            service
+                        )));
+                    }
                 }
             }
         }
 
         // Ensure that protocols offered from self are defined in `capabilities`.
         if let Some(protocol) = offer.protocol.as_ref() {
-            for protocol in protocol.iter() {
+            for protocol in protocol {
                 if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
                     if !self.all_protocols.contains(protocol) {
                         return Err(Error::validate(format!(
@@ -860,7 +864,7 @@ impl<'a> ValidationContext<'a> {
         if cap.service().is_none() && from.is_many() {
             return Err(Error::validate(format!(
                 "\"{}\" capabilities cannot have multiple \"from\" clauses",
-                cap.capability_name()
+                cap.capability_type()
             )));
         }
 
@@ -4553,6 +4557,27 @@ mod tests {
                 ],
             }),
             Ok(())
+        ),
+        test_cml_service_multi(
+            json!({
+                "capabilities": [
+                    {
+                        "service": ["a", "b", "c"],
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_service_multi_invalid_path(
+            json!({
+                "capabilities": [
+                    {
+                        "service": ["a", "b", "c"],
+                        "path": "/minfs",
+                    },
+                ],
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"path\" can only be specified when one `service` is supplied."
         ),
         test_cml_service_all_valid_chars(
             json!({

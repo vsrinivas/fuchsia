@@ -215,13 +215,18 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
     for use_ in use_in {
         if let Some(n) = use_.service() {
             let source = extract_use_source(use_)?;
-            let target_path = one_target_use_path(use_, use_)?;
-            out_uses.push(fsys::UseDecl::Service(fsys::UseServiceDecl {
-                source: Some(source),
-                source_name: Some(n.clone().into()),
-                target_path: Some(target_path.into()),
-                ..fsys::UseServiceDecl::EMPTY
-            }));
+            let target_paths =
+                all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
+            let source_names = n.to_vec();
+            for (source_name, target_path) in source_names.into_iter().zip(target_paths.into_iter())
+            {
+                out_uses.push(fsys::UseDecl::Service(fsys::UseServiceDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(source_name.clone().into()),
+                    target_path: Some(target_path.into()),
+                    ..fsys::UseServiceDecl::EMPTY
+                }));
+            }
         } else if let Some(n) = use_.protocol() {
             let source = extract_use_source(use_)?;
             let target_paths =
@@ -330,17 +335,21 @@ fn translate_expose(
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let target = extract_expose_target(expose)?;
-        if let Some(n) = expose.service() {
+        if let Some(source_names) = expose.service() {
             let sources = extract_all_expose_sources(expose, Some(all_collections))?;
-            let target_name = one_target_capability_name(expose, expose)?;
-            for source in sources {
-                out_exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                    source: Some(clone_fsys_ref(&source)?),
-                    source_name: Some(n.clone().into()),
-                    target_name: Some(target_name.clone().into()),
-                    target: Some(clone_fsys_ref(&target)?),
-                    ..fsys::ExposeServiceDecl::EMPTY
-                }))
+            let target_names = all_target_capability_names(expose, expose)
+                .ok_or_else(|| Error::internal("no capability"))?;
+            for (source_name, target_name) in source_names.into_iter().zip(target_names.into_iter())
+            {
+                for source in &sources {
+                    out_exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
+                        source: Some(clone_fsys_ref(source)?),
+                        source_name: Some(source_name.clone().into()),
+                        target_name: Some(target_name.clone().into()),
+                        target: Some(clone_fsys_ref(&target)?),
+                        ..fsys::ExposeServiceDecl::EMPTY
+                    }))
+                }
             }
         } else if let Some(n) = expose.protocol() {
             let source = extract_single_expose_source(expose, Some(all_capability_names))?;
@@ -410,11 +419,25 @@ fn translate_offer(
         if let Some(n) = offer.service() {
             let sources = extract_all_offer_sources(offer, Some(all_collections))?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
+            let source_names = n.to_vec();
             for (target, target_name) in targets {
                 for source in &sources {
+                    // When multiple source names are provided, there is no way to alias each one,
+                    // so source_name == target_name.  When one source name is provided,
+                    // source_name may be aliased to a different target_name, so we use
+                    // source_names[0] to derive the source_name.
+                    //
+                    // TODO: This logic for protocols and protocols could be simplified to use
+                    // iter::zip() if extract_all_targets_for_each_child returned separate vectors
+                    // for targets and target_names instead of the cross product of them.
+                    let source_name = if source_names.len() == 1 {
+                        source_names[0].clone()
+                    } else {
+                        target_name.clone()
+                    };
                     out_offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                        source_name: Some(n.clone().into()),
-                        source: Some(clone_fsys_ref(&source)?),
+                        source: Some(clone_fsys_ref(source)?),
+                        source_name: Some(source_name.into()),
                         target: Some(clone_fsys_ref(&target)?),
                         target_name: Some(target_name.clone().into()),
                         ..fsys::OfferServiceDecl::EMPTY
@@ -426,14 +449,6 @@ fn translate_offer(
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             let source_names = n.to_vec();
             for (target, target_name) in targets {
-                // When multiple source names are provided, there is no way to alias each one, so
-                // source_name == target_name.
-                // When one source name is provided, source_name may be aliased to a different
-                // target_name, so we source_names[0] to derive the source_name.
-                //
-                // TODO: This logic could be simplified to use iter::zip() if
-                // extract_all_targets_for_each_child returned separate vectors for targets and
-                // target_names instead of the cross product of them.
                 let source_name = if source_names.len() == 1 {
                     source_names[0].clone()
                 } else {
@@ -948,25 +963,9 @@ where
     U: cml::AsClause + cml::PathClause,
 {
     if let Some(n) = in_obj.service() {
-        if let Some(path) = to_obj.path() {
-            Some(OneOrMany::One(path.clone()))
-        } else {
-            Some(OneOrMany::One(format!("/svc/{}", n).parse().unwrap()))
-        }
-    } else if let Some(p) = in_obj.protocol() {
-        Some(match p {
-            OneOrMany::One(n) => {
-                if let Some(path) = to_obj.path() {
-                    OneOrMany::One(path.clone())
-                } else {
-                    OneOrMany::One(format!("/svc/{}", n).parse().unwrap())
-                }
-            }
-            OneOrMany::Many(v) => {
-                let many = v.iter().map(|n| format!("/svc/{}", n).parse().unwrap()).collect();
-                OneOrMany::Many(many)
-            }
-        })
+        Some(svc_paths_from_names(n, to_obj))
+    } else if let Some(n) = in_obj.protocol() {
+        Some(svc_paths_from_names(n, to_obj))
     } else if let Some(_) = in_obj.directory() {
         let path = to_obj.path().expect("no path on use directory");
         Some(OneOrMany::One(path.clone()))
@@ -978,6 +977,27 @@ where
         Some(OneOrMany::One(path.clone()))
     } else {
         None
+    }
+}
+
+/// Returns the list of paths derived from a `use` declaration with `names` and `to_obj`. `to_obj`
+/// must be a declaration that has a `path` clause.
+fn svc_paths_from_names<T>(names: OneOrMany<cml::Name>, to_obj: &T) -> OneOrMany<cml::Path>
+where
+    T: cml::PathClause,
+{
+    match names {
+        OneOrMany::One(n) => {
+            if let Some(path) = to_obj.path() {
+                OneOrMany::One(path.clone())
+            } else {
+                OneOrMany::One(format!("/svc/{}", n).parse().unwrap())
+            }
+        }
+        OneOrMany::Many(v) => {
+            let many = v.iter().map(|n| format!("/svc/{}", n).parse().unwrap()).collect();
+            OneOrMany::Many(many)
+        }
     }
 }
 
@@ -1007,19 +1027,19 @@ where
         Some(OneOrMany::One(as_.clone()))
     } else {
         if let Some(n) = in_obj.service() {
+            Some(n.clone())
+        } else if let Some(n) = in_obj.protocol() {
+            Some(n.clone())
+        } else if let Some(n) = in_obj.directory() {
             Some(OneOrMany::One(n.clone()))
-        } else if let Some(p) = in_obj.protocol() {
-            Some(p.clone())
-        } else if let Some(d) = in_obj.directory() {
-            Some(OneOrMany::One(d.clone()))
         } else if let Some(n) = in_obj.storage() {
             Some(OneOrMany::One(n.clone()))
         } else if let Some(n) = in_obj.runner() {
             Some(OneOrMany::One(n.clone()))
         } else if let Some(n) = in_obj.resolver() {
             Some(OneOrMany::One(n.clone()))
-        } else if let Some(e) = in_obj.event() {
-            Some(e.clone())
+        } else if let Some(n) = in_obj.event() {
+            Some(n.clone())
         } else {
             None
         }
@@ -1148,7 +1168,7 @@ mod tests {
                         "path": "/service",
                     },
                     {
-                        "service": "myservice2",
+                        "service": [ "myservice2", "myservice3" ],
                     },
                 ]
             }),
@@ -1168,6 +1188,13 @@ mod tests {
                             ..fsys::ServiceDecl::EMPTY
                         }
                     ),
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("myservice3".to_string()),
+                            source_path: Some("/svc/myservice3".to_string()),
+                            ..fsys::ServiceDecl::EMPTY
+                        }
+                    ),
                 ]),
                 ..fsys::ComponentDecl::EMPTY
             },
@@ -1177,6 +1204,7 @@ mod tests {
                 "use": [
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "service": "fuchsia.sys2.Realm", "from": "framework" },
+                    { "service": [ "myservice", "myservice2" ] },
                 ]
             }),
             output = fsys::ComponentDecl {
@@ -1194,6 +1222,22 @@ mod tests {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("fuchsia.sys2.Realm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                            ..fsys::UseServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::UseDecl::Service (
+                        fsys::UseServiceDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("myservice".to_string()),
+                            target_path: Some("/svc/myservice".to_string()),
+                            ..fsys::UseServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::UseDecl::Service (
+                        fsys::UseServiceDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("myservice2".to_string()),
+                            target_path: Some("/svc/myservice2".to_string()),
                             ..fsys::UseServiceDecl::EMPTY
                         }
                     ),
@@ -1216,7 +1260,10 @@ mod tests {
                         "as": "fuchsia.logger.Log2",
                     },
                     {
-                        "service": "my.service.Service",
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
                         "from": ["#logger", "self"],
                         "to": [ "#netstack" ]
                     },
@@ -1227,7 +1274,12 @@ mod tests {
                     },
                 ],
                 "capabilities": [
-                    { "service": "my.service.Service" },
+                    {
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
+                    },
                 ],
                 "children": [
                     {
@@ -1306,6 +1358,33 @@ mod tests {
                     ),
                     fsys::OfferDecl::Service (
                         fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service2".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service2".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
                             source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "coll".to_string() })),
                             source_name: Some("my.service.CollectionService".to_string()),
                             target: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1322,6 +1401,13 @@ mod tests {
                         fsys::ServiceDecl {
                             name: Some("my.service.Service".to_string()),
                             source_path: Some("/svc/my.service.Service".to_string()),
+                            ..fsys::ServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("my.service.Service2".to_string()),
+                            source_path: Some("/svc/my.service.Service2".to_string()),
                             ..fsys::ServiceDecl::EMPTY
                         }
                     ),
@@ -1362,7 +1448,10 @@ mod tests {
                         "as": "fuchsia.logger.Log2",
                     },
                     {
-                        "service": "my.service.Service",
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
                         "from": ["#logger", "self"],
                     },
                     {
@@ -1371,7 +1460,12 @@ mod tests {
                     },
                 ],
                 "capabilities": [
-                    { "service": "my.service.Service" }
+                    {
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
+                    },
                 ],
                 "children": [
                     {
@@ -1423,6 +1517,27 @@ mod tests {
                     ),
                     fsys::ExposeDecl::Service (
                         fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target_name: Some("my.service.Service2".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            ..fsys::ExposeServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target_name: Some("my.service.Service2".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            ..fsys::ExposeServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
                             source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "coll".to_string() })),
                             source_name: Some("my.service.CollectionService".to_string()),
                             target_name: Some("my.service.CollectionService".to_string()),
@@ -1436,6 +1551,13 @@ mod tests {
                         fsys::ServiceDecl {
                             name: Some("my.service.Service".to_string()),
                             source_path: Some("/svc/my.service.Service".to_string()),
+                            ..fsys::ServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("my.service.Service2".to_string()),
+                            source_path: Some("/svc/my.service.Service2".to_string()),
                             ..fsys::ServiceDecl::EMPTY
                         }
                     ),
