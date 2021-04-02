@@ -47,12 +47,12 @@ zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint3
 }
 
 zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo, uint64_t content_size,
-                                       zx_koid_t pager_koid,
+                                       zx_koid_t pager_koid, InitialMutability initial_mutability,
                                        KernelHandle<VmObjectDispatcher>* handle,
                                        zx_rights_t* rights) {
   fbl::AllocChecker ac;
-  KernelHandle new_handle(
-      fbl::AdoptRef(new (&ac) VmObjectDispatcher(ktl::move(vmo), content_size, pager_koid)));
+  KernelHandle new_handle(fbl::AdoptRef(
+      new (&ac) VmObjectDispatcher(ktl::move(vmo), content_size, pager_koid, initial_mutability)));
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
@@ -63,11 +63,12 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo, uint64_t conte
 }
 
 VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t content_size,
-                                       zx_koid_t pager_koid)
+                                       zx_koid_t pager_koid, InitialMutability initial_mutability)
     : SoloDispatcher(ZX_VMO_ZERO_CHILDREN),
       vmo_(vmo),
       content_size_(content_size),
-      pager_koid_(pager_koid) {
+      pager_koid_(pager_koid),
+      initial_mutability_(initial_mutability) {
   kcounter_add(dispatcher_vmo_create_count, 1);
   vmo_->SetChildObserver(this);
 }
@@ -184,7 +185,13 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   return entry;
 }
 
-zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(void) { return VmoToInfoEntry(vmo().get(), true, 0); }
+zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(void) {
+  zx_info_vmo_t info = VmoToInfoEntry(vmo().get(), true, 0);
+  if (initial_mutability_ == InitialMutability::kImmutable) {
+    info.flags |= ZX_INFO_VMO_IMMUTABLE;
+  }
+  return info;
+}
 
 zx_status_t VmObjectDispatcher::SetContentSize(uint64_t content_size) {
   canary_.Assert();

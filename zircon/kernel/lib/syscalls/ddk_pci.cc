@@ -663,7 +663,8 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num,
 
     // Now that the vmo has been created for the bar, create a handle to
     // the appropriate dispatcher for the caller
-    status = VmObjectDispatcher::Create(vmo, info->size, &kernel_handle, &rights);
+    status = VmObjectDispatcher::Create(
+        vmo, info->size, VmObjectDispatcher::InitialMutability::kMutable, &kernel_handle, &rights);
     if (status != ZX_OK) {
       return status;
     }
@@ -769,7 +770,7 @@ zx_status_t sys_pci_set_irq_mode(zx_handle_t dev_handle, uint32_t mode,
 
   return pci_device->SetIrqMode((zx_pci_irq_mode_t)mode, requested_irq_count);
 }
-#else  // WITH_KERNEL_PCIE
+#else   // WITH_KERNEL_PCIE
 // zx_status_t zx_pci_init
 zx_status_t sys_pci_init(zx_handle_t, user_in_ptr<const zx_pci_init_arg_t>, uint32_t) {
   shutdown_early_init_console();

@@ -21,14 +21,19 @@
 class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DEFAULT_VMO_RIGHTS>,
                                  public VmObjectChildObserver {
  public:
+  enum class InitialMutability { kMutable, kImmutable };
+
   static zx_status_t parse_create_syscall_flags(uint32_t flags, uint32_t* out_flags);
 
   static zx_status_t Create(fbl::RefPtr<VmObject> vmo, uint64_t content_size,
+                            InitialMutability initial_mutability,
                             KernelHandle<VmObjectDispatcher>* handle, zx_rights_t* rights) {
-    return Create(ktl::move(vmo), content_size, ZX_KOID_INVALID, handle, rights);
+    return Create(ktl::move(vmo), content_size, ZX_KOID_INVALID, initial_mutability, handle,
+                  rights);
   }
 
   static zx_status_t Create(fbl::RefPtr<VmObject> vmo, uint64_t content_size, zx_koid_t pager_koid,
+                            InitialMutability initial_mutability,
                             KernelHandle<VmObjectDispatcher>* handle, zx_rights_t* rights);
   ~VmObjectDispatcher() final;
 
@@ -75,7 +80,8 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   zx_koid_t pager_koid() const { return pager_koid_; }
 
  private:
-  explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t size, zx_koid_t pager_koid);
+  explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t size, zx_koid_t pager_koid,
+                              InitialMutability initial_mutability);
   // The 'const' here is load bearing; we give a raw pointer to
   // ourselves to |vmo_| so we have to ensure we don't reset vmo_
   // except during destruction.
@@ -87,6 +93,9 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   // The koid of the related pager object, or ZX_KOID_INVALID if
   // there is no related pager.
   const zx_koid_t pager_koid_;
+
+  // Indicates whether the VMO was immutable at creation time.
+  const InitialMutability initial_mutability_;
 };
 
 zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t handle_rights);

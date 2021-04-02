@@ -42,6 +42,9 @@ This flag is not supported on:
  - VMOs backed by a user pager.
 For information on VMO syscall interactions with children, see [NOTES](#notes).
 
+ZX_VMO_CHILD_SNAPSHOT creates an immutable VMO when the ZX_VMO_CHILD_NO_WRITE
+option is enabled and the ZX_VMO_CHILD_RESIZABLE option is disabled.
+
 - **ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE** -  Create a child that behaves with at least copy on
 write semantics. Any write operation on the child brings in a copy of the page from the parent,
 after which its contents may diverge from the parent. Until a page is written to, and copied, reads
@@ -83,7 +86,7 @@ content size of the VMO. Use [`zx_object_set_property()`] with
 **ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
 actually resizing the VMO.
 
-By default the rights of the child handled will be the same as the
+By default the rights of the child handle will be the same as the
 original with a few exceptions. See [`zx_vmo_create()`] for a
 discussion of the details of each right.
 

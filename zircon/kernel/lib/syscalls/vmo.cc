@@ -58,7 +58,9 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_handle* out
   // create a Vm Object dispatcher
   KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t rights;
-  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), size, &kernel_handle, &rights);
+  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), size,
+                                                  VmObjectDispatcher::InitialMutability::kMutable,
+                                                  &kernel_handle, &rights);
   if (result != ZX_OK)
     return result;
 
@@ -217,11 +219,22 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
 
   DEBUG_ASSERT(child_vmo);
 
+  // This checks that the child VMO is explicitly created with ZX_VMO_CHILD_SNAPSHOT.
+  // There are other ways that VMOs can be effectively immutable, for instance if the VMO is
+  // created with ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE and meets certain criteria it will be
+  // "upgraded" to a snapshot. However this behavior is not guaranteed at the API level.
+  // A choice was made to conservatively only mark VMOs as immutable when the user explicitly
+  // creates a VMO in a way that is guaranteed at the API level to always output an immutable VMO.
+  auto initial_mutability = VmObjectDispatcher::InitialMutability::kMutable;
+  if (no_write && (options & ZX_VMO_CHILD_SNAPSHOT) && (~options & ZX_VMO_CHILD_RESIZABLE)) {
+    initial_mutability = VmObjectDispatcher::InitialMutability::kImmutable;
+  }
+
   // create a Vm Object dispatcher
   KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t default_rights;
-  zx_status_t result =
-      VmObjectDispatcher::Create(ktl::move(child_vmo), size, &kernel_handle, &default_rights);
+  zx_status_t result = VmObjectDispatcher::Create(ktl::move(child_vmo), size, initial_mutability,
+                                                  &kernel_handle, &default_rights);
   if (result != ZX_OK)
     return result;
 

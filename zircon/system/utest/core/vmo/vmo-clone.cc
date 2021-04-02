@@ -257,4 +257,59 @@ TEST(VmoCloneTestCase, NoResize) {
   EXPECT_OK(status, "handle_close parent");
 }
 
+struct TestImmutableCloneParams {
+  uint32_t parent_create_flags;
+  uint32_t child_clone_flags;
+  bool expect_immutable_child;
+};
+auto TestImmutableClone(TestImmutableCloneParams params) {
+  constexpr size_t kNumPages = 4;
+  const size_t len = zx_system_get_page_size() * kNumPages;
+  zx_handle_t parent = ZX_HANDLE_INVALID;
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+
+  EXPECT_OK(zx_vmo_create(len, params.parent_create_flags, &parent), "zx_vmo_create");
+  EXPECT_NE(ZX_HANDLE_INVALID, parent);
+  EXPECT_OK(zx_vmo_create_child(parent, params.child_clone_flags, 0, len, &vmo),
+            "zx_vmo_create_child");
+  EXPECT_NE(ZX_HANDLE_INVALID, vmo);
+
+  zx_info_vmo_t info;
+  EXPECT_OK(zx_object_get_info(vmo, ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr),
+            "zx_object_get_info");
+  EXPECT_EQ(params.expect_immutable_child, (info.flags & ZX_INFO_VMO_IMMUTABLE) != 0);
+
+  EXPECT_OK(zx_handle_close(vmo), "handle_close");
+  EXPECT_OK(zx_handle_close(parent), "handle_close parent");
+}
+
+TEST(VmoCloneTestCase, ImmutableClone) {
+  TestImmutableClone({
+      .parent_create_flags = 0,
+      .child_clone_flags = ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_SNAPSHOT,
+      .expect_immutable_child = true,
+  });
+}
+TEST(VmoCloneTestCase, NotImmutableMissingSnapshot) {
+  TestImmutableClone({
+      .parent_create_flags = 0,
+      .child_clone_flags = ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_SLICE,
+      .expect_immutable_child = false,
+  });
+}
+TEST(VmoCloneTestCase, NotImmutableMissingNoWrite) {
+  TestImmutableClone({
+      .parent_create_flags = 0,
+      .child_clone_flags = ZX_VMO_CHILD_SNAPSHOT,
+      .expect_immutable_child = false,
+  });
+}
+TEST(VmoCloneTestCase, NotImmutableHasResizable) {
+  TestImmutableClone({
+      .parent_create_flags = ZX_VMO_RESIZABLE,
+      .child_clone_flags = ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_RESIZABLE,
+      .expect_immutable_child = false,
+  });
+}
+
 }  // namespace

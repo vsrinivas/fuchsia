@@ -430,6 +430,9 @@ typedef struct zx_info_maps {
 // The VMO is discardable.
 #define ZX_INFO_VMO_DISCARDABLE             (1u<<7)
 
+// The VMO is immutable and has been since creation.
+#define ZX_INFO_VMO_IMMUTABLE               (1u<<8)
+
 // Describes a VMO. For mapping information, see |zx_info_maps_t|.
 typedef struct zx_info_vmo {
     // The koid of this VMO.
