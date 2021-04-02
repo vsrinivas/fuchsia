@@ -10,38 +10,5 @@
 #include "hid/usages.h"
 
 namespace root_presenter {
-namespace {
-
-TEST(InputUtil, IntoKeyEvent) {
-  fuchsia::ui::input::KeyboardEvent kbd = {};
-  kbd.phase = fuchsia::ui::input::KeyboardEventPhase::PRESSED;
-  kbd.hid_usage = HID_USAGE_KEY_A;
-  kbd.modifiers = fuchsia::ui::input::kModifierLeftShift;
-
-  std::optional<fuchsia::ui::input2::KeyEvent> key = key_util::into_key_event(kbd);
-
-  EXPECT_TRUE(key);
-  EXPECT_EQ(key->phase(), fuchsia::ui::input2::KeyEventPhase::PRESSED);
-  EXPECT_EQ(key->key(), fuchsia::ui::input2::Key::A);
-  EXPECT_EQ(key->modifiers(),
-            fuchsia::ui::input2::Modifiers::SHIFT | fuchsia::ui::input2::Modifiers::LEFT_SHIFT);
-}
-
-TEST(InputUtil, IntoKeyEventUnknown) {
-  fuchsia::ui::input::KeyboardEvent kbd = {};
-  kbd.hid_usage = HID_USAGE_KEY_ERROR_ROLLOVER;
-
-  std::optional<fuchsia::ui::input2::KeyEvent> key = key_util::into_key_event(kbd);
-
-  EXPECT_FALSE(key);
-}
-
-TEST(InputUtil, FuchsiaKeyToHidKey) {
-  std::optional<uint32_t> key =
-      key_util::fuchsia_key_to_hid_key(fuchsia::ui::input2::Key::LEFT_SHIFT);
-  ASSERT_TRUE(key);
-  ASSERT_EQ(*key, HID_USAGE_KEY_LEFT_SHIFT);
-}
-
-}  // namespace
+namespace {}  // namespace
 }  // namespace root_presenter

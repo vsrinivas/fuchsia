@@ -6,7 +6,6 @@
 #define SRC_UI_LIB_KEY_UTIL_KEY_UTIL_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/input2/cpp/fidl.h>
 
 #include <optional>
 
@@ -14,17 +13,9 @@
 
 namespace key_util {
 
-// Utility function to create Key event from Keyboard event.
-std::optional<fuchsia::ui::input2::KeyEvent> into_key_event(
-    const fuchsia::ui::input::KeyboardEvent& event);
-
-// Function to convert HID usage to a Fuchsia Key.
-// The HID usage must be from page 0x7 (Keyboard/Keypad).
-std::optional<fuchsia::ui::input2::Key> hid_key_to_fuchsia_key(hid::Usage usage);
-
 // Function to convert Fuchsia Key to a HID Usage.
 // The HID usage will be from page 0x7 (Keyboard/Keypad).
-std::optional<uint32_t> fuchsia_key_to_hid_key(fuchsia::ui::input2::Key);
+uint32_t fuchsia_key3_to_hid_key(fuchsia::input::Key);
 
 std::optional<fuchsia::input::Key> hid_key_to_fuchsia_key3(hid::Usage usage);
 

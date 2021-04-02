@@ -339,11 +339,11 @@ TEST_F(VirtioInputTest, KeyboardTest) {
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
               keyboard.ParseInputReport(report, report_size, report_allocator, input_report));
 
-    ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 4U);
-    EXPECT_EQ(input_report.keyboard().pressed_keys()[0], fuchsia_ui_input2::wire::Key::LEFT_SHIFT);
-    EXPECT_EQ(input_report.keyboard().pressed_keys()[1], fuchsia_ui_input2::wire::Key::A);
-    EXPECT_EQ(input_report.keyboard().pressed_keys()[2], fuchsia_ui_input2::wire::Key::RIGHT_ALT);
-    EXPECT_EQ(input_report.keyboard().pressed_keys()[3], fuchsia_ui_input2::wire::Key::DOWN);
+    ASSERT_EQ(input_report.keyboard().pressed_keys3().count(), 4U);
+    EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], fuchsia_input::wire::Key::LEFT_SHIFT);
+    EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], fuchsia_input::wire::Key::A);
+    EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], fuchsia_input::wire::Key::RIGHT_ALT);
+    EXPECT_EQ(input_report.keyboard().pressed_keys3()[3], fuchsia_input::wire::Key::DOWN);
   }
 }
 

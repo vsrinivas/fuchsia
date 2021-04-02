@@ -42,8 +42,6 @@ class Keyboard : public Device {
   uint8_t input_report_id_ = 0;
 
   // The ordered, unique list of key values.
-  std::set<fuchsia_ui_input2::wire::Key> key_values_;
-  // The ordered, unique list of key values.
   std::set<fuchsia_input::wire::Key> key_3_values_;
 
   // Fields for the output reports.

@@ -336,9 +336,8 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
 
 TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
   auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
-  descriptor->mutable_keyboard()->mutable_input()->set_keys({fuchsia::ui::input2::Key::A,
-                                                             fuchsia::ui::input2::Key::UP,
-                                                             fuchsia::ui::input2::Key::LEFT_SHIFT});
+  descriptor->mutable_keyboard()->mutable_input()->set_keys3(
+      {fuchsia::input::Key::A, fuchsia::input::Key::UP, fuchsia::input::Key::LEFT_SHIFT});
   descriptor->mutable_keyboard()->mutable_output()->set_leds(
       {fuchsia::input::report::LedType::CAPS_LOCK, fuchsia::input::report::LedType::SCROLL_LOCK});
 
@@ -349,9 +348,9 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
       "Descriptor from file: test\n",
       "Keyboard Descriptor:\n",
       "Input Report:\n",
-      "  Key:        1\n",
-      "  Key:       79\n",
-      "  Key:       82\n",
+      "  Key:   458756\n",  // 0x70004
+      "  Key:   458834\n",  // 0x70052
+      "  Key:   458977\n",  // 0x700e1
       "Output Report:\n",
       "  Led: CAPS_LOCK\n",
       "  Led: SCROLL_LOCK\n",
@@ -363,9 +362,8 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
 
 TEST_F(PrintInputReport, PrintKeyboardInputReport) {
   fuchsia::input::report::InputReport report;
-  report.mutable_keyboard()->set_pressed_keys({fuchsia::ui::input2::Key::A,
-                                               fuchsia::ui::input2::Key::UP,
-                                               fuchsia::ui::input2::Key::LEFT_SHIFT});
+  report.mutable_keyboard()->set_pressed_keys3(
+      {fuchsia::input::Key::A, fuchsia::input::Key::UP, fuchsia::input::Key::LEFT_SHIFT});
 
   std::vector<fuchsia::input::report::InputReport> reports;
   reports.push_back(std::move(report));
@@ -375,9 +373,9 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
   printer.SetExpectedStrings(std::vector<std::string>{
       "Report from file: test\n",
       "Keyboard Report\n",
-      "  Key:        1\n",
-      "  Key:       79\n",
-      "  Key:       82\n",
+      "  Key:   458756\n",  // 0x70004
+      "  Key:   458834\n",  // 0x70052
+      "  Key:   458977\n",  // 0x700e1
       "\n",
   });
 
@@ -392,7 +390,7 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
 
 TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
   fuchsia::input::report::InputReport report;
-  report.mutable_keyboard()->set_pressed_keys({});
+  report.mutable_keyboard()->set_pressed_keys3({});
 
   std::vector<fuchsia::input::report::InputReport> reports;
   reports.push_back(std::move(report));

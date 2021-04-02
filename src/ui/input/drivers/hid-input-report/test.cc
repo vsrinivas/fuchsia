@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/hiddevice/cpp/banjo.h>
-#include <fuchsia/ui/input2/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -528,12 +527,7 @@ TEST_F(HidDevTest, KeyboardTest) {
 
   const auto& report = reports[0];
   const auto& keyboard = report.keyboard();
-  ASSERT_TRUE(keyboard.has_pressed_keys());
-  ASSERT_EQ(3, keyboard.pressed_keys().count());
   ASSERT_EQ(3, keyboard.pressed_keys3().count());
-  EXPECT_EQ(fuchsia_ui_input2::wire::Key::A, keyboard.pressed_keys()[0]);
-  EXPECT_EQ(fuchsia_ui_input2::wire::Key::UP, keyboard.pressed_keys()[1]);
-  EXPECT_EQ(fuchsia_ui_input2::wire::Key::B, keyboard.pressed_keys()[2]);
   EXPECT_EQ(fuchsia_input::wire::Key::A, keyboard.pressed_keys3()[0]);
   EXPECT_EQ(fuchsia_input::wire::Key::UP, keyboard.pressed_keys3()[1]);
   EXPECT_EQ(fuchsia_input::wire::Key::B, keyboard.pressed_keys3()[2]);

@@ -5,7 +5,6 @@
 #include "src/ui/input/lib/hid-input-report/keyboard.h"
 
 #include <fuchsia/input/cpp/fidl.h>
-#include <fuchsia/ui/input2/cpp/fidl.h>
 
 #include <variant>
 
@@ -113,8 +112,6 @@ TEST(KeyboardTest, BootKeyboard) {
             keyboard.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_keyboard());
   EXPECT_TRUE(descriptor.keyboard().has_input());
-  EXPECT_TRUE(descriptor.keyboard().input().has_keys());
-  EXPECT_EQ(105, descriptor.keyboard().input().keys().count());
   EXPECT_EQ(105, descriptor.keyboard().input().keys3().count());
 
   // Test a report parses correctly.
@@ -131,14 +128,6 @@ TEST(KeyboardTest, BootKeyboard) {
                                       report_allocator, input_report));
 
   ASSERT_TRUE(input_report.has_keyboard());
-
-  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], fuchsia_ui_input2::wire::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], fuchsia_ui_input2::wire::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], fuchsia_ui_input2::wire::Key::A);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
-            fuchsia_ui_input2::wire::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], fuchsia_ui_input2::wire::Key::UP);
 
   EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], fuchsia_input::wire::Key::LEFT_SHIFT);
   EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], fuchsia_input::wire::Key::RIGHT_META);
@@ -195,8 +184,6 @@ TEST(KeyboardTest, DoubleCountingKeys) {
   fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.CreateDescriptor(descriptor_allocator, descriptor));
-
-  EXPECT_EQ(descriptor.keyboard().input().keys().count(), 105U);
 }
 
 TEST(KeyboardTest, BootKeyboardOutputReport) {
@@ -245,7 +232,6 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.CreateDescriptor(descriptor_allocator, descriptor));
 
-  EXPECT_EQ(descriptor.keyboard().input().keys().count(), 107);
   EXPECT_EQ(descriptor.keyboard().input().keys3().count(), 107);
 
   // Test a report parses correctly.
@@ -260,14 +246,6 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
                                       report_allocator, input_report));
-
-  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], fuchsia_ui_input2::wire::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], fuchsia_ui_input2::wire::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], fuchsia_ui_input2::wire::Key::A);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
-            fuchsia_ui_input2::wire::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], fuchsia_ui_input2::wire::Key::UP);
 
   ASSERT_EQ(input_report.keyboard().pressed_keys3().count(), 5U);
   EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], fuchsia_input::wire::Key::LEFT_SHIFT);

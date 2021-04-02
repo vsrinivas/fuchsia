@@ -60,13 +60,13 @@ class KeyboardInputHelper {
     fuchsia_input_report::wire::KeyboardInputReport keyboard_input_report(allocator);
 
     size_t index = 0;
-    fidl::VectorView<fuchsia_ui_input2::wire::Key> fidl_keys(allocator, keys.size());
+    fidl::VectorView<fuchsia_input::wire::Key> fidl_keys(allocator, keys.size());
     for (auto& key : keys) {
       auto fidl_key =
-          *key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
-      fidl_keys[index++] = static_cast<fuchsia_ui_input2::wire::Key>(fidl_key);
+          *key_util::hid_key_to_fuchsia_key3(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
+      fidl_keys[index++] = static_cast<fuchsia_input::wire::Key>(fidl_key);
     }
-    keyboard_input_report.set_pressed_keys(allocator, std::move(fidl_keys));
+    keyboard_input_report.set_pressed_keys3(allocator, std::move(fidl_keys));
     input_report.set_keyboard(allocator, std::move(keyboard_input_report));
     keyboard_.ProcessInput(input_report);
   }

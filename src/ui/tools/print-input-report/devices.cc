@@ -140,9 +140,9 @@ void PrintKeyboardDesc(Printer* printer,
     const fuchsia_input_report::wire::KeyboardInputDescriptor& input = descriptor.input();
     printer->Print("Input Report:\n");
     printer->IncreaseIndent();
-    if (input.has_keys()) {
-      for (size_t i = 0; i < input.keys().count(); i++) {
-        printer->Print("Key: %8ld\n", input.keys()[i]);
+    if (input.has_keys3()) {
+      for (size_t i = 0; i < input.keys3().count(); i++) {
+        printer->Print("Key: %8ld\n", input.keys3()[i]);
       }
     }
     printer->DecreaseIndent();
@@ -321,11 +321,11 @@ void PrintKeyboardInputReport(
     Printer* printer, const fuchsia_input_report::wire::KeyboardInputReport& keyboard_report) {
   printer->Print("Keyboard Report\n");
   printer->IncreaseIndent();
-  if (keyboard_report.has_pressed_keys()) {
-    for (size_t i = 0; i < keyboard_report.pressed_keys().count(); i++) {
-      printer->Print("Key: %8ld\n", keyboard_report.pressed_keys()[i]);
+  if (keyboard_report.has_pressed_keys3()) {
+    for (size_t i = 0; i < keyboard_report.pressed_keys3().count(); i++) {
+      printer->Print("Key: %8ld\n", keyboard_report.pressed_keys3()[i]);
     }
-    if (keyboard_report.pressed_keys().count() == 0) {
+    if (keyboard_report.pressed_keys3().count() == 0) {
       printer->Print("No keys pressed\n");
     }
   }
