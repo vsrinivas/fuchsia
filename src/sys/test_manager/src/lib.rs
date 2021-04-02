@@ -246,7 +246,9 @@ impl RunningTest {
                 error!(?err, "Failed to await for logs streaming task");
             });
         }
-        destroy_waiter.await;
+        destroy_waiter.await.unwrap_or_else(|err| {
+            error!(?err, "Failed to destroy instance");
+        })
     }
 
     /// Serves Suite controller and destroys this test afterwards.

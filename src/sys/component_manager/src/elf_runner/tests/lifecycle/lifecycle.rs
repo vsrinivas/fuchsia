@@ -34,9 +34,7 @@ async fn test_normal_behavior() {
 
         (instance.child_name(), instance.take_destroy_waiter())
     };
-    if let Some(e) = destroy_waiter.await {
-        panic!("failed to destroy child: {:?}", e);
-    }
+    let () = destroy_waiter.await.expect("failed to destroy child");
 
     let moniker_stem = format!("./{}:{}:", collection_name, child_name);
     let descriptor_moniker = format!("^{}\\d+$", moniker_stem);

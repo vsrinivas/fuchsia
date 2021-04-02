@@ -8,6 +8,7 @@
     program: {
         runner: "elf",
         binary: "bin/realm",
+        args: [ "--wait" ],
     },
     collections: [
         {

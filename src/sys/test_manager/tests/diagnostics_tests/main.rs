@@ -54,7 +54,7 @@ async fn test_isolated_diagnostics_can_be_read_by_the_test() {
 
     let destroy_fut = instance.take_destroy_waiter();
     drop(instance);
-    destroy_fut.await;
+    let () = destroy_fut.await.expect("failed to destroy instance");
 
-    logs_fut.await;
+    let () = logs_fut.await;
 }

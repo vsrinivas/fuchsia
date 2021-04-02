@@ -22,14 +22,13 @@ use {
     fuchsia_runtime::HandleType,
     fuchsia_zircon::{self as zx, Socket, SocketOpts},
     futures::{
-        channel::mpsc,
-        future::{self, BoxFuture, FutureExt, TryFutureExt},
+        future::{self, FutureExt, TryFutureExt},
         stream::{StreamExt, TryStreamExt},
         Future,
     },
     log::*,
     rand::Rng,
-    std::{borrow::Borrow, fmt, fs::File, marker::PhantomData, path::PathBuf, pin::Pin, sync::Arc},
+    std::{borrow::Borrow, fmt, fs::File, marker::PhantomData, path::PathBuf, sync::Arc},
     thiserror::Error,
 };
 
@@ -423,9 +422,16 @@ pub fn realm() -> Result<RealmProxy, Error> {
 #[must_use = "Dropping `ScopedInstance` will cause the component instance to be stopped and destroyed."]
 pub struct ScopedInstance {
     child_name: String,
+    collection: String,
     exposed_dir: DirectoryProxy,
-    destroy_future: Option<Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>>,
-    destroy_waiter: Option<Pin<Box<dyn Future<Output = Option<Error>> + Send + Sync + 'static>>>,
+    destroy_channel: Option<
+        futures::channel::oneshot::Sender<
+            Result<
+                fidl::client::QueryResponseFut<fidl_fuchsia_sys2::RealmDestroyChildResult>,
+                Error,
+            >,
+        >,
+    >,
 }
 
 impl ScopedInstance {
@@ -444,11 +450,11 @@ impl ScopedInstance {
     /// should be torn down at the end of the test. Components v2 only.
     pub async fn new_with_name(
         child_name: String,
-        coll: String,
+        collection: String,
         url: String,
     ) -> Result<Self, Error> {
         let realm = realm().context("Failed to connect to Realm service")?;
-        let mut collection_ref = CollectionRef { name: coll.clone() };
+        let mut collection_ref = CollectionRef { name: collection.clone() };
         let child_decl = ChildDecl {
             name: Some(child_name.clone()),
             url: Some(url),
@@ -456,41 +462,21 @@ impl ScopedInstance {
             environment: None,
             ..ChildDecl::EMPTY
         };
-        realm
+        let () = realm
             .create_child(&mut collection_ref, child_decl)
             .await
             .context("CreateChild FIDL failed.")?
             .map_err(|e| format_err!("Failed to create child: {:?}", e))?;
-        let mut child_ref = ChildRef { name: child_name.clone(), collection: Some(coll.clone()) };
+        let mut child_ref =
+            ChildRef { name: child_name.clone(), collection: Some(collection.clone()) };
         let (exposed_dir, server) = endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
             .context("Failed to create directory proxy")?;
-        realm
+        let () = realm
             .bind_child(&mut child_ref, server)
             .await
             .context("BindChild FIDL failed.")?
             .map_err(|e| format_err!("Failed to bind to child: {:?}", e))?;
-
-        let (mut destroy_result_sender, mut destroy_result_receiver) = mpsc::channel(1);
-
-        let destroy_future = {
-            let coll = coll.clone();
-            let child_name = child_name.clone();
-            async move {
-                let res = Self::destroy_child(coll, child_name).await;
-                if let Err(e) = res {
-                    if let Err(e) = destroy_result_sender.try_send(e) {
-                        warn!("Failed to send error result for destroy scoped instance: {:?}", e);
-                    }
-                }
-            }
-        };
-        let destroy_waiter = async move { destroy_result_receiver.next().await };
-        Ok(Self {
-            child_name,
-            exposed_dir,
-            destroy_future: Some(Box::pin(destroy_future)),
-            destroy_waiter: Some(Box::pin(destroy_waiter)),
-        })
+        Ok(Self { child_name, exposed_dir, collection, destroy_channel: None })
     }
 
     /// Connect to an instance of a FIDL protocol hosted in the component's exposed directory`,
@@ -536,22 +522,21 @@ impl ScopedInstance {
 
     /// Returns a future which can be awaited on for destruction to complete after the
     /// `ScopedInstance` is dropped.
-    pub fn take_destroy_waiter(&mut self) -> BoxFuture<'static, Option<Error>> {
-        self.destroy_waiter.take().expect("destroy waiter already taken")
+    pub fn take_destroy_waiter(&mut self) -> impl futures::Future<Output = Result<(), Error>> {
+        if self.destroy_channel.is_some() {
+            panic!("destroy waiter already taken");
+        }
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        self.destroy_channel = Some(sender);
+        receiver.err_into().and_then(futures::future::ready).and_then(
+            |fidl_fut: fidl::client::QueryResponseFut<_>| {
+                fidl_fut.map(|r: Result<Result<(), fidl_fuchsia_component::Error>, fidl::Error>| {
+                    r.context("DestroyChild FIDL error")?
+                        .map_err(|e| format_err!("Failed to destroy child: {:?}", e))
+                })
+            },
+        )
     }
-
-    async fn destroy_child(coll: String, child_name: String) -> Result<(), Error> {
-        let realm = realm().context("Failed to connect to Realm service")?;
-        let mut child_ref = ChildRef { name: child_name, collection: Some(coll) };
-        // DestroyChild also stops the component.
-        realm
-            .destroy_child(&mut child_ref)
-            .await
-            .context("DestroyChild FIDL failed.")?
-            .map_err(|e| format_err!("Failed to destroy child: {:?}", e))?;
-        Ok(())
-    }
-
     /// Return the name of this instance.
     pub fn child_name(&self) -> String {
         return self.child_name.clone();
@@ -560,7 +545,22 @@ impl ScopedInstance {
 
 impl Drop for ScopedInstance {
     fn drop(&mut self) {
-        fasync::Task::spawn(self.destroy_future.take().unwrap()).detach();
+        let Self { collection, child_name, destroy_channel, exposed_dir: _ } = self;
+        let result = realm().context("Failed to connect to Realm service").and_then(|realm| {
+            let mut child_ref =
+                ChildRef { name: child_name.clone(), collection: Some(collection.clone()) };
+            // DestroyChild also stops the component.
+            //
+            // Calling destroy child within drop guarantees that the message
+            // goes out to the realm regardless of there existing a waiter on
+            // the destruction channel.
+            Ok(realm.destroy_child(&mut child_ref))
+        });
+        if let Some(chan) = destroy_channel.take() {
+            let () = chan.send(result).unwrap_or_else(|result| {
+                warn!("Failed to send result for destroyed scoped instance. Result={:?}", result);
+            });
+        }
     }
 }
 

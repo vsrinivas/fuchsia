@@ -5,7 +5,8 @@
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 rustc_test("fuchsia-component-v1-test") {
   edition = "2018"
@@ -35,6 +36,7 @@ rustc_test("fuchsia-component-v2-test") {
   edition = "2018"
   source_root = "components_v2/lib.rs"
   deps = [
+    ":fuchsia.component.client.test-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -42,8 +44,10 @@ rustc_test("fuchsia-component-v2-test") {
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:test-case",
   ]
 
   sources = [ "components_v2/lib.rs" ]
@@ -54,6 +58,7 @@ rustc_binary("realm") {
   source_root = "components_v2/realm.rs"
   testonly = true
   deps = [
+    ":fuchsia.component.client.test-rustc",
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -61,6 +66,7 @@ rustc_binary("realm") {
     "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
@@ -76,44 +82,43 @@ fidl("fuchsia.component.client.test") {
   sources = [ "client.test.fidl" ]
 }
 
-test_package("fuchsia-component-tests") {
+fuchsia_component("fuchsia_component_v1_test_component") {
+  component_name = "fuchsia_component_v1_test"
+  manifest = "meta/fuchsia_component_v1_test.cmx"
+  testonly = true
+  deps = [ ":fuchsia-component-v1-test" ]
+}
+
+fuchsia_component("fuchsia_component_v2_test_component") {
+  component_name = "fuchsia_component_v2_test"
+  manifest = "meta/fuchsia_component_v2_test.cmx"
+  testonly = true
+  deps = [ ":fuchsia-component-v2-test" ]
+}
+
+fuchsia_component("realm_component") {
+  component_name = "realm"
+  manifest = "meta/realm.cml"
+  testonly = true
+  deps = [ ":realm" ]
+}
+
+fuchsia_component("realm_with_wait_component") {
+  component_name = "realm_with_wait"
+  manifest = "meta/realm_with_wait.cml"
+  testonly = true
+  deps = [ ":realm" ]
+}
+
+fuchsia_test_package("fuchsia-component-tests") {
+  test_components = [
+    ":fuchsia_component_v1_test_component",
+    ":fuchsia_component_v2_test_component",
+  ]
   deps = [
-    ":fuchsia-component-v1-test",
-    ":fuchsia-component-v2-test",
-    ":realm",
-    "//examples/components/routing/echo_server",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/realm.cml")
-      dest = "realm.cm"
-    },
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "echo_server"
-    },
-    {
-      name = "realm"
-    },
-  ]
-
-  tests = [
-    {
-      name = "fuchsia_component_v1_test"
-      environments = basic_envs
-    },
-    {
-      name = "fuchsia_component_v2_test"
-      environments = basic_envs
-    },
+    ":realm_component",
+    ":realm_with_wait_component",
+    "//examples/components/routing/echo_server:echo_server_component",
   ]
 }
 

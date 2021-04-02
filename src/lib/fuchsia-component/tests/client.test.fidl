@@ -17,3 +17,8 @@ protocol ServiceB {
     /// Does nothing.
     Foo() -> ();
 };
+
+/// An empty protocol.
+[Discoverable]
+protocol EmptyProtocol {
+};

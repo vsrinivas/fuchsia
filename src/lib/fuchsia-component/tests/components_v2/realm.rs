@@ -10,7 +10,15 @@ use {
     log::*,
 };
 
+#[derive(argh::FromArgs)]
+/// Helper binary to test binding to components v2 children.
+struct Args {
+    /// whether or not to wait on ScopedInstance destroy waiters.
+    #[argh(switch, long = "wait")]
+    wait: bool,
+}
 fn main() {
+    let Args { wait } = argh::from_env();
     let mut exec = fasync::Executor::new().expect("failed to make async executor");
     syslog::init_with_tags(&["components_v2_realm"]).expect("could not initialize logging");
     info!("Realm started");
@@ -20,26 +28,54 @@ fn main() {
         exec.run_singlethreaded(create_instances()).expect("failed to create instances");
     info!("Created instances");
 
-    // Grab the destroy waiters for each scoped instance, each of which will resolve once
-    // destruction for its instance is complete
-    let mut waiters: Vec<_> = instances.iter_mut().map(|i| i.take_destroy_waiter()).collect();
+    let waiters = if wait {
+        // Grab the destroy waiters for each scoped instance, each of which will resolve once
+        // destruction for its instance is complete
+        let mut waiters: Vec<_> = instances.iter_mut().map(|i| i.take_destroy_waiter()).collect();
 
-    // None of the waiters should be ready yet, since we haven't dropped any of the instances
-    for waiter in waiters.iter_mut() {
-        exec.wake_main_future();
-        match exec.run_one_step(waiter) {
-            None => panic!("waiter future has not been dispatched"),
-            Some(core::task::Poll::Ready(_)) => panic!("waiter future should not be ready yet"),
-            Some(core::task::Poll::Pending) => (),
+        // None of the waiters should be ready yet, since we haven't dropped any of the instances
+        for waiter in waiters.iter_mut() {
+            exec.wake_main_future();
+            match exec.run_one_step(waiter) {
+                None => panic!("waiter future has not been dispatched"),
+                Some(core::task::Poll::Ready(_)) => panic!("waiter future should not be ready yet"),
+                Some(core::task::Poll::Pending) => (),
+            }
         }
-    }
+        Some(waiters)
+    } else {
+        None
+    };
 
     // Drop the ScopedInstances, which will cause the child components to be destroyed
     info!("Dropping scoped instances");
     drop(instances);
-    // Wait for all of the instances to be destroyed, assert that there were no errors
-    for destruction_error in exec.run_singlethreaded(join_all(waiters)) {
-        assert!(destruction_error.is_none());
+
+    if let Some(waiters) = waiters {
+        info!("Waiting on destroy waiters");
+        // Wait for all of the instances to be destroyed, assert that there were no errors
+        for destruction_result in exec.run_singlethreaded(join_all(waiters)) {
+            let () = destruction_result.expect("destruction failed");
+        }
+    }
+
+    // Connect to a bogus service as a way to signal that this test component has performed all the
+    // logic it wanted. The runner uses this signal as a statement that this component is alive and
+    // to keep it living up to this point.
+    let _proxy = fuchsia_component::client::connect_to_service::<
+        fidl_fuchsia_component_client_test::EmptyProtocolMarker,
+    >()
+    .expect("can create bogus service request");
+
+    // The orchestrator of this test is observing component manager events to determine when the
+    // test is over based on the children exiting. If we exit from main the children will be stopped
+    // for different reasons than dropping our scoped instances here, thus invalidating the test.
+    //
+    // When not waiting on destruction result, we're intentionally not giving the executor any
+    // chance to run after dropping instances to prove that the children will be deleted without an
+    // executor running.
+    loop {
+        let () = std::thread::park();
     }
 }
 

@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fuchsia_component_v1_test"
+        "binary": "bin/fuchsia_component_v1_test"
     }
 }

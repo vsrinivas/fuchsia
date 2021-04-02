@@ -36,7 +36,7 @@ async fn main() -> Result<(), Error> {
     let mut instance = instances.pop().unwrap();
     let destroy_waiter = instance.take_destroy_waiter();
     drop(instance);
-    destroy_waiter.await;
+    let () = destroy_waiter.await?;
 
     // Subscribe to events.
     let event_source = EventSource::new()?;
