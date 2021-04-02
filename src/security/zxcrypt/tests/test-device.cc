@@ -145,7 +145,7 @@ void TestDevice::BindFvmDriver() {
   ASSERT_NOT_NULL(io);
   auto resp =
       fuchsia_device::Controller::Call::Bind(zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-                                             ::fidl::unowned_str(kFvmDriver, strlen(kFvmDriver)));
+                                             fidl::StringView::FromExternal(kFvmDriver));
   zx_status_t status = resp.status();
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK);
@@ -170,7 +170,7 @@ void TestDevice::Rebind() {
     ;
     auto resp = fuchsia_device::Controller::Call::Rebind(
         zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-        ::fidl::unowned_str(kFvmDriver, strlen(kFvmDriver)));
+        fidl::StringView::FromExternal(kFvmDriver));
     zx_status_t status = resp.status();
     if (resp->result.is_err()) {
       call_status = resp->result.err();
