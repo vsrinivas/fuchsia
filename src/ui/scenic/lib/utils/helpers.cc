@@ -61,6 +61,18 @@ std::vector<zx::event> CreateEventArray(size_t n) {
   return events;
 }
 
+std::vector<zx_koid_t> ExtractKoids(const std::vector<zx::event>& events) {
+  std::vector<zx_koid_t> result;
+  result.reserve(events.size());
+  for (auto& evt : events) {
+    zx_info_handle_basic_t info;
+    zx_status_t status = evt.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    FX_DCHECK(status == ZX_OK);
+    result.push_back(info.koid);
+  }
+  return result;
+}
+
 fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
     const std::string& debug_name_suffix) {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;

@@ -26,6 +26,9 @@ zx::event CreateEvent();
 // Create a std::vector populated with |n| unsignalled zx::event elements.
 std::vector<zx::event> CreateEventArray(size_t n);
 
+// Create a std::vector populated with koids of the input vector of zx:event.
+std::vector<zx_koid_t> ExtractKoids(const std::vector<zx::event>& events);
+
 // Copy a zx::event.
 zx::event CopyEvent(const zx::event& event);
 

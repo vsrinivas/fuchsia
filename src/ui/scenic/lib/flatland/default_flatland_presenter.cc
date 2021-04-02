@@ -19,6 +19,26 @@ void DefaultFlatlandPresenter::SetFrameScheduler(
   frame_scheduler_ = frame_scheduler;
 }
 
+std::vector<zx::event> DefaultFlatlandPresenter::TakeReleaseFences(
+    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>&
+        highest_present_per_session) {
+  std::vector<zx::event> fences;
+  for (const auto& [session_id, present_id] : highest_present_per_session) {
+    const auto begin_it = release_fences_.lower_bound({session_id, 0});
+    const auto end_it = release_fences_.upper_bound({session_id, present_id});
+    FX_DCHECK(std::distance(begin_it, end_it) >= 0);
+    std::for_each(
+        begin_it, end_it,
+        [&fences](
+            std::pair<const scheduling::SchedulingIdPair, std::vector<zx::event>>& release_fences) {
+          std::move(std::begin(release_fences.second), std::end(release_fences.second),
+                    std::back_inserter(fences));
+        });
+    release_fences_.erase(begin_it, end_it);
+  }
+  return fences;
+}
+
 scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
     scheduling::SessionId session_id, std::vector<zx::event> release_fences) {
   scheduling::PresentId present_id = scheduling::kInvalidPresentId;
@@ -31,9 +51,13 @@ scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
     // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
     // since GFX sessions may access the FrameScheduler without passing through this object. Post a
     // task to the main thread, which is where GFX runs, to account for thread safety.
-    async::PostTask(main_dispatcher_, [scheduler, present_id, session_id,
+    async::PostTask(main_dispatcher_, [thiz = shared_from_this(), scheduler, present_id, session_id,
                                        release_fences = std::move(release_fences)]() mutable {
-      scheduler->RegisterPresent(session_id, std::move(release_fences), present_id);
+      scheduling::SchedulingIdPair id_pair{session_id, present_id};
+      FX_DCHECK(thiz->release_fences_.find(id_pair) == thiz->release_fences_.end());
+      thiz->release_fences_.emplace(id_pair, std::move(release_fences));
+
+      scheduler->RegisterPresent(session_id, {}, present_id);
     });
   } else {
     // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
@@ -94,6 +118,13 @@ void DefaultFlatlandPresenter::GetFuturePresentationInfos(
 }
 
 void DefaultFlatlandPresenter::RemoveSession(scheduling::SessionId session_id) {
+  // Remove any registered release fences for the removed session.
+  {
+    auto start = release_fences_.lower_bound({session_id, 0});
+    auto end = release_fences_.lower_bound({session_id + 1, 0});
+    release_fences_.erase(start, end);
+  }
+
   if (auto scheduler = frame_scheduler_.lock()) {
     scheduler->RemoveSession(session_id);
   } else {

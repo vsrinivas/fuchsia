@@ -8,12 +8,17 @@
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
+#include <memory>
+
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace flatland {
 
-class DefaultFlatlandPresenter final : public FlatlandPresenter {
+class DefaultFlatlandPresenter final
+    : public FlatlandPresenter,
+      public std::enable_shared_from_this<DefaultFlatlandPresenter> {
  public:
   // The |main_dispatcher| must be the dispatcher that GFX sessions run and update on. That thread
   // is typically refered to as the "main thread" or "render thread".
@@ -22,6 +27,13 @@ class DefaultFlatlandPresenter final : public FlatlandPresenter {
   // Sets the FrameScheduler this DefaultFlatlandPresenter will use for frame scheduling calls.
   // This function should be called once before any Flatland clients begin making API calls.
   void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
+
+  // Return all release fences registered by RegisterPresent() for the specified sessions, up to and
+  // including the corresponding PresentId.  Typically, the caller will pass these release fences to
+  // the DisplayCompositor, to be signaled at the appropriate time.
+  std::vector<zx::event> TakeReleaseFences(
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>&
+          highest_present_per_session);
 
   // |FlatlandPresenter|
   scheduling::PresentId RegisterPresent(scheduling::SessionId session_id,
@@ -41,6 +53,7 @@ class DefaultFlatlandPresenter final : public FlatlandPresenter {
  private:
   async_dispatcher_t* main_dispatcher_;
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> release_fences_;
 
   // Ask for 8 frames of information for GetFuturePresentationInfos().
   const int64_t kDefaultPredictionInfos = 8;

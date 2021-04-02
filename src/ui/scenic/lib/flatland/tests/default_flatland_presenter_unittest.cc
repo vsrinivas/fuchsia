@@ -34,8 +34,8 @@ namespace {
 // tasks posted by the DefaultFlatlandPresenter to run without blocking the worker threads.
 class DefaultFlatlandPresenterTest : public gtest::RealLoopFixture {
  public:
-  DefaultFlatlandPresenter CreateDefaultFlatlandPresenter() {
-    return DefaultFlatlandPresenter(dispatcher());
+  std::shared_ptr<DefaultFlatlandPresenter> CreateDefaultFlatlandPresenter() {
+    return std::make_shared<DefaultFlatlandPresenter>(dispatcher());
   }
 };
 
@@ -48,15 +48,15 @@ TEST_F(DefaultFlatlandPresenterTest, NoFrameSchedulerSet) {
   const scheduling::PresentId kPresentId = 2;
 
   // No function should crash, even though there is no FrameScheduler.
-  scheduling::PresentId present_id = presenter.RegisterPresent(kSessionId, /*release_fences=*/{});
+  scheduling::PresentId present_id = presenter->RegisterPresent(kSessionId, /*release_fences=*/{});
   RunLoopUntilIdle();
 
   EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
 
-  presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
+  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
   RunLoopUntilIdle();
 
-  presenter.RemoveSession(kSessionId);
+  presenter->RemoveSession(kSessionId);
   RunLoopUntilIdle();
 }
 
@@ -64,7 +64,7 @@ TEST_F(DefaultFlatlandPresenterTest, FrameSchedulerExpired) {
   auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
 
   auto presenter = CreateDefaultFlatlandPresenter();
-  presenter.SetFrameScheduler(frame_scheduler);
+  presenter->SetFrameScheduler(frame_scheduler);
 
   frame_scheduler.reset();
 
@@ -72,15 +72,15 @@ TEST_F(DefaultFlatlandPresenterTest, FrameSchedulerExpired) {
   const scheduling::PresentId kPresentId = 2;
 
   // No function should crash, even though the FrameScheduler has expired.
-  scheduling::PresentId present_id = presenter.RegisterPresent(kSessionId, /*release_fences=*/{});
+  scheduling::PresentId present_id = presenter->RegisterPresent(kSessionId, /*release_fences=*/{});
   RunLoopUntilIdle();
 
   EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
 
-  presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
+  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
   RunLoopUntilIdle();
 
-  presenter.RemoveSession(kSessionId);
+  presenter->RemoveSession(kSessionId);
   RunLoopUntilIdle();
 }
 
@@ -89,45 +89,26 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
 
   // Capture the relevant arguments of the RegisterPresent() call.
   scheduling::SessionId last_session_id = scheduling::kInvalidSessionId;
-  std::vector<zx::event> last_release_fences;
+  scheduling::PresentId last_present_id = scheduling::kInvalidPresentId;
 
   frame_scheduler->set_register_present_callback(
-      [&last_session_id, &last_release_fences](scheduling::SessionId session_id,
-                                               std::vector<zx::event> release_fences,
-                                               scheduling::PresentId present_id) {
+      [&last_session_id, &last_present_id](scheduling::SessionId session_id,
+                                           std::vector<zx::event> release_fences,
+                                           scheduling::PresentId present_id) {
         last_session_id = session_id;
-        last_release_fences = std::move(release_fences);
+        last_present_id = present_id;
       });
 
   auto presenter = CreateDefaultFlatlandPresenter();
-  presenter.SetFrameScheduler(frame_scheduler);
+  presenter->SetFrameScheduler(frame_scheduler);
 
   const scheduling::SessionId kSessionId = 2;
-
-  // Create release fences to verify they are plumbed through to the FrameScheduler.
-  std::vector<zx::event> release_fences = utils::CreateEventArray(2);
-  zx::event release1_dup = utils::CopyEvent(release_fences[0]);
-  zx::event release2_dup = utils::CopyEvent(release_fences[1]);
-
-  scheduling::PresentId present_id =
-      presenter.RegisterPresent(kSessionId, std::move(release_fences));
+  const scheduling::PresentId present_id = presenter->RegisterPresent(kSessionId, {});
   RunLoopUntilIdle();
 
   EXPECT_NE(present_id, scheduling::kInvalidPresentId);
   EXPECT_EQ(last_session_id, kSessionId);
-  EXPECT_EQ(last_release_fences.size(), 2ul);
-
-  // Signal the fences one at a time and verify they are in the correct order.
-  EXPECT_FALSE(utils::IsEventSignalled(last_release_fences[0], ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(utils::IsEventSignalled(last_release_fences[1], ZX_EVENT_SIGNALED));
-
-  release1_dup.signal(0, ZX_EVENT_SIGNALED);
-  EXPECT_TRUE(utils::IsEventSignalled(last_release_fences[0], ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(utils::IsEventSignalled(last_release_fences[1], ZX_EVENT_SIGNALED));
-
-  release2_dup.signal(0, ZX_EVENT_SIGNALED);
-  EXPECT_TRUE(utils::IsEventSignalled(last_release_fences[0], ZX_EVENT_SIGNALED));
-  EXPECT_TRUE(utils::IsEventSignalled(last_release_fences[1], ZX_EVENT_SIGNALED));
+  EXPECT_EQ(last_present_id, present_id);
 }
 
 TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameScheduler) {
@@ -150,7 +131,7 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
       });
 
   auto presenter = CreateDefaultFlatlandPresenter();
-  presenter.SetFrameScheduler(frame_scheduler);
+  presenter->SetFrameScheduler(frame_scheduler);
 
   const auto kIdPair = scheduling::SchedulingIdPair({
       .session_id = 1,
@@ -159,7 +140,7 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
   const zx::time kPresentationTime = zx::time(123);
   const bool kSquashable = true;
 
-  presenter.ScheduleUpdateForSession(kPresentationTime, kIdPair, kSquashable);
+  presenter->ScheduleUpdateForSession(kPresentationTime, kIdPair, kSquashable);
   RunLoopUntilIdle();
 
   EXPECT_EQ(last_presentation_time, kPresentationTime);
@@ -177,11 +158,11 @@ TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
       [&last_session_id](scheduling::SessionId session_id) { last_session_id = session_id; });
 
   auto presenter = CreateDefaultFlatlandPresenter();
-  presenter.SetFrameScheduler(frame_scheduler);
+  presenter->SetFrameScheduler(frame_scheduler);
 
   const scheduling::SessionId kSessionId = 1;
 
-  presenter.RemoveSession(kSessionId);
+  presenter->RemoveSession(kSessionId);
 
   // Since this function runs on the main thread, no RunLoopUntilIdle() is necessary.
   EXPECT_EQ(last_session_id, kSessionId);
@@ -205,10 +186,10 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
       });
 
   auto presenter = CreateDefaultFlatlandPresenter();
-  presenter.SetFrameScheduler(frame_scheduler);
+  presenter->SetFrameScheduler(frame_scheduler);
 
   std::vector<scheduling::FuturePresentationInfo> presentation_infos;
-  presenter.GetFuturePresentationInfos(
+  presenter->GetFuturePresentationInfos(
       [&presentation_infos](auto infos) { presentation_infos = std::move(infos); });
   RunLoopUntilIdle();
 
@@ -217,6 +198,79 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
   EXPECT_EQ(presentation_infos.size(), 1u);
   EXPECT_EQ(presentation_infos[0].latch_point, kLatchPoint);
   EXPECT_EQ(presentation_infos[0].presentation_time, kPresentationTime);
+}
+
+TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
+  auto presenter = CreateDefaultFlatlandPresenter();
+
+  // The frame scheduler isn't actually used for this test, although it *is* required for the
+  // presenter to properly stash the release fences (not inherently, just an implementation detail).
+  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  presenter->SetFrameScheduler(frame_scheduler);
+
+  const scheduling::SessionId kSessionIdA = 3;
+  const scheduling::SessionId kSessionIdB = 7;
+
+  // Create release fences
+  std::vector<zx::event> release_fences_A1 = utils::CreateEventArray(2);
+  std::vector<zx_koid_t> release_fence_koids_A1 = utils::ExtractKoids(release_fences_A1);
+  std::vector<zx::event> release_fences_A2 = utils::CreateEventArray(2);
+  std::vector<zx_koid_t> release_fence_koids_A2 = utils::ExtractKoids(release_fences_A2);
+  std::vector<zx::event> release_fences_B1 = utils::CreateEventArray(2);
+  std::vector<zx_koid_t> release_fence_koids_B1 = utils::ExtractKoids(release_fences_B1);
+  std::vector<zx::event> release_fences_B2 = utils::CreateEventArray(2);
+  std::vector<zx_koid_t> release_fence_koids_B2 = utils::ExtractKoids(release_fences_B2);
+  std::vector<zx::event> release_fences_B3 = utils::CreateEventArray(2);
+  std::vector<zx_koid_t> release_fence_koids_B3 = utils::ExtractKoids(release_fences_B3);
+
+  const auto present_id_A1 = presenter->RegisterPresent(kSessionIdA, std::move(release_fences_A1));
+  const auto present_id_A2 = presenter->RegisterPresent(kSessionIdA, std::move(release_fences_A2));
+  const auto present_id_B1 = presenter->RegisterPresent(kSessionIdB, std::move(release_fences_B1));
+  const auto present_id_B2 = presenter->RegisterPresent(kSessionIdB, std::move(release_fences_B2));
+
+  // There will be no fences yet, because RegisterPresent() stashes the fences in a task dispatched
+  // to the main thread, which hasn't run yet.
+  auto fences_empty = presenter->TakeReleaseFences({
+      {kSessionIdA, present_id_A2},
+      {kSessionIdB, present_id_B1},
+  });
+  EXPECT_TRUE(fences_empty.empty());
+
+  // Try to take the same fences.  We should see the fences for A1/A2/B1, but not B2.  Note that we
+  // don't explicitly mention A1, but we get the fences for it too, because A2 has a higher present
+  // ID for the same session ID.
+  RunLoopUntilIdle();
+  auto fences_A1A2B1 = presenter->TakeReleaseFences({
+      {kSessionIdA, present_id_A2},
+      {kSessionIdB, present_id_B1},
+  });
+  EXPECT_EQ(fences_A1A2B1.size(), release_fence_koids_A1.size() + release_fence_koids_A2.size() +
+                                      release_fence_koids_B1.size());
+  auto fences_A1A2B1_koids = utils::ExtractKoids(fences_A1A2B1);
+  for (auto koid : release_fence_koids_A1) {
+    EXPECT_THAT(fences_A1A2B1_koids, testing::Contains(koid));
+  }
+  for (auto koid : release_fence_koids_A2) {
+    EXPECT_THAT(fences_A1A2B1_koids, testing::Contains(koid));
+  }
+  for (auto koid : release_fence_koids_B1) {
+    EXPECT_THAT(fences_A1A2B1_koids, testing::Contains(koid));
+  }
+
+  // Register one more present.
+  const auto present_id_B3 = presenter->RegisterPresent(kSessionIdB, std::move(release_fences_B3));
+  RunLoopUntilIdle();
+  auto fences_B2B3 = presenter->TakeReleaseFences({
+      {kSessionIdB, present_id_B3},
+  });
+  EXPECT_EQ(fences_B2B3.size(), release_fence_koids_B2.size() + release_fence_koids_B3.size());
+  auto fences_B2B3_koids = utils::ExtractKoids(fences_B2B3);
+  for (auto koid : release_fence_koids_B2) {
+    EXPECT_THAT(fences_B2B3_koids, testing::Contains(koid));
+  }
+  for (auto koid : release_fence_koids_B3) {
+    EXPECT_THAT(fences_B2B3_koids, testing::Contains(koid));
+  }
 }
 
 TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
@@ -256,7 +310,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
       });
 
   auto presenter = CreateDefaultFlatlandPresenter();
-  presenter.SetFrameScheduler(frame_scheduler);
+  presenter->SetFrameScheduler(frame_scheduler);
 
   // Start 10 "sessions", each of which registers 100 presents and schedules 100 updates.
   static constexpr uint64_t kNumSessions = 10;
@@ -293,7 +347,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
 
       for (uint64_t i = 0; i < kNumPresents; ++i) {
         // RegisterPresent() is one of the three functions being tested.
-        auto present_id = presenter.RegisterPresent(session_id, /*release_fences=*/{});
+        auto present_id = presenter->RegisterPresent(session_id, /*release_fences=*/{});
         presents.push_back(present_id);
 
         // Yield with some randomness so the threads get jumbled up a bit.
@@ -302,7 +356,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         }
 
         // ScheduleUpdateForSession() is the second function being tested.
-        presenter.ScheduleUpdateForSession(zx::time(0), {session_id, present_id}, true);
+        presenter->ScheduleUpdateForSession(zx::time(0), {session_id, present_id}, true);
 
         // Yield with some randomness so the threads get jumbled up a bit.
         if (std::rand() % 4 == 0) {
@@ -310,7 +364,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         }
 
         // GetFuturePresentationInfos() is the third function being tested.
-        presenter.GetFuturePresentationInfos(
+        presenter->GetFuturePresentationInfos(
             [&presentation_info_count, &loop, &loop_quits, &checker](auto) {
               presentation_info_count++;
 
