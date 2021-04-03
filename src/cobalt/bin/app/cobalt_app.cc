@@ -79,6 +79,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .product_name = product_name,
       .board_name_suggestion = board_name,
       .version = version,
+      .build_type = configuration_data.GetBuildType(),
       .release_stage = configuration_data.GetReleaseStage(),
 
       .file_system = std::make_unique<PosixFileSystem>(),

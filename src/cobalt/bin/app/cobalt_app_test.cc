@@ -118,6 +118,38 @@ TEST_F(CreateCobaltConfigTest, ConfigFields) {
   EXPECT_EQ(config.upload_schedule_cfg.jitter, test_jitter);
 }
 
+TEST_F(CreateCobaltConfigTest, BuildTypeUser) {
+  ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
+  ASSERT_TRUE(WriteFile("type", "user"));
+  FuchsiaConfigurationData configuration_data(kTestDir, kTestDir, kTestDir);
+  CobaltConfig config =
+      CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
+                         std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
+                         0, 4, true, 1048000, "core", "x64", "0.1.2");
+  EXPECT_EQ(config.build_type, SystemProfile::USER);
+}
+
+TEST_F(CreateCobaltConfigTest, UnknownBuildType) {
+  ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
+  FuchsiaConfigurationData configuration_data(kTestDir, kTestDir, kTestDir);
+  CobaltConfig config =
+      CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
+                         std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
+                         0, 4, true, 1048000, "core", "x64", "0.1.2");
+  EXPECT_EQ(config.build_type, SystemProfile::UNKNOWN_TYPE);
+}
+
+TEST_F(CreateCobaltConfigTest, InvalidBuildType) {
+  ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
+  ASSERT_TRUE(WriteFile("type", "invalid"));
+  FuchsiaConfigurationData configuration_data(kTestDir, kTestDir, kTestDir);
+  CobaltConfig config =
+      CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
+                         std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
+                         0, 4, true, 1048000, "core", "x64", "0.1.2");
+  EXPECT_EQ(config.build_type, SystemProfile::OTHER_TYPE);
+}
+
 class CobaltAppTest : public gtest::TestLoopFixture {
  public:
   CobaltAppTest()
