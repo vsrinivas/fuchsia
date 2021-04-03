@@ -112,6 +112,7 @@ function format-file() {
     *.py) format-full-file "${PY_CMD}" "$1" ;;
     *.rs) format-full-file "${RUST_FMT_CMD}" "$1" ;;
     *.triage) format-full-file "${JSON5_FMT_CMD}" "$1";;
+    *.persist) format-full-file "${JSON5_FMT_CMD}" "$1";;
   esac
 }
 
