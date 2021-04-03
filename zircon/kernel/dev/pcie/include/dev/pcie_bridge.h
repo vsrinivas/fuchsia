@@ -33,9 +33,9 @@ class PcieBridge : public PcieDevice, public PcieUpstreamNode {
   PCIE_IMPLEMENT_REFCOUNTED;
 
   // Device overrides
-  void Unplug() override;
+  void Unplug() __TA_EXCLUDES(bridge_lock_) final;
 
-  zx_status_t EnableBusMasterUpstream(bool enabled) override;
+  zx_status_t EnableBusMasterUpstream(bool enabled) __TA_EXCLUDES(bridge_lock_) final;
 
   // UpstreamNode overrides
   RegionAllocator& pf_mmio_regions() final { return pf_mmio_regions_; }
@@ -58,26 +58,27 @@ class PcieBridge : public PcieDevice, public PcieUpstreamNode {
   void Dump() const override;
 
  protected:
-  zx_status_t AllocateBars() override;
-  zx_status_t AllocateBridgeWindowsLocked();
-  void Disable() override;
+  zx_status_t AllocateBars() __TA_EXCLUDES(bridge_lock_) final;
+  zx_status_t AllocateBridgeWindowsLocked() __TA_REQUIRES(bridge_lock_);
+  void Disable() __TA_EXCLUDES(bridge_lock_) __TA_EXCLUDES(dev_lock_) override;
 
  private:
   friend class PcieBusDriver;
 
   PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id, uint mbus_id);
 
-  zx_status_t ParseBusWindowsLocked();
-  zx_status_t Init(PcieUpstreamNode& upstream);
+  zx_status_t ParseBusWindowsLocked() __TA_REQUIRES(bridge_lock_);
+  zx_status_t Init(PcieUpstreamNode& upstream) __TA_EXCLUDES(bridge_lock_);
 
-  RegionAllocator pf_mmio_regions_;
-  RegionAllocator mmio_lo_regions_;
-  RegionAllocator mmio_hi_regions_;
-  RegionAllocator pio_regions_;
+  mutable DECLARE_MUTEX(PcieBridge) bridge_lock_;
+  RegionAllocator pf_mmio_regions_ __TA_GUARDED(bridge_lock_);
+  RegionAllocator mmio_lo_regions_ __TA_GUARDED(bridge_lock_);
+  RegionAllocator mmio_hi_regions_ __TA_GUARDED(bridge_lock_);
+  RegionAllocator pio_regions_ __TA_GUARDED(bridge_lock_);
 
-  RegionAllocator::Region::UPtr pf_mmio_window_;
-  RegionAllocator::Region::UPtr mmio_window_;
-  RegionAllocator::Region::UPtr pio_window_;
+  RegionAllocator::Region::UPtr pf_mmio_window_ __TA_GUARDED(bridge_lock_);
+  RegionAllocator::Region::UPtr mmio_window_ __TA_GUARDED(bridge_lock_);
+  RegionAllocator::Region::UPtr pio_window_ __TA_GUARDED(bridge_lock_);
 
   size_t downstream_bus_mastering_cnt_ = 0;
   uint64_t pf_mem_base_ = 0;

@@ -112,7 +112,6 @@ zx_status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
 
 zx_status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
   zx_status_t res;
-  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   DEBUG_ASSERT(cfg_ == nullptr);
 
   cfg_ = bus_drv_.GetConfig(bus_id_, dev_id_, func_id_, &cfg_phys_);
@@ -359,16 +358,16 @@ void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
 }
 
 zx_status_t PcieDevice::EnableBusMaster(bool enabled) {
-  Guard<Mutex> guard{&dev_lock_};
-  return EnableBusMasterLocked(enabled);
-}
+  {
+    Guard<Mutex> guard{&dev_lock_};
 
-zx_status_t PcieDevice::EnableBusMasterLocked(bool enabled) {
-  if (enabled && disabled_) {
-    return ZX_ERR_BAD_STATE;
+    if (enabled && disabled_) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    ModifyCmdLocked(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
+                    enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
   }
-
-  ModifyCmdLocked(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
   return upstream_->EnableBusMasterUpstream(enabled);
 }
 

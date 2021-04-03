@@ -21,6 +21,7 @@
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
+#include <dev/pcie_irqs.h>
 #include <dev/pcie_root.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/spinlock.h>
@@ -434,12 +435,6 @@ zx_status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // MSIs require bus mastering be enabled.
-  if ((res = EnableBusMasterLocked(true)) && res != ZX_OK) {
-    LTRACEF("Failed to enable bus mastering for MSI (%d)\n", res);
-    goto bailout;
-  }
-
   // If we support PVM, make sure that we are completely masked before
   // attempting to allocate the block of IRQs.
   bool initially_masked;
@@ -789,11 +784,21 @@ zx_status_t PcieDevice::GetIrqMode(pcie_irq_mode_info_t* out_info) const {
 }
 
 zx_status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
-  Guard<Mutex> guard{&dev_lock_};
+  zx_status_t status;
+  {
+    Guard<Mutex> guard{&dev_lock_};
+    status = ((mode == PCIE_IRQ_MODE_DISABLED) || (plugged_in_ && !disabled_))
+                 ? SetIrqModeLocked(mode, requested_irqs)
+                 : ZX_ERR_BAD_STATE;
+  }
 
-  return ((mode == PCIE_IRQ_MODE_DISABLED) || (plugged_in_ && !disabled_))
-             ? SetIrqModeLocked(mode, requested_irqs)
-             : ZX_ERR_BAD_STATE;
+  // MSIs require bus mastering be enabled. This is done here outside of the
+  // lock to avoid out of order locking between the Bridge and Device locks.
+  if (status == ZX_OK && mode == PCIE_IRQ_MODE_MSI) {
+    status = EnableBusMaster(true);
+  }
+
+  return status;
 }
 
 zx_status_t PcieDevice::RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx) {

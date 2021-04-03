@@ -59,61 +59,62 @@ fbl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream, uint dev_
 }
 
 zx_status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
+  Guard<Mutex> guard{&bridge_lock_};
+  zx_status_t res;
+  // Initialize the device portion of ourselves first.
   {
-    Guard<Mutex> guard{&dev_lock_};
-
-    // Initialize the device portion of ourselves first.
-    zx_status_t res = PcieDevice::InitLocked(upstream);
+    Guard<Mutex> _{dev_lock()};
+    res = PcieDevice::InitLocked(upstream);
     if (res != ZX_OK) {
       return res;
     }
-
-    // Sanity checks of bus allocation.
-    //
-    // TODO(johngro) : Strengthen sanity checks around bridge topology and
-    // handle the need to reconfigure bridge topology if a bridge happens to be
-    // misconfigured.  Right now, we just assume that the BIOS/Bootloader has
-    // taken care of bridge configuration.  In the short term, it would be good
-    // to add some protection against cycles in the bridge configuration which
-    // could lead to infinite recursion.
-    uint primary_id = cfg_->Read(PciConfig::kPrimaryBusId);
-    uint secondary_id = cfg_->Read(PciConfig::kSecondaryBusId);
-
-    if (primary_id == secondary_id) {
-      TRACEF(
-          "PCI-to-PCI bridge detected at %02x:%02x.%01x claims to be bridged to itsef "
-          "(primary %02x == secondary %02x)... skipping scan.\n",
-          bus_id_, dev_id_, func_id_, primary_id, secondary_id);
-      return ZX_ERR_BAD_STATE;
-    }
-
-    if (primary_id != bus_id_) {
-      TRACEF(
-          "PCI-to-PCI bridge detected at %02x:%02x.%01x has invalid primary bus id "
-          "(%02x)... skipping scan.\n",
-          bus_id_, dev_id_, func_id_, primary_id);
-      return ZX_ERR_BAD_STATE;
-    }
-
-    if (secondary_id != managed_bus_id()) {
-      TRACEF(
-          "PCI-to-PCI bridge detected at %02x:%02x.%01x has invalid secondary bus id "
-          "(%02x)... skipping scan.\n",
-          bus_id_, dev_id_, func_id_, secondary_id);
-      return ZX_ERR_BAD_STATE;
-    }
-
-    // Parse the state of its I/O and Memory windows.
-    res = ParseBusWindowsLocked();
-    if (res != ZX_OK) {
-      return res;
-    }
-
-    // Things went well, flag the device as plugged in and link ourselves up to
-    // the graph.
-    plugged_in_ = true;
-    driver().LinkDeviceToUpstream(*this, upstream);
   }
+
+  // Sanity checks of bus allocation.
+  //
+  // TODO(johngro) : Strengthen sanity checks around bridge topology and
+  // handle the need to reconfigure bridge topology if a bridge happens to be
+  // misconfigured.  Right now, we just assume that the BIOS/Bootloader has
+  // taken care of bridge configuration.  In the short term, it would be good
+  // to add some protection against cycles in the bridge configuration which
+  // could lead to infinite recursion.
+  uint primary_id = cfg_->Read(PciConfig::kPrimaryBusId);
+  uint secondary_id = cfg_->Read(PciConfig::kSecondaryBusId);
+
+  if (primary_id == secondary_id) {
+    TRACEF(
+        "PCI-to-PCI bridge detected at %02x:%02x.%01x claims to be bridged to itsef "
+        "(primary %02x == secondary %02x)... skipping scan.\n",
+        bus_id_, dev_id_, func_id_, primary_id, secondary_id);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (primary_id != bus_id_) {
+    TRACEF(
+        "PCI-to-PCI bridge detected at %02x:%02x.%01x has invalid primary bus id "
+        "(%02x)... skipping scan.\n",
+        bus_id_, dev_id_, func_id_, primary_id);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (secondary_id != managed_bus_id()) {
+    TRACEF(
+        "PCI-to-PCI bridge detected at %02x:%02x.%01x has invalid secondary bus id "
+        "(%02x)... skipping scan.\n",
+        bus_id_, dev_id_, func_id_, secondary_id);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Parse the state of its I/O and Memory windows.
+  res = ParseBusWindowsLocked();
+  if (res != ZX_OK) {
+    return res;
+  }
+
+  // Things went well, flag the device as plugged in and link ourselves up to
+  // the graph.
+  plugged_in_ = true;
+  driver().LinkDeviceToUpstream(*this, upstream);
   // Release the device lock, then recurse and scan for downstream devices.
   ScanDownstream();
   return ZX_OK;
@@ -123,21 +124,19 @@ zx_status_t PcieBridge::EnableBusMasterUpstream(bool enabled) {
   // If being asked to disable Bus Mastering then we should ensure that no other
   // devices downstream of this bridge still have it enabled. If any do then we
   // leave BusMastering enabled.
-  {
-    Guard<Mutex> guard{&dev_lock_};
-    if (enabled) {
-      downstream_bus_mastering_cnt_++;
-    } else {
-      if (downstream_bus_mastering_cnt_ == 0) {
-        return ZX_ERR_BAD_STATE;
-      }
-      downstream_bus_mastering_cnt_--;
+  Guard<Mutex> guard{&bridge_lock_};
+  if (enabled) {
+    downstream_bus_mastering_cnt_++;
+  } else {
+    if (downstream_bus_mastering_cnt_ == 0) {
+      return ZX_ERR_BAD_STATE;
     }
+    downstream_bus_mastering_cnt_--;
   }
 
   LTRACEF("UpstreamNode bm cnt: %zu\n", downstream_bus_mastering_cnt_);
-  // Only make a change to the bridge's configuration in a case where the
-  // state of the children has changed meaningfully.
+  // Only make a change to the bridge's bus mastering configuration in a case
+  // where the state of the children has changed meaningfully.
   if (downstream_bus_mastering_cnt_ == 0) {
     LTRACEF("Disabling BusMastering\n");
     return PcieDevice::EnableBusMaster(false);
@@ -152,8 +151,6 @@ zx_status_t PcieBridge::EnableBusMasterUpstream(bool enabled) {
 }
 
 zx_status_t PcieBridge::ParseBusWindowsLocked() {
-  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
-
   // Parse the currently configured windows used to determine MMIO/PIO
   // forwarding policy for this bridge.
   //
@@ -210,7 +207,7 @@ void PcieBridge::Unplug() {
 
 zx_status_t PcieBridge::AllocateBars() {
   {
-    Guard<Mutex> guard{&dev_lock_};
+    Guard<Mutex> guard{&bridge_lock_};
 
     // Start by making sure we can allocate our bridge windows.
     zx_status_t res = AllocateBridgeWindowsLocked();
@@ -219,11 +216,13 @@ zx_status_t PcieBridge::AllocateBars() {
     }
 
     // Now, attempt to allocate our device BARs.
-    res = PcieDevice::AllocateBarsLocked();
-    if (res != ZX_OK) {
-      return res;
+    {
+      Guard<Mutex> _{dev_lock()};
+      res = PcieDevice::AllocateBarsLocked();
+      if (res != ZX_OK) {
+        return res;
+      }
     }
-
     // Great, we are good to go.  Leave our device lock and attempt to allocate
     // our downstream devices' resources.
   }
@@ -233,7 +232,6 @@ zx_status_t PcieBridge::AllocateBars() {
 
 zx_status_t PcieBridge::AllocateBridgeWindowsLocked() {
   zx_status_t ret;
-  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
 
   // Hold a reference to our upstream node while we do this.  If we cannot
   // obtain a reference, then our upstream node has become unplugged and we
@@ -310,42 +308,40 @@ zx_status_t PcieBridge::AllocateBridgeWindowsLocked() {
 }
 
 void PcieBridge::Disable() {
-  DEBUG_ASSERT(!dev_lock_.lock().IsHeld());
-
   // Immediately enter the device lock and enter the disabled state.  We want
   // to be outside of the device lock as we disable our downstream devices,
   // but we don't want any new devices to be able to plug into us as we do so.
   {
     Guard<Mutex> guard{&dev_lock_};
     disabled_ = true;
+
+    // Start by disabling all of our downstream devices.  This should prevent
+    // the from bothering us moving forward.  Do not hold the device lock while
+    // we do this.
+    guard.CallUnlocked([this]() { PcieUpstreamNode::DisableDownstream(); });
+
+    // Enter the device lock again and finish shooting ourselves in the head.
+
+    // Disable the device portion of ourselves.
+    PcieDevice::DisableLocked();
+
+    // Close all of our IO windows at the HW level and update the internal
+    // bookkeeping to indicate that they are closed.
+    cfg_->Write(PciConfig::kIoBase, 0xF0);
+    cfg_->Write(PciConfig::kIoLimit, 0);
+    cfg_->Write(PciConfig::kIoBaseUpper, 0);
+    cfg_->Write(PciConfig::kIoLimitUpper, 0);
+
+    cfg_->Write(PciConfig::kMemoryBase, 0xFFF0);
+    cfg_->Write(PciConfig::kMemoryLimit, 0);
+
+    cfg_->Write(PciConfig::kPrefetchableMemoryBase, 0xFFF0);
+    cfg_->Write(PciConfig::kPrefetchableMemoryLimit, 0);
+    cfg_->Write(PciConfig::kPrefetchableMemoryBaseUpper, 0);
+    cfg_->Write(PciConfig::kPrefetchableMemoryLimitUpper, 0);
   }
 
-  // Start by disabling all of our downstream devices.  This should prevent
-  // the from bothering us moving forward.  Do not hold the device lock while
-  // we do this.
-  PcieUpstreamNode::DisableDownstream();
-
-  // Enter the device lock again and finish shooting ourselves in the head.
-  Guard<Mutex> guard{&dev_lock_};
-
-  // Disable the device portion of ourselves.
-  PcieDevice::DisableLocked();
-
-  // Close all of our IO windows at the HW level and update the internal
-  // bookkeeping to indicate that they are closed.
-  cfg_->Write(PciConfig::kIoBase, 0xF0);
-  cfg_->Write(PciConfig::kIoLimit, 0);
-  cfg_->Write(PciConfig::kIoBaseUpper, 0);
-  cfg_->Write(PciConfig::kIoLimitUpper, 0);
-
-  cfg_->Write(PciConfig::kMemoryBase, 0xFFF0);
-  cfg_->Write(PciConfig::kMemoryLimit, 0);
-
-  cfg_->Write(PciConfig::kPrefetchableMemoryBase, 0xFFF0);
-  cfg_->Write(PciConfig::kPrefetchableMemoryLimit, 0);
-  cfg_->Write(PciConfig::kPrefetchableMemoryBaseUpper, 0);
-  cfg_->Write(PciConfig::kPrefetchableMemoryLimitUpper, 0);
-
+  Guard<Mutex> _{&bridge_lock_};
   pf_mem_limit_ = mem_limit_ = io_limit_ = 0u;
   pf_mem_base_ = mem_base_ = io_base_ = 1u;
 

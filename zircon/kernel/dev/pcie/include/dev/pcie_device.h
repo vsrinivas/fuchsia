@@ -105,7 +105,6 @@ class PcieDevice {
    * @return A zx_status_t indicating success or failure of the operation.
    */
   zx_status_t EnableBusMaster(bool enabled) __TA_EXCLUDES(dev_lock_);
-  zx_status_t EnableBusMasterLocked(bool enabled) __TA_REQUIRES(dev_lock_);
 
   /*
    * Enable or disable PIO access in a device's configuration.
@@ -304,20 +303,20 @@ class PcieDevice {
   uint bar_count() const { return bar_count_; }
   uint8_t legacy_irq_pin() const { return irq_.legacy.pin; }
   const CapabilityList& capabilities() const { return caps_.detected; }
-  const pcie_irq_mode_t& irq_mode() { return irq_.mode; }
+  const pcie_irq_mode_t& irq_mode() const { return irq_.mode; }
   // TODO(cja): This doesn't really make sense in a pcie capability optional world.
   // It is only used by bridge and debug code, so it might make sense to just have those check if
   // the device is pcie first, then use dev->pcie()->devtype().
   pcie_device_type_t pcie_device_type() const {
-    if (pcie_)
+    if (pcie_) {
       return pcie_->devtype();
-    else
-      return PCIE_DEVTYPE_UNKNOWN;
+    }
+    return PCIE_DEVTYPE_UNKNOWN;
   }
 
   // TODO(johngro) : make these protected.  They are currently only visible
   // because of debug code.
-  Lock<Mutex>* dev_lock() { return &dev_lock_; }
+  Lock<Mutex>* dev_lock() __TA_RETURN_CAPABILITY(dev_lock_) { return &dev_lock_; }
 
   // Dump some information about the device
   virtual void Dump() const;
@@ -332,19 +331,19 @@ class PcieDevice {
 
   // Initialization and probing.
   zx_status_t Init(PcieUpstreamNode& upstream);
-  zx_status_t InitLocked(PcieUpstreamNode& upstream);
-  zx_status_t ProbeBarsLocked();
-  zx_status_t ProbeBarLocked(uint bar_id);
-  zx_status_t ProbeCapabilitiesLocked();
-  zx_status_t ParseStdCapabilitiesLocked();
-  zx_status_t ParseExtCapabilitiesLocked();
-  zx_status_t MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream);
-  zx_status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream);
+  zx_status_t InitLocked(PcieUpstreamNode& upstream) __TA_REQUIRES(dev_lock_);
+  zx_status_t ProbeBarsLocked() __TA_REQUIRES(dev_lock_);
+  zx_status_t ProbeBarLocked(uint bar_id) __TA_REQUIRES(dev_lock_);
+  zx_status_t ProbeCapabilitiesLocked() __TA_REQUIRES(dev_lock_);
+  zx_status_t ParseStdCapabilitiesLocked() __TA_REQUIRES(dev_lock_);
+  zx_status_t ParseExtCapabilitiesLocked() __TA_REQUIRES(dev_lock_);
+  zx_status_t MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream) __TA_REQUIRES(dev_lock_);
+  zx_status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) __TA_REQUIRES(dev_lock_);
 
   // BAR allocation
   virtual zx_status_t AllocateBars();
-  zx_status_t AllocateBarsLocked();
-  zx_status_t AllocateBarLocked(pcie_bar_info_t& info);
+  zx_status_t AllocateBarsLocked() __TA_REQUIRES(dev_lock_);
+  zx_status_t AllocateBarLocked(pcie_bar_info_t& info) __TA_REQUIRES(dev_lock_);
 
   // Disable a device, and anything downstream of it.  The device will
   // continue to enumerate, but users will only be able to access config (and
