@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <getopt.h>
+#include <lib/fit/defer.h>
 
 #include <ctime>
 
-#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/log-sink.h>
@@ -87,7 +87,7 @@ Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* error
   };
   Runner::Options options;
 
-  auto reset = fbl::MakeAutoCall([]() { optind = 0; });
+  auto reset = fit::defer([]() { optind = 0; });
 
   int c = -1;
   int option_index = -1;

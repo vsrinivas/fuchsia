@@ -46,7 +46,7 @@ class PartitionMappingTest : public zxtest::Test {
     struct dirent* de;
     DIR* dir = opendir(DEV_BLOCK);
     ASSERT_NOT_NULL(dir);
-    auto cleanup = fbl::MakeAutoCall([&dir]() { closedir(dir); });
+    auto cleanup = fit::defer([&dir]() { closedir(dir); });
 
     while ((de = readdir(dir)) != nullptr) {
       if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {

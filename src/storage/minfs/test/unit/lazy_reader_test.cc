@@ -5,9 +5,9 @@
 #include "src/storage/minfs/lazy_reader.h"
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 
 #include <block-client/cpp/fake-device.h>
-#include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/minfs/bcache.h"
@@ -78,7 +78,7 @@ TEST(LazyReaderTest, ReadSucceeds) {
   // Now read the data back using the lazy_reader.
   ResizeableVmoBuffer buffer(kMinfsBlockSize);
   ASSERT_EQ(buffer.Attach("LazyReaderTest", bcache.get()), ZX_OK);
-  auto detach = fbl::MakeAutoCall([&]() { buffer.Detach(bcache.get()); });
+  auto detach = fit::defer([&]() { buffer.Detach(bcache.get()); });
   ASSERT_EQ(buffer.Grow(kBlockCount), ZX_OK);
   MappedFileReader reader(bcache.get(), &mapper, &buffer);
   LazyReader lazy_reader;
@@ -96,7 +96,7 @@ TEST(LazyReaderTest, UnmappedBlockIsZeroed) {
 
   ResizeableVmoBuffer buffer(kMinfsBlockSize);
   ASSERT_EQ(buffer.Attach("LazyReaderTest", bcache.get()), ZX_OK);
-  auto detach = fbl::MakeAutoCall([&]() { buffer.Detach(bcache.get()); });
+  auto detach = fit::defer([&]() { buffer.Detach(bcache.get()); });
   *static_cast<uint8_t*>(buffer.Data(0)) = 0xab;
   Mapper mapper;
   MappedFileReader reader(bcache.get(), &mapper, &buffer);

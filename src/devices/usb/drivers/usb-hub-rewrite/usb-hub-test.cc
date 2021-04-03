@@ -15,6 +15,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/synchronous-executor/executor.h>
@@ -39,7 +40,6 @@
 
 #include <ddktl/device.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
@@ -84,7 +84,7 @@ class UsbHarness : public zxtest::Test {
   auto StartDispatching() {
     dispatching_ = true;
     device_->GetStateChangeQueue().StartThread(fit::bind_member(this, &UsbHarness::DispatchThread));
-    return fbl::MakeAutoCall([this]() { StopDispatching(); });
+    return fit::defer([this]() { StopDispatching(); });
   }
 
   void SetConnectCallback(fit::function<zx_status_t(uint32_t port, usb_speed_t speed)> callback) {

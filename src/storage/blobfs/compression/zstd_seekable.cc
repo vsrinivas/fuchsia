@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/compression/zstd_seekable.h"
 
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -11,7 +12,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <zstd/zstd.h>
 #include <zstd/zstd_seekable.h>
@@ -138,7 +138,7 @@ zx_status_t ZSTDSeekableDecompressor::DecompressArchive(void* uncompressed_buf,
                                                         const void* compressed_buf,
                                                         size_t compressed_size, size_t offset) {
   ZSTD_seekable* stream = ZSTD_seekable_create();
-  auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_seekable_free(stream); });
+  auto cleanup = fit::defer([&stream] { ZSTD_seekable_free(stream); });
   size_t zstd_return = ZSTD_seekable_initBuff(stream, compressed_buf, compressed_size);
   if (ZSTD_isError(zstd_return)) {
     FX_LOGS(ERROR) << "[zstd-seekable] Failed to initialize seekable dstream: "

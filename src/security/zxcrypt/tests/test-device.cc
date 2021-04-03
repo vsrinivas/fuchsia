@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
@@ -31,7 +32,6 @@
 #include <string_view>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
@@ -222,7 +222,7 @@ int TestDevice::WakeThread(void* arg) {
   fbl::AutoLock lock(&device->lock_);
 
   // Always send a wake-up call; even if we failed to go to sleep.
-  auto cleanup = fbl::MakeAutoCall([&] { ramdisk_wake(device->ramdisk_); });
+  auto cleanup = fit::defer([&] { ramdisk_wake(device->ramdisk_); });
 
   // Loop until timeout, |wake_after_| txns received, or error getting counts
   ramdisk_block_write_counts_t counts;

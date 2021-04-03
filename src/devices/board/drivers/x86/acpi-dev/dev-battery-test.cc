@@ -7,9 +7,9 @@
 #include <dirent.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/fit/defer.h>
 #include <zircon/syscalls/port.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #define SIGNAL_WAIT_TIMEOUT (5000u)
@@ -103,7 +103,7 @@ void verify_battery_change_signal(uint32_t level, uint32_t state) {
   pkg.Type = ACPI_TYPE_PACKAGE;
 
   void* buf = ACPI_ALLOCATE_ZEROED((ACPI_SIZE)(sizeof(pkg)));
-  const auto cleanup = fbl::MakeAutoCall([buf]() { ACPI_FREE(buf); });
+  const auto cleanup = fit::defer([buf]() { ACPI_FREE(buf); });
   dev->bst_buffer.Pointer = &pkg;
 
   // test simulates charge to 50

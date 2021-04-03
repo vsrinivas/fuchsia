@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
@@ -33,7 +34,6 @@
 
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "util.h"
@@ -507,7 +507,7 @@ int thread_suspend_test_fn(void* arg) {
 TEST(ZxTestCase, ThreadSuspend) {
   zx_handle_t event_wait;
   ASSERT_OK(zx_event_create(0, &event_wait));
-  auto ac = fbl::MakeAutoCall([event_wait] { ASSERT_OK(zx_handle_close(event_wait)); });
+  auto cleanup = fit::defer([event_wait] { ASSERT_OK(zx_handle_close(event_wait)); });
 
   // We can't use syscalls to create the thread here because we are running and exiting the
   // thread. Going through the C APIs is the easiest way to ensure that ASAN and other

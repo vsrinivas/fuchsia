@@ -14,6 +14,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <string.h>
@@ -23,7 +24,6 @@
 #include <array>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 namespace sysconfig {
 
@@ -70,7 +70,7 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
   if (dir == nullptr) {
     return ZX_ERR_IO;
   }
-  const auto closer = fbl::MakeAutoCall([&dir]() { closedir(dir); });
+  const auto closer = fit::defer([&dir]() { closedir(dir); });
 
   auto watch_dir_event_cb = [](int dirfd, int event, const char* filename, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {

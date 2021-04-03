@@ -10,13 +10,13 @@
 #endif
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 
 #include <atomic>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
 
-#include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
 
 #include "src/lib/storage/vfs/cpp/connection.h"
@@ -79,7 +79,8 @@ class ManagedVfs : public Vfs {
       this};
   ShutdownCallback shutdown_handler_ __TA_GUARDED(lock_);
 
-  std::unordered_map<internal::Connection*, std::shared_ptr<fbl::AutoCall<fit::callback<void()>>>>
+  std::unordered_map<internal::Connection*,
+                     std::shared_ptr<fit::deferred_action<fit::callback<void()>>>>
       closing_connections_ __TA_GUARDED(lock_);
 };
 

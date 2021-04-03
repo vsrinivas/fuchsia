@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fit/defer.h>
 #include <poll.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 #include "generated-source.h"
 #include "noise-source.h"
@@ -390,7 +390,7 @@ int main(int argc, const char** argv) {
   uint32_t channels = DEFAULT_CHANNELS;
   uint32_t active = DEFAULT_ACTIVE_CHANNELS;
   Command cmd = Command::INVALID;
-  auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
+  auto print_usage = fit::defer([prog_name = argv[0]]() { usage(prog_name); });
   int arg = 1;
 
   if (arg >= argc)

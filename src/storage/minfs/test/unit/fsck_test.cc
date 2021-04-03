@@ -5,6 +5,7 @@
 #include "src/storage/minfs/fsck.h"
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -271,7 +272,7 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
     fbl::RefPtr<fs::Vnode> child_;
     ASSERT_EQ(root->Create("foo", 0, &child_), ZX_OK);
     auto child = fbl::RefPtr<VnodeMinfs>::Downcast(std::move(child_));
-    auto close_child = fbl::MakeAutoCall([child]() { child->Close(); });
+    auto close_child = fit::defer([child]() { child->Close(); });
     ino = child->GetIno();
     ASSERT_GT(kMinfsInodesPerBlock, ino);
 

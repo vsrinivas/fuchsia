@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -12,7 +13,6 @@
 #include <iterator>
 #include <limits>
 
-#include <fbl/auto_call.h>
 #include <fbl/futex.h>
 #include <zxtest/zxtest.h>
 
@@ -108,7 +108,7 @@ TEST(FutexOwnershipTestCase, Wait) {
   // If things go wrong, and we bail out early, do out best to shut down all
   // of the threads we may have started before unwinding our stack state out
   // from under them.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
     external.Stop();
     thread1.Stop();
@@ -347,7 +347,7 @@ static void WakeOwnershipTest() {
   // If things go wrong, and we bail out early, do out best to shut down all
   // of the threads we may have started before unwinding our stack state out
   // from under them.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
     for (auto& waiter : WAITERS) {
       waiter.thread.Stop();
@@ -520,7 +520,7 @@ static void WakeZeroOwnershipTest() {
   // If things go wrong, and we bail out early, do out best to shut down all
   // of the threads we may have started before unwinding our stack state out
   // from under them.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
     thread1.Stop();
   });
@@ -622,7 +622,7 @@ TEST(FutexOwnershipTestCase, Requeue) {
   // If things go wrong, and we bail out early, do out best to shut down all
   // of the threads we may have started before unwinding our stack state out
   // from under them.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&wake_futex, std::numeric_limits<uint32_t>::max());
     zx_futex_wake(&requeue_futex, std::numeric_limits<uint32_t>::max());
     external.Stop();
@@ -932,7 +932,7 @@ TEST(FutexOwnershipTestCase, OwnerExit) {
 
   // If things go wrong, and we bail out early, do out best to shut down all
   // of the threads.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
     the_owner.Stop();
     the_waiter.Stop();
@@ -1077,7 +1077,7 @@ TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
 
   // Success or fail, make sure we clean everything up in the proper order at
   // the end of the test.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&futex1, std::numeric_limits<uint32_t>::max());
     zx_futex_wake(&futex2, std::numeric_limits<uint32_t>::max());
     the_waiter.Stop();

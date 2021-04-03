@@ -7,6 +7,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/if_ether.h>
@@ -21,7 +22,6 @@
 #include <latch>
 #include <thread>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
@@ -2402,7 +2402,7 @@ class IOMethod {
 #if !defined(__Fuchsia__)
 // disableSIGPIPE is typically invoked on Linux, in cases where the caller
 // expects to perform stream socket writes on an unconnected socket. In such
-// cases, SIGPIPE is expected on Linux. This returns a fbl::AutoCall object
+// cases, SIGPIPE is expected on Linux. This returns a fit::deferred_action object
 // whose destructor would undo the signal masking performed here.
 //
 // send{,to,msg} support the MSG_NOSIGNAL flag to suppress this behaviour, but
@@ -2415,7 +2415,7 @@ auto disableSIGPIPE(bool isWrite) {
   if (isWrite) {
     EXPECT_EQ(sigaction(SIGPIPE, &act, &oldact), 0) << strerror(errno);
   }
-  return fbl::MakeAutoCall([=]() {
+  return fit::defer([=]() {
     if (isWrite) {
       EXPECT_EQ(sigaction(SIGPIPE, &oldact, nullptr), 0) << strerror(errno);
     }

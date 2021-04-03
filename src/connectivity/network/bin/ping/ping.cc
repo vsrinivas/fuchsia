@@ -4,6 +4,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <netdb.h>
 #include <netinet/icmp6.h>
 #include <netinet/in.h>
@@ -20,7 +21,6 @@
 #include <cstring>
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 
 #define USEC_TO_MSEC(x) (float(x) / 1000.0)
@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "ping: unknown host %s\n", options.host);
     return -1;
   }
-  auto undo = fbl::MakeAutoCall([info]() { freeaddrinfo(info); });
+  auto undo = fit::defer([info]() { freeaddrinfo(info); });
 
   int proto;
   uint8_t type;

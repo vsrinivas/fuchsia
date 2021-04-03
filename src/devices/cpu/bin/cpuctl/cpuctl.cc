@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,8 +27,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-
-#include <fbl/auto_call.h>
 
 #include "performance-domain.h"
 
@@ -114,7 +113,7 @@ zx_status_t list(ListCb cb) {
     return -1;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&dir]() { closedir(dir); });
+  auto cleanup = fit::defer([&dir]() { closedir(dir); });
 
   struct dirent* de = nullptr;
   while ((de = readdir(dir)) != nullptr) {
@@ -274,7 +273,7 @@ void stress(std::vector<std::string> names, const size_t iterations, const uint6
   }
 
   // Put things back the way they were before the test started.
-  std::vector<fbl::AutoCall<std::function<void(void)>>> autoreset;
+  std::vector<fit::deferred_action<std::function<void(void)>>> autoreset;
   for (auto& domain : domains) {
     const auto current_pstate = domain.GetCurrentPerformanceState();
     if (std::get<0>(current_pstate) != ZX_OK) {

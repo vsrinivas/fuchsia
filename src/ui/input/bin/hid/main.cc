@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/event.h>
 #include <limits.h>
 #include <stdio.h>
@@ -26,7 +27,6 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
@@ -185,7 +185,7 @@ static zx_status_t print_hid_status(input_args_t* args) {
       return ZX_ERR_INTERNAL;
     }
   }
-  auto ac = fbl::MakeAutoCall([&dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+  auto cleanup = fit::defer([&dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   mtx_lock(&print_lock);
   printf("hid: %s num reports: %zu\n", args->devpath, dev_desc->rep_count);

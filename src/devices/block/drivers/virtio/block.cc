@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/align.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -17,7 +18,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 
@@ -124,7 +124,7 @@ zx_status_t BlockDevice::Init() {
     zxlogf(ERROR, "cannot alloc blk_req buffers %d", status);
     return status;
   }
-  auto cleanup = fbl::MakeAutoCall([this]() { io_buffer_release(&blk_req_buf_); });
+  auto cleanup = fit::defer([this]() { io_buffer_release(&blk_req_buf_); });
   blk_req_ = static_cast<virtio_blk_req_t*>(io_buffer_virt(&blk_req_buf_));
 
   LTRACEF("allocated blk request at %p, physical address %#" PRIxPTR "\n", blk_req_,
@@ -388,7 +388,7 @@ void BlockDevice::SignalWorker(block_txn_t* txn) {
 }
 
 void BlockDevice::WorkerThread() {
-  auto cleanup = fbl::MakeAutoCall([this]() { CleanupPendingTxns(); });
+  auto cleanup = fit::defer([this]() { CleanupPendingTxns(); });
   block_txn_t* txn = nullptr;
   for (;;) {
     if (worker_shutdown_.load()) {

@@ -8,12 +8,12 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/defer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <string.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 #include <soc/aml-common/aml-g12-saradc.h>
 
@@ -110,7 +110,7 @@ void AmlThermistor::DdkInit(ddk::InitTxn txn) {
 
   saradc_->HwInit();
 
-  auto on_error = fbl::MakeAutoCall([this]() { saradc_->Shutdown(); });
+  auto on_error = fit::defer([this]() { saradc_->Shutdown(); });
 
   NtcChannel ntc_channels[kMaxNtcChannels];
   size_t actual;

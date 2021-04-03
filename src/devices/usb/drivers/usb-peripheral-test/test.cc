@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +12,6 @@
 
 #include <thread>
 
-#include <fbl/auto_call.h>
 #include <usbhost/usbhost.h>
 #include <zxtest/zxtest.h>
 
@@ -240,7 +240,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "usb_host_context failed\n");
     return -1;
   }
-  auto cleanup = fbl::MakeAutoCall([&]() { usb_host_cleanup(context); });
+  auto cleanup = fit::defer([&]() { usb_host_cleanup(context); });
 
   auto ret =
       usb_host_load(context, usb_device_added, usb_device_removed, usb_discovery_done, nullptr);

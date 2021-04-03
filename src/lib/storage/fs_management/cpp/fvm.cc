@@ -17,6 +17,7 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
@@ -29,7 +30,6 @@
 #include <memory>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
@@ -361,7 +361,7 @@ zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out)
 // Takes ownership of |dir|.
 int open_partition_impl(DIR* dir, const char* out_path_base, const uint8_t* uniqueGUID,
                         const uint8_t* typeGUID, zx_duration_t timeout, char* out_path) {
-  auto cleanup = fbl::MakeAutoCall([&]() { closedir(dir); });
+  auto cleanup = fit::defer([&]() { closedir(dir); });
 
   typedef struct {
     const uint8_t* guid;

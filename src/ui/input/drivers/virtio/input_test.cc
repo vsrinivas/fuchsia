@@ -4,8 +4,8 @@
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/defer.h>
 
-#include <fbl/auto_call.h>
 #include <hid/boot.h>
 #include <virtio/input.h>
 #include <zxtest/zxtest.h>
@@ -139,7 +139,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   auto parse_res = hid::ParseReportDescriptor(report_descriptor, report_descriptor_size, &dev_desc);
   ASSERT_EQ(parse_res, hid::ParseResult::kParseOk);
   ASSERT_EQ(1, dev_desc->rep_count);
-  auto free_descriptor = fbl::MakeAutoCall([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+  auto free_descriptor = fit::defer([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Mouse mouse;
   ASSERT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
@@ -305,7 +305,7 @@ TEST_F(VirtioInputTest, KeyboardTest) {
   auto parse_res = hid::ParseReportDescriptor(report_descriptor, report_descriptor_size, &dev_desc);
   ASSERT_EQ(parse_res, hid::ParseResult::kParseOk);
   ASSERT_EQ(1, dev_desc->rep_count);
-  auto free_descriptor = fbl::MakeAutoCall([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+  auto free_descriptor = fit::defer([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Keyboard keyboard;
   ASSERT_EQ(hid_input_report::ParseResult::kOk,

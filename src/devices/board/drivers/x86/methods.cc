@@ -5,6 +5,7 @@
 #include "methods.h"
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,7 +13,6 @@
 
 #include <acpica/acpi.h>
 #include <acpica/acuuid.h>
-#include <fbl/auto_call.h>
 
 #include "errors.h"
 #include "util.h"
@@ -121,7 +121,7 @@ zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj, const char* uuid_str, uint64_t re
   }
 
   // Ensure we free ACPI's memory allocation for the _OSC call.
-  auto acpi_object_free = fbl::MakeAutoCall([&]() { AcpiOsFree(out.Pointer); });
+  auto acpi_object_free = fit::defer([&]() { AcpiOsFree(out.Pointer); });
   ACPI_OBJECT* out_obj = static_cast<ACPI_OBJECT*>(out.Pointer);
   if (out_obj->Buffer.Length > dword_length) {
     return ZX_ERR_BUFFER_TOO_SMALL;

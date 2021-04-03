@@ -4,12 +4,11 @@
 
 #include "src/camera/drivers/controller/pipeline_manager.h"
 
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-
-#include <fbl/auto_call.h>
 
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
@@ -122,7 +121,7 @@ void PipelineManager::ConfigureStreamPipeline(
     TRACE_DURATION("camera", "PipelineManager::ConfigureStreamPipeline.task");
     TRACE_FLOW_END("camera", "post_configure_stream_pipeline_task", nonce);
     zx_status_t status = ZX_OK;
-    auto cleanup = fbl::MakeAutoCall([this, &stream, &status]() {
+    auto cleanup = fit::defer([this, &stream, &status]() {
       TaskComplete();
       if (status != ZX_OK) {
         stream.Close(status);
@@ -132,7 +131,7 @@ void PipelineManager::ConfigureStreamPipeline(
     ProcessNode* graph_node_to_be_appended = nullptr;
     camera::InternalConfigNode internal_graph_node_to_be_appended;
     std::unique_ptr<camera::ProcessNode> graph_head;
-    auto shutdown_graph_on_error = fbl::MakeAutoCall([&] {
+    auto shutdown_graph_on_error = fit::defer([&] {
       if (graph_head) {
         graph_head->OnShutdown([] {});
       }
@@ -289,7 +288,7 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
 
     // Check if global shutdown was requested and it was complete before exiting
     // this function.
-    auto shutdown_cleanup = fbl::MakeAutoCall([this]() {
+    auto shutdown_cleanup = fit::defer([this]() {
       if (output_nodes_info_.empty() && global_shutdown_requested_) {
         // Signal for pipeline manager shutdown complete.
         shutdown_event_.signal(0, kPipelineManagerSignalExitDone);

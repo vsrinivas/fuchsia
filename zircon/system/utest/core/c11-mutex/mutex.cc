@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
@@ -17,7 +18,6 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -115,7 +115,7 @@ TEST(C11MutexTest, TryMutexMultiThreadedContention) TA_NO_THREAD_SAFETY_ANALYSIS
   bool lock_held = false;
   ASSERT_EQ(thrd_success, mtx_init(&lock, mtx_plain));
   args.lock = &lock;
-  auto cleanup_mutex = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+  auto cleanup_mutex = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
     if (lock_held) {
       mtx_unlock(&lock);
     }
@@ -153,7 +153,7 @@ TEST(C11MutexTest, StaticInitalizerSameBytesAsAuto) {
   mtx_t auto_mutex;
   memset(&auto_mutex, 0xae, sizeof(auto_mutex));
   mtx_init(&auto_mutex, mtx_plain);
-  auto cleanup_mutex = fbl::MakeAutoCall([&]() { mtx_destroy(&auto_mutex); });
+  auto cleanup_mutex = fit::defer([&]() { mtx_destroy(&auto_mutex); });
 
   EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&static_mutex),
                   reinterpret_cast<uint8_t*>(&auto_mutex), sizeof(mtx_t),
@@ -181,7 +181,7 @@ TEST(C11MutexTest, TimeoutElapsed) {
   // NOTE: This will cause flakes if more than one test is doing this in the same process.
   zx::clock prev_clock;
   ASSERT_OK(zx_utc_reference_swap(local_utc_clock.release(), prev_clock.reset_and_get_address()));
-  auto reinstall_clock = fbl::MakeAutoCall([&]() {
+  auto reinstall_clock = fit::defer([&]() {
     ASSERT_OK(zx_utc_reference_swap(prev_clock.release(), local_utc_clock.reset_and_get_address()));
   });
 
@@ -215,7 +215,7 @@ TEST(C11MutexTest, TimeoutElapsed) {
 
   ThreadTimeoutArgs args;
   ASSERT_EQ(thrd_success, mtx_init(&args.lock, mtx_plain));
-  auto cleanup_mutex = fbl::MakeAutoCall([&]() { mtx_destroy(&args.lock); });
+  auto cleanup_mutex = fit::defer([&]() { mtx_destroy(&args.lock); });
   ASSERT_OK(zx::event::create(0, &args.start_event));
   ASSERT_OK(zx::event::create(0, &args.done_event));
 
@@ -223,7 +223,7 @@ TEST(C11MutexTest, TimeoutElapsed) {
   ASSERT_EQ(thrd_create(&helper, TestTimeoutHelper, &args), thrd_success);
 
   cleanup_mutex.cancel();
-  auto cleanup_thread = fbl::MakeAutoCall([&]() {
+  auto cleanup_thread = fit::defer([&]() {
     args.done_event.signal(0, ZX_EVENT_SIGNALED);
     thrd_join(helper, kNoReturnValue);
     mtx_destroy(&args.lock);

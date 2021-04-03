@@ -11,6 +11,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/edid/edid.h>
+#include <lib/fit/defer.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 #include <math.h>
@@ -30,7 +31,6 @@
 #include <vector>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
@@ -135,7 +135,7 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
   }
 
   auto release_image =
-      fbl::MakeAutoCall([this, &dc_image]() { controller_->dc()->ReleaseImage(&dc_image); });
+      fit::defer([this, &dc_image]() { controller_->dc()->ReleaseImage(&dc_image); });
   zx::vmo vmo;
   uint32_t stride = 0;
   if (is_vc_) {
@@ -833,7 +833,7 @@ void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t
   zx_status_t status = controller_->dc_capture()->ImportImageForCapture(
       collection.channel().get(), index, &capture_image.handle);
   if (status == ZX_OK) {
-    auto release_image = fbl::MakeAutoCall([this, &capture_image]() {
+    auto release_image = fit::defer([this, &capture_image]() {
       controller_->dc_capture()->ReleaseCapture(capture_image.handle);
     });
 
@@ -1686,7 +1686,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     return ZX_ERR_BAD_STATE;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     if (cookie) {
       cookie_sequence_--;
     }

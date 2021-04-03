@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include "src/storage/minfs/test/unit/journal_integration_fixture.h"
 
 namespace minfs {
@@ -19,7 +21,7 @@ class TruncateTest : public JournalIntegrationFixture {
     ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
     fbl::RefPtr<fs::Vnode> foo;
     ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
-    auto close = fbl::MakeAutoCall([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
+    auto close = fit::defer([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
     std::vector<uint8_t> buf(kMinfsBlockSize + 10, kFill);
     size_t written;
     ASSERT_EQ(foo->Write(buf.data(), buf.size(), 0, &written), ZX_OK);
@@ -45,7 +47,7 @@ TEST_F(TruncateTest, EnsureOldDataWhenTransactionFails) {
   auto validated_options = foo->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
   ASSERT_EQ(foo->Open(validated_options.value(), &foo), ZX_OK);
-  auto close = fbl::MakeAutoCall([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
+  auto close = fit::defer([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
 
   // Read the file.
   std::vector<uint8_t> buf(kMinfsBlockSize + 10);

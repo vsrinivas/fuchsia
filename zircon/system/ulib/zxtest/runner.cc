@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/log-sink.h>
@@ -96,7 +97,7 @@ TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::Strin
 
 int Runner::Run(const Runner::Options& options) {
   options_ = &options;
-  auto reset_options = fbl::MakeAutoCall([this]() { options_ = nullptr; });
+  auto reset_options = fit::defer([this]() { options_ = nullptr; });
   summary_.total_iterations = options.repeat;
   EnforceOptions(options);
 
@@ -144,7 +145,7 @@ int Runner::Run(const Runner::Options& options) {
 
 void Runner::List(const Runner::Options& options) {
   options_ = &options;
-  auto reset_options = fbl::MakeAutoCall([this]() { options_ = nullptr; });
+  auto reset_options = fit::defer([this]() { options_ = nullptr; });
   summary_.total_iterations = options.repeat;
   EnforceOptions(options);
 

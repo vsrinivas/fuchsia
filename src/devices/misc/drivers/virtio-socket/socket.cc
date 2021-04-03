@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>
+#include <lib/fit/defer.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -22,7 +23,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <virtio/virtio.h>
@@ -248,7 +248,7 @@ zx_status_t SocketDevice::Init() {
   DriverFeatureAck(VIRTIO_F_VERSION_1);
 
   // Plan to clean up unless everything goes right.
-  auto cleanup = fbl::MakeAutoCall([this]() TA_NO_THREAD_SAFETY_ANALYSIS { ReleaseLocked(); });
+  auto cleanup = fit::defer([this]() TA_NO_THREAD_SAFETY_ANALYSIS { ReleaseLocked(); });
 
   UpdateCidLocked();
 
@@ -1031,7 +1031,7 @@ bool SocketDevice::Connection::SocketTxPending() {
 
 bool SocketDevice::Connection::DoVmoTx(bool force_credit_request, TxIoBufferRing& tx) {
   bool needs_kick = false;
-  auto auto_kick = fbl::MakeAutoCall([&needs_kick, &tx]() {
+  auto auto_kick = fit::defer([&needs_kick, &tx]() {
     if (needs_kick) {
       tx.Kick();
     }
@@ -1063,7 +1063,7 @@ bool SocketDevice::Connection::DoVmoTx(bool force_credit_request, TxIoBufferRing
 zx_status_t SocketDevice::Connection::DoSocketTx(bool force_credit_request, TxIoBufferRing& tx,
                                                  async_dispatcher_t* dispatcher) {
   bool needs_kick = false;
-  auto auto_kick = fbl::MakeAutoCall([&needs_kick, &tx]() {
+  auto auto_kick = fit::defer([&needs_kick, &tx]() {
     if (needs_kick) {
       tx.Kick();
     }

@@ -10,11 +10,11 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sdmmc/hw.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"
@@ -714,7 +714,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
     dut.SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
     EXPECT_OK(dut.AddDevice());
 
-    auto stop_threads = fbl::MakeAutoCall([&]() { dut.StopWorkerThread(); });
+    auto stop_threads = fit::defer([&]() { dut.StopWorkerThread(); });
 
     ddk::BlockImplProtocolClient user = GetBlockClient(USER_DATA_PARTITION);
     ASSERT_TRUE(user.is_valid());

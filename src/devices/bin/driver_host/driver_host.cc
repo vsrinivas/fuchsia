@@ -729,7 +729,7 @@ int main(int argc, char** argv) {
       // This is not a fatal error.
     }
   }
-  auto stop_tracing = fbl::MakeAutoCall([]() { stop_trace_provider(); });
+  auto stop_tracing = fit::defer([]() { stop_trace_provider(); });
 
   status = ctx.SetupRootDevcoordinatorConnection(std::move(root_conn_channel));
   if (status != ZX_OK) {

@@ -398,7 +398,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
                                          const char* proxy_args, zx::vmo inspect,
                                          zx::channel client_remote) {
   inspect_.DeviceAddStats().Update();
-  auto mark_dead = fbl::MakeAutoCall([&dev]() {
+  auto mark_dead = fit::defer([&dev]() {
     if (dev) {
       dev->set_flag(DEV_FLAG_DEAD);
     }

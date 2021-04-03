@@ -4,6 +4,7 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fit/defer.h>
 #include <vk_dispatch_table_helper.h>
 #include <vk_layer_data.h>
 #include <vk_layer_extension_utils.h>
@@ -13,7 +14,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <sdk/lib/syslog/cpp/macros.h>
 #include <vulkan/vk_layer.h>
 
@@ -194,7 +194,7 @@ class ImageCompactor {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    auto cleanup = fbl::MakeAutoCall([this, pAllocator] { Cleanup(pAllocator); });
+    auto cleanup = fit::defer([this, pAllocator] { Cleanup(pAllocator); });
 
     // Create pipeline layout that will be used by all shaders.
     VkResult result =
@@ -309,7 +309,7 @@ class ImageCompactor {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    auto cleanup_collection = fbl::MakeAutoCall([this, collection, pAllocator] {
+    auto cleanup_collection = fit::defer([this, collection, pAllocator] {
       dispatch_->DestroyBufferCollectionFUCHSIA(device_, collection, pAllocator);
     });
 
@@ -370,10 +370,9 @@ class ImageCompactor {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    auto cleanup_collection_for_buffer =
-        fbl::MakeAutoCall([this, collection_for_buffer, pAllocator] {
-          dispatch_->DestroyBufferCollectionFUCHSIA(device_, collection_for_buffer, pAllocator);
-        });
+    auto cleanup_collection_for_buffer = fit::defer([this, collection_for_buffer, pAllocator] {
+      dispatch_->DestroyBufferCollectionFUCHSIA(device_, collection_for_buffer, pAllocator);
+    });
 
     VkBufferCreateInfo buffer_create_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -467,7 +466,7 @@ class ImageCompactor {
       return result;
     }
 
-    auto cleanup_buffer = fbl::MakeAutoCall(
+    auto cleanup_buffer = fit::defer(
         [this, buffer, pAllocator] { dispatch_->DestroyBuffer(device_, buffer, pAllocator); });
 
     // Create memory allocation by importing the sysmem collection.
@@ -490,7 +489,7 @@ class ImageCompactor {
       return result;
     }
 
-    auto cleanup_buffer_memory = fbl::MakeAutoCall([this, buffer_memory, pAllocator] {
+    auto cleanup_buffer_memory = fit::defer([this, buffer_memory, pAllocator] {
       dispatch_->FreeMemory(device_, buffer_memory, pAllocator);
     });
 
@@ -501,7 +500,7 @@ class ImageCompactor {
       return result;
     }
 
-    auto cleanup_aux_buffer = fbl::MakeAutoCall([this, aux_buffer, pAllocator] {
+    auto cleanup_aux_buffer = fit::defer([this, aux_buffer, pAllocator] {
       dispatch_->DestroyBuffer(device_, aux_buffer, pAllocator);
     });
 
@@ -515,7 +514,7 @@ class ImageCompactor {
       return result;
     }
 
-    auto cleanup_aux_buffer_memory = fbl::MakeAutoCall([this, aux_buffer_memory, pAllocator] {
+    auto cleanup_aux_buffer_memory = fit::defer([this, aux_buffer_memory, pAllocator] {
       dispatch_->FreeMemory(device_, aux_buffer_memory, pAllocator);
     });
 
@@ -527,7 +526,7 @@ class ImageCompactor {
     *reinterpret_cast<uint32_t*>(aux_buffer_data) =
         buffer_collection_info.settings.buffer_settings.size_bytes;
 
-    auto cleanup_aux_buffer_data = fbl::MakeAutoCall(
+    auto cleanup_aux_buffer_data = fit::defer(
         [this, aux_buffer_memory] { dispatch_->UnmapMemory(device_, aux_buffer_memory); });
 
     // Create image after successfully initializing extra state.
@@ -930,7 +929,7 @@ class ImageCompactor {
       return result;
     }
 
-    auto cleanup_memory = fbl::MakeAutoCall(
+    auto cleanup_memory = fit::defer(
         [this, pMemory, pAllocator] { dispatch_->FreeMemory(device_, *pMemory, pAllocator); });
 
     result = dispatch_->BindBufferMemory(device_, buffer, *pMemory, 0);

@@ -4,13 +4,12 @@
 
 #include "src/camera/drivers/controller/stream_protocol.h"
 
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/errors.h>
 
 #include <utility>
-
-#include <fbl/auto_call.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/processing_node.h"
@@ -83,7 +82,7 @@ void StreamImpl::AcknowledgeFrameError() {
 void StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
                                      SetRegionOfInterestCallback callback) {
   zx_status_t status = ZX_OK;
-  auto cleanup = fbl::MakeAutoCall([&]() { callback(status); });
+  auto cleanup = fit::defer([&]() { callback(status); });
 
   auto stream_type = output_node_.configured_streams().at(0);
   auto* parent_node = output_node_.parent_node();
@@ -101,7 +100,7 @@ void StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, floa
 
 void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {
   zx_status_t status = ZX_OK;
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     if (status == ZX_OK) {
       output_node_.set_current_image_format_index(image_format_index);
     }

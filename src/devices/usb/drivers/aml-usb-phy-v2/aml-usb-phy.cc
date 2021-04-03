@@ -11,6 +11,7 @@
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,7 +25,6 @@
 
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/usb/drivers/aml-usb-phy-v2/aml_usb_phy_bind.h"
@@ -167,7 +167,7 @@ void AmlUsbPhy::SetMode(UsbMode mode, SetModeCompletion completion) {
   // Only the irq thread calls |SetMode|, and it should have waited for the
   // previous call to |SetMode| to complete.
   ZX_DEBUG_ASSERT(!set_mode_completion_);
-  auto ac = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     if (completion)
       completion();
   });
@@ -298,7 +298,7 @@ zx_status_t AmlUsbPhy::AddXhciDevice() {
 }
 
 void AmlUsbPhy::RemoveXhciDevice(SetModeCompletion completion) {
-  auto ac = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     if (completion)
       completion();
   });
@@ -327,7 +327,7 @@ zx_status_t AmlUsbPhy::AddDwc2Device() {
 }
 
 void AmlUsbPhy::RemoveDwc2Device(SetModeCompletion completion) {
-  auto ac = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     if (completion)
       completion();
   });

@@ -10,6 +10,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -26,7 +27,6 @@
 #include <string>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/devices/usb/drivers/xhci-rewrite/usb_xhci_bind.h"
 
@@ -1063,7 +1063,7 @@ void UsbXhci::UsbHciControlRequestQueue(Request req) {
   pending_transfer.transfer_ring = &device_state->GetTransferRing();
   pending_transfer.slot = device_state->GetSlot();
   ControlRequestAllocationPhase(&pending_transfer);
-  auto call = fbl::MakeAutoCall([&]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  auto call = fit::defer([&]() __TA_NO_THREAD_SAFETY_ANALYSIS {
     rollback_transaction();
     transaction_lock.release();
     pending_transfer.Complete();
@@ -1335,7 +1335,7 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
   hw_mb();
   return SubmitCommand(trb, std::move(context))
       .then([=](fit::result<TRB*, zx_status_t>& result) {
-        auto free_buffers = fbl::MakeAutoCall([=]() {
+        auto free_buffers = fit::defer([=]() {
           fbl::AutoLock _(&state->transaction_lock());
           state->GetTransferRing(index - 1).Deinit();
           slot_context->set_CONTEXT_ENTRIES(context_entries);
@@ -1846,8 +1846,8 @@ void UsbXhci::ResetController() {
 int UsbXhci::InitThread() {
   ZX_ASSERT(init_txn_.has_value());  // This is set in DdkInit before creating this thread.
 
-  auto call = fbl::MakeAutoCall([=]() { init_txn_->Reply(ZX_ERR_INTERNAL); });
-  auto init_completer = fbl::MakeAutoCall([=]() { sync_completion_signal(&init_complete_); });
+  auto call = fit::defer([=]() { init_txn_->Reply(ZX_ERR_INTERNAL); });
+  auto init_completer = fit::defer([=]() { sync_completion_signal(&init_complete_); });
   // Initialize either the PCI or MMIO structures first
   if (pci_.is_valid()) {
     zx_status_t status = InitPci();

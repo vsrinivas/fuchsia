@@ -5,12 +5,11 @@
 #include "src/devices/block/drivers/block-verity/driver-sealer.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
-
-#include <fbl/auto_call.h>
 
 namespace block_verity {
 
@@ -48,7 +47,7 @@ zx_status_t DriverSealer::StartSealing(void* cookie, sealer_callback callback) {
     zxlogf(ERROR, "zx::vmo::create failed: %s", zx_status_get_string(rc));
     return rc;
   }
-  auto cleanup = fbl::MakeAutoCall([this]() { block_op_vmo_.reset(); });
+  auto cleanup = fit::defer([this]() { block_op_vmo_.reset(); });
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   uintptr_t address;
   if ((rc = zx::vmar::root_self()->map(flags, 0, block_op_vmo_, 0, kVmoSize, &address)) != ZX_OK) {

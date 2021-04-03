@@ -9,13 +9,13 @@
 #include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fit/defer.h>
 #include <limits.h>
 
 #include <map>
 #include <memory>
 
 #include <ddktl/fidl.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/graphics/drivers/misc/goldfish_address_space/goldfish_address_space-bind.h"
@@ -298,7 +298,7 @@ void AddressSpaceChildDriver::AllocateBlock(uint64_t size,
     return;
   }
 
-  auto deallocate_block = fbl::MakeAutoCall([this, offset]() { device_->DeallocateBlock(offset); });
+  auto deallocate_block = fit::defer([this, offset]() { device_->DeallocateBlock(offset); });
 
   zx_paddr_t paddr;
   zx::pmt pmt;

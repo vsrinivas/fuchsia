@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include <variant>
 #include <vector>
 
 #include <ddk/metadata/buttons.h>
-#include <fbl/auto_call.h>
 #include <hid/buttons.h>
 #include <zxtest/zxtest.h>
 
@@ -21,7 +22,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   hid::DeviceDescriptor* dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(descriptor_data, descriptor_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
-  auto free_descriptor = fbl::MakeAutoCall([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+  auto free_descriptor = fit::defer([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::ConsumerControl consumer_control;
   EXPECT_EQ(hid_input_report::ParseResult::kOk,

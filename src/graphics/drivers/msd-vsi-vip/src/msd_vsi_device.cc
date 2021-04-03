@@ -4,10 +4,10 @@
 
 #include "msd_vsi_device.h"
 
+#include <lib/fit/defer.h>
+
 #include <chrono>
 #include <thread>
-
-#include <fbl/auto_call.h>
 
 #include "address_space_layout.h"
 #include "command_buffer.h"
@@ -503,7 +503,7 @@ void MsdVsiDevice::ProcessRequestBacklog() {
       return;
     }
     // Free the interrupt event if submitting fails.
-    auto free_event = fbl::MakeAutoCall([this, event_id]() { FreeInterruptEvent(event_id); });
+    auto free_event = fit::defer([this, event_id]() { FreeInterruptEvent(event_id); });
 
     auto request = std::move(request_backlog_.front());
     request_backlog_.pop_front();
@@ -928,7 +928,7 @@ bool MsdVsiDevice::SubmitCommandBuffer(std::shared_ptr<MsdVsiContext> context,
     return DRETF(false, "Context killed");
   }
 
-  auto kill_context = fbl::MakeAutoCall([context]() { context->Kill(); });
+  auto kill_context = fit::defer([context]() { context->Kill(); });
 
   // Check if we have loaded an address space and enabled the MMU.
   bool initial_address_space_loaded = page_table_arrays_->IsEnabled(register_io());

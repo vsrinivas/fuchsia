@@ -5,6 +5,7 @@
 #include "usb-audio-stream.h"
 
 #include <lib/ddk/device.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 
@@ -672,7 +672,7 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
     ReleaseRingBufferLocked();
   }
 
-  auto cleanup = fbl::MakeAutoCall([&completer, this]() {
+  auto cleanup = fit::defer([&completer, this]() {
     {
       fbl::AutoLock req_lock(&this->lock_);
       this->ReleaseRingBufferLocked();

@@ -6,9 +6,8 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
 #include <lib/trace/event.h>
-
-#include <fbl/auto_call.h>
 
 #include "src/graphics/display/drivers/display/preferred-scanout-image-type.h"
 #include "src/ui/lib/escher/escher.h"
@@ -191,7 +190,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     return false;
   }
 
-  auto collection_closer = fbl::MakeAutoCall([environment, display_collection_id]() {
+  auto collection_closer = fit::defer([environment, display_collection_id]() {
     if ((*environment->display_controller)->ReleaseBufferCollection(display_collection_id) !=
         ZX_OK) {
       FX_LOGS(ERROR) << "ReleaseBufferCollection failed.";
@@ -224,7 +223,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     return false;
   }
 
-  auto vulkan_collection_closer = fbl::MakeAutoCall([environment, import_result]() {
+  auto vulkan_collection_closer = fit::defer([environment, import_result]() {
     environment->vk_device.destroyBufferCollectionFUCHSIA(
         import_result.value, nullptr, environment->escher->device()->dispatch_loader());
   });

@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
@@ -17,7 +18,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <usb/request-cpp.h>
 
 #include "src/devices/usb/tests/usb-hci-test/usb_hci_test_bind.h"
@@ -35,7 +35,7 @@ void HciTest::Run(RunCompleter::Sync& completer) {
 
 void HciTest::TestThread(RunCompleter::Async completer) {
   test_running_ = true;
-  auto test_complete = fbl::MakeAutoCall([this]() { test_running_ = false; });
+  auto test_complete = fit::defer([this]() { test_running_ = false; });
   zx_status_t status = ZX_OK;
   fuchsia_hardware_usb_hcitest::wire::TestResults test_results;
   using Request = usb::CallbackRequest<sizeof(std::max_align_t) * 4>;

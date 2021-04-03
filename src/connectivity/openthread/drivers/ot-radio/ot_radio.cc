@@ -12,6 +12,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -21,7 +22,6 @@
 #include <iterator>
 
 #include <ddktl/fidl.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -489,7 +489,7 @@ zx_status_t OtRadioDevice::Start() {
   }
 
   StartRadioThread();
-  auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
+  auto cleanup = fit::defer([&]() { ShutDown(); });
 
 #ifdef INTERNAL_ACCESS
   // Update the NCP Firmware if new version is available

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 #include <sys/stat.h>
@@ -10,7 +11,6 @@
 #include <unistd.h>
 #include <zircon/processargs.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "predicates.h"
@@ -53,7 +53,7 @@ static auto prepare_directories() {
   mkdir("/tmp/chroot1/a/foo", 0666);
   mkdir("/tmp/chroot1/aa", 0666);
   mkdir("/tmp/chroot1/b", 0666);
-  return fbl::MakeAutoCall([] {
+  return fit::defer([] {
     rmdir("/tmp/chroot1/b");
     rmdir("/tmp/chroot1/a/foo");
     rmdir("/tmp/chroot1/a");

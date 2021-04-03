@@ -9,6 +9,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sdio/hw.h>
 #include <lib/sdmmc/hw.h>
@@ -20,7 +21,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "dma_descriptors.h"
 #include "src/devices/block/drivers/mtk-sdmmc/mtk-sdmmc-bind.h"
@@ -494,7 +494,7 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
     return status;
   }
 
-  auto bdma_buf_ac = fbl::MakeAutoCall([this]() { io_buffer_release(&bdma_buf_); });
+  auto bdma_buf_cleanup = fit::defer([this]() { io_buffer_release(&bdma_buf_); });
 
   phys_iter_t phys_iter;
   phys_iter_init(&phys_iter, phys_iter_buf, BDmaDescriptor::kMaxBufferSize);
@@ -538,7 +538,7 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
     return status;
   }
 
-  auto gpdma_buf_ac = fbl::MakeAutoCall([this]() { io_buffer_release(&gpdma_buf_); });
+  auto gpdma_buf_cleanup = fit::defer([this]() { io_buffer_release(&gpdma_buf_); });
 
   GpDmaDescriptor gp_desc;
   gp_desc.info = GpDmaDescriptorInfo().set_reg_value(0).set_hwo(1).set_bdp(1).reg_value();
@@ -569,8 +569,8 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
     return status;
   }
 
-  bdma_buf_ac.cancel();
-  gpdma_buf_ac.cancel();
+  bdma_buf_cleanup.cancel();
+  gpdma_buf_cleanup.cancel();
 
   return ZX_OK;
 }
@@ -593,7 +593,7 @@ zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
     return status;
   }
 
-  auto pmt_ac = fbl::MakeAutoCall([&req]() { zx_pmt_unpin(req->pmt); });
+  auto pmt_cleanup = fit::defer([&req]() { zx_pmt_unpin(req->pmt); });
 
   if (pagecount > 1) {
     phys_iter_buffer_t phys_iter_buf = {.phys = phys,
@@ -633,7 +633,7 @@ zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
 
   MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(0).WriteTo(&mmio_);
 
-  pmt_ac.cancel();
+  pmt_cleanup.cancel();
   return status;
 }
 

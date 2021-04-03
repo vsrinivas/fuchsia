@@ -4,10 +4,10 @@
 
 #include "usb-audio-control-interface.h"
 
+#include <lib/fit/defer.h>
+
 #include <memory>
 #include <utility>
-
-#include <fbl/auto_call.h>
 
 #include "debug-logging.h"
 #include "usb-audio-device.h"
@@ -185,7 +185,7 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
                                                                uint32_t level) {
   // Flag the current node as having been visited and setup a cleanup task to
   // clear the flag as we unwind.
-  auto cleanup = fbl::MakeAutoCall([&current]() { current->visited() = false; });
+  auto cleanup = fit::defer([&current]() { current->visited() = false; });
   ZX_DEBUG_ASSERT(!current->visited());
   current->visited() = true;
   LOG(DEBUG, "Visiting unit id %u, type %s", current->id(), current->type_name());

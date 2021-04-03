@@ -4,13 +4,13 @@
 
 #include "intel-dsp-ipc.h"
 
+#include <lib/fit/defer.h>
 #include <lib/zx/time.h>
 #include <string.h>
 
 #include <functional>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/span.h>
 #include <fbl/string_printf.h>
@@ -233,7 +233,7 @@ void HardwareDspChannel::SendIpc(const Txn& txn) {
 
 zx_status_t HardwareDspChannel::SendIpcWait(Txn* txn) {
   in_flight_callbacks_.Inc();
-  auto cleanup = fbl::MakeAutoCall([this]() { in_flight_callbacks_.Dec(); });
+  auto cleanup = fit::defer([this]() { in_flight_callbacks_.Dec(); });
 
   {
     // Add to the pending queue and start the ipc if necessary

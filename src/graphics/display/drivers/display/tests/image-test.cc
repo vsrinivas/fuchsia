@@ -7,9 +7,9 @@
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
 #include <zircon/pixelformat.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
@@ -66,7 +66,7 @@ TEST_F(ImageTest, RetiredImagesAreAlwaysUsable) {
   info.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
   info.type = 0;
   auto image = ImportImage(std::move(vmo), info);
-  auto image_cleanup = fbl::MakeAutoCall([image]() {
+  auto image_cleanup = fit::defer([image]() {
     fbl::AutoLock l(image->mtx());
     image->ResetFences();
   });
@@ -78,7 +78,7 @@ TEST_F(ImageTest, RetiredImagesAreAlwaysUsable) {
   auto signal_fence = fbl::AdoptRef(
       new Fence(this, controller()->loop().dispatcher(), 1, std::move(signal_event_dup)));
   signal_fence->CreateRef();
-  auto signal_cleanup = fbl::MakeAutoCall([signal_fence]() { signal_fence->ClearRef(); });
+  auto signal_cleanup = fit::defer([signal_fence]() { signal_fence->ClearRef(); });
 
   zx::port signal_port;
   ASSERT_OK(zx::port::create(0, &signal_port));

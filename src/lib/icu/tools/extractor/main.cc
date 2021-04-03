@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -12,8 +13,6 @@
 #include <iostream>
 #include <optional>
 #include <string>
-
-#include <fbl/auto_call.h>
 
 #include "common.h"
 #include "src/lib/fxl/command_line.h"
@@ -46,7 +45,7 @@ class MappedFile {
     }
 
     // Automatically close the file when this variable goes out of scope.
-    auto close_fd = fbl::MakeAutoCall([&fd, &path]() {
+    auto close_fd = fit::defer([&fd, &path]() {
       if (close(fd) != 0) {
         std::cerr << "Failed to explicitly close file " << path
                   << " after opening it. Error: " << strerror(errno) << std::endl;

@@ -3,19 +3,19 @@
 // found in the LICENSE file
 
 #include <fcntl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fs-test-utils/fixture.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fdio/cpp/caller.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
-#include <zircon/device/block.h>
-#include <zircon/syscalls.h>
 
 namespace fs_test_utils {
 namespace {
@@ -247,7 +247,7 @@ bool UseBlockDeviceIsOk() {
             ZX_OK);
   options.block_device_path = ramdisk_get_path(ramdisk);
 
-  auto clean_up = fbl::MakeAutoCall([&ramdisk]() { ramdisk_destroy(ramdisk); });
+  auto clean_up = fit::defer([&ramdisk]() { ramdisk_destroy(ramdisk); });
 
   mkfs_options_t mkfs_options = default_mkfs_options;
   ASSERT_EQ(
@@ -293,7 +293,7 @@ bool UseBlockDeviceWithFvmIsOk() {
             ZX_OK);
   options.block_device_path = ramdisk_get_path(ramdisk);
 
-  auto clean_up = fbl::MakeAutoCall([&ramdisk]() { ramdisk_destroy(ramdisk); });
+  auto clean_up = fit::defer([&ramdisk]() { ramdisk_destroy(ramdisk); });
 
   mkfs_options_t mkfs_options = default_mkfs_options;
   ASSERT_EQ(
@@ -344,7 +344,7 @@ bool SkipFormatIsOk() {
             ZX_OK);
   options.block_device_path = ramdisk_get_path(ramdisk);
 
-  auto clean_up = fbl::MakeAutoCall([&ramdisk]() { ramdisk_destroy(ramdisk); });
+  auto clean_up = fit::defer([&ramdisk]() { ramdisk_destroy(ramdisk); });
 
   mkfs_options_t mkfs_options = default_mkfs_options;
   ASSERT_EQ(

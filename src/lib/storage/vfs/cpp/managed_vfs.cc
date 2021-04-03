@@ -53,7 +53,7 @@ void ManagedVfs::CloseAllConnectionsForVnode(const Vnode& node,
     // Each connection to the Vnode takes a copy of the shared pointer of the AutoCall.  When a
     // connection is finished closing, |UnregisterConnection| will drop the copy and when the last
     // copy is dropped the AutoCall will call |callback|.
-    auto closer = std::make_shared<fbl::AutoCall<fit::callback<void()>>>(
+    auto closer = std::make_shared<fit::deferred_action<fit::callback<void()>>>(
         [callback = std::move(callback)]() mutable {
           if (callback) {
             callback();
@@ -107,7 +107,7 @@ zx_status_t ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection>
 }
 
 void ManagedVfs::UnregisterConnection(internal::Connection* connection) {
-  std::shared_ptr<fbl::AutoCall<fit::callback<void()>>> closer;  // Must go before lock.
+  std::shared_ptr<fit::deferred_action<fit::callback<void()>>> closer;  // Must go before lock.
   std::lock_guard<std::mutex> lock(lock_);
 
   auto iter = closing_connections_.find(connection);

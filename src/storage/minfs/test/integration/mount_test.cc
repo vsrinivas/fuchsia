@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
+#include <lib/fit/defer.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 #include <sys/statvfs.h>
@@ -19,7 +20,6 @@
 
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
@@ -174,7 +174,7 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
   DIR* dir = fdopendir(dir_fd.get());
   ASSERT_NE(dir, nullptr);
   dir_fd.release();
-  auto close_dir = fbl::MakeAutoCall([&]() { closedir(dir); });
+  auto close_dir = fit::defer([&]() { closedir(dir); });
   int count = 0;
   // Verify that there is exactly one entry called "root".
   // TODO(fxbug.dev/34531): Adjust this test accordingly when the admin service is added.

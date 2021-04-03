@@ -12,13 +12,12 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-
-#include <fbl/auto_call.h>
 
 #define DRIVER_TEST_DIR "/boot/driver/test"
 #define MOCK_DEVICE_LIB "/boot/driver/test/mock-device.so"
@@ -85,7 +84,7 @@ zx_status_t RootMockDevice::CreateFromTestRoot(
     return call_status;
   }
 
-  auto destroy_device = fbl::MakeAutoCall([&test_dev] { test_dev->Destroy(); });
+  auto destroy_device = fit::defer([&test_dev] { test_dev->Destroy(); });
 
   fidl::InterfaceHandle<fuchsia::device::mock::MockDevice> client;
   fidl::InterfaceRequest<fuchsia::device::mock::MockDevice> server(client.NewRequest());

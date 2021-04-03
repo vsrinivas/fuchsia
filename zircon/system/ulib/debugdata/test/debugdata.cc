@@ -11,6 +11,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/vmar.h>
@@ -20,7 +21,6 @@
 
 #include <filesystem>
 
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
@@ -90,7 +90,7 @@ TEST(DebugDataTest, LoadConfig) {
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_get_installed(&ns));
   ASSERT_OK(fdio_ns_bind(ns, directory.c_str(), c2.release()));
-  auto unbind = fbl::MakeAutoCall([&]() { fdio_ns_unbind(ns, directory.c_str()); });
+  auto unbind = fit::defer([&]() { fdio_ns_unbind(ns, directory.c_str()); });
 
   async::Loop svc_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::channel client, server;

@@ -12,6 +12,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fit/defer.h>
 #include <lib/focaltech/focaltech.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
@@ -27,7 +28,6 @@
 #include <iterator>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -148,7 +148,7 @@ zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
 
   auto thunk = [](void* arg) -> int { return reinterpret_cast<FtDevice*>(arg)->Thread(); };
 
-  auto cleanup = fbl::MakeAutoCall([&]() { ft_dev->ShutDown(); });
+  auto cleanup = fit::defer([&]() { ft_dev->ShutDown(); });
 
   ft_dev->running_.store(true);
   int ret = thrd_create_with_name(&ft_dev->thread_, thunk, reinterpret_cast<void*>(ft_dev.get()),

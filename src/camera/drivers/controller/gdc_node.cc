@@ -4,12 +4,12 @@
 
 #include "src/camera/drivers/controller/gdc_node.h"
 
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
@@ -104,7 +104,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
     config_vmos_info.push_back(gdc_config.value());
   }
 
-  auto cleanup = fbl::MakeAutoCall([config_vmos_info]() {
+  auto cleanup = fit::defer([config_vmos_info]() {
     for (auto info : config_vmos_info) {
       ZX_ASSERT_MSG(ZX_OK == zx_handle_close(info.config_vmo), "Failed to free up Config VMOs");
     }

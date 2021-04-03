@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sdio/hw.h>
 #include <lib/zx/clock.h>
@@ -20,7 +21,6 @@
 #include <algorithm>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 namespace {
 
@@ -189,7 +189,7 @@ zx_status_t SdioControllerDevice::AddDevice() {
     return st;
   }
 
-  auto remove_device_on_error = fbl::MakeAutoCall([&]() { DdkAsyncRemove(); });
+  auto remove_device_on_error = fit::defer([&]() { DdkAsyncRemove(); });
 
   std::array<std::unique_ptr<SdioFunctionDevice>, SDIO_MAX_FUNCS> devices = {};
   for (uint32_t i = 0; i < hw_info_.num_funcs - 1; i++) {

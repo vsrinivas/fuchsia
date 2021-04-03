@@ -14,6 +14,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -35,7 +36,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
@@ -164,7 +164,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     fprintf(stderr, "FAILURE: Cannot export root namespace: %s\n", zx_status_get_string(status));
     return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
   }
-  auto auto_fdio_free_flat_ns = fbl::MakeAutoCall([&flat]() { fdio_ns_free_flat_ns(flat); });
+  auto auto_fdio_free_flat_ns = fit::defer([&flat]() { fdio_ns_free_flat_ns(flat); });
 
   auto action_ns_entry = [](const char* prefix, zx_handle_t handle) {
     return fdio_spawn_action{.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
@@ -229,7 +229,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     fprintf(stderr, "FAILURE: zx::job::create() returned %d\n", status);
     return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
   }
-  auto auto_call_kill_job = fbl::MakeAutoCall([&test_job]() { test_job.kill(); });
+  auto auto_call_kill_job = fit::defer([&test_job]() { test_job.kill(); });
   status = test_job.set_property(ZX_PROP_NAME, "run-test", sizeof("run-test"));
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: set_property() returned %d\n", status);

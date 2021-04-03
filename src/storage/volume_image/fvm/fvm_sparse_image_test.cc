@@ -4,6 +4,7 @@
 
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
 #include <algorithm>
@@ -15,7 +16,6 @@
 #include <string>
 #include <string_view>
 
-#include <fbl/auto_call.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -537,7 +537,7 @@ TEST(FvmSparseWriteImageTest, DataCompressedCompliesWithFormat) {
 
   // Decompress extent data.
   LZ4F_decompressionContext_t decompression_context = nullptr;
-  auto release_decompressor = fbl::MakeAutoCall([&decompression_context]() {
+  auto release_decompressor = fit::defer([&decompression_context]() {
     if (decompression_context != nullptr) {
       LZ4F_freeDecompressionContext(decompression_context);
     }

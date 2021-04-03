@@ -4,10 +4,11 @@
 
 #include "usb-audio-descriptors.h"
 
+#include <lib/fit/defer.h>
+
 #include <utility>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <pretty/hexdump.h>
 
 #include "debug-logging.h"
@@ -82,7 +83,7 @@ bool DescriptorListMemory::Iterator::ValidateOffset() {
   }
 
   // If anything goes wrong from here on out, make sure to invalidate our offset.
-  auto cleanup = fbl::MakeAutoCall([this] { offset_ = mem_->size(); });
+  auto cleanup = fit::defer([this] { offset_ = mem_->size(); });
 
   if (space < sizeof(usb_descriptor_header_t)) {
     GLOBAL_LOG(WARNING,

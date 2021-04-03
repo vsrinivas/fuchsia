@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/debug.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -11,7 +12,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
@@ -209,7 +209,7 @@ zx_status_t AEAD::Init(Algorithm algo, const Secret& key, const Bytes& iv,
   zx_status_t rc;
 
   Reset();
-  auto cleanup = fbl::MakeAutoCall([&] { Reset(); });
+  auto cleanup = fit::defer([&] { Reset(); });
 
   // Look up specific algorithm
   const EVP_AEAD* aead;

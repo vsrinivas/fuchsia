@@ -5,13 +5,13 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
@@ -231,7 +231,7 @@ TEST_F(SerialDeviceTest, AsyncRead) {
   strcpy(serial_impl().read_buffer(), expected);
   serial_impl().set_state_and_notify(SERIAL_STATE_READABLE);
   ASSERT_OK(device()->Bind());
-  auto unbind = fbl::MakeAutoCall([=]() { device()->DdkAsyncRemove(); });
+  auto unbind = fit::defer([=]() { device()->DdkAsyncRemove(); });
   // Test.
   ASSERT_EQ(ZX_OK, Read(&fidl(), &buffer));
   ASSERT_EQ(4, buffer.size());
@@ -247,7 +247,7 @@ TEST_F(SerialDeviceTest, AsyncWrite) {
 
   // Test set up.
   ASSERT_OK(device()->Bind());
-  auto unbind = fbl::MakeAutoCall([=]() { device()->DdkAsyncRemove(); });
+  auto unbind = fit::defer([=]() { device()->DdkAsyncRemove(); });
   serial_impl().set_state_and_notify(SERIAL_STATE_WRITABLE);
 
   // Test.

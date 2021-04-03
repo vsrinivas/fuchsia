@@ -143,7 +143,7 @@ zx_status_t SanitizerCovProxy::SetProxy(ProxyPtr coverage) {
     return ZX_ERR_INVALID_ARGS;
   }
   Reset();
-  auto cleanup = fbl::MakeAutoCall([this]() { Reset(); });
+  auto cleanup = fit::defer([this]() { Reset(); });
 
   std::lock_guard<std::mutex> lock(lock_);
   coverage_ = std::move(coverage);

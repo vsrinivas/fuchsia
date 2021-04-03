@@ -15,6 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -26,7 +27,6 @@
 #include <memory>
 #include <variant>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 
 namespace {
@@ -122,7 +122,7 @@ zx_status_t wait_dev_enumerate(const char* dir, const char* dev_name, fbl::uniqu
     fprintf(stderr, "Could not open dir: \"%s\"\n", dir);
     return ZX_ERR_BAD_STATE;
   }
-  auto close_dir = fbl::MakeAutoCall([&] { closedir(d); });
+  auto close_dir = fit::defer([&] { closedir(d); });
   WatchDirData data = {.dev_name = dev_name, .fd = fbl::unique_fd()};
   zx_status_t status =
       fdio_watch_directory(dirfd(d), watch_dir_cb, zx_deadline_after(ZX_SEC(kEnumerationWaitSecs)),
@@ -392,7 +392,7 @@ zx_status_t device_firmware_upgrade(const char* firmware_path) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
+  auto print_usage = fit::defer([prog_name = argv[0]]() { usage(prog_name); });
 
   Mode mode = Mode::kUpdateTest;
   const char* firmware_path = nullptr;

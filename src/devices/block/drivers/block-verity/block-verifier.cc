@@ -4,11 +4,11 @@
 
 #include "src/devices/block/drivers/block-verity/block-verifier.h"
 
+#include <lib/fit/defer.h>
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/block/drivers/block-verity/block-loader-interface.h"
@@ -58,7 +58,7 @@ zx_status_t BlockVerifier::PrepareAsync(void* cookie, BlockVerifierCallback call
         ZX_OK) {
       return rc;
     }
-    auto cleanup = fbl::MakeAutoCall([this]() { integrity_block_vmo_.reset(); });
+    auto cleanup = fit::defer([this]() { integrity_block_vmo_.reset(); });
     constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     uintptr_t address;
     if ((rc = zx::vmar::root_self()->map(flags, 0, integrity_block_vmo_, 0,

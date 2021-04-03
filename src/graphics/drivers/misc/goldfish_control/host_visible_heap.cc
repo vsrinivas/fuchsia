@@ -12,6 +12,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <lib/zx/vmar.h>
@@ -22,7 +23,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 #include "src/lib/fsl/handles/object_info.h"
@@ -204,7 +204,7 @@ void HostVisibleHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& com
   // We need to clean up the allocated block if |zx_vmo_create_child| or
   // |fsl::GetKoid| fails, which could happen before we create and bind the
   // |DeallocateBlock()| wait in |Block|.
-  auto cleanup_block = fbl::MakeAutoCall([this, paddr = result.value().paddr] {
+  auto cleanup_block = fit::defer([this, paddr = result.value().paddr] {
     auto result = control()->address_space_child()->DeallocateBlock(paddr);
     if (!result.ok()) {
       zxlogf(ERROR, "[%s] DeallocateBlock FIDL call failed: status %d", kTag, result.status());
@@ -319,7 +319,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
 
   // If the following part fails, we need to free the ColorBuffer/Buffer
   // handle so that there is no handle/resource leakage.
-  auto cleanup_handle = fbl::MakeAutoCall([this, id] { control()->FreeBufferHandle(id); });
+  auto cleanup_handle = fit::defer([this, id] { control()->FreeBufferHandle(id); });
 
   if (is_image) {
     fidl::FidlAllocator allocator;

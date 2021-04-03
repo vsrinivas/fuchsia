@@ -5,13 +5,13 @@
 #include "utils.h"
 
 #include <lib/fdio/spawn.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 const char* ExternalThread::program_name_ = nullptr;
@@ -183,7 +183,7 @@ int ExternalThread::DoHelperThread() {
 }
 
 void ExternalThread::Start() {
-  auto on_failure = fbl::MakeAutoCall([this]() { Stop(); });
+  auto on_failure = fit::defer([this]() { Stop(); });
 
   // Make sure that we have a program name and have not already started.
   ASSERT_NOT_NULL(program_name_);

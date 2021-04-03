@@ -6,6 +6,7 @@
 #include <fuchsia/net/llcpp/fidl.h>
 #include <ifaddrs.h>
 #include <lib/fdio/io.h>
+#include <lib/fit/defer.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -17,7 +18,6 @@
 #include <cstring>
 #include <mutex>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "fdio_unistd.h"
@@ -220,7 +220,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
   }
   auto [nfd, cleanup_getter] = reservation.value();
   // Lambdas are not allowed to reference local bindings.
-  auto release = fbl::MakeAutoCall([nfd = nfd, cleanup_getter = cleanup_getter]() {
+  auto release = fit::defer([nfd = nfd, cleanup_getter = cleanup_getter]() {
     fbl::AutoLock lock(&fdio_lock);
     (fdio_fdtab[nfd].*cleanup_getter)();
   });

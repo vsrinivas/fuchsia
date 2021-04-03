@@ -8,12 +8,12 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fit/defer.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 
 #include <ddktl/fidl.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/graphics/drivers/misc/goldfish_control/device_local_heap.h"
@@ -161,7 +161,7 @@ zx_status_t Control::InitPipeDeviceLocked() {
   }
 
   auto release_buffer =
-      fbl::MakeAutoCall([this]() TA_NO_THREAD_SAFETY_ANALYSIS { cmd_buffer_.release(); });
+      fit::defer([this]() TA_NO_THREAD_SAFETY_ANALYSIS { cmd_buffer_.release(); });
 
   auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
   buffer->id = id_;
@@ -378,7 +378,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
   }
 
   auto close_color_buffer =
-      fbl::MakeAutoCall([this, id]() TA_NO_THREAD_SAFETY_ANALYSIS { CloseColorBufferLocked(id); });
+      fit::defer([this, id]() TA_NO_THREAD_SAFETY_ANALYSIS { CloseColorBufferLocked(id); });
 
   uint32_t result = 0;
   status =
@@ -478,7 +478,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
   }
 
   auto close_buffer =
-      fbl::MakeAutoCall([this, id]() TA_NO_THREAD_SAFETY_ANALYSIS { CloseBufferLocked(id); });
+      fit::defer([this, id]() TA_NO_THREAD_SAFETY_ANALYSIS { CloseBufferLocked(id); });
 
   int32_t hw_address_page_offset = -1;
   if (create_params.memory_property() &

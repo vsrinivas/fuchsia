@@ -13,6 +13,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
@@ -30,7 +31,6 @@
 
 #include <ddk/metadata/display.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 
@@ -953,7 +953,7 @@ zx_status_t AmlogicDisplay::Bind() {
     }
   }
 
-  auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });
+  auto cleanup = fit::defer([&]() { DdkRelease(); });
 
   status = DdkAdd(ddk::DeviceAddArgs("amlogic-display")
                       .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)

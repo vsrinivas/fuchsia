@@ -6,11 +6,10 @@
 
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <zircon/threads.h>
 
 #include <memory>
-
-#include <fbl/auto_call.h>
 
 #include "src/devices/block/drivers/sdmmc/sdmmc-bind.h"
 
@@ -55,7 +54,7 @@ zx_status_t SdmmcRootDevice::Init() {
 }
 
 int SdmmcRootDevice::WorkerThread() {
-  auto remove_device_on_error = fbl::MakeAutoCall([&]() { DdkAsyncRemove(); });
+  auto remove_device_on_error = fit::defer([&]() { DdkAsyncRemove(); });
 
   SdmmcDevice sdmmc(host_);
   zx_status_t st = sdmmc.Init();

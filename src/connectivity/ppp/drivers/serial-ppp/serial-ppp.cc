@@ -6,11 +6,11 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/usb.h>
 
 #include <ddktl/fidl.h>
-#include <fbl/auto_call.h>
 
 #include "lib/common/ppp.h"
 #include "lib/fit/result.h"
@@ -346,7 +346,7 @@ zx_status_t SerialPpp::NetworkDeviceImplInit(const network_device_ifc_protocol_t
 }
 
 void SerialPpp::NetworkDeviceImplStart(network_device_impl_start_callback callback, void* cookie) {
-  auto complete = fbl::MakeAutoCall([callback, cookie]() { callback(cookie); });
+  auto complete = fit::defer([callback, cookie]() { callback(cookie); });
   zx::socket serial;
   zx::port port;
   zx_status_t status = serial_protocol_.OpenSocket(&serial);
@@ -371,7 +371,7 @@ void SerialPpp::NetworkDeviceImplStart(network_device_impl_start_callback callba
 }
 
 void SerialPpp::NetworkDeviceImplStop(network_device_impl_stop_callback callback, void* cookie) {
-  auto complete = fbl::MakeAutoCall([callback, cookie]() { callback(cookie); });
+  auto complete = fit::defer([callback, cookie]() { callback(cookie); });
   Shutdown();
 
   status_t new_status = {.mtu = kDefaultMtu, .flags = 0};

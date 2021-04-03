@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <string.h>
 
@@ -13,7 +14,6 @@
 #include <audio-proto-utils/format-utils.h>
 #include <audio-proto/audio-proto.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>
 #include <intel-hda/codec-utils/stream-base.h>
 #include <intel-hda/utils/intel-hda-proto.h>
@@ -77,7 +77,7 @@ zx_status_t IntelHDAStreamBase::Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& 
   // the compiler is not quite smart enough to figure out that the obj_lock
   // AutoLock will destruct (and release the lock) after the AutoCall runs,
   // and that the AutoCall will never leave this scope.
-  auto cleanup = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  auto cleanup = fit::defer([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
     parent_codec_.reset();
     codec_channel_.reset();
   });

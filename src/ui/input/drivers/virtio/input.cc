@@ -5,6 +5,7 @@
 #include "input.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <limits.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -15,7 +16,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/bus/lib/virtio/trace.h"
@@ -113,7 +113,7 @@ zx_status_t InputDevice::Init() {
   DriverStatusAck();
 
   // Plan to clean up unless everything succeeds.
-  auto cleanup = fbl::MakeAutoCall([this]() { Release(); });
+  auto cleanup = fit::defer([this]() { Release(); });
 
   // Allocate the main vring
   zx_status_t status = vring_.Init(0, kEventCount);

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -9,7 +10,6 @@
 #include <memory>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/types.h>
 
@@ -83,7 +83,7 @@ void TestCase::Run(LifecycleObserver* event_broadcaster, TestDriver* driver) {
     return;
   }
 
-  auto tear_down = fbl::MakeAutoCall([this, event_broadcaster] {
+  auto tear_down = fit::defer([this, event_broadcaster] {
     tear_down_();
     event_broadcaster->OnTestCaseEnd(*this);
   });

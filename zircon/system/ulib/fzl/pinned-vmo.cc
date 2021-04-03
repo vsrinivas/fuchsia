@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/fzl/pinned-vmo.h>
 
 #include <climits>
 #include <limits>
 #include <memory>
-
-#include <fbl/auto_call.h>
 
 namespace fzl {
 
@@ -77,7 +76,7 @@ zx_status_t PinnedVmo::PinInternal(uint64_t offset, uint64_t len, const zx::vmo&
 
   // From here on out, if anything goes wrong, we need to make sure to clean
   // up.  Setup an autocall to take care of this for us.
-  auto cleanup = fbl::MakeAutoCall([&]() { UnpinInternal(); });
+  auto cleanup = fit::defer([&]() { UnpinInternal(); });
 
   // Do a quick pass over the pages to figure out how many adjacent pages we
   // can merge.  This will let us know how many regions we will need storage

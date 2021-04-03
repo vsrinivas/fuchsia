@@ -6,10 +6,9 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
-
-#include <fbl/auto_call.h>
 
 #include "src/camera/drivers/controller/configs/product_config.h"
 
@@ -80,7 +79,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   TRACE_DURATION("camera", "ControllerImpl::CreateStream");
   zx_status_t status = ZX_OK;
-  auto cleanup = fbl::MakeAutoCall([&stream, &status]() { stream.Close(status); });
+  auto cleanup = fit::defer([&stream, &status]() { stream.Close(status); });
   auto external_configs = product_config_->ExternalConfigs();
 
   // Input Validations

@@ -4,12 +4,12 @@
 
 #include "src/storage/blobfs/compression/lz4.h"
 
+#include <lib/fit/defer.h>
 #include <zircon/types.h>
 
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <lz4/lz4frame.h>
 
@@ -100,7 +100,7 @@ zx_status_t LZ4Decompressor::Decompress(void* uncompressed_buf_, size_t* uncompr
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&ctx]() { LZ4F_freeDecompressionContext(ctx); });
+  auto cleanup = fit::defer([&ctx]() { LZ4F_freeDecompressionContext(ctx); });
   size_t target_drained = 0;
   size_t src_drained = 0;
 

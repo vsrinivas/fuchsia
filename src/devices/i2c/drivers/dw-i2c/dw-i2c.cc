@@ -13,6 +13,7 @@
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +25,6 @@
 
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/i2c/drivers/dw-i2c/dw_i2c-bind.h"
@@ -598,7 +598,7 @@ void DwI2c::DdkUnbind(ddk::UnbindTxn txn) {
 void DwI2c::DdkRelease() { delete this; }
 
 zx_status_t DwI2c::Init() {
-  auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
+  auto cleanup = fit::defer([&]() { ShutDown(); });
 
 #if I2C_AS370_DW_TEST
   thrd_t test_thread;

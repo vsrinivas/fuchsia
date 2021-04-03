@@ -4,12 +4,12 @@
 
 #include "server.h"
 
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <unistd.h>
 
 #include <thread>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "test/stub-block-device.h"
@@ -107,7 +107,7 @@ TEST_F(ServerTestFixture, CloseFifo) {
 TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
   ASSERT_OK(Server::Create(&client_, &fifo_, &server_));
   CreateThread();
-  auto cleanup = fbl::MakeAutoCall([&] {
+  auto cleanup = fit::defer([&] {
     server_->Shutdown();
     JoinThread();
   });

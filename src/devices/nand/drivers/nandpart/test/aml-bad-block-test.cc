@@ -5,6 +5,7 @@
 #include "aml-bad-block.h"
 
 #include <fuchsia/hardware/nand/c/banjo.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/vmar.h>
 #include <zircon/types.h>
 
@@ -12,7 +13,6 @@
 #include <utility>
 
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/vector.h>
@@ -122,8 +122,8 @@ void MockQueue(void* ctx, nand_operation_t* op, nand_queue_callback completion_c
     completion_cb(cookie, status, op);
     return;
   }
-  auto data_unmapper = fbl::MakeAutoCall(
-      [&]() { zx::vmar::root_self()->unmap(data_buf, op->rw.length * kPageSize); });
+  auto data_unmapper =
+      fit::defer([&]() { zx::vmar::root_self()->unmap(data_buf, op->rw.length * kPageSize); });
   uintptr_t oob_buf;
   zx::vmo oob_vmo(op->rw.oob_vmo);
   status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, oob_vmo,
@@ -134,7 +134,7 @@ void MockQueue(void* ctx, nand_operation_t* op, nand_queue_callback completion_c
     return;
   }
   auto oob_unmapper =
-      fbl::MakeAutoCall([&]() { zx::vmar::root_self()->unmap(oob_buf, op->rw.length * kOobSize); });
+      fit::defer([&]() { zx::vmar::root_self()->unmap(oob_buf, op->rw.length * kOobSize); });
   auto* data = reinterpret_cast<uint8_t*>(data_buf);
   auto* oob = reinterpret_cast<AmlBadBlock::OobMetadata*>(oob_buf);
 

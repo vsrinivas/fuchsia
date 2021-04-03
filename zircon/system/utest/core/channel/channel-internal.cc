@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -12,7 +13,6 @@
 
 #include <thread>
 
-#include <fbl/auto_call.h>
 #include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
 
@@ -166,7 +166,7 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
     ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), local.release(), true,
                                      cmd_channel.reset_and_get_address()));
 
-    auto cleanup = fbl::MakeAutoCall([&cmd_channel]() {
+    auto cleanup = fit::defer([&cmd_channel]() {
       ASSERT_EQ(mini_process_cmd(cmd_channel.get(), MINIP_CMD_EXIT_NORMAL, nullptr),
                 ZX_ERR_PEER_CLOSED);
     });

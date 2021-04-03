@@ -20,6 +20,7 @@
 #include <lib/ddk/io-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/defer.h>
 #include <lib/image-format/image_format.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -32,7 +33,6 @@
 
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "hdmitx.h"
@@ -734,7 +734,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
 
   // If anything goes wrong from here on out, make sure to log the status code
   // of the error, and destroy our display object.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     DISP_ERROR("bind failed! %d\n", status);
     display_release(display);
   });

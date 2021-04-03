@@ -12,6 +12,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -27,7 +28,6 @@
 #include <memory>
 #include <string>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <gpt/c/gpt.h>
 #include <gpt/guid.h>
@@ -93,7 +93,7 @@ static int cmd_list_blk(void) {
     fprintf(stderr, "Error opening %s\n", DEV_BLOCK);
     return -1;
   }
-  auto cleanup = fbl::MakeAutoCall([&dir]() { closedir(dir); });
+  auto cleanup = fit::defer([&dir]() { closedir(dir); });
 
   blkinfo_t info;
   printf("%-3s %-4s %-16s %-20s %-6s %s\n", "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE");

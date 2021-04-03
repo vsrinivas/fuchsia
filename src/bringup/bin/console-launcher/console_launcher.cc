@@ -13,6 +13,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
@@ -20,7 +21,6 @@
 #include <zircon/compiler.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 namespace console_launcher {
 
@@ -241,7 +241,7 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
   if (status != ZX_OK) {
     return status;
   }
-  auto free_flat = fbl::MakeAutoCall([&flat]() { fdio_ns_free_flat_ns(flat); });
+  auto free_flat = fit::defer([&flat]() { fdio_ns_free_flat_ns(flat); });
 
   // Go through each directory in our namespace and copy all of them except /system-delayed.
   for (size_t i = 0; i < flat->count; i++) {

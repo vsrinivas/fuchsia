@@ -20,7 +20,6 @@
 #include <string>
 
 #include <elf/elf.h>
-#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
@@ -176,7 +175,7 @@ TEST(ElfSearchTest, ForEachModule) {
   zx::process process;
   EXPECT_NE(ZX_HANDLE_INVALID,
             *process.reset_and_get_address() = springboard_get_process_handle(sb));
-  auto ac = fbl::MakeAutoCall([&]() { process.kill(); });
+  auto cleanup = fit::defer([&]() { process.kill(); });
 
   // These modules appear in the list as they are the mimimum possible set of mappings that a
   // process can be spawned with using fuchsia.process.Launcher, which tu_launch_init relies on.

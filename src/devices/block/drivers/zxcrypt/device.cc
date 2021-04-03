@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <string.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -16,7 +17,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/block/drivers/zxcrypt/debug.h"
@@ -115,7 +115,7 @@ void Device::DdkRelease() {
   LOG_ENTRY();
 
   // One way or another we need to release the memory
-  auto cleanup = fbl::MakeAutoCall([this]() {
+  auto cleanup = fit::defer([this]() {
     zxlogf(DEBUG, "zxcrypt device %p released", this);
     delete this;
   });

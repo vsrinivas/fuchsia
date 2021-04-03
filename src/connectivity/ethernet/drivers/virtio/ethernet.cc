@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>
+#include <lib/fit/defer.h>
 #include <lib/operation/ethernet.h>
 #include <lib/virtio/ring.h>
 #include <lib/zircon-internal/align.h>
@@ -25,7 +26,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <virtio/net.h>
@@ -188,7 +188,7 @@ zx_status_t EthernetDevice::Init() {
   }
 
   // Plan to clean up unless everything goes right.
-  auto cleanup = fbl::MakeAutoCall([this]() { DdkRelease(); });
+  auto cleanup = fit::defer([this]() { DdkRelease(); });
 
   // Allocate I/O buffers and virtqueues.
   uint16_t num_descs = static_cast<uint16_t>(kBacklog & 0xffff);

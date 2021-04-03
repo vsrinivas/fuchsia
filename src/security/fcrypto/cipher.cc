@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/debug.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -13,7 +14,6 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
@@ -117,7 +117,7 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Secret& key,
   zx_status_t rc;
 
   Reset();
-  auto cleanup = fbl::MakeAutoCall([&]() { Reset(); });
+  auto cleanup = fit::defer([&]() { Reset(); });
 
   const EVP_CIPHER* cipher;
   if ((rc = GetCipher(algo, &cipher)) != ZX_OK) {

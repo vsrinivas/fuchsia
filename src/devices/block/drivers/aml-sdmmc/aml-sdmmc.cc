@@ -18,6 +18,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/sdmmc/hw.h>
 #include <lib/sync/completion.h>
@@ -32,7 +33,6 @@
 
 #include <bits/limits.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -100,10 +100,10 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   auto status_irq = AmlSdmmcStatus::Get().ReadFrom(&mmio_);
   uint32_t rxd_err = status_irq.rxd_err();
 
-  auto complete_ac = fbl::MakeAutoCall([&]() { ClearStatus(); });
+  auto complete = fit::defer([&]() { ClearStatus(); });
 
-  auto on_bus_error = fbl::MakeAutoCall(
-      [&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
+  auto on_bus_error =
+      fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
   if (rxd_err) {
     if (req->probe_tuning_cmd) {
@@ -204,10 +204,10 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
   auto status_irq = AmlSdmmcStatus::Get().ReadFrom(&mmio_);
   uint32_t rxd_err = status_irq.rxd_err();
 
-  auto complete_ac = fbl::MakeAutoCall([&]() { ClearStatus(); });
+  auto complete = fit::defer([&]() { ClearStatus(); });
 
-  auto on_bus_error = fbl::MakeAutoCall(
-      [&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
+  auto on_bus_error =
+      fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
   if (rxd_err) {
     if (req.probe_tuning_cmd) {
@@ -512,7 +512,7 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
     return st;
   }
 
-  auto unpin_ac = fbl::MakeAutoCall([&req]() { zx_pmt_unpin(req->pmt); });
+  auto unpin = fit::defer([&req]() { zx_pmt_unpin(req->pmt); });
   if (is_read) {
     st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset, req_len,
                          nullptr, 0);
@@ -583,7 +583,7 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
     desc->data_addr = static_cast<uint32_t>(paddr);
     desc += 1;
   }
-  unpin_ac.cancel();
+  unpin.cancel();
   return ZX_OK;
 }
 

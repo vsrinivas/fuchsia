@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fit/defer.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <poll.h>
@@ -16,7 +17,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <fbl/mutex.h>
 
 #include "private.h"
@@ -153,7 +153,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
   }
 
   fdio_t* io = fdio_unsafe_fd_to_io(epfd);
-  auto clean_io = fbl::MakeAutoCall([io] {
+  auto clean_io = fit::defer([io] {
     if (io) {
       fdio_unsafe_release(io);
     }
@@ -170,7 +170,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
     mtx_unlock(&epoll->lock);
     return ERRNO(EBADF);
   }
-  auto clean_io_poll = fbl::MakeAutoCall([pollio] { fdio_unsafe_release(pollio); });
+  auto clean_io_poll = fit::defer([pollio] { fdio_unsafe_release(pollio); });
 
   if (op == EPOLL_CTL_MOD || op == EPOLL_CTL_DEL) {
     if (!epoll_remove_fd(fdio_get_zxio(io), fd)) {
@@ -208,7 +208,7 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout)
     return ERRNO(EINVAL);
   }
   fdio_t* io = fdio_unsafe_fd_to_io(epfd);
-  auto clean_io = fbl::MakeAutoCall([io] {
+  auto clean_io = fit::defer([io] {
     if (io) {
       fdio_unsafe_release(io);
     }

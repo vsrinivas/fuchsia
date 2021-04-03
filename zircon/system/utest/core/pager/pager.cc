@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/fzl/memory-probe.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
@@ -15,7 +16,6 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
@@ -2248,7 +2248,7 @@ TEST(Pager, FailErrorCode) {
         return false;
       }
 
-      auto unmap = fbl::MakeAutoCall([&]() { zx_vmar_unmap(zx_vmar_root_self(), buf, len); });
+      auto unmap = fit::defer([&]() { zx_vmar_unmap(zx_vmar_root_self(), buf, len); });
 
       // |status_read| should get set to the error code passed in via FailPages.
       status_read = vmo->vmo().read(reinterpret_cast<void*>(buf), 0, len);

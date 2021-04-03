@@ -12,6 +12,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
+#include <lib/fit/defer.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +27,6 @@
 #include <ddk/usb-peripheral-config.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
@@ -131,7 +131,7 @@ zx_status_t UsbPeripheral::Init() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  auto call = fbl::MakeAutoCall(
+  auto call = fit::defer(
       [=]() { operator delete[](reinterpret_cast<char*>(config), std::align_val_t(alignment)); });
   status = device_get_metadata(parent(), DEVICE_METADATA_USB_CONFIG, config, metasize, &metasize);
   if (status != ZX_OK) {

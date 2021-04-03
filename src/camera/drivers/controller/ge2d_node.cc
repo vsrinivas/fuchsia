@@ -4,6 +4,7 @@
 
 #include "src/camera/drivers/controller/ge2d_node.h"
 
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/errors.h>
@@ -11,7 +12,6 @@
 
 #include <algorithm>
 
-#include <fbl/auto_call.h>
 #include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
@@ -136,7 +136,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
         watermarks_info.push_back(info);
       }
 
-      auto cleanup = fbl::MakeAutoCall([watermarks_info]() {
+      auto cleanup = fit::defer([watermarks_info]() {
         for (auto info : watermarks_info) {
           ZX_ASSERT_MSG(ZX_OK == zx_handle_close(info.watermark_vmo),
                         "Failed to free up watermark VMOs");

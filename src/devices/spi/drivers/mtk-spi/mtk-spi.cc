@@ -8,11 +8,11 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/defer.h>
 #include <unistd.h>
 
 #include <ddk/metadata/spi.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "registers.h"
 #include "src/devices/spi/drivers/mtk-spi/mtk_spi_bind.h"
@@ -226,7 +226,7 @@ zx_status_t MtkSpi::Create(void* ctx, zx_device_t* device) {
     }
     auto* ptr = spi.release();
 
-    auto cleanup = fbl::MakeAutoCall([&ptr]() { ptr->DdkAsyncRemove(); });
+    auto cleanup = fit::defer([&ptr]() { ptr->DdkAsyncRemove(); });
 
     status = ptr->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &channels[i].bus_id,
                                  sizeof channels[i].bus_id);

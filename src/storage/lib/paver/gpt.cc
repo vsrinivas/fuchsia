@@ -6,8 +6,8 @@
 
 #include <dirent.h>
 #include <fuchsia/device/llcpp/fidl.h>
+#include <lib/fit/defer.h>
 
-#include <fbl/auto_call.h>
 #include <gpt/c/gpt.h>
 
 #include "src/storage/lib/paver/pave-logging.h"
@@ -98,7 +98,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     ERROR("Cannot inspect block devices\n");
     return false;
   }
-  const auto closer = fbl::MakeAutoCall([&]() { closedir(d); });
+  const auto closer = fit::defer([&]() { closedir(d); });
 
   struct dirent* de;
   GptDevices found_devices;

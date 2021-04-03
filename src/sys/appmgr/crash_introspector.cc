@@ -14,10 +14,10 @@
 #include <memory>
 #include <utility>
 
-#include "fbl/auto_call.h"
 #include "lib/async/cpp/task.h"
 #include "lib/async/default.h"
 #include "lib/fidl/cpp/clone.h"
+#include "lib/fit/defer.h"
 #include "lib/fitx/result.h"
 #include "src/lib/fsl/handles/object_info.h"
 
@@ -124,7 +124,7 @@ void CrashIntrospector::CrashMonitor::CrashHandler(async_dispatcher_t* dispatche
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     // wait for next signal
-    auto run_again = fbl::MakeAutoCall([&wait, &dispatcher] { wait->Begin(dispatcher); });
+    auto run_again = fit::defer([&wait, &dispatcher] { wait->Begin(dispatcher); });
     zx_exception_info_t info;
     zx::exception exception;
     if (const zx_status_t status = exception_channel_.read(

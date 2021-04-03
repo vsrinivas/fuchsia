@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <libgen.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -14,7 +15,6 @@
 #include <iterator>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 #define MIN_ARGS 3
 
@@ -161,7 +161,7 @@ zx_status_t FsCreator::ParseManifestLine(FILE* manifest, const char* dir_path, c
   char* line = nullptr;
 
   // Always free the line on exiting this method.
-  auto cleanup = fbl::MakeAutoCall([&line]() {
+  auto cleanup = fit::defer([&line]() {
     if (line)
       free(line);
   });

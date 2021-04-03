@@ -12,6 +12,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +25,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
@@ -131,7 +131,7 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
       hid::kParseOk) {
     return ZX_OK;
   }
-  auto cleanup_desc = fbl::MakeAutoCall([desc]() { hid::FreeDeviceDescriptor(desc); });
+  auto cleanup_desc = fit::defer([desc]() { hid::FreeDeviceDescriptor(desc); });
 
   uint8_t report_id;
   size_t bit_offset;

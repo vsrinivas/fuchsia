@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
+#include <lib/fit/defer.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
@@ -18,8 +19,6 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
-
-#include <fbl/auto_call.h>
 
 #include "lib/async-loop/loop.h"
 #include "lib/fdio/cpp/caller.h"
@@ -108,7 +107,7 @@ int Paver::StreamBuffer() {
     return ZX_OK;
   };
 
-  auto cleanup = fbl::MakeAutoCall([this, &result]() {
+  auto cleanup = fit::defer([this, &result]() {
     unsigned int refcount = std::atomic_fetch_sub(&buf_refcount_, 1u);
     if (refcount == 1) {
       buffer_mapper_.Reset();
@@ -428,7 +427,7 @@ zx_status_t Paver::WipePartitionTables(fuchsia_mem::wire::Buffer buffer) {
 int Paver::MonitorBuffer() {
   int result = TFTP_NO_ERROR;
 
-  auto cleanup = fbl::MakeAutoCall([this, &result]() {
+  auto cleanup = fit::defer([this, &result]() {
     unsigned int refcount = std::atomic_fetch_sub(&buf_refcount_, 1u);
     if (refcount == 1) {
       buffer_mapper_.Reset();
@@ -657,7 +656,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
     printf("netsvc: unable to allocate and map buffer. Size - %lu, Error - %d\n", size, status);
     return status;
   }
-  auto buffer_cleanup = fbl::MakeAutoCall([this]() { buffer_mapper_.Reset(); });
+  auto buffer_cleanup = fit::defer([this]() { buffer_mapper_.Reset(); });
 
   zx::channel paver_local, paver_remote;
   status = zx::channel::create(0, &paver_local, &paver_remote);
@@ -673,7 +672,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   }
 
   paver_svc_.emplace(std::move(paver_local));
-  auto svc_cleanup = fbl::MakeAutoCall([&]() { paver_svc_.reset(); });
+  auto svc_cleanup = fit::defer([&]() { paver_svc_.reset(); });
 
   size_ = size;
 

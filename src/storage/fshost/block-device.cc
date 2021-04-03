@@ -388,7 +388,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
 
     case DISK_FORMAT_MINFS: {
       zx::ticks before = zx::ticks::now();
-      auto timer = fbl::MakeAutoCall([before]() {
+      auto timer = fit::defer([before]() {
         auto after = zx::ticks::now();
         auto duration = fzl::TicksToNs(after - before);
         FX_LOGS(INFO) << "fsck took " << duration.to_secs() << "." << duration.to_msecs() % 1000

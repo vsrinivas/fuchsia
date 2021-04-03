@@ -4,7 +4,8 @@
 
 #include "src/storage/minfs/resizeable_vmo_buffer.h"
 
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
+
 #include <gtest/gtest.h>
 
 namespace minfs {
@@ -27,7 +28,7 @@ class Device : public storage::VmoidRegistry {
 TEST(ResizeableVmoBufferTest, Grow) {
   ResizeableVmoBuffer buffer(kBlockSize);
   ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
-  auto detach = fbl::MakeAutoCall([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
+  auto detach = fit::defer([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
   ASSERT_EQ(buffer.Grow(2), ZX_OK);
   EXPECT_EQ(buffer.capacity(), 2ul);
   char buf[kBlockSize];
@@ -42,7 +43,7 @@ TEST(ResizeableVmoBufferTest, Grow) {
 TEST(ResizeableVmoBufferTest, Shrink) {
   ResizeableVmoBuffer buffer(kBlockSize);
   ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
-  auto detach = fbl::MakeAutoCall([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
+  auto detach = fit::defer([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
   ASSERT_EQ(buffer.Grow(5), ZX_OK);
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
@@ -56,7 +57,7 @@ TEST(ResizeableVmoBufferTest, Zero) {
   constexpr int kBlocks = 10;
   ResizeableVmoBuffer buffer(kBlockSize);
   ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
-  auto detach = fbl::MakeAutoCall([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
+  auto detach = fit::defer([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
   ASSERT_EQ(buffer.Grow(kBlocks), ZX_OK);
   static const uint8_t kFill = 0xaf;
   memset(buffer.Data(0), kFill, kBlocks * kBlockSize);

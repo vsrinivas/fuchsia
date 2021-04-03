@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/zx/interrupt.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
@@ -217,7 +217,7 @@ zx_status_t Device::InitLocked() {
   // Disable the device in event of a failure initializing. TA is disabled
   // because it cannot track the scope of AutoCalls and their associated
   // locking semantics. The lock is grabbed by |Init| and held at this point.
-  auto disable = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS { DisableLocked(); });
+  auto disable = fit::defer([this]() __TA_NO_THREAD_SAFETY_ANALYSIS { DisableLocked(); });
 
   // Parse and sanity check the capabilities and extended capabilities lists
   // if they exist

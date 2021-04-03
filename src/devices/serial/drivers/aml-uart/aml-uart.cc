@@ -11,6 +11,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 #include <bits/limits.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/mmio.h>
 
@@ -68,7 +68,7 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t AmlUart::Init() {
-  auto cleanup = fbl::MakeAutoCall([this]() { DdkRelease(); });
+  auto cleanup = fit::defer([this]() { DdkRelease(); });
 
   // Default configuration for the case that serial_impl_config is not called.
   constexpr uint32_t kDefaultBaudRate = 115200;

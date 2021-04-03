@@ -9,6 +9,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -24,7 +25,6 @@
 #include <elfload/elfload.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <zxtest/zxtest.h>
@@ -121,7 +121,7 @@ TEST(LaunchPadTest, ArgumentSize) {
 void RunWithArgsEnvHandles(unsigned int num_args, unsigned int num_env, unsigned int num_handles) {
   launchpad_t* lp;
   ASSERT_OK(launchpad_create(ZX_HANDLE_INVALID, "limits test", &lp));
-  auto destroy_launchpad = fbl::MakeAutoCall([&]() { launchpad_destroy(lp); });
+  auto destroy_launchpad = fit::defer([&]() { launchpad_destroy(lp); });
 
   // Set the args.
   const unsigned int argc = 3 + num_args;

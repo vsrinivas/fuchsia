@@ -4,13 +4,14 @@
 
 #include "usb-audio-stream-interface.h"
 
+#include <lib/fit/defer.h>
+
 #include <algorithm>
 #include <memory>
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 #include "debug-logging.h"
 #include "usb-audio-device.h"
@@ -442,7 +443,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
   // descriptor), then we are confused and this interface should be ignored.
   // Be sure to skip headers like this if we return from the middle of the
   // do/while loop below.
-  auto cleanup = fbl::MakeAutoCall([iter]() { iter->Next(); });
+  auto cleanup = fit::defer([iter]() { iter->Next(); });
   do {
     auto hdr = iter->hdr();
     if (hdr == nullptr) {

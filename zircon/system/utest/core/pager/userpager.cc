@@ -4,6 +4,7 @@
 
 #include "userpager.h"
 
+#include <lib/fit/defer.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
 #include <zircon/process.h>
@@ -17,7 +18,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 
 namespace pager_tests {
 
@@ -59,7 +59,7 @@ bool Vmo::CheckVmo(uint64_t offset, uint64_t len, const void* expected) {
     return false;
   }
 
-  auto unmap = fbl::MakeAutoCall([&]() { zx_vmar_unmap(zx_vmar_root_self(), buf, len); });
+  auto unmap = fit::defer([&]() { zx_vmar_unmap(zx_vmar_root_self(), buf, len); });
 
   if (vmo_.read(reinterpret_cast<void*>(buf), offset, len) != ZX_OK) {
     return false;

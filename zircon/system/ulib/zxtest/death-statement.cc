@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -21,7 +22,6 @@
 #include <cstdint>
 #include <string>
 
-#include <fbl/auto_call.h>
 #include <zxtest/base/death-statement.h>
 
 namespace zxtest {
@@ -101,7 +101,7 @@ int RoutineThread(void* args) {
   RoutineArgs* routine_args = reinterpret_cast<RoutineArgs*>(args);
   zx::unowned_thread thread = zx::thread::self();
 
-  auto signal_completion = fbl::MakeAutoCall([&routine_args]() {
+  auto signal_completion = fit::defer([&routine_args]() {
     zx_port_packet_t packet;
     packet.type = ZX_PKT_TYPE_USER;
     packet.key = static_cast<uint64_t>(PortKeys::kThreadCompletion);
@@ -265,7 +265,7 @@ bool DeathStatement::HandleException(const zx::channel& exception_channel) {
   uint32_t num_handles = 1;
   uint32_t num_bytes = sizeof(zx_exception_info_t);
 
-  auto set_internal_error = fbl::MakeAutoCall([this]() { state_ = State::kInternalError; });
+  auto set_internal_error = fit::defer([this]() { state_ = State::kInternalError; });
 
   if (exception_channel.read(0, &exception_info, exception.reset_and_get_address(),
                              sizeof(zx_exception_info_t), 1, &num_bytes, &num_handles) != ZX_OK) {

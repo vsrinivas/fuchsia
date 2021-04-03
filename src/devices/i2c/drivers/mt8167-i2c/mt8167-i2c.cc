@@ -11,11 +11,11 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fit/defer.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/devices/i2c/drivers/mt8167-i2c/mt8167_i2c_bind.h"
 
@@ -328,7 +328,7 @@ zx_status_t Mt8167I2c::Bind() {
 }
 
 zx_status_t Mt8167I2c::Init() {
-  auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
+  auto cleanup = fit::defer([&]() { ShutDown(); });
 
 #ifdef TEST_USB_REGS_READ
   auto thunk = [](void* arg) -> int { return reinterpret_cast<Mt8167I2c*>(arg)->TestThread(); };

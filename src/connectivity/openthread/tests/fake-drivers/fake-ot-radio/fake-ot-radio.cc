@@ -8,13 +8,13 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
 #include <ddktl/fidl.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -398,7 +398,7 @@ zx_status_t FakeOtRadioDevice::Start() {
     return status;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
+  auto cleanup = fit::defer([&]() { ShutDown(); });
 
   auto callback = [](void* cookie) {
     return reinterpret_cast<FakeOtRadioDevice*>(cookie)->RadioThread();

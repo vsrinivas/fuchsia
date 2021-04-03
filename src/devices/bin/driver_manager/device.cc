@@ -10,12 +10,11 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl/coding.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <memory>
-
-#include <fbl/auto_call.h>
 
 #include "coordinator.h"
 #include "devfs.h"
@@ -725,7 +724,7 @@ zx_status_t Device::DriverCompatibilityTest() {
 int Device::RunCompatibilityTests() {
   const char* test_driver_name = GetTestDriverName();
   TEST_LOGF(INFO, "Running test '%s'", test_driver_name);
-  auto cleanup = fbl::MakeAutoCall([this]() {
+  auto cleanup = fit::defer([this]() {
     if (test_reply_required_) {
       dh_send_complete_compatibility_tests(this, test_status_);
     }

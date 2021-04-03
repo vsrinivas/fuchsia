@@ -18,7 +18,6 @@
 #include <thread>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
@@ -1470,7 +1469,7 @@ TEST_F(VmoClone2TestCase, PinClonePages) {
   // sharing any physical pages (even though they were sharing pages up until
   // now).
   zx::pmt parent_pmt, clone_pmt;
-  auto unpin = fbl::MakeAutoCall([&parent_pmt, &clone_pmt]() {
+  auto unpin = fit::defer([&parent_pmt, &clone_pmt]() {
     if (parent_pmt.is_valid()) {
       parent_pmt.unpin();
     }

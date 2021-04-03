@@ -15,6 +15,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -35,7 +36,6 @@
 
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
@@ -65,7 +65,7 @@ static zx_status_t wait_for_device_impl(int dir_fd, char* path, const zx::time& 
   char* last = sep + 1;
 
   *sep = '\0';
-  auto restore_path = fbl::MakeAutoCall([sep] { *sep = '/'; });
+  auto restore_path = fit::defer([sep] { *sep = '/'; });
 
   // Recursively check the path up to this point
   struct stat buf;
@@ -144,7 +144,7 @@ struct ramdisk_client {
 
     // If binding to the block interface fails, ensure we still try to tear down the
     // ramdisk driver.
-    auto cleanup = fbl::MakeAutoCall(
+    auto cleanup = fit::defer(
         [&ramdisk_interface]() { ramdisk_client::DestroyByHandle(std::move(ramdisk_interface)); });
 
     status = wait_for_device_at(dirfd.get(), block_path.c_str(), duration.get());

@@ -4,7 +4,8 @@
 
 #include "src/storage/volume_image/utils/lz4_compressor.h"
 
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <lz4/lz4.h>
@@ -344,7 +345,7 @@ TEST(Lz4CompressorTest, CompressedDataMatchesUncompressedDataWhenDecompressed) {
   LZ4F_decompressionContext_t decompression_context = nullptr;
   auto decompression_context_result =
       LZ4F_createDecompressionContext(&decompression_context, LZ4F_VERSION);
-  auto release_decompression_context = fbl::MakeAutoCall([&decompression_context]() {
+  auto release_decompression_context = fit::defer([&decompression_context]() {
     if (decompression_context != nullptr) {
       LZ4F_freeDecompressionContext(decompression_context);
     }

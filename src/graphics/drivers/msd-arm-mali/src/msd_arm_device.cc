@@ -4,6 +4,8 @@
 
 #include "msd_arm_device.h"
 
+#include <lib/fit/defer.h>
+
 #include <bitset>
 #include <chrono>
 #include <cinttypes>
@@ -12,7 +14,6 @@
 #include <string>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/string_printf.h>
 
 #include "job_scheduler.h"
@@ -433,7 +434,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     gpu_interrupt_time_ = magma::get_monotonic_ns();
     // Resets flag at end of loop iteration.
     handling_gpu_interrupt_ = true;
-    auto ac = fbl::MakeAutoCall([&]() { handling_gpu_interrupt_ = false; });
+    auto cleanup = fit::defer([&]() { handling_gpu_interrupt_ = false; });
 
     if (interrupt_thread_quit_flag_)
       break;
@@ -549,7 +550,7 @@ int MsdArmDevice::JobInterruptThreadLoop() {
     job_interrupt_time_ = now;
     // Resets flag at end of loop iteration.
     handling_job_interrupt_ = true;
-    auto ac = fbl::MakeAutoCall([&]() { handling_job_interrupt_ = false; });
+    auto cleanup = fit::defer([&]() { handling_job_interrupt_ = false; });
 
     if (interrupt_thread_quit_flag_)
       break;
@@ -728,7 +729,7 @@ int MsdArmDevice::MmuInterruptThreadLoop() {
     mmu_interrupt_time_ = magma::get_monotonic_ns();
     // Resets flag at end of loop iteration.
     handling_mmu_interrupt_ = true;
-    auto ac = fbl::MakeAutoCall([&]() { handling_mmu_interrupt_ = false; });
+    auto cleanup = fit::defer([&]() { handling_mmu_interrupt_ = false; });
 
     if (interrupt_thread_quit_flag_)
       break;

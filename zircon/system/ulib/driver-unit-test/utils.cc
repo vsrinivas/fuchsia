@@ -4,8 +4,8 @@
 
 #include <lib/driver-unit-test/logger.h>
 #include <lib/driver-unit-test/utils.h>
+#include <lib/fit/defer.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -22,7 +22,7 @@ bool RunZxTests(const char* name, zx_device_t* parent, zx_handle_t handle) {
   zx::channel channel(handle);
   SetParent(parent);
 
-  auto cleanup = fbl::MakeAutoCall([]() {
+  auto cleanup = fit::defer([]() {
     SetParent(nullptr);
     Logger::DeleteInstance();
   });

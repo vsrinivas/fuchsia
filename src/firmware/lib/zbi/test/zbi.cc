@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <assert.h>
+#include <lib/fit/defer.h>
 #include <lib/zbi/zbi.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -12,7 +13,6 @@
 #include <cstring>
 #include <memory>
 
-#include <fbl/auto_call.h>
 #include <pretty/hexdump.h>
 #include <zxtest/zxtest.h>
 
@@ -852,7 +852,7 @@ TEST(ZbiTests, ZbiTestExtendOkay) {
   const size_t kDstCapacity = kExtraBytes + sizeof(test_zbi);
   uint8_t* dst_buf = get_test_zbi_extra(kExtraBytes);
 
-  auto cleanup = fbl::MakeAutoCall([src_buf, dst_buf] {
+  auto cleanup = fit::defer([src_buf, dst_buf] {
     free(src_buf);
     free(dst_buf);
   });

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dlfcn.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -14,7 +15,6 @@
 #include <thread>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "sanitizer-memory-snapshot-test-dso.h"
@@ -228,7 +228,7 @@ TEST(SanitizerUtilsTest, MemorySnapshotNoReportsWithThreads) {
   }
 
   // At the end, wake the threads up and wait for them to die.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     {
       std::lock_guard<std::mutex> locked(mutex);
       time_to_die = true;
@@ -400,7 +400,7 @@ TEST(SanitizerUtilsTest, MemorySnapshotFull) {
   }
 
   // At the end, wake the threads up and wait for them to die.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     finished.store(1);
     EXPECT_OK(zx_futex_wake(reinterpret_cast<zx_futex_t*>(&finished), -1));
     for (auto& t : threads) {

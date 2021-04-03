@@ -317,7 +317,7 @@ zx_status_t BlobLoader::InitForDecompression(
     return ZX_ERR_BAD_STATE;
   }
 
-  auto decommit_used = fbl::MakeAutoCall([this, length = blocks_to_read * GetBlockSize()]() {
+  auto decommit_used = fit::defer([this, length = blocks_to_read * GetBlockSize()]() {
     read_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, length, nullptr, 0);
   });
   auto bytes_read =
@@ -390,7 +390,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
   TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData", "compressed_size",
                  blob_layout.DataSizeUpperBound(), "blob_size", inode.blob_size);
 
-  auto decommit_used = fbl::MakeAutoCall([this, length = blob_layout.DataSizeUpperBound()]() {
+  auto decommit_used = fit::defer([this, length = blob_layout.DataSizeUpperBound()]() {
     read_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
                                 nullptr, 0);
   });

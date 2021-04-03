@@ -223,7 +223,7 @@ TEST_P(BlobfsIntegrationTest, NullBlobCreateUnlink) {
 
   DIR* dir = opendir(fs().mount_path().c_str());
   ASSERT_NE(dir, nullptr);
-  auto cleanup = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  auto cleanup = fit::defer([dir]() { closedir(dir); });
   struct dirent* entry = readdir(dir);
   ASSERT_NE(entry, nullptr);
   constexpr std::string_view kEmptyBlobName =
@@ -359,7 +359,7 @@ TEST_P(BlobfsIntegrationTest, ReadDirectory) {
   // Try to readdir on an empty directory.
   DIR* dir = opendir(fs().mount_path().c_str());
   ASSERT_NE(dir, nullptr);
-  auto cleanup = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  auto cleanup = fit::defer([dir]() { closedir(dir); });
   ASSERT_EQ(readdir(dir), nullptr) << "Expected blobfs to start empty";
 
   // Fill a directory with entries.
@@ -1322,8 +1322,7 @@ TEST_P(BlobfsIntegrationTest, FailedWrite) {
   ASSERT_EQ(
       fs().GetRamDisk()->SleepAfter(pages_per_block * (kBlockCountToWrite - 1)).status_value(),
       ZX_OK);
-  auto wake =
-      fbl::MakeAutoCall([&] { ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), ZX_OK); });
+  auto wake = fit::defer([&] { ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), ZX_OK); });
 
   ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
             static_cast<ssize_t>(info->size_data));
@@ -1416,7 +1415,7 @@ TEST_P(BlobfsIntegrationTest, ReaddirAfterUnlinkingFileWithOpenHandleShouldNotRe
   // Make sure the blob can be listed with readdir.
   DIR* dir = opendir(fs().mount_path().c_str());
   ASSERT_NE(dir, nullptr);
-  auto cleanup = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  auto cleanup = fit::defer([dir]() { closedir(dir); });
   struct dirent* dir_entry = readdir(dir);
   ASSERT_EQ(strcmp(strrchr(info->path, '/') + 1, dir_entry->d_name), 0);
 

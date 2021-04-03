@@ -8,6 +8,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -15,7 +16,6 @@
 #include <array>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <fs-management/admin.h>
 
@@ -78,7 +78,7 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_opt
   argv.push_back(nullptr);
   int argc = static_cast<int>(argv.size() - 1);
 
-  auto cleanup = fbl::MakeAutoCall([&outgoing_directory, &options]() {
+  auto cleanup = fit::defer([&outgoing_directory, &options]() {
     UnmountHandle(outgoing_directory.client->get(), options.wait_until_ready);
   });
 

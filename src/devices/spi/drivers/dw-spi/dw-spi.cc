@@ -157,7 +157,7 @@ zx_status_t DwSpi::Create(void* ctx, zx_device_t* parent) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    auto cleanup = fbl::MakeAutoCall([&spi]() { spi->DdkRelease(); });
+    auto cleanup = fit::defer([&spi]() { spi->DdkRelease(); });
 
     char devname[32];
     sprintf(devname, "dw-spi-%d", i);

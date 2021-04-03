@@ -10,6 +10,7 @@
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/operation/ethernet.h>
 #include <lib/zircon-internal/align.h>
@@ -20,7 +21,6 @@
 #include <zircon/compiler.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -199,7 +199,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
                                  (mac_device->mac_[1] << 8) | (mac_device->mac_[0] << 0),
                              DW_MAC_MAC_MACADDR0LO);
 
-  auto cleanup = fbl::MakeAutoCall([&]() { mac_device->ShutDown(); });
+  auto cleanup = fit::defer([&]() { mac_device->ShutDown(); });
 
   status = mac_device->InitBuffers();
   if (status != ZX_OK)

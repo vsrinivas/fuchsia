@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
@@ -25,7 +26,6 @@
 #include <limits>
 #include <string>
 
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
@@ -432,7 +432,7 @@ static zx_status_t DecompressLz4f(zx::vmo& input, uint64_t input_offset, size_t 
   }
 
   // Calls freeDecompressionContext when cleanup goes out of scope
-  auto cleanup = fbl::MakeAutoCall([&]() { LZ4F_freeDecompressionContext(ctx); });
+  auto cleanup = fit::defer([&]() { LZ4F_freeDecompressionContext(ctx); });
 
   std::byte* dst = output_buffer.get();
   size_t dst_size = output_size;

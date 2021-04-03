@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/process.h>
@@ -14,7 +15,6 @@
 
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 namespace {
 
@@ -208,7 +208,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
     return st;
   }
 
-  auto remove_device_on_error = fbl::MakeAutoCall([&]() { DdkAsyncRemove(); });
+  auto remove_device_on_error = fit::defer([&]() { DdkAsyncRemove(); });
 
   fbl::AllocChecker ac;
   std::unique_ptr<PartitionDevice> user_partition(

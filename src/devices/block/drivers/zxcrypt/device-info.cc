@@ -6,10 +6,10 @@
 
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/vmar.h>
 #include <zircon/status.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 
 #include "src/devices/block/drivers/zxcrypt/extra.h"
@@ -78,7 +78,7 @@ zx_status_t DeviceInfo::Reserve(size_t size) {
     zxlogf(ERROR, "zx::vmo::create failed: %s", zx_status_get_string(rc));
     return rc;
   }
-  auto cleanup = fbl::MakeAutoCall([this]() { vmo.reset(); });
+  auto cleanup = fit::defer([this]() { vmo.reset(); });
 
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   uintptr_t address;

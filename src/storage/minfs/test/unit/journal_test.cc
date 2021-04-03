@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
@@ -177,7 +179,7 @@ TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
   ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
   fbl::RefPtr<fs::Vnode> foo;
   ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
-  auto close = fbl::MakeAutoCall([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
+  auto close = fit::defer([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
   std::vector<uint8_t> buf(10, 0xaf);
   size_t written;
   ASSERT_EQ(foo->Write(buf.data(), buf.size(), 0, &written), ZX_OK);

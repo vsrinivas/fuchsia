@@ -5,6 +5,7 @@
 #ifndef __CORE_TEST_OBJECT_INFO_HELPER_H__
 #define __CORE_TEST_OBJECT_INFO_HELPER_H__
 
+#include <lib/fit/defer.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls/object.h>
@@ -13,7 +14,6 @@
 #include <climits>
 #include <type_traits>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace object_info_test {
@@ -231,7 +231,7 @@ void CheckPartiallyUnmappedBufferIsError(zx_object_info_topic_t topic,
                      zx_system_get_page_size(), &vmo_addr));
 
   // Once mapped, we need to destroy it before closing the handle.
-  auto cleanup = fbl::MakeAutoCall([&vmar]() { vmar.destroy(); });
+  auto cleanup = fit::defer([&vmar]() { vmar.destroy(); });
   ASSERT_EQ(vmar_addr, vmo_addr);
 
   // Point to a spot in the mapped page just before the unmapped region:

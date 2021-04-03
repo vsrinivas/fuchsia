@@ -6,6 +6,7 @@
 
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/fit/defer.h>
 #include <string.h>
 #include <zircon/errors.h>
 
@@ -15,7 +16,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/nhlt.h>
@@ -495,7 +495,7 @@ zx_status_t IntelDsp::Suspend(uint8_t requested_state, bool enable_wake, uint8_t
 }
 
 int IntelDsp::InitThread() {
-  auto cleanup = fbl::MakeAutoCall([this]() { DeviceShutdown(); });
+  auto cleanup = fit::defer([this]() { DeviceShutdown(); });
 
   // Enable Audio DSP
   Enable();

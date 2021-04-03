@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
@@ -19,7 +20,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 #include <safemath/checked_math.h>
 
@@ -275,7 +275,7 @@ zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
                  << " off=" << off;
 
   fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fbl::MakeAutoCall(
+  auto get_metrics = fit::defer(
       [&ticker, &out_actual, this]() { Vfs()->UpdateReadMetrics(*out_actual, ticker.End()); });
 
   Transaction transaction(Vfs());
@@ -350,7 +350,7 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   }
 
   fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fbl::MakeAutoCall(
+  auto get_metrics = fit::defer(
       [&ticker, &out_actual, this]() { Vfs()->UpdateWriteMetrics(*out_actual, ticker.End()); });
 
   auto new_size_or = safemath::CheckAdd(offset, len);
@@ -420,8 +420,7 @@ zx_status_t File::Truncate(size_t len) {
   }
 
   fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics =
-      fbl::MakeAutoCall([&ticker, this] { Vfs()->UpdateTruncateMetrics(ticker.End()); });
+  auto get_metrics = fit::defer([&ticker, this] { Vfs()->UpdateTruncateMetrics(ticker.End()); });
 
   std::unique_ptr<Transaction> transaction;
   // Due to file copy-on-write, up to 1 new (data) block may be required.

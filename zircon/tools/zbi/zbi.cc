@@ -7,6 +7,7 @@
 #include <fnmatch.h>
 #include <getopt.h>
 #include <lib/cksum.h>
+#include <lib/fit/defer.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zbitl/item.h>
 #include <lib/zbitl/json.h>
@@ -44,7 +45,6 @@
 #include <variant>
 #include <vector>
 
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <lz4/lz4frame.h>
@@ -815,7 +815,7 @@ std::unique_ptr<std::byte[]> DecompressLz4f(const std::list<const iovec>& payloa
 
   LZ4F_decompressionContext_t ctx;
   Lz4fCall(LZ4F_createDecompressionContext, &ctx, LZ4F_VERSION);
-  auto cleanup = fbl::MakeAutoCall([&]() { Lz4fCall(LZ4F_freeDecompressionContext, ctx); });
+  auto cleanup = fit::defer([&]() { Lz4fCall(LZ4F_freeDecompressionContext, ctx); });
 
   std::byte* dst = buffer.get();
   size_t dst_size = decompressed_length;
@@ -858,7 +858,7 @@ std::unique_ptr<std::byte[]> DecompressZstd(const std::list<const iovec>& payloa
     fprintf(stderr, "out of memory\n");
     exit(1);
   }
-  auto cleanup = fbl::MakeAutoCall([&]() { ZstdCall("free", ZSTD_freeDStream, stream); });
+  auto cleanup = fit::defer([&]() { ZstdCall("free", ZSTD_freeDStream, stream); });
 
   ZstdCall("init", ZSTD_initDStream, stream);
 

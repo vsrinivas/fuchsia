@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
@@ -23,7 +24,6 @@
 #include <limits>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/futex.h>
 #include <zxtest/zxtest.h>
 
@@ -254,7 +254,7 @@ TEST(FutexTest, Wakeup) {
   ASSERT_NO_FATAL_FAILURES(thread.Start(&futex_value));
 
   // Clean up on exit.
-  auto cleanup = fbl::MakeAutoCall([&thread, &futex_value]() {
+  auto cleanup = fit::defer([&thread, &futex_value]() {
     EXPECT_OK(zx_futex_wake(&futex_value, kThreadWakeAllCount));
     thread.Shutdown();
   });
@@ -272,7 +272,7 @@ TEST(FutexTest, WakeupLimit) {
   TestThread threads[4];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&futex_value, kThreadWakeAllCount);
     for (auto& t : threads) {
       t.Shutdown();
@@ -312,7 +312,7 @@ TEST(FutexTest, WakeupAddress) {
   TestThread threads[2];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&futex_value1, kThreadWakeAllCount);
     zx_futex_wake(&futex_value2, kThreadWakeAllCount);
     for (auto& t : threads) {
@@ -366,7 +366,7 @@ TEST(FutexTest, Requeue) {
   TestThread threads[6];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&futex_value1, kThreadWakeAllCount);
     zx_futex_wake(&futex_value2, kThreadWakeAllCount);
     for (auto& t : threads) {
@@ -408,7 +408,7 @@ TEST(FutexTest, RequeueUnqueuedOnTimeout) {
   TestThread threads[2];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&futex_value1, kThreadWakeAllCount);
     zx_futex_wake(&futex_value2, kThreadWakeAllCount);
     for (auto& t : threads) {
@@ -451,7 +451,7 @@ TEST(FutexTest, ThreadSuspended) {
   TestThread thread;
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     zx_futex_wake(&futex_value1, kThreadWakeAllCount);
     thread.Shutdown();
   });

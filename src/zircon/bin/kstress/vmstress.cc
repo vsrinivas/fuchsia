@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
@@ -42,7 +43,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -1078,7 +1078,7 @@ class MultiVmoTestInstance : public TestInstance {
         mapping = std::nullopt;
       }
     };
-    auto cleanup = fbl::MakeAutoCall([&unmap_mapping, &pmt]() {
+    auto cleanup = fit::defer([&unmap_mapping, &pmt]() {
       unmap_mapping();
       if (pmt) {
         pmt.unpin();

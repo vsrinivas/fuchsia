@@ -7,13 +7,13 @@
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/defer.h>
 
 #include <algorithm>
 #include <memory>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 
 #include "src/media/audio/drivers/codecs/tas27xx/ti_tas27xx-bind.h"
 
@@ -196,7 +196,7 @@ zx::status<DriverIds> Tas27xx::Initialize() {
   }
 
   // Clean up and shutdown in event of error
-  auto on_error = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto on_error = fit::defer([this]() { Shutdown(); });
 
   status = fault_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
   if (status != ZX_OK) {

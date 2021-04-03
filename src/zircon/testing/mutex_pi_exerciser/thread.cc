@@ -7,11 +7,11 @@
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "utils.h"
@@ -95,7 +95,7 @@ zx_status_t Thread::Start(Thunk thunk) {
       return ZX_ERR_NO_RESOURCES;
     }
 
-    auto cleanup = fbl::MakeAutoCall([this]() { Exit(); });
+    auto cleanup = fit::defer([this]() { Exit(); });
 
     zx_status_t res = EnsureProfile(prio_);
     if (res != ZX_OK) {

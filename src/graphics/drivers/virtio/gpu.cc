@@ -7,6 +7,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zircon-internal/align.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include <utility>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/bus/lib/virtio/trace.h"
@@ -325,7 +325,7 @@ void GpuDevice::send_command_response(const RequestType* cmd, ResponseType** res
 
   // Keep this single message at a time
   sem_wait(&request_sem_);
-  fbl::MakeAutoCall([this]() { sem_post(&request_sem_); });
+  fit::defer([this]() { sem_post(&request_sem_); });
 
   uint16_t i;
   struct vring_desc* desc = vring_.AllocDescChain(2, &i);

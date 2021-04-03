@@ -4,9 +4,10 @@
 
 #include "mtk-sdmmc.h"
 
+#include <lib/fit/defer.h>
+
 #include <atomic>
 
-#include <fbl/auto_call.h>
 #include <fbl/condition_variable.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
@@ -261,7 +262,7 @@ TEST(SdmmcTest, Request) {
   ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
   MtkSdmmcTest sdmmc(mock_regs);
 
-  auto thread_ac = fbl::MakeAutoCall([&sdmmc] { sdmmc.StopIrqThread(); });
+  auto thread_cleanup = fit::defer([&sdmmc] { sdmmc.StopIrqThread(); });
 
   // Set card_ck_stable so Init() can call SdmmcSetBusFreq() without hanging.
   GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
@@ -329,7 +330,7 @@ TEST(SdmmcTest, ReadPolled) {
   ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
   MtkSdmmcTest sdmmc(mock_regs);
 
-  auto thread_ac = fbl::MakeAutoCall([&sdmmc] { sdmmc.StopIrqThread(); });
+  auto thread_cleanup = fit::defer([&sdmmc] { sdmmc.StopIrqThread(); });
 
   GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
   sdmmc.Init();
@@ -436,7 +437,7 @@ TEST(SdmmcTest, WritePolled) {
   ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
   MtkSdmmcTest sdmmc(mock_regs);
 
-  auto thread_ac = fbl::MakeAutoCall([&sdmmc] { sdmmc.StopIrqThread(); });
+  auto thread_cleanup = fit::defer([&sdmmc] { sdmmc.StopIrqThread(); });
 
   GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
   sdmmc.Init();
@@ -550,7 +551,7 @@ TEST(SdmmcTest, IrqCallbackCalled) {
 
   ASSERT_OK(sdmmc.RegisterInBandInterrupt());
 
-  auto thread_ac = fbl::MakeAutoCall([&sdmmc] { sdmmc.StopIrqThread(); });
+  auto thread_cleanup = fit::defer([&sdmmc] { sdmmc.StopIrqThread(); });
 
   GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
   sdmmc.Init();

@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <glob.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -23,7 +24,6 @@
 #include <string>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
@@ -183,7 +183,7 @@ int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
 
 int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>* resolved) {
   glob_t resolved_glob;
-  auto auto_call_glob_free = fbl::MakeAutoCall([&resolved_glob] { globfree(&resolved_glob); });
+  auto auto_call_glob_free = fit::defer([&resolved_glob] { globfree(&resolved_glob); });
   int flags = 0;
   for (const auto& test_dir_glob : globs) {
     int err = glob(test_dir_glob.c_str(), flags, nullptr, &resolved_glob);

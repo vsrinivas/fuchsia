@@ -5,6 +5,8 @@
 #ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_ENVIRONMENT_UTILS_H_
 #define FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_ENVIRONMENT_UTILS_H_
 
+#include <lib/fit/defer.h>
+
 #include <type_traits>
 #include <utility>
 
@@ -71,9 +73,9 @@ struct SizeUtils<
 template <typename ContainerType>
 auto MakeContainerAutoCleanup([[maybe_unused]] ContainerType* container) {
   if constexpr (!ContainerType::PtrTraits::IsManaged) {
-    return fbl::MakeAutoCall([container]() { container->clear(); });
+    return fit::defer([container]() { container->clear(); });
   } else {
-    return fbl::MakeAutoCall([]() {});
+    return fit::defer([]() {});
   }
 }
 

@@ -12,6 +12,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/fifo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -40,7 +41,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/string.h>
@@ -465,7 +465,7 @@ TEST(RamdiskTests, RamdiskTestFilesystem) {
   strcpy(blockpath, "/dev/class/block/");
   DIR* dir = opendir(blockpath);
   ASSERT_NE(dir, nullptr);
-  const auto closer = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  const auto closer = fit::defer([dir]() { closedir(dir); });
 
   typedef struct watcher_args {
     const char* expected_name;
@@ -1549,7 +1549,7 @@ int fifo_wake_thread(void* arg) {
 
   // Always send a wake-up call; even if we failed to go to sleep.
   wake_args_t* wake = static_cast<wake_args_t*>(arg);
-  auto cleanup = fbl::MakeAutoCall([&] { ramdisk_wake(wake->ramdisk_client); });
+  auto cleanup = fit::defer([&] { ramdisk_wake(wake->ramdisk_client); });
 
   // Wait for the start-up signal
   zx_status_t rc = sync_completion_wait_deadline(&wake->start, wake->deadline);

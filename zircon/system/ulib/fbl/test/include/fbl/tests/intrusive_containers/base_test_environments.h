@@ -7,7 +7,6 @@
 
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 #include <fbl/tests/intrusive_containers/objects.h>
 #include <fbl/tests/intrusive_containers/test_environment_utils.h>

@@ -85,7 +85,7 @@ void BlockWatcher::Thread() {
     return;
   }
   fdio_cpp::FdioCaller caller(std::move(dirfd));
-  auto cleanup = fbl::MakeAutoCall([this] {
+  auto cleanup = fit::defer([this] {
     pause_event_.reset();
     pause_condition_.notify_all();
   });

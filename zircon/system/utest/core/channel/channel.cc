@@ -17,6 +17,7 @@
 #pragma GCC diagnostic ignored "-Wnonnull"
 #include <lib/zx/channel.h>
 #pragma GCC diagnostic pop
+#include <lib/fit/defer.h>
 #include <lib/zx/event.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/object.h>
@@ -25,7 +26,6 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "utils.h"
@@ -195,7 +195,7 @@ TEST(ChannelTest, WaitManyIsSignaledOnAnyElementWrite) {
                           zx::unowned_channel(remote_2), zx::unowned_event(event),
                           &received_packets, &received_bytes_1, &received_bytes_2, &result);
     // On exit close the local handles to unblock the service thread.
-    auto cleanup = fbl::MakeAutoCall([&local_1, &local_2]() {
+    auto cleanup = fit::defer([&local_1, &local_2]() {
       local_1.reset();
       local_2.reset();
     });
@@ -240,7 +240,7 @@ TEST(ChannelTest, WaitManyIsSignaledForBothWrites) {
                           zx::unowned_channel(remote_2), zx::unowned_event(event),
                           &received_packets, &received_bytes_1, &received_bytes_2, &result);
     // On exit close the local handles to unblock the service thread.
-    auto cleanup = fbl::MakeAutoCall([&local_1, &local_2]() {
+    auto cleanup = fit::defer([&local_1, &local_2]() {
       local_1.reset();
       local_2.reset();
     });
@@ -481,7 +481,7 @@ TEST(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
   {
     AutoJoinThread worker_1(reader_worker, kReader1Offset);
     AutoJoinThread worker_2(reader_worker, kReader2Offset);
-    auto cleanup = fbl::MakeAutoCall([&local, &event]() {
+    auto cleanup = fit::defer([&local, &event]() {
       // Unlock read.
       local.reset();
       // Notify cancelled.
@@ -785,7 +785,7 @@ void ReplyAndWait(const Message& request, uint32_t message_count, zx::channel sv
                   std::atomic<const char*>* error, zx::event* wait_for_event) {
   std::set<zx_txid_t> live_ids;
   std::vector<Message> live_requests;
-  auto cleanup = fbl::MakeAutoCall([&svc, &live_requests]() {
+  auto cleanup = fit::defer([&svc, &live_requests]() {
     svc.reset();
     for (auto req : live_requests) {
       for (uint32_t i = 0; i < req.handle_count; ++i) {
@@ -863,7 +863,7 @@ void ReplyFiller(Message* reply) {
   reply->data_size = data_size;
 
   uint32_t i = 0;
-  auto cleanup = fbl::MakeAutoCall([&i, reply]() {
+  auto cleanup = fit::defer([&i, reply]() {
     for (uint32_t j = 0; j < i; ++j) {
       zx_handle_close(reply->handles[j]);
     }

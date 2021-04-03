@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <sys/time.h>
 #include <time.h>
@@ -10,7 +11,6 @@
 #include <zircon/types.h>
 #include <zircon/utc.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -31,7 +31,7 @@ class UtcFixture : public zxtest::Test {
     ASSERT_FALSE(clock_installed_);
     zx::clock clock_to_install;
 
-    auto cleanup = fbl::MakeAutoCall([this]() {
+    auto cleanup = fit::defer([this]() {
       ZX_ASSERT(!clock_installed_);
       test_clock_.reset();
       runtime_clock_.reset();

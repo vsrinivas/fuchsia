@@ -5,8 +5,7 @@
 #include "fake_bus_driver.h"
 
 #include <lib/ddk/platform-defs.h>
-
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
 
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/device.h"
@@ -24,7 +23,7 @@ zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name, uint8_t
     return st;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&bus_driver] { bus_driver->DdkAsyncRemove(); });
+  auto cleanup = fit::defer([&bus_driver] { bus_driver->DdkAsyncRemove(); });
   st = bus_driver->CreateDevice(bus_driver->test_bdf(), kFakeQuadroDeviceConfig.data(),
                                 kFakeQuadroDeviceConfig.max_size());
   if (st != ZX_OK) {

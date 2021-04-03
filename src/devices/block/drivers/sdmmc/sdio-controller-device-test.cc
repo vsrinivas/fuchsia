@@ -4,12 +4,12 @@
 
 #include "sdio-controller-device.h"
 
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sdio/hw.h>
 #include <lib/zx/vmo.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
@@ -144,7 +144,7 @@ class SdioScatterGatherTest : public zxtest::Test {
 
 TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
   EXPECT_OK(dut_.StartSdioIrqThread());
-  auto stop_thread = fbl::MakeAutoCall([&]() { dut_.StopSdioIrqThread(); });
+  auto stop_thread = fit::defer([&]() { dut_.StopSdioIrqThread(); });
 
   zx::port port;
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
@@ -369,7 +369,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
 
 TEST_F(SdioControllerDeviceTest, DdkLifecycle) {
   // The interrupt thread is started by AddDevice.
-  auto stop_thread = fbl::MakeAutoCall([&]() { dut_.StopSdioIrqThread(); });
+  auto stop_thread = fit::defer([&]() { dut_.StopSdioIrqThread(); });
 
   sdmmc_.set_command_callback(
       SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
@@ -790,7 +790,7 @@ TEST_F(SdioControllerDeviceTest, IoAbortSetsAbortFlag) {
 }
 
 TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
-  auto stop_thread = fbl::MakeAutoCall([&]() { dut_.StopSdioIrqThread(); });
+  auto stop_thread = fit::defer([&]() { dut_.StopSdioIrqThread(); });
 
   sdmmc_.set_command_callback(
       SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });

@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <lib/trace/event.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/port.h>
@@ -18,8 +19,6 @@
 #include <zircon/types.h>
 
 #include <utility>
-
-#include <fbl/auto_call.h>
 
 #include "src/devices/block/drivers/zxcrypt/debug.h"
 #include "src/devices/block/drivers/zxcrypt/device.h"
@@ -188,7 +187,7 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
     zxlogf(ERROR, "zx::vmar::root_self()->map() failed: %s", zx_status_get_string(rc));
     return rc;
   }
-  auto cleanup = fbl::MakeAutoCall(
+  auto cleanup = fit::defer(
       [root, address, aligned_length]() { zx_vmar_unmap(root, address, aligned_length); });
 
   // Decrypt in place

@@ -32,6 +32,7 @@
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/cksum.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/event.h>
 
 #include <fbl/auto_lock.h>
@@ -1444,8 +1445,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
 
   zx_status_t status;
 #ifdef __Fuchsia__
-  auto fvm_cleanup =
-      fbl::MakeAutoCall([device = bc->device(), &info]() { FreeSlices(&info, device); });
+  auto fvm_cleanup = fit::defer([device = bc->device(), &info]() { FreeSlices(&info, device); });
   status = CreateFvmData(options, &info, bc->device());
   if (status != ZX_OK) {
     return status;

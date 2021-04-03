@@ -4,10 +4,9 @@
 #include "aml-tdm-config-device.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 
 #include <utility>
-
-#include <fbl/auto_call.h>
 
 namespace audio::aml_g12 {
 
@@ -67,7 +66,7 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
   // Shut down the SoC audio peripherals (tdm/dma)
   device_->Shutdown();
 
-  auto on_error = fbl::MakeAutoCall([this]() { device_->Shutdown(); });
+  auto on_error = fit::defer([this]() { device_->Shutdown(); });
 
   device_->Initialize();
 

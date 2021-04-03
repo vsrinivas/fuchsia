@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -15,7 +16,6 @@
 #include <memory>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 
 #include "xdc-init.h"
@@ -111,7 +111,7 @@ static zx_status_t transfer(fbl::unique_fd& src_fd, off_t src_len, fbl::unique_f
 }
 
 int main(int argc, char** argv) {
-  auto print_usage = fbl::MakeAutoCall([argv]() { usage(argv[0]); });
+  auto print_usage = fit::defer([argv]() { usage(argv[0]); });
 
   const char* filename = nullptr;
   uint32_t stream_id = DEFAULT_STREAM_ID;

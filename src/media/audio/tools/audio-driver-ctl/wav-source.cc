@@ -6,13 +6,13 @@
 
 #include <fcntl.h>
 #include <lib/fdio/io.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 zx_status_t WAVSource::Initialize(const char* filename, uint64_t channels_to_use_bitmask,
                                   Duration duration) {
@@ -24,7 +24,7 @@ zx_status_t WAVSource::Initialize(const char* filename, uint64_t channels_to_use
   RIFFChunkHeader riff_hdr;
   WAVHeader wav_info;
 
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     Close();
     payload_len_ = 0;
   });

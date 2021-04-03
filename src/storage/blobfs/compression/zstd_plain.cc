@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/compression/zstd_plain.h"
 
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -11,7 +12,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <zstd/zstd.h>
 
@@ -29,7 +29,7 @@ zx_status_t AbstractZSTDDecompressor::Decompress(void* uncompressed_buf, size_t*
   TRACE_DURATION("blobfs", "AbstractZSTDDecompressor::Decompress", "uncompressed_size",
                  *uncompressed_size, "max_compressed_size", max_compressed_size);
   ZSTD_DStream* stream = ZSTD_createDStream();
-  auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_freeDStream(stream); });
+  auto cleanup = fit::defer([&stream] { ZSTD_freeDStream(stream); });
 
   size_t r = ZSTD_initDStream(stream);
   if (ZSTD_isError(r)) {

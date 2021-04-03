@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/defer.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 
-#include <fbl/auto_call.h>
 #include <zxtest/cpp/zxtest.h>
 #include <zxtest/zxtest.h>
 
@@ -1082,7 +1082,7 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
     observed_key.key = key;
     sync_completion_signal(&completion);
   };
-  auto undo = fbl::MakeAutoCall([dev_iface]() {
+  auto undo = fit::defer([dev_iface]() {
     // Clear event handler so we don't see any of the teardown.
     dev_iface->evt_rx_queue_packet = nullptr;
   });

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include <array>
 #include <type_traits>
 
-#include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -638,7 +639,7 @@ void CopyTestHelper() {
     // Make sure that we always clean our container before allowing the
     // container, or any nodes in the container the chance to destruct.
     Container container;
-    auto cleanup = fbl::MakeAutoCall([&container]() { container.clear(); });
+    auto cleanup = fit::defer([&container]() { container.clear(); });
 
     // For these tests, we want A and B to be in the container, while C is not
     // in the container.  Also, keep track of who is initially first the
@@ -756,7 +757,7 @@ void MoveTestHelper() {
     // Make sure that we always clean our container before allowing the
     // container, or any nodes in the container the chance to destruct.
     Container container;
-    auto cleanup = fbl::MakeAutoCall([&container]() { container.clear(); });
+    auto cleanup = fit::defer([&container]() { container.clear(); });
 
     // For these tests, we want A and B to be in the container, while C is not
     // in the container.  Also, keep track of who is initially first the

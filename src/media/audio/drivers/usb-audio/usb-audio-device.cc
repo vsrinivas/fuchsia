@@ -4,12 +4,12 @@
 
 #include "usb-audio-device.h"
 
+#include <lib/fit/defer.h>
 #include <string.h>
 
 #include <memory>
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 
@@ -147,7 +147,7 @@ void UsbAudioDevice::Probe() {
   while (iter.valid()) {
     // Advance to the next descriptor if we don't find and parse an
     // interface we understand.
-    auto cleanup = fbl::MakeAutoCall([&iter] { iter.Next(); });
+    auto cleanup = fit::defer([&iter] { iter.Next(); });
     auto hdr = iter.hdr();
 
     // We are only prepared to find interface descriptors at this point.

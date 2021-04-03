@@ -5,7 +5,7 @@
 #include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
-#include "fbl/auto_call.h"
+#include "lib/fit/defer.h"
 
 namespace {
 
@@ -176,7 +176,7 @@ TEST_F(UsbLibTest, TestUsbDescIterNextInterface) {
                         sizeof(kTestUsbSsEpCompDescriptor)) *
                        2;
   void* desc = malloc(desc_length);
-  auto cleanup = fbl::MakeAutoCall([desc]() { free(desc); });
+  auto cleanup = fit::defer([desc]() { free(desc); });
   uint8_t* ptr = reinterpret_cast<uint8_t*>(desc);
   usb_desc_iter_t iter;
   for (size_t i = 0; i < 2; i++) {
@@ -190,7 +190,7 @@ TEST_F(UsbLibTest, TestUsbDescIterNextInterface) {
   SetDescriptors(desc);
   SetDescriptorLength(desc_length);
   ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
-  auto iter_cleanup = fbl::MakeAutoCall([&iter]() { usb_desc_iter_release(&iter); });
+  auto iter_cleanup = fit::defer([&iter]() { usb_desc_iter_release(&iter); });
   for (size_t i = 0; i < 2; i++) {
     usb_interface_descriptor_t* interface = usb_desc_iter_next_interface(&iter, false);
     ASSERT_NE(nullptr, interface);
@@ -205,7 +205,7 @@ TEST_F(UsbLibTest, TestUsbDescIterNextEndpoint) {
   size_t desc_length =
       sizeof(kTestUsbInterfaceDescriptor) * 2 + sizeof(kTestUsbEndpointDescriptor) * 2;
   void* desc = malloc(desc_length);
-  auto cleanup = fbl::MakeAutoCall([desc]() { free(desc); });
+  auto cleanup = fit::defer([desc]() { free(desc); });
   uint8_t* ptr = reinterpret_cast<uint8_t*>(desc);
   usb_desc_iter_t iter;
   memcpy(ptr, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor));
@@ -219,7 +219,7 @@ TEST_F(UsbLibTest, TestUsbDescIterNextEndpoint) {
   SetDescriptors(desc);
   SetDescriptorLength(desc_length);
   ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
-  auto iter_cleanup = fbl::MakeAutoCall([&iter]() { usb_desc_iter_release(&iter); });
+  auto iter_cleanup = fit::defer([&iter]() { usb_desc_iter_release(&iter); });
   ASSERT_NE(nullptr, usb_desc_iter_next_interface(&iter, false));
   for (size_t i = 0; i < 2; i++) {
     usb_endpoint_descriptor_t* ep = usb_desc_iter_next_endpoint(&iter);
@@ -234,7 +234,7 @@ TEST_F(UsbLibTest, TestUsbDescIterNextSsEpComp) {
   size_t desc_length = sizeof(kTestUsbInterfaceDescriptor) * 2 +
                        sizeof(kTestUsbEndpointDescriptor) + sizeof(kTestUsbSsEpCompDescriptor) * 2;
   void* desc = malloc(desc_length);
-  auto cleanup = fbl::MakeAutoCall([desc]() { free(desc); });
+  auto cleanup = fit::defer([desc]() { free(desc); });
   uint8_t* ptr = reinterpret_cast<uint8_t*>(desc);
   usb_desc_iter_t iter;
   memcpy(ptr, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor));
@@ -250,7 +250,7 @@ TEST_F(UsbLibTest, TestUsbDescIterNextSsEpComp) {
   SetDescriptors(desc);
   SetDescriptorLength(desc_length);
   ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
-  auto iter_cleanup = fbl::MakeAutoCall([&iter]() { usb_desc_iter_release(&iter); });
+  auto iter_cleanup = fit::defer([&iter]() { usb_desc_iter_release(&iter); });
   ASSERT_NE(nullptr, usb_desc_iter_next_interface(&iter, false));
   ASSERT_NE(nullptr, usb_desc_iter_next_endpoint(&iter));
   for (size_t i = 0; i < 2; i++) {

@@ -6,6 +6,7 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/types.h>
 #include <zircon/device/vfs.h>
@@ -13,7 +14,6 @@
 
 #include <new>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -383,7 +383,7 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
 
   // If we fail, but leave any intermediate nodes, we need to clean them up
   // before unlocking and returning.
-  auto cleanup = fbl::MakeAutoCall([&first_new_node]() {
+  auto cleanup = fit::defer([&first_new_node]() {
     if (first_new_node != nullptr) {
       first_new_node->Unlink();
     }

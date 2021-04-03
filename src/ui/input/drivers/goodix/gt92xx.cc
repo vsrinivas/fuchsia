@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -19,7 +20,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 
@@ -153,7 +153,7 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
 
   auto thunk = [](void* arg) -> int { return reinterpret_cast<Gt92xxDevice*>(arg)->Thread(); };
 
-  auto cleanup = fbl::MakeAutoCall([&]() { goodix_dev->ShutDown(); });
+  auto cleanup = fit::defer([&]() { goodix_dev->ShutDown(); });
 
   goodix_dev->running_.store(true);
   int ret = thrd_create_with_name(&goodix_dev->thread_, thunk, goodix_dev.get(), "gt92xx-thread");

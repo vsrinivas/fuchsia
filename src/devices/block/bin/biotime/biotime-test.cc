@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/process.h>
 
 #include <utility>
 
-#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
@@ -20,7 +20,7 @@ namespace {
 void run_biotime(fbl::Vector<const char*>&& args) {
   ramdisk_client_t* ramdisk;
   ASSERT_EQ(ramdisk_create(1024, 100, &ramdisk), ZX_OK);
-  auto ac = fbl::MakeAutoCall([&] { EXPECT_EQ(ramdisk_destroy(ramdisk), 0); });
+  auto cleanup = fit::defer([&] { EXPECT_EQ(ramdisk_destroy(ramdisk), 0); });
 
   args.insert(0, "/boot/bin/biotime");
   args.push_back(ramdisk_get_path(ramdisk));

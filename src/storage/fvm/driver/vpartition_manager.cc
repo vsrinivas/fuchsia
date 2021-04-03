@@ -10,6 +10,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -32,7 +33,6 @@
 #include <utility>
 
 #include <fbl/array.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <safemath/clamped_math.h>
 
@@ -211,10 +211,9 @@ zx_status_t VPartitionManager::Load() {
 
   // Signal all threads blocked on this thread completion. Join Only happens in DdkRelease, but we
   // need to block earlier to avoid races between DdkRemove and any API call.
-  auto singal_completion =
-      fbl::MakeAutoCall([this]() { sync_completion_signal(&worker_completed_); });
+  auto singal_completion = fit::defer([this]() { sync_completion_signal(&worker_completed_); });
 
-  auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+  auto auto_detach = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
     zxlogf(ERROR, "Aborting Driver Load");
     // This will schedule the device to be unbound.
     if (init_txn_)
@@ -251,7 +250,7 @@ zx_status_t VPartitionManager::Load() {
   }
 
   // Cancelled before we return ZX_OK at the end of Load().
-  auto dump_header = fbl::MakeAutoCall([&sb]() { zxlogf(ERROR, "%s\n", sb.ToString().c_str()); });
+  auto dump_header = fit::defer([&sb]() { zxlogf(ERROR, "%s\n", sb.ToString().c_str()); });
 
   // Allocate a buffer big enough for the allocated metadata.
   size_t metadata_vmo_size = sb.GetMetadataAllocatedBytes();

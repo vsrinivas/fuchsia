@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/io.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <threads.h>
 #include <unistd.h>
@@ -17,7 +18,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>
 
 static constexpr uint32_t kDefaultNumThreads = 4;
@@ -154,7 +154,7 @@ void usage(const char* program_name) {
 }
 
 int main(int argc, char** argv) {
-  auto show_usage = fbl::MakeAutoCall([argv]() { usage(argv[0]); });
+  auto show_usage = fit::defer([argv]() { usage(argv[0]); });
 
   // 0, 1, 3, 5 and 6 arguments are the only legal number of args.
   switch (argc) {

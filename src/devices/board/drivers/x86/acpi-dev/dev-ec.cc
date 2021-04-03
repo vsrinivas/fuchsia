@@ -5,12 +5,11 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/hw/inout.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <threads.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include <fbl/auto_call.h>
 
 #include "acpi-private.h"
 #include "dev.h"
@@ -324,7 +323,7 @@ static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE ec_handle, ACPI_HANDLE* gpe_block
     }
   }
 
-  auto cleanup = fbl::MakeAutoCall([]() { xprintf("Failed to intepret EC GPE number"); });
+  auto cleanup = fit::defer([]() { xprintf("Failed to intepret EC GPE number"); });
 
   /* According to section 12.11 of ACPI v6.1, a _GPE object on this device
    * evaluates to either an integer specifying bit in the GPEx_STS blocks

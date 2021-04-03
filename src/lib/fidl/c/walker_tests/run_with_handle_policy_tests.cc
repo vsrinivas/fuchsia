@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <limits.h>
@@ -23,7 +24,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
@@ -52,7 +52,7 @@ void LaunchHelper(const char* argv[]) {
   zx::job test_job;
   status = zx::job::create(*zx::job::default_job(), 0, &test_job);
   ASSERT_EQ(status, ZX_OK);
-  auto auto_call_kill_job = fbl::MakeAutoCall([&test_job]() { test_job.kill(); });
+  auto auto_call_kill_job = fit::defer([&test_job]() { test_job.kill(); });
   const char name[] = "handle-policy-test-app";
   status = test_job.set_property(ZX_PROP_NAME, name, sizeof(name));
   ASSERT_EQ(status, ZX_OK);

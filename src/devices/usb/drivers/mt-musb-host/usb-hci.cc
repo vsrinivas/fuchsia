@@ -9,13 +9,13 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/usb.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 
-#include <fbl/auto_call.h>
 #include <soc/mt8167/mt8167-usb-phy.h>
 #include <soc/mt8167/mt8167-usb.h>
 #include <usb/request-cpp.h>
@@ -221,7 +221,7 @@ zx_status_t UsbHci::Init() {
     return ZX_ERR_INTERNAL;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     irq_.destroy();
     irq_thread_.join();
   });

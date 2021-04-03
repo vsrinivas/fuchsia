@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/process.h>
@@ -11,7 +12,6 @@
 
 #include <string>
 
-#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -70,7 +70,7 @@ const char* TargetProcess::program_name_ = nullptr;
 
 // Run the target process, passing the clock provided (if any) and wait for it to exit.
 void TargetProcess::Run(zx::clock clock_to_send) {
-  auto on_failure = fbl::MakeAutoCall([this]() { Stop(); });
+  auto on_failure = fit::defer([this]() { Stop(); });
 
   // Make sure that we have a program name and have not already started.
   ASSERT_NOT_NULL(program_name_);

@@ -5,6 +5,7 @@
 #include "src/storage/minfs/directory.h"
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +20,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 
 #include "lib/zx/status.h"
@@ -516,7 +516,7 @@ zx_status_t Directory::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPi
 
   bool success = false;
   fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fbl::MakeAutoCall(
+  auto get_metrics = fit::defer(
       [&ticker, &success, this]() { Vfs()->UpdateLookupMetrics(success, ticker.End()); });
 
   if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind); found_or.is_error()) {
@@ -627,7 +627,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
   bool success = false;
   fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fbl::MakeAutoCall(
+  auto get_metrics = fit::defer(
       [&ticker, &success, this]() { Vfs()->UpdateCreateMetrics(success, ticker.End()); });
 
   if (IsUnlinked()) {
@@ -729,7 +729,7 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
   bool success = false;
   fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fbl::MakeAutoCall(
+  auto get_metrics = fit::defer(
       [&ticker, &success, this]() { Vfs()->UpdateUnlinkMetrics(success, ticker.End()); });
 
   zx_status_t status;
@@ -783,7 +783,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   TRACE_DURATION("minfs", "Directory::Rename", "src", oldname, "dst", newname);
   bool success = false;
   fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fbl::MakeAutoCall(
+  auto get_metrics = fit::defer(
       [&ticker, &success, this]() { Vfs()->UpdateRenameMetrics(success, ticker.End()); });
 
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname));
