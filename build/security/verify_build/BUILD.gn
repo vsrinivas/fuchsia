@@ -15,29 +15,29 @@ if (host_os == "win") {
   zbi_tool += ".exe"
 }
 
-host_test("verify_zbi_test") {
+host_test("verify_build_test") {
   binary_path = python_exe_path
   args = [
     rebase_path("${target_out_dir}/test_wrapper.py", root_build_dir),
     rebase_path("${python_exe_path}", root_build_dir),
-    rebase_path("${target_out_dir}/verify_zbi_test.py", root_build_dir),
+    rebase_path("${target_out_dir}/verify_build_test.py", root_build_dir),
     rebase_path(scrutiny_tool, root_build_dir),
     rebase_path(zbi_tool, root_build_dir),
   ]
   deps = [
     ":tools($host_toolchain)",
-    ":verify_zbi_test_data($host_toolchain)",
+    ":verify_build_test_data($host_toolchain)",
     "//build/python:interpreter",
     scrutiny_target,
     zbi_target,
   ]
 }
 
-host_test_data("verify_zbi_test_data") {
+host_test_data("verify_build_test_data") {
   sources = [
     "test_wrapper.py",
-    "verify_zbi.py",
-    "verify_zbi_test.py",
+    "verify_build.py",
+    "verify_build_test.py",
   ]
   outputs = [ "${target_out_dir}/{{source_file_part}}" ]
 }
@@ -52,5 +52,5 @@ host_test_data("tools") {
 group("tests") {
   testonly = true
 
-  deps = [ ":verify_zbi_test($host_toolchain)" ]
+  deps = [ ":verify_build_test($host_toolchain)" ]
 }

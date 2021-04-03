@@ -2,7 +2,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-r"""Unit test for verify_zbi.py.
+r"""Unit test for verify_build.py.
 
 Need to have SCRUTINY and ZBI environmental variables set.
 
@@ -10,7 +10,7 @@ To manually run this test:
 
   SCRUTINY=~/fuchsia/out/default/host_x64/scrutiny \
   ZBI=~/fuchsia/out/default/host_x64/zbi python3 \
-  verify_zbi_test.py
+  verify_build_test.py
 """
 import os
 import subprocess
@@ -19,7 +19,7 @@ import tempfile
 import unittest
 import unittest.mock as mock
 
-import verify_zbi
+import verify_build
 
 SUBPROCESS_RUN = subprocess.run
 
@@ -53,7 +53,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 '--stamp', stamp_file
             ]
             # Verify the cmdline in the generated ZBI.
-            result = verify_zbi.main(args)
+            result = verify_build.main(args)
             if result == 0:
                 # Verify stamp file is created.
                 self.assertTrue(os.path.isfile(stamp_file))
@@ -90,7 +90,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                     '--scrutiny', fake_scrutiny, '--golden-files', golden_file,
                     '--stamp', stamp_file
                 ]
-                result = verify_zbi.main(args)
+                result = verify_build.main(args)
             if result == 0:
                 # Verify stamp file is created.
                 self.assertTrue(os.path.isfile(stamp_file))
@@ -136,7 +136,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                     '--far', fake_far, '--golden-files', golden_file, '--stamp',
                     stamp_file
                 ]
-                result = verify_zbi.main(args)
+                result = verify_build.main(args)
 
             if result == 0:
                 # Verify stamp file is created.
@@ -218,7 +218,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 '--scrutiny', scrutiny, '--golden-files', golden_file,
                 '--stamp', stamp_file
             ]
-            self.assertEqual(1, verify_zbi.main(args))
+            self.assertEqual(1, verify_build.main(args))
 
     def test_verify_kernel_cmdline_success_no_cmdline_found(self):
         with tempfile.TemporaryDirectory() as test_folder:
@@ -242,7 +242,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 '--scrutiny', scrutiny, '--golden-files', golden_file,
                 '--stamp', stamp_file
             ]
-            self.assertEqual(0, verify_zbi.main(args))
+            self.assertEqual(0, verify_build.main(args))
 
     def test_verify_kernel_cmdline_fail_golden_empty_cmdline_found(self):
         self.assertEqual(1, self.verify_kernel_cmdline('', b'option2'))
@@ -270,7 +270,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 '--scrutiny', scrutiny, '--golden-files', golden_file,
                 '--stamp', stamp_file
             ]
-            self.assertEqual(1, verify_zbi.main(args))
+            self.assertEqual(1, verify_build.main(args))
 
     def test_verify_kernel_cmdline_multiple_golden_files_one_match(self):
         with tempfile.TemporaryDirectory() as test_folder:
@@ -307,7 +307,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 '--scrutiny', scrutiny, '--golden-files', golden_file_1,
                 golden_file_2, '--stamp', stamp_file
             ]
-            self.assertEqual(1, verify_zbi.main(args))
+            self.assertEqual(1, verify_build.main(args))
 
     def test_verify_kernel_cmdline_three_golden_files_not_supported(self):
         with tempfile.TemporaryDirectory() as test_folder:
@@ -345,7 +345,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 golden_file_2, golden_file_3, '--stamp', stamp_file
             ]
             # We do not support more than two golden files.
-            self.assertEqual(0, verify_zbi.main(args))
+            self.assertEqual(0, verify_build.main(args))
 
     def test_verify_bootfs_filelist_normal_case(self):
         self.assertEqual(

@@ -2,7 +2,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-"""Use scrutiny to verify various ZBI items."""
+"""Use scrutiny to verify a build."""
 
 import argparse
 import difflib
@@ -74,7 +74,7 @@ def main(input_args):
             'that to finish before starting a new one.')
 
     try:
-        verify_zbi(args)
+        verify_build(args)
     except VerificationError as e:
         print_error(str(e))
         return 1
@@ -84,8 +84,8 @@ def main(input_args):
     return 0
 
 
-def verify_zbi(args):
-    """verify_zbi verifies the ZBI image.
+def verify_build(args):
+    """verify_build verifies a build against specified golden files.
 
     Raises:
         VerificationError: If verification fails.
