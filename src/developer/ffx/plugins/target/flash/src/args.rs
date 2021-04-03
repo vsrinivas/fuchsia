@@ -11,7 +11,7 @@ use {
 };
 
 pub(crate) const OEM_FILE_ERROR_MSG: &str =
-    "Unrecognized OEM staged file. Expected comma-seperated pair: \"<OEM_COMMAND>,<PATH_TO_FILE>\"";
+    "Unrecognized OEM staged file. Expected comma-separated pair: \"<OEM_COMMAND>,<PATH_TO_FILE>\"";
 
 #[ffx_command()]
 #[derive(FromArgs, Default, Debug, PartialEq, Clone)]
@@ -30,7 +30,7 @@ To include SSH keys as well:
     ~/fuchsia/.ssh/authorized_keys
     ~/fuchsia/out/default/flash.json
      fuchsia",
-    note = "Flases an image to a target device using the fastboot protocol.
+    note = "Flashes an image to a target device using the fastboot protocol.
 Requires a specific <manifest> file and <product> name as an input.
 
 This is only applicable to a physical device and not an emulator target.

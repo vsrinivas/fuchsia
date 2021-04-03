@@ -387,9 +387,9 @@ mod test {
 
     const MANIFEST: &'static str = r#"{
         "version": 1,
-        "manifest": [ 
+        "manifest": [
             {
-                "name": "zedboot", 
+                "name": "zedboot",
                 "bootloader_partitions": [
                     ["test1", "path1"],
                     ["test2", "path2"]
@@ -404,10 +404,10 @@ mod test {
                 "oem_files": [
                     ["test1", "path1"],
                     ["test2", "path2"]
-                ] 
+                ]
             },
             {
-                "name": "product", 
+                "name": "product",
                 "bootloader_partitions": [],
                 "partitions": [
                     ["test10", "path10"],
@@ -421,9 +421,9 @@ mod test {
 
     const ARRAY_MANIFEST: &'static str = r#"[{
         "version": 1,
-        "manifest": [ 
+        "manifest": [
             {
-                "name": "zedboot", 
+                "name": "zedboot",
                 "bootloader_partitions": [
                     ["test1", "path1"],
                     ["test2", "path2"]
@@ -438,10 +438,10 @@ mod test {
                 "oem_files": [
                     ["test1", "path1"],
                     ["test2", "path2"]
-                ] 
+                ]
             },
             {
-                "name": "product", 
+                "name": "product",
                 "bootloader_partitions": [],
                 "partitions": [
                     ["test10", "path10"],
