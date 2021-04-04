@@ -128,6 +128,10 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
 #    include_dirs : list of additional include directories passed to the pre-processor.
 #    defines      : list of defines.
 #
+# Additional variables whose defaults are determined by declare_args():
+#    gen_debug_shaders : generate debug shaders
+#    skip_spirv_opt    : skip the `spirv-opt` pass
+#
 template("graphics_compute_compile_glsl_shader_foreach") {
   _output_dir = invoker.output_dir
   _gen_debug_shaders = graphics_compute_generate_debug_shaders
