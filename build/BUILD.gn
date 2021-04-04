@@ -50,6 +50,7 @@ group("deprecated_package") {
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
   visibility += [
+    "//examples/fidl/fuchsia.examples/*",
     "//garnet/bin/run_test_component/*",
     "//garnet/bin/run_test_component/test/*",
     "//garnet/bin/setui/*",
@@ -81,6 +82,7 @@ group("deprecated_package") {
     "//sdk/lib/sys/cpp/testing/examples/*",
     "//sdk/lib/sys/cpp/testing/examples/test_with_environment/*",
     "//sdk/lib/syslog/cpp/*",
+    "//src/bringup/bin/pwrbtn-monitor/test/fidl/*",
     "//src/developer/debug/debug_agent/*",
     "//src/developer/remote-control/*",
     "//src/developer/remote-control/diagnostics-bridge/*",
@@ -137,6 +139,35 @@ group("deprecated_package") {
     "//src/virtualization/tests/*",
     "//third_party/Vulkan-Tools/cube/*",
   ]
+}
+
+group("non_hermetic_deps") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of actions with `hermetic_deps = false`.
+  #
+  # Introducing new actions that are non-hermetic is not allowed.
+  # A cleanup is in progress. See:
+  # https://fuchsia.dev/fuchsia-src/contribute/open_projects/build/hermetic_actions
+  #
+  # For more information about hermetic build actions:
+  # https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
+  #
+  # Maintainers will accept changes to the allowlist below that support
+  # refactors, such as moving a legacy target to a different directory.
+
+  # To regenerate:
+  # fx gn refs $(fx get-build-dir) //build:non_hermetic_deps | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
+  #
+  # TODO(shayba): populate the allowlist below once top root causes are fixed.
+  # Otherwise there will be too much pressure to extend the allowlist.
+  visibility = [ "*" ]
 }
 
 # Build targets that use the legacy zx_library and zx_host_tool templates

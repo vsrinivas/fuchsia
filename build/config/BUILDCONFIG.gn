@@ -646,10 +646,16 @@ foreach(_target_type,
         hermetic_deps = invoker.hermetic_deps
       }
 
-      # Touching this file will force all non-hermetic actions to rerun.
-      # This is useful for ensuring incremental build correctness, even in
-      # the presence of non-hermetic actions.
+      if (!defined(deps)) {
+        deps = []
+      }
       if (!hermetic_deps) {
+        # Regression stop
+        deps += [ "//build:non_hermetic_deps" ]
+
+        # Touching this file will force all non-hermetic actions to rerun.
+        # This is useful for ensuring incremental build correctness, even in
+        # the presence of non-hermetic actions.
         inputs += [ "//build/tracer/force_nonhermetic_rebuild" ]
       }
 
