@@ -59,17 +59,9 @@ void App::RegisterMediaButtonsListener(
   media_buttons_handler_.RegisterListener(std::move(listener));
 }
 
-void App::PresentView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
+void App::PresentViewInternal(
+    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  if (presentation_) {
-    FX_LOGS(ERROR) << "Support for multiple simultaneous presentations has been removed. To "
-                      "replace a view, use PresentOrReplaceView";
-    // Reject the request.
-    presentation_request.Close(ZX_ERR_ALREADY_BOUND);
-    return;
-  }
-
   InitializeServices();
 
   int32_t display_startup_rotation_adjustment = 0;
@@ -85,11 +77,29 @@ void App::PresentView(
   auto presentation = std::make_unique<Presentation>(
       inspector_.root().CreateChild(inspector_.root().UniqueName("presentation-")),
       component_context_, scenic_.get(), session_.get(), compositor_->id(),
-      std::move(view_holder_token), std::move(presentation_request), safe_presenter_.get(),
-      display_startup_rotation_adjustment,
-      /*on_client_death*/ [this] { ShutdownPresentation(); });
+      std::move(view_holder_token), std::move(view_ref), std::move(presentation_request),
+      safe_presenter_.get(), display_startup_rotation_adjustment,
+      /*on_client_death*/ [this] { ShutdownPresentation(); },
+      /*request_focus*/
+      [this](fuchsia::ui::views::ViewRef view_ref) {
+        RequestFocus(std::move(view_ref), [](auto) {});
+      });
 
   SetPresentation(std::move(presentation));
+}
+
+void App::PresentView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  if (presentation_) {
+    FX_LOGS(ERROR) << "Support for multiple simultaneous presentations has been removed. To "
+                      "replace a view, use PresentOrReplaceView";
+    // Reject the request.
+    presentation_request.Close(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
+
+  PresentViewInternal(std::move(view_holder_token), {}, std::move(presentation_request));
 }
 
 void App::PresentOrReplaceView(
@@ -98,16 +108,17 @@ void App::PresentOrReplaceView(
   if (presentation_) {
     ShutdownPresentation();
   }
-  PresentView(std::move(view_holder_token), std::move(presentation_request));
+  PresentViewInternal(std::move(view_holder_token), {}, std::move(presentation_request));
 }
 
 void App::PresentOrReplaceView2(
     fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  // TODO(fxbug.dev/70214): Use |view_ref| to focus client view at scene setup completion.
-  FX_LOGS(WARNING) << "PresentOrReplaceView2() not fully implemented. Dropping ViewRef and "
-                      "delegating to PresentOrReplaceView()";
-  PresentOrReplaceView(std::move(view_holder_token), std::move(presentation_request));
+  if (presentation_) {
+    ShutdownPresentation();
+  }
+  PresentViewInternal(std::move(view_holder_token), std::move(view_ref),
+                      std::move(presentation_request));
 }
 
 void App::SetPresentation(std::unique_ptr<Presentation> presentation) {
@@ -207,6 +218,9 @@ void App::InitializeServices() {
       Reset();
     });
 
+    view_focuser_.set_error_handler([](zx_status_t error) {
+      FX_LOGS(ERROR) << "ViewFocuser died with error " << zx_status_get_string(error);
+    });
     session_ = std::make_unique<scenic::Session>(scenic_.get(), view_focuser_.NewRequest());
     session_->set_error_handler([this](zx_status_t error) {
       FX_LOGS(ERROR) << "Session died, destroying presentation.";
@@ -214,16 +228,6 @@ void App::InitializeServices() {
     });
 
     safe_presenter_ = std::make_unique<SafePresenter>(session_.get());
-
-    // Globally disable parallel dispatch of input events.
-    // TODO(fxbug.dev/24258): Enable parallel dispatch.
-    {
-      fuchsia::ui::input::SetParallelDispatchCmd cmd;
-      cmd.parallel_dispatch = false;
-      fuchsia::ui::input::Command input_cmd;
-      input_cmd.set_set_parallel_dispatch(std::move(cmd));
-      session_->Enqueue(std::move(input_cmd));
-    }
 
     compositor_ = std::make_unique<scenic::DisplayCompositor>(session_.get());
     layer_stack_ = std::make_unique<scenic::LayerStack>(session_.get());
@@ -312,13 +316,17 @@ void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> vi
 }
 
 void App::RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) {
+  if (!view_ref.reference.is_valid()) {
+    callback(fit::error(fuchsia::ui::views::Error::DENIED));
+    return;
+  }
   if (!view_focuser_) {
     // Scenic disconnected, close the connection.
     callback(fit::error(fuchsia::ui::views::Error::DENIED));
     focuser_binding_.Close(ZX_ERR_BAD_STATE);
-  } else {
-    view_focuser_->RequestFocus(std::move(view_ref), std::move(callback));
+    return;
   }
+  view_focuser_->RequestFocus(std::move(view_ref), std::move(callback));
 }
 
 }  // namespace root_presenter

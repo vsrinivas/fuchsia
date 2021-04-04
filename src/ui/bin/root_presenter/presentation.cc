@@ -49,9 +49,11 @@ Presentation::Presentation(
     inspect::Node inspect_node, sys::ComponentContext* component_context,
     fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fuchsia::ui::views::ViewRef client_view_ref,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
-    std::function<void()> on_client_death)
+    fit::function<void()> on_client_death,
+    fit::function<void(fuchsia::ui::views::ViewRef)> request_focus)
     : inspect_node_(std::move(inspect_node)),
       input_report_inspector_(inspect_node_.CreateChild("input_reports")),
       input_event_inspector_(inspect_node_.CreateChild("input_events")),
@@ -178,15 +180,21 @@ Presentation::Presentation(
   });
 
   a11y_session_.set_event_handler(
-      [on_client_death = std::move(on_client_death),
-       client_id = client_view_holder_->id()](std::vector<fuchsia::ui::scenic::Event> events) {
+      [on_client_death = std::move(on_client_death), request_focus = std::move(request_focus),
+       view_ref = std::move(client_view_ref), client_id = client_view_holder_->id()](
+          std::vector<fuchsia::ui::scenic::Event> events) mutable {
         for (const auto& event : events) {
-          if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-              event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
-              event.gfx().view_disconnected().view_holder_id == client_id) {
-            FX_LOGS(WARNING) << "Client died, destroying presentation.";
-            on_client_death();  // This kills the Presentation, so exit immediately to be safe.
-            return;
+          if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx) {
+            if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
+              FX_DCHECK(event.gfx().view_connected().view_holder_id == client_id);
+              FX_LOGS(INFO) << "Transferring focus to client";
+              request_focus(std::move(view_ref));
+            } else if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected) {
+              FX_DCHECK(event.gfx().view_disconnected().view_holder_id == client_id);
+              FX_LOGS(WARNING) << "Client died, destroying presentation.";
+              on_client_death();  // This kills the Presentation, so exit immediately to be safe.
+              return;
+            }
           }
         }
       });
