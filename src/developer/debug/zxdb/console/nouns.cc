@@ -26,6 +26,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/console/format_filter.h"
 #include "src/developer/debug/zxdb/console/format_frame.h"
 #include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
@@ -192,53 +193,6 @@ Examples
       Removes filter 4.
 )";
 
-void ListFilters(ConsoleContext* context, Job* job) {
-  int active_filter_id = context->GetActiveFilterId();
-  auto filters = context->session()->system().GetFilters();
-
-  std::vector<std::vector<std::string>> rows;
-  for (auto& filter : filters) {
-    if (job && filter->job() && filter->job() != job) {
-      continue;
-    }
-
-    auto id = context->IdForFilter(filter);
-
-    std::vector<std::string>& row = rows.emplace_back();
-
-    // "Current thread" marker.
-    if (id == active_filter_id)
-      row.push_back(GetCurrentRowMarker());
-    else
-      row.emplace_back();
-
-    row.push_back(std::to_string(id));
-    row.push_back(filter->pattern());
-
-    if (filter->job()) {
-      auto job_id = context->IdForJob(filter->job());
-      row.push_back(std::to_string(job_id));
-    } else {
-      row.push_back("*");
-    }
-  }
-
-  OutputBuffer out;
-  if (rows.empty()) {
-    if (job)
-      out.Append(fxl::StringPrintf("No filters for job %d.\n", context->IdForJob(job)));
-    else
-      out.Append("No filters.\n");
-  } else {
-    if (job)
-      out.Append(fxl::StringPrintf("Filters for job %d only:\n", context->IdForJob(job)));
-    FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-                 ColSpec(Align::kLeft, 0, "pattern"), ColSpec(Align::kRight, 0, "job")},
-                rows, &out);
-  }
-  Console::get()->Output(out);
-}
-
 // Returns true if processing should stop (either a filter command or an error), false to continue
 // processing to the next noun type.
 bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
@@ -252,10 +206,11 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (cmd.GetNounIndex(Noun::kFilter) == Command::kNoIndex) {
     // Just "filter", this lists available filters. If a job is given, it lists only filters
     // for that job. Otherwise it lists all filters.
-    if (cmd.HasNoun(Noun::kJob))
-      ListFilters(context, cmd.job());
-    else
-      ListFilters(context, nullptr);
+    if (cmd.HasNoun(Noun::kJob)) {
+      Console::get()->Output(FormatFilterList(context, cmd.job()));
+    } else {
+      Console::get()->Output(FormatFilterList(context));
+    }
     return true;
   }
 

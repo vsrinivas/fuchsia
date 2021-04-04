@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/console/format_filter.h"
 #include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/verbs.h"

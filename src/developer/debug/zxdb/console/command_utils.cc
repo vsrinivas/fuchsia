@@ -422,31 +422,6 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
   return result;
 }
 
-OutputBuffer FormatFilter(const ConsoleContext* context, const Filter* filter) {
-  OutputBuffer out("Filter ");
-  out.Append(Syntax::kSpecial, std::to_string(context->IdForFilter(filter)));
-
-  out.Append(Syntax::kVariable, " pattern");
-  out.Append("=" + FormatConsoleString(filter->pattern()) + " ");
-
-  if (filter->pattern().empty()) {
-    out.Append(Syntax::kComment, "(disabled) ");
-  } else if (filter->pattern() == Filter::kAllProcessesPattern) {
-    out.Append(Syntax::kComment, "(all processes) ");
-  }
-
-  out.Append(Syntax::kVariable, "job");
-  out.Append("=");
-  if (filter->job()) {
-    out.Append(std::to_string(context->IdForJob(filter->job())));
-  } else {
-    out.Append("*");
-    out.Append(Syntax::kComment, " (all attached jobs)");
-  }
-
-  return out;
-}
-
 OutputBuffer FormatInputLocation(const InputLocation& location) {
   switch (location.type) {
     case InputLocation::Type::kNone: {

@@ -223,25 +223,6 @@ TEST(CommandUtils, FormatBreakpoint) {
   system_observer->WillDestroyBreakpoint(&breakpoint);
 }
 
-TEST(CommandUtils, FormatFilter) {
-  Session session;
-  ConsoleContext context(&session);
-
-  Filter* f = session.system().CreateNewFilter();
-  EXPECT_EQ("Filter 1 pattern=\"\" (disabled) job=* (all attached jobs)",
-            FormatFilter(&context, f).AsString());
-
-  f->SetPattern(Filter::kAllProcessesPattern);
-  EXPECT_EQ("Filter 1 pattern=* (all processes) job=* (all attached jobs)",
-            FormatFilter(&context, f).AsString());
-
-  // This will be job 2 since the system should have a default job.
-  Job* job = session.system().CreateNewJob();
-  f->SetJob(job);
-  f->SetPattern("foo");
-  EXPECT_EQ("Filter 1 pattern=foo job=2", FormatFilter(&context, f).AsString());
-}
-
 TEST(CommandUtils, FormatConsoleString) {
   EXPECT_EQ("\"\"", FormatConsoleString(""));
 

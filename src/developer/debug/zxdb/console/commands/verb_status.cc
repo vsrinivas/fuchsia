@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/console/format_filter.h"
 #include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
@@ -38,6 +39,8 @@ Err RunVerbStatus(ConsoleContext* context, const Command& cmd, CommandCallback c
   }
 
   out.Append(GetJobStatus(context));
+  out.Append("\n");
+  out.Append(GetFilterStatus(context));
   out.Append("\n");
   out.Append(GetProcessStatus(context));
   out.Append("\n");
@@ -133,6 +136,22 @@ OutputBuffer GetConnectionStatus(const Session* session) {
     result.Append(R"(
     Have a nice day.
 )");
+  }
+
+  return result;
+}
+
+OutputBuffer GetFilterStatus(ConsoleContext* context) {
+  OutputBuffer result;
+  result.Append(Syntax::kHeading, "Process name filters\n");
+  result.Append(
+      "  Filters match the names of processes launched in attached jobs and\n"
+      "  automatically attaches to them.\n");
+
+  if (context->session()->system().GetFilters().empty()) {
+    result.Append("\n  There are no filters. Use \"attach <process-name>\" to create one.\n");
+  } else {
+    result.Append(FormatFilterList(context, nullptr, 2));
   }
 
   return result;

@@ -23,6 +23,7 @@ VerbRecord GetStatusVerbRecord();
 
 // Return diagnostic and help information on the given category of stuff.
 OutputBuffer GetConnectionStatus(const Session* session);
+OutputBuffer GetFilterStatus(ConsoleContext* context);
 OutputBuffer GetJobStatus(ConsoleContext* context);
 OutputBuffer GetProcessStatus(ConsoleContext* context);
 OutputBuffer GetLimboStatus(const std::vector<debug_ipc::ProcessRecord>& limbo);

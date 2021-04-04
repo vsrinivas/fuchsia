@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
+#include "src/developer/debug/zxdb/console/format_filter.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
