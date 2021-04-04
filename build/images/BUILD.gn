@@ -315,7 +315,6 @@ system_manifest_outputs = get_target_outputs(":system_image.manifest")
 action("system_image_prime.manifest") {
   visibility = [ ":*" ]
   testonly = true
-  hermetic_deps = false
   script = "manifest.py"
   outputs = [ "$target_out_dir/$target_name" ]
 
@@ -2578,8 +2577,8 @@ foreach(manifest, tagged_snapshot_manifests) {
     testonly = true
     deps = [ ":" + untagged_entries ]
     script = "add_tag_to_manifest.sh"
-    inputs = [ target_gen_dir + "/" + untagged_entries ]
-    outputs = [ root_build_dir + "/" + target_name ]
+    inputs = [ "$target_gen_dir/$untagged_entries" ]
+    outputs = [ "$root_build_dir/$target_name" ]
     args = [
       manifest.tag,
       rebase_path(inputs[0], root_build_dir),
@@ -2595,12 +2594,14 @@ action("system_index") {
 
   hermetic_deps = false
   script = "//build/cat.sh"
+  sources = []
   outputs = [ "$target_out_dir/$target_name" ]
-  args = [ rebase_path(outputs[0], root_build_dir) ]
+  args = rebase_path(outputs, root_build_dir)
   deps = []
   foreach(entry, all_snapshot_entries) {
     args += [ entry ]
     deps += [ ":" + entry ]
+    sources += [ "$root_build_dir/$entry" ]
   }
 }
 
