@@ -31,7 +31,7 @@ protocol ViewRefInstalled {
     /// - If |view_ref| is invalid, or becomes invalid (perhaps because the view
     ///   was destroyed), the |Watch| call returns with an error.  The error is
     ///   not guaranteed to be immediate, but a ViewRef holder can itself
-    ///   determine ViewRef validity by listening for ZX_ERR_PEER_CLOSED.
+    ///   determine ViewRef validity by listening for ZX_EVENTPAIR_PEER_CLOSED.
     ///
     /// Flow control: The caller is allowed multiple |Watch| calls on multiple
     /// ViewRefs. There is at most one response per call back to the client.

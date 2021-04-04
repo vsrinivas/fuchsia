@@ -26,9 +26,9 @@ protocol Controller {
     ///
     /// # Notes
     /// * The callee should monitor the provided `ViewRef` for a
-    ///   `ZX_ERR_PEER_CLOSED` signal (see documentation for
+    ///   `ZX_EVENTPAIR_PEER_CLOSED` signal (see documentation for
     ///   `fuchsia.ui.views.ViewRefControl`).
-    /// * When the `ViewRef` receives `ZX_ERR_PEER_CLOSED`, the
+    /// * When the `ViewRef` receives `ZX_EVENTPAIR_PEER_CLOSED`, the
     ///   callee should stop delivering keystroke/text to
     ///   the consumer associated with `view_ref`.
     /// * The caller should wait for each call to be acknowledged
