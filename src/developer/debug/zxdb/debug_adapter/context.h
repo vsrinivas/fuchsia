@@ -9,6 +9,7 @@
 #include <dap/session.h>
 
 #include "src/developer/debug/shared/stream_buffer.h"
+#include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
@@ -55,16 +56,30 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   // `thread` can be nullptr, in which case an error is returned.
   Err CheckStoppedThread(Thread* thread);
 
- private:
-  void Init();
+  // Helper methods to get/set frame to ID mapping
+  int IdForFrame(Frame* frame, int stack_index);
+  Frame* FrameforId(int id);
+  void DeleteFrameIdsForThread(Thread* thread);
 
+ private:
   Session* const session_;
   const std::unique_ptr<dap::Session> dap_;
   std::shared_ptr<DebugAdapterReader> reader_;
   std::shared_ptr<DebugAdapterWriter> writer_;
+
   bool supports_run_in_terminal_ = false;
   bool supports_invalidate_event_ = false;
   bool init_done_ = false;
+
+  struct FrameRecord {
+    uint64_t thread_koid = 0;
+    int stack_index = 0;
+  };
+
+  std::map<int, FrameRecord> id_to_frame_;
+  int next_frame_id_ = 1;
+
+  void Init();
 };
 
 class DebugAdapterReader : public dap::Reader {

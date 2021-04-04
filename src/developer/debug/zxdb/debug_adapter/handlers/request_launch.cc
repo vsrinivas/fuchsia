@@ -11,7 +11,7 @@
 namespace dap {
 
 DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(LaunchRequestZxdb, LaunchRequest, "launch",
-                                  DAP_FIELD(program, "program"),
+                                  DAP_FIELD(process, "process"),
                                   DAP_FIELD(runCommand, "runCommand"), DAP_FIELD(cwd, "cwd"));
 
 }  // namespace dap
@@ -27,7 +27,7 @@ dap::ResponseOrError<dap::LaunchResponse> OnRequestLaunch(DebugAdapterContext* c
   }
 
   Filter* filter = context->session()->system().CreateNewFilter();
-  filter->SetPattern(req.program);
+  filter->SetPattern(req.process);
 
   dap::RunInTerminalRequest run_request;
   run_request.title = "zxdb launch";

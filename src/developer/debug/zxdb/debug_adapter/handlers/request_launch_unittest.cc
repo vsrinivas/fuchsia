@@ -18,8 +18,8 @@ class RequestLaunchTest : public DebugAdapterContextTest {};
 
 TEST_F(RequestLaunchTest, LaunchInTerminal) {
   dap::LaunchRequestZxdb launch_req = {};
-  // Dummy program to attach to.
-  launch_req.program = "test";
+  // Dummy process to attach to.
+  launch_req.process = "test";
   // Shell command to run the program. It is a list of args with first one being the command.
   launch_req.runCommand = {"fx", "run", "test"};
 
@@ -68,7 +68,7 @@ TEST_F(RequestLaunchTest, LaunchNoTerminal) {
 
   // Send attach request from the client.
   dap::LaunchRequestZxdb req = {};
-  req.program = "test";
+  req.process = "test";
   auto response = client().send(req);
 
   // Read request and process it.

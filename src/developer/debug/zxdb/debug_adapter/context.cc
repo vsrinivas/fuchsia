@@ -15,22 +15,23 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_next.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_pause.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_stacktrace.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
 
 namespace zxdb {
 
-DebugAdapterContext::DebugAdapterContext(Session *session, debug_ipc::StreamBuffer *stream)
+DebugAdapterContext::DebugAdapterContext(Session* session, debug_ipc::StreamBuffer* stream)
     : session_(session), dap_(dap::Session::create()) {
   reader_ = std::make_shared<DebugAdapterReader>(stream);
   writer_ = std::make_shared<DebugAdapterWriter>(stream);
 
-  dap_->registerHandler([this](const dap::InitializeRequest &req) {
+  dap_->registerHandler([this](const dap::InitializeRequest& req) {
     DEBUG_LOG(DebugAdapter) << "InitializeRequest received";
     dap::InitializeResponse response;
     response.supportsFunctionBreakpoints = false;
     response.supportsConfigurationDoneRequest = true;
-    response.supportsEvaluateForHovers = true;
+    response.supportsEvaluateForHovers = false;
     if (req.supportsInvalidatedEvent) {
       this->supports_invalidate_event_ = req.supportsInvalidatedEvent.value();
     }
@@ -40,7 +41,7 @@ DebugAdapterContext::DebugAdapterContext(Session *session, debug_ipc::StreamBuff
     return response;
   });
 
-  dap_->registerSentHandler([this](const dap::ResponseOrError<dap::InitializeResponse> &response) {
+  dap_->registerSentHandler([this](const dap::ResponseOrError<dap::InitializeResponse>& response) {
     DEBUG_LOG(DebugAdapter) << "InitializeResponse sent";
     // Set up events and handlers now. All messages should be sent only after Initialize response
     // is sent. Setting up earlier would lead to events and responses being sent before Initialize
@@ -49,7 +50,7 @@ DebugAdapterContext::DebugAdapterContext(Session *session, debug_ipc::StreamBuff
     dap_->send(dap::InitializedEvent());
   });
 
-  dap_->onError([](const char *msg) { FX_LOGS(ERROR) << "dap::Session error:" << msg << "\r\n"; });
+  dap_->onError([](const char* msg) { FX_LOGS(ERROR) << "dap::Session error:" << msg << "\r\n"; });
 
   dap_->connect(reader_, writer_);
 }
@@ -63,59 +64,66 @@ DebugAdapterContext::~DebugAdapterContext() {
 
 void DebugAdapterContext::Init() {
   // Register handlers with dap module.
-  dap_->registerHandler([](const dap::DisconnectRequest &req) {
+  dap_->registerHandler([](const dap::DisconnectRequest& req) {
     DEBUG_LOG(DebugAdapter) << "DisconnectRequest received";
     return dap::DisconnectResponse();
   });
 
-  dap_->registerHandler([this](const dap::LaunchRequestZxdb &req) {
+  dap_->registerHandler([this](const dap::LaunchRequestZxdb& req) {
     DEBUG_LOG(DebugAdapter) << "LaunchRequest received";
     return OnRequestLaunch(this, req);
   });
 
-  dap_->registerHandler([](const dap::SetExceptionBreakpointsRequest &req) {
+  dap_->registerHandler([](const dap::SetExceptionBreakpointsRequest& req) {
     DEBUG_LOG(DebugAdapter) << "SetExceptionBreakpointsRequest received";
     dap::SetExceptionBreakpointsResponse response;
     return response;
   });
 
-  dap_->registerHandler([this](const dap::SetBreakpointsRequest &req) {
+  dap_->registerHandler([this](const dap::SetBreakpointsRequest& req) {
     DEBUG_LOG(DebugAdapter) << "SetBreakpointsRequest received";
     return OnRequestBreakpoint(this, req);
   });
 
-  dap_->registerHandler([](const dap::ConfigurationDoneRequest &req) {
+  dap_->registerHandler([](const dap::ConfigurationDoneRequest& req) {
     DEBUG_LOG(DebugAdapter) << "ConfigurationDoneRequest received";
     return dap::ConfigurationDoneResponse();
   });
 
-  dap_->registerHandler([this](const dap::AttachRequestZxdb &req) {
+  dap_->registerHandler([this](const dap::AttachRequestZxdb& req) {
     DEBUG_LOG(DebugAdapter) << "AttachRequest received";
     return OnRequestAttach(this, req);
   });
 
-  dap_->registerHandler([this](const dap::ThreadsRequest &req) {
+  dap_->registerHandler([this](const dap::ThreadsRequest& req) {
     DEBUG_LOG(DebugAdapter) << "ThreadRequest received";
     return OnRequestThreads(this, req);
   });
 
   dap_->registerHandler(
-      [this](const dap::PauseRequest &req,
+      [this](const dap::PauseRequest& req,
              std::function<void(dap::ResponseOrError<dap::PauseResponse>)> callback) {
         DEBUG_LOG(DebugAdapter) << "PauseRequest received";
         OnRequestPause(this, req, callback);
       });
 
-  dap_->registerHandler([this](const dap::ContinueRequest &req) {
+  dap_->registerHandler([this](const dap::ContinueRequest& req) {
     DEBUG_LOG(DebugAdapter) << "ContinueRequest received";
     return OnRequestContinue(this, req);
   });
 
   dap_->registerHandler(
-      [this](const dap::NextRequest &req,
+      [this](const dap::NextRequest& req,
              std::function<void(dap::ResponseOrError<dap::NextResponse>)> callback) {
         DEBUG_LOG(DebugAdapter) << "NextRequest received";
         OnRequestNext(this, req, callback);
+      });
+
+  dap_->registerHandler(
+      [this](const dap::StackTraceRequest& req,
+             std::function<void(dap::ResponseOrError<dap::StackTraceResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "StackTraceRequest received";
+        OnRequestStackTrace(this, req, callback);
       });
 
   // Register to zxdb session events
@@ -132,26 +140,27 @@ void DebugAdapterContext::OnStreamReadable() {
   }
 }
 
-void DebugAdapterContext::DidCreateThread(Thread *thread) {
+void DebugAdapterContext::DidCreateThread(Thread* thread) {
   dap::ThreadEvent event;
   event.reason = "started";
   event.threadId = thread->GetKoid();
   dap_->send(event);
 }
 
-void DebugAdapterContext::WillDestroyThread(Thread *thread) {
+void DebugAdapterContext::WillDestroyThread(Thread* thread) {
   dap::ThreadEvent event;
   event.reason = "exited";
   event.threadId = thread->GetKoid();
   dap_->send(event);
 }
 
-void DebugAdapterContext::OnThreadStopped(Thread *thread, const StopInfo &info) {
+void DebugAdapterContext::OnThreadStopped(Thread* thread, const StopInfo& info) {
   dap::StoppedEvent event;
   switch (info.exception_type) {
     case debug_ipc::ExceptionType::kSoftwareBreakpoint:
     case debug_ipc::ExceptionType::kHardwareBreakpoint:
       event.reason = "breakpoint";
+      event.description = "Breakpoint hit";
       break;
     case debug_ipc::ExceptionType::kSingleStep:
       event.reason = "step";
@@ -179,7 +188,8 @@ void DebugAdapterContext::OnThreadStopped(Thread *thread, const StopInfo &info) 
   dap_->send(event);
 }
 
-void DebugAdapterContext::OnThreadFramesInvalidated(Thread *thread) {
+void DebugAdapterContext::OnThreadFramesInvalidated(Thread* thread) {
+  DeleteFrameIdsForThread(thread);
   if (supports_invalidate_event_) {
     dap::InvalidatedEvent event;
     event.threadId = thread->GetKoid();
@@ -187,7 +197,7 @@ void DebugAdapterContext::OnThreadFramesInvalidated(Thread *thread) {
   }
 }
 
-void DebugAdapterContext::DidCreateProcess(Process *process, bool autoattached_to_new_process,
+void DebugAdapterContext::DidCreateProcess(Process* process, bool autoattached_to_new_process,
                                            uint64_t timestamp) {
   dap::ProcessEvent event;
   event.name = process->GetName();
@@ -212,7 +222,7 @@ void DebugAdapterContext::DidCreateProcess(Process *process, bool autoattached_t
   dap_->send(event);
 }
 
-Target *DebugAdapterContext::GetCurrentTarget() {
+Target* DebugAdapterContext::GetCurrentTarget() {
   auto targets = session()->system().GetTargets();
   if (targets.size() > 0) {
     // Currently debug adapter supports only one target. The default target is used to attach
@@ -222,7 +232,7 @@ Target *DebugAdapterContext::GetCurrentTarget() {
   return nullptr;
 }
 
-Process *DebugAdapterContext::GetCurrentProcess() {
+Process* DebugAdapterContext::GetCurrentProcess() {
   auto target = GetCurrentTarget();
   if (target) {
     return target->GetProcess();
@@ -230,8 +240,8 @@ Process *DebugAdapterContext::GetCurrentProcess() {
   return nullptr;
 }
 
-Thread *DebugAdapterContext::GetThread(uint64_t koid) {
-  Thread *match = nullptr;
+Thread* DebugAdapterContext::GetThread(uint64_t koid) {
+  Thread* match = nullptr;
   auto process = GetCurrentProcess();
   if (process) {
     auto threads = process->GetThreads();
@@ -245,7 +255,7 @@ Thread *DebugAdapterContext::GetThread(uint64_t koid) {
   return match;
 }
 
-Err DebugAdapterContext::CheckStoppedThread(Thread *thread) {
+Err DebugAdapterContext::CheckStoppedThread(Thread* thread) {
   if (!thread) {
     return Err("Invalid thread.");
   }
@@ -258,6 +268,51 @@ Err DebugAdapterContext::CheckStoppedThread(Thread *thread) {
                debug_ipc::ThreadRecord::StateToString(thread->GetState()));
   }
   return Err();
+}
+
+int DebugAdapterContext::IdForFrame(Frame* frame, int stack_index) {
+  FrameRecord record = {};
+  record.thread_koid = frame->GetThread()->GetKoid();
+  record.stack_index = stack_index;
+
+  for (auto const& it : id_to_frame_) {
+    if (it.second.thread_koid == record.thread_koid && it.second.stack_index == stack_index) {
+      return it.first;
+    }
+  }
+
+  int current_frame_id = next_frame_id_++;
+  id_to_frame_[current_frame_id] = record;
+  return current_frame_id;
+}
+
+Frame* DebugAdapterContext::FrameforId(int id) {
+  // id - 0 is invalid
+  if (!id) {
+    return nullptr;
+  }
+
+  if (auto it = id_to_frame_.find(id); it != id_to_frame_.end()) {
+    Thread* thread = GetThread(it->second.thread_koid);
+    if (!thread) {
+      return nullptr;
+    }
+    if (thread->GetStack().size() <= static_cast<size_t>(it->second.stack_index)) {
+      return nullptr;
+    }
+    return thread->GetStack()[it->second.stack_index];
+  }
+  // Not found
+  return nullptr;
+}
+
+void DebugAdapterContext::DeleteFrameIdsForThread(Thread* thread) {
+  auto thread_koid = thread->GetKoid();
+  for (auto it = id_to_frame_.begin(); it != id_to_frame_.end(); it++) {
+    if (it->second.thread_koid == thread_koid) {
+      id_to_frame_.erase(it);
+    }
+  }
 }
 
 }  // namespace zxdb

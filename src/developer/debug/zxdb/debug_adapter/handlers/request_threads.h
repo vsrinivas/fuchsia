@@ -8,8 +8,8 @@
 
 namespace zxdb {
 
-dap::ResponseOrError<dap::ThreadsResponse> OnRequestThreads(DebugAdapterContext *ctx,
-                                                            const dap::ThreadsRequest &req);
+dap::ResponseOrError<dap::ThreadsResponse> OnRequestThreads(DebugAdapterContext* ctx,
+                                                            const dap::ThreadsRequest& req);
 
 }  // namespace zxdb
 

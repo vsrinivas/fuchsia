@@ -9,7 +9,7 @@
 
 namespace zxdb {
 
-void OnRequestNext(DebugAdapterContext *ctx, const dap::NextRequest &request,
+void OnRequestNext(DebugAdapterContext* ctx, const dap::NextRequest& request,
                    std::function<void(dap::ResponseOrError<dap::NextResponse>)> callback) {
   auto thread = ctx->GetThread(request.threadId);
 
@@ -21,7 +21,7 @@ void OnRequestNext(DebugAdapterContext *ctx, const dap::NextRequest &request,
   // TODO(69411): Add support for instruction step mode when request specifies that granularity.
   auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine);
 
-  thread->ContinueWith(std::move(controller), [callback](const Err &err) {
+  thread->ContinueWith(std::move(controller), [callback](const Err& err) {
     if (err.has_error()) {
       callback(dap::Error("Next command failed!"));
       return;

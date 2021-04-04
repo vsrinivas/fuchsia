@@ -17,8 +17,8 @@ DAP_DECLARE_STRUCT_TYPEINFO(AttachRequestZxdb);
 }  // namespace dap
 
 namespace zxdb {
-dap::ResponseOrError<dap::AttachResponse> OnRequestAttach(DebugAdapterContext *ctx,
-                                                          const dap::AttachRequestZxdb &req);
+dap::ResponseOrError<dap::AttachResponse> OnRequestAttach(DebugAdapterContext* ctx,
+                                                          const dap::AttachRequestZxdb& req);
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_HANDLERS_REQUEST_ATTACH_H_

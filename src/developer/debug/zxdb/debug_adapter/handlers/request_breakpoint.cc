@@ -11,7 +11,7 @@
 
 namespace zxdb {
 
-std::string GetFile(const dap::Source &source) {
+std::string GetFile(const dap::Source& source) {
   if (source.sourceReference.has_value()) {
     // TODO: Add support for reference once SourceRequest is supported
   }
@@ -30,20 +30,20 @@ std::string GetFile(const dap::Source &source) {
   return std::string();
 }
 dap::ResponseOrError<dap::SetBreakpointsResponse> OnRequestBreakpoint(
-    DebugAdapterContext *ctx, const dap::SetBreakpointsRequest &req) {
+    DebugAdapterContext* ctx, const dap::SetBreakpointsRequest& req) {
   dap::SetBreakpointsResponse response;
   size_t numBreakpoints = 0;
 
   if (req.breakpoints.has_value()) {
-    auto const &breakpoints = req.breakpoints.value();
+    auto const& breakpoints = req.breakpoints.value();
     numBreakpoints = breakpoints.size();
 
     auto file = GetFile(req.source);
     if (!file.empty()) {
       for (size_t i = 0; i < numBreakpoints; i++) {
-        auto &request_bp = breakpoints[i];
+        auto& request_bp = breakpoints[i];
 
-        Breakpoint *breakpoint = ctx->session()->system().CreateNewBreakpoint();
+        Breakpoint* breakpoint = ctx->session()->system().CreateNewBreakpoint();
         BreakpointSettings settings;
 
         std::vector<InputLocation> locations;

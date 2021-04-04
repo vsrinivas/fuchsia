@@ -8,7 +8,7 @@
 
 namespace zxdb {
 dap::ResponseOrError<dap::SetBreakpointsResponse> OnRequestBreakpoint(
-    DebugAdapterContext *ctx, const dap::SetBreakpointsRequest &req);
+    DebugAdapterContext* ctx, const dap::SetBreakpointsRequest& req);
 }
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_HANDLERS_REQUEST_BREAKPOINT_H_

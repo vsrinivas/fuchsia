@@ -8,7 +8,7 @@
 
 namespace zxdb {
 
-void OnRequestNext(DebugAdapterContext *ctx, const dap::NextRequest &request,
+void OnRequestNext(DebugAdapterContext* ctx, const dap::NextRequest& request,
                    std::function<void(dap::ResponseOrError<dap::NextResponse>)> callback);
 
 }  // namespace zxdb

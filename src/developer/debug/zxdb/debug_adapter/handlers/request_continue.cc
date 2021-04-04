@@ -8,8 +8,8 @@
 
 namespace zxdb {
 
-dap::ResponseOrError<dap::ContinueResponse> OnRequestContinue(DebugAdapterContext *ctx,
-                                                              const dap::ContinueRequest &request) {
+dap::ResponseOrError<dap::ContinueResponse> OnRequestContinue(DebugAdapterContext* ctx,
+                                                              const dap::ContinueRequest& request) {
   dap::ContinueResponse response = {};
   auto thread = ctx->GetThread(request.threadId);
 

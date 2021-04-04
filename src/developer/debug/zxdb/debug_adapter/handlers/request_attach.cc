@@ -16,10 +16,10 @@ DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(AttachRequestZxdb, AttachRequest, "attach",
 
 namespace zxdb {
 
-dap::ResponseOrError<dap::AttachResponse> OnRequestAttach(DebugAdapterContext *context,
-                                                          const dap::AttachRequestZxdb &req) {
+dap::ResponseOrError<dap::AttachResponse> OnRequestAttach(DebugAdapterContext* context,
+                                                          const dap::AttachRequestZxdb& req) {
   dap::AttachResponse response;
-  Filter *filter = context->session()->system().CreateNewFilter();
+  Filter* filter = context->session()->system().CreateNewFilter();
   filter->SetPattern(req.process);
   return response;
 }
