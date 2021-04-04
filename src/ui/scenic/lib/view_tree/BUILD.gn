@@ -1,0 +1,19 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("view_tree_snapshot") {
+  sources = [
+    "view_tree_snapshotter.cc",
+    "view_tree_snapshotter.h",
+  ]
+  deps = []
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//src/lib/fxl",
+    "//src/ui/lib/glm_workaround",
+    "//zircon/system/public",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}

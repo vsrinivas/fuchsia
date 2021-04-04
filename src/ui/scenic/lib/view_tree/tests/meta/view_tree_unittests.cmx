@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/view_tree_test_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

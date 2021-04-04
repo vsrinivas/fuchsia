@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":view_tree_unittests" ]
+}
+
+executable("view_tree_test_bin") {
+  testonly = true
+  sources = [ "view_tree_snapshot_unittest.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-testing",
+  ]
+}
+
+fuchsia_unittest_package("view_tree_unittests") {
+  manifest = "meta/view_tree_unittests.cmx"
+  deps = [ ":view_tree_test_bin" ]
+}
