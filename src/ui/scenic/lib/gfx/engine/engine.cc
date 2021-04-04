@@ -25,15 +25,11 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
 #include "src/ui/scenic/lib/gfx/resources/protected_memory_visitor.h"
 #include "src/ui/scenic/lib/gfx/swapchain/frame_timings.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-Engine::Engine(sys::ComponentContext* app_context,
-               const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-               escher::EscherWeakPtr weak_escher,
+Engine::Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr weak_escher,
                std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
                inspect::Node inspect_node)
     : escher_(std::move(weak_escher)),
@@ -44,8 +40,6 @@ Engine::Engine(sys::ComponentContext* app_context,
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                                    escher()->resource_recycler())),
       buffer_collection_importer_(buffer_collection_importer),
-      delegating_frame_scheduler_(
-          std::make_shared<scheduling::DelegatingFrameScheduler>(frame_scheduler)),
       scene_graph_(app_context),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
@@ -55,15 +49,11 @@ Engine::Engine(sys::ComponentContext* app_context,
   InitializeAnnotationManager();
 }
 
-Engine::Engine(sys::ComponentContext* app_context,
-               const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-               escher::EscherWeakPtr weak_escher)
+Engine::Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       image_factory_(escher() ? std::make_unique<escher::ImageFactoryAdapter>(
                                     escher()->gpu_allocator(), escher()->resource_recycler())
                               : nullptr),
-      delegating_frame_scheduler_(
-          std::make_shared<scheduling::DelegatingFrameScheduler>(frame_scheduler)),
       scene_graph_(app_context),
       weak_factory_(this) {
   InitializeInspectObjects();

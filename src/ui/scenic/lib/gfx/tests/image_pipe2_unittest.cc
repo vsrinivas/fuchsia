@@ -126,7 +126,7 @@ VK_TEST_F(CreateImagePipe2CmdTest, ApplyCommand) {
 
 class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
  public:
-  ImagePipe2ThatCreatesFakeImages(gfx::Session* session, std::unique_ptr<ImagePipeUpdater> updater,
+  ImagePipe2ThatCreatesFakeImages(gfx::Session* session, std::shared_ptr<ImagePipeUpdater> updater,
                                   fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request,
                                   escher::ResourceManager* fake_resource_manager)
       : ImagePipe2(session, 0u, std::move(request), std::move(updater),
@@ -138,7 +138,7 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
     sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
                                           fsl::GetCurrentProcessKoid());
   }
-  ~ImagePipe2ThatCreatesFakeImages() { CloseConnectionAndCleanUp(); }
+  ~ImagePipe2ThatCreatesFakeImages() override { CloseConnectionAndCleanUp(); }
 
   ImagePipeUpdateResults Update(scheduling::PresentId present_id) override {
     auto result = ImagePipe2::Update(present_id);
@@ -205,10 +205,9 @@ class ImagePipe2Test : public ErrorReportingTest, public escher::ResourceManager
 
     gfx_session_ = std::make_unique<gfx::Session>(/*id=*/1, SessionContext{},
                                                   shared_event_reporter(), shared_error_reporter());
-    auto updater = std::make_unique<MockImagePipeUpdater>();
-    image_pipe_updater_ = updater.get();
+    image_pipe_updater_ = std::make_shared<MockImagePipeUpdater>();
     image_pipe_ = fxl::MakeRefCounted<ImagePipe2ThatCreatesFakeImages>(
-        gfx_session_.get(), std::move(updater), image_pipe_handle_.NewRequest(), this);
+        gfx_session_.get(), image_pipe_updater_, image_pipe_handle_.NewRequest(), this);
   }
 
   void TearDown() override {
@@ -220,12 +219,20 @@ class ImagePipe2Test : public ErrorReportingTest, public escher::ResourceManager
   }
 
   fxl::RefPtr<ImagePipe2ThatCreatesFakeImages> image_pipe_;
-  MockImagePipeUpdater* image_pipe_updater_;
+  std::shared_ptr<MockImagePipeUpdater> image_pipe_updater_;
 
  private:
   std::unique_ptr<gfx::Session> gfx_session_;
   fidl::InterfacePtr<fuchsia::images::ImagePipe2> image_pipe_handle_;
 };
+
+TEST_F(ImagePipe2Test, CleansUpOnDestruction) {
+  EXPECT_EQ(image_pipe_updater_->cleanup_image_pipe_count_, 0u);
+  image_pipe_.reset();
+  // 2 since ImagePipe2ThatCreatesFakeImages also calls CloseConnectionAndCleanUp() in its
+  // destructor.
+  EXPECT_EQ(image_pipe_updater_->cleanup_image_pipe_count_, 2u);
+}
 
 // Present a BufferCollection with an Id of zero, and expect an error.
 TEST_F(ImagePipe2Test, BufferCollectionIdMustNotBeZero) {

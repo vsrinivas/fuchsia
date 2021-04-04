@@ -63,13 +63,11 @@ class DisplaySwapchainTest : public Fixture {
     image_factory_ = std::make_unique<ImageFactoryAdapter>(escher_->gpu_allocator(),
                                                            escher_->resource_recycler());
     frame_scheduler_ = std::make_shared<MockFrameScheduler>();
-    auto session_context = SessionContext{escher_->vk_device(),
-                                          escher_.get(),
-                                          escher_->resource_recycler(),
-                                          image_factory_.get(),
-                                          frame_scheduler_,
-                                          SceneGraphWeakPtr(),
-                                          nullptr};
+    auto session_context = SessionContext{.vk_device = escher_->vk_device(),
+                                          .escher = escher_.get(),
+                                          .escher_resource_recycler = escher_->resource_recycler(),
+                                          .escher_image_factory = image_factory_.get(),
+                                          .scene_graph = SceneGraphWeakPtr()};
     error_reporter_ = std::make_shared<TestErrorReporter>();
     event_reporter_ = std::make_shared<TestEventReporter>();
     session_ = std::make_unique<Session>(1, session_context, event_reporter_, error_reporter_);

@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
@@ -59,6 +60,7 @@ class SessionTest : public ErrorReportingTest {
   SessionContext session_context_;
 
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
   std::unique_ptr<Session> session_;
 };
 

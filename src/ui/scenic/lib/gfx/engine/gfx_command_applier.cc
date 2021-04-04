@@ -254,10 +254,12 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImage3:
       return ApplyCreateImage3(session, id, std::move(command.resource.image3()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe: {
-      return ApplyCreateImagePipe(session, id, std::move(command.resource.image_pipe()));
+      return ApplyCreateImagePipe(session, id, std::move(command.resource.image_pipe()),
+                                  command_context->image_pipe_updater);
     }
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe2: {
-      return ApplyCreateImagePipe2(session, id, std::move(command.resource.image_pipe2()));
+      return ApplyCreateImagePipe2(session, id, std::move(command.resource.image_pipe2()),
+                                   command_context->image_pipe_updater);
     }
     case fuchsia::ui::gfx::ResourceArgs::Tag::kBuffer:
       return ApplyCreateBuffer(session, id, std::move(command.resource.buffer()));
@@ -1078,24 +1080,20 @@ bool GfxCommandApplier::ApplyCreateImage3(Session* session, ResourceId id,
 }
 
 bool GfxCommandApplier::ApplyCreateImagePipe(Session* session, ResourceId id,
-                                             fuchsia::ui::gfx::ImagePipeArgs args) {
-  auto image_pipe_updater =
-      std::make_shared<ImagePipeUpdater>(session->session_context().frame_scheduler);
-  session->session_context().frame_scheduler->AddSessionUpdater(image_pipe_updater);
-  auto image_pipe =
-      fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
-                                     image_pipe_updater, session->shared_error_reporter());
+                                             fuchsia::ui::gfx::ImagePipeArgs args,
+                                             std::shared_ptr<ImagePipeUpdater> image_pipe_updater) {
+  auto image_pipe = fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
+                                                   std::move(image_pipe_updater),
+                                                   session->shared_error_reporter());
   return session->resources()->AddResource(id, image_pipe);
 }
 
-bool GfxCommandApplier::ApplyCreateImagePipe2(Session* session, ResourceId id,
-                                              fuchsia::ui::gfx::ImagePipe2Args args) {
-  auto image_pipe_updater =
-      std::make_shared<ImagePipeUpdater>(session->session_context().frame_scheduler);
-  session->session_context().frame_scheduler->AddSessionUpdater(image_pipe_updater);
-  auto image_pipe =
-      fxl::MakeRefCounted<ImagePipe2>(session, id, std::move(args.image_pipe_request),
-                                      image_pipe_updater, session->shared_error_reporter());
+bool GfxCommandApplier::ApplyCreateImagePipe2(
+    Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipe2Args args,
+    std::shared_ptr<ImagePipeUpdater> image_pipe_updater) {
+  auto image_pipe = fxl::MakeRefCounted<ImagePipe2>(session, id, std::move(args.image_pipe_request),
+                                                    std::move(image_pipe_updater),
+                                                    session->shared_error_reporter());
   return session->resources()->AddResource(id, image_pipe);
 }
 

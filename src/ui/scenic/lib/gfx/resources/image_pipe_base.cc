@@ -8,7 +8,7 @@ namespace scenic_impl {
 namespace gfx {
 
 ImagePipeBase::ImagePipeBase(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
-    : ImageBase(session, id, type_info) {}
+    : ImageBase(session, id, type_info), scheduling_id_(scheduling::GetNextSessionId()) {}
 
 }  // namespace gfx
 }  // namespace scenic_impl

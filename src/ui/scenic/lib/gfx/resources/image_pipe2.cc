@@ -275,7 +275,7 @@ scheduling::PresentId ImagePipe2::PresentImage(uint32_t image_id, zx::time prese
   }
 
   scheduling::PresentId present_id = image_pipe_updater_->ScheduleImagePipeUpdate(
-      presentation_time, weak_ptr_factory_.GetWeakPtr(), std::move(acquire_fences),
+      scheduling_id_, presentation_time, weak_ptr_factory_.GetWeakPtr(), std::move(acquire_fences),
       std::move(release_fences), std::move(callback));
   frames_.push({.present_id = present_id,
                 .image = image_it->second,
@@ -468,10 +468,7 @@ void ImagePipe2::CloseConnectionAndCleanUp() {
     RemoveBufferCollection(buffer_collections_.begin()->first);
   }
 
-  // Schedule a new frame.
-  image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>(),
-                                               /*acquire_fences*/ {}, /*release_fences*/ {},
-                                               /*callback*/ [](auto...) {});
+  image_pipe_updater_->CleanupImagePipe(scheduling_id_);
 }
 
 void ImagePipe2::OnConnectionError() { CloseConnectionAndCleanUp(); }

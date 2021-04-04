@@ -13,41 +13,45 @@ namespace gfx {
 
 ImagePipeUpdater::ImagePipeUpdater(
     const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler)
-    : scheduling_id_(scheduling::GetNextSessionId()), frame_scheduler_(frame_scheduler) {
+    : frame_scheduler_(frame_scheduler) {
   FX_DCHECK(frame_scheduler);
 }
 
-ImagePipeUpdater::ImagePipeUpdater() : scheduling_id_(scheduling::GetNextSessionId()) {}
+ImagePipeUpdater::ImagePipeUpdater() {}
 
 ImagePipeUpdater::~ImagePipeUpdater() {
   if (auto scheduler = frame_scheduler_.lock()) {
-    scheduler->RemoveSession(scheduling_id_);
+    for (const auto& [scheduling_id, _] : image_pipes_) {
+      scheduler->RemoveSession(scheduling_id);
+    }
   }
 }
 
 scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
-    zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe,
-    std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
+    scheduling::SessionId scheduling_id, zx::time presentation_time,
+    fxl::WeakPtr<ImagePipeBase> image_pipe, std::vector<zx::event> acquire_fences,
+    std::vector<zx::event> release_fences,
     fuchsia::images::ImagePipe::PresentImageCallback callback) {
   TRACE_DURATION("gfx", "ImagePipeUpdater::ScheduleImagePipeUpdate", "scheduling_id",
-                 scheduling_id_);
+                 scheduling_id);
 
   scheduling::PresentId present_id = scheduling::kInvalidPresentId;
 
-  // This gets reset to the same value on every frame. Should probably only be set once (per pipe).
-  // TODO(fxbug.dev/45362): Optimize this for either one or several image pipes.
-  image_pipes_[scheduling_id_] = std::move(image_pipe);
+  if (image_pipes_.find(scheduling_id) == image_pipes_.end()) {
+    image_pipes_[scheduling_id].image_pipe = std::move(image_pipe);
+  }
 
+  auto& pipe = image_pipes_.at(scheduling_id);
   if (auto scheduler = frame_scheduler_.lock()) {
-    present_id = scheduler->RegisterPresent(scheduling_id_, std::move(release_fences));
-    scheduling::SchedulingIdPair id_pair{scheduling_id_, present_id};
+    present_id = scheduler->RegisterPresent(scheduling_id, std::move(release_fences));
+    const scheduling::SchedulingIdPair id_pair{scheduling_id, present_id};
 
-    present1_helper_.RegisterPresent(present_id, std::move(callback));
+    pipe.present1_helper.RegisterPresent(present_id, std::move(callback));
 
     auto [it, success] = fence_listeners_.emplace(id_pair, std::move(acquire_fences));
     FX_DCHECK(success);
 
-    const auto trace_id = SESSION_TRACE_ID(scheduling_id_, present_id);
+    const auto trace_id = SESSION_TRACE_ID(scheduling_id, present_id);
     TRACE_FLOW_BEGIN("gfx", "wait_for_fences", trace_id);
 
     // Set callback for the acquire fence listener.
@@ -78,37 +82,59 @@ ImagePipeUpdater::UpdateResults ImagePipeUpdater::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
   UpdateResults results{};
-  if (sessions_to_update.find(scheduling_id_) == sessions_to_update.end()) {
-    return results;
-  }
 
-  const scheduling::SessionId session_id = scheduling_id_;
-  const scheduling::PresentId present_id = sessions_to_update.at(session_id);
+  for (const auto& [scheduling_id, present_id] : sessions_to_update) {
+    // Destroy all unsignalled acquire fence listeners older than |present_id|.
+    RemoveFenceListenersPriorTo(scheduling_id, present_id);
 
-  // Destroy all unsignalled acquire fence listeners older than |present_id|.
-  {
-    auto begin_it = fence_listeners_.lower_bound({session_id, 0});
-    auto end_it = fence_listeners_.upper_bound({session_id, present_id});
-    FX_DCHECK(std::distance(begin_it, end_it) >= 0);
-    fence_listeners_.erase(begin_it, end_it);
-  }
-
-  // Apply update for |present_id|.
-  FX_DCHECK(image_pipes_.find(session_id) != image_pipes_.end());
-  if (auto image_pipe = image_pipes_[session_id]) {
-    auto image_pipe_update_results = image_pipe->Update(present_id);
+    // Apply update for |present_id|.
+    if (image_pipes_.find(scheduling_id) != image_pipes_.end()) {
+      if (auto image_pipe = image_pipes_.at(scheduling_id).image_pipe) {
+        image_pipe->Update(present_id);
+      }
+    }
   }
 
   return results;
+}
+
+void ImagePipeUpdater::RemoveFenceListenersPriorTo(scheduling::SessionId scheduling_id,
+                                                   scheduling::PresentId present_id) {
+  auto begin_it = fence_listeners_.lower_bound({scheduling_id, 0});
+  auto end_it = fence_listeners_.upper_bound({scheduling_id, present_id});
+  FX_DCHECK(std::distance(begin_it, end_it) >= 0);
+  fence_listeners_.erase(begin_it, end_it);
 }
 
 void ImagePipeUpdater::OnFramePresented(
     const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&
         latched_times,
     scheduling::PresentTimestamps present_times) {
-  const auto it = latched_times.find(scheduling_id_);
-  if (it != latched_times.end()) {
-    present1_helper_.OnPresented(/*latched_times*/ it->second, present_times);
+  for (const auto& [scheduling_id, latch_map] : latched_times) {
+    const auto it = image_pipes_.find(scheduling_id);
+    if (it != image_pipes_.end()) {
+      it->second.present1_helper.OnPresented(latch_map, present_times);
+    }
+  }
+}
+
+void ImagePipeUpdater::CleanupImagePipe(scheduling::SessionId scheduling_id) {
+  const auto it = image_pipes_.find(scheduling_id);
+  if (it == image_pipes_.end()) {
+    return;
+  }
+
+  image_pipes_.erase(it);
+  RemoveFenceListenersPriorTo(scheduling_id, std::numeric_limits<scheduling::PresentId>::max());
+
+  // Remove all old updates and schedule a new dummy update to ensure we draw a new clean frame
+  // without the removed pipe.
+  if (auto scheduler = frame_scheduler_.lock()) {
+    scheduler->RemoveSession(scheduling_id);
+    const auto present_id = scheduler->RegisterPresent(scheduling_id, /*release_fences*/ {});
+    scheduler->ScheduleUpdateForSession(/*presentation_time*/ zx::time(0),
+                                        /*id_pair*/ {scheduling_id, present_id},
+                                        /*squashable=*/true);
   }
 }
 

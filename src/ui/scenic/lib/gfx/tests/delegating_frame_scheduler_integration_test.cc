@@ -102,8 +102,9 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {
   auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(session.delegating_frame_scheduler);
   session.delegating_frame_scheduler->AddSessionUpdater(image_pipe_updater);
 
+  constexpr scheduling::SessionId kSessionId = 1;
   constexpr zx::time kPresentationTime = zx::time(5);
-  image_pipe_updater->ScheduleImagePipeUpdate(kPresentationTime, /*image_pipe=*/nullptr,
+  image_pipe_updater->ScheduleImagePipeUpdate(kSessionId, kPresentationTime, /*image_pipe=*/nullptr,
                                               /*acquire_fences=*/{}, /*release_fences=*/{},
                                               /*callback=*/[](auto...) {});
 
@@ -115,7 +116,7 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {
       [&](zx::time presentation_time, scheduling::SchedulingIdPair id_pair, bool squashable) {
         scheduled_update = true;
         EXPECT_EQ(kPresentationTime, presentation_time);
-        EXPECT_EQ(image_pipe_updater->GetSchedulingId(), id_pair.session_id);
+        EXPECT_EQ(kSessionId, id_pair.session_id);
       });
 
   // Once |frame_scheduler| is set, expect it to get a call to ScheduleUpdateForSession.

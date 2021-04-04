@@ -57,7 +57,7 @@ void SessionHandlerTest::InitializeEngine() {
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
-  engine_ = std::make_shared<Engine>(app_context_.context(), frame_scheduler_, GetEscherWeakPtr());
+  engine_ = std::make_shared<Engine>(app_context_.context(), GetEscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_);
 
   session_manager_ = std::make_unique<SessionManager>();

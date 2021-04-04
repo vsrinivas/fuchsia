@@ -117,8 +117,7 @@ class EngineTest : public escher::test::TestWithVkValidationLayer {
     auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
     escher_ =
         std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem(), nullptr);
-    engine_ = std::make_shared<Engine>(/*app_context=*/nullptr, /*frame_scheduler=*/nullptr,
-                                       escher_->GetWeakPtr(),
+    engine_ = std::make_shared<Engine>(/*app_context=*/nullptr, escher_->GetWeakPtr(),
                                        /*buffer_collection_importer=*/nullptr, inspect::Node());
   }
 

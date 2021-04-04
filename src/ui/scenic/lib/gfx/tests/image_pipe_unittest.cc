@@ -21,7 +21,7 @@ namespace test {
 class ImagePipeThatCreatesFakeImages : public ImagePipe {
  public:
   ImagePipeThatCreatesFakeImages(gfx::Session* session,
-                                 std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
+                                 std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
                                  escher::ResourceManager* fake_resource_manager)
       : ImagePipe(session, 0u, std::move(image_pipe_updater), session->shared_error_reporter()),
         fake_resource_manager_(fake_resource_manager) {}
@@ -70,10 +70,9 @@ class ImagePipeTest : public ErrorReportingTest, public escher::ResourceManager 
 
     gfx_session_ = std::make_unique<gfx::Session>(/*id=*/1, SessionContext{},
                                                   shared_event_reporter(), shared_error_reporter());
-    auto updater = std::make_unique<MockImagePipeUpdater>();
-    image_pipe_updater_ = updater.get();
+    image_pipe_updater_ = std::make_shared<MockImagePipeUpdater>();
     image_pipe_ = fxl::MakeRefCounted<ImagePipeThatCreatesFakeImages>(gfx_session_.get(),
-                                                                      std::move(updater), this);
+                                                                      image_pipe_updater_, this);
   }
 
   void TearDown() override {
@@ -85,11 +84,17 @@ class ImagePipeTest : public ErrorReportingTest, public escher::ResourceManager 
   }
 
   fxl::RefPtr<ImagePipeThatCreatesFakeImages> image_pipe_;
-  MockImagePipeUpdater* image_pipe_updater_;
+  std::shared_ptr<MockImagePipeUpdater> image_pipe_updater_;
 
  private:
   std::unique_ptr<gfx::Session> gfx_session_;
 };
+
+TEST_F(ImagePipeTest, CleansUpOnDestruction) {
+  EXPECT_EQ(image_pipe_updater_->cleanup_image_pipe_count_, 0u);
+  image_pipe_.reset();
+  EXPECT_EQ(image_pipe_updater_->cleanup_image_pipe_count_, 1u);
+}
 
 // Present an image with an Id of zero, and expect an error.
 TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {

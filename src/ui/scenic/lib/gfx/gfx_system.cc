@@ -28,12 +28,14 @@ static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
 GfxSystem::GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
-                     display::DisplayManager* display_manager)
+                     display::DisplayManager* display_manager,
+                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater)
     : System(std::move(context)),
       display_manager_(display_manager),
       sysmem_(sysmem),
       engine_(engine),
-      session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")) {
+      session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")),
+      image_pipe_updater_(std::move(image_pipe_updater)) {
   FX_DCHECK(engine_);
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
@@ -232,7 +234,8 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
             renderer->WarmPipelineCache({framebuffer_format});
           },
       .scene_graph = engine_->scene_graph(),
-      .view_tree_updater = &engine_->view_tree_updater()};
+      .view_tree_updater = &engine_->view_tree_updater(),
+      .image_pipe_updater = image_pipe_updater_};
 
   // Update scene graph and stage ViewTree updates of Annotation Views first.
   //

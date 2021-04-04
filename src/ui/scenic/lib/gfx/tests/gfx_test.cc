@@ -25,12 +25,14 @@ void GfxSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
           scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration,
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
-  engine_ = std::make_shared<Engine>(context_provider_.context(), frame_scheduler_,
-                                     escher::EscherWeakPtr());
+  engine_ = std::make_shared<Engine>(context_provider_.context(), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_);
-  gfx_system_ = scenic->RegisterSystem<GfxSystem>(engine_.get(),
-                                                  /* sysmem */ nullptr,
-                                                  /* display_manager */ nullptr);
+  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler_);
+  frame_scheduler_->AddSessionUpdater(image_pipe_updater);
+  gfx_system_ =
+      scenic->RegisterSystem<GfxSystem>(engine_.get(),
+                                        /* sysmem */ nullptr,
+                                        /* display_manager */ nullptr, image_pipe_updater);
   frame_scheduler_->AddSessionUpdater(scenic);
   scenic->SetInitialized(engine_->scene_graph());
   scenic->SetFrameScheduler(frame_scheduler_);

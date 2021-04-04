@@ -153,18 +153,18 @@ SessionWrapper InputSystemTest::CreateClient(const std::string& name,
 void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
   display_ = std::make_unique<Display>(
       /*id*/ 0, test_display_width_px(), test_display_height_px());
-  auto frame_scheduler = std::make_shared<DefaultFrameScheduler>(
+  frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
       display_->vsync_timing(),
       std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
+  engine_ = std::make_shared<Engine>(context_provider_.context(), escher::EscherWeakPtr());
+  frame_scheduler_->SetFrameRenderer(engine_);
 
-  engine_ = std::make_shared<Engine>(context_provider_.context(), frame_scheduler,
-                                     escher::EscherWeakPtr());
-  frame_scheduler->SetFrameRenderer(engine_);
   auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                /* sysmem */ nullptr,
-                                               /* display_manager */ nullptr);
-  frame_scheduler->AddSessionUpdater(scenic);
-  scenic->SetFrameScheduler(frame_scheduler);
+                                               /* display_manager */ nullptr,
+                                               /*image_pipe_updater*/ nullptr);
+  frame_scheduler_->AddSessionUpdater(scenic);
+  scenic->SetFrameScheduler(frame_scheduler_);
 
   input_system_ =
       scenic->RegisterSystem<InputSystem>(engine_->scene_graph(), auto_focus_behavior()).get();

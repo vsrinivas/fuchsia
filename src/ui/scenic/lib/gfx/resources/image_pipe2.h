@@ -31,7 +31,7 @@ class ImagePipe2 : public ImagePipeBase {
              ::fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request,
              std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
              std::shared_ptr<ErrorReporter> error_reporter);
-  virtual ~ImagePipe2();
+  virtual ~ImagePipe2() override;
 
   static const ResourceTypeInfo kTypeInfo;
 

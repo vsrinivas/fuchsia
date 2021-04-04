@@ -294,8 +294,8 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
-    engine_ = std::make_shared<gfx::Engine>(app_context_.get(), frame_scheduler_,
-                                            escher_->GetWeakPtr(), gfx_buffer_collection_importer,
+    engine_ = std::make_shared<gfx::Engine>(app_context_.get(), escher_->GetWeakPtr(),
+                                            gfx_buffer_collection_importer,
                                             scenic_->inspect_node()->CreateChild("Engine"));
   }
   frame_scheduler_->SetFrameRenderer(engine_);
@@ -303,8 +303,10 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto gfx =
-      scenic_->RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_, display_manager_.get());
+  auto image_pipe_updater = std::make_shared<gfx::ImagePipeUpdater>(frame_scheduler_);
+  frame_scheduler_->AddSessionUpdater(image_pipe_updater);
+  auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_,
+                                                     display_manager_.get(), image_pipe_updater);
   FX_DCHECK(gfx);
 
   frame_scheduler_->AddSessionUpdater(scenic_);

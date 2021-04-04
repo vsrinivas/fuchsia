@@ -20,6 +20,9 @@ void SessionTest::SetUp() {
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
+  image_pipe_updater_ = std::make_shared<ImagePipeUpdater>(frame_scheduler_);
+  frame_scheduler_->AddSessionUpdater(image_pipe_updater_);
+
   session_context_ = CreateSessionContext();
   session_ = CreateSession();
 }
@@ -38,14 +41,16 @@ SessionContext SessionTest::CreateSessionContext() {
                                  .escher = nullptr,
                                  .escher_resource_recycler = nullptr,
                                  .escher_image_factory = nullptr,
-                                 .frame_scheduler = frame_scheduler_,
                                  .scene_graph = nullptr,
                                  .view_linker = nullptr};
   return session_context;
 }
 
 CommandContext SessionTest::CreateCommandContext() {
-  return CommandContext{.view_tree_updater = &view_tree_updater_};
+  return CommandContext{
+      .view_tree_updater = &view_tree_updater_,
+      .image_pipe_updater = image_pipe_updater_,
+  };
 }
 
 std::unique_ptr<Session> SessionTest::CreateSession() {

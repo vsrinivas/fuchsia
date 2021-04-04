@@ -39,6 +39,8 @@ ImagePipe::ImagePipe(Session* session, ResourceId id,
   FX_CHECK(error_reporter_);
 }
 
+ImagePipe::~ImagePipe() { CloseConnectionAndCleanUp(); }
+
 void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo vmo,
                          uint64_t offset_bytes, uint64_t size_bytes,
                          fuchsia::images::MemoryType memory_type) {
@@ -79,15 +81,11 @@ void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_inf
 
 void ImagePipe::CloseConnectionAndCleanUp() {
   handler_.reset();
-  is_valid_ = false;
   frames_ = {};
   images_.clear();
 
-  // Schedule a new frame.
-  FX_DCHECK(image_pipe_updater_);
-  image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>(),
-                                               /*acquire_fences*/ {}, /*release_fences*/ {},
-                                               /*callback*/ [](auto...) {});
+  if (image_pipe_updater_)
+    image_pipe_updater_->CleanupImagePipe(scheduling_id_);
 }
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
@@ -134,7 +132,7 @@ scheduling::PresentId ImagePipe::PresentImage(
   }
 
   const auto present_id = image_pipe_updater_->ScheduleImagePipeUpdate(
-      presentation_time, weak_ptr_factory_.GetWeakPtr(), std::move(acquire_fences),
+      scheduling_id_, presentation_time, weak_ptr_factory_.GetWeakPtr(), std::move(acquire_fences),
       std::move(release_fences), std::move(callback));
   frames_.push({.present_id = present_id,
                 .image = image_it->second,

@@ -9,7 +9,6 @@
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -31,7 +30,6 @@ struct SessionContext {
   escher::Escher* escher = nullptr;
   escher::ResourceRecycler* escher_resource_recycler = nullptr;
   escher::ImageFactory* escher_image_factory = nullptr;
-  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler = nullptr;
   SceneGraphWeakPtr scene_graph;
   ViewLinker* view_linker = nullptr;
   std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer = nullptr;

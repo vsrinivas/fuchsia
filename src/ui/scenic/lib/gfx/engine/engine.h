@@ -31,10 +31,6 @@
 #include "src/ui/scenic/lib/gfx/engine/session_manager.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
-#include "src/ui/scenic/lib/scenic/event_reporter.h"
-#include "src/ui/scenic/lib/scheduling/delegating_frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -95,16 +91,12 @@ using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 //
 class Engine : public scheduling::FrameRenderer {
  public:
-  Engine(sys::ComponentContext* app_context,
-         const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-         escher::EscherWeakPtr escher,
+  Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr escher,
          std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
          inspect::Node inspect_node);
 
   // Only used for testing.
-  Engine(sys::ComponentContext* app_context,
-         const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-         escher::EscherWeakPtr escher);
+  Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr escher);
 
   ~Engine() override = default;
 
@@ -128,14 +120,9 @@ class Engine : public scheduling::FrameRenderer {
   AnnotationManager* annotation_manager() { return annotation_manager_.get(); }
 
   SessionContext session_context() {
-    return SessionContext{vk_device(),
-                          escher(),
-                          escher_resource_recycler(),
-                          escher_image_factory(),
-                          delegating_frame_scheduler_,
-                          scene_graph(),
-                          &view_linker_,
-                          buffer_collection_importer_};
+    return SessionContext{
+        vk_device(),   escher(),      escher_resource_recycler(), escher_image_factory(),
+        scene_graph(), &view_linker_, buffer_collection_importer_};
   }
 
   // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
@@ -193,10 +180,6 @@ class Engine : public scheduling::FrameRenderer {
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
 
   std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer_;
-
-  // TODO(fxbug.dev/24686): This is a temporary solution until we can remove frame_scheduler from
-  // ResourceContext. Do not add any additional dependencies on this object/pointer.
-  std::shared_ptr<scheduling::DelegatingFrameScheduler> delegating_frame_scheduler_;
 
   SceneGraph scene_graph_;
   ViewTreeUpdater view_tree_updater_;

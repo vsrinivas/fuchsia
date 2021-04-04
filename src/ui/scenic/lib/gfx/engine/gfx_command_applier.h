@@ -8,8 +8,8 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
@@ -51,6 +51,7 @@ struct CommandContext {
   WarmPipelineCacheCallback warm_pipeline_cache_callback;
   fxl::WeakPtr<SceneGraph> scene_graph;
   ViewTreeUpdater* view_tree_updater = nullptr;
+  std::shared_ptr<ImagePipeUpdater> image_pipe_updater = nullptr;
 };
 
 // Responsible for applying gfx commands to sessions.
@@ -163,9 +164,11 @@ class GfxCommandApplier {
   static bool ApplyCreateImage2(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs2 args);
   static bool ApplyCreateImage3(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs3 args);
   static bool ApplyCreateImagePipe(Session* session, ResourceId id,
-                                   fuchsia::ui::gfx::ImagePipeArgs args);
+                                   fuchsia::ui::gfx::ImagePipeArgs args,
+                                   std::shared_ptr<ImagePipeUpdater> image_pipe_updater);
   static bool ApplyCreateImagePipe2(Session* session, ResourceId id,
-                                    fuchsia::ui::gfx::ImagePipe2Args args);
+                                    fuchsia::ui::gfx::ImagePipe2Args args,
+                                    std::shared_ptr<ImagePipeUpdater> image_pipe_updater);
   static bool ApplyCreateBuffer(Session* session, ResourceId id, fuchsia::ui::gfx::BufferArgs args);
   static bool ApplyCreateScene(Session* session, ResourceId id, fuchsia::ui::gfx::SceneArgs args,
                                ViewTreeUpdater& view_tree_updater);

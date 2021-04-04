@@ -17,6 +17,9 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
+constexpr scheduling::SessionId kSchedulingId = 1;
+constexpr scheduling::SessionId kSchedulingId2 = 2;
+
 class MockImagePipe : public ImagePipeBase {
  public:
   MockImagePipe(Session* session)
@@ -71,8 +74,36 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
   std::unique_ptr<gfx::Session> session_;
 };
 
+TEST_F(ImagePipeUpdaterTest, CleansUpCorrectly) {
+  image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
+      /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
+      /*acquire_fences=*/{}, /*release_fences=*/{}, /*callback=*/[](auto...) {});
+
+  std::vector<std::pair<scheduling::SessionId, int32_t>> result;
+  scheduler_->set_remove_session_callback([&result](scheduling::SessionId session_id) {
+    result.push_back({session_id, 1});
+  });
+  scheduler_->set_schedule_update_for_session_callback(
+      [&result](zx::time, scheduling::SchedulingIdPair id_pair, bool) {
+        result.push_back({id_pair.session_id, 2});
+      });
+
+  // When an image pipe is removed we expect it to first be removed from the frame scheduler and
+  // then a new dummy update scheduled to trigger a clean frame.
+  image_pipe_updater_->CleanupImagePipe(kSchedulingId);
+  EXPECT_THAT(result, testing::ElementsAre(std::make_pair(kSchedulingId, 1),
+                                           std::make_pair(kSchedulingId, 2)));
+
+  // Calling clean up for already cleaned up pipes should not cause extra calls.
+  image_pipe_updater_->CleanupImagePipe(kSchedulingId);
+  EXPECT_THAT(result, testing::ElementsAre(std::make_pair(kSchedulingId, 1),
+                                           std::make_pair(kSchedulingId, 2)));
+}
+
 TEST_F(ImagePipeUpdaterTest, ScheduleWithNoFences_ShouldScheduleOnLoop) {
   image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       /*acquire_fences=*/{}, /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
@@ -86,6 +117,7 @@ TEST_F(ImagePipeUpdaterTest, ScheduleWithFences_ShouldScheduleOnLoop_WhenAllFenc
   zx::event fence2 = CopyEvent(acquire_fences.at(1));
 
   image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences), /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
@@ -108,9 +140,11 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledInOrder_BeforeUpdate_ShouldAllBeSche
   zx::event fence2 = CopyEvent(acquire_fences2.at(0));
 
   image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences1), /*release_fences=*/{}, /*callback=*/[](auto...) {});
   image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences2), /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
@@ -133,9 +167,11 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledOutOfOrder_BeforeUpdate_ShouldStillB
   zx::event fence2 = CopyEvent(acquire_fences2.at(0));
 
   image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences1), /*release_fences=*/{}, /*callback=*/[](auto...) {});
   image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences2), /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
@@ -158,10 +194,12 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledInOrder_AfterUpdate_ShouldBeSchedule
   zx::event fence2 = CopyEvent(acquire_fences2.at(0));
 
   scheduling::PresentId present_id1 = image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences1), /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
   scheduling::PresentId present_id2 = image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences2), /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
@@ -173,7 +211,7 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledInOrder_AfterUpdate_ShouldBeSchedule
   EXPECT_EQ(schedule_call_count_, 1);
 
   image_pipe_updater_->UpdateSessions(
-      /*sessions_to_update=*/{{image_pipe_updater_->GetSchedulingId(), present_id1}},
+      /*sessions_to_update=*/{{kSchedulingId, present_id1}},
       /*trace_id=*/0);
 
   fence2.signal(0u, ZX_EVENT_SIGNALED);
@@ -188,10 +226,12 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledOutOfOrder_AfterUpdate_ShouldNeverBe
   zx::event fence2 = CopyEvent(acquire_fences2.at(0));
 
   scheduling::PresentId present_id1 = image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences1), /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
   scheduling::PresentId present_id2 = image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
       std::move(acquire_fences2), /*release_fences=*/{}, /*callback=*/[](auto...) {});
 
@@ -203,12 +243,59 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledOutOfOrder_AfterUpdate_ShouldNeverBe
   EXPECT_EQ(schedule_call_count_, 1);
 
   image_pipe_updater_->UpdateSessions(
-      /*sessions_to_update=*/{{image_pipe_updater_->GetSchedulingId(), present_id2}},
+      /*sessions_to_update=*/{{kSchedulingId, present_id2}},
       /*trace_id=*/0);
 
   fence1.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   EXPECT_EQ(schedule_call_count_, 1);
+}
+
+TEST_F(ImagePipeUpdaterTest, DifferentSchedulingIds_ShouldBeHandledSeparately) {
+  // Scheduling update for kSchedulingId.
+  std::vector<zx::event> acquire_fences1 = CreateEventArray(1);
+  zx::event fence1 = CopyEvent(acquire_fences1.at(0));
+  bool callback1_fired = false;
+  const auto present_id1 = image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId, /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
+      std::move(acquire_fences1), /*release_fences=*/{},
+      /*callback=*/[&callback1_fired](auto...) { callback1_fired = true; });
+
+  // One call for a different scheduling id (kSchedulingId2).
+  std::vector<zx::event> acquire_fences2 = CreateEventArray(1);
+  zx::event fence2 = CopyEvent(acquire_fences2.at(0));
+  bool callback2_fired = false;
+  const auto present_id2 = image_pipe_updater_->ScheduleImagePipeUpdate(
+      kSchedulingId2, /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
+      std::move(acquire_fences2), /*release_fences=*/{},
+      /*callback=*/[&callback2_fired](auto...) { callback2_fired = true; });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(schedule_call_count_, 0);
+
+  // Signalling fence2 should cause a scheduling call only for kSchedulingId.
+  fence2.signal(0u, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+  EXPECT_EQ(schedule_call_count_, 1);
+
+  // Signalling fence1 should cause a scheduling call for kSchedulingId.
+  fence1.signal(0u, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+  EXPECT_EQ(schedule_call_count_, 2);
+
+  EXPECT_FALSE(callback1_fired);
+  EXPECT_FALSE(callback2_fired);
+
+  // Check that both callbacks fire.
+  std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>
+      latched_times{
+          {kSchedulingId, {{present_id1, zx::time(0)}}},
+          {kSchedulingId2, {{present_id2, zx::time(0)}}},
+      };
+  image_pipe_updater_->OnFramePresented(latched_times, /*present_times*/ {});
+
+  EXPECT_TRUE(callback1_fired);
+  EXPECT_TRUE(callback2_fired);
 }
 
 }  // namespace test

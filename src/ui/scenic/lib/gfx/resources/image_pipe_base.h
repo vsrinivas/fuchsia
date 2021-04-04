@@ -8,6 +8,7 @@
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace escher {
 class ReleaseFenceSignaller;
@@ -28,12 +29,15 @@ class ImagePipeBase : public ImageBase {
   // |image_updated| as true if the current Image changed since the last time
   // Update() was called, and false otherwise.
   virtual ImagePipeUpdateResults Update(scheduling::PresentId present_id) = 0;
+  virtual ~ImagePipeBase() = default;
 
   // Resource implementation
   void Accept(class ResourceVisitor* visitor) override;
 
  protected:
   ImagePipeBase(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
+
+  const scheduling::SessionId scheduling_id_;
 };
 
 }  // namespace scenic_impl::gfx

@@ -12,6 +12,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
+#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 
@@ -24,7 +25,8 @@ class GfxSystem final : public System, public scenic_impl::TakeScreenshotDelegat
   static const char* kName;
 
   GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
-            display::DisplayManager* display_manager);
+            display::DisplayManager* display_manager,
+            std::shared_ptr<ImagePipeUpdater> image_pipe_updater);
 
   // |scenic_impl::System|
   CommandDispatcherUniquePtr CreateCommandDispatcher(
@@ -58,6 +60,7 @@ class GfxSystem final : public System, public scenic_impl::TakeScreenshotDelegat
   Sysmem* const sysmem_;
   Engine* const engine_;
   SessionManager session_manager_;
+  const std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
 };
 
 }  // namespace gfx

@@ -41,6 +41,7 @@ class ImagePipe : public ImagePipeBase {
             fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
             std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
             std::shared_ptr<ErrorReporter> error_reporter);
+  ~ImagePipe() override;
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo memory,
@@ -67,9 +68,6 @@ class ImagePipe : public ImagePipeBase {
   const escher::ImagePtr& GetEscherImage() override;
 
   bool use_protected_memory() override { return false; }
-
-  // Returns true if the connection to the ImagePipe has not closed.
-  bool is_valid() { return is_valid_; };
 
   fxl::WeakPtr<ImagePipe> GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
@@ -104,7 +102,6 @@ class ImagePipe : public ImagePipeBase {
   ImagePtr current_image_;
 
   std::unordered_map<ResourceId, ImagePtr> images_;
-  bool is_valid_ = true;
 
   const std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
   const std::shared_ptr<ErrorReporter> error_reporter_;

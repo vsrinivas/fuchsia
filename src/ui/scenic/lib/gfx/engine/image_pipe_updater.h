@@ -22,19 +22,18 @@ class MockImagePipeUpdater;
 }  // namespace test
 
 class ImagePipeBase;
-using ImagePipeBasePtr = fxl::RefPtr<ImagePipeBase>;
 using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 
 // ImagePipeUpdater is a helper class responsible for the scheduling and application of ImagePipe
-// updates.  There is one ImagePipeUpdater per Session, which is used for all ImagePipes in the
-// Session.  ImagePipeUpdater has two clients, Session and ImagePipe, who interact with it as
-// follows:
-//   - ImagePipe calls ScheduleImagePipeUpdate() whenever a new image is ready to display (i.e. all
-//     of the fences associated with the image have been signalled).  This adds an "update" to a
-//     priority queue sorted by target presentation time.
-//   - Session calls ApplyScheduledUpdates() when a frame is to be rendered.  At this time, all
-//     updates (from all ImagePipes in the Session) are applied, by calling ImagePipe::Update() on
-//     the corresponding ImagePipe.
+// updates.
+//
+//   - ImagePipeUpdater calls FrameScheduler::ScheduleUpdateForSession() whenever a new image is
+//     ready to display (i.e. all of the fences associated with the image have been signalled).
+//   - FrameScheduler calls UpdateSessions() when a frame is to be rendered. At this time, the
+//     most recent ready updates are applied to each ImagePipe, by calling ImagePipe::Update() on
+//     the corresponding ImagePipe with the corresponding PresentId. Older scheduled updates are
+//     discarded, whether their acquire fences have been signaled or not.
+//   - The ImagePipe *must* call CleanupImagePipe() on destruction.
 //
 // Note that creating an ImagePipeUpdater does not add it to the FrameScheduler as a
 // SessionUpdater; the creation code should manually do this after construction.
@@ -44,14 +43,13 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
   ImagePipeUpdater(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
   ~ImagePipeUpdater();
 
-  // Called by ImagePipe::PresentImage(). Stashes the arguments without applying them; they will
-  // later be applied by ApplyScheduledUpdates(). This method can also be used to clean up after an
-  // ImagePipe when it is being closed/cleaned-up; in this case, pass in a null ImagePipe.
-  // Returns an error string if there was an error, std::nullopt otherwise.
+  // Called in ImagePipe::PresentImage(). Waits until the |acquire_fences| for an update have been
+  // reached and then schedules it with the FrameScheduler.
   // Virtual for testing.
   virtual scheduling::PresentId ScheduleImagePipeUpdate(
-      zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe,
-      std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
+      scheduling::SessionId scheduling_id, zx::time presentation_time,
+      fxl::WeakPtr<ImagePipeBase> image_pipe, std::vector<zx::event> acquire_fences,
+      std::vector<zx::event> release_fences,
       fuchsia::images::ImagePipe::PresentImageCallback callback);
   // |scheduling::SessionUpdater|
   UpdateResults UpdateSessions(
@@ -62,30 +60,36 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
       const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&
           latched_times,
       scheduling::PresentTimestamps present_times) override;
-
+  // |scheduling::SessionUpdater|
   void OnCpuWorkDone() override {}
 
-  // For tests.
-  scheduling::SessionId GetSchedulingId() { return scheduling_id_; }
+  // Removes all references to ImagePipe with |scheduling_id|.
+  // Virtual for testing.
+  virtual void CleanupImagePipe(scheduling::SessionId scheduling_id);
 
  private:
   friend class test::MockImagePipeUpdater;
 
+  struct Pipe {
+    fxl::WeakPtr<ImagePipeBase> image_pipe;
+    // Handles Present1 callback semantics. Called in ScheduleImagePipeUpdate and OnFramePresented.
+    scheduling::Present1Helper present1_helper;
+  };
+
   // Constructor for test.
   ImagePipeUpdater();
 
-  // Handles Present1 callback semantics. Called in ScheduleImagePipeUpdate and OnFramePresented.
-  scheduling::Present1Helper present1_helper_;
+  // Destroys all fence listeners for |scheduling_id| up to, but not including, |present_id|.
+  void RemoveFenceListenersPriorTo(scheduling::SessionId scheduling_id,
+                                   scheduling::PresentId present_id);
 
   // Map of fence listeners per present call. Listeners are removed when they are either signalled,
   // or when an UpdateSessions call for the corresponding SchedulingIdPair or a subsequent one is
   // made.
   std::map<scheduling::SchedulingIdPair, escher::FenceSetListener> fence_listeners_;
-  // Map from SessionId to ImagePipe. Currently only has a single value in it, since
-  // ImagePipeUpdater is mapped one to one with ImagePipes.
-  std::map<scheduling::SessionId, fxl::WeakPtr<ImagePipeBase>> image_pipes_;
+  // Map from SessionId to an ImagePipe and its corresponding Present1Helper.
+  std::unordered_map<scheduling::SessionId, Pipe> image_pipes_;
 
-  const scheduling::SessionId scheduling_id_;
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
 };
 
