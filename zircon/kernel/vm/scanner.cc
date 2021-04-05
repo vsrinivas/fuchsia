@@ -398,6 +398,7 @@ uint64_t scanner_synchronous_evict(uint64_t max_pages, scanner::EvictionLevel ev
   list_initialize(&free_list);
   uint64_t pages_freed_pager_backed =
       scanner_evict_pager_backed(pages_to_free_pager_backed, eviction_level, &free_list);
+  pmm_free(&free_list);
 
   if (output == scanner::Output::Print && pages_freed_pager_backed > 0) {
     printf("[SCAN]: Evicted %lu user pager backed pages\n", pages_freed_pager_backed);
