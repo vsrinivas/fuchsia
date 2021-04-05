@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        component::{ComponentInstance, ComponentManagerInstance},
-        error::ModelError,
-    },
+    crate::model::{component::ComponentInstance, error::ModelError},
     ::routing::capability_source::CapabilitySourceInterface,
     async_trait::async_trait,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -14,7 +11,7 @@ use {
 };
 
 // TODO(https://fxbug.dev/71901): remove aliases once the routing lib has a stable API.
-pub type CapabilitySource = CapabilitySourceInterface<ComponentInstance, ComponentManagerInstance>;
+pub type CapabilitySource = CapabilitySourceInterface<ComponentInstance>;
 pub type InternalCapability = ::routing::capability_source::InternalCapability;
 pub type ComponentCapability = ::routing::capability_source::ComponentCapability;
 

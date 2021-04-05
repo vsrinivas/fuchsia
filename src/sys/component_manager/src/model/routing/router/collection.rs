@@ -6,7 +6,7 @@ use {
     crate::{
         capability::CapabilitySource,
         model::{
-            component::{ComponentInstance, ComponentManagerInstance, WeakComponentInstance},
+            component::{ComponentInstance, WeakComponentInstance},
             routing::{
                 error::RoutingError,
                 router::{
@@ -36,7 +36,7 @@ pub(super) struct RouteOfferFromCollection<B, O, E, S, V> {
 }
 
 #[async_trait]
-impl<B, O, E, S, V> CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>
+impl<B, O, E, S, V> CollectionCapabilityProvider<ComponentInstance>
     for RouteOfferFromCollection<B, O, E, S, V>
 where
     B: Send + Sync + 'static,
@@ -116,9 +116,7 @@ where
             .await
     }
 
-    fn clone_boxed(
-        &self,
-    ) -> Box<dyn CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>> {
+    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<ComponentInstance>> {
         Box::new(self.clone())
     }
 }
@@ -155,7 +153,7 @@ pub(super) struct RouteExposeFromCollection<B, O, E, S, V> {
 }
 
 #[async_trait]
-impl<B, O, E, S, V> CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>
+impl<B, O, E, S, V> CollectionCapabilityProvider<ComponentInstance>
     for RouteExposeFromCollection<B, O, E, S, V>
 where
     B: Send + Sync + 'static,
@@ -228,9 +226,7 @@ where
             .await
     }
 
-    fn clone_boxed(
-        &self,
-    ) -> Box<dyn CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>> {
+    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<ComponentInstance>> {
         Box::new(self.clone())
     }
 }

@@ -6,7 +6,7 @@ use {
     crate::{
         channel,
         model::{
-            component::{ComponentInstance, ComponentManagerInstance, WeakComponentInstance},
+            component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
             routing::open_capability_at_source,
         },
@@ -43,7 +43,7 @@ const DEFAULT_INSTANCE: &'static str = "default";
 pub async fn serve_collection<'a>(
     target: WeakComponentInstance,
     collection_component: &'a Arc<ComponentInstance>,
-    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>>,
+    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance>>,
     flags: u32,
     open_mode: u32,
     path: PathBuf,
@@ -80,7 +80,7 @@ struct ServiceInstanceDirectoryEntry {
     /// The moniker of the component at which the instance was aggregated.
     intermediate_component: AbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
-    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>>,
+    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance>>,
 }
 
 impl DirectoryEntry for ServiceInstanceDirectoryEntry {
@@ -171,7 +171,7 @@ struct ServiceCollectionDirectory {
     /// The moniker of the component hosting the collection.
     collection_component: AbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
-    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>>,
+    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance>>,
 }
 
 #[async_trait]
@@ -244,9 +244,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>
-        for MockCollectionCapabilityProvider
-    {
+    impl CollectionCapabilityProvider<ComponentInstance> for MockCollectionCapabilityProvider {
         async fn route_instance(&self, instance: &str) -> Result<CapabilitySource, RoutingError> {
             Ok(CapabilitySource::Component {
                 capability: ComponentCapability::Service(ServiceDecl {
@@ -269,10 +267,7 @@ mod tests {
             Ok(self.instances.keys().cloned().collect())
         }
 
-        fn clone_boxed(
-            &self,
-        ) -> Box<dyn CollectionCapabilityProvider<ComponentInstance, ComponentManagerInstance>>
-        {
+        fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<ComponentInstance>> {
             Box::new(self.clone())
         }
     }

@@ -15,6 +15,8 @@ use {
 /// A trait providing a representation of a component instance.
 // TODO(https://fxbug.dev/71901): Add methods providing all the data needed for capability routing.
 pub trait ComponentInstanceInterface: Sized {
+    type TopInstance: TopInstanceInterface;
+
     /// Returns a new `WeakComponentInstanceInterface<Self>` pointing to `self`.
     fn as_weak(self: &Arc<Self>) -> WeakComponentInstanceInterface<Self> {
         WeakComponentInstanceInterface::new(self)
@@ -27,6 +29,9 @@ pub trait ComponentInstanceInterface: Sized {
 
     /// Returns this `ComponentInstanceInterface`'s absolute moniker.
     fn abs_moniker(&self) -> &AbsoluteMoniker;
+
+    /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
+    fn try_get_parent(&self) -> Result<ExtendedInstanceInterface<Self>, ComponentInstanceError>;
 }
 
 /// A wrapper for a weak reference to a type implementing `ComponentInstanceInterface`. Provides the
@@ -78,25 +83,24 @@ impl<C: ComponentInstanceInterface> Default for WeakComponentInstanceInterface<C
     }
 }
 
-/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`.
+/// Either a type implementing `ComponentInstanceInterface` or its `TopInstance`.
 #[derive(Debug, Clone)]
-pub enum ExtendedInstanceInterface<C: ComponentInstanceInterface, T: TopInstanceInterface> {
+pub enum ExtendedInstanceInterface<C: ComponentInstanceInterface> {
     Component(Arc<C>),
-    AboveRoot(Arc<T>),
+    AboveRoot(Arc<C::TopInstance>),
 }
 
-/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`,
-/// as a weak pointer.
+/// A type implementing `ComponentInstanceInterface` or its `TopInstance`, as a weak pointer.
 #[derive(Debug)]
-pub enum WeakExtendedInstanceInterface<C: ComponentInstanceInterface, T: TopInstanceInterface> {
+pub enum WeakExtendedInstanceInterface<C: ComponentInstanceInterface> {
     Component(WeakComponentInstanceInterface<C>),
-    AboveRoot(Weak<T>),
+    AboveRoot(Weak<C::TopInstance>),
 }
 
-impl<C: ComponentInstanceInterface, T: TopInstanceInterface> WeakExtendedInstanceInterface<C, T> {
+impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
     /// Attempts to upgrade this `WeakExtendedInstanceInterface<C>` into an
     /// `ExtendedInstanceInterface<C>`, if the original extended instance has not been destroyed.
-    pub fn upgrade(&self) -> Result<ExtendedInstanceInterface<C, T>, ComponentInstanceError> {
+    pub fn upgrade(&self) -> Result<ExtendedInstanceInterface<C>, ComponentInstanceError> {
         match self {
             WeakExtendedInstanceInterface::Component(p) => {
                 Ok(ExtendedInstanceInterface::Component(p.upgrade()?))

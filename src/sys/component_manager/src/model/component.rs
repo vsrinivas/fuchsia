@@ -63,9 +63,8 @@ use {
 };
 
 pub type WeakComponentInstance = WeakComponentInstanceInterface<ComponentInstance>;
-pub type ExtendedInstance = ExtendedInstanceInterface<ComponentInstance, ComponentManagerInstance>;
-pub type WeakExtendedInstance =
-    WeakExtendedInstanceInterface<ComponentInstance, ComponentManagerInstance>;
+pub type ExtendedInstance = ExtendedInstanceInterface<ComponentInstance>;
+pub type WeakExtendedInstance = WeakExtendedInstanceInterface<ComponentInstance>;
 
 /// Describes the reason a component instance is being requested to start.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -276,11 +275,6 @@ impl ComponentInstance {
     /// Locks and returns the instance's action set.
     pub async fn lock_actions(&self) -> MutexGuard<'_, ActionSet> {
         self.actions.lock().await
-    }
-
-    /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
-    pub fn try_get_parent(&self) -> Result<ExtendedInstance, ComponentInstanceError> {
-        self.parent.upgrade()
     }
 
     /// Gets the context, if it exists, or returns a '`ContextNotFound` error.
@@ -651,8 +645,14 @@ impl ComponentInstance {
 }
 
 impl ComponentInstanceInterface for ComponentInstance {
+    type TopInstance = ComponentManagerInstance;
+
     fn abs_moniker(&self) -> &AbsoluteMoniker {
         &self.abs_moniker
+    }
+
+    fn try_get_parent(&self) -> Result<ExtendedInstance, ComponentInstanceError> {
+        self.parent.upgrade()
     }
 }
 

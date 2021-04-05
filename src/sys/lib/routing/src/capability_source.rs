@@ -5,7 +5,7 @@
 use {
     crate::{
         component_instance::{
-            ComponentInstanceInterface, TopInstanceInterface, WeakComponentInstanceInterface,
+            ComponentInstanceInterface, WeakComponentInstanceInterface,
             WeakExtendedInstanceInterface,
         },
         error::RoutingError,
@@ -35,7 +35,7 @@ pub enum Error {
 
 /// Describes the source of a capability, as determined by `find_capability_source`
 #[derive(Debug)]
-pub enum CapabilitySourceInterface<C: ComponentInstanceInterface, T: TopInstanceInterface> {
+pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
     /// This capability originates from the component instance for the given Realm.
     /// point.
     Component { capability: ComponentCapability, component: WeakComponentInstanceInterface<C> },
@@ -45,11 +45,11 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface, T: TopInstance
     /// This capability originates from the parent of the root component, and is built in to
     /// component manager. `top_instance` is the instance at the top of the tree, i.e.  the
     /// instance representing component manager.
-    Builtin { capability: InternalCapability, top_instance: Weak<T> },
+    Builtin { capability: InternalCapability, top_instance: Weak<C::TopInstance> },
     /// This capability originates from the parent of the root component, and is offered from
     /// component manager's namespace. `top_instance` is the instance at the top of the tree, i.e.
     /// the instance representing component manager.
-    Namespace { capability: ComponentCapability, top_instance: Weak<T> },
+    Namespace { capability: ComponentCapability, top_instance: Weak<C::TopInstance> },
     /// This capability is provided by the framework based on some other capability.
     Capability {
         source_capability: ComponentCapability,
@@ -59,12 +59,12 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface, T: TopInstance
     Collection {
         collection_name: String,
         source_name: CapabilityName,
-        capability_provider: Box<dyn CollectionCapabilityProvider<C, T>>,
+        capability_provider: Box<dyn CollectionCapabilityProvider<C>>,
         component: WeakComponentInstanceInterface<C>,
     },
 }
 
-impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInterface<C, T> {
+impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
     /// Returns whether the given CapabilitySourceInterface can be available in a component's
     /// namespace.
     pub fn can_be_in_namespace(&self) -> bool {
@@ -100,7 +100,7 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInt
         }
     }
 
-    pub fn source_instance(&self) -> WeakExtendedInstanceInterface<C, T> {
+    pub fn source_instance(&self) -> WeakExtendedInstanceInterface<C> {
         match self {
             Self::Component { component, .. }
             | Self::Framework { component, .. }
@@ -115,9 +115,7 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInt
     }
 }
 
-impl<C: ComponentInstanceInterface, T: TopInstanceInterface> fmt::Display
-    for CapabilitySourceInterface<C, T>
-{
+impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -150,9 +148,7 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> fmt::Display
     }
 }
 
-impl<C: ComponentInstanceInterface, T: TopInstanceInterface> Clone
-    for CapabilitySourceInterface<C, T>
-{
+impl<C: ComponentInstanceInterface> Clone for CapabilitySourceInterface<C> {
     fn clone(&self) -> Self {
         match self {
             CapabilitySourceInterface::Component { capability, component } => {
@@ -204,9 +200,7 @@ impl<C: ComponentInstanceInterface, T: TopInstanceInterface> Clone
 /// of a collection. This trait type-erases the capability type, so it can be handled
 /// and hosted generically.
 #[async_trait]
-pub trait CollectionCapabilityProvider<C: ComponentInstanceInterface, T: TopInstanceInterface>:
-    Send + Sync
-{
+pub trait CollectionCapabilityProvider<C: ComponentInstanceInterface>: Send + Sync {
     /// Lists the instances of the capability within the collection.
     async fn list_instances(&self) -> Result<Vec<String>, RoutingError>;
 
@@ -214,21 +208,19 @@ pub trait CollectionCapabilityProvider<C: ComponentInstanceInterface, T: TopInst
     async fn route_instance(
         &self,
         instance: &str,
-    ) -> Result<CapabilitySourceInterface<C, T>, RoutingError>;
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>;
 
     /// Trait-object compatible clone.
-    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C, T>>;
+    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C>>;
 }
 
-impl<C: ComponentInstanceInterface, T: TopInstanceInterface> Clone
-    for Box<dyn CollectionCapabilityProvider<C, T>>
-{
+impl<C: ComponentInstanceInterface> Clone for Box<dyn CollectionCapabilityProvider<C>> {
     fn clone(&self) -> Self {
         self.clone_boxed()
     }
 }
 
-impl<C, T> fmt::Debug for Box<dyn CollectionCapabilityProvider<C, T>> {
+impl<C> fmt::Debug for Box<dyn CollectionCapabilityProvider<C>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Box<dyn CollectionCapabilityProvider>").finish()
     }
