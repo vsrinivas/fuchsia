@@ -655,19 +655,19 @@ type t1 = resource struct {
   h0 zx.handle;
   h1 zx.handle:optional;
   h2 zx.handle:VMO;
-  h3 zx.handle:[VMO,optional];
-  h4 zx.handle:[VMO,zx.rights.DUPLICATE];
-  h5 zx.handle:[VMO,zx.rights.DUPLICATE,optional];
+  h3 zx.handle:<VMO,optional>;
+  h4 zx.handle:<VMO,zx.rights.DUPLICATE>;
+  h5 zx.handle:<VMO,zx.rights.DUPLICATE,optional>;
   u7 union { 1: b bool; };
   u8 union { 1: b bool; }:optional;
   v9 vector<bool>;
   v10 vector<bool>:optional;
   v11 vector<bool>:16;
-  v12 vector<bool>:[16,optional];
+  v12 vector<bool>:<16,optional>;
   //p13 client_end:MyProtocol;
-  //p14 client_end:[MyProtocol,optional];
+  //p14 client_end:<MyProtocol,optional>;
   //r15 server_end:P;
-  //r16 server_end:[MyProtocol,optional];
+  //r16 server_end:<MyProtocol,optional>;
 };
 )FIDL",
                                std::move(experimental_flags));
@@ -693,19 +693,19 @@ type TypeDecl = struct {
     // errors[0]: no constraints specified
     f0 vector<uint16>:;
     // errors[1]: no constraints specified
-    f1 vector<uint16>:[];
+    f1 vector<uint16>:<>;
     // errors[2]: leading comma
-    f2 vector<uint16>:[,16,optional];
+    f2 vector<uint16>:<,16,optional>;
     // errors[3]: trailing comma
-    f3 vector<uint16>:[16,optional,];
+    f3 vector<uint16>:<16,optional,>;
     // errors[4]: double comma
-    f4 vector<uint16>:[16,,optional];
+    f4 vector<uint16>:<16,,optional>;
     // errors[5]: missing comma, errors[6]: unecessary brackets
-    f5 vector<uint16>:[16 optional];
+    f5 vector<uint16>:<16 optional>;
     // errors[7]: unnecessary brackets
-    f6 vector<uint16>:[16];
+    f6 vector<uint16>:<16>;
     // errors[8] missing close bracket, errors[9] unnecessary brackets
-    f7 vector<uint16>:[16;
+    f7 vector<uint16>:<16;
     // errors[10]: invalid constant
     f8 vector<uint16>:1~6,optional;
     // errors[11]: unexpected token
@@ -804,19 +804,19 @@ type TypeDecl= struct {
   v0 vector<bool>;
   v1 vector<bool>:16;
   v2 vector<bool>:optional;
-  v3 vector<bool>:[16,optional];
+  v3 vector<bool>:<16,optional>;
   b4 bytes;
   b5 bytes:16;
   b6 bytes:optional;
-  b7 bytes:[16,optional];
+  b7 bytes:<16,optional>;
   s8 string;
   s9 string:16;
   s10 string:optional;
-  s11 string:[16,optional];
+  s11 string:<16,optional>;
   a12 TypeAlias;
   a13 TypeAlias:16;
   a14 TypeAlias:optional;
-  a15 TypeAlias:[16,optional];
+  a15 TypeAlias:<16,optional>;
 };
 )FIDL",
                       std::move(experimental_flags));
@@ -948,9 +948,9 @@ type TypeDecl = resource struct {
   h0 zx.handle;
   h1 zx.handle:VMO;
   h2 zx.handle:optional;
-  h3 zx.handle:[VMO,optional];
-  h4 zx.handle:[VMO,zx.rights.TRANSFER];
-  h5 zx.handle:[VMO,zx.rights.TRANSFER,optional];
+  h3 zx.handle:<VMO,optional>;
+  h4 zx.handle:<VMO,zx.rights.TRANSFER>;
+  h5 zx.handle:<VMO,zx.rights.TRANSFER,optional>;
 };
 )FIDL",
                                std::move(experimental_flags));

@@ -1732,7 +1732,7 @@ std::unique_ptr<raw::TypeConstraints> Parser::ParseConstraints() {
   ASTScope scope(this);
   bool bracketed = false;
   std::vector<std::unique_ptr<raw::Constant>> constraints;
-  if (MaybeConsumeToken(OfKind(Token::Kind::kLeftSquare))) {
+  if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     bracketed = true;
   }
 
@@ -1745,7 +1745,7 @@ std::unique_ptr<raw::TypeConstraints> Parser::ParseConstraints() {
   }
 
   if (bracketed) {
-    ConsumeTokenOrRecover(OfKind(Token::Kind::kRightSquare));
+    ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
     if (constraints.size() == 1) {
       Fail(ErrUnnecessaryConstraintBrackets);
     }
@@ -1954,7 +1954,7 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
       // know for sure that the identifier before the colon must be a
       // NamedLayoutReference, so none of the other checks in this case are
       // required.
-      if (Peek().kind() == Token::Kind::kLeftSquare) {
+      if (Peek().kind() == Token::Kind::kLeftAngle) {
         layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
                                                                  std::move(identifier));
         break;
@@ -2003,13 +2003,16 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
     }
   }
 
-  auto parameters = MaybeParseTypeParameterList();
-  if (!Ok())
-    return Fail();
+  std::unique_ptr<raw::TypeParameterList> parameters;
+  if (previous_token_.kind() != Token::Kind::kColon) {
+    parameters = MaybeParseTypeParameterList();
+    if (!Ok())
+      return Fail();
+  }
 
   std::unique_ptr<raw::TypeConstraints> constraints;
-  if (previous_token_.kind() == Token::Kind::kColon ||
-      MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
+  MaybeConsumeToken(OfKind(Token::Kind::kColon));
+  if (previous_token_.kind() == Token::Kind::kColon) {
     constraints = ParseConstraints();
     if (!Ok())
       return Fail();
