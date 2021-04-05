@@ -12,8 +12,8 @@ use {
     crate::handler::setting_handler::{
         controller, persist, persist::controller as data_controller,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, BoxedController,
-        ClientImpl, ClientProxy, Command, ControllerError, ControllerStateResult, Event,
-        GenerateController, Handler, IntoHandlerResult, Payload, SettingHandlerResult, State,
+        ClientImpl, Command, ControllerError, ControllerStateResult, Event, GenerateController,
+        Handler, IntoHandlerResult, Payload, SettingHandlerResult, State,
     },
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::service,
@@ -38,7 +38,7 @@ macro_rules! gen_controller {
 
         #[async_trait]
         impl controller::Create for $name {
-            async fn create(_: ClientProxy) -> Result<Self, ControllerError> {
+            async fn create(_: ::std::sync::Arc<ClientImpl>) -> Result<Self, ControllerError> {
                 if $succeed {
                     Ok($name {})
                 } else {

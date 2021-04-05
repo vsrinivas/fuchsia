@@ -7,10 +7,11 @@ use crate::call_async;
 use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
-    controller, ClientProxy, ControllerError, SettingHandlerResult,
+    controller, ClientImpl, ControllerError, SettingHandlerResult,
 };
 use crate::service_context::ServiceContextHandle;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
 
@@ -24,9 +25,9 @@ impl DeviceStorageAccess for AccountController {
 
 #[async_trait]
 impl controller::Create for AccountController {
-    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+    async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError> {
         let service_context = client.get_service_context().await;
-        Ok(Self { service_context: service_context })
+        Ok(Self { service_context })
     }
 }
 

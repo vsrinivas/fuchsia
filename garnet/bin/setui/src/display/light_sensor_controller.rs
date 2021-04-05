@@ -7,7 +7,7 @@ use crate::display::types::LightData;
 use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
-    controller, ClientProxy, ControllerError, ControllerStateResult, Event, SettingHandlerResult,
+    controller, ClientImpl, ControllerError, ControllerStateResult, Event, SettingHandlerResult,
     State,
 };
 use async_trait::async_trait;
@@ -26,7 +26,7 @@ pub const LIGHT_SENSOR_CONFIG_PATH: &str = "/config/data/light_sensor_configurat
 const SCAN_DURATION_MS: i64 = 1000;
 
 pub struct LightSensorController {
-    client: ClientProxy,
+    client: Arc<ClientImpl>,
     sensor: Sensor,
     current_value: Arc<Mutex<LightData>>,
     notifier_abort: Option<AbortHandle>,
@@ -38,7 +38,7 @@ impl DeviceStorageAccess for LightSensorController {
 
 #[async_trait]
 impl controller::Create for LightSensorController {
-    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+    async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError> {
         let service_context = client.get_service_context().await;
         let sensor_proxy_result = service_context
             .lock()
@@ -86,7 +86,7 @@ impl controller::Handle for LightSensorController {
                 self.notifier_abort = Some(
                     notify_on_change(
                         change_receiver,
-                        ClientNotifier::create(self.client.clone()),
+                        ClientNotifier::create(Arc::clone(&self.client)),
                         self.current_value.clone(),
                     )
                     .await,
@@ -110,11 +110,11 @@ trait LightNotifier {
 }
 
 struct ClientNotifier {
-    client: ClientProxy,
+    client: Arc<ClientImpl>,
 }
 
 impl ClientNotifier {
-    pub fn create(client: ClientProxy) -> Arc<Mutex<Self>> {
+    pub fn create(client: Arc<ClientImpl>) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self { client }))
     }
 }

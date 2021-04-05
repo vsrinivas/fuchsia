@@ -127,8 +127,7 @@ mod tests {
     use crate::handler::base::Request;
     use crate::handler::setting_handler::controller::{Create, Handle};
     use crate::handler::setting_handler::{
-        BoxedController, ClientImpl, ClientProxy, ControllerError, ControllerStateResult,
-        SettingHandlerResult,
+        BoxedController, ClientImpl, ControllerError, ControllerStateResult, SettingHandlerResult,
     };
     use crate::message::base::{filter, Message, MessageType};
     use crate::service;
@@ -143,7 +142,7 @@ mod tests {
 
     #[async_trait]
     impl Create for TestController {
-        async fn create(_client: ClientProxy) -> Result<Self, ControllerError> {
+        async fn create(_client: Arc<ClientImpl>) -> Result<Self, ControllerError> {
             Ok(Self)
         }
     }

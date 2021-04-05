@@ -6,10 +6,11 @@ use crate::device::types::DeviceInfo;
 use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
-    controller, ClientProxy, ControllerError, SettingHandlerResult,
+    controller, ClientImpl, ControllerError, SettingHandlerResult,
 };
 use async_trait::async_trait;
 use std::fs;
+use std::sync::Arc;
 
 const BUILD_TAG_FILE_PATH: &str = "/config/build-info/version";
 
@@ -22,7 +23,7 @@ impl DeviceStorageAccess for DeviceController {
 #[async_trait]
 impl controller::Create for DeviceController {
     /// Creates the controller
-    async fn create(_: ClientProxy) -> Result<Self, ControllerError> {
+    async fn create(_: Arc<ClientImpl>) -> Result<Self, ControllerError> {
         Ok(Self {})
     }
 }

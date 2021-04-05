@@ -139,14 +139,14 @@ pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;
 pub type BoxedControllerResult = Result<BoxedController, ControllerError>;
 
 pub type GenerateController =
-    Box<dyn Fn(ClientProxy) -> BoxFuture<'static, BoxedControllerResult> + Send + Sync>;
+    Box<dyn Fn(Arc<ClientImpl>) -> BoxFuture<'static, BoxedControllerResult> + Send + Sync>;
 
 pub mod controller {
     use super::*;
 
     #[async_trait]
     pub trait Create: Sized {
-        async fn create(client: ClientProxy) -> Result<Self, ControllerError>;
+        async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError>;
     }
 
     #[async_trait]
@@ -158,29 +158,8 @@ pub mod controller {
     }
 }
 
-// TODO(fxbug.dev/70633) Convert Arc<Mutex<...>> into interior mutability within ClientImpl.
-// Then remove/replace ClientProxy with ClientImpl.
-#[derive(Clone)]
-pub struct ClientProxy {
-    client_handle: Arc<Mutex<ClientImpl>>,
-}
-
-impl ClientProxy {
-    fn new(handle: Arc<Mutex<ClientImpl>>) -> Self {
-        Self { client_handle: handle }
-    }
-
-    pub async fn get_service_context(&self) -> ServiceContextHandle {
-        self.client_handle.lock().await.get_service_context().await
-    }
-
-    pub async fn notify(&self, event: Event) {
-        self.client_handle.lock().await.notify(event).await;
-    }
-}
-
 pub struct ClientImpl {
-    notify: bool,
+    notify: Mutex<bool>,
     messenger: Messenger,
     notifier_signature: Signature,
     service_context: ServiceContextHandle,
@@ -193,7 +172,7 @@ impl ClientImpl {
             messenger: context.messenger.clone(),
             setting_type: context.setting_type,
             notifier_signature: context.notifier_signature.clone(),
-            notify: false,
+            notify: Mutex::new(false),
             service_context: context.environment.service_context_handle.clone(),
         }
     }
@@ -210,12 +189,12 @@ impl ClientImpl {
         }
     }
 
-    pub async fn create(
+    pub(crate) async fn create(
         mut context: Context,
         generate_controller: GenerateController,
     ) -> ControllerGenerateResult {
-        let client = Arc::new(Mutex::new(Self::new(&context)));
-        let controller_result = generate_controller(ClientProxy::new(client.clone())).await;
+        let client = Arc::new(Self::new(&context));
+        let controller_result = generate_controller(Arc::clone(&client)).await;
 
         if let Err(error) = controller_result {
             return Err(anyhow::Error::new(error));
@@ -226,7 +205,7 @@ impl ClientImpl {
         // Process MessageHub requests
         fasync::Task::spawn(async move {
             while let Ok((payload, message_client)) = context.receptor.next_payload().await {
-                let setting_type = client.lock().await.setting_type;
+                let setting_type = client.setting_type;
 
                 // Setting handlers should only expect commands
                 match Command::try_from(
@@ -244,7 +223,7 @@ impl ClientImpl {
 
                         // notify proxy of value
                         if let Ok(Some(info)) = &controller_reply {
-                            client.lock().await.notify(Event::Changed(info.clone())).await;
+                            client.notify(Event::Changed(info.clone())).await;
                         }
 
                         reply(message_client, controller_reply);
@@ -267,10 +246,10 @@ impl ClientImpl {
                                 continue;
                             }
                             State::Listen => {
-                                client.lock().await.notify = true;
+                                *client.notify.lock().await = true;
                             }
                             State::EndListen => {
-                                client.lock().await.notify = false;
+                                *client.notify.lock().await = false;
                             }
                             State::Teardown => {
                                 if let Some(Err(e)) = controller.change_state(state).await {
@@ -294,16 +273,16 @@ impl ClientImpl {
         Ok(())
     }
 
-    async fn get_service_context(&self) -> ServiceContextHandle {
+    pub(crate) async fn get_service_context(&self) -> ServiceContextHandle {
         self.service_context.clone()
     }
 
-    async fn notify(&self, event: Event) {
-        if self.notify {
+    pub(crate) async fn notify(&self, event: Event) {
+        let notify = self.notify.lock().await;
+        if *notify {
             self.messenger
                 .message(Payload::Event(event).into(), Audience::Messenger(self.notifier_signature))
-                .send()
-                .ack();
+                .send();
         }
     }
 }
@@ -346,7 +325,7 @@ impl IntoHandlerResult for SettingInfo {
 }
 
 pub mod persist {
-    use super::ClientProxy as BaseProxy;
+    use super::ClientImpl as BaseProxy;
     use super::*;
     use crate::base::SettingInfo;
     use crate::handler::device_storage::DeviceStorageConvertible;
@@ -375,14 +354,19 @@ pub mod persist {
         }
     }
 
-    #[derive(Clone)]
     pub struct ClientProxy {
-        base: BaseProxy,
+        base: Arc<BaseProxy>,
         setting_type: SettingType,
     }
 
+    impl Clone for ClientProxy {
+        fn clone(&self) -> Self {
+            Self { base: Arc::clone(&self.base), setting_type: self.setting_type }
+        }
+    }
+
     impl ClientProxy {
-        pub async fn new(base_proxy: BaseProxy, setting_type: SettingType) -> Self {
+        pub async fn new(base_proxy: Arc<BaseProxy>, setting_type: SettingType) -> Self {
             Self { base: base_proxy, setting_type }
         }
 
@@ -397,9 +381,6 @@ pub mod persist {
         pub async fn read_setting_info<T: HasSettingType>(&self) -> SettingInfo {
             let mut receptor = self
                 .base
-                .client_handle
-                .lock()
-                .await
                 .messenger
                 .message(
                     storage::Payload::Request(storage::StorageRequest::Read(T::SETTING_TYPE))
@@ -445,9 +426,6 @@ pub mod persist {
             let setting_type = (&setting_info).into();
             let mut receptor = self
                 .base
-                .client_handle
-                .lock()
-                .await
                 .messenger
                 .message(
                     storage::Payload::Request(storage::StorageRequest::Write(
