@@ -65,15 +65,19 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		return nil, err
 	}
 
-	ninjaPath := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja")
-	runner := &runner.SubprocessRunner{}
-	if msg, err := runNinja(ctx, runner, ninjaPath, contextSpec.BuildDir, targets, int(contextSpec.GomaJobCount)); err != nil {
+	runner := ninjaRunner{
+		runner:    &runner.SubprocessRunner{},
+		ninjaPath: thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja"),
+		buildDir:  contextSpec.BuildDir,
+		jobCount:  int(contextSpec.GomaJobCount),
+	}
+	if msg, err := runNinja(ctx, runner, targets); err != nil {
 		artifacts.FailureSummary = msg
 		return artifacts, err
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
-		noop, err := checkNinjaNoop(ctx, runner, ninjaPath, contextSpec.BuildDir, targets, hostplatform.IsMac())
+		noop, err := checkNinjaNoop(ctx, runner, targets, hostplatform.IsMac())
 		if err != nil {
 			return nil, err
 		}

@@ -53,6 +53,26 @@ const (
 	unrecognizedFailureMsg = "Unrecognized failures, please check the original stdout instead."
 )
 
+// ninjaRunner provides logic for running ninja commands using common flags
+// (e.g. build directory name).
+type ninjaRunner struct {
+	runner    subprocessRunner
+	ninjaPath string
+	buildDir  string
+	jobCount  int
+}
+
+// run runs a ninja command as a subprocess, passing `args` in addition to the
+// common args configured on the ninjaRunner.
+func (r ninjaRunner) run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	cmd := []string{r.ninjaPath, "-C", r.buildDir}
+	if r.jobCount > 0 {
+		cmd = append(cmd, "-j", fmt.Sprintf("%d", r.jobCount))
+	}
+	cmd = append(cmd, args...)
+	return r.runner.Run(ctx, cmd, stdout, stderr)
+}
+
 // ninjaParser is a container for tracking the stdout of a ninja subprocess and
 // aggregating the logs from any failed targets.
 type ninjaParser struct {
@@ -122,18 +142,9 @@ func (p *ninjaParser) failureMessage() string {
 
 func runNinja(
 	ctx context.Context,
-	r subprocessRunner,
-	ninjaPath string,
-	buildDir string,
+	r ninjaRunner,
 	targets []string,
-	jobCount int,
 ) (string, error) {
-	cmd := []string{ninjaPath, "-C", buildDir}
-	if jobCount > 0 {
-		cmd = append(cmd, "-j", fmt.Sprintf("%d", jobCount))
-	}
-	cmd = append(cmd, targets...)
-
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutReader.Close()
 	parser := &ninjaParser{ninjaStdout: stdoutReader}
@@ -148,7 +159,7 @@ func runNinja(
 		// Close the pipe as soon as the subprocess completes so that the pipe
 		// reader will return an EOF.
 		defer stdoutWriter.Close()
-		ninjaErr = r.Run(ctx, cmd, io.MultiWriter(os.Stdout, stdoutWriter), os.Stderr)
+		ninjaErr = r.run(ctx, targets, io.MultiWriter(os.Stdout, stdoutWriter), os.Stderr)
 	}()
 	// Wait for parsing to complete.
 	if parserErr := <-parserErrs; parserErr != nil {
@@ -169,18 +180,16 @@ func runNinja(
 // false otherwise.
 func checkNinjaNoop(
 	ctx context.Context,
-	r subprocessRunner,
-	ninjaPath string,
-	buildDir string,
+	r ninjaRunner,
 	targets []string,
 	isMac bool,
 ) (bool, error) {
 	// -n means dry-run.
-	cmd := []string{ninjaPath, "-C", buildDir, "-d", "explain", "--verbose", "-n"}
-	cmd = append(cmd, targets...)
+	args := []string{"-d", "explain", "--verbose", "-n"}
+	args = append(args, targets...)
 
 	var stdout, stderr bytes.Buffer
-	if err := r.Run(ctx, cmd, &stdout, &stderr); err != nil {
+	if err := r.run(ctx, args, &stdout, &stderr); err != nil {
 		return false, err
 	}
 

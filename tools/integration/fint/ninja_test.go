@@ -144,14 +144,17 @@ func TestRunNinja(t *testing.T) {
 			tc.stdout = normalize(tc.stdout)
 			tc.expectedFailureMessage = normalize(tc.expectedFailureMessage)
 
-			r := &fakeSubprocessRunner{
+			sr := &fakeSubprocessRunner{
 				mockStdout: []byte(tc.stdout),
 				fail:       tc.fail,
 			}
-			ninjaPath := filepath.Join(t.TempDir(), "ninja")
-			buildDir := filepath.Join(t.TempDir(), "out")
-			jobCount := 23 // Arbitrary distinctive value.
-			msg, err := runNinja(ctx, r, ninjaPath, buildDir, []string{"foo", "bar"}, jobCount)
+			r := ninjaRunner{
+				runner:    sr,
+				ninjaPath: filepath.Join(t.TempDir(), "ninja"),
+				buildDir:  filepath.Join(t.TempDir(), "out"),
+				jobCount:  23, // Arbitrary but distinctive value.
+			}
+			msg, err := runNinja(ctx, r, []string{"foo", "bar"})
 			if tc.fail {
 				if !errors.Is(err, errSubprocessFailure) {
 					t.Fatalf("Expected a subprocess failure error but got: %s", err)
@@ -160,18 +163,18 @@ func TestRunNinja(t *testing.T) {
 				t.Fatalf("Unexpected error: %s", err)
 			}
 
-			if len(r.commandsRun) != 1 {
-				t.Fatalf("expected runNinja to run 1 command but got %d", len(r.commandsRun))
+			if len(sr.commandsRun) != 1 {
+				t.Fatalf("expected runNinja to run 1 command but got %d", len(sr.commandsRun))
 			}
-			cmd := r.commandsRun[0]
-			if cmd[0] != ninjaPath {
-				t.Fatalf("runNinja ran wrong executable %q (expected %q)", cmd[0], ninjaPath)
+			cmd := sr.commandsRun[0]
+			if cmd[0] != r.ninjaPath {
+				t.Fatalf("runNinja ran wrong executable %q (expected %q)", cmd[0], r.ninjaPath)
 			}
 			foundJobCount := false
 			for i, part := range cmd {
 				if part == "-j" {
 					foundJobCount = true
-					if i+1 >= len(cmd) || cmd[i+1] != fmt.Sprintf("%d", jobCount) {
+					if i+1 >= len(cmd) || cmd[i+1] != fmt.Sprintf("%d", r.jobCount) {
 						t.Errorf("wrong value for -j flag: %v", cmd)
 					}
 				}
@@ -230,10 +233,14 @@ func TestCheckNinjaNoop(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := &fakeSubprocessRunner{
-				mockStdout: []byte(tc.stdout),
+			r := ninjaRunner{
+				runner: &fakeSubprocessRunner{
+					mockStdout: []byte(tc.stdout),
+				},
+				ninjaPath: "ninja",
+				buildDir:  t.TempDir(),
 			}
-			noop, err := checkNinjaNoop(ctx, r, "ninja", t.TempDir(), []string{"foo"}, tc.isMac)
+			noop, err := checkNinjaNoop(ctx, r, []string{"foo"}, tc.isMac)
 			if err != nil {
 				t.Fatal(err)
 			}
