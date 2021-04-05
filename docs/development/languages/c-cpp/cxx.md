@@ -272,8 +272,6 @@ FBL provides:
   - [intrusive refcounted mixin](/zircon/system/ulib/fbl/include/fbl/ref_counted.h)
   - [intrusive refcounting pointer](/zircon/system/ulib/fbl/include/fbl/ref_ptr.h)
 - raii utilities
-  - [auto call](/zircon/system/ulib/fbl/include/fbl/auto_call.h) to run
-    code upon leaving scope
   - [AutoLock](/zircon/system/ulib/fbl/include/fbl/auto_lock.h)
 
 FBL has strict controls on memory allocation.  Memory allocation should be

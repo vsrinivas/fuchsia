@@ -38,8 +38,6 @@ FBL provides:
   - [intrusive refcounted mixin](include/fbl/ref_counted.h)
   - [intrusive refcounting pointer](include/fbl/ref_ptr.h)
 - raii utilities
-  - [auto call](include/fbl/auto_call.h) to run
-    code upon leaving scope
   - [AutoLock](include/fbl/auto_lock.h)
 
 FBL has strict controls on memory allocation.  Memory allocation should be
