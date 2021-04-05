@@ -122,12 +122,6 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
         EXPECT_FALSE(result.is_err());
         processed_callback = true;
       });
-
-  // Channel isn't bound until SetInitialized().
-  RunLoopUntilIdle();
-  EXPECT_FALSE(processed_callback);
-
-  allocator->SetInitialized({});
   RunLoopUntilIdle();
   EXPECT_TRUE(processed_callback);
 
@@ -146,7 +140,6 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
 
 TEST_F(AllocatorTest, RegisterBufferCollectionThroughMultipleAllocatorChannels) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  allocator->SetInitialized({});
 
   const int kNumAllocators = 3;
   std::vector<fuchsia::scenic::allocation::AllocatorPtr> allocator_ptrs;

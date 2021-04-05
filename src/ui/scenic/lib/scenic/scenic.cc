@@ -28,9 +28,8 @@ Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
 
 Scenic::~Scenic() = default;
 
-void Scenic::SetInitialized(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry) {
+void Scenic::SetViewFocuserRegistry(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry) {
   view_focuser_registry_ = view_focuser_registry;
-  post_initialization_runner_.SetInitialized();
 }
 
 void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
@@ -86,10 +85,7 @@ void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> 
   SessionEndpoints endpoints;
   endpoints.set_session(std::move(session_request));
   endpoints.set_session_listener(std::move(listener));
-  post_initialization_runner_.RunAfterInitialized(
-      [this, endpoints = std::move(endpoints)]() mutable {
-        CreateSessionImmediately(std::move(endpoints));
-      });
+  CreateSessionImmediately(std::move(endpoints));
 }
 
 void Scenic::CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
@@ -99,10 +95,7 @@ void Scenic::CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session>
   endpoints.set_session(std::move(session_request));
   endpoints.set_session_listener(std::move(listener));
   endpoints.set_view_focuser(std::move(view_focuser));
-  post_initialization_runner_.RunAfterInitialized(
-      [this, endpoints = std::move(endpoints)]() mutable {
-        CreateSessionImmediately(std::move(endpoints));
-      });
+  CreateSessionImmediately(std::move(endpoints));
 }
 
 void Scenic::CreateSessionT(SessionEndpoints endpoints, CreateSessionTCallback callback) {
@@ -116,10 +109,7 @@ void Scenic::CreateSessionT(SessionEndpoints endpoints, CreateSessionTCallback c
     return;
   }
 
-  post_initialization_runner_.RunAfterInitialized(
-      [this, endpoints = std::move(endpoints)]() mutable {
-        CreateSessionImmediately(std::move(endpoints));
-      });
+  CreateSessionImmediately(std::move(endpoints));
   callback();  // acknowledge this request
 }
 
@@ -162,40 +152,34 @@ void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
-  post_initialization_runner_.RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
-    // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
-    // delegate class completely. If the delegate becomes a permanent fixture of the system,
-    // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
-    // initialization order logic.
-    FX_DCHECK(display_delegate_);
-    display_delegate_->GetDisplayInfo(std::move(callback));
-  });
+  // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
+  // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
+  // delegate class completely. If the delegate becomes a permanent fixture of the system,
+  // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
+  // initialization order logic.
+  FX_DCHECK(display_delegate_);
+  display_delegate_->GetDisplayInfo(std::move(callback));
 }
 
 void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
-  post_initialization_runner_.RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
-    // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
-    // delegate class completely. If the delegate becomes a permanent fixture of the system,
-    // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
-    // initialization order logic.
-    FX_DCHECK(screenshot_delegate_);
-    screenshot_delegate_->TakeScreenshot(std::move(callback));
-  });
+  // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
+  // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
+  // delegate class completely. If the delegate becomes a permanent fixture of the system,
+  // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
+  // initialization order logic.
+  FX_DCHECK(screenshot_delegate_);
+  screenshot_delegate_->TakeScreenshot(std::move(callback));
 }
 
 void Scenic::GetDisplayOwnershipEvent(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
-  post_initialization_runner_.RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
-    // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
-    // delegate class completely. If the delegate becomes a permanent fixture of the system,
-    // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
-    // initialization order logic.
-    FX_DCHECK(display_delegate_);
-    display_delegate_->GetDisplayOwnershipEvent(std::move(callback));
-  });
+  // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
+  // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
+  // delegate class completely. If the delegate becomes a permanent fixture of the system,
+  // switch to fxbug.dev/24689, as we need a more formal mechanism for delayed execution and
+  // initialization order logic.
+  FX_DCHECK(display_delegate_);
+  display_delegate_->GetDisplayOwnershipEvent(std::move(callback));
 }
 
 void Scenic::InitializeSnapshotService(

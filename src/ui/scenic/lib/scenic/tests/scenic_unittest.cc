@@ -43,7 +43,6 @@ TEST_F(ScenicTest, CreateAndDestroySession) {
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
   const auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
   scenic()->SetFrameScheduler(frame_scheduler);
-  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
   auto session = CreateSession();
@@ -64,7 +63,6 @@ TEST_F(ScenicTest, CreateAndDestroySession_TableVariant) {
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
   const auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
   scenic()->SetFrameScheduler(frame_scheduler);
-  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
   fuchsia::ui::scenic::SessionPtr session_ptr;
@@ -93,7 +91,6 @@ TEST_F(ScenicTest, CreateAndDestroySession_TableVariant) {
 
 TEST_F(ScenicTest, CreateAndDestroyMultipleSessions) {
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
-  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
   auto session1 = CreateSession();
@@ -124,24 +121,10 @@ TEST_F(ScenicTest, CreateAndDestroyMultipleSessions) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 
-TEST_F(ScenicTest, SessionCreatedAfterInitialization) {
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-
-  // Request session creation, which doesn't occur yet because system isn't
-  // initialized.
-  auto session = CreateSession();
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-
-  // Initializing Scenic allows the session to be created.
-  scenic()->SetInitialized();
-  EXPECT_EQ(scenic()->num_sessions(), 1U);
-}
-
 TEST_F(ScenicTest, InvalidEndpointTable) {
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
   const auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
   scenic()->SetFrameScheduler(frame_scheduler);
-  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
   fuchsia::ui::scenic::SessionEndpoints empty;  // Requires .session field, don't put one in.
@@ -157,7 +140,6 @@ TEST_F(ScenicTest, InvalidEndpointTable) {
 }
 
 TEST_F(ScenicTest, InvalidPresentCall_ShouldDestroySession) {
-  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
   auto session = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
@@ -176,7 +158,6 @@ TEST_F(ScenicTest, InvalidPresentCall_ShouldDestroySession) {
 }
 
 TEST_F(ScenicTest, InvalidPresent2Call_ShouldDestroySession) {
-  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
   auto session = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
@@ -196,7 +177,6 @@ TEST_F(ScenicTest, InvalidPresent2Call_ShouldDestroySession) {
 
 TEST_F(ScenicTest, FailedUpdate_ShouldDestroySession) {
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
-  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
   auto session = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
@@ -215,83 +195,6 @@ TEST_F(ScenicTest, FailedUpdate_ShouldDestroySession) {
   // Returned |update_result| should contain the same sessions returned from the system.
   ASSERT_EQ(update_result.sessions_with_failed_updates.size(), 1u);
   EXPECT_EQ(*update_result.sessions_with_failed_updates.begin(), session_id);
-}
-
-TEST_F(ScenicTest, ScenicApiRaceBeforeSystemRegistration) {
-  DisplayInfoDelegate display_info_delegate;
-  TakeScreenshotDelegate screenshot_delegate;
-
-  bool display_info = false;
-  auto display_info_callback = [&](fuchsia::ui::gfx::DisplayInfo info) { display_info = true; };
-
-  bool screenshot = false;
-  auto screenshot_callback = [&](fuchsia::ui::scenic::ScreenshotData data, bool status) {
-    screenshot = true;
-  };
-
-  bool display_ownership = false;
-  auto display_ownership_callback = [&](zx::event event) { display_ownership = true; };
-
-  scenic()->GetDisplayInfo(display_info_callback);
-  scenic()->TakeScreenshot(screenshot_callback);
-  scenic()->GetDisplayOwnershipEvent(display_ownership_callback);
-
-  EXPECT_FALSE(display_info);
-  EXPECT_FALSE(screenshot);
-  EXPECT_FALSE(display_ownership);
-
-  auto mock_system = scenic()->RegisterSystem<DummySystem>();
-  scenic()->SetDisplayInfoDelegate(&display_info_delegate);
-  scenic()->SetScreenshotDelegate(&screenshot_delegate);
-
-  EXPECT_FALSE(display_info);
-  EXPECT_FALSE(screenshot);
-  EXPECT_FALSE(display_ownership);
-
-  scenic()->SetInitialized();
-
-  EXPECT_TRUE(display_info);
-  EXPECT_TRUE(screenshot);
-  EXPECT_TRUE(display_ownership);
-}
-
-TEST_F(ScenicTest, ScenicApiRaceAfterSystemRegistration) {
-  DisplayInfoDelegate display_info_delegate;
-  TakeScreenshotDelegate screenshot_delegate;
-
-  bool display_info = false;
-  auto display_info_callback = [&](fuchsia::ui::gfx::DisplayInfo info) { display_info = true; };
-
-  bool screenshot = false;
-  auto screenshot_callback = [&](fuchsia::ui::scenic::ScreenshotData data, bool status) {
-    screenshot = true;
-  };
-
-  bool display_ownership = false;
-  auto display_ownership_callback = [&](zx::event event) { display_ownership = true; };
-
-  auto mock_system = scenic()->RegisterSystem<DummySystem>();
-
-  scenic()->GetDisplayInfo(display_info_callback);
-  scenic()->TakeScreenshot(screenshot_callback);
-  scenic()->GetDisplayOwnershipEvent(display_ownership_callback);
-
-  EXPECT_FALSE(display_info);
-  EXPECT_FALSE(screenshot);
-  EXPECT_FALSE(display_ownership);
-
-  scenic()->SetDisplayInfoDelegate(&display_info_delegate);
-  scenic()->SetScreenshotDelegate(&screenshot_delegate);
-
-  EXPECT_FALSE(display_info);
-  EXPECT_FALSE(screenshot);
-  EXPECT_FALSE(display_ownership);
-
-  scenic()->SetInitialized();
-
-  EXPECT_TRUE(display_info);
-  EXPECT_TRUE(screenshot);
-  EXPECT_TRUE(display_ownership);
 }
 
 TEST_F(ScenicTest, ScenicApiAfterDelegate) {
@@ -316,12 +219,6 @@ TEST_F(ScenicTest, ScenicApiAfterDelegate) {
   scenic()->GetDisplayInfo(display_info_callback);
   scenic()->TakeScreenshot(screenshot_callback);
   scenic()->GetDisplayOwnershipEvent(display_ownership_callback);
-
-  EXPECT_FALSE(display_info);
-  EXPECT_FALSE(screenshot);
-  EXPECT_FALSE(display_ownership);
-
-  scenic()->SetInitialized();
 
   EXPECT_TRUE(display_info);
   EXPECT_TRUE(screenshot);

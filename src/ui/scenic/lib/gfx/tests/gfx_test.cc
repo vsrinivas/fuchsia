@@ -34,7 +34,7 @@ void GfxSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
                                         /* sysmem */ nullptr,
                                         /* display_manager */ nullptr, image_pipe_updater);
   frame_scheduler_->AddSessionUpdater(scenic);
-  scenic->SetInitialized(engine_->scene_graph());
+  scenic->SetViewFocuserRegistry(engine_->scene_graph());
   scenic->SetFrameScheduler(frame_scheduler_);
 }
 

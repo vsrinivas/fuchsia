@@ -86,4 +86,9 @@ void HardwareDisplayControllerProviderImpl::OpenController(
   holders_[id] = std::move(watcher);
 }
 
+void HardwareDisplayControllerProviderImpl::BindDisplayProvider(
+    fidl::InterfaceRequest<fuchsia::hardware::display::Provider> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
 }  // namespace ui_display

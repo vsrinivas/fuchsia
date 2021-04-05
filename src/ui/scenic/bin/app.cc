@@ -144,23 +144,10 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
           std::make_shared<flatland::LinkSystem>(uber_struct_system_->GetNextInstanceId())),
       flatland_presenter_(
           std::make_shared<flatland::DefaultFlatlandPresenter>(async_get_default_dispatcher())),
-      flatland_manager_(std::make_shared<flatland::FlatlandManager>(
-          async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_)),
       annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
   FX_DCHECK(!device_watcher_);
-
-  // Read config for the adjustable params.
-  bool enable_allocator_for_flatland;
-  ReadConfig(&min_predicted_frame_duration_, &enable_allocator_for_flatland);
-
-  // Create Allocator with the available importers.
-  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
-  if (enable_allocator_for_flatland && flatland_compositor_)
-    importers.push_back(flatland_compositor_);
-  allocator_ = std::make_shared<allocation::Allocator>(
-      app_context_.get(), importers, utils::CreateSysmemAllocatorSyncPtr("Allocator"));
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
   fit::bridge<std::shared_ptr<display::Display>> display_bridge;
@@ -185,12 +172,15 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       }));
 
   // Schedule a task to finish initialization once all promises have been completed.
+  // This closure is placed on |executor_|, which is owned by App, so it is safe to use |this|.
   auto p =
       fit::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
           .and_then([this](std::tuple<fit::result<escher::EscherUniquePtr>,
                                       fit::result<std::shared_ptr<display::Display>>>& results) {
             InitializeServices(std::move(std::get<0>(results).value()),
                                std::move(std::get<1>(results).value()));
+            // Should be run after all outgoing services are published.
+            app_context_->outgoing()->ServeFromStartupInfo();
           });
 
   executor_.schedule_task(std::move(p));
@@ -214,13 +204,6 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
 
   watchdog_ = std::make_unique<Watchdog>(kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
                                          async_get_default_dispatcher());
-
-  // TODO(fxbug.dev/67206): this should be moved into FlatlandManager.
-  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)>
-      flatland_handler =
-          fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
-  zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(flatland_handler));
-  FX_DCHECK(status == ZX_OK);
 }
 
 void App::InitializeServices(escher::EscherUniquePtr escher,
@@ -276,21 +259,32 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
     escher_->set_pipeline_builder(std::move(pipeline_builder));
   }
 
+  // Allocator sets constraints from both gfx and flatland. |enable_allocator_for_flatland| check
+  // allows us to disable flatland support via config while it is still in development, so it does
+  // not affect Image3 use in gfx.
+  bool enable_allocator_for_flatland = false;
+  zx::duration min_predicted_frame_duration;
+  ReadConfig(&min_predicted_frame_duration, &enable_allocator_for_flatland);
+
   {
     TRACE_DURATION("gfx", "App::InitializeServices[frame-scheduler]");
     frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
         display->vsync_timing(),
         std::make_unique<scheduling::WindowedFramePredictor>(
-            min_predicted_frame_duration_,
-            scheduling::DefaultFrameScheduler::kInitialRenderDuration,
+            min_predicted_frame_duration, scheduling::DefaultFrameScheduler::kInitialRenderDuration,
             scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
         scenic_->inspect_node()->CreateChild("FrameScheduler"), cobalt_logger);
   }
 
-  // Send the newly initialized importer to Allocator.
+  // Create Allocator with the available importers.
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
   auto gfx_buffer_collection_importer =
       std::make_shared<gfx::GfxBufferCollectionImporter>(escher_->GetWeakPtr());
-  allocator_->SetInitialized({gfx_buffer_collection_importer});
+  importers.push_back(gfx_buffer_collection_importer);
+  if (enable_allocator_for_flatland && flatland_compositor_)
+    importers.push_back(flatland_compositor_);
+  allocator_ = std::make_shared<allocation::Allocator>(
+      app_context_.get(), importers, utils::CreateSysmemAllocatorSyncPtr("Allocator"));
 
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
@@ -328,10 +322,19 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   auto snapshotter =
       std::make_unique<gfx::InternalSnapshotImpl>(engine_->scene_graph(), escher_->GetWeakPtr());
   scenic_->InitializeSnapshotService(std::move(snapshotter));
+  scenic_->SetViewFocuserRegistry(engine_->scene_graph());
 
-  scenic_->SetInitialized(engine_->scene_graph());
-
-  flatland_manager_->Initialize(display, {flatland_compositor_});
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> flatland_importers;
+  flatland_importers.push_back(flatland_compositor_);
+  flatland_manager_ = std::make_shared<flatland::FlatlandManager>(
+      async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
+      display, flatland_importers);
+  // TODO(fxbug.dev/67206): this should be moved into FlatlandManager.
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)>
+      flatland_handler =
+          fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
+  zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(flatland_handler));
+  FX_DCHECK(status == ZX_OK);
 }
 
 }  // namespace scenic_impl

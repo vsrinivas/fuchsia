@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/get_hardware_display_controller_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.hardware.display.Provider"
+        ]
+    }
+}

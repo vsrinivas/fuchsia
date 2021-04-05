@@ -168,7 +168,6 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
 
   input_system_ =
       scenic->RegisterSystem<InputSystem>(engine_->scene_graph(), auto_focus_behavior()).get();
-  scenic->SetInitialized();
 }
 
 void InputSystemTest::Inject(float x, float y, fuchsia::ui::pointerinjector::EventPhase phase) {

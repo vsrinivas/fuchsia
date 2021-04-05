@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"
+            }
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/get_hardware_display_controller_inject_services_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.hardware.display.Provider"
+        ]
+    }
+}

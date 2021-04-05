@@ -121,12 +121,6 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
       is_ok = services->AddServiceWithLaunchInfo(kScenic, launch_info_provider,
                                                  fuchsia::ui::scenic::Scenic::Name_);
       FX_CHECK(is_ok == ZX_OK);
-
-      // Scenic needs access to the fuchsia.hardware.display.Provider service, which is typically
-      // and in this case provided by Scenic itself.
-      is_ok = services->AddServiceWithLaunchInfo(kScenic, launch_info_provider,
-                                                 fuchsia::hardware::display::Provider::Name_);
-      FX_CHECK(is_ok == ZX_OK);
       is_ok = services->AddServiceWithLaunchInfo({.url = kScenic},
                                                  fuchsia::ui::pointerinjector::Registry::Name_);
       FX_CHECK(is_ok == ZX_OK);

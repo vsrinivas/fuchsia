@@ -9,8 +9,6 @@ source_set("utils") {
   sources = [
     "helpers.cc",
     "helpers.h",
-    "post_initialization_runner.cc",
-    "post_initialization_runner.h",
   ]
 
   public_deps = [
@@ -24,25 +22,5 @@ source_set("utils") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
-  ]
-}
-
-fuchsia_unittest_package("tests") {
-  package_name = "scenic_utils_tests"
-  deps = [ ":scenic_utils_unittests" ]
-}
-
-executable("scenic_utils_unittests") {
-  testonly = true
-  sources = [ "test/post_initialization_runner_unittest.cc" ]
-  deps = [
-    ":utils",
-    "//sdk/lib/fidl/cpp:cpp_base",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
   ]
 }

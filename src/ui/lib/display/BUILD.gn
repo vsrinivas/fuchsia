@@ -1,6 +1,8 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
 # Provides a C++ implementation of fuchsia.hardware.display.Provider, which returns a connection to
 # the default display controller (via a proxied connection to the driver-provided version).  This
@@ -42,7 +44,60 @@ source_set("hdcp_client") {
     "//sdk/lib/fit-promise",
   ]
   deps = [
+    ":hdcp_service",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/trace",
   ]
+}
+
+# Below tests exercise the different code paths caused by having fake-display injected via
+# facets:injected-services in .cmx files. We have two packages to add two different .cmx configs.
+test("get_hardware_display_controller_test") {
+  sources = [ "tests/get_hardware_display_controller_test.cc" ]
+
+  deps = [
+    ":hdcp_client",
+    ":hdcp_service",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("test") {
+  package_name = "get_hardware_display_controller_test"
+  deps = [ ":get_hardware_display_controller_test" ]
+  manifest = "tests/meta/get_hardware_display_controller_test.cmx"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+test("get_hardware_display_controller_inject_services_test") {
+  sources = [ "tests/get_hardware_display_controller_inject_services_test.cc" ]
+
+  deps = [
+    ":hdcp_client",
+    ":hdcp_service",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("inject_service_test") {
+  package_name = "get_hardware_display_controller_inject_services_test"
+  deps = [ ":get_hardware_display_controller_inject_services_test" ]
+  manifest =
+      "tests/meta/get_hardware_display_controller_inject_services_test.cmx"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

@@ -27,17 +27,19 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<sys::ComponentContext> app_context(
-      sys::ComponentContext::CreateAndServeOutgoingDirectory());
+  // This call creates ComponentContext, but does not start serving immediately. Outgoing directory
+  // is served by App, after App::InitializeServices() is completed.
+  std::unique_ptr<sys::ComponentContext> app_context = sys::ComponentContext::Create();
 
   // Set up an inspect::Node to inject into the App.
   sys::ComponentInspector inspector(app_context.get());
 
   // Obtain the default display controller via the fuchsia.hardware.display.Provider service that we
-  // find in our environment.  Scenic provides its own default implementation of this service, which
-  // can be overridden by the environment (e.g. by a test's "injected-services" facet).
+  // find in our environment. Scenic provides its own default implementation through
+  // |hdcp_service_impl|, which can be overridden by the environment (e.g. by a test's
+  // "injected-services" facet).
   ui_display::HardwareDisplayControllerProviderImpl hdcp_service_impl(app_context.get());
-  auto display_controller_promise = ui_display::GetHardwareDisplayController();
+  auto display_controller_promise = ui_display::GetHardwareDisplayController(&hdcp_service_impl);
 
   // Instantiate Scenic app.
   scenic_impl::App app(std::move(app_context), inspector.root().CreateChild("scenic"),

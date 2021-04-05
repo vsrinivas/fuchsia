@@ -23,7 +23,6 @@
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
-#include "src/ui/scenic/lib/utils/post_initialization_runner.h"
 
 namespace scenic_impl {
 
@@ -104,7 +103,7 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
 
   size_t num_sessions();
 
-  void SetInitialized(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry = nullptr);
+  void SetViewFocuserRegistry(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry);
 
   void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
 
@@ -125,8 +124,6 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
 
   // Registered systems, mapped to their TypeId.
   std::unordered_map<System::TypeId, std::shared_ptr<System>> systems_;
-
-  utils::PostInitializationRunner post_initialization_runner_;
 
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 

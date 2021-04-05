@@ -40,6 +40,8 @@ class HardwareDisplayControllerProviderImpl : public fuchsia::hardware::display:
                       ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller,
                       OpenControllerCallback callback) override;
 
+  void BindDisplayProvider(fidl::InterfaceRequest<fuchsia::hardware::display::Provider> request);
+
  private:
   fidl::BindingSet<fuchsia::hardware::display::Provider> bindings_;
 

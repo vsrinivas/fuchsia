@@ -27,9 +27,7 @@ Allocator::Allocator(
       sysmem_allocator_(std::move(sysmem_allocator)),
       weak_factory_(this) {
   FX_DCHECK(app_context);
-  fit::function<void(fidl::InterfaceRequest<fuchsia::scenic::allocation::Allocator>)>
-      allocator_handler = fit::bind_member(this, &Allocator::CreateAllocator);
-  app_context->outgoing()->AddPublicService(std::move(allocator_handler));
+  app_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 Allocator::~Allocator() {
@@ -40,17 +38,6 @@ Allocator::~Allocator() {
   while (!buffer_collections_.empty()) {
     ReleaseBufferCollection(*buffer_collections_.begin());
   }
-}
-
-void Allocator::SetInitialized(
-    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
-        buffer_collection_importers) {
-  FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
-
-  buffer_collection_importers_.insert(buffer_collection_importers_.end(),
-                                      buffer_collection_importers.begin(),
-                                      buffer_collection_importers.end());
-  post_initialization_runner_.SetInitialized();
 }
 
 void Allocator::RegisterBufferCollection(
@@ -179,15 +166,6 @@ void Allocator::RegisterBufferCollection(
   FX_DCHECK(status == ZX_OK);
 
   callback(fit::ok());
-}
-
-void Allocator::CreateAllocator(
-    fidl::InterfaceRequest<fuchsia::scenic::allocation::Allocator> request) {
-  FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
-
-  post_initialization_runner_.RunAfterInitialized([this, request = std::move(request)]() mutable {
-    bindings_.AddBinding(this, std::move(request));
-  });
 }
 
 void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {
