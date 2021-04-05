@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -213,6 +214,23 @@ func (t testFixture) assertFile(pathExpr, content string) {
 	}
 	if diff := cmp.Diff(content, string(got)); diff != "" {
 		t.Fatalf("unexpected content (-want +got):\n%s", diff)
+	}
+}
+
+func (t testFixture) assertNotModified(pathExpr string, during func()) {
+	t.Helper()
+	path := t.fmt(pathExpr)
+	// First, reset mtime to the epoch. This avoids the false positive where the
+	// test executes so fast that a modification does not change mtime.
+	longAgo := time.Unix(0, 0)
+	if err := os.Chtimes(path, longAgo, longAgo); err != nil {
+		t.Fatal(err)
+	}
+	during()
+	if info, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	} else if !info.ModTime().Equal(longAgo) {
+		t.Fatalf("%s was modified at %s", pathExpr, info.ModTime())
 	}
 }
 
@@ -457,6 +475,106 @@ func TestRegenRemovesUntrackedGoldenFiles(pt *testing.T) {
 	t.assertRegen(m)
 	t.assertDir("$A", []string{"goldens.txt"})
 	t.assertFile("$A/goldens.txt", "")
+}
+
+func TestRegenLeavesAccurateGoldensTxtOnError(pt *testing.T) {
+	t := newTestFixture(pt)
+	t.createTempDirs("$A", "$B")
+	t.writeFile("$A/goldens.txt", "")
+	t.writeFile("$B/foo", "foo contents")
+	m := t.parseManifest(`{
+		"test_goldens_dir": "$A",
+		"regen_goldens_dir": "$A",
+		"entries": [
+			{"golden": "foo.golden", "generated": "$B/foo"},
+			{"golden": "bar.golden", "generated": "$B/bar"}
+		]
+	}`)
+
+	// Regen fails because $B/bar does not exist.
+	t.assertRegenErr(m, "bar")
+	// But it should leave goldens.txt consistent with the filesystem.
+	t.assertDir("$A", []string{"goldens.txt", "foo.golden"})
+	t.assertFile("$A/goldens.txt", "foo.golden\n")
+}
+
+func TestRegenDoesNotRewriteUnchangedGoldensTxt(pt *testing.T) {
+	t := newTestFixture(pt)
+	t.createTempDirs("$A", "$B")
+	// Add extra blank lines and use non-alphabetical order to show that regen
+	// uses set equality when determining whether to rewrite goldens.txt.
+	goldensTxt := "\n\n\nfoo.golden\n\nbar.golden\n\n\n"
+	t.writeFile("$A/goldens.txt", goldensTxt)
+	t.writeFile("$A/foo.golden", "old")
+	t.writeFile("$A/bar.golden", "old")
+	t.writeFile("$B/foo", "new")
+	t.writeFile("$B/bar", "new")
+	m := t.parseManifest(`{
+		"test_goldens_dir": "$A",
+		"regen_goldens_dir": "$A",
+		"entries": [
+			{"golden": "foo.golden", "generated": "$B/foo"},
+			{"golden": "bar.golden", "generated": "$B/bar"}
+		]
+	}`)
+
+	// Regen rewrites foo.golden and bar.golden, but not goldens.txt.
+	t.assertNotModified("$A/goldens.txt", func() {
+		t.assertRegen(m)
+	})
+	t.assertFile("$A/goldens.txt", goldensTxt)
+}
+
+func TestRegenDoesNotRewriteUnchangedGoldenFile(pt *testing.T) {
+	t := newTestFixture(pt)
+	t.createTempDirs("$A", "$B")
+	t.writeFile("$A/goldens.txt", "foo.golden")
+	t.writeFile("$A/foo.golden", "unchanged")
+	t.writeFile("$B/foo", "unchanged")
+	t.writeFile("$B/bar", "new file")
+	m := t.parseManifest(`{
+		"test_goldens_dir": "$A",
+		"regen_goldens_dir": "$A",
+		"entries": [
+			{"golden": "foo.golden", "generated": "$B/foo"},
+			{"golden": "bar.golden", "generated": "$B/bar"}
+		]
+	}`)
+
+	// Regen rewrites goldens.txt, but not foo.golden.
+	t.assertNotModified("$A/foo.golden", func() {
+		t.assertRegen(m)
+	})
+	t.assertFile("$A/foo.golden", "unchanged")
+}
+
+func TestChangesWithVariousSizes(pt *testing.T) {
+	t := newTestFixture(pt)
+	t.createTempDirs("$A", "$B")
+	t.writeFile("$A/goldens.txt", "")
+	t.writeFile("$B/foo", "same")
+	t.writeFile("$B/bar", "grow")
+	t.writeFile("$B/baz", "shrink")
+	m := t.parseManifest(`{
+		"test_goldens_dir": "$A",
+		"regen_goldens_dir": "$A",
+		"entries": [
+			{"golden": "foo.golden", "generated": "$B/foo"},
+			{"golden": "bar.golden", "generated": "$B/bar"},
+			{"golden": "baz.golden", "generated": "$B/baz"}
+		]
+	}`)
+	t.assertRegen(m)
+
+	// Exercise code paths that check size before comparing content.
+	t.writeFile("$B/foo", "SAME")
+	t.writeFile("$B/bar", "grow larger")
+	t.writeFile("$B/baz", "")
+	t.assertRegen(m)
+	t.assertFile("$A/foo.golden", "SAME")
+	t.assertFile("$A/bar.golden", "grow larger")
+	t.assertFile("$A/baz.golden", "")
+	t.assertTest(m)
 }
 
 func TestSeparateDirsForRegenAndTest(pt *testing.T) {

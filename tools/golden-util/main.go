@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -144,84 +146,75 @@ func (m *manifest) regen(w io.Writer) error {
 	}
 	fmt.Fprintf(w, "Regenerating goldens in %s\n", absGoldensDir)
 
-	// Read the current contents of goldens.txt before overwriting it. If any
-	// files it lists are no longer generated, we remove them at the end.
+	// Read the current contents of goldens.txt into oldGoldens and newGoldens.
+	// We update newGoldens after each operation so that at every point it
+	// reflects the current state of the filesystem.
 	goldensTxtPath := filepath.Join(m.RegenGoldensDir, "goldens.txt")
-	goldensTxtFile, err := os.OpenFile(goldensTxtPath, os.O_RDWR|os.O_APPEND, 0)
+	goldensTxtFile, err := os.OpenFile(goldensTxtPath, os.O_RDWR, 0)
 	if err != nil {
 		return err
 	}
 	defer goldensTxtFile.Close()
-	goldensToRemove, err := readGoldensTxt(goldensTxtFile)
+	oldGoldens, err := readGoldensTxt(goldensTxtFile)
 	if err != nil {
-		return fmt.Errorf("%s: %s", goldensTxtPath, err)
+		return fmt.Errorf("%s: %w", goldensTxtPath, err)
 	}
-	// Write a newline in case the file doesn't end with one.
-	goldensTxtFile.WriteString("\n")
+	newGoldens := make(map[string]struct{})
+	for golden := range oldGoldens {
+		newGoldens[golden] = struct{}{}
+	}
 
-	var allGoldenPaths []string
+	// Defer rewriting goldens.txt so that it remains accurate even if something
+	// fails partway through the rest of this function.
+	defer func() {
+		// Avoid touching goldens.txt if it hasn't changed. This saves a lot of
+		// build work since goldens.txt is read at GN gen time.
+		if reflect.DeepEqual(oldGoldens, newGoldens) {
+			return
+		}
+		goldensTxtFile.Truncate(0)
+		goldensTxtFile.Seek(0, 0)
+		for _, golden := range setToSortedSlice(newGoldens) {
+			goldensTxtFile.WriteString(golden)
+			goldensTxtFile.WriteString("\n")
+		}
+	}()
+
+	manifestGoldens := make(map[string]struct{}, len(m.Entries))
 	for _, entry := range m.Entries {
-		fmt.Fprintf(w, "Writing %s\n", entry.Golden)
 		goldenPath := filepath.Join(m.RegenGoldensDir, entry.Golden)
-		goldenFile, err := os.Create(goldenPath)
-		if err != nil {
+		if err := copyIfDifferent(goldenPath, entry.Generated, func() {
+			fmt.Fprintf(w, "Writing %s\n", entry.Golden)
+		}); err != nil {
 			return err
 		}
-		defer goldenFile.Close()
-		generatedPath := entry.Generated
-		generatedFile, err := os.Open(generatedPath)
-		if err != nil {
-			return err
-		}
-		defer generatedFile.Close()
-		if _, err := io.Copy(goldenFile, generatedFile); err != nil {
-			return fmt.Errorf("copying %s to %s: %s", generatedPath, goldenPath, err)
-		}
-		allGoldenPaths = append(allGoldenPaths, entry.Golden)
-		delete(goldensToRemove, entry.Golden)
-		// Append to goldens.txt, even though we rewrite it at the end, so that
-		// it remains accurate if something fails partway through.
-		goldensTxtFile.WriteString(entry.Golden)
-		goldensTxtFile.WriteString("\n")
+		// Record the golden. It's better to do this after copyIfDifferent and
+		// risk having an untracked golden file (due to an error between create
+		// and copy) than to do it before and risk having a nonexistent file in
+		// goldens.txt (due to an error during create) which makes GN gen fail.
+		newGoldens[entry.Golden] = struct{}{}
+		manifestGoldens[entry.Golden] = struct{}{}
 	}
 
-	// Purge stale goldens.
-	for path := range goldensToRemove {
-		fmt.Fprintf(w, "Removing %s\n", path)
-		if err := os.Remove(filepath.Join(m.RegenGoldensDir, path)); err != nil {
-			return err
-		}
-	}
-
-	// Rewrite goldens.txt with the new paths, sorted.
-	sort.Strings(allGoldenPaths)
-	goldensTxtFile.Truncate(0)
-	goldensTxtFile.Seek(0, 0)
-	for _, path := range allGoldenPaths {
-		goldensTxtFile.WriteString(path)
-		goldensTxtFile.WriteString("\n")
-	}
-
-	// Check if there are any stray .golden files not tracked in goldens.txt.
-	// This can happen when rebasing changes incorrectly, for example.
-	allGoldensSet := make(map[string]struct{}, len(allGoldenPaths))
-	for _, path := range allGoldenPaths {
-		allGoldensSet[path] = struct{}{}
-	}
+	// Purge old goldens that are no longer used, including stray .golden files
+	// that were not tracked in goldens.txt (likely a merge/rebase mistake).
 	dirEntries, err := os.ReadDir(m.RegenGoldensDir)
 	if err != nil {
 		return err
 	}
 	for _, d := range dirEntries {
-		if d.Type().IsRegular() && filepath.Ext(d.Name()) == ".golden" {
-			name := d.Name()
-			if _, ok := allGoldensSet[name]; !ok {
-				fmt.Fprintf(w, "Removing untracked file %s\n", name)
-				if err := os.Remove(filepath.Join(m.RegenGoldensDir, name)); err != nil {
-					return err
-				}
-			}
+		if !(d.Type().IsRegular() && filepath.Ext(d.Name()) == ".golden") {
+			continue
 		}
+		golden := d.Name()
+		if _, ok := manifestGoldens[golden]; ok {
+			continue
+		}
+		fmt.Fprintf(w, "Removing %s\n", golden)
+		if err := os.Remove(filepath.Join(m.RegenGoldensDir, golden)); err != nil {
+			return err
+		}
+		delete(newGoldens, golden)
 	}
 
 	return nil
@@ -238,7 +231,7 @@ func (m *manifest) test(w io.Writer) (bool, error) {
 	remainingGoldens, err := readGoldensTxt(goldensTxtFile)
 	goldensTxtFile.Close()
 	if err != nil {
-		return false, fmt.Errorf("%s: %s", goldensTxtPath, err)
+		return false, fmt.Errorf("%s: %w", goldensTxtPath, err)
 	}
 
 	reporter := reporter{Writer: w}
@@ -282,14 +275,9 @@ diff -golden +generated:
 	}
 
 	if len(remainingGoldens) != 0 {
-		var extras []string
-		for golden := range remainingGoldens {
-			extras = append(extras, golden)
-		}
-		sort.Strings(extras)
 		var msg strings.Builder
 		msg.WriteString("extra files in goldens.txt (forgot to regen?):\n")
-		for _, golden := range extras {
+		for _, golden := range setToSortedSlice(remainingGoldens) {
 			msg.WriteString(fmt.Sprintf("\t%s\n", golden))
 		}
 		tc := reporter.testCase("goldens.txt")
@@ -323,6 +311,60 @@ func readGoldensTxt(rd io.Reader) (map[string]struct{}, error) {
 		return nil, err
 	}
 	return goldens, nil
+}
+
+// copyIfDifferent calls beforeCopy() and copies from dstPath to srcPath, unless
+// the file contents are already the same in which case it does nothing.
+func copyIfDifferent(dstPath, srcPath string, beforeCopy func()) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	dst, err := os.OpenFile(dstPath, os.O_RDWR|os.O_CREATE, 0o666)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+	srcInfo, err := src.Stat()
+	if err != nil {
+		return err
+	}
+	dstInfo, err := dst.Stat()
+	if err != nil {
+		return err
+	}
+	if srcInfo.Size() != dstInfo.Size() {
+		beforeCopy()
+		dst.Truncate(0)
+		_, err = io.Copy(dst, src)
+		return err
+	}
+	srcBytes, err := io.ReadAll(src)
+	if err != nil {
+		return err
+	}
+	dstBytes, err := io.ReadAll(dst)
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(srcBytes, dstBytes) {
+		return nil
+	}
+	beforeCopy()
+	dst.Truncate(0)
+	dst.Seek(0, 0)
+	_, err = dst.Write(srcBytes)
+	return err
+}
+
+func setToSortedSlice(set map[string]struct{}) []string {
+	res := make([]string, 0, len(set))
+	for s := range set {
+		res = append(res, s)
+	}
+	sort.Strings(res)
+	return res
 }
 
 type reporter struct {
