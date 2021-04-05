@@ -196,8 +196,7 @@ impl ImeService {
                 // fuchsia.ui.input.ImeServiceRequest::DispatchKey3 should be used instead.
             }
             uii::ImeServiceRequest::DispatchKey { .. }
-            | uii::ImeServiceRequest::DispatchKey3 { .. }
-            | uii::ImeServiceRequest::ViewFocusChanged { .. } => {
+            | uii::ImeServiceRequest::DispatchKey3 { .. } => {
                 // Transitional: DispatchKey should be handled by keyboard/Service.
                 // See Service.spawn_ime_service() for handing DispatchKey.
                 // In future, Keyboard service will receive keys directly.
