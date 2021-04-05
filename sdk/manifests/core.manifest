@@ -184,7 +184,9 @@ sdk://tools/arm64/minfs
 sdk://tools/arm64/pm
 sdk://tools/arm64/symbol-index
 sdk://tools/arm64/symbolize
+sdk://tools/arm64/symbolizer
 sdk://tools/arm64/zbi
+sdk://tools/arm64/zxdb
 sdk://tools/bootserver
 sdk://tools/cmc
 sdk://tools/device-finder

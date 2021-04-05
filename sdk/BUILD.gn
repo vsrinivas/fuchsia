@@ -282,11 +282,7 @@ sdk_molecule("host_tools") {
   visibility = [ ":*" ]
 
   # TODO: Move to cross_compiled once it's possible to cross-compile them.
-  not_cross_compiled = [
-    "//src/developer/debug/zxdb:zxdb_sdk",
-    "//tools/fidlcat:fidlcat_sdk",
-    "//tools/symbolizer:sdk",
-  ]
+  not_cross_compiled = [ "//tools/fidlcat:fidlcat_sdk" ]
 
   cross_compiled = [
     "tools:symbolize_sdk",
@@ -297,6 +293,7 @@ sdk_molecule("host_tools") {
     "//tools/sdk-tools/fpublish:fpublish_sdk",
     "//tools/sdk-tools/fserve:fserve_sdk",
     "//tools/sdk-tools/fssh:fssh_sdk",
+    "//src/developer/debug/zxdb:zxdb_sdk",
     "//src/developer/ffx:bin_sdk",
     "//src/storage/bin/fvm:fvm_sdk",
     "//src/storage/tools/blobfs-compression:blobfs-compression_sdk",
@@ -305,6 +302,7 @@ sdk_molecule("host_tools") {
     "//tools/bootserver_old:bootserver_sdk",
     "//tools/net/device-finder:device-finder_sdk",
     "//tools/symbol-index:symbol_index_sdk",
+    "//tools/symbolizer:sdk",
     "//tools/fidl/fidlc:fidl-format_sdk",
     "//tools/fidl/fidlc:fidlc_sdk",
     "//zircon/tools/merkleroot:merkleroot_sdk",
@@ -443,6 +441,7 @@ if (is_host) {
 
     deps = [
       "tools:symbolize_sdk",
+      "//src/developer/debug/zxdb:zxdb_sdk",
       "//src/developer/ffx:bin_sdk",
       "//src/storage/bin/fvm:fvm_sdk",
       "//src/storage/tools/blobfs-compression:blobfs-compression_sdk",
@@ -456,6 +455,7 @@ if (is_host) {
       "//tools/fvdl:fvdl_sdk",
       "//tools/net/device-finder:device-finder_sdk",
       "//tools/symbol-index:symbol_index_sdk",
+      "//tools/symbolizer:sdk",
       "//zircon/tools/merkleroot:merkleroot_sdk",
       "//zircon/tools/minfs:minfs_sdk",
       "//zircon/tools/zbi:zbi_sdk",
@@ -463,10 +463,7 @@ if (is_host) {
 
     # These tools can't currently be cross-compiled.
     if (current_toolchain == host_toolchain) {
-      deps += [
-        "//src/developer/debug/zxdb:zxdb_sdk",
-        "//tools/fidlcat:fidlcat_sdk",
-      ]
+      deps += [ "//tools/fidlcat:fidlcat_sdk" ]
     }
   }
 }
