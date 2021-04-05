@@ -4,16 +4,30 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 
-go_library("lib") {
+go_library("gopkg") {
   testonly = true
-  name = "golden-util"
+  name = "go.fuchsia.dev/fuchsia/tools/golden-util"
   deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
-  sources = [ "main.go" ]
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
 }
 
 go_binary("golden-util") {
   testonly = true
-  gopackage = "golden-util"
-  deps = [ ":lib" ]
+  gopackage = "go.fuchsia.dev/fuchsia/tools/golden-util"
+  deps = [ ":gopkg" ]
+}
+
+go_test("golden_util_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/golden-util" ]
+  deps = [ ":gopkg" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":golden_util_tests($host_toolchain)" ]
 }

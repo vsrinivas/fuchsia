@@ -157,6 +157,7 @@ group("tests_no_e2e") {
     "//tools/fidlcat/tests",
     "//tools/fuzz:tests($host_toolchain)",
     "//tools/fvdl:tests",
+    "//tools/golden-util:tests",
     "//tools/integration:tests($host_toolchain)",
     "//tools/jq5:tests($host_toolchain)",
     "//tools/lib:tests($host_toolchain)",
