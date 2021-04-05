@@ -70,7 +70,8 @@ protocol TouchSource {
     /// client's previous "hold" by replacing it with a response that allows
     /// ownership resolution to proceed.
     ///
-    /// See |EventPhase| for how a stream is structured into interactions.
+    /// See |TouchInteractionId| for how a stream is structured into
+    /// interactions.
     ///
     /// Flow control. The caller is allowed at most one |UpdateResponse| call
     /// per interaction, and it must be on a closed interaction. It is a logical
@@ -123,8 +124,26 @@ table TouchDeviceInfo {
     1: uint32 id;
 };
 
-/// A unique identifier for a "interaction" of touch events.
-/// See |EventPhase| for how a stream is structured into interactions.
+/// A unique identifier for a "interaction" of touch events in an event stream.
+/// Touch events are observed as a succession of interactions, as fingers engage
+/// and disengage with the display.
+///
+/// A finite sequence of pointer events that follows the `EventPhase` state
+/// machine, starting from the initial state ADD, is called an **interaction**.
+/// A closed (or past) interaction is one where it has reached the terminal
+/// state (REMOVE or CANCEL); an open (or current) interaction is one where it
+/// has not.
+///
+/// For a given device pointer, a stream of events is observed as a succession
+/// of zero or more closed interactions (the past history of user engagement),
+/// followed by at most one open interaction (the current user engagement).
+///
+/// Because we need to group pointer events by their interaction, touch event
+/// carries an **interaction id** that is unique in that pointer stream. This
+/// common reference makes it possible to operate on a closed interaction, as
+/// well as an open interaction.
+///
+/// Also see `EventPhase` for a discussion on event streams by mice.
 struct TouchInteractionId {
     /// An identifier for the pointer device that issues touch event streams.
     /// A device may own multiple pointers, each with its own |pointer_id|.
@@ -137,7 +156,7 @@ struct TouchInteractionId {
 
     /// An identifier of the interaction. It is unique only to a specific
     /// (device_id, pointer_id) pair.
-    uint32 stream_id;
+    uint32 interaction_id;
 };
 
 /// A description of each sampled data point in a touch event stream.
