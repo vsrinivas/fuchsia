@@ -24,6 +24,7 @@ using TakeStaticEventStream_Result = fuchsia::sys2::EventSource_TakeStaticEventS
 int main(int argc, const char** argv) {
   // diagnostic is tagging this component_manager_dor_test by default.
   syslog::SetTags({"debug_data"});
+  FX_LOGS(INFO) << "Started debug data processor";
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 

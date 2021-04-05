@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/debugdata/datasink.h>
 #include <lib/syslog/cpp/macros.h>
+#include <string.h>
 #include <zircon/assert.h>
 
 #include <unordered_map>
@@ -163,5 +164,6 @@ void DataProcessor::WriteSummaryFile(TestDebugDataMap debug_data_map) {
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   doc.Accept(writer);
 
-  files::WriteFileAt(dir_fd_.get(), kSummaryFile, buffer.GetString(), buffer.GetSize());
+  FX_CHECK(files::WriteFileAt(dir_fd_.get(), kSummaryFile, buffer.GetString(), buffer.GetSize()))
+      << strerror(errno);
 }
