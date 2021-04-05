@@ -327,8 +327,8 @@ TEST_F(UmsTest, BlkdevTest) {
                            nullptr, 1, actions, &process, errmsg));
   uint32_t observed;
   zx_object_wait_one(process, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, &observed);
-  zx_info_process_t proc_info;
-  EXPECT_OK(zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr,
+  zx_info_process_v2_t proc_info;
+  EXPECT_OK(zx_object_get_info(process, ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr,
                                nullptr));
   EXPECT_EQ(proc_info.return_code, 0);
 }

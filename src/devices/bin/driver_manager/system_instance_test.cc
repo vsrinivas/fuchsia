@@ -125,9 +125,9 @@ TEST_F(SystemInstanceTest, DriverHostJobLacksAmbientVmex) {
                                            nullptr, nullptr, 0, &proc, 0));
 
   ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
+  zx_info_process_v2_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_TRUE(proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
   // A return code of 1 from the util process indicates the replace_as_executable call failed with
   // ACCESS_DENIED.
   ASSERT_EQ(proc_info.return_code, 1);
@@ -146,9 +146,9 @@ TEST_F(SystemInstanceTest, DriverHostJobLacksNewProcess) {
                                            nullptr, nullptr, 0, &proc, 0));
 
   ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
+  zx_info_process_v2_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_TRUE(proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
   // A return code of 1 from the util process indicates the process_create call failed with
   // ACCESS_DENIED.
   ASSERT_EQ(proc_info.return_code, 1);

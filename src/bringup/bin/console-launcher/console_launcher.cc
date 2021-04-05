@@ -285,16 +285,17 @@ zx_status_t ConsoleLauncher::WaitForShellExit() {
            zx_status_get_string(status));
     return status;
   }
-  zx_info_process_t proc_info;
+  zx_info_process_v2_t proc_info;
   status =
-      shell_process_.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
+      shell_process_.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr);
   if (status != ZX_OK) {
     printf("console-launcher: failed to determine console shell termination cause (%s)\n",
            zx_status_get_string(status));
     return status;
   }
   printf("console-launcher: console shell exited (started=%d exited=%d, return_code=%ld)\n",
-         proc_info.started, proc_info.exited, proc_info.return_code);
+         (proc_info.flags & ZX_INFO_PROCESS_FLAG_STARTED) != 0,
+         (proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED) != 0, proc_info.return_code);
   return ZX_OK;
 }
 

@@ -120,8 +120,8 @@ class ComponentContextStaticConstructorTest : public gtest::RealLoopFixture {
     auto result =
         process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), /*pending=*/nullptr);
     EXPECT_EQ(result, ZX_OK);
-    zx_info_process_t process_info = {};
-    result = process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), NULL, NULL);
+    zx_info_process_v2_t process_info = {};
+    result = process.get_info(ZX_INFO_PROCESS_V2, &process_info, sizeof(process_info), NULL, NULL);
     EXPECT_EQ(result, ZX_OK);
 
     // Allow the run loop to drain so that any messages that constructor_helper_proc

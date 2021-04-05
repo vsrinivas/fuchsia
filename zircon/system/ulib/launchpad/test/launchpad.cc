@@ -105,8 +105,8 @@ void RunOneArgumentSizeTest(size_t size) {
   EXPECT_OK(launchpad_go(lp, &proc, &errmsg), "%s", errmsg);
 
   EXPECT_OK(zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL));
-  zx_info_process_t info;
-  EXPECT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
+  zx_info_process_v2_t info;
+  EXPECT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL));
   EXPECT_OK(zx_handle_close(proc));
 
   EXPECT_EQ(info.return_code, 0, "shell exit status");
@@ -166,8 +166,8 @@ void RunWithArgsEnvHandles(unsigned int num_args, unsigned int num_env, unsigned
 
   // See that it completed successfully.
   ASSERT_OK(zx_object_wait_one(proc.get(), ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL));
-  zx_info_process_t info;
-  ASSERT_OK(zx_object_get_info(proc.get(), ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
+  zx_info_process_v2_t info;
+  ASSERT_OK(zx_object_get_info(proc.get(), ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL));
   ASSERT_EQ(info.return_code, 0, "shell exit status");
 }
 

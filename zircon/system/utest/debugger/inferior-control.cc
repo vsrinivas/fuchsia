@@ -210,11 +210,11 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
 bool expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg) {
   BEGIN_HELPER;
 
-  zx_info_process_t info;
+  zx_info_process_v2_t info;
   // ZX_ASSERT returns false if the check fails.
-  ASSERT_EQ(zx_object_get_info(inferior, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
-  ASSERT_EQ(info.debugger_attached, expected, msg);
-
+  ASSERT_EQ(zx_object_get_info(inferior, ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL),
+            ZX_OK);
+  ASSERT_EQ((info.flags & ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED) != 0, expected, msg);
   END_HELPER;
 }
 

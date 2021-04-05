@@ -54,9 +54,9 @@ void RunMiniProcessTestHelper(const zx::job& job, uint32_t minip_cmd, int64_t* e
 
   ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
 
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
+  zx_info_process_v2_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_TRUE(proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
 
   *exit_code = proc_info.return_code;
 }

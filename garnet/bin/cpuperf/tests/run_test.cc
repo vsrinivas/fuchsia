@@ -90,8 +90,8 @@ static zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx:
     return status;
   }
 
-  zx_info_process_t proc_info;
-  status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
+  zx_info_process_v2_t proc_info;
+  status = zx_object_get_info(process.get(), ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info),
                               nullptr, nullptr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Error getting return code for program " << program_name << ": "

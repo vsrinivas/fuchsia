@@ -271,11 +271,12 @@ void tu_process_wait_signaled(zx_handle_t process) {
 }
 
 int tu_process_get_return_code(zx_handle_t process) {
-  zx_info_process_t info;
+  zx_info_process_v2_t info;
   zx_status_t status;
-  if ((status = zx_object_get_info(process, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL)) < 0)
+  if ((status = zx_object_get_info(process, ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL)) <
+      0)
     tu_fatal("get process info", status);
-  if (!info.exited) {
+  if (!(info.flags & ZX_INFO_PROCESS_FLAG_EXITED)) {
     printf("attempt to read return code of non-exited process");
     exit(TU_FAIL_ERRCODE);
   }

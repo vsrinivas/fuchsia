@@ -88,9 +88,9 @@ class ChrealmTest : public sys::testing::TestWithEnvironment,
     ASSERT_EQ(ZX_OK, async_wait.Begin(dispatcher()));
     ASSERT_TRUE(
         RunLoopWithTimeoutOrUntil([&proc_terminated] { return proc_terminated; }, zx::sec(10)));
-    zx_info_process_t info;
+    zx_info_process_v2_t info;
     zx_status_t status =
-        zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+        zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(info.return_code, 0) << "Command failed with code " << info.return_code;
 

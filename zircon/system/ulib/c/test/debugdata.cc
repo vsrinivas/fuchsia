@@ -91,8 +91,8 @@ void RunHelper(const char* mode, const size_t action_count, const fdio_spawn_act
 
   ASSERT_OK(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
 
-  zx_info_process_t proc_info;
-  ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  zx_info_process_v2_t proc_info;
+  ASSERT_OK(process.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr));
   ASSERT_EQ(expected_return_code, proc_info.return_code);
 }
 

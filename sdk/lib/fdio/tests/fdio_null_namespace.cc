@@ -13,8 +13,8 @@
 static int64_t join(const zx::process& process) {
   zx_status_t status = process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
   EXPECT_OK(status);
-  zx_info_process_t proc_info{};
-  status = process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
+  zx_info_process_v2_t proc_info{};
+  status = process.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr);
   EXPECT_OK(status);
   return proc_info.return_code;
 }

@@ -81,7 +81,7 @@ int BadHandleTestMain(int argc, char** argv) {
 
 namespace {
 
-void LaunchTestCase(const char* test_case, zx_info_process_t* proc_info) {
+void LaunchTestCase(const char* test_case, zx_info_process_v2_t* proc_info) {
   // Set up a subjob and subprocess in order to set BAD_HANDLE policy.
   zx::job job;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
@@ -105,34 +105,34 @@ void LaunchTestCase(const char* test_case, zx_info_process_t* proc_info) {
   res = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
   ASSERT_OK(res);
 
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, proc_info, sizeof(*proc_info), nullptr, nullptr));
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS_V2, proc_info, sizeof(*proc_info), nullptr, nullptr));
 }
 
 // This is a test for fxbug.dev/41780 where we accidentally enforced the BAD_HANDLE policy in a case
 // where the futex value mismatched expectations.
 TEST(BadHandleTest, WaitBadHandleWithMismatchedValueDoesNotExit) {
-  zx_info_process_t proc_info;
+  zx_info_process_v2_t proc_info;
   ASSERT_NO_FATAL_FAILURES(LaunchTestCase("no_match_wait", &proc_info));
   // We should see ZX_ERR_BAD_STATE since the futex value mismatched
   ASSERT_EQ(proc_info.return_code, ZX_ERR_BAD_STATE);
 }
 
 TEST(BadHandleTest, WaitBadHandleWithMatchedValueExits) {
-  zx_info_process_t proc_info;
+  zx_info_process_v2_t proc_info;
   ASSERT_NO_FATAL_FAILURES(LaunchTestCase("match_wait", &proc_info));
   // We should see an exception kill due to the policy violation
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
 }
 
 TEST(BadHandleTest, RequeueBadHandleWithMismatchedValueDoesNotExit) {
-  zx_info_process_t proc_info;
+  zx_info_process_v2_t proc_info;
   ASSERT_NO_FATAL_FAILURES(LaunchTestCase("no_match_requeue", &proc_info));
   // We should see ZX_ERR_BAD_STATE since the futex value mismatched
   ASSERT_EQ(proc_info.return_code, ZX_ERR_BAD_STATE);
 }
 
 TEST(BadHandleTest, RequeueBadHandleWithMatchedValueExits) {
-  zx_info_process_t proc_info;
+  zx_info_process_v2_t proc_info;
   ASSERT_NO_FATAL_FAILURES(LaunchTestCase("match_requeue", &proc_info));
   // We should see an exception kill due to the policy violation
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);

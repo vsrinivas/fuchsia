@@ -147,8 +147,9 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
 
   // Hang on to the resource root handle in case we call powerctl below.
   zx::resource root_resource;
-  status = zx::unowned_resource { handles[kRootResource] }
-  ->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_resource);
+  status = zx::unowned_resource {
+    handles[kRootResource]
+    } -> duplicate(ZX_RIGHT_SAME_RIGHTS, &root_resource);
   check(log, status, "zx_handle_duplicate");
 
   // Process the kernel command line, which gives us options and also
@@ -338,8 +339,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     printl(log, "Waiting for %s to exit...", o.value[OPTION_FILENAME]);
     status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     check(log, status, "zx_object_wait_one on process failed");
-    zx_info_process_t info;
-    status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+    zx_info_process_v2_t info;
+    status = proc.get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr);
     check(log, status, "zx_object_get_info on process failed");
     printl(log, "*** Exit status %zd ***\n", info.return_code);
     if (info.return_code == 0) {

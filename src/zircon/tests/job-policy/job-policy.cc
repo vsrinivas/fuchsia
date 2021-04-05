@@ -179,9 +179,9 @@ void CheckInvokingPolicyHelper(zx_policy_basic_v2_t* pol, uint32_t pol_count, ui
   if (expect_cmd_status == ZX_ERR_PEER_CLOSED) {
     // We expected the process to be terminated. Verify that it was due to policy.
     ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-    zx_info_process_t proc_info;
-    ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-    ASSERT_TRUE(proc_info.exited);
+    zx_info_process_v2_t proc_info;
+    ASSERT_OK(proc.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr));
+    ASSERT_TRUE(proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
     ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_POLICY_KILL);
   } else {
     // The process executed the command and is still running. Ask it to exit.

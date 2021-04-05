@@ -50,8 +50,8 @@ void BadFdTest() {
   ASSERT_OK(proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), &signals));
   ASSERT_TRUE(signals & ZX_PROCESS_TERMINATED);
 
-  zx_info_process_t pinfo;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &pinfo, sizeof(pinfo), nullptr, nullptr));
+  zx_info_process_v2_t pinfo;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS_V2, &pinfo, sizeof(pinfo), nullptr, nullptr));
 
   EXPECT_NE(pinfo.return_code, 0);
 }

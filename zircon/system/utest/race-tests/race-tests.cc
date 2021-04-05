@@ -39,23 +39,24 @@ TEST(RaceTests, TestProcessExitStatusRace) {
 
   for (;;) {
     // Query the process state.
-    zx_info_process_t info1;
+    zx_info_process_v2_t info1;
     size_t records_read;
-    ASSERT_EQ(zx_object_get_info(proc, ZX_INFO_PROCESS, &info1, sizeof(info1), &records_read, NULL),
-              ZX_OK);
+    ASSERT_EQ(
+        zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info1, sizeof(info1), &records_read, NULL),
+        ZX_OK);
     ASSERT_EQ(records_read, 1u);
 
     // If the process was reported as exited, query its state again.
-    if (info1.exited) {
+    if (info1.flags & ZX_INFO_PROCESS_FLAG_EXITED) {
       EXPECT_TRUE(info1.return_code == 100 || info1.return_code == 200);
 
-      zx_info_process_t info2;
+      zx_info_process_v2_t info2;
       ASSERT_EQ(
-          zx_object_get_info(proc, ZX_INFO_PROCESS, &info2, sizeof(info2), &records_read, NULL),
+          zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info2, sizeof(info2), &records_read, NULL),
           ZX_OK);
       ASSERT_EQ(records_read, 1u);
       // Do the results match what we got before?
-      EXPECT_TRUE(info2.exited);
+      EXPECT_TRUE(info1.flags & ZX_INFO_PROCESS_FLAG_EXITED);
       EXPECT_EQ(info1.return_code, info2.return_code);
       break;
     }

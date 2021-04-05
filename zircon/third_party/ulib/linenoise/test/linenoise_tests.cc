@@ -82,8 +82,9 @@ std::unique_ptr<MultiprocessInfo> RunChild(const char* child_main) {
 int64_t JoinChild(std::unique_ptr<MultiprocessInfo> info) {
   zx_status_t status = info->child.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
   ZX_ASSERT(status == ZX_OK);
-  zx_info_process_t proc_info{};
-  status = info->child.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
+  zx_info_process_v2_t proc_info{};
+  status =
+      info->child.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr);
   ZX_ASSERT(status == ZX_OK);
   return proc_info.return_code;
 }

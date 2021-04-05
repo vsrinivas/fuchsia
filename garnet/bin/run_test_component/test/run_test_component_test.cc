@@ -179,9 +179,9 @@ TEST_F(RunFixture, TestTimeout) {
       << err_msg;
   zx_signals_t signal;
   process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &signal);
-  zx_info_process_t process_info;
+  zx_info_process_v2_t process_info;
   ASSERT_EQ(
-      process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr),
+      process.get_info(ZX_INFO_PROCESS_V2, &process_info, sizeof(process_info), nullptr, nullptr),
       ZX_OK);
 
   ASSERT_EQ(process_info.return_code, -ZX_ERR_TIMED_OUT);
@@ -246,9 +246,9 @@ void run_component(const std::string& component_url, std::vector<const char*>& a
       << err_msg;
   zx_signals_t signal;
   process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &signal);
-  zx_info_process_t process_info;
+  zx_info_process_v2_t process_info;
   ASSERT_EQ(
-      process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr),
+      process.get_info(ZX_INFO_PROCESS_V2, &process_info, sizeof(process_info), nullptr, nullptr),
       ZX_OK);
 
   EXPECT_EQ(process_info.return_code, expected_exit_code);

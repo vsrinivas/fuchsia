@@ -334,7 +334,7 @@ TEST(ProcessTest, KillChannelHandleCycle) {
   EXPECT_OK(zx_handle_close(job_child));
 }
 
-// Tests that |zx_info_process_t| fields reflect the current state of a process.
+// Tests that |zx_info_process_v2_t| fields reflect the current state of a process.
 TEST(ProcessTest, InfoReflectsProcessState) {
   // Create a process with one thread.
   zx_handle_t event;

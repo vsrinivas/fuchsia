@@ -175,7 +175,7 @@ typedef uint32_t zx_info_process_flags_t;
 // renamed to `zx_info_process_t` later in the transition.
 typedef struct zx_info_process_v2 {
     // The process's return code; only valid if the
-    // |ZX_PROCESS_INFO_FLAG_EXITED| flag is set. If the process was killed, it
+    // |ZX_INFO_PROCESS_FLAG_EXITED| flag is set. If the process was killed, it
     // will be one of the |ZX_TASK_RETCODE| values.
     int64_t return_code;
 
