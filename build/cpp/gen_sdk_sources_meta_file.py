@@ -34,6 +34,7 @@ def main():
     }
 
     deps = []
+    banjo_deps = []
     fidl_deps = []
     for spec in args.deps:
         with open(spec, 'r') as spec_file:
@@ -44,11 +45,14 @@ def main():
         name = data['name']
         if type == 'cc_source_library' or type == 'cc_prebuilt_library':
             deps.append(name)
+        elif type == 'banjo_library':
+            banjo_deps.append(name)
         elif type == 'fidl_library':
             fidl_deps.append(name)
         else:
             raise Exception('Unsupported dependency type: %s' % type)
     metadata['deps'] = sorted(set(deps))
+    metadata['banjo_deps'] = sorted(set(banjo_deps))
     metadata['fidl_deps'] = sorted(set(fidl_deps))
 
     with open(args.out, 'w') as out_file:

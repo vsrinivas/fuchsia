@@ -4,6 +4,7 @@
 
 import("//build/banjo/toolchain.gni")
 import("//build/compiled_action.gni")
+import("//build/sdk/sdk_atom_alias.gni")
 
 # C/C++ bindings for a Banjo protocol.
 #
@@ -94,6 +95,18 @@ template("banjo_c_target") {
       "//zircon/public/lib/mock-function",
       "//zircon/public/lib/zxtest",
     ]
+  }
+
+  if (current_toolchain != banjo_toolchain) {
+    # Set up an SDK item for this library
+    if (defined(invoker.sdk_category)) {
+      # Instead of depending on the generated bindings, set up a dependency on
+      # the original library.
+      sdk_target_name = "${target_name}_sdk"
+      sdk_atom_alias(sdk_target_name) {
+        atom = ":$sdk_target_name($banjo_toolchain)"
+      }
+    }
   }
 }
 
