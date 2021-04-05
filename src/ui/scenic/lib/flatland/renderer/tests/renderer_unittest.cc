@@ -910,13 +910,13 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       });
 }
 
-class ParameterizedRendererYuvTest
+class VulkanRendererParameterizedYuvTest
     : public VulkanRendererTest,
       public ::testing::WithParamInterface<fuchsia::sysmem::PixelFormatType> {};
 
 // This test actually renders a YUV format texture using the VKRenderer. We create a single
 // rectangle, with a fuchsia texture. The render target and the rectangle are 32x32.
-VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
+VK_TEST_P(VulkanRendererParameterizedYuvTest, YuvTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
@@ -1066,8 +1066,118 @@ VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
                  });
 }
 
-INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, ParameterizedRendererYuvTest,
+INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, VulkanRendererParameterizedYuvTest,
                          ::testing::Values(fuchsia::sysmem::PixelFormatType::NV12,
                                            fuchsia::sysmem::PixelFormatType::I420));
+
+// This test actually renders a protected memory backed image using the VKRenderer.
+VK_TEST_F(VulkanRendererTest, ProtectedMemoryTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = escher::test::CreateEscherWithProtectedMemoryEnabled();
+  if (!unique_escher) {
+    FX_LOGS(WARNING) << "Protected memory not supported. Test skipped.";
+    GTEST_SKIP();
+  }
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  // Create a pair of tokens for the Image allocation.
+  auto image_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+
+  // Register the Image token with the renderer.
+  auto image_collection_id = allocation::GenerateUniqueBufferCollectionId();
+  auto result = renderer.ImportBufferCollection(image_collection_id, sysmem_allocator_.get(),
+                                                std::move(image_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  const uint32_t kTargetWidth = 32;
+  const uint32_t kTargetHeight = 32;
+
+  // Set the local constraints for the Image.
+  const fuchsia::sysmem::PixelFormatType pixel_format = fuchsia::sysmem::PixelFormatType::BGRA32;
+  const fuchsia::sysmem::BufferMemoryConstraints memory_constraints = {
+      .secure_required = true,
+      .cpu_domain_supported = false,
+      .inaccessible_domain_supported = true,
+  };
+  const fuchsia::sysmem::BufferUsage buffer_usage = {.vulkan =
+                                                         fuchsia::sysmem::vulkanUsageTransferSrc};
+  auto image_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(image_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ kTargetWidth,
+      /*height*/ kTargetHeight, buffer_usage, pixel_format, std::make_optional(memory_constraints));
+
+  // Wait for buffers allocated so it can populate its information struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 image_collection_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status =
+        image_collection->WaitForBuffersAllocated(&allocation_status, &image_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+    EXPECT_EQ(image_collection_info.settings.image_format_constraints.pixel_format.type,
+              pixel_format);
+    EXPECT_TRUE(image_collection_info.settings.buffer_settings.is_secure);
+  }
+
+  // Create the image meta data for the Image and import.
+  ImageMetadata image_metadata = {.collection_id = image_collection_id,
+                                  .identifier = allocation::GenerateUniqueImageId(),
+                                  .vmo_index = 0,
+                                  .width = kTargetWidth,
+                                  .height = kTargetHeight};
+  auto import_res = renderer.ImportBufferImage(image_metadata);
+  EXPECT_TRUE(import_res);
+
+  // Create a pair of tokens for the render target allocation.
+  auto render_target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+
+  // Register the render target tokens with the renderer.
+  auto render_target_collection_id = allocation::GenerateUniqueBufferCollectionId();
+  result =
+      renderer.RegisterRenderTargetCollection(render_target_collection_id, sysmem_allocator_.get(),
+                                              std::move(render_target_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  // Create a client-side handle to the render target's buffer collection and set the client
+  // constraints.
+  auto render_target_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(render_target_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ kTargetWidth,
+      /*height*/ kTargetHeight, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
+
+  // Wait for buffers allocated so it can populate its information struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 render_target_collection_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = render_target_collection->WaitForBuffersAllocated(&allocation_status,
+                                                                    &render_target_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+    EXPECT_TRUE(image_collection_info.settings.buffer_settings.is_secure);
+  }
+
+  // Create the render_target image metadata and import.
+  ImageMetadata render_target_metadata = {.collection_id = render_target_collection_id,
+                                          .identifier = allocation::GenerateUniqueImageId(),
+                                          .vmo_index = 0,
+                                          .width = kTargetWidth,
+                                          .height = kTargetHeight};
+  import_res = renderer.ImportBufferImage(render_target_metadata);
+  EXPECT_TRUE(import_res);
+
+  // Create a renderable where the upper-left hand corner should be at position (0,0) with a
+  // width/height of (32,32).
+  Rectangle2D image_renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
+  // Render the renderable to the render target.
+  renderer.Render(render_target_metadata, {image_renderable}, {image_metadata});
+  renderer.WaitIdle();
+
+  // Note that we cannot read pixel values from either buffer because protected memory does not
+  // allow that.
+}
 
 }  // namespace flatland

@@ -158,6 +158,8 @@ bool VkRenderer::RegisterCollection(
     image_constraints_info.minBufferCount = 1;
     image_constraints_info.minBufferCountForDedicatedSlack = 0;
     image_constraints_info.minBufferCountForSharedSlack = 0;
+    if (escher_->allow_protected_memory())
+      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIA::eProtectedOptional;
 
     // Create the collection and set its constraints.
     vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
@@ -276,6 +278,14 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
     return nullptr;
   }
 
+  // Check if allocated buffers are backed by protected memory.
+  bool is_protected =
+      (escher_->vk_physical_device()
+           .getMemoryProperties()
+           .memoryTypes[escher::CountTrailingZeros(properties.memoryTypeBits)]
+           .propertyFlags &
+       vk::MemoryPropertyFlagBits::eProtected) == vk::MemoryPropertyFlagBits::eProtected;
+
   // Setup the create info Fuchsia extension.
   vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
   collection_image_info.collection = collection;
@@ -284,7 +294,6 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
   // Setup the create info.
   FX_DCHECK(properties.createInfoIndex < std::size(kPreferredImageFormats));
   auto pixel_format = kPreferredImageFormats[properties.createInfoIndex];
-  bool is_protected = properties.memoryTypeBits & VK_MEMORY_PROPERTY_PROTECTED_BIT;
   vk::ImageCreateInfo create_info =
       escher::RectangleCompositor::GetDefaultImageConstraints(pixel_format, usage);
   create_info.extent = vk::Extent3D{metadata.width, metadata.height, 1};
@@ -388,11 +397,6 @@ void VkRenderer::Render(const ImageMetadata& render_target,
                         const std::vector<zx::event>& release_fences) {
   TRACE_DURATION("flatland", "VkRenderer::Render");
 
-  // Escher's frame class acts as a command buffer manager that we use to create a
-  // command buffer and submit it to the device queue once we are done.
-  auto frame = escher_->NewFrame("flatland::VkRenderer", ++frame_number_);
-  auto command_buffer = frame->cmds();
-
   // Copy over the texture and render target data to local containers that do not need
   // to be accessed via a lock. We're just doing a shallow copy via the copy assignment
   // operator since the texture and render target data is just referenced through pointers.
@@ -406,6 +410,28 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   const auto local_pending_textures = std::move(pending_textures_);
   const auto local_pending_render_targets = std::move(pending_render_targets_);
   lock.unlock();
+
+  // If we have any |images| protected, we should switch to a protected escher::Frame and
+  // |render_target| should also be protected.
+  bool has_protected_images = false;
+  for (const auto& image : images) {
+    FX_DCHECK(local_texture_map.find(image.identifier) != local_texture_map.end());
+    if (local_texture_map.at(image.identifier)->image()->use_protected_memory()) {
+      has_protected_images = true;
+      break;
+    }
+  }
+  FX_DCHECK(local_render_target_map.find(render_target.identifier) !=
+            local_render_target_map.end());
+  FX_DCHECK(!has_protected_images ||
+            local_render_target_map.at(render_target.identifier)->use_protected_memory());
+
+  // Escher's frame class acts as a command buffer manager that we use to create a
+  // command buffer and submit it to the device queue once we are done.
+  auto frame = escher_->NewFrame(
+      "flatland::VkRenderer", ++frame_number_, /*enable_gpu_logging=*/false,
+      /*requested_type=*/escher::CommandBuffer::Type::kGraphics, has_protected_images);
+  auto command_buffer = frame->cmds();
 
   // Transition pending images to their correct layout
   // TODO(fxbug.dev/52196): The way we are transitioning image layouts here and in the rest of
@@ -428,7 +454,6 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   std::vector<escher::RectangleCompositor::ColorData> color_data;
   for (const auto& image : images) {
     // Pass the texture into the above vector to keep it alive outside of this loop.
-    FX_DCHECK(local_texture_map.find(image.identifier) != local_texture_map.end());
     textures.emplace_back(local_texture_map.at(image.identifier));
 
     // TODO(fxbug.dev/52632): We are hardcoding the multiply color. Eventually it will
@@ -439,8 +464,6 @@ void VkRenderer::Render(const ImageMetadata& render_target,
 
   // Grab the output image and use it to generate a depth texture. The depth texture needs to
   // be the same width and height as the output image.
-  FX_DCHECK(local_render_target_map.find(render_target.identifier) !=
-            local_render_target_map.end());
   const auto output_image = local_render_target_map.at(render_target.identifier);
   const auto depth_texture = local_depth_target_map.at(render_target.identifier);
 
