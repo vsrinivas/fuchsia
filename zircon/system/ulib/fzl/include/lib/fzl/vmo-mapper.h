@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_VMO_MAPPER_H_
+#define LIB_FZL_VMO_MAPPER_H_
 
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/ref_counted.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/zx/vmo.h>
 
 #include <utility>
+
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 namespace fzl {
 
@@ -46,7 +48,8 @@ class VmoMapper {
   // cache_policy : When non-zero, indicates the cache policy to apply to the
   //                created VMO.
   // vmo_options  : The options to use when creating the VMO.
-  zx_status_t CreateAndMap(uint64_t size, zx_vm_option_t map_flags,
+  zx_status_t CreateAndMap(uint64_t size,
+                           zx_vm_option_t map_flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                            fbl::RefPtr<VmarManager> vmar_manager = nullptr,
                            zx::vmo* vmo_out = nullptr,
                            zx_rights_t vmo_rights = ZX_RIGHT_SAME_RIGHTS, uint32_t cache_policy = 0,
@@ -62,7 +65,8 @@ class VmoMapper {
   // map_flags  : The flags to use when mapping the VMO.
   // vmar       : A reference to a VmarManager to use when mapping the VMO, or
   //              nullptr to map the VMO using the root VMAR.
-  zx_status_t Map(const zx::vmo& vmo, uint64_t offset, uint64_t size, zx_vm_option_t map_flags,
+  zx_status_t Map(const zx::vmo& vmo, uint64_t offset = 0, uint64_t size = 0,
+                  zx_vm_option_t map_flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                   fbl::RefPtr<VmarManager> vmar_manager = nullptr);
 
   // Unmap the VMO from whichever VMAR it was mapped into.
@@ -93,3 +97,5 @@ class VmoMapper {
 };
 
 }  // namespace fzl
+
+#endif  // LIB_FZL_VMO_MAPPER_H_

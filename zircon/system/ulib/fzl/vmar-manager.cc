@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/alloc_checker.h>
 #include <lib/fzl/vmar-manager.h>
 
 #include <utility>
+
+#include <fbl/alloc_checker.h>
 
 namespace fzl {
 

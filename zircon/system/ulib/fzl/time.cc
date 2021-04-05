@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fzl/time.h>
+#include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <lib/fzl/time.h>
-#include <lib/zx/time.h>
 
 namespace fzl {
 

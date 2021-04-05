@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_MEMORY_PROBE_H_
+#define LIB_FZL_MEMORY_PROBE_H_
 
 #include <zircon/compiler.h>
 
@@ -23,3 +24,5 @@ bool probe_for_read(const void* addr);
 bool probe_for_write(void* addr);
 
 __END_CDECLS
+
+#endif  // LIB_FZL_MEMORY_PROBE_H_

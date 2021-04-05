@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_FIFO_H_
+#define LIB_FZL_FIFO_H_
 
 #include <lib/zx/fifo.h>
 
@@ -74,3 +75,5 @@ zx_status_t create_fifo(uint32_t elem_count, uint32_t options, fifo<W, R>* out0,
 }
 
 }  // namespace fzl
+
+#endif  // LIB_FZL_FIFO_H_

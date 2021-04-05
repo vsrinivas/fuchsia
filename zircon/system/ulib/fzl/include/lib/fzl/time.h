@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_TIME_H_
+#define LIB_FZL_TIME_H_
 
 #include <zircon/types.h>
 
@@ -25,3 +26,5 @@ zx_ticks_t ns_to_ticks(zx_duration_t ns);
 zx_duration_t ticks_to_ns(zx_ticks_t ticks);
 
 __END_CDECLS
+
+#endif  // LIB_FZL_TIME_H_

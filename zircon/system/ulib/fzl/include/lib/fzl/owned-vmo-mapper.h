@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_OWNED_VMO_MAPPER_H_
+#define LIB_FZL_OWNED_VMO_MAPPER_H_
 
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/ref_counted.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
 #include <utility>
+
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 namespace fzl {
 
@@ -71,3 +73,5 @@ class OwnedVmoMapper : protected VmoMapper {
 };
 
 }  // namespace fzl
+
+#endif  // LIB_FZL_OWNED_VMO_MAPPER_H_

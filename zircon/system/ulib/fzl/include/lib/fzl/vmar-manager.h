@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_VMAR_MANAGER_H_
+#define LIB_FZL_VMAR_MANAGER_H_
+
+#include <lib/zx/vmar.h>
 
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/zx/vmar.h>
 
 namespace fzl {
 
@@ -61,3 +63,5 @@ class VmarManager : public fbl::RefCounted<VmarManager> {
 };
 
 }  // namespace fzl
+
+#endif  // LIB_FZL_VMAR_MANAGER_H_
