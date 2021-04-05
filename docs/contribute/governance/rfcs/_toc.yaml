@@ -81,3 +81,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0081_fastboot_boot.md
 - title: "RFC-0082 - Runnning unmodified Linux programs on Fuchsia"
   path: /docs/contribute/governance/rfcs/0082_starnix.md
+- title: "RFC-0083: FIDL Versioning"
+  path: /docs/contribute/governance/rfcs/0083_fidl_versioning.md

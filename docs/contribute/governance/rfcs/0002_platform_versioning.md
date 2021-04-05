@@ -103,10 +103,10 @@ library. The API defines that set of functions, which means two IDK releases
 should expose the same set of functions in the `fit` library at the same API
 level.
 
-Syntactically, a Fuchsia *API level* is an unsigned, 64-bit integer. As the
-platform evolves (see *Evolution* below), API levels are assigned in increasing
-order and are intended to be understood by human beings, including
-end-developers.
+Syntactically, a Fuchsia *API level* is an unsigned, 64-bit integer.
+&nbsp;{#back-1}[\[1\]](#footnote-1) As the platform evolves (see *Evolution*
+below), API levels are assigned in increasing order and are intended to be
+understood by human beings, including end-developers.
 
 #### ABI revision
 
@@ -216,7 +216,7 @@ The platform cannot run components that neither target a supported ABI revision
 nor are listed as legacy components because the platform does not know what
 semantics those components expect.
 
-### Lifecycle
+### Lifecycle {#lifecycle}
 
 Every element of the [Fuchsia System Interface][Fuchsia System Interface]
 (e.g., a system call or a FIDL message) goes through the following lifecycle:
@@ -245,7 +245,7 @@ Every element of the [Fuchsia System Interface][Fuchsia System Interface]
  5. Once none of the legacy components use the element, the element can be
     *removed* from the platform entirely.
 
-### Dynamics
+### Dynamics {#dynamics}
 
 This approach incentivizes developers to migrate away from deprecated interfaces
 by coupling access to new APIs to performing those migrations. Specifically, to
@@ -259,7 +259,7 @@ Implementing this design involves many layers of the Fuchsia system. This
 document provides a sketch of the changes needed at each implicated layer, but
 the detailed designs for those layers are left to subsequent documents.
 
-### FIDL
+### FIDL {#fidl}
 
 FIDL should offer a way to annotate the range of API levels in which each
 protocol element is available. The FIDL toolchain should be aware of the
@@ -345,7 +345,7 @@ to run legacy components could have a significant performance impact, but the
 project can evaluate those performance implications on a case-by-case basis
 when adding a component to the list of legacy components.
 
-## Security considerations
+## Security considerations {#security-considerations}
 
 This proposal should have a positive impact on security because the proposal
 will make it easier to migrate the Fuchsia software ecosystem to newer APIs,
@@ -425,7 +425,7 @@ system. Using a single API level for the entire system implies a degree of
 coordination about the evolution of contract between the platform and
 applications.
 
-## Prior Art and References
+## Prior Art and References {#prior-art-and-references}
 
 There is a vast amount of prior art on this subject. The proposal in this
 document builds directly on the experience of Android, Windows, and macOS/iOS.
@@ -463,8 +463,15 @@ semantics from the platform.
 Apple has used these mechanisms successfully to migrate applications for these
 operating systems from older APIs to newer APIs.
 
+---
+
+{#footnote-1}[1]: [RFC-0083: FIDL Versioning][rfc-0083] amends this, restricting
+    API levels to 63 bits in order to reserve the high bit for other uses.
+    [&#x21A9;&#xFE0E;︎](#back-1)
+
 [Fuchsia System Interface]: /docs/concepts/system/abi/system.md
 [Fuchsia IDK]: /docs/development/idk/README.md
 [`uses-sdk`]: https://developer.android.com/guide/topics/manifest/uses-sdk-element
 [`SupportedOS`]: https://docs.microsoft.com/en-us/windows/win32/win7appqual/compatibility---application-manifest#leveraging-feature-capabilities
 [`API_AVAILABLE`]: https://developer.apple.com/documentation/swift/objective-c_and_c_code_customization/marking_api_availability_in_objective-c
+[rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md

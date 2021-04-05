@@ -443,3 +443,16 @@
   reviewers: ['shayba@google.com', jln@google.com', 'abdulla@google.com', 'jamesr@google.com', 'pascallouis@google.com', 'hjfreyer@google.com', 'cpu@google.com']
   submitted: '2021-02-11'
   reviewed: '2021-03-25'
+
+- name: 'RFC-0083'
+  title: 'FIDL versioning'
+  short_description: 'Provide a way to version FIDL elements and generate bindings at a particular version.'
+  authors: ['mkember@google.com']
+  file: '0083_fidl_versioning.md'
+  area: ['FIDL']
+  issue: ['67858']
+  gerrit_change_id: ['486164']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'hjfreyer@google.com', 'jamesr@google.com', 'jeremymanson@google.com', 'pascallouis@google.com', 'tombergan@google.com', 'yifeit@google.com']
+  submitted: '2021-02-12'
+  reviewed: '2021-04-05'
