@@ -228,6 +228,45 @@ async fn handle_cobalt_logger(
     }
 }
 
+async fn run_metrics_service(
+    stream: fidl_fuchsia_metrics::MetricEventLoggerFactoryRequestStream,
+) -> Result<(), fidl::Error> {
+    use fidl_fuchsia_metrics::MetricEventLoggerFactoryRequest::*;
+    stream
+        .try_for_each_concurrent(None, |event| async {
+            let CreateMetricEventLogger { logger, responder, .. } = event;
+            let handler = handle_metric_event_logger(logger.into_stream()?);
+            let () = responder.send(fidl_fuchsia_metrics::Status::Ok)?;
+            handler.await
+        })
+        .await
+}
+
+async fn handle_metric_event_logger(
+    stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
+) -> Result<(), fidl::Error> {
+    use fidl_fuchsia_metrics::MetricEventLoggerRequest::*;
+    stream
+        .try_for_each_concurrent(None, |event| async {
+            let _ = match event {
+                LogOccurrence { responder, .. } => responder.send(fidl_fuchsia_metrics::Status::Ok),
+                LogInteger { responder, .. } => responder.send(fidl_fuchsia_metrics::Status::Ok),
+                LogIntegerHistogram { responder, .. } => {
+                    responder.send(fidl_fuchsia_metrics::Status::Ok)
+                }
+                LogString { responder, .. } => responder.send(fidl_fuchsia_metrics::Status::Ok),
+                LogMetricEvents { responder, .. } => {
+                    responder.send(fidl_fuchsia_metrics::Status::Ok)
+                }
+                LogCustomEvent { responder, .. } => {
+                    responder.send(fidl_fuchsia_metrics::Status::Ok)
+                }
+            };
+            Ok(())
+        })
+        .await
+}
+
 /// Handles requests to query the state of the mock.
 async fn run_cobalt_query_service(
     stream: cobalt_test::LoggerQuerierRequestStream,
@@ -367,6 +406,7 @@ async fn run_cobalt_query_service(
 
 enum IncomingService {
     Cobalt(fidl_fuchsia_cobalt::LoggerFactoryRequestStream),
+    Metrics(fidl_fuchsia_metrics::MetricEventLoggerFactoryRequestStream),
     Query(fidl_fuchsia_cobalt_test::LoggerQuerierRequestStream),
 }
 
@@ -380,6 +420,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = fuchsia_component::server::ServiceFs::new_local();
     fs.dir("svc")
         .add_fidl_service(IncomingService::Cobalt)
+        .add_fidl_service(IncomingService::Metrics)
         .add_fidl_service(IncomingService::Query);
     fs.take_and_serve_directory_handle()?;
     fs.then(futures::future::ok)
@@ -387,6 +428,7 @@ async fn main() -> Result<(), Error> {
             let loggers = loggers.clone();
             match client_request {
                 IncomingService::Cobalt(stream) => run_cobalt_service(stream, loggers).await,
+                IncomingService::Metrics(stream) => run_metrics_service(stream).await,
                 IncomingService::Query(stream) => run_cobalt_query_service(stream, loggers).await,
             }
         })
@@ -879,7 +921,7 @@ mod tests {
                     match watch_logs_result {
                         futures::future::Either::Left(_services_future_returned) => unreachable!(
                             "unexpected services future return (cannot be formatted with the \
-                            default formatter)"
+                             default formatter)"
                         ),
                         futures::future::Either::Right((
                             cobalt_query_result,

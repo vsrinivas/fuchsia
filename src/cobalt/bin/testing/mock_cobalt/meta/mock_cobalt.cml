@@ -9,6 +9,7 @@
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.cobalt.test.LoggerQuerier",
+                "fuchsia.metrics.MetricEventLoggerFactory",
             ],
         },
     ],
@@ -17,6 +18,7 @@
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.cobalt.test.LoggerQuerier",
+                "fuchsia.metrics.MetricEventLoggerFactory",
             ],
             from: "self",
         },
