@@ -104,11 +104,11 @@ class InotifyAddFilter : public zxtest::Test {
     ASSERT_TRUE(fd_ = fbl::unique_fd(inotify_init1(0)), "%s", strerror(errno));
 
     // client-server channel logic
-    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_OK(endpoints.status_value());
-    auto result =
+    fit::result result =
         fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server), server_.get());
-    ASSERT_EQ(result.is_ok(), true);
+    ASSERT_TRUE(result.is_ok(), "%s", zx_status_get_string(result.error()));
 
     // install namespace for local-filesystem.
     ASSERT_OK(fdio_ns_get_installed(&namespace_));
