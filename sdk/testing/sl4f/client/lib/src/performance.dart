@@ -422,6 +422,41 @@ class Performance {
     _log.info('Stop temperature logging');
     await _sl4f.request('temperature_facade.StopLogging', {});
   }
+
+  /// Starts logging system metrics data into the system_metrics_logger trace
+  /// category.
+  ///
+  /// The metrics will be polled and a trace event produced after each
+  /// [interval] amount of time. If [duration] is specified, then logging will
+  /// automatically stop after that amount of time has elapsed. If [duration] is
+  /// not specified, then logging will continue until explicitly stopped.
+  ///
+  /// This function will fail if logging is already started.
+  Future<void> startSystemMetricsLogging({
+    @required Duration interval,
+    Duration duration,
+  }) async {
+    _log.info(
+        'Start system metrics logging: interval $interval duration $duration');
+    if (duration == null) {
+      await _sl4f.request('system_metrics_facade.StartLoggingForever', {
+        'interval_ms': interval.inMilliseconds,
+      });
+    } else {
+      await _sl4f.request('system_metrics_facade.StartLogging', {
+        'interval_ms': interval.inMilliseconds,
+        'duration_ms': duration.inMilliseconds,
+      });
+    }
+  }
+
+  /// Stops logging system metrics data in system_metrics_logger trace category.
+  ///
+  /// This function will still succeed if logging is already stopped.
+  Future<void> stopSystemMetricsLogging() async {
+    _log.info('Stop system metrics logging');
+    await _sl4f.request('system_metrics_facade.StopLogging', {});
+  }
 }
 
 /// Handle a tracing session.
