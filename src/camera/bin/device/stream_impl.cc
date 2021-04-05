@@ -33,13 +33,11 @@ StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& 
                        const fuchsia::camera3::StreamProperties2& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
-                       CheckTokenCallback check_token, StreamRequestedCallback on_stream_requested,
-                       fit::closure on_no_clients)
+                       StreamRequestedCallback on_stream_requested, fit::closure on_no_clients)
     : dispatcher_(dispatcher),
       metrics_(metrics),
       properties_(properties),
       legacy_config_(legacy_config),
-      check_token_(std::move(check_token)),
       on_stream_requested_(std::move(on_stream_requested)),
       on_no_clients_(std::move(on_no_clients)) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
@@ -168,45 +166,40 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
 }
 
 void StreamImpl::SetBufferCollection(
-    uint64_t id, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+    uint64_t id, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_handle) {
   TRACE_DURATION("camera", "StreamImpl::SetBufferCollection");
   auto it = clients_.find(id);
   if (it == clients_.end()) {
     FX_LOGS(ERROR) << "Client " << id << " not found.";
-    token.BindSync()->Close();
+    token_handle.BindSync()->Close();
     ZX_DEBUG_ASSERT(false);
     return;
   }
   auto& client = it->second;
 
   // If null, just unregister the client and return.
-  if (!token) {
+  if (!token_handle) {
     client->Participant() = false;
     return;
   }
-  client->Participant() = true;
 
-  // Validate the token.
-  fsl::GetRelatedKoid(token.channel().get());
-  check_token_(
-      fsl::GetRelatedKoid(token.channel().get()),
-      [this, it, token_handle = std::move(token)](bool valid) mutable {
-        if (!valid) {
-          FX_LOGS(INFO) << "Client provided an invalid BufferCollectionToken.";
-          it->second->CloseConnection(ZX_ERR_BAD_STATE);
-          return;
-        }
-        // Duplicate and send each client a token.
-        fuchsia::sysmem::BufferCollectionTokenPtr token;
-        token.Bind(std::move(token_handle));
-        std::map<uint64_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
-        for (auto& client : clients_) {
-          if (client.second->Participant()) {
-            token->Duplicate(ZX_RIGHT_SAME_RIGHTS, client_tokens[client.first].NewRequest());
-          }
-        }
-        token->Sync([this, token = std::move(token),
-                     client_tokens = std::move(client_tokens)]() mutable {
+  client->SetInitialToken(std::move(token_handle));
+
+  // Sync token before marking as a Participant to avoid introducing non-responsive tokens to
+  // the participant list.
+  client->InitialToken()->Sync([this, &client]() {
+    client->Participant() = true;
+
+    // Duplicate and send each client a token.
+    std::map<uint64_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
+    for (auto& client_i : clients_) {
+      if (client_i.second->Participant()) {
+        client->InitialToken()->Duplicate(ZX_RIGHT_SAME_RIGHTS,
+                                          client_tokens[client_i.first].NewRequest());
+      }
+    }
+    client->InitialToken()->Sync(
+        [this, &client, client_tokens = std::move(client_tokens)]() mutable {
           for (auto& [id, token] : client_tokens) {
             auto it = clients_.find(id);
             if (it == clients_.end()) {
@@ -218,13 +211,13 @@ void StreamImpl::SetBufferCollection(
           // Send the last token to the device for constraints application.
           frame_waiters_.clear();
           on_stream_requested_(
-              std::move(token), legacy_stream_.NewRequest(),
+              client->TakeInitialToken(), legacy_stream_.NewRequest(),
               [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; },
               legacy_stream_format_index_);
           RestoreLegacyStreamState();
           legacy_stream_->Start();
         });
-      });
+  });
 }
 
 void StreamImpl::SetResolution(uint64_t id, fuchsia::math::Size coded_size) {

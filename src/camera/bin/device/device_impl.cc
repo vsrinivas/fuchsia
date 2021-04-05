@@ -229,10 +229,6 @@ void DeviceImpl::ConnectToStream(uint32_t index,
     return;
   }
 
-  auto check_token = [this](zx_koid_t token_server_koid, fit::function<void(bool)> callback) {
-    sysmem_allocator_.fidl()->ValidateBufferCollectionToken(token_server_koid, std::move(callback));
-  };
-
   // Once the necessary token is received, post a task to send the request to the controller.
   auto on_stream_requested =
       [this, index](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
@@ -254,7 +250,7 @@ void DeviceImpl::ConnectToStream(uint32_t index,
       dispatcher_, configuration_metrics_[current_configuration_index_]->stream(index),
       configurations_[current_configuration_index_].streams()[index],
       configs_[current_configuration_index_].stream_configs[index], std::move(request),
-      std::move(check_token), std::move(on_stream_requested), std::move(on_no_clients));
+      std::move(on_stream_requested), std::move(on_no_clients));
 }
 
 void DeviceImpl::OnStreamRequested(

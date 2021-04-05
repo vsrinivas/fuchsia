@@ -114,7 +114,7 @@ TEST_F(FakeCameraTest, SetBufferCollectionInvokesCallback) {
         ASSERT_FALSE(configurations[0].streams.empty());
         device_protocol->ConnectToStream(0, stream_protocol.NewRequest());
         allocator_->AllocateSharedCollection(token.NewRequest());
-        token->Sync([&] { stream_protocol->SetBufferCollection(std::move(token)); });
+        stream_protocol->SetBufferCollection(std::move(token));
       });
   RunLoopUntil([&]() { return HasFailure() || callback_invoked; });
 }

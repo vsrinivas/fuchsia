@@ -152,32 +152,30 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
   // Allocate buffer collection
   fuchsia::sysmem::BufferCollectionTokenPtr token_orig;
   allocator_->AllocateSharedCollection(token_orig.NewRequest());
-  token_orig->Sync([this, image_format, config_index, stream_index, &stream,
-                    token_orig = std::move(token_orig)]() mutable {
-    stream->SetBufferCollection(std::move(token_orig));
-    stream->WatchBufferCollection([this, image_format, config_index, stream_index, &stream](
-                                      fuchsia::sysmem::BufferCollectionTokenHandle token_back) {
-      ZX_ASSERT(image_format.coded_width > 0);  // image_format must be reasonable.
-      ZX_ASSERT(image_format.coded_height > 0);
 
-      if (add_collection_handler_) {
-        auto& stream_info = stream_infos_[stream_index];
-        std::ostringstream oss;
-        oss << "c" << config_index << "s" << stream_index << ".data";
-        stream_info.add_collection_handler_returned_value =
-            add_collection_handler_(std::move(token_back), image_format, oss.str());
-      } else {
-        token_back.BindSync()->Close();
-      }
+  stream->SetBufferCollection(std::move(token_orig));
+  stream->WatchBufferCollection([this, image_format, config_index, stream_index,
+                                 &stream](fuchsia::sysmem::BufferCollectionTokenHandle token_back) {
+    ZX_ASSERT(image_format.coded_width > 0);  // image_format must be reasonable.
+    ZX_ASSERT(image_format.coded_height > 0);
 
-      if (stream_index > 0) {
-        ConnectToStream(config_index, stream_index - 1);
-      }
+    if (add_collection_handler_) {
+      auto& stream_info = stream_infos_[stream_index];
+      std::ostringstream oss;
+      oss << "c" << config_index << "s" << stream_index << ".data";
+      stream_info.add_collection_handler_returned_value =
+          add_collection_handler_(std::move(token_back), image_format, oss.str());
+    } else {
+      token_back.BindSync()->Close();
+    }
 
-      // Kick start the stream
-      stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
-        OnNextFrame(stream_index, std::move(frame_info));
-      });
+    if (stream_index > 0) {
+      ConnectToStream(config_index, stream_index - 1);
+    }
+
+    // Kick start the stream
+    stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
+      OnNextFrame(stream_index, std::move(frame_info));
     });
   });
 

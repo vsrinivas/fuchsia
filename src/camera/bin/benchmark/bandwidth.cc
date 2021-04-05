@@ -127,26 +127,24 @@ void Bandwidth::ConnectSequential(uint32_t stream_index) {
   }
   camera_device_->ConnectToStream(stream_index, streams_[stream_index].ptr.NewRequest(dispatcher_));
   sysmem_allocator_->AllocateSharedCollection(streams_[stream_index].token.NewRequest());
-  streams_[stream_index].token->Sync([this, stream_index] {
-    streams_[stream_index].ptr->SetBufferCollection(std::move(streams_[stream_index].token));
-    streams_[stream_index].ptr->WatchBufferCollection(
-        [this, stream_index](fuchsia::sysmem::BufferCollectionTokenHandle token) {
-          sysmem_allocator_->BindSharedCollection(
-              std::move(token), streams_[stream_index].collection.NewRequest(dispatcher_));
-          streams_[stream_index].collection->SetConstraints(
-              true, {.usage{.none = fuchsia::sysmem::noneUsage},
-                     .min_buffer_count_for_camping = 2,
-                     .has_buffer_memory_constraints = true,
-                     .buffer_memory_constraints{.ram_domain_supported = true}});
-          streams_[stream_index].collection->WaitForBuffersAllocated(
-              [this, stream_index](zx_status_t status,
-                                   fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
-                streams_[stream_index].ptr->GetNextFrame(
-                    streams_[stream_index].frame_callback.share());
-                ConnectSequential(stream_index + 1);
-              });
-        });
-  });
+  streams_[stream_index].ptr->SetBufferCollection(std::move(streams_[stream_index].token));
+  streams_[stream_index].ptr->WatchBufferCollection(
+      [this, stream_index](fuchsia::sysmem::BufferCollectionTokenHandle token) {
+        sysmem_allocator_->BindSharedCollection(
+            std::move(token), streams_[stream_index].collection.NewRequest(dispatcher_));
+        streams_[stream_index].collection->SetConstraints(
+            true, {.usage{.none = fuchsia::sysmem::noneUsage},
+                   .min_buffer_count_for_camping = 2,
+                   .has_buffer_memory_constraints = true,
+                   .buffer_memory_constraints{.ram_domain_supported = true}});
+        streams_[stream_index].collection->WaitForBuffersAllocated(
+            [this, stream_index](zx_status_t status,
+                                 fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+              streams_[stream_index].ptr->GetNextFrame(
+                  streams_[stream_index].frame_callback.share());
+              ConnectSequential(stream_index + 1);
+            });
+      });
 }
 
 void Bandwidth::MeasureRamChannels(

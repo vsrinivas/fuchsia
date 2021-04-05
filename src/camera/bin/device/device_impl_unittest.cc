@@ -25,10 +25,6 @@ namespace camera {
 // No-op function.
 static void nop() {}
 
-static void check_stream_valid(zx_koid_t koid, fit::function<void(bool)> callback) {
-  callback(true);
-}
-
 static void nop_stream_requested(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
@@ -149,7 +145,7 @@ TEST_F(DeviceImplTest, CreateStreamNullConnection) {
   MetricsReporter metrics(*context_);
   auto config_metrics = metrics.CreateConfiguration(0, 1);
   StreamImpl stream(dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-                    nullptr, check_stream_valid, nop_stream_requested, nop);
+                    nullptr, nop_stream_requested, nop);
 }
 
 TEST_F(DeviceImplTest, CreateStreamFakeLegacyStream) {
@@ -158,7 +154,7 @@ TEST_F(DeviceImplTest, CreateStreamFakeLegacyStream) {
   auto config_metrics = metrics.CreateConfiguration(0, 1);
   StreamImpl stream_impl(
       dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-      stream.NewRequest(), check_stream_valid,
+      stream.NewRequest(),
       [](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
          fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -187,7 +183,7 @@ TEST_F(DeviceImplTest, GetFrames) {
   auto config_metrics = metrics.CreateConfiguration(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
       dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-      stream.NewRequest(), check_stream_valid,
+      stream.NewRequest(),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -204,7 +200,7 @@ TEST_F(DeviceImplTest, GetFrames) {
 
   fuchsia::sysmem::BufferCollectionTokenPtr token;
   allocator_->AllocateSharedCollection(token.NewRequest());
-  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
+  stream->SetBufferCollection(std::move(token));
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> received_token;
   bool buffer_collection_returned = false;
   stream->WatchBufferCollection(
@@ -322,7 +318,7 @@ TEST_F(DeviceImplTest, GetFramesInvalidCall) {
   auto config_metrics = metrics.CreateConfiguration(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
       dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-      stream.NewRequest(), check_stream_valid,
+      stream.NewRequest(),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -390,7 +386,7 @@ TEST_F(DeviceImplTest, RequestStreamFromController) {
   device->ConnectToStream(0, stream.NewRequest());
   fuchsia::sysmem::BufferCollectionTokenPtr token;
   allocator_->AllocateSharedCollection(token.NewRequest());
-  token->Sync([&]() { stream->SetBufferCollection(std::move(token)); });
+  stream->SetBufferCollection(std::move(token));
   fuchsia::sysmem::BufferCollectionPtr buffers;
   SetFailOnError(buffers, "BufferCollection");
   bool buffers_allocated_returned = false;
@@ -498,7 +494,7 @@ TEST_F(DeviceImplTest, StreamClientDisconnect) {
     fuchsia::sysmem::BufferCollectionTokenPtr token;
     SetFailOnError(token, "Token");
     allocator_->AllocateSharedCollection(token.NewRequest());
-    token->Sync([&] { stream2->SetBufferCollection(std::move(token)); });
+    stream2->SetBufferCollection(std::move(token));
     // Call a returning API to verify the connection status.
     stream2->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
       EXPECT_EQ(token.BindSync()->Close(), ZX_OK);
@@ -715,7 +711,7 @@ TEST_F(DeviceImplTest, SoftwareMuteState) {
 
   fuchsia::sysmem::BufferCollectionTokenPtr token;
   allocator_->AllocateSharedCollection(token.NewRequest());
-  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
+  stream->SetBufferCollection(std::move(token));
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> received_token;
   watch_returned = false;
   stream->WatchBufferCollection(
@@ -914,7 +910,7 @@ TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   auto config_metrics = metrics.CreateConfiguration(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
       dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-      stream.NewRequest(), check_stream_valid,
+      stream.NewRequest(),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -930,7 +926,6 @@ TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   for (cycle = 0; cycle < kCycleCount; ++cycle) {
     fuchsia::sysmem::BufferCollectionTokenPtr token;
     allocator_->AllocateSharedCollection(token.NewRequest());
-    token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
     stream->SetBufferCollection(std::move(token));
     bool frame_received = false;
     stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
@@ -1040,7 +1035,7 @@ TEST_F(DeviceImplTest, BadToken) {
   RunLoopUntilFailureOr(stream_disconnected);
 }
 
-TEST_F(DeviceImplTest, StuckToken) {
+TEST_F(DeviceImplTest, FailingToken) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -1052,33 +1047,34 @@ TEST_F(DeviceImplTest, StuckToken) {
   });
   device->ConnectToStream(0, stream.NewRequest());
   fuchsia::sysmem::BufferCollectionTokenPtr token;
-  // Create the server endpoint of the token but do not close it or pass it to sysmem.
+  // Create the server endpoint of the token but do not close it right away or pass it to sysmem.
   auto request = token.NewRequest();
   stream->SetBufferCollection(std::move(token));
   stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
     ADD_FAILURE() << "Watch should not return when given a token not visible to sysmem.";
   });
+  // Close server end of token and check that the stream closes as well.
+  auto kDelay = zx::msec(250);
+  async::PostDelayedTask(
+      dispatcher(), [&] { request.TakeChannel().reset(); }, kDelay);
   RunLoopUntilFailureOr(stream_disconnected);
 }
 
-TEST_F(DeviceImplTest, GoodTokenWithSync) {
+TEST_F(DeviceImplTest, GoodToken) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
   fuchsia::camera3::StreamPtr stream;
   SetFailOnError(stream, "Stream");
   device->ConnectToStream(0, stream.NewRequest());
-  fuchsia::sysmem::BufferCollectionTokenPtr token;
-  auto request = token.NewRequest();
-  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
+  fuchsia::sysmem::BufferCollectionTokenHandle token;
+  allocator_->AllocateSharedCollection(token.NewRequest());
+  stream->SetBufferCollection(std::move(token));
   bool watch_returned = false;
   stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
     token.BindSync()->Close();
     watch_returned = true;
   });
-  auto kDelay = zx::msec(250);
-  async::PostDelayedTask(
-      dispatcher(), [&] { allocator_->AllocateSharedCollection(std::move(request)); }, kDelay);
   RunLoopUntilFailureOr(watch_returned);
 }
 
@@ -1095,7 +1091,7 @@ TEST_F(DeviceImplTest, GetFramesMultiClient) {
   auto config_metrics = metrics.CreateConfiguration(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
       dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-      original_stream.NewRequest(), check_stream_valid,
+      original_stream.NewRequest(),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -1140,8 +1136,7 @@ TEST_F(DeviceImplTest, GetFramesMultiClient) {
     client.stream.set_error_handler(MakeErrorHandler("Stream"));
     original_stream->Rebind(client.stream.NewRequest());
     allocator_->AllocateSharedCollection(client.initial_token.NewRequest());
-    client.initial_token->Sync(
-        [&client] { client.stream->SetBufferCollection(std::move(client.initial_token)); });
+    client.stream->SetBufferCollection(std::move(client.initial_token));
     client.stream->WatchBufferCollection(fit::bind_member(&client, &PerClient::OnToken));
   }
   original_stream = nullptr;
@@ -1211,7 +1206,7 @@ TEST_F(DeviceImplTest, LegacyStreamPropertiesRestored) {
   auto config_metrics = metrics.CreateConfiguration(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
       dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-      std::move(request), check_stream_valid,
+      std::move(request),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -1225,7 +1220,7 @@ TEST_F(DeviceImplTest, LegacyStreamPropertiesRestored) {
       nop);
   fuchsia::sysmem::BufferCollectionTokenPtr token;
   allocator_->AllocateSharedCollection(token.NewRequest());
-  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
+  stream->SetBufferCollection(std::move(token));
   stream->WatchBufferCollection(
       [](fuchsia::sysmem::BufferCollectionTokenHandle token) { token.BindSync()->Close(); });
   RunLoopUntil([&]() {
