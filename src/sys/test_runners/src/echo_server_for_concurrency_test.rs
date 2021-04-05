@@ -19,7 +19,7 @@ async fn main() {
     let responders = Arc::new(Mutex::new(vec![]));
     fs.dir("svc").add_fidl_service(move |stream| {
         let responders = responders.clone();
-        fasync::Task::local(async move {
+        fasync::Task::spawn(async move {
             run_echo_service(stream, responders).await;
         })
         .detach();

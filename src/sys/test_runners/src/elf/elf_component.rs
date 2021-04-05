@@ -240,7 +240,7 @@ pub fn start_component<F, U, S>(
     validate_args: U,
 ) -> Result<(), ComponentError>
 where
-    F: 'static + Fn() -> S,
+    F: 'static + Fn() -> S + Send,
     U: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     S: SuiteServer,
 {
@@ -268,7 +268,7 @@ fn start_component_inner<F, U, S>(
     validate_args: U,
 ) -> Result<(), ComponentError>
 where
-    F: 'static + Fn() -> S,
+    F: 'static + Fn() -> S + Send,
     U: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     S: SuiteServer,
 {
@@ -284,7 +284,7 @@ where
         .job
         .duplicate_handle(zx::Rights::SAME_RIGHTS)
         .map_err(ComponentError::DuplicateJob)?;
-    let mut fs = ServiceFs::new_local();
+    let mut fs = ServiceFs::new();
 
     let suite_server_abortable_handles = Arc::new(Mutex::new(vec![]));
     let weak_test_suite_abortable_handles = Arc::downgrade(&suite_server_abortable_handles);
@@ -314,7 +314,7 @@ where
     );
 
     let resolved_url = url.clone();
-    fasync::Task::local(async move {
+    fasync::Task::spawn(async move {
         // as error on abortable will always return Aborted,
         // no need to check that, as it is a valid usecase.
         fut.await.ok();
@@ -336,7 +336,7 @@ where
         zx::Status::OK.try_into().unwrap()
     });
 
-    fasync::Task::local(async move {
+    fasync::Task::spawn(async move {
         if let Err(e) = controller.serve(epitaph_fut).await {
             fx_log_err!("test '{}' controller ended with error: {:?}", resolved_url, e);
         }

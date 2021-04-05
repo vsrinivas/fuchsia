@@ -83,7 +83,7 @@ pub struct LogStreamReader {
 impl LogStreamReader {
     pub fn new(logger: LoggerStream) -> Self {
         let (logger_handle, logger_fut) = logger.read_to_end().remote_handle();
-        fasync::Task::local(logger_handle).detach();
+        fasync::Task::spawn(logger_handle).detach();
         Self { fut: logger_fut }
     }
 
