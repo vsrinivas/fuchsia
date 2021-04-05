@@ -230,6 +230,59 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
   return log->Write(DEBUGLOG_INFO, options, {buf, len});
 }
 
+// Converts a dlog_record_t into a zx_log_record_t and copies it out to user memory.
+//
+// Copies at most |len| bytes to |dst|.
+static zx::status<size_t> CopyOutLogRecord(const dlog_record_t& internal_record,
+                                           user_out_ptr<zx_log_record_t> dst, size_t len) {
+  zx_log_record_t external_record{};
+  external_record.datalen = internal_record.hdr.datalen;
+  external_record.severity = internal_record.hdr.severity;
+  external_record.flags = internal_record.hdr.flags;
+  external_record.timestamp = internal_record.hdr.timestamp;
+  external_record.pid = internal_record.hdr.pid;
+  external_record.tid = internal_record.hdr.tid;
+
+  // The user's buffer may not be large enough to hold the zx_log_record_t let
+  // alone the flexible array member that follows.
+  //
+  //
+  zx_status_t status;
+  if (len < sizeof(zx_log_record_t)) {
+    // Not enough space to copy the whole struct so we must treat it as an array
+    // of bytes instead.
+    size_t to_copy = ktl::min(len, sizeof(external_record));
+    auto src = reinterpret_cast<const char*>(&external_record);
+    status = dst.reinterpret<char>().copy_array_to_user(src, to_copy);
+    if (status == ZX_OK) {
+      return zx::ok(to_copy);
+    }
+    return zx::error(status);
+  }
+
+  // There's enough space for the struct so copy it as is.  By not casting to an
+  // array, we benefit from user_copy's static_asserts that verify the type
+  // (zx_log_record_t) is ABI-safe.
+  status = dst.copy_to_user(external_record);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  size_t amount_copied = sizeof(external_record);
+  len -= amount_copied;
+
+  // Copy out as much of the flexible array member as will fit.
+  size_t to_copy = ktl::min(len, static_cast<size_t>(external_record.datalen));
+  status = dst.reinterpret<char>()
+               .byte_offset(amount_copied)
+               .copy_array_to_user(internal_record.data, to_copy);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  amount_copied += to_copy;
+
+  return zx::ok(amount_copied);
+}
+
 // zx_status_t zx_debuglog_read
 zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out_ptr<void> ptr,
                               size_t len) {
@@ -251,16 +304,12 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out
     return status;
   }
 
-  const size_t to_copy = ktl::min(actual, len);
-  DEBUG_ASSERT(to_copy <= sizeof(record));
-  static_assert(internal::is_copy_allowed<decltype(record.hdr)>::value);
-  auto src = reinterpret_cast<const char*>(&record.hdr);
-  status = ptr.reinterpret<char>().copy_array_to_user(src, to_copy);
-  if (status != ZX_OK) {
-    return ZX_ERR_INVALID_ARGS;
+  zx::status<size_t> result = CopyOutLogRecord(record, ptr.reinterpret<zx_log_record_t>(), len);
+  if (result.is_error()) {
+    return result.error_value();
   }
 
-  return static_cast<zx_status_t>(to_copy);
+  return static_cast<zx_status_t>(result.value());
 }
 
 // zx_status_t zx_cprng_draw_once

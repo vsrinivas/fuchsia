@@ -43,6 +43,9 @@ struct DLog {
   fbl::DoublyLinkedList<DlogReader*> readers TA_GUARDED(readers_lock);
 
  private:
+  // A counter incremented for each log message that enters the debuglog.
+  uint64_t sequence_count TA_GUARDED(lock) = 0;
+
   // Indicates that this |DLog| object is being shutdown.  When true, |write| will immediately
   // return an error.
   bool shutdown_requested_ TA_GUARDED(lock) = false;

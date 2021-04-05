@@ -151,6 +151,8 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
   {
     Guard<SpinLock, IrqSave> guard{&this->lock};
 
+    hdr.sequence = sequence_count;
+
     if (this->shutdown_requested_) {
       return ZX_ERR_BAD_STATE;
     }
@@ -184,6 +186,7 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
       memcpy(this->data, ptr + fifospace, len - fifospace);
     }
     this->head += wiresize;
+    this->sequence_count++;
 
     // Need to check this before re-releasing the log lock, since we may
     // re-enable interrupts while doing that.  If interrupts are enabled when we
@@ -272,9 +275,6 @@ zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* _act
         memcpy(record, record_start, fifospace);
         memcpy(reinterpret_cast<char*>(record) + fifospace, log->data, actual - fifospace);
       }
-
-      // The underlying structure at ptr is zx_log_record_t as defined in zircon/syscalls/log.h .
-      // We're setting the "rollout" field here.
       record->hdr.preamble = rolled_out;
 
       *_actual = actual;
@@ -413,6 +413,8 @@ static int debuglog_dumper(void* arg) {
   reader.Initialize(&debuglog_dumper_notify, &dumper_event);
   auto disconnect = fit::defer([&reader]() { reader.Disconnect(); });
 
+  uint64_t expected_sequence = 0;
+
   bool done = false;
   while (!done) {
     dumper_event.Wait();
@@ -426,6 +428,18 @@ static int debuglog_dumper(void* arg) {
     // Read out all the records and dump them to the kernel console.
     size_t actual;
     while (reader.Read(0, &rec, &actual) == ZX_OK) {
+      uint64_t gap = rec.hdr.sequence - expected_sequence;
+      if (gap > 0) {
+        int n = snprintf(tmp, sizeof(tmp), "debuglog: dropped %zu messages\n", gap);
+        if (n > static_cast<int>(sizeof(tmp))) {
+          n = sizeof(tmp);
+        }
+        ktl::string_view str{tmp, static_cast<size_t>(n)};
+        console_write(str);
+        dlog_serial_write(str);
+      }
+      expected_sequence = rec.hdr.sequence + 1;
+
       // "Remove" any tailing newline character before formatting because the
       // format string already contains a newline.
       if (rec.hdr.datalen > 0 && (rec.data[rec.hdr.datalen - 1] == '\n')) {

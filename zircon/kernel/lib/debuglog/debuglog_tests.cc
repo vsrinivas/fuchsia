@@ -105,6 +105,8 @@ bool log_reader_read() {
   ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
   ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
   EXPECT_EQ(0u, rec.hdr.preamble);
+  // Sequence should start at 0.
+  EXPECT_EQ(0u, rec.hdr.sequence);
   EXPECT_EQ(sizeof(msg), rec.hdr.datalen);
   EXPECT_EQ(DEBUGLOG_WARNING, rec.hdr.severity);
   EXPECT_EQ(0, rec.hdr.flags);
@@ -129,7 +131,10 @@ bool log_reader_rollout() {
 
   char msg[] = "Hello World";
 
+  uint64_t num_written = 0;
+
   log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
+  num_written++;
 
   dlog_record_t rec{};
   size_t got;
@@ -149,15 +154,35 @@ bool log_reader_rollout() {
 
   for (size_t i = 0; i < DLOG_SIZE; i += sizeof(dlog_header) + sizeof(msg)) {
     log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
+    num_written++;
   }
 
-  ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
-  ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
+  uint64_t num_read = 0;
+  zx_status_t status;
+  uint64_t expected_sequence = 0;
+  uint64_t dropped = 0;
+  while ((status = reader.Read(0, &rec, &got)) == ZX_OK) {
+    num_read++;
+    ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
+    EXPECT_EQ(DEBUGLOG_WARNING, rec.hdr.severity);
+    if (num_read == 1) {
+      EXPECT_EQ(sizeof(dlog_header_t) + sizeof(msg), rec.hdr.preamble);
+    } else {
+      EXPECT_EQ(0u, rec.hdr.preamble);
+    }
+    EXPECT_EQ(0, rec.hdr.flags);
+    EXPECT_EQ(ZX_KOID_INVALID, rec.hdr.pid);
+    EXPECT_NE(ZX_KOID_INVALID, rec.hdr.tid);
+    ASSERT_EQ(sizeof(msg), rec.hdr.datalen);
+    EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(msg), reinterpret_cast<uint8_t*>(rec.data),
+                    sizeof(msg));
+    dropped += (rec.hdr.sequence - expected_sequence);
+    expected_sequence = rec.hdr.sequence + 1;
+  }
+  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
-  EXPECT_EQ(DEBUGLOG_WARNING, rec.hdr.severity);
-
-  // The amount of data rolled out should be snuck in here.
-  EXPECT_EQ(sizeof(dlog_header) + sizeof(msg), rec.hdr.preamble);
+  // See that we read fewer records than we wrote.
+  EXPECT_LT(num_read, num_written);
 
   EXPECT_EQ(0, rec.hdr.flags);
   EXPECT_EQ(ZX_KOID_INVALID, rec.hdr.pid);
@@ -166,6 +191,9 @@ bool log_reader_rollout() {
 
   EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(msg), reinterpret_cast<uint8_t*>(rec.data),
                   sizeof(msg));
+
+  // See that all messages are acconted for.  That is, the number dropped matches the differnce.
+  EXPECT_EQ(dropped, num_written - num_read);
 
   reader.Disconnect();
   END_TEST;

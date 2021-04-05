@@ -73,9 +73,11 @@ struct dlog_header {
   // (|DLOG_HDR_READLEN|) and the record's size when padded out to live in the
   // FIFO (|DLOG_HDR_FIFOLEN|).
   //
-  // After being read out of a debuglog, the |preamble| field contains an
-  // estimate of the number of bytes that were dropped from the log since the
-  // last message was read.
+  // After being read out of a debuglog, the |preamble| field contains the
+  // number of bytes (across both headers and messages) that were dropped from
+  // the log since the last message was read. Note, this is a 32-bit value so if
+  // approximately 4GB of data is written in between two read operations, data
+  // loss may go undetected.
   uint32_t preamble;
   uint16_t datalen;
   uint8_t severity;
@@ -83,21 +85,12 @@ struct dlog_header {
   zx_time_t timestamp;
   uint64_t pid;
   uint64_t tid;
+  // Each log record is assigned a sequence number at the time it enters the
+  // debuglog. A record's sequence number will be exactly one greater than the
+  // record that preceeded it. The purpose of |sequence| is to enable debuglog
+  // readers to detect dropped message.
+  uint64_t sequence;
 };
-static_assert(sizeof(dlog_header_t) == sizeof(zx_log_record_t));
-static_assert(alignof(dlog_header_t) == alignof(zx_log_record_t));
-#define ASSERT_FIELDS_MATCH(type1, field1, type2, field2)                          \
-  static_assert(sizeof(type1::field1) == sizeof(type2::field2));                   \
-  static_assert(ktl::is_same_v<decltype(type1::field1), decltype(type2::field2)>); \
-  static_assert(offsetof(type1, field1) == offsetof(type2, field2))
-ASSERT_FIELDS_MATCH(dlog_header_t, preamble, zx_log_record_t, rollout);
-ASSERT_FIELDS_MATCH(dlog_header_t, datalen, zx_log_record_t, datalen);
-ASSERT_FIELDS_MATCH(dlog_header_t, severity, zx_log_record_t, severity);
-ASSERT_FIELDS_MATCH(dlog_header_t, flags, zx_log_record_t, flags);
-ASSERT_FIELDS_MATCH(dlog_header_t, timestamp, zx_log_record_t, timestamp);
-ASSERT_FIELDS_MATCH(dlog_header_t, pid, zx_log_record_t, pid);
-ASSERT_FIELDS_MATCH(dlog_header_t, tid, zx_log_record_t, tid);
-#undef ASSERT_FIELDS_MATCH
 
 // Severity Levels
 #define DEBUGLOG_TRACE (0x10)
