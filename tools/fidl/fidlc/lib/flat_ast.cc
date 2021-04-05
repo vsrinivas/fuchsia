@@ -2096,10 +2096,10 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
   auto constraints = std::move(raw_type_ctor->constraints);
   size_t num_constraints = constraints == nullptr ? 0 : constraints->items.size();
 
-  if (raw_type_ctor->type_ref->kind == raw::LayoutReference::Kind::kInline) {
+  if (raw_type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
     assert((params == nullptr || params->items.empty()) &&
            "anonymous layouts cannot have type parameters");
-    auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->type_ref.get());
+    auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->layout_ref.get());
     if (!ConsumeLayout(std::move(inline_ref->layout), context)) {
       return false;
     }
@@ -2129,7 +2129,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     return true;
   }
 
-  auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->type_ref.get());
+  auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());
   SourceSpan span = named_ref->identifier->span();
   auto last_name_component = named_ref->identifier->components.back()->span().data();
   auto name = CompileCompoundIdentifier(named_ref->identifier.get());
@@ -2316,9 +2316,9 @@ bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const N
 
 void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   auto name = Name::CreateSourced(this, type_decl->identifier->span());
-  auto& type_ref = type_decl->type_ctor->type_ref;
-  if (type_ref->kind == raw::LayoutReference::Kind::kNamed) {
-    auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ref.get());
+  auto& layout_ref = type_decl->type_ctor->layout_ref;
+  if (layout_ref->kind == raw::LayoutReference::Kind::kNamed) {
+    auto named_ref = static_cast<raw::NamedLayoutReference*>(layout_ref.get());
     Fail(ErrNewTypesNotAllowed, name, named_ref->span().data());
     return;
   }

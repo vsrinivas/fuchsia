@@ -295,17 +295,17 @@ class TypeConstraints;
 
 class TypeConstructorNew final : public SourceElement {
  public:
-  TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> type_ref,
+  TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> layout_ref,
                      std::unique_ptr<TypeParameterList> parameters,
                      std::unique_ptr<TypeConstraints> constraints)
       : SourceElement(element),
-        type_ref(std::move(type_ref)),
+        layout_ref(std::move(layout_ref)),
         parameters(std::move(parameters)),
         constraints(std::move(constraints)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<LayoutReference> type_ref;
+  std::unique_ptr<LayoutReference> layout_ref;
   std::unique_ptr<TypeParameterList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
 };
@@ -861,8 +861,8 @@ class Layout final : public SourceElement {
   types::Resourceness resourceness;
   // TODO(fxbug.dev/65978): Eventually we'll make [Struct/Ordinaled/Value]Layout
   //  classes to inherit from the now-abstract Layout class, similar to what can
-  //  currently be seen on LayoutMember its children.  When that happens this
-  //  field will only exist on ValueLayout.
+  //  currently be seen on LayoutMember and its children.  When that happens
+  //  this field will only exist on ValueLayout.
   std::unique_ptr<TypeConstructorNew> subtype_ctor;
 };
 

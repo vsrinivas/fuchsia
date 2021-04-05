@@ -1698,9 +1698,9 @@ std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
     // In cases with no type parameters or constraints present (ie, just "foo"), it is impossible
     // to deduce whether "foo" refers to a type or a value.  In such cases, we must discard the
     // recently built type constructor, and convert it to a compound identifier instead.
-    if (type_ctor->type_ref->kind == raw::LayoutReference::Kind::kNamed &&
+    if (type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kNamed &&
         type_ctor->parameters == nullptr && type_ctor->constraints == nullptr) {
-      auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ctor->type_ref.get());
+      auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ctor->layout_ref.get());
       return std::make_unique<raw::AmbiguousTypeParameter>(scope.GetSourceElement(),
                                                            std::move(named_ref->identifier));
     }
@@ -1728,11 +1728,7 @@ std::unique_ptr<raw::TypeParameterList> Parser::MaybeParseTypeParameterList() {
   return std::make_unique<raw::TypeParameterList>(scope.GetSourceElement(), std::move(params));
 }
 
-std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
-  if (!MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
-    return nullptr;
-  }
-
+std::unique_ptr<raw::TypeConstraints> Parser::ParseConstraints() {
   ASTScope scope(this);
   bool bracketed = false;
   std::vector<std::unique_ptr<raw::Constant>> constraints;
@@ -1825,8 +1821,9 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
 }
 
 std::unique_ptr<raw::Layout> Parser::ParseLayout(
-    ASTScope& scope, std::unique_ptr<raw::CompoundIdentifier> identifier,
-    const Modifiers& modifiers) {
+    ASTScope& scope, const Modifiers& modifiers,
+    std::unique_ptr<raw::CompoundIdentifier> identifier,
+    std::unique_ptr<raw::TypeConstructorNew> subtype_ctor) {
   raw::Layout::Kind kind;
   raw::LayoutMember::Kind member_kind;
 
@@ -1838,19 +1835,14 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   // remove token subkinds for struct, union, table, bits, and enum. Or
   // maybe we want to have a 'recognize token subkind' on an identifier
   // instead of doing string comparison directly.
-  std::unique_ptr<raw::TypeConstructorNew> subtype_ctor;
   if (identifier->components[0]->span().data() == "bits") {
     ValidateModifiers<types::Strictness>(modifiers, identifier->components[0]->start_);
     kind = raw::Layout::Kind::kBits;
     member_kind = raw::LayoutMember::Kind::kValue;
-    // TODO(fxbug.dev/70528): Change once this RFC lands.
-    // subtype_ctor = MaybeParseLayoutSubtype();
   } else if (identifier->components[0]->span().data() == "enum") {
     ValidateModifiers<types::Strictness>(modifiers, identifier->components[0]->start_);
     kind = raw::Layout::Kind::kEnum;
     member_kind = raw::LayoutMember::Kind::kValue;
-    // TODO(fxbug.dev/70528): Change once this RFC lands.
-    // subtype_ctor = MaybeParseLayoutSubtype();
   } else if (identifier->components[0]->span().data() == "struct") {
     ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
     kind = raw::Layout::Kind::kStruct;
@@ -1921,41 +1913,109 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
       modifiers.resourceness.value_or(types::Resourceness::kValue), std::move(subtype_ctor));
 }
 
-std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
+// [ name | { ... } ][ < ... > ][ : ... ]
+std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   ASTScope scope(this);
   const auto modifiers = ParseModifiers();
   auto identifier = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
 
-  if (Peek().kind() == Token::Kind::kLeftCurly) {
-    auto layout = ParseLayout(scope, std::move(identifier), modifiers);
-    return std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(),
-                                                        std::move(layout));
+  std::unique_ptr<raw::LayoutReference> layout_ref;
+  switch (Peek().kind()) {
+    case Token::Kind::kLeftCurly: {
+      auto layout = ParseLayout(scope, modifiers, std::move(identifier), /*subtype_ctor=*/nullptr);
+      layout_ref =
+          std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(), std::move(layout));
+      break;
+    }
+    case Token::Kind::kColon: {
+      // The colon case is ambiguous. Consider the following two examples:
+      //
+      //   type A = enum : foo { BAR = 1; };
+      //   type B = enum : foo;
+      //
+      // When the parser encounters the colon in each case, it has no idea
+      // whether the value immediately after it should be interpreted as the
+      // wrapped type in an inline layout of kind enum, or otherwise as the only
+      // constraint on a named layout called "enum."
+      //
+      // To resolve this confusion, we parse the token after the colon as a
+      // constant, then check to see if the token after that is a left curly
+      // brace. If it is, we assume that this is in fact the inline layout case
+      // ("type A"). If it is not, we assume that it is a named layout with
+      // constraints ("type B").
+      ASTScope after_colon_scope(this);
+      ConsumeToken(OfKind(Token::Kind::kColon));
+      if (!Ok())
+        return Fail();
+
+      // If the token after the colon is the opener to a constraints list, we
+      // know for sure that the identifier before the colon must be a
+      // NamedLayoutReference, so none of the other checks in this case are
+      // required.
+      if (Peek().kind() == Token::Kind::kLeftSquare) {
+        layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+                                                                 std::move(identifier));
+        break;
+      }
+
+      std::unique_ptr<raw::Constant> constraint_or_subtype = ParseConstant();
+      if (!Ok())
+        return Fail();
+
+      // If the token after the constant is not an open brace, this was actually
+      // a one-entry constraints block the whole time, so it should be parsed as
+      // such.
+      if (Peek().kind() != Token::Kind::kLeftCurly) {
+        layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+                                                                 std::move(identifier));
+        std::vector<std::unique_ptr<raw::Constant>> components;
+        components.emplace_back(std::move(constraint_or_subtype));
+        auto constraints = std::make_unique<raw::TypeConstraints>(
+            after_colon_scope.GetSourceElement(), std::move(components));
+        return std::make_unique<raw::TypeConstructorNew>(
+            scope.GetSourceElement(), std::move(layout_ref), nullptr, std::move(constraints));
+      }
+
+      // The token we just parsed as a constant is in fact a layout subtype.
+      // Coerce it into that class, then build the layout_ref.
+      if (constraint_or_subtype->kind != raw::Constant::Kind::kIdentifier) {
+        return Fail(ErrInvalidWrappedType);
+      }
+
+      auto subtype_element =
+          raw::SourceElement(constraint_or_subtype->start_, constraint_or_subtype->end_);
+      auto subtype_constant = static_cast<raw::IdentifierConstant*>(constraint_or_subtype.get());
+      auto subtype_ref = std::make_unique<raw::NamedLayoutReference>(
+          subtype_element, std::move(subtype_constant->identifier));
+      auto subtype_ctor = std::make_unique<raw::TypeConstructorNew>(
+          subtype_element, std::move(subtype_ref), /*parameters=*/nullptr, /*constraints=*/nullptr);
+      auto layout = ParseLayout(scope, modifiers, std::move(identifier), std::move(subtype_ctor));
+      layout_ref =
+          std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(), std::move(layout));
+      break;
+    }
+    default: {
+      ValidateModifiers</* none */>(modifiers, identifier->start_);
+      layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+                                                               std::move(identifier));
+    }
   }
-
-  ValidateModifiers</* none */>(modifiers, identifier->start_);
-
-  return std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
-                                                     std::move(identifier));
-}
-
-// [ name | { ... } ][ < ... > ][ : ... ]
-std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
-  ASTScope scope(this);
-  auto type_ref = ParseLayoutReference();
-  if (!Ok())
-    return Fail();
 
   auto parameters = MaybeParseTypeParameterList();
   if (!Ok())
     return Fail();
 
-  auto constraints = MaybeParseConstraints();
-  if (!Ok())
-    return Fail();
+  std::unique_ptr<raw::TypeConstraints> constraints;
+  if (previous_token_.kind() == Token::Kind::kColon ||
+      MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
+    constraints = ParseConstraints();
+    if (!Ok())
+      return Fail();
+  }
 
-  return std::make_unique<raw::TypeConstructorNew>(scope.GetSourceElement(), std::move(type_ref),
+  return std::make_unique<raw::TypeConstructorNew>(scope.GetSourceElement(), std::move(layout_ref),
                                                    std::move(parameters), std::move(constraints));
 }
 

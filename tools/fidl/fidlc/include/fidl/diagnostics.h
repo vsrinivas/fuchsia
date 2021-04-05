@@ -39,6 +39,7 @@ constexpr ErrorDef ErrRemoveSyntaxVersion(
 constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
 constexpr ErrorDef ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");
+constexpr ErrorDef ErrInvalidWrappedType("wrapped type for bits/enum must be an identifier");
 constexpr ErrorDef ErrMissingConstraintBrackets(
     "lists of constraints must be enclosed in brackets");
 constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
@@ -164,6 +165,8 @@ constexpr ErrorDef<std::string, std::string, std::string, std::string>
         "explicitly specify the unknown value with the [Unknown] attribute. see "
         "<https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/"
         "language#unions> for more info.");
+// TODO(65978): Investigate folding these two errors into InvalidWrappedType
+//  when removing old syntax.
 constexpr ErrorDef<const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitive(
     "bits may only be of unsigned integral primitive type, found {}");
 constexpr ErrorDef<const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(

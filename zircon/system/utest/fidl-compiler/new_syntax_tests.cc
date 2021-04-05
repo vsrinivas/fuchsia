@@ -157,6 +157,24 @@ type TypeDecl = bits {
   EXPECT_EQ(type_decl->members.size(), 2);
 }
 
+TEST(NewSyntaxTests, TypeDeclOfBitsLayoutWithSubtype) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = bits : uint64 {
+    FOO = 1;
+    BAR = 2;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupBits("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
+  EXPECT_EQ(type_decl->subtype_ctor->name.decl_name(), "uint64");
+}
+
 TEST(NewSyntaxTests, TypeDeclOfBitsLayoutWithStrictnesss) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -205,6 +223,38 @@ type TypeDecl = enum {
   auto type_decl = library.LookupEnum("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->members.size(), 2);
+}
+
+TEST(NewSyntaxTests, TypeDeclOfEnumLayoutWithSubtype) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = enum : int32 {
+    FOO = 1;
+    BAR = 2;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupEnum("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
+  EXPECT_EQ(type_decl->subtype_ctor->name.decl_name(), "int32");
+}
+
+TEST(NewSyntaxTests, TypeDeclOfEnumLayoutWithInvalidSubtype) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = enum : "123" {
+    FOO = 1;
+    BAR = 2;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrInvalidWrappedType);
 }
 
 TEST(NewSyntaxTests, TypeDeclOfEnumLayoutWithStrictnesss) {

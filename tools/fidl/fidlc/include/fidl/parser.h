@@ -341,11 +341,11 @@ class Parser {
 
   std::unique_ptr<raw::TypeParameter> ParseTypeParameter();
   std::unique_ptr<raw::TypeParameterList> MaybeParseTypeParameterList();
-  std::unique_ptr<raw::TypeConstraints> MaybeParseConstraints();
+  std::unique_ptr<raw::TypeConstraints> ParseConstraints();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::LayoutMember::Kind);
-  std::unique_ptr<raw::Layout> ParseLayout(ASTScope&, std::unique_ptr<raw::CompoundIdentifier>,
-                                           const Modifiers&);
-  std::unique_ptr<raw::LayoutReference> ParseLayoutReference();
+  std::unique_ptr<raw::Layout> ParseLayout(ASTScope&, const Modifiers&,
+                                           std::unique_ptr<raw::CompoundIdentifier>,
+                                           std::unique_ptr<raw::TypeConstructorNew>);
   std::unique_ptr<raw::TypeConstructorNew> ParseTypeConstructorNew();
   raw::TypeConstructor ParseTypeConstructor();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
