@@ -7,6 +7,7 @@ package fint
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -149,7 +150,8 @@ func TestRunNinja(t *testing.T) {
 			}
 			ninjaPath := filepath.Join(t.TempDir(), "ninja")
 			buildDir := filepath.Join(t.TempDir(), "out")
-			msg, err := runNinja(ctx, r, ninjaPath, buildDir, []string{"foo", "bar"})
+			jobCount := 23 // Arbitrary distinctive value.
+			msg, err := runNinja(ctx, r, ninjaPath, buildDir, []string{"foo", "bar"}, jobCount)
 			if tc.fail {
 				if !errors.Is(err, errSubprocessFailure) {
 					t.Fatalf("Expected a subprocess failure error but got: %s", err)
@@ -164,6 +166,18 @@ func TestRunNinja(t *testing.T) {
 			cmd := r.commandsRun[0]
 			if cmd[0] != ninjaPath {
 				t.Fatalf("runNinja ran wrong executable %q (expected %q)", cmd[0], ninjaPath)
+			}
+			foundJobCount := false
+			for i, part := range cmd {
+				if part == "-j" {
+					foundJobCount = true
+					if i+1 >= len(cmd) || cmd[i+1] != fmt.Sprintf("%d", jobCount) {
+						t.Errorf("wrong value for -j flag: %v", cmd)
+					}
+				}
+			}
+			if !foundJobCount {
+				t.Errorf("runNinja didn't set the -j flag. Full command: %v", cmd)
 			}
 
 			if diff := cmp.Diff(tc.expectedFailureMessage, msg); diff != "" {

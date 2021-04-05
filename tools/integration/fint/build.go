@@ -67,7 +67,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 
 	ninjaPath := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja")
 	runner := &runner.SubprocessRunner{}
-	if msg, err := runNinja(ctx, runner, ninjaPath, contextSpec.BuildDir, targets); err != nil {
+	if msg, err := runNinja(ctx, runner, ninjaPath, contextSpec.BuildDir, targets, int(contextSpec.GomaJobCount)); err != nil {
 		artifacts.FailureSummary = msg
 		return artifacts, err
 	}

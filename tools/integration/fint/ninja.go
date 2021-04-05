@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -125,8 +126,12 @@ func runNinja(
 	ninjaPath string,
 	buildDir string,
 	targets []string,
+	jobCount int,
 ) (string, error) {
 	cmd := []string{ninjaPath, "-C", buildDir}
+	if jobCount > 0 {
+		cmd = append(cmd, "-j", fmt.Sprintf("%d", jobCount))
+	}
 	cmd = append(cmd, targets...)
 
 	stdoutReader, stdoutWriter := io.Pipe()
