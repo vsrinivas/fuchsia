@@ -16,7 +16,7 @@ pub const LOG_PREFIX: &str = "ffx";
 fn config() -> Config {
     // Sets the target level to "Error" so that all logs show their module
     // target in the logs.
-    ConfigBuilder::new().set_target_level(LevelFilter::Error).build()
+    ConfigBuilder::new().set_target_level(LevelFilter::Error).set_time_to_local(true).build()
 }
 
 pub async fn log_file(name: &str) -> Result<std::fs::File> {
