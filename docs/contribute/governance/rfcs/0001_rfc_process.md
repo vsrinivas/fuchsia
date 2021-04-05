@@ -231,7 +231,7 @@ The Eng Council will then mark your CL Code-Review +2 and you can land your RFC!
 *Congratulations! You have contributed a valuable engineering artifact to the
 project!*
 
-### How decisions are made
+### How decisions are made {#how-decisions-are-made}
 
 The decision whether to accept an RFC is made by the Eng Council, acting in
 [rough consensus](https://en.wikipedia.org/wiki/Rough_consensus) with each
@@ -265,10 +265,9 @@ Recording decisions in the source repository has the effect of making those
 decisions more difficult to change. That effect might be positive in some
 scenarios, but the effect might also be negative in other scenarios.
 
-The criteria in the ["when to use the process"
-section](#when-to-use-the-process) attempts to mitigate this drawback by scoping
-the process to consequential situations but such scoping is bound to have false
-positives and false negatives.
+The criteria in the ["when to use the process" section](#criteria) attempts to
+mitigate this drawback by scoping the process to consequential situations but
+such scoping is bound to have false positives and false negatives.
 
 There are a large number of possible alternative strategies for solving the
 underlying problem. For example, we could use a decision-making process that
