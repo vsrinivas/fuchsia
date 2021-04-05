@@ -81,7 +81,7 @@ func TestStringPairConvert(t *testing.T) {
 			t.Errorf("stringPairFromString(%s) errored %v", tc.tag, err)
 
 		}
-		if diff := cmp.Diff(got, tc.want, protocmp.Transform()); diff != "" {
+		if diff := cmp.Diff(tc.want, got, protocmp.Transform()); diff != "" {
 			t.Errorf("stringPairFromString diff (-want +got):\n%s", diff)
 		}
 	}

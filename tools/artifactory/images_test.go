@@ -120,7 +120,7 @@ func TestImageUploads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("imageUploads failed: %s", err)
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Fatalf("unexpected image uploads (-want +got):\n%s", diff)
 	}
 }
