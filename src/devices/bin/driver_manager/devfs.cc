@@ -171,33 +171,53 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
              CloneCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override;
   void Describe(DescribeCompleter::Sync& completer) override;
-  void Sync(SyncCompleter::Sync& completer) override {}
+  void Sync(SyncCompleter::Sync& completer) override { completer.Reply(ZX_ERR_NOT_SUPPORTED); }
   void GetAttr(GetAttrCompleter::Sync& completer) override;
   void SetAttr(uint32_t flags, fio::wire::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) override {}
+               SetAttrCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
 
   void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
             OpenCompleter::Sync& completer) override;
   void AddInotifyFilter(fidl::StringView path, fuchsia_io2::wire::InotifyWatchMask filters,
                         uint32_t watch_descriptor, zx::socket socket,
                         AddInotifyFilterCompleter::Sync& completer) override {}
-  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
+  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
   void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override;
   void Rewind(RewindCompleter::Sync& completer) override;
-  void GetToken(GetTokenCompleter::Sync& completer) override {}
+  void GetToken(GetTokenCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
+  }
   void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-              RenameCompleter::Sync& completer) override {}
+              RenameCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
   void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-            LinkCompleter::Sync& completer) override {}
+            LinkCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCompleter::Sync& completer) override;
-  void Mount(fidl::ClientEnd<fio::Directory> remote, MountCompleter::Sync& completer) override {}
+  void Mount(fidl::ClientEnd<fio::Directory> remote, MountCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
   void MountAndCreate(fidl::ClientEnd<fio::Directory> remote, fidl::StringView name, uint32_t flags,
-                      MountAndCreateCompleter::Sync& completer) override {}
-  void Unmount(UnmountCompleter::Sync& completer) override {}
-  void UnmountNode(UnmountNodeCompleter::Sync& completer) override {}
+                      MountAndCreateCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+  void Unmount(UnmountCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+  void UnmountNode(UnmountNodeCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::ClientEnd<fio::Directory>());
+  }
   void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override;
-  void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {}
+  void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::StringView());
+  }
 
  private:
   DcIostate* owner_;

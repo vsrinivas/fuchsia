@@ -346,7 +346,7 @@ TEST_F(MultipleDeviceTestCase, DISABLED_ResumeTimeout) {
   // Dont reply for sys proxy resume. we should timeout
   async::Wait resume_task_sys_proxy(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         zx_txid_t txid;
         ASSERT_NO_FATAL_FAILURES(
             CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::FULLY_ON, &txid));
@@ -368,7 +368,7 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
@@ -376,7 +376,7 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
@@ -510,7 +510,7 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
 }
 
 TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
-  Devnode *root_node = coordinator().root_device()->self;
+  Devnode* root_node = coordinator().root_device()->self;
   ASSERT_FALSE(devfs_has_watchers(root_node));
 
   // Create the watcher and make sure it's been registered.
@@ -523,6 +523,73 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   local.reset();
   coordinator_loop()->RunUntilIdle();
   ASSERT_FALSE(devfs_has_watchers(root_node));
+}
+
+TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
+  zx::channel chan = devfs_root_clone();
+  fidl::Client<fuchsia_io::DirectoryAdmin> client(std::move(chan),
+                                                  coordinator_loop()->dispatcher());
+
+  {
+    auto result = client->GetDevicePath([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    zx::channel s, c;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
+    auto result =
+        client->Mount(std::move(c), [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    zx::channel s, c;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
+    auto result = client->MountAndCreate(
+        std::move(c), "", 0, [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    auto result = client->Unmount([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    auto result = client->UnmountNode([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    auto result = client->GetDevicePath([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    zx::channel s, c;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
+    auto result = client->Link("", std::move(s), "",
+                               [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    zx::channel s, c;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
+    auto result = client->Rename("", std::move(s), "",
+                                 [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    auto result = client->GetToken([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    fuchsia_io::wire::NodeAttributes attrs = {};
+    auto result =
+        client->SetAttr(0, attrs, [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+  {
+    auto result = client->Sync([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_EQ(result.status(), ZX_OK);
+  }
+
+  coordinator_loop()->RunUntilIdle();
 }
 
 // Check that UnregisterSystemStorageForShutdown works when no system devices exist.
