@@ -5,9 +5,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-common/aml-registers.h>
 
 #include "sherlock.h"
@@ -134,11 +134,12 @@ zx_status_t Sherlock::RegistersInit() {
     return encoded_metadata.status();
   }
 
+  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
   const pbus_metadata_t registers_metadata[] = {
       {
           .type = DEVICE_METADATA_REGISTERS,
-          .data_buffer = encoded_metadata.GetOutgoingMessage().bytes(),
-          .data_size = encoded_metadata.GetOutgoingMessage().byte_actual(),
+          .data_buffer = encoded_metadata_bytes.data(),
+          .data_size = encoded_metadata_bytes.size(),
       },
   };
 

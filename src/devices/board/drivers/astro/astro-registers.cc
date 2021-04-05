@@ -5,12 +5,12 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <memory>
 #include <vector>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
@@ -94,11 +94,12 @@ zx_status_t Astro::RegistersInit() {
     return encoded_metadata.status();
   }
 
+  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
   static const pbus_metadata_t registers_metadata[] = {
       {
           .type = DEVICE_METADATA_REGISTERS,
-          .data_buffer = encoded_metadata.GetOutgoingMessage().bytes(),
-          .data_size = encoded_metadata.GetOutgoingMessage().byte_actual(),
+          .data_buffer = encoded_metadata_bytes.data(),
+          .data_size = encoded_metadata_bytes.size(),
       },
   };
 

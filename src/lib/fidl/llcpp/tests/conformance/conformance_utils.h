@@ -85,9 +85,9 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
               << "): " << encoded.error() << std::endl;
     return false;
   }
+  auto encoded_bytes = encoded.GetOutgoingMessage().CopyBytes();
   bool bytes_match =
-      ComparePayload(encoded.GetOutgoingMessage().bytes(),
-                     encoded.GetOutgoingMessage().byte_actual(), bytes.data(), bytes.size());
+      ComparePayload(encoded_bytes.data(), encoded_bytes.size(), bytes.data(), bytes.size());
   bool handles_match = false;
   if (check_handle_rights) {
     handles_match = ComparePayload(encoded.GetOutgoingMessage().handles(),

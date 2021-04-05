@@ -17,8 +17,9 @@ TEST(LinearizedAndEncoded, FullyLinearizedAndEncoded) {
   fidl::OwnedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(&input);
   EXPECT_TRUE(encoded.ok());
 
-  auto encoded_obj = reinterpret_cast<const fidl_linearized::wire::FullyLinearizedStruct*>(
-      encoded.GetOutgoingMessage().bytes());
+  auto message_bytes = encoded.GetOutgoingMessage().CopyBytes();
+  auto encoded_obj =
+      reinterpret_cast<const fidl_linearized::wire::FullyLinearizedStruct*>(message_bytes.data());
   EXPECT_NE(encoded_obj, &input);
   EXPECT_EQ(*reinterpret_cast<const uintptr_t*>(&encoded_obj->ptr), FIDL_ALLOC_PRESENT);
   EXPECT_EQ(reinterpret_cast<const fidl_linearized::wire::InnerStruct*>(encoded_obj + 1)->x,

@@ -6,8 +6,8 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -85,11 +85,12 @@ zx_status_t Astro::MaliInit() {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__, encoded_metadata.error());
     return encoded_metadata.status();
   }
+  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
   const pbus_metadata_t mali_metadata_list[] = {
       {
           .type = fuchsia_hardware_gpu_amlogic::wire::MALI_METADATA,
-          .data_buffer = encoded_metadata.GetOutgoingMessage().bytes(),
-          .data_size = encoded_metadata.GetOutgoingMessage().byte_actual(),
+          .data_buffer = encoded_metadata_bytes.data(),
+          .data_size = encoded_metadata_bytes.size(),
       },
   };
   mali_dev.metadata_list = mali_metadata_list;

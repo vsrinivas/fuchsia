@@ -100,13 +100,13 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
   }
   status.progress = DecoderEncoderProgress::FirstEncodeSuccess;
 
-  auto& message = encoded.GetOutgoingMessage();
+  auto message_bytes = encoded.GetOutgoingMessage().CopyBytes();
   status.first_encoded_bytes =
-      ::std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual());
+      ::std::vector<uint8_t>(message_bytes.data(), message_bytes.data() + message_bytes.size());
 
   // TODO(fxbug.dev/72895): Add handles for koid check.
 
-  auto conversion = ::fidl::OutgoingToIncomingMessage(message);
+  auto conversion = ::fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
 
   if (conversion.status() != ZX_OK) {
     status.status = encoded.status();
@@ -131,9 +131,9 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
   }
   status.progress = DecoderEncoderProgress::SecondEncodeSuccess;
 
-  auto& message2 = encoded2.GetOutgoingMessage();
+  auto message_bytes2 = encoded2.GetOutgoingMessage().CopyBytes();
   status.second_encoded_bytes =
-      ::std::vector<uint8_t>(message2.bytes(), message2.bytes() + message2.byte_actual());
+      ::std::vector<uint8_t>(message_bytes2.data(), message_bytes2.data() + message_bytes2.size());
 
   // TODO(fxbug.dev/72895): Add handles for koid check.
 

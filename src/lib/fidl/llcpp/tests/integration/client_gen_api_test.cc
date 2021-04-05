@@ -263,8 +263,8 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
   Example::OnEventResponse resp{fidl::StringView("", 0)};
   fidl::OwnedEncodedMessage<Example::OnEventResponse> encoded(&resp);
   ASSERT_TRUE(encoded.ok());
-  ASSERT_OK(remote.channel().write(0, encoded.GetOutgoingMessage().bytes(),
-                                   sizeof(fidl_message_header_t), nullptr, 0));
+  auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+  ASSERT_OK(remote.channel().write(0, bytes.data(), sizeof(fidl_message_header_t), nullptr, 0));
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

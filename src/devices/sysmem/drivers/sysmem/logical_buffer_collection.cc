@@ -1146,22 +1146,9 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.ok());
   ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.handle_actual() == 0);
   ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.handle_actual() == 0);
-  if (original_linear_buffer_collection_info.byte_actual() !=
-      new_linear_buffer_collection_info.byte_actual()) {
+  if (!original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)) {
     LOG(WARNING,
-        "original_linear_buffer_collection_info.byte_actual() != "
-        "new_linear_buffer_collection_info.byte_actual()");
-    LogDiffsBufferCollectionInfo(**buffer_collection_info_before_population_,
-                                 unpopulated_buffer_collection_info);
-    SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  size_t linear_size_bytes = original_linear_buffer_collection_info.byte_actual();
-  if (0 != memcmp(original_linear_buffer_collection_info.bytes(),
-                  new_linear_buffer_collection_info.bytes(), linear_size_bytes)) {
-    LOG(WARNING,
-        "0 != memcmp(original_linear_buffer_collection_info.bytes(), "
-        "new_linear_buffer_collection_info.bytes(), linear_size_bytes)");
+        "original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)");
     LogDiffsBufferCollectionInfo(**buffer_collection_info_before_population_,
                                  unpopulated_buffer_collection_info);
     SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
@@ -3125,34 +3112,39 @@ std::vector<const BufferCollection*> LogicalBufferCollection::collection_views()
   return result;
 }
 
-#define LOG_UINT32_FIELD(location, prefix, field_name) \
-  do { \
-    if (!(prefix).has_##field_name()) { \
+#define LOG_UINT32_FIELD(location, prefix, field_name)                                \
+  do {                                                                                \
+    if (!(prefix).has_##field_name()) {                                               \
       LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name); \
-    } else { \
-      LogClientInfo(location, node_properties, "%s.%s(): %u", #prefix, #field_name, prefix.field_name()); \
-    } \
-  } while(0)
+    } else {                                                                          \
+      LogClientInfo(location, node_properties, "%s.%s(): %u", #prefix, #field_name,   \
+                    prefix.field_name());                                             \
+    }                                                                                 \
+  } while (0)
 
-#define LOG_UINT64_FIELD(location, prefix, field_name) \
-  do { \
-    if (!(prefix).has_##field_name()) { \
+#define LOG_UINT64_FIELD(location, prefix, field_name)                                    \
+  do {                                                                                    \
+    if (!(prefix).has_##field_name()) {                                                   \
+      LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name);     \
+    } else {                                                                              \
+      LogClientInfo(location, node_properties, "%s.%s(): %" PRIx64, #prefix, #field_name, \
+                    (prefix).field_name());                                               \
+    }                                                                                     \
+  } while (0)
+
+#define LOG_BOOL_FIELD(location, prefix, field_name)                                  \
+  do {                                                                                \
+    if (!(prefix).has_##field_name()) {                                               \
       LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name); \
-    } else { \
-      LogClientInfo(location, node_properties, "%s.%s(): %" PRIx64, #prefix, #field_name, (prefix).field_name()); \
-    } \
-  } while(0)
+    } else {                                                                          \
+      LogClientInfo(location, node_properties, "%s.%s(): %u", #prefix, #field_name,   \
+                    (prefix).field_name());                                           \
+    }                                                                                 \
+  } while (0)
 
-#define LOG_BOOL_FIELD(location, prefix, field_name) \
-  do { \
-    if (!(prefix).has_##field_name()) { \
-      LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name); \
-    } else { \
-      LogClientInfo(location, node_properties, "%s.%s(): %u", #prefix, #field_name, (prefix).field_name()); \
-    } \
-  } while(0)
-
-void LogicalBufferCollection::LogConstraints(Location location, NodeProperties* node_properties, const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const {
+void LogicalBufferCollection::LogConstraints(
+    Location location, NodeProperties* node_properties,
+    const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const {
   const fuchsia_sysmem2::wire::BufferCollectionConstraints& c = constraints;
 
   LOG_UINT32_FIELD(FROM_HERE, c, min_buffer_count);
@@ -3173,17 +3165,14 @@ void LogicalBufferCollection::LogConstraints(Location location, NodeProperties* 
     LOG_BOOL_FIELD(FROM_HERE, bmc, inaccessible_domain_supported);
   }
 
-  uint32_t image_format_constraints_count = c.has_image_format_constraints() ? c.image_format_constraints().count() : 0;
-  LogInfo(
-    FROM_HERE,
-    "image_format_constraints.count() %u", image_format_constraints_count);
+  uint32_t image_format_constraints_count =
+      c.has_image_format_constraints() ? c.image_format_constraints().count() : 0;
+  LogInfo(FROM_HERE, "image_format_constraints.count() %u", image_format_constraints_count);
   for (uint32_t i = 0; i < image_format_constraints_count; ++i) {
-    LogInfo(
-      FROM_HERE, "image_format_constraints[%u] (ifc):", i);
+    LogInfo(FROM_HERE, "image_format_constraints[%u] (ifc):", i);
     const fuchsia_sysmem2::wire::ImageFormatConstraints& ifc = c.image_format_constraints()[i];
     if (!ifc.has_pixel_format()) {
-      LogInfo(
-        FROM_HERE, "!ifc.has_pixel_format()");
+      LogInfo(FROM_HERE, "!ifc.has_pixel_format()");
     } else {
       LOG_UINT32_FIELD(FROM_HERE, ifc.pixel_format(), type);
       LOG_UINT64_FIELD(FROM_HERE, ifc.pixel_format(), format_modifier_value);

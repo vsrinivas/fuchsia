@@ -26,20 +26,19 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   FidlType aligned_value = builder(allocator);
   fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
-  fidl::OutgoingMessage& encoded_message = encoded.GetOutgoingMessage();
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
   state->DeclareStep("Teardown/WallTime");
 
-  std::vector<uint8_t> test_data(encoded_message.byte_actual());
+  fidl::OutgoingMessage::CopiedBytes bytes;
   while (state->KeepRunning()) {
-    memcpy(test_data.data(), encoded_message.bytes(), encoded_message.byte_actual());
+    bytes = encoded.GetOutgoingMessage().CopyBytes();
 
     state->NextStep();  // End: Setup. Begin: Decode.
 
     const char* error;
-    if (!decode(&test_data[0], test_data.size(), nullptr, 0, &error)) {
+    if (!decode(bytes.data(), bytes.size(), nullptr, 0, &error)) {
       std::cout << "error in decode benchmark: " << error << std::endl;
       return false;
     }
@@ -48,25 +47,25 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   }
 
   // Reencode the decoded result and compare against the initial (expected) encode_result.
-  fidl::OwnedEncodedMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(test_data.data()));
+  fidl::OwnedEncodedMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(bytes.data()));
   if (!reencoded.ok()) {
     std::cout << "fidl::Encode failed with error: " << reencoded.error() << std::endl;
     return false;
   }
+  auto reencoded_bytes = reencoded.GetOutgoingMessage().CopyBytes();
+  auto encoded_bytes = encoded.GetOutgoingMessage().CopyBytes();
 
-  fidl::OutgoingMessage& reencoded_message = reencoded.GetOutgoingMessage();
-  if (encoded_message.byte_actual() != reencoded_message.byte_actual()) {
-    std::cout << "output size mismatch - reencoded size was " << reencoded_message.byte_actual()
-              << " but expected encode result size was" << encoded_message.byte_actual()
-              << std::endl;
+  if (encoded_bytes.size() != reencoded_bytes.size()) {
+    std::cout << "output size mismatch - reencoded size was " << encoded_bytes.size()
+              << " but expected encode result size was" << encoded_bytes.size() << std::endl;
     return false;
   }
   bool success = true;
-  for (uint32_t i = 0; i < encoded_message.byte_actual(); ++i) {
-    if (encoded_message.bytes()[i] != reencoded_message.bytes()[i]) {
+  for (uint32_t i = 0; i < encoded_bytes.size(); ++i) {
+    if (encoded_bytes.data()[i] != reencoded_bytes.data()[i]) {
       std::cout << "At offset " << i << " reencoded got 0x" << std::setw(2) << std::setfill('0')
-                << std::hex << int(reencoded_message.bytes()[i]) << " but expected was 0x"
-                << int(encoded_message.bytes()[i]) << std::dec << std::endl;
+                << std::hex << int(reencoded_bytes.data()[i]) << " but expected was 0x"
+                << int(encoded_bytes.data()[i]) << std::dec << std::endl;
       success = false;
     }
   }

@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 
 #include <memory>
+#include <vector>
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
@@ -56,23 +57,53 @@ class OutgoingMessage : public ::fidl::Result {
   // Set the txid in the message header.
   // Requires that there are sufficient bytes to store the header in the buffer.
   void set_txid(zx_txid_t txid) {
-    ZX_ASSERT(byte_actual() >= sizeof(fidl_message_header_t));
-    reinterpret_cast<fidl_message_header_t*>(bytes())->txid = txid;
+    ZX_ASSERT(byte_message().num_bytes >= sizeof(fidl_message_header_t));
+    reinterpret_cast<fidl_message_header_t*>(byte_message().bytes)->txid = txid;
   }
 
-  // TODO(fxbug.dev/66977) Replace this with iovec accessor.
-  uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message()->byte.bytes); }
-  // TODO(fxbug.dev/66977) Replace this with iovec count.
-  uint32_t byte_actual() const { return message()->byte.num_bytes; }
-
-  zx_handle_disposition_t* handles() const { return message_.byte.handles; }
-  uint32_t handle_actual() const { return message_.byte.num_handles; }
+  zx_handle_disposition_t* handles() const { return byte_message().handles; }
+  uint32_t handle_actual() const { return byte_message().num_handles; }
   fidl_outgoing_msg_t* message() { return &message_; }
   const fidl_outgoing_msg_t* message() const { return &message_; }
 
+  bool BytesMatch(const OutgoingMessage& other) {
+    if (byte_message().num_bytes != other.byte_message().num_bytes) {
+      return false;
+    }
+    return memcmp(byte_message().bytes, other.byte_message().bytes, byte_message().num_bytes) == 0;
+  }
+
+  // Holds a heap-allocated continguous copy of the bytes in this message.
+  //
+  // This owns the allocated buffer and frees it when the object goes out of scope.
+  // To create a |CopiedBytes|, use |CopyBytes|.
+  class CopiedBytes {
+   public:
+    CopiedBytes() = default;
+    CopiedBytes(CopiedBytes&&) = default;
+    CopiedBytes& operator=(CopiedBytes&&) = default;
+    CopiedBytes(const CopiedBytes&) = delete;
+    CopiedBytes& operator=(const CopiedBytes&) = delete;
+
+    uint8_t* data() { return bytes_.data(); }
+    size_t size() const { return bytes_.size(); }
+
+   private:
+    explicit CopiedBytes(OutgoingMessage& msg) : bytes_(msg.byte_message().num_bytes) {
+      memcpy(bytes_.data(), msg.byte_message().bytes, msg.byte_message().num_bytes);
+    }
+
+    std::vector<uint8_t> bytes_;
+
+    friend class OutgoingMessage;
+  };
+
+  // Create a heap-allocated contiguous copy of the bytes in this message.
+  CopiedBytes CopyBytes() { return CopiedBytes(*this); }
+
   // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
   // when interfacing with low-level channel operations which consume the handles.
-  void ReleaseHandles() { message()->byte.num_handles = 0; }
+  void ReleaseHandles() { byte_message().num_handles = 0; }
 
   // Encodes the data.
   template <typename FidlType>
@@ -137,6 +168,15 @@ class OutgoingMessage : public ::fidl::Result {
   uint32_t handle_capacity() const { return handle_capacity_; }
 
  private:
+  fidl_outgoing_msg_byte_t& byte_message() {
+    ZX_DEBUG_ASSERT(message_.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+    return message_.byte;
+  }
+  const fidl_outgoing_msg_byte_t& byte_message() const {
+    ZX_DEBUG_ASSERT(message_.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+    return message_.byte;
+  }
+
   fidl_outgoing_msg_t message_;
   uint32_t byte_capacity_;
   uint32_t handle_capacity_;

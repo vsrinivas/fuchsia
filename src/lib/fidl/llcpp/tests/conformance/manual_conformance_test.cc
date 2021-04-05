@@ -51,9 +51,9 @@ TEST(InlineXUnionInStruct, Success) {
     fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
-                                                        encoded.GetOutgoingMessage().byte_actual(),
-                                                        &expected[0], expected.size()));
+    auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
+                                                        expected.size()));
   }
   // decode
   {
@@ -102,9 +102,9 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
-                                                        encoded.GetOutgoingMessage().byte_actual(),
-                                                        &expected[0], expected.size()));
+    auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
+                                                        expected.size()));
   }
   // decode
   {
@@ -214,9 +214,9 @@ TEST(ComplexTable, SuccessEmpty) {
     fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
-                                                        encoded.GetOutgoingMessage().byte_actual(),
-                                                        &expected[0], expected.size()));
+    auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
+                                                        expected.size()));
   }
   // decode
   {
@@ -311,9 +311,9 @@ TEST(ComplexTable, Success) {
     fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
-                                                        encoded.GetOutgoingMessage().byte_actual(),
-                                                        &expected[0], expected.size()));
+    auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
+                                                        expected.size()));
   }
   // decode
   {

@@ -103,9 +103,9 @@ class TestAmlGpu {
       {
         fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
         ASSERT_TRUE(encoded_metadata.ok());
-        auto& message = encoded_metadata.GetOutgoingMessage();
-        EXPECT_OK(aml_gpu.ProcessMetadata(
-            std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+        auto message_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
+        EXPECT_OK(aml_gpu.ProcessMetadata(std::vector<uint8_t>(
+            message_bytes.data(), message_bytes.data() + message_bytes.size())));
       }
     }
 
@@ -119,9 +119,9 @@ class TestAmlGpu {
       {
         fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
         ASSERT_TRUE(encoded_metadata.ok());
-        auto& message = encoded_metadata.GetOutgoingMessage();
-        EXPECT_OK(aml_gpu.ProcessMetadata(
-            std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+        auto message_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
+        EXPECT_OK(aml_gpu.ProcessMetadata(std::vector<uint8_t>(
+            message_bytes.data(), message_bytes.data() + message_bytes.size())));
       }
     }
 

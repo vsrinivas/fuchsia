@@ -61,12 +61,12 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   }
   uint32_t num_bytes_actual;
   uint32_t num_handles_actual;
-  status_ = fidl_linearize_and_encode_etc(message_type, data, bytes(), byte_capacity_, handles(),
-                                          handle_capacity(), &num_bytes_actual, &num_handles_actual,
-                                          &error_);
+  status_ = fidl_linearize_and_encode_etc(
+      message_type, data, reinterpret_cast<uint8_t*>(byte_message().bytes), byte_capacity_,
+      handles(), handle_capacity(), &num_bytes_actual, &num_handles_actual, &error_);
   if (status_ == ZX_OK) {
-    message()->byte.num_bytes = num_bytes_actual;
-    message()->byte.num_handles = num_handles_actual;
+    byte_message().num_bytes = num_bytes_actual;
+    byte_message().num_handles = num_handles_actual;
   }
 }
 
@@ -75,7 +75,8 @@ void OutgoingMessage::WriteImpl(zx_handle_t channel) {
   if (status_ != ZX_OK) {
     return;
   }
-  status_ = zx_channel_write_etc(channel, 0, bytes(), byte_actual(), handles(), handle_actual());
+  status_ = zx_channel_write_etc(channel, 0, byte_message().bytes, byte_message().num_bytes,
+                                 handles(), handle_actual());
   if (status_ != ZX_OK) {
     error_ = ::fidl::kErrorWriteFailed;
   }
@@ -106,11 +107,11 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
   zx_handle_info_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_num_bytes = 0u;
   uint32_t actual_num_handles = 0u;
-  zx_channel_call_etc_args_t args = {.wr_bytes = bytes(),
+  zx_channel_call_etc_args_t args = {.wr_bytes = byte_message().bytes,
                                      .wr_handles = handles(),
                                      .rd_bytes = result_bytes,
                                      .rd_handles = result_handles,
-                                     .wr_num_bytes = byte_actual(),
+                                     .wr_num_bytes = byte_message().num_bytes,
                                      .wr_num_handles = handle_actual(),
                                      .rd_num_bytes = result_capacity,
                                      .rd_num_handles = ZX_CHANNEL_MAX_MSG_HANDLES};

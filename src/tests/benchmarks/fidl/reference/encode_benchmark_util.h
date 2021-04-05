@@ -57,19 +57,18 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
     return false;
   }
 
-  fidl::OutgoingMessage& expected_message = encoded.GetOutgoingMessage();
-  if (expected_message.byte_actual() != reference_bytes.size()) {
+  auto expected_bytes = encoded.GetOutgoingMessage().CopyBytes();
+  if (expected_bytes.size() != reference_bytes.size()) {
     std::cout << "output size mismatch - encoded reference size was " << reference_bytes.size()
-              << " but expected encode result size was" << expected_message.byte_actual()
-              << std::endl;
+              << " but expected encode result size was" << expected_bytes.size() << std::endl;
     return false;
   }
   bool success = true;
-  for (size_t i = 0; i < expected_message.byte_actual(); i++) {
-    if (expected_message.bytes()[i] != reference_bytes.data()[i]) {
+  for (size_t i = 0; i < expected_bytes.size(); i++) {
+    if (expected_bytes.data()[i] != reference_bytes.data()[i]) {
       std::cout << "At offset " << i << " reference got 0x" << std::setw(2) << std::setfill('0')
                 << std::hex << int(reference_bytes.data()[i]) << " but fidl::Decode got 0x"
-                << int(expected_message.bytes()[i]) << std::dec << std::endl;
+                << int(expected_bytes.data()[i]) << std::dec << std::endl;
       success = false;
     }
   }

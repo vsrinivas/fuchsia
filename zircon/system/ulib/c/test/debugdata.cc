@@ -195,7 +195,7 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
 
   fidl::ServerEnd<fio::Node> empty;
   fio::Directory::OpenRequest::OwnedEncodedMessage msg(0, 0, 0, "", empty);
-  ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().byte_actual());
+  ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().CopyBytes().size());
 }
 
 }  // anonymous namespace
