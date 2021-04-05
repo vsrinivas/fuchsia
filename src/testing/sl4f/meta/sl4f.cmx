@@ -80,8 +80,6 @@
             "fuchsia.settings.Setup",
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.systemmetrics.test.SystemMetricsLogger",
             "fuchsia.test.manager.Harness",
             "fuchsia.testing.sl4f.FacadeProvider",
             "fuchsia.thermal.test.TemperatureLogger",
