@@ -651,6 +651,46 @@ in `core.cml`:
 }
 ```
 
+### Resolve dependency cycles {#dependency-cycles}
+
+In Components v1, `appmgr` represents a collection of multiple components with
+many capabilities. This increases the chance that a v2 component routes multiple
+capabilities into and out of `appmgr` for a given component. Components that
+both offer services to `appmgr` and consume services offered by `appmgr` create
+a **dependency cycle** that you may need to resolve during the migration.
+
+```none
+Strong dependency cycles were found. Break the cycle by removing a dependency or
+marking an offer as weak. Cycles: { { ... }, { ... } }
+```
+
+To avoid build-time errors resulting from dependency cycles, apply the
+`weak_for_migration` tag to one of the capability routes. For example:
+
+```json5
+// core.cml
+{
+    offer: [
+        {
+            protocol: [ "fuchsia.pkg.FontResolver" ],
+            from: "#appmgr",
+            to: [ "#font_provider" ],
+            {{ '<strong>' }}dependency: "weak_for_migration",{{ '</strong>' }}
+        },
+        {
+            protocol: "fuchsia.fonts.Provider",
+            from: "#font_provider",
+            to: [ "#appmgr" ],
+        },
+    ]
+}
+```
+
+You can apply `weak_for_migration` to either capability in a dependency cycle.
+Determine which side is most appropriate for your component.
+In most cases, the convention is to apply `weak_for_migration` on the capability
+offered from `appmgr` until everything is migrated out of Components v1.
+
 ### Remove sysmgr configuration entries {#remove-config-entries}
 
 Before you test your component, remove the service mappings in
