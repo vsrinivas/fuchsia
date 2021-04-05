@@ -67,8 +67,9 @@ class FuzzedCapturer : public FuzzedClient<AudioCapturerShim<FuzzerConst::Sample
   void Random() final;
 
  private:
-  static constexpr size_t kPacketFrames =
-      FuzzerConst::kFrameRate / 4000 * RendererShimImpl::kPacketMs;
+  // A typical size is 480 frames per packet (10ms at 48kHz). The specific value
+  // here doesn't matter. To speed up this test, we use a smaller value.
+  static constexpr size_t kPacketFrames = 120;
   enum CaptureStep {
     kDiscardAllPackets = 0,  // Must be first as a default to end loop.
     kDiscardAllPacketsNoReply,

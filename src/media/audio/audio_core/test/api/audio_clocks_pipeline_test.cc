@@ -41,8 +41,9 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
 
  protected:
   static constexpr int32_t kFrameRate = 96000;
-  static constexpr int64_t kPayloadFrames = 2 * kFrameRate;  // 2sec ring buffer
-  static constexpr int64_t kPacketFrames = kFrameRate * RendererShimImpl::kPacketMs / 1000;
+  static constexpr int64_t kPayloadFrames = 2 * kFrameRate;         // 2sec ring buffer
+  static constexpr int64_t kPacketFrames = kFrameRate * 10 / 1000;  // 10ms packets
+  static_assert((kFrameRate * 10) % 1000 == 0);
 
   ClockSyncPipelineTest() : format_(Format::Create<ASF::FLOAT>(1, kFrameRate).value()) {}
 
@@ -176,9 +177,9 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     auto impulse = Impulse(kInputImpulseMagnitude, kPreSilenceFrames, kPostSilenceFrames);
 
     // Play two impulses frames_between_impulses apart.
-    auto first_input = renderer_->AppendPackets({&impulse}, offset_before_input_start);
-    auto second_input =
-        renderer_->AppendPackets({&impulse}, offset_before_input_start + frames_between_impulses);
+    auto first_input = renderer_->AppendSlice(impulse, kPacketFrames, offset_before_input_start);
+    auto second_input = renderer_->AppendSlice(impulse, kPacketFrames,
+                                               offset_before_input_start + frames_between_impulses);
 
     if constexpr (kDebugOutputImpulseValues) {
       auto snapshot = renderer_->payload().Snapshot<ASF::FLOAT>();
@@ -246,7 +247,7 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     auto offset_before_input_start = std::max(OffsetFrames(), ConvergenceFrames());
     auto input = FillBuffer(num_frames_input, kInputStepMagnitude);
 
-    auto packets = renderer_->AppendPackets({&input}, offset_before_input_start);
+    auto packets = renderer_->AppendSlice(input, kPacketFrames, offset_before_input_start);
     renderer_->PlaySynchronized(this, output_, 0);
     renderer_->WaitForPackets(this, packets);
 
@@ -361,9 +362,11 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     // ... and that this additional output doesn't cause us to overrun the ring buffer.
     ASSERT_TRUE(NumFramesOutput(clock_slew_ppm, actual_num_frames_input) < kPayloadFrames);
 
-    auto packets = renderer_->AppendPackets({&input, input_prefix}, offset_before_input_start);
+    auto packets1 = renderer_->AppendSlice(input, kPacketFrames, offset_before_input_start);
+    auto packets2 = renderer_->AppendSlice(input_prefix, kPacketFrames, packets1.back()->end_pts);
     renderer_->PlaySynchronized(this, output_, 0);
-    renderer_->WaitForPackets(this, packets);
+    renderer_->WaitForPackets(this, packets1);
+    renderer_->WaitForPackets(this, packets2);
 
     // offset_before_input_start is input frame where signal starts. Add PostRampFrames to get the
     // frame where any effect of preceding silence is completely gone. Translate to output frame.

@@ -24,6 +24,8 @@ namespace media::audio::test {
 
 namespace {
 
+constexpr auto kPacketMs = 10;
+
 // Using a macro here to preserve line numbers in the test error messages.
 #define EXPECT_WITHIN_RELATIVE_ERROR(actual, expected, threshold)                          \
   do {                                                                                     \
@@ -56,13 +58,13 @@ class WaveformTestRunner {
 template <ASF InputFormat, ASF OutputFormat>
 void WaveformTestRunner<InputFormat, OutputFormat>::CompareRMSE(
     AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected) {
-  CompareAudioBuffers(actual, expected,
-                      {
-                          .max_relative_error = tc_.max_relative_rms_error,
-                          .test_label = "check data",
-                          .num_frames_per_packet = expected.format().frames_per_second() / 1000 *
-                                                   RendererShimImpl::kPacketMs,
-                      });
+  CompareAudioBuffers(
+      actual, expected,
+      {
+          .max_relative_error = tc_.max_relative_rms_error,
+          .test_label = "check data",
+          .num_frames_per_packet = expected.format().frames_per_second() * kPacketMs / 1000,
+      });
 }
 
 template <ASF InputFormat, ASF OutputFormat>
@@ -128,12 +130,12 @@ void WaveformTestRunner<InputFormat, OutputFormat>::CompareFreqs(
 template <ASF InputFormat, ASF OutputFormat>
 void WaveformTestRunner<InputFormat, OutputFormat>::ExpectSilence(
     AudioBufferSlice<OutputFormat> actual) {
-  CompareAudioBuffers(actual, AudioBufferSlice<OutputFormat>(),
-                      {
-                          .test_label = "check silence",
-                          .num_frames_per_packet = actual.format().frames_per_second() / 1000 *
-                                                   RendererShimImpl::kPacketMs,
-                      });
+  CompareAudioBuffers(
+      actual, AudioBufferSlice<OutputFormat>(),
+      {
+          .test_label = "check silence",
+          .num_frames_per_packet = actual.format().frames_per_second() * kPacketMs / 1000,
+      });
 }
 
 }  // namespace

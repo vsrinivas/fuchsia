@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/media/audio/hardware.gni")
+import("//src/sys/build/fuchsia_test_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+executable("audio-core-stress-tests-bin") {
+  sources = [ "loopback_stress_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/media/audio/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/test:hermetic_audio_test",
+    "//third_party/googletest:gmock",
+  ]
+  testonly = true
+}
+
+fuchsia_test_component("audio-core-stress-tests-component") {
+  manifest = "meta/audio-core-stress-tests.cmx"
+  deps = [ ":audio-core-stress-tests-bin" ]
+}
+
+fuchsia_test_package("audio-core-stress-tests") {
+  test_components = [ ":audio-core-stress-tests-component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = hardware_envs
+  }
+  deps = [ "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr" ]
+}

@@ -115,6 +115,13 @@ class VmoBackedBuffer {
     }
   }
 
+  // Write raw bytes to the given offset.
+  void WriteRawBytesAt(int64_t offset, const std::vector<uint8_t>& bytes) {
+    FX_CHECK(offset + static_cast<int64_t>(bytes.size()) <= SizeBytes());
+
+    memmove(BufferStart() + offset, &bytes[0], bytes.size());
+  }
+
   // Set every sample to the given value.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   void Memset(typename SampleFormatTraits<SampleFormat>::SampleT value) {

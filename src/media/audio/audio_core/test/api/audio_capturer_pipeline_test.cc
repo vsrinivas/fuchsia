@@ -41,9 +41,10 @@ struct RendererHolder {
 
 class AudioCapturerPipelineTest : public HermeticAudioTest {
  protected:
+  static constexpr zx::duration kPacketLength = zx::msec(10);
   static constexpr int32_t kFrameRate = 48000;
-  static constexpr int64_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
-  const TypedFormat<ASF::SIGNED_16> format_;
+  static constexpr int64_t kPacketFrames = kFrameRate * kPacketLength.to_msecs() / 1000;
+  static_assert((kFrameRate * kPacketLength.to_msecs()) % 1000 == 0);
 
   AudioCapturerPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
 
@@ -61,6 +62,7 @@ class AudioCapturerPipelineTest : public HermeticAudioTest {
     ExpectNoOverflowsOrUnderflows();
   }
 
+  const TypedFormat<ASF::SIGNED_16> format_;
   VirtualInput<ASF::SIGNED_16>* input_ = nullptr;
   AudioCapturerShim<ASF::SIGNED_16>* capturer_ = nullptr;
 };
@@ -88,6 +90,7 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
     auto data = capturer_->SnapshotPacket(p);
     capture_buffer.samples().insert(capture_buffer.samples().end(), data.samples().begin(),
                                     data.samples().end());
+    capturer_->fidl()->ReleasePacket(p);
   };
 
   capturer_->fidl()->StartAsyncCapture(kPacketFrames);
@@ -100,14 +103,15 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
   input_->WriteRingBufferAt(input_frame, AudioBufferSlice(&input_buffer));
 
   // Wait until the last input packet has been captured.
-  auto end_time = start_time + zx::msec(num_packets * RendererShimImpl::kPacketMs);
+  auto end_time = start_time + kPacketLength * num_packets;
   RunLoopUntil([&last_capture_pts, end_time]() {
     return last_capture_pts && last_capture_pts > end_time.get();
   });
 
   // Stop the capture so we don't overflow while running the following tests.
   capturer_->fidl().events().OnPacketProduced = nullptr;
-  capturer_->fidl()->StopAsyncCaptureNoReply();
+  capturer_->fidl()->StopAsyncCapture(AddCallback("StopAsyncCapture"));
+  ExpectCallback();
 
   // The captured data should be silence up to start_time, followed by the input_buffer,
   // followed by more silence.
@@ -140,8 +144,9 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
 
 class AudioLoopbackPipelineTest : public HermeticAudioTest {
  protected:
+  static constexpr zx::duration kPacketLength = zx::msec(10);
   static constexpr int32_t kFrameRate = 48000;
-  static constexpr int64_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
+  static constexpr int64_t kPacketFrames = kFrameRate * kPacketLength.to_msecs() / 1000;
   const TypedFormat<ASF::SIGNED_16> format_;
 
   AudioLoopbackPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
@@ -181,7 +186,7 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
     int64_t num_input_frames = 0;
     for (auto& i : inputs) {
       auto r = CreateAudioRenderer(format_, kFrameRate);
-      renderers.push_back({r, r->AppendPackets({&i})});
+      renderers.push_back({r, r->AppendSlice(i, kPacketFrames)});
       num_input_frames = std::max(num_input_frames, i.NumFrames());
     }
 
@@ -193,6 +198,7 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
           .pts = p.pts,
           .data = capturer->SnapshotPacket(p),
       });
+      capturer->fidl()->ReleasePacket(p);
     };
     capturer->fidl()->StartAsyncCapture(kPacketFrames);
 
@@ -203,7 +209,7 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
     for (auto& r : renderers) {
       min_lead_time = std::max(min_lead_time, r.renderer->min_lead_time());
     }
-    const auto tolerance = zx::msec(70);
+    const auto tolerance = zx::msec(10);
     auto start_time = zx::clock::get_monotonic() + min_lead_time + tolerance;
     for (auto& r : renderers) {
       r.renderer->Play(this, start_time, 0);
@@ -225,6 +231,11 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
     RunLoopUntil([&captured_packets, end_time]() {
       return captured_packets.size() > 0 && captured_packets.back().pts > end_time.get();
     });
+
+    // Stop the capture so we don't overflow while running the following tests.
+    capturer->fidl().events().OnPacketProduced = nullptr;
+    capturer->fidl()->StopAsyncCapture(AddCallback("StopAsyncCapture"));
+    ExpectCallback();
 
     // Find the first output frame.
     auto first_output_value = expected_output.samples()[0];

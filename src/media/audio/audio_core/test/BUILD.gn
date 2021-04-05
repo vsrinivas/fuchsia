@@ -18,6 +18,7 @@ group("test") {
     deps += [
       "api:audio-core-api-pipeline-tests",
       "hardware:audio_core_hardware_tests",
+      "stress:audio-core-stress-tests",
     ]
   }
 }

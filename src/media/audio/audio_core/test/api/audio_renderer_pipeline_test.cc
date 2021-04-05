@@ -25,8 +25,11 @@ using AudioRenderUsage = fuchsia::media::AudioRenderUsage;
 namespace media::audio::test {
 
 namespace {
+constexpr zx::duration kPacketLength = zx::msec(10);
 constexpr int64_t kNumPacketsInPayload = 50;
 constexpr int64_t kDebugFramesPerPacket = 480;
+// Tolerance to account for scheduling latency.
+constexpr int64_t kToleranceInPackets = 2;
 // The one-sided filter width of the SincSampler.
 constexpr int64_t kSincSamplerHalfFilterWidth = 13;
 // The length of gain ramp for each volume change.
@@ -40,8 +43,10 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
   static constexpr int32_t kOutputFrameRate = 48000;
   static constexpr int32_t kNumChannels = 2;
 
-  static int64_t PacketsToFrames(int64_t num_packets, int32_t frame_rate) {
-    return num_packets * frame_rate * RendererShimImpl::kPacketMs / 1000;
+  static constexpr int64_t PacketsToFrames(int64_t num_packets, int32_t frame_rate) {
+    auto numerator = num_packets * frame_rate * kPacketLength.to_msecs();
+    FX_CHECK(numerator % 1000 == 0);
+    return numerator / 1000;
   }
 
   void SetUp() override {
@@ -77,8 +82,7 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
     FX_CHECK(min_lead_time.get() > 0);
     // In exceptional cases, min_lead_time might be smaller than one packet.
     // Ensure we have at least a handful of packets.
-    auto num_packets =
-        std::max(5l, static_cast<int64_t>(min_lead_time / zx::msec(RendererShimImpl::kPacketMs)));
+    auto num_packets = std::max(5l, static_cast<int64_t>(min_lead_time / kPacketLength));
     FX_CHECK(num_packets < kNumPacketsInPayload);
     return std::make_pair(num_packets,
                           PacketsToFrames(num_packets, renderer->format().frames_per_second()));
@@ -93,9 +97,10 @@ using AudioRendererPipelineTestFloat = AudioRendererPipelineTest<ASF::FLOAT>;
 TEST_F(AudioRendererPipelineTestInt16, RenderSameFrameRate) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
@@ -115,10 +120,11 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSameFrameRate) {
 TEST_F(AudioRendererPipelineTestInt16, RenderFasterFrameRate) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate * 2);
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
 
   constexpr int16_t kSampleVal = 0xabc;
   auto input_buffer = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames, kSampleVal);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
@@ -148,10 +154,11 @@ TEST_F(AudioRendererPipelineTestInt16, RenderFasterFrameRate) {
 TEST_F(AudioRendererPipelineTestInt16, RenderSlowerFrameRate) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate / 2);
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
 
   constexpr int16_t kSampleVal = 0xabc;
   auto input_buffer = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames, kSampleVal);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
@@ -186,12 +193,9 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto kPacketFrames = PacketsToFrames(1, kOutputFrameRate);
 
-  auto min_lead_time = renderer->min_lead_time();
-  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See
-  // fxbug.dev/52410.
-  constexpr auto kSchedulingDelayInPackets = 10;
+  // Include a tolerance to account for scheduling latency.
   const auto min_lead_time_in_packets =
-      (min_lead_time / zx::msec(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
+      renderer->min_lead_time() / kPacketLength + kToleranceInPackets;
 
   // This test writes to the ring buffer as follows:
   //
@@ -214,7 +218,6 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   //     +---+---+ ...           +---+ ...               +
   //
   //             ^ min_lead_time ^
-  //             +kSchedulingDelay
   //
   //     ^..... num_packets .....^..... num_packets .....^
   //
@@ -225,10 +228,11 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   const int64_t first_pts = first_packet * kPacketFrames;
   const int64_t restart_pts = restart_packet * kPacketFrames;
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
 
   // Load the renderer with lots of packets, but interrupt after two of them.
   auto first_input = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto first_packets = renderer->AppendPackets({&first_input}, first_pts);
+  auto first_packets = renderer->AppendSlice(first_input, frames_per_packet, first_pts);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, {first_packets[0], first_packets[1]});
 
@@ -261,7 +265,7 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   const int16_t restart_data_value = 0x4000;
   auto second_input =
       GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames, restart_data_value);
-  auto second_packets = renderer->AppendPackets({&second_input}, restart_pts);
+  auto second_packets = renderer->AppendSlice(second_input, frames_per_packet, restart_pts);
   renderer->WaitForPackets(this, second_packets);
 
   // The ring buffer should contain first_input for 10ms (one packet), then partially-written data
@@ -298,17 +302,18 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto num_packets = kNumPacketsInPayload;
   const auto num_frames = PacketsToFrames(num_packets, kOutputFrameRate);
+  const auto frames_per_packet = num_frames / num_packets;
 
   const int16_t kSampleFullVolume = 0x0200;
   const int16_t kSampleHalfVolume = 0x0010;
 
   auto input_buffer = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames, kSampleFullVolume);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   auto start_time = renderer->PlaySynchronized(this, output_, 0);
 
   // Wait until a few packets are rendered, then raise the volume to 1.0.
   auto start_delay = zx::time(start_time) - zx::clock::get_monotonic();
-  RunLoopWithTimeout(start_delay + zx::msec((num_packets / 2) * RendererShimImpl::kPacketMs));
+  RunLoopWithTimeout(start_delay + kPacketLength * (num_packets / 2));
   volume->SetVolume(1.0);
 
   // Now wait for all packets to be rendered.
@@ -368,14 +373,14 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
   const int64_t kFramesPerPeriod = 256;
   const int32_t freq = num_frames / kFramesPerPeriod;
   auto input_buffer = GenerateCosineAudio(format, num_frames, freq);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, kPacketFrames);
   auto start_time = renderer->PlaySynchronized(this, output_, 0);
 
   // Wait until the first packet will be rendered, then make a few gain toggles.
   RunLoopWithTimeout(zx::time(start_time) - zx::clock::get_monotonic());
   for (int64_t k = 0; k < num_frames / kPacketFrames; k++) {
     volume->SetVolume((k % 2) == 0 ? 1.0 : 0.5);
-    RunLoopWithTimeout(zx::msec(RendererShimImpl::kPacketMs));
+    RunLoopWithTimeout(kPacketLength);
   }
 
   // Now wait for all packets to be rendered.
@@ -434,7 +439,7 @@ class AudioRendererPipelineUnderflowTest : public HermeticAudioTest {
 TEST_F(AudioRendererPipelineUnderflowTest, HasUnderflow) {
   // Inject one packet and wait for it to be rendered.
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, kPacketFrames);
-  auto packets = renderer_->AppendPackets({&input_buffer});
+  auto packets = renderer_->AppendSlice(input_buffer, kPacketFrames);
   renderer_->PlaySynchronized(this, output_, 0);
   renderer_->WaitForPackets(this, packets);
 
@@ -481,9 +486,10 @@ class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
 TEST_F(AudioRendererPipelineEffectsTest, RenderWithEffects) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
@@ -531,9 +537,10 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
 
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
@@ -587,11 +594,12 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto num_packets = 1;
   auto num_frames = PacketsToFrames(num_packets, kOutputFrameRate);
+  const auto frames_per_packet = num_frames / num_packets;
 
   // Initiate stream with first packets and send through default OutputPipeline, which has an
   // inversion_filter effect enabled.
   auto first_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto first_packets = renderer->AppendPackets({&first_buffer});
+  auto first_packets = renderer->AppendSlice(first_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, first_packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
@@ -641,18 +649,14 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
 
   // Send second set of packets through new OutputPipeline (with inversion effect disabled); play
   // packets at least "min_lead_time" after the last audio frame previously written to the ring
-  // buffer.
-  auto min_lead_time = renderer->min_lead_time();
-  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See
-  // fxbug.dev/52410.
-  constexpr auto kSchedulingDelayInPackets = 10;
+  // buffer. Include a tolerance to account for scheduling delay.
   const auto min_lead_time_in_packets =
-      (min_lead_time / zx::msec(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
+      renderer->min_lead_time() / kPacketLength + kToleranceInPackets;
   const int64_t restart_packet = 2 + min_lead_time_in_packets;
   const int64_t restart_pts = PacketsToFrames(restart_packet, kOutputFrameRate);
 
   auto second_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto second_packets = renderer->AppendPackets({&second_buffer}, restart_pts);
+  auto second_packets = renderer->AppendSlice(second_buffer, frames_per_packet, restart_pts);
   renderer->WaitForPackets(this, second_packets);
   ring_buffer = output_->SnapshotRingBuffer();
 
@@ -684,11 +688,12 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
 
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto min_lead_time = renderer->min_lead_time();
-  auto num_packets = min_lead_time / zx::msec(RendererShimImpl::kPacketMs);
+  auto num_packets = min_lead_time / kPacketLength;
   auto num_frames = PacketsToFrames(num_packets, kOutputFrameRate);
+  const auto frames_per_packet = num_frames / num_packets;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto packets = renderer->AppendPackets({&input_buffer});
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();

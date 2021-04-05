@@ -9,6 +9,7 @@
 #include <fuchsia/ultrasound/cpp/fidl.h>
 #include <lib/zx/clock.h>
 
+#include <deque>
 #include <memory>
 #include <vector>
 
@@ -28,18 +29,11 @@ class VirtualDevice;
 // This class is thread hostile: none of its methods can be called concurrently.
 class RendererShimImpl {
  public:
-  static constexpr uint32_t kPacketMs = 10;
-
   fuchsia::media::AudioRendererPtr& fidl() { return fidl_; }
   VmoBackedBuffer& payload() { return payload_buffer_; }
   const Format& format() const { return format_; }
 
-  int64_t num_packet_frames() const { return format_.frames_per_second() / 1000 * kPacketMs; }
-  int64_t num_packet_samples() const { return num_packet_frames() * format_.channels(); }
-  int64_t num_packet_bytes() const { return num_packet_frames() * format_.bytes_per_frame(); }
-
   int64_t num_payload_frames() const { return payload_frame_count_; }
-  int64_t num_payload_packets() const { return payload_frame_count_ / num_packet_frames(); }
   int64_t num_payload_samples() const { return payload_frame_count_ * format_.channels(); }
   int64_t num_payload_bytes() const { return payload_frame_count_ * format_.bytes_per_frame(); }
 
@@ -76,11 +70,25 @@ class RendererShimImpl {
 
   using PacketVector = std::vector<std::shared_ptr<Packet>>;
 
-  // Submit the given slices as a sequence of timestamped packets of length at most kPacketMs.
-  // The packets are appended to the payload buffer after the last call to ClearPayload().
+  // Submit the given slices as a sequence of timestamped packets, with one packet per slice.
+  // The packets are appended to the payload buffer. If the packets overrun the end of the buffer,
+  // those extra packets will be queued and submitted once space becomes available in the buffer.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   PacketVector AppendPackets(const std::vector<AudioBufferSlice<SampleFormat>>& slices,
                              int64_t initial_pts = 0);
+
+  // Submit the given slice as a sequence of timestamped packets, with this slice divided into
+  // packets of size frames_per_packet.
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  PacketVector AppendSlice(AudioBufferSlice<SampleFormat> slice, int64_t frames_per_packet,
+                           int64_t initial_pts = 0);
+
+  // Overload to help template instantiation.
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  PacketVector AppendSlice(const AudioBuffer<SampleFormat>& buffer, int64_t frames_per_packet,
+                           int64_t initial_pts = 0) {
+    return AppendSlice(AudioBufferSlice(&buffer), frames_per_packet, initial_pts);
+  }
 
   // Wait until the given packets are rendered. |packets| must be non-empty and must be ordered by
   // start_pts. If |ring_out_frames| > 0, we wait for all |packets| to be rendered, plus an
@@ -97,11 +105,7 @@ class RendererShimImpl {
   const zx::clock& reference_clock() const { return reference_clock_; }
 
  protected:
-  RendererShimImpl(Format format, int64_t payload_frame_count, size_t inspect_id)
-      : format_(format),
-        payload_frame_count_(payload_frame_count),
-        inspect_id_(inspect_id),
-        payload_buffer_(format, payload_frame_count) {}
+  RendererShimImpl(Format format, int64_t payload_frame_count, size_t inspect_id);
 
   void SetReferenceClock(TestFixture* fixture, const zx::clock& clock);
   void RetrieveReferenceClock(TestFixture* fixture);
@@ -115,6 +119,12 @@ class RendererShimImpl {
   }
 
  private:
+  struct PendingPacket;
+  struct PayloadSlot;
+
+  void SendPendingPackets();
+  std::optional<PayloadSlot> AllocSlotFor(const PendingPacket& pp);
+
   const Format format_;
   const int64_t payload_frame_count_;
   const size_t inspect_id_;
@@ -126,7 +136,25 @@ class RendererShimImpl {
   std::optional<zx::duration> min_lead_time_;
   TimelineRate pts_ticks_per_second_;
   TimelineRate pts_ticks_per_frame_;
-  PacketVector queued_packets_;
+
+  // All packets that are in-flight.
+  std::set<std::shared_ptr<Packet>> packets_;
+
+  // These packets are waiting to be sent.
+  struct PendingPacket {
+    std::shared_ptr<Packet> packet;
+    int64_t slice_start_frame;
+    std::vector<uint8_t> slice_bytes;
+  };
+  std::deque<PendingPacket> pending_packets_;
+
+  // An available byte range in payload_buffer_.
+  struct PayloadSlot {
+    int64_t start_offset;
+    int64_t end_offset;
+    int64_t size() const { return end_offset - start_offset; }
+  };
+  std::vector<PayloadSlot> payload_slots_;
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
