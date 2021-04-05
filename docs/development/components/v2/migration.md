@@ -729,8 +729,9 @@ This allows the [Archivist][archivist] to read Inspect data for snapshots,
 Note: For more details on the differences in data collection between
 Components v1 and Components v2, see the [Archivist documentation][archivist].
 
-You can add Inspect capabilities to your v2 component by including the following
-manifest shard:
+When [migrating the component manifest](#create-component-manifest), you can add
+Inspect capabilities to your v2 component by including the following manifest
+shard:
 
 ```json5
 // my_component.cml
@@ -740,6 +741,34 @@ manifest shard:
     ...
 }
 ```
+
+#### Reading Inspect data from the Hub {#inspect-hub}
+
+If your test components read Inspect diagnostics data from the [Hub](#hub),
+migrate to the `fuchsia.diagnostics.ArchiveAccessor` service provided by the
+[Archivist][archivist].
+
+1.  When [migrating tests](#migrate-tests), add the protocol capability to your
+    test root or test driver:
+
+    ```json5
+    // test_driver.cml (test driver)
+    {
+        use: [
+            {
+                protocol: [
+                    "fuchsia.diagnostics.ArchiveAccessor",
+                ],
+            },
+        ]
+    }
+    ```
+
+1.  Update your program to use the `ArchiveReader` library, which is available
+    in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart].
+
+    Note: For components in other languages, use the `ArchiveAccessor`
+    [FIDL protocol][archive-fidl] directly.
 
 ### Logging {#logging}
 
@@ -844,6 +873,74 @@ direct log messages back to the `debuglog` buffer.
 
     Note: If the component isn't written in C++ or Rust you can use the existing
     libraries as a template for how to perform the initialization.
+
+### Hub {#hub}
+
+The hub provides access to detailed structural information about component
+instances at runtime.
+In Components v1, `appmgr` provides the [v1 Hub][hub-v1] through a specific
+directory structure populated in your component's namespace under `/hub`.
+In Components v2, many v1 Hub use cases have preferred alternative approaches.
+
+When migrating to Components v2, consider the following alternatives:
+
+-   [Observing lifecycle events](#events): Clients watching the filesystem to
+    observe component instance changes should use
+    [event capabilities][event-capabilities] instead.
+-   [Reading inspect data](#inspect-hub): Clients reading Inspect data from
+    `out/diagnostics` should migrate to the `fuchsia.diagnostics.ArchiveAccessor`
+    service instead.
+-   [Connecting to exposed services](#injected-services): Clients connecting
+    to services exposed through a component's `out/svc` directory should route
+    these services and capability providers into their tests instead, similar
+    to `injected-services`.
+
+For other use cases, follow the instructions in this section to migrate to the
+[v2 Hub][hub-v2] provided by Component Manager.
+
+Note: Features of the Hub are designed to support test components only.
+If you need to access the Hub outside of the test realm, reach out to
+[component-framework-dev][cf-dev-list] for assistance.
+
+#### Route the hub directory
+
+When [migrating tests](#migrate-tests), you'll need to route the `hub`
+[directory capability][directory-capabilities] to your test if the test driver
+or any other components in the test realm need to read data from the v2 Hub.
+
+Following the example in [Test uses injected services](#injected-services),
+add the `hub` directory capability to your CML file:
+
+```json5
+//test_driver.cml
+{
+    use: [
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ]
+}
+```
+
+#### Update hub reference paths
+
+Update your code to reference the content path from the v2 Hub directory
+structure. Here are some examples of path differences between the Hub
+implementations:
+
+| [v1 Hub][hub-v1] Path | [v2 Hub][hub-v2] Path |
+| --------------------- | --------------------- |
+| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/url` | `/hub/url` |
+| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/in/{{ '<var>' }}svc-path{{ '</var>' }}` | `/hub/exec/in/{{ '<var>' }}svc-path{{ '</var>' }}` |
+| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/process-id` | `/hub/exec/runtime/elf/process-id` |
+| `/hub/c/{{ '<var>' }}child-component{{ '</var>' }}` | `/hub/children/{{ '<var>' }}child-component{{ '</var>' }}` |
+
+Note: The `hub` directory routed to your component is scoped to the current
+realm. To access hub contents from the parent realm, route the hub from `parent`
+instead of `framework`. This feature is not available with the v1 Hub.
 
 ## Other common capabilities {#other-capabilities}
 
@@ -1346,7 +1443,83 @@ parent realm.
 }
 ```
 
+### Event capabilities {#events}
 
+If your component uses any of the following features, follow the instructions in
+this section:
+
+| Feature | Description | Path |
+| ------- | ----------- | ---- |
+| `hub` | Observing component path changes | `/hub/c/*` |
+| `hub` | Observing realm path changes | `/hub/r/*` |
+
+These features are supported in v2 components using
+[event capabilities][event-capabilities].
+
+#### Inject event sources into tests
+
+When [migrating tests](#migrate-tests), you'll need to inject any components you
+wish to observe into the test realm and route the apppropriate lifecycle events
+for those components to your test driver.
+
+Following the example in [Test uses injected services](#injected-services),
+offer the `fuchsia.sys2.EventSource` capability and the appropriate events to
+your test driver from the test root:
+
+```json5
+// test_root.cml
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component_test.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            to: [ "#test_driver" ],
+        },
+        {
+            event: [ "{{ '<var label="event name">started</var>' }}" ],
+            from: "framework",
+            to: [ "#test_driver" ],
+        },
+    ],
+}
+```
+
+Note: The `EventSource` capability comes from the test realm (`parent`), but the
+events come from the Component Manager (`framework`). This sets the event scope
+to only components in the test root's topology. For more details on event scope,
+see [Using events][event-scopes].
+
+In your test driver, consume the events routed by the test root:
+
+```json5
+// test_driver.cml
+{
+    use: [
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent"
+        },
+        {
+            event: [ "{{ '<var label="event name">started</var>' }}" ],
+            from: "parent",
+            modes: [ "async" ],
+        },
+    ]
+}
+```
+
+
+
+[archive-cpp]: /sdk/lib/inspect/contrib/cpp
+[archive-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
+[archive-rust]: /src/lib/diagnostics/reader/rust
+[archive-dart]: /sdk/dart/fuchsia_inspect/lib/src/reader
 [archivist]: /docs/reference/diagnostics/inspect/tree.md#archivist
 [build-migration]: /docs/development/components/build.md#legacy-package-migration
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
@@ -1364,6 +1537,8 @@ parent realm.
 [device-model]: /docs/concepts/drivers/device_driver_model/device-model.md
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [emulatortest]: /tools/emulator/emulatortest
+[event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
+[event-scopes]: /docs/concepts/components/v2/capabilities/event.md#using-events
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
@@ -1380,6 +1555,8 @@ parent realm.
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [glossary-environment]: /docs/glossary.md#environment
 [glossary-runner]: /docs/glossary.md#runner
+[hub-v1]: /docs/concepts/components/v1/hub.md
+[hub-v2]: /docs/concepts/components/v2/hub.md
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [iquery]: /docs/reference/diagnostics/consumers/iquery.md
 [logs]: /docs/development/diagnostics/logs/README.md
@@ -1388,6 +1565,7 @@ parent realm.
 [manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [manifests-include]: /docs/concepts/components/v2/component_manifests.md#include
+[protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
 [syslog]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
