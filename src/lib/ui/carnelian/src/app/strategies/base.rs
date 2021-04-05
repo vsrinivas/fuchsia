@@ -111,7 +111,7 @@ pub(crate) async fn create_app_strategy(
         // TODO: improve scheduling of updates
         fasync::Task::local(
             async move {
-                while let Some(VSyncMessage { display_id: _, timestamp, cookie, .. }) =
+                while let Some(VSyncMessage { display_id: _, timestamp, cookie, owned, .. }) =
                     receiver.next().await
                 {
                     vsync_internal_sender
@@ -121,9 +121,11 @@ pub(crate) async fn create_app_strategy(
                             cookie,
                         ))
                         .expect("unbounded_send");
-                    vsync_internal_sender
-                        .unbounded_send(MessageInternal::RenderAllViews)
-                        .expect("unbounded_send");
+                    if owned {
+                        vsync_internal_sender
+                            .unbounded_send(MessageInternal::RenderAllViews)
+                            .expect("unbounded_send");
+                    }
                 }
                 Ok(())
             }

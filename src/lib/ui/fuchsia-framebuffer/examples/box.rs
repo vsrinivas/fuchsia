@@ -222,23 +222,29 @@ fn main() -> Result<(), Error> {
         // Listen for vsync messages to schedule an update of the displayed image
         fasync::Task::local(
             async move {
-                while let Some(_vsync_message) = receiver.next().await {
-                    // Wait an arbitrary 10 milliseconds after vsync to present the
-                    // next prepared image.
-                    Timer::new(10_i64.millis().after_now()).await;
-
-                    // Grab a mutable reference. This is guaranteed to work
-                    // since only one of this closure or the vsync closure can
-                    // be in scope at once.
-                    let mut frame_manager = frame_manager.borrow_mut();
-
+                while let Some(vsync_message) = receiver.next().await {
                     let mut fb = fb_ptr2.borrow_mut();
+                    if vsync_message.owned {
+                        // Wait an arbitrary 10 milliseconds after vsync to present the
+                        // next prepared image.
+                        Timer::new(10_i64.millis().after_now()).await;
 
-                    // Present the previously prepared image. As a side effect,
-                    // the currently presented image will be eventually freed.
-                    frame_manager
-                        .present_prepared(&mut fb, Some(image_sender.clone()))
-                        .expect("FrameManager::present_prepared to work");
+                        // Grab a mutable reference. This is guaranteed to work
+                        // since only one of this closure or the vsync closure can
+                        // be in scope at once.
+                        let mut frame_manager = frame_manager.borrow_mut();
+
+                        // Present the previously prepared image. As a side effect,
+                        // the currently presented image will be eventually freed.
+                        frame_manager
+                            .present_prepared(&mut fb, Some(image_sender.clone()))
+                            .expect("FrameManager::present_prepared to work");
+                    }
+                    fb.acknowledge_vsync(vsync_message.cookie).unwrap_or_else(
+                        |e: anyhow::Error| {
+                            println!("acknowledge_vsync: error {:#?}", e);
+                        },
+                    );
                 }
                 Ok(())
             }

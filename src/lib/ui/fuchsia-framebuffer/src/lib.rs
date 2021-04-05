@@ -421,6 +421,7 @@ pub struct VSyncMessage {
     pub timestamp: u64,
     pub images: Vec<u64>,
     pub cookie: u64,
+    pub owned: bool,
 }
 
 pub struct FrameBuffer {
@@ -601,19 +602,30 @@ impl FrameBuffer {
         let config = Self::create_config_from_event_stream(&mut stream).await?;
 
         if let Some(vsync_sender) = vsync_sender {
+            let mut owned = true;
             proxy.enable_vsync(true).context("enable_vsync failed")?;
             fasync::Task::local(
                 stream
                     .map_ok(move |request| match request {
+                        // Note: this area is likely to change as part of the work on
+                        // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=73665.
+                        // In particular, ownership events should likely be broken out
+                        // of vsync.
                         ControllerEvent::OnVsync { display_id, timestamp, images, cookie } => {
-                            vsync_sender
-                                .unbounded_send(VSyncMessage {
-                                    display_id,
-                                    timestamp,
-                                    images,
-                                    cookie,
-                                })
-                                .unwrap_or_else(|e| eprintln!("{:?}", e));
+                            if owned {
+                                vsync_sender
+                                    .unbounded_send(VSyncMessage {
+                                        display_id,
+                                        timestamp,
+                                        images,
+                                        cookie,
+                                        owned,
+                                    })
+                                    .unwrap_or_else(|e| eprintln!("{:?}", e));
+                            }
+                        }
+                        ControllerEvent::OnClientOwnershipChange { has_ownership } => {
+                            owned = has_ownership;
                         }
                         _ => (),
                     })
