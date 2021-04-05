@@ -29,15 +29,20 @@ func TestRespectColLength_longWords(t *testing.T) {
 			"example.md": `
 We have a really-long-word exemption:
 
+Sometimeswordsarejustreallylongandcannotbebrokenuplikesupercalifragilisticexpiali
 Sometimeswordsarejustreallylongandcannotbebrokenuplikesupercalifragilisticexpialidocious
 
 It also applies to headings:
 
-############# Headingsometimeswordsarejustreallylongandcannotbebrokenuplikesuperc
+############# This-long-word-is-allowed-even-though-it-starts-on-column-15-not-on-column-1
+
+############# But in this sentence we do NOT subtract 15, so it must not go past «80»
 
 And list items:
 
-12345678. Listsometimeswordsarejustreallylongandcannotbebrokenuplikesupercalifrag
+1234567890. This-long-word-is-allowed-even-though-it-starts-on-column-13-not-on-column-1
+
+1234567890. But in this sentence we do NOT subtract 13, so it must not go past «80»
 `,
 		},
 	}.runOverTokens(t, newRespectColLength)
@@ -53,6 +58,8 @@ func TestRespectColLength_longWordsCont(t *testing.T) {
 And block quotes:
 
 > Blockquotessometimeswordsarejustreallylongandcannotbebrokenuplikesupercalifragi
+
+   > Blockquotessometimeswordsarejustreallylongandcannotbebrokenuplikesupercalifragilisticexpialidocious
 
 (We test these in decreasing order of 'countStartingAtCol' to ensure it is reset
 properly.)
