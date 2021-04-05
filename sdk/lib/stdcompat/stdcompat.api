@@ -1,7 +1,9 @@
 {
+  "pkg/stdcompat/include/lib/stdcompat/array.h": "67fd410544beac721b7599e7a2a8ace8",
   "pkg/stdcompat/include/lib/stdcompat/bit.h": "b0500e052fd94194efaf72d9cbc97abf",
   "pkg/stdcompat/include/lib/stdcompat/cstddef.h": "555383442b1946dc6d958cf8b205fbb6",
   "pkg/stdcompat/include/lib/stdcompat/functional.h": "7432ad237638e6acfe4f706dc03ddb29",
+  "pkg/stdcompat/include/lib/stdcompat/internal/array.h": "b86fbc2d33a82e9c6790f34ddd1be048",
   "pkg/stdcompat/include/lib/stdcompat/internal/bit.h": "7217ebfac7c95f27b6d5f5e4fd5c2e7a",
   "pkg/stdcompat/include/lib/stdcompat/internal/constructors.h": "664276aef7a6132071fbf93b5ee3fe75",
   "pkg/stdcompat/include/lib/stdcompat/internal/exception.h": "36e3245793a2229c969370af46d7f692",

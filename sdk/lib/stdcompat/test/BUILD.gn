@@ -17,6 +17,7 @@ group("tests") {
 }
 
 stdcompat_test_sources = [
+  "array_test.cc",
   "bit_test.cc",
   "constructors_internal_test.cc",
   "cstddef_test.cc",
