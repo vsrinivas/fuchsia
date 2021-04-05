@@ -26,6 +26,11 @@ fuchsia_component("stub_inspect_component") {
   manifest = "meta/stub_inspect_component.cml"
 }
 
+fuchsia_component("component_with_children") {
+  deps = [ ":stub_inspect_component_bin" ]
+  manifest = "meta/component_with_children.cml"
+}
+
 rustc_test("integration_tests_bin") {
   output_name = "archivist_integration_tests"
   edition = "2018"
@@ -73,6 +78,7 @@ fuchsia_test_package("archivist-integration-tests-v2") {
   test_components = [ ":archivist_integration_tests" ]
   deps = [
     ":archivist_for_integration",
+    ":component_with_children",
     ":driver",
     ":stub_inspect_component",
     ":testdata",

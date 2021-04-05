@@ -159,7 +159,7 @@ fn selector_matches_string(selector: &StringSelector, str: &str) -> bool {
         // fuzzy matches.
         &format!(
             "^{}$",
-            convert_string_selector_to_regex(selector, WILDCARD_REGEX_EQUIVALENT).unwrap()
+            convert_string_selector_to_regex(selector, WILDCARD_REGEX_EQUIVALENT, None).unwrap()
         ),
     )
     .unwrap();

@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_diagnostics::Selector,
     fuchsia_inspect as inspect,
-    selectors::parse_selector_file,
+    selectors::{contains_recursive_glob, parse_selector_file},
     serde::Deserialize,
     std::path::{Path, PathBuf},
     std::{collections::BTreeMap, fs},
@@ -102,8 +102,17 @@ impl PipelineConfig {
                     if path.extension() == Some(&suffix) {
                         match parse_selector_file(&path) {
                             Ok(selectors) => {
-                                inspect_configs.insert(path, selectors.len());
-                                inspect_selectors.as_mut().unwrap().extend(selectors);
+                                let mut validated_selectors = vec![];
+                                for selector in selectors.into_iter() {
+                                    match validate_static_selector(&selector) {
+                                        Ok(()) => validated_selectors.push(selector),
+                                        Err(e) => {
+                                            errors.push(format!("Invalid static selector: {}", e))
+                                        }
+                                    }
+                                }
+                                inspect_configs.insert(path, validated_selectors.len());
+                                inspect_selectors.as_mut().unwrap().extend(validated_selectors);
                             }
                             Err(e) => {
                                 errors.push(format!(
@@ -179,6 +188,19 @@ pub fn parse_service_config(path: impl AsRef<Path>) -> Result<ServiceConfig, Err
     let config: ServiceConfig =
         serde_json::from_str(&json_string).context("parsing json service config")?;
     Ok(config)
+}
+
+/// Validates a static selector against rules that apply specifically to a static selector and
+/// do not apply to selectors in general. Assumes the selector is already validated against the
+/// rules in selectors::validate_selector.
+fn validate_static_selector(static_selector: &Selector) -> Result<(), String> {
+    match static_selector.component_selector.as_ref() {
+        Some(selector) if contains_recursive_glob(selector) => {
+            Err(format!("Recursive glob not allowed in static selector configs"))
+        }
+        Some(_) => Ok(()),
+        None => Err(format!("A selector does not contain a component selector")),
+    }
 }
 
 #[cfg(test)]
@@ -454,5 +476,41 @@ mod tests {
 
         assert!(config.disable_filtering);
         assert_eq!(3, config.take_inspect_selectors().unwrap_or_default().len());
+    }
+
+    #[test]
+    fn parse_pipeline_disallow_recursive_glob() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+        fs::write(config_path.join("glob.cfg"), "core/a/**:root:status").unwrap();
+        fs::write(config_path.join("ok.cfg"), "core/b:root:status").unwrap();
+
+        let mut config = PipelineConfig::from_directory(&config_path, EmptyBehavior::Disable);
+
+        assert!(config.has_error());
+
+        let inspector = inspect::Inspector::new();
+        config.record_to_inspect(inspector.root());
+        assert_inspect_tree!(inspector, root: {
+            filtering_enabled: true,
+            selector_count: 1u64,
+            errors: {
+                "0": {
+                    message: AnyProperty
+                }
+            },
+            config_files: {
+                ok: {
+                    selector_count: 1u64,
+                },
+                glob: {
+                    selector_count: 0u64,
+                }
+            }
+        });
+
+        assert!(!config.disable_filtering);
+        assert_eq!(1, config.take_inspect_selectors().unwrap_or_default().len());
     }
 }

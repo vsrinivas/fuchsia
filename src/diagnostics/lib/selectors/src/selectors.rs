@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{
-        self, ComponentSelector, PropertySelector, Selector, StringSelector, SubtreeSelector,
-        TreeSelector,
+        self, ComponentSelector, PropertySelector, Selector, StringSelector, StringSelectorUnknown,
+        SubtreeSelector, TreeSelector,
     },
     lazy_static::lazy_static,
     regex::{Regex, RegexSet},
@@ -31,6 +31,8 @@ static ESCAPE_CHARACTER: char = '\\';
 pub static WILDCARD_SYMBOL_STR: &str = "*";
 pub static WILDCARD_SYMBOL_CHAR: char = '*';
 
+pub static RECURSIVE_WILDCARD_SYMBOL_STR: &str = "**";
+
 // Globs will match everything along a moniker, but won't match empty strings.
 pub static GLOB_REGEX_EQUIVALENT: &str = ".+";
 
@@ -40,6 +42,11 @@ pub static GLOB_REGEX_EQUIVALENT: &str = ".+";
 // It is OK for a wildcard to match nothing when appearing as a pattern match.
 // For example, "hello*" matches both "hello world" and "hello".
 pub static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])*"#;
+
+// Recursive wildcards will match anything, including an unescaped slash.
+//
+// It is OK for a recursive wildcard to match nothing when appearing in a pattern match.
+pub static RECURSIVE_WILDCARD_REGEX_EQUIVALENT: &str = ".*";
 
 // Extract moniker from component path.
 // For example, for path "/hub/c/archivist.cmx" this function will return "archivist.cmx".
@@ -114,33 +121,48 @@ fn validate_string_pattern(string_pattern: &String) -> Result<(), Error> {
     }
 }
 
+fn validate_string_selector_allow_recursive_glob(
+    string_selector: &StringSelector,
+) -> Result<(), Error> {
+    match string_selector {
+        StringSelector::StringPattern(pattern) if pattern == RECURSIVE_WILDCARD_SYMBOL_STR => {
+            Ok(())
+        }
+        _ => validate_string_selector(string_selector),
+    }
+}
+
+fn validate_string_selector(string_selector: &StringSelector) -> Result<(), Error> {
+    match string_selector {
+        StringSelector::StringPattern(pattern) => validate_string_pattern(pattern),
+        //TODO(fxbug.dev/4601): What do we need to validate against exact matches?
+        StringSelector::ExactMatch(_) => Ok(()),
+        _ => Err(format_err!("PathSelectionNodes must be string patterns or pattern matches")),
+    }
+}
+
 /// Validates all PathSelectorNodes within `path_selection_vector`.
 /// PathSelectorNodes:
 ///     1) Require that all elements of the vector are valid per
 ///        Selectors::validate_string_pattern specification.
 ///     2) Require a non-empty vector.
-fn validate_path_selection_vector(
-    path_selection_vector: &Vec<StringSelector>,
+fn validate_tree_path_selection_vector(
+    path_selection_vector: &[StringSelector],
 ) -> Result<(), Error> {
     for path_selection_node in path_selection_vector {
-        match path_selection_node {
-            StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
-                Ok(_) => {}
-                Err(e) => {
-                    return Err(e);
-                }
-            },
-            StringSelector::ExactMatch(_) => {
-                //TODO(fxbug.dev/4601): What do we need to validate against exact matches?
-            }
-            _ => {
-                return Err(format_err!(
-                    "PathSelectionNodes must be string patterns or pattern matches"
-                ))
-            }
-        }
+        validate_string_selector(path_selection_node)?;
     }
     Ok(())
+}
+
+fn validate_component_path_selection_vector(
+    path_selection_vector: &[StringSelector],
+) -> Result<(), Error> {
+    let last_idx = path_selection_vector.len() - 1;
+    for path_selection_node in path_selection_vector[..last_idx].iter() {
+        validate_string_selector(path_selection_node)?;
+    }
+    validate_string_selector_allow_recursive_glob(&path_selection_vector[last_idx])
 }
 
 /// Validates a TreeSelector:
@@ -156,7 +178,7 @@ fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
             if subtree_selector.node_path.is_empty() {
                 return Err(format_err!("Subtree selectors must have non-empty node_path vector."));
             }
-            validate_path_selection_vector(&subtree_selector.node_path)?;
+            validate_tree_path_selection_vector(&subtree_selector.node_path)?;
         }
         TreeSelector::PropertySelector(property_selector) => {
             if property_selector.node_path.is_empty() {
@@ -165,7 +187,7 @@ fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
                 ));
             }
 
-            validate_path_selection_vector(&property_selector.node_path)?;
+            validate_tree_path_selection_vector(&property_selector.node_path)?;
 
             match &property_selector.target_properties {
                 StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
@@ -204,9 +226,22 @@ pub fn validate_component_selector(component_selector: &ComponentSelector) -> Re
                 ));
             }
 
-            return validate_path_selection_vector(moniker);
+            validate_component_path_selection_vector(moniker)
         }
-        None => return Err(format_err!("Component selectors must have a moniker_segment.")),
+        None => Err(format_err!("Component selectors must have a moniker_segment.")),
+    }
+}
+
+/// Returns true iff a component selector uses the recursive glob.
+/// Assumes the selector has already been validated.
+pub fn contains_recursive_glob(component_selector: &ComponentSelector) -> bool {
+    // Unwrap as a valid selector must contain these fields.
+    let last_segment = component_selector.moniker_segments.as_ref().unwrap().last().unwrap();
+    match last_segment {
+        StringSelector::StringPattern(pattern) if pattern == RECURSIVE_WILDCARD_SYMBOL_STR => true,
+        StringSelector::StringPattern(_) => false,
+        StringSelector::ExactMatch(_) => false,
+        StringSelectorUnknown!() => false,
     }
 }
 
@@ -222,11 +257,9 @@ pub fn validate_selector(selector: &Selector) -> Result<(), Error> {
 }
 
 /// Parse a string into a FIDL StringSelector structure.
-fn convert_string_to_string_selector(string_to_convert: &String) -> Result<StringSelector, Error> {
-    validate_string_pattern(string_to_convert)?;
-
+fn convert_string_to_string_selector(string_to_convert: &String) -> StringSelector {
     // TODO(fxbug.dev/4601): Expose the ability to parse selectors from string into "exact_match" mode.
-    Ok(StringSelector::StringPattern(string_to_convert.to_string()))
+    StringSelector::StringPattern(string_to_convert.to_string())
 }
 
 /// Increments the CharIndices iterator and updates the token builder
@@ -305,9 +338,9 @@ pub fn parse_component_selector(
     let path_node_vector = tokenized_component_selector
         .iter()
         .map(|node_string| convert_string_to_string_selector(node_string))
-        .collect::<Result<Vec<StringSelector>, Error>>()?;
+        .collect::<Vec<_>>();
 
-    validate_path_selection_vector(&path_node_vector)?;
+    validate_component_path_selection_vector(&path_node_vector)?;
 
     component_selector.moniker_segments = Some(path_node_vector);
     return Ok(component_selector);
@@ -326,12 +359,12 @@ fn parse_tree_selector(
             tokenize_string(unparsed_node_path, PATH_NODE_DELIMITER)?
                 .iter()
                 .map(|node_string| convert_string_to_string_selector(node_string))
-                .collect::<Result<Vec<StringSelector>, Error>>()?,
+                .collect::<Vec<_>>(),
         )
     };
 
     let property_option = match unparsed_property_selector {
-        Some(unparsed_string) => Some(convert_string_to_string_selector(unparsed_string)?),
+        Some(unparsed_string) => Some(convert_string_to_string_selector(unparsed_string)),
         None => None,
     };
 
@@ -468,18 +501,24 @@ fn convert_escaped_char_to_regex(
 /// as escape characters that prevent `*` characters from being evaluated as pattern
 /// matchers.
 ///
-/// If the StringSelector is an ExactMatch, it will "santiize" the exact match to
+/// If the StringSelector is an ExactMatch, it will "sanitize" the exact match to
 /// align with the format of sanitized text from the system. The resulting regex will
 /// be a literal matcher for escape-characters followed by special characters in the
 /// selector lanaguage.
 pub fn convert_string_selector_to_regex(
     node: &StringSelector,
     wildcard_symbol_replacement: &str,
+    recursive_wildcard_symbol_replacement: Option<&str>,
 ) -> Result<String, Error> {
     match node {
         StringSelector::StringPattern(string_pattern) => {
             if string_pattern == WILDCARD_SYMBOL_STR {
                 Ok(wildcard_symbol_replacement.to_string())
+            } else if string_pattern == RECURSIVE_WILDCARD_SYMBOL_STR {
+                match recursive_wildcard_symbol_replacement {
+                    Some(replacement) => Ok(replacement.to_string()),
+                    None => Err(format_err!("Recursive wildcards are not supported")),
+                }
             } else {
                 let mut node_regex_builder = "(".to_string();
                 let mut node_iter = string_pattern.as_str().char_indices();
@@ -533,8 +572,11 @@ pub fn convert_path_selector_to_regex(
         // Path selectors replace wildcards with a regex that only extends to the next
         // unescaped '/' character, since we want each node to only be applied to one level
         // of the path.
-        let node_regex =
-            convert_string_selector_to_regex(path_selector, WILDCARD_REGEX_EQUIVALENT)?;
+        let node_regex = convert_string_selector_to_regex(
+            path_selector,
+            WILDCARD_REGEX_EQUIVALENT,
+            Some(RECURSIVE_WILDCARD_REGEX_EQUIVALENT),
+        )?;
         regex_string.push_str(&node_regex);
         regex_string.push_str("/");
     }
@@ -559,7 +601,7 @@ pub fn convert_property_selector_to_regex(selector: &StringSelector) -> Result<S
 
     // Property selectors replace wildcards with GLOB like behavior since there is no
     // concept of levels/depth to properties.
-    let property_regex = convert_string_selector_to_regex(selector, GLOB_REGEX_EQUIVALENT)?;
+    let property_regex = convert_string_selector_to_regex(selector, GLOB_REGEX_EQUIVALENT, None)?;
     regex_string.push_str(&property_regex);
 
     regex_string.push_str("$");
@@ -810,6 +852,12 @@ mod tests {
                 StringSelector::StringPattern(r#"\*"#.to_string()),
                 StringSelector::StringPattern("c".to_string()),
             ),
+            (
+                "a/b/**".to_string(),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("b".to_string()),
+                StringSelector::StringPattern("**".to_string()),
+            ),
         ];
 
         for (test_string, first_path_node, second_path_node, target_component) in test_vector {
@@ -856,6 +904,7 @@ mod tests {
             r#"a/b***/c"#.to_string(),
             r#"a/***/c"#.to_string(),
             r#"a/**/c"#.to_string(),
+            // supported? r#"a/*/b/**"#.to_string(),
         ];
         for test_string in test_vector {
             let component_selector_result = parse_component_selector(&test_string);
@@ -950,6 +999,7 @@ mod tests {
             (r#"a/b**"#.to_string(), Some("c".to_string())),
             // Property selector string literals cant have globs.
             (r#"a/b"#.to_string(), Some("c**".to_string())),
+            ("a/b".to_string(), Some("**".to_string())),
             // Node path cant have globs.
             ("a/**".to_string(), Some("c".to_string())),
             ("".to_string(), Some("c".to_string())),
@@ -1200,8 +1250,6 @@ mod tests {
         };
         static ref SHARED_FAILING_TEST_CASES: Vec<(Vec<&'static str>, &'static str)> = {
             vec![
-                // Globs aren't allowed in path nodes.
-                (vec![r#"**"#], r#"a"#),
                 // Slashes aren't allowed in path nodes.
                 (vec![r#"/"#], r#"a"#),
                 // Colons aren't allowed in path nodes.
@@ -1308,6 +1356,8 @@ mod tests {
             (r#"a/echo*.cmx:*:*"#, vec!["a", "echo1.cmx"]),
             (r#"a/echo*.cmx:*:*"#, vec!["a", "echo.cmx"]),
             (r#"ab*/echo.cmx:*:*"#, vec!["ab", "echo.cmx"]),
+            (r#"a/**:*:*"#, vec!["a", "echo.cmx"]),
+            (r#"a/**:*:*"#, vec!["a", "b", "echo.cmx"]),
         ];
 
         for (selector, moniker) in passing_test_cases {
@@ -1325,6 +1375,8 @@ mod tests {
         let failing_test_cases = vec![
             (r#"*:*:*"#, vec!["a", "echo.cmx"]),
             (r#"*/echo.cmx:*:*"#, vec!["123", "abc", "echo.cmx"]),
+            (r#"a/**:*:*"#, vec!["b", "echo.cmx"]),
+            (r#"e/**:*:*"#, vec!["echo.cmx"]),
         ];
 
         for (selector, moniker) in failing_test_cases {

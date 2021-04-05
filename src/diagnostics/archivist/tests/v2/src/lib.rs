@@ -11,21 +11,26 @@ use {
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     futures::stream::StreamExt,
     log::info,
+    std::{collections::HashSet, iter::FromIterator},
 };
 
 const DRIVER_COMPONENT: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/driver.cm";
 const TEST_COMPONENT: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
+const TEST_COMPONENT_WITH_CHILDREN: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/component_with_children.cm";
 
 #[fuchsia::test]
 async fn read_v2_components_inspect() {
-    let _test_app = ScopedInstance::new("coll".to_string(), TEST_COMPONENT.to_string())
+    let test_app = ScopedInstance::new("coll".to_string(), TEST_COMPONENT.to_string())
         .await
         .expect("Failed to create dynamic component");
 
     let data = ArchiveReader::new()
-        .add_selector("driver/coll\\:auto-*:root")
+        .add_selector(format!("driver/coll\\:{}:root", test_app.child_name()))
+        .retry_if_empty(true)
+        .with_minimum_schema_count(1)
         .snapshot::<Inspect>()
         .await
         .expect("got inspect data");
@@ -70,6 +75,86 @@ async fn read_v2_components_single_selector() {
         }
     });
     assert_eq!(data[0].moniker, "driver/coll\\:child_a");
+}
+
+#[fuchsia::test]
+async fn read_v2_components_recursive_glob() {
+    let test_app_a =
+        ScopedInstance::new("coll".to_string(), TEST_COMPONENT_WITH_CHILDREN.to_string())
+            .await
+            .expect("Failed to create dynamic component");
+    let _test_app_b =
+        ScopedInstance::new("coll".to_string(), TEST_COMPONENT_WITH_CHILDREN.to_string())
+            .await
+            .expect("Failed to create dynamic component");
+
+    // Only inspect from descendants of test_app_a should be reported
+    let expected_monikers = HashSet::from_iter(vec![
+        format!("driver/coll\\:{}/stub_inspect_1", test_app_a.child_name()),
+        format!("driver/coll\\:{}/stub_inspect_2", test_app_a.child_name()),
+    ]);
+
+    let data_vec = ArchiveReader::new()
+        .add_selector(format!("driver/coll\\:{}/**:root", test_app_a.child_name()))
+        .retry_if_empty(true)
+        .with_minimum_schema_count(expected_monikers.len())
+        .snapshot::<Inspect>()
+        .await
+        .expect("got inspect data");
+
+    assert_eq!(data_vec.len(), expected_monikers.len());
+    let mut found_monikers = HashSet::new();
+    for data in data_vec {
+        assert_inspect_tree!(data.payload.as_ref().unwrap(), root: {
+            "fuchsia.inspect.Health": {
+                status: "OK",
+                start_timestamp_nanos: AnyProperty,
+            }
+        });
+        found_monikers.replace(data.moniker);
+    }
+    assert_eq!(expected_monikers, found_monikers);
+}
+
+#[fuchsia::test]
+async fn read_v2_components_subtree_with_recursive_glob() {
+    let test_app_a =
+        ScopedInstance::new("coll".to_string(), TEST_COMPONENT_WITH_CHILDREN.to_string())
+            .await
+            .expect("Failed to create dynamic component");
+    let _test_app_b =
+        ScopedInstance::new("coll".to_string(), TEST_COMPONENT_WITH_CHILDREN.to_string())
+            .await
+            .expect("Failed to create dynamic component");
+
+    // Only inspect from test_app_a, and descendants of test_app_a should be reported
+    let expected_monikers = HashSet::from_iter(vec![
+        format!("driver/coll\\:{}", test_app_a.child_name()),
+        format!("driver/coll\\:{}/stub_inspect_1", test_app_a.child_name()),
+        format!("driver/coll\\:{}/stub_inspect_2", test_app_a.child_name()),
+    ]);
+
+    let data_vec = ArchiveReader::new()
+        .add_selector(format!("driver/coll\\:{}/**:root", test_app_a.child_name()))
+        .add_selector(format!("driver/coll\\:{}:root", test_app_a.child_name()))
+        .retry_if_empty(true)
+        .with_minimum_schema_count(expected_monikers.len())
+        .snapshot::<Inspect>()
+        .await
+        .expect("got inspect data");
+
+    assert_eq!(data_vec.len(), expected_monikers.len());
+    let mut found_monikers = HashSet::new();
+    for data in data_vec {
+        assert_inspect_tree!(data.payload.as_ref().unwrap(), root: {
+            "fuchsia.inspect.Health": {
+                status: "OK",
+                start_timestamp_nanos: AnyProperty,
+            }
+        });
+        found_monikers.replace(data.moniker);
+    }
+    assert_eq!(expected_monikers, found_monikers);
 }
 
 // This test verifies that Archivist knows about logging from this component.

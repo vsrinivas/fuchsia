@@ -1,0 +1,32 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/stub_inspect_component",
+    },
+    children: [
+        {
+            name: "stub_inspect_1",
+            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm",
+            startup: "eager",
+        },
+        {
+            name: "stub_inspect_2",
+            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#stub_inspect_1",
+                "#stub_inspect_2",
+            ],
+        },
+    ],
+}
