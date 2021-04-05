@@ -10,32 +10,36 @@
 #include <debug.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <string.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/ops.h>
-#include <kernel/auto_lock.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <platform/debug.h>
 #include <vm/vm.h>
 
-static SpinLock dputc_spin_lock;
+namespace {
+
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(dputc_spin_lock, MonitoredSpinLock);
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(print_spin_lock, MonitoredSpinLock);
+static fbl::DoublyLinkedList<PrintCallback*> print_callbacks TA_GUARDED(print_spin_lock::Get());
+
+}  // namespace
 
 void serial_write(ktl::string_view str) {
-  AutoSpinLock guard(&dputc_spin_lock);
+  Guard<MonitoredSpinLock, IrqSave> guard{dputc_spin_lock::Get(), SOURCE_TAG};
 
   // Write out the serial port.
   platform_dputs_irq(str.data(), str.size());
 }
 
-static SpinLock print_spin_lock;
-static fbl::DoublyLinkedList<PrintCallback*> print_callbacks TA_GUARDED(print_spin_lock);
-
 void console_write(ktl::string_view str) {
   // Print to any registered console loggers.
-  AutoSpinLock guard(&print_spin_lock);
+  Guard<MonitoredSpinLock, IrqSave> guard{print_spin_lock::Get(), SOURCE_TAG};
 
   for (PrintCallback& print_callback : print_callbacks) {
     print_callback.Print(str);
@@ -110,13 +114,13 @@ void Linebuffer::Write(ktl::string_view str) {
 }
 
 void register_print_callback(PrintCallback* cb) {
-  AutoSpinLock guard(&print_spin_lock);
+  Guard<MonitoredSpinLock, IrqSave> guard{print_spin_lock::Get(), SOURCE_TAG};
 
   print_callbacks.push_front(cb);
 }
 
 void unregister_print_callback(PrintCallback* cb) {
-  AutoSpinLock guard(&print_spin_lock);
+  Guard<MonitoredSpinLock, IrqSave> guard{print_spin_lock::Get(), SOURCE_TAG};
 
   print_callbacks.erase(*cb);
 }
