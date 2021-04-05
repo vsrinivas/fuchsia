@@ -27,3 +27,6 @@ toc:
 - title: "FIDL"
   section:
   - include: /docs/contribute/governance/fidl/_toc.yaml
+- title: "APIs"
+  section:
+  - include: /docs/contribute/governance/apis/_toc.yaml
