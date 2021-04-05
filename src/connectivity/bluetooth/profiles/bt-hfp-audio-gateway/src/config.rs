@@ -47,7 +47,19 @@ mod tests {
 
     #[test]
     fn successful_deserialization_of_configuration_file() {
-        AudioGatewayFeatureSupport::load().expect("Parse config file correctly");
+        let config = AudioGatewayFeatureSupport::load().expect("Parse config file correctly");
+        assert!(config.reject_incoming_voice_call);
+        assert!(config.three_way_calling);
+        assert!(!config.in_band_ringtone);
+        assert!(config.echo_canceling_and_noise_reduction);
+        assert!(!config.voice_recognition);
+        assert!(config.attach_phone_number_to_voice_tag);
+        assert!(config.remote_audio_volume_control);
+        assert!(!config.respond_and_hold);
+        assert!(!config.enhanced_call_controls);
+        assert!(config.wide_band_speech);
+        assert!(!config.enhanced_voice_recognition);
+        assert!(!config.enhanced_voice_recognition_with_text);
     }
 
     #[test]
