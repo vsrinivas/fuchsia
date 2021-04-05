@@ -70,7 +70,7 @@ DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
     : dispatcher_(dispatcher),
       executor_(executor),
       metrics_(std::move(metrics)),
-      sysmem_allocator_(dispatcher, std::move(allocator)),
+      sysmem_allocator_(std::move(allocator)),
       bad_state_event_(std::move(bad_state_event)),
       button_listener_binding_(this) {}
 
@@ -181,6 +181,25 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   current_configuration_index_ = index;
   configuration_metrics_[current_configuration_index_]->SetActive(true);
 
+  std::vector<fit::promise<void, zx_status_t>> deallocation_promises;
+  for (auto& event : deallocation_events_) {
+    fit::bridge<void, zx_status_t> bridge;
+    auto wait = std::make_shared<async::WaitOnce>(event.release(), ZX_EVENTPAIR_PEER_CLOSED, 0);
+    wait->Begin(dispatcher_, [wait_ref = wait, completer = std::move(bridge.completer)](
+                                 async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                 zx_status_t status, const zx_packet_signal_t* signal) mutable {
+      if (status != ZX_OK) {
+        completer.complete_error(status);
+        return;
+      }
+      completer.complete_ok();
+    });
+    deallocation_promises.push_back(bridge.consumer.promise());
+  }
+
+  deallocation_events_.clear();
+  deallocation_promises_ = std::move(deallocation_promises);
+
   streams_.clear();
   streams_.resize(configurations_[index].streams().size());
   stream_to_pending_legacy_stream_request_params_.clear();
@@ -260,34 +279,49 @@ void DeviceImpl::OnStreamRequested(
   // Assign friendly names to each buffer for debugging and profiling.
   std::ostringstream oss;
   oss << "camera_c" << current_configuration_index_ << "_s" << index;
-  executor_.schedule_task(
-      sysmem_allocator_
-          .BindSharedCollection(
-              std::move(token),
-              configs_[current_configuration_index_].stream_configs[index].constraints, oss.str())
-          .then([this, index, format_index, request = std::move(request),
-                 max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
-                    fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t>&
-                        result) mutable {
-            if (result.is_error()) {
-              request.Close(result.error());
-              return;
-            }
 
-            auto buffers = result.take_value();
-            // Inform the stream of the maxmimum number of buffers it may hand out.
-            uint32_t max_camping_buffers =
-                buffers.buffer_count - configs_[current_configuration_index_]
-                                           .stream_configs[index]
-                                           .constraints.min_buffer_count_for_camping;
-            max_camping_buffers_callback(max_camping_buffers);
+  auto allocate_buffers =
+      [this, token = std::move(token), name = oss.str(),
+       index](const fit::result<std::vector<fit::result<void, zx_status_t>>>& results) mutable
+      -> fit::promise<BufferCollectionWithLifetime, zx_status_t> {
+    return sysmem_allocator_.BindSharedCollection(
+        std::move(token), configs_[current_configuration_index_].stream_configs[index].constraints,
+        name);
+  };
 
-            // Get the legacy stream using the negotiated buffers.
-            stream_to_pending_legacy_stream_request_params_.insert_or_assign(
-                index,
-                ControllerCreateStreamParams{format_index, std::move(buffers), std::move(request)});
-            MaybeConnectToLegacyStreams();
-          }));
+  auto connect_to_stream =
+      [this, index, format_index, request = std::move(request),
+       max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
+          fit::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
+        if (result.is_error()) {
+          request.Close(result.error());
+          return;
+        }
+
+        auto buffer_collection_lifetime = result.take_value();
+        auto buffers = std::move(buffer_collection_lifetime.buffers);
+        deallocation_events_.push_back(std::move(buffer_collection_lifetime.deallocation_complete));
+
+        // Inform the stream of the maxmimum number of buffers it may hand out.
+        uint32_t max_camping_buffers =
+            buffers.buffer_count - configs_[current_configuration_index_]
+                                       .stream_configs[index]
+                                       .constraints.min_buffer_count_for_camping;
+        max_camping_buffers_callback(max_camping_buffers);
+
+        // Get the legacy stream using the negotiated buffers.
+        stream_to_pending_legacy_stream_request_params_.insert_or_assign(
+            index,
+            ControllerCreateStreamParams{format_index, std::move(buffers), std::move(request)});
+        MaybeConnectToLegacyStreams();
+      };
+
+  // Wait for any previous configurations buffers to finish deallocation, then allocate and connect
+  // to stream.
+  executor_.schedule_task(fit::join_promise_vector(std::move(deallocation_promises_))
+                              .then(std::move(allocate_buffers))
+                              .then(std::move(connect_to_stream))
+                              .wrap_with(streams_[index]->Scope()));
 }
 
 // HUGE CAVEAT: Please see b/181345355 comment #24 for details.

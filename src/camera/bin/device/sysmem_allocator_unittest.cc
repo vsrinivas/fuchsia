@@ -13,19 +13,6 @@
 namespace camera {
 namespace {
 
-constexpr std::array<zx::duration, 10> kTimeoutByAttempt = {{
-    zx::msec(200),
-    zx::msec(288),
-    zx::msec(377),
-    zx::msec(466),
-    zx::msec(555),
-    zx::msec(644),
-    zx::msec(733),
-    zx::msec(822),
-    zx::msec(911),
-    zx::msec(1000),
-}};
-
 class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_TestBase {
  public:
   FakeBufferCollection(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request)
@@ -49,12 +36,17 @@ class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_T
     allocated_callback_ = std::move(callback);
   }
 
+  void AttachLifetimeTracking(zx::eventpair server_end, uint32_t buffers_remaining) override {
+    lifetime_tracking_ = std::move(server_end);
+  }
+
   void NotImplemented_(const std::string& name) override {
     FAIL() << "Not Implemented BufferCollection." << name;
   }
 
   fidl::Binding<fuchsia::sysmem::BufferCollection> binding_;
   WaitForBuffersAllocatedCallback allocated_callback_;
+  zx::eventpair lifetime_tracking_;
 };
 
 class FakeAllocator : public fuchsia::sysmem::testing::Allocator_TestBase {
@@ -94,81 +86,27 @@ class SysmemAllocatorTest : public gtest::TestLoopFixture {
   }
 
   FakeAllocator sysmem_allocator_;
-  SysmemAllocator allocator_{dispatcher(), sysmem_allocator_.NewBinding()};
+  SysmemAllocator allocator_{sysmem_allocator_.NewBinding()};
   async::Executor executor_{dispatcher()};
 };
 
-TEST_F(SysmemAllocatorTest, SafelyBindSharedCollection) {
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+TEST_F(SysmemAllocatorTest, BindSharedCollection) {
+  fuchsia::sysmem::BufferCollectionTokenHandle token;
   auto request = token.NewRequest();
-  fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> result;
+  fit::result<BufferCollectionWithLifetime, zx_status_t> result;
   executor_.schedule_task(
-      allocator_.SafelyBindSharedCollection(std::move(token), {}, "CollectionName")
-          .then([&result](
-                    fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t>& r) mutable {
+      allocator_.BindSharedCollection(std::move(token), {}, "CollectionName")
+          .then([&result](fit::result<BufferCollectionWithLifetime, zx_status_t>& r) mutable {
             result = std::move(r);
           }));
   RunLoopUntilIdle();
 
-  // First buffer collection to complete, this is for the initial free-space 'probe'
-  ASSERT_EQ(1u, sysmem_allocator_.bound_collections().size());
-  last_bound_collection()->CompleteBufferAllocation(ZX_OK,
-                                                    fuchsia::sysmem::BufferCollectionInfo_2{});
-  RunLoopFor(kTimeoutByAttempt[0]);
-
   // Now we should have the shared buffer collection.
-  ASSERT_EQ(2u, sysmem_allocator_.bound_collections().size());
+  ASSERT_EQ(1u, sysmem_allocator_.bound_collections().size());
   last_bound_collection()->CompleteBufferAllocation(ZX_OK,
                                                     fuchsia::sysmem::BufferCollectionInfo_2{});
   RunLoopUntilIdle();
   EXPECT_TRUE(result.is_ok());
-}
-
-TEST_F(SysmemAllocatorTest, SafelyBindSharedCollectionNoMemory) {
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
-  auto request = token.NewRequest();
-  fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> result;
-  executor_.schedule_task(
-      allocator_.SafelyBindSharedCollection(std::move(token), {}, "CollectionName")
-          .then([&result](
-                    fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t>& r) mutable {
-            result = std::move(r);
-          }));
-  RunLoopUntilIdle();
-
-  for (size_t i = 1; i <= 10; ++i) {
-    EXPECT_TRUE(result.is_pending());
-    ASSERT_EQ(i, sysmem_allocator_.bound_collections().size());
-    last_bound_collection()->CompleteBufferAllocation(ZX_ERR_NO_MEMORY,
-                                                      fuchsia::sysmem::BufferCollectionInfo_2{});
-    RunLoopFor(kTimeoutByAttempt[i - 1]);
-  }
-
-  EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), ZX_ERR_NO_MEMORY);
-}
-
-TEST_F(SysmemAllocatorTest, SafelyBindSharedCollectionPeerClosed) {
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
-  auto request = token.NewRequest();
-  fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> result;
-  executor_.schedule_task(
-      allocator_.SafelyBindSharedCollection(std::move(token), {}, "CollectionName")
-          .then([&result](
-                    fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t>& r) mutable {
-            result = std::move(r);
-          }));
-  RunLoopUntilIdle();
-
-  for (size_t i = 1; i <= 10; ++i) {
-    EXPECT_TRUE(result.is_pending());
-    ASSERT_EQ(i, sysmem_allocator_.bound_collections().size());
-    last_bound_collection()->PeerClose();
-    RunLoopFor(kTimeoutByAttempt[i - 1]);
-  }
-
-  EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), ZX_ERR_NO_MEMORY);
 }
 
 }  // namespace

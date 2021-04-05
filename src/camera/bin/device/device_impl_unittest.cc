@@ -22,6 +22,8 @@
 
 namespace camera {
 
+constexpr uint32_t kNamePriority = 30;  // Higher than Scenic but below the maximum.
+
 // No-op function.
 static void nop() {}
 
@@ -361,6 +363,88 @@ TEST_F(DeviceImplTest, Configurations) {
     device->SetCurrentConfiguration(1);
   });
   RunLoopUntilFailureOr(all_callbacks_received);
+}
+
+TEST_F(DeviceImplTest, ConfigurationSwitchingWhileAllocated) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+
+  uint32_t buffers_allocated = 0;
+  constexpr uint32_t kExpectedBuffersAllocated = 2;
+  bool all_buffers_allocated = false;
+  bool first_stream_gone = false;
+  device->GetConfigurations([&](std::vector<fuchsia::camera3::Configuration> configurations) {
+    EXPECT_GE(configurations.size(), 2u);
+  });
+  device->SetCurrentConfiguration(0);
+
+  // Connect and allocate stream
+  fuchsia::camera3::StreamPtr stream;
+  // Don't SetFailOnError as we expect stream to close when switching config
+  device->ConnectToStream(0, stream.NewRequest());
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  allocator_->AllocateSharedCollection(token.NewRequest());
+  stream->SetBufferCollection(std::move(token));
+  fuchsia::sysmem::BufferCollectionPtr buffers;
+  bool buffers_allocated_returned = false;
+  zx::vmo vmo;
+  stream->WatchBufferCollection(
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        allocator_->BindSharedCollection(std::move(token), buffers.NewRequest());
+        buffers->SetConstraints(true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+                                       .min_buffer_count_for_camping = 1});
+        buffers->SetName(kNamePriority, "Testc0s0Buffers");
+        buffers->WaitForBuffersAllocated(
+            [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+              EXPECT_EQ(status, ZX_OK);
+              vmo = std::move(buffers.buffers[0].vmo);
+              all_buffers_allocated = ++buffers_allocated == kExpectedBuffersAllocated;
+              buffers_allocated_returned = true;
+            });
+      });
+
+  stream.set_error_handler([&](zx_status_t status) {
+    first_stream_gone = true;
+    buffers.Unbind();
+    vmo.reset();
+  });
+
+  RunLoopUntilFailureOr(buffers_allocated_returned);
+
+  fuchsia::camera3::StreamPtr stream2;
+  fuchsia::sysmem::BufferCollectionPtr buffers2;
+  fuchsia::sysmem::BufferCollectionTokenPtr token2;
+  zx::vmo vmo2;
+
+  device->WatchCurrentConfiguration([&](uint32_t index) {
+    EXPECT_EQ(index, 0u);
+
+    device->SetCurrentConfiguration(1);
+    device->WatchCurrentConfiguration([&](uint32_t index) { EXPECT_EQ(index, 1u); });
+
+    RunLoopUntilFailureOr(first_stream_gone);
+
+    // Connect and allocate stream
+    device->ConnectToStream(0, stream2.NewRequest());
+    allocator_->AllocateSharedCollection(token2.NewRequest());
+    stream2->SetBufferCollection(std::move(token2));
+    stream2->WatchBufferCollection(
+        [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+          allocator_->BindSharedCollection(std::move(token), buffers2.NewRequest());
+          buffers2->SetConstraints(true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+                                          .min_buffer_count_for_camping = 1});
+          buffers2->SetName(kNamePriority, "Testc1s0Buffers");
+          buffers2->WaitForBuffersAllocated(
+              [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+                EXPECT_EQ(status, ZX_OK);
+                vmo2 = std::move(buffers.buffers[0].vmo);
+                all_buffers_allocated = ++buffers_allocated == kExpectedBuffersAllocated;
+              });
+        });
+  });
+
+  RunLoopUntilFailureOr(all_buffers_allocated);
 }
 
 TEST_F(DeviceImplTest, Identifier) {

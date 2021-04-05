@@ -57,6 +57,8 @@ void StreamImpl::SetMuteState(MuteState mute_state) {
   }
 }
 
+fit::scope& StreamImpl::Scope() { return scope_; }
+
 void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
   TRACE_DURATION("camera", "StreamImpl::OnNewRequest");
   auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));

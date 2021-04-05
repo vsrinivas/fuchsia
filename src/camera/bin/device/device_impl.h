@@ -158,11 +158,12 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
   uint32_t current_configuration_index_ = 0;
+
+  std::vector<zx::eventpair> deallocation_events_;
+  std::vector<fit::promise<void, zx_status_t>> deallocation_promises_;
   std::vector<std::unique_ptr<StreamImpl>> streams_;
   MuteState mute_state_;
   bool controller_streaming_ = true;
-  std::list<fuchsia::sysmem::BufferCollectionTokenPtr> check_token_tokens_;
-  std::list<fuchsia::sysmem::BufferCollectionPtr> check_token_collections_;
 
   friend class Client;
 };
