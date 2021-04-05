@@ -54,7 +54,9 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   void PushFrameToOtLib();
 
  private:
+  zx_status_t InitOutgoingAndServe();
   zx_status_t SetupFidlService();
+  zx_status_t SetupBootstrapFidlService();
   zx_status_t ConnectToOtRadioDev();
   zx_status_t SetDeviceSetupClientInDevmgr(const std::string& path);
   zx_status_t SetDeviceSetupClientInIsolatedDevmgr(const std::string& path);

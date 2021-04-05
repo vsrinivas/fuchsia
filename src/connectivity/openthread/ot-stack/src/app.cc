@@ -15,12 +15,16 @@
 
 #include <fbl/auto_lock.h>
 #include <openthread/tasklet.h>
+#include <src/lib/files/file.h>
 
 #define OT_STACK_ASSERT assert
 
 namespace otstack {
+namespace {
+constexpr char kMigrationConfigPath[] = "/config/data/migration_config.json";
 
 constexpr uint8_t kSpinelResetFrame[]{0x80, 0x06, 0x0};
+}  // namespace
 
 OtStackApp::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtStackApp& app) : app_(app) {}
 
@@ -263,13 +267,53 @@ void OtStackApp::OtStackCallBackImpl::PostDelayedAlarmTask(zx::duration delay) {
       app_.loop_.dispatcher(), [this]() { this->app_.AlarmTask(); }, delay);
 }
 
+zx_status_t OtStackApp::InitOutgoingAndServe() {
+  // Ensure that outgoing_ is not already initialized.
+  // Current code cannot result in outgoing_ being reinitialized.
+  // If there is a change in future and this gets called, that
+  // may be a bug, as it may result in a unexpected behavior.
+  OT_STACK_ASSERT(!outgoing_);
+
+  async_dispatcher_t* dispatcher = loop_.dispatcher();
+  outgoing_ = std::make_unique<svc::Outgoing>(dispatcher);
+  return outgoing_->ServeFromStartupInfo();
+}
+
+zx_status_t OtStackApp::SetupBootstrapFidlService() {
+  zx_status_t status = InitOutgoingAndServe();
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Init outgoing failed during SetupBootstrapFidlService: " << status
+                   << std::endl;
+    return status;
+  }
+
+  // Now add entry for bootstrap fidl:
+  bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapThreadImpl>();
+
+  status = outgoing_->svc_dir()->AddEntry(
+      fuchsia_lowpan_bootstrap::Thread::Name,
+      fbl::MakeRefCounted<fs::Service>(
+          [this](fidl::ServerEnd<fuchsia_lowpan_bootstrap::Thread> request) {
+            zx_status_t status =
+                bootstrap_impl_->Bind(std::move(request), loop_.dispatcher(), outgoing_->svc_dir());
+            if (status != ZX_OK) {
+              FX_LOGS(ERROR) << "error binding new server: " << status << std::endl;
+            }
+            return status;
+          }));
+
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Error adding service in ot-stack for bootstrap fidl";
+    return status;
+  }
+  return ZX_OK;
+}
+
 // Setup FIDL server side which handle requests from upper layer components.
 zx_status_t OtStackApp::SetupFidlService() {
-  async_dispatcher_t* dispatcher = loop_.dispatcher();
-
-  outgoing_ = std::make_unique<svc::Outgoing>(dispatcher);
-  zx_status_t status = outgoing_->ServeFromStartupInfo();
+  zx_status_t status = InitOutgoingAndServe();
   if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Init outgoing failed during SetupFidlService: " << status << std::endl;
     return status;
   }
 
@@ -302,27 +346,6 @@ zx_status_t OtStackApp::SetupFidlService() {
     FX_PLOGS(ERROR, status) << "Error adding service in ot-stack";
     return status;
   }
-
-  // Now add entry for bootstrap fidl:
-  bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapThreadImpl>();
-
-  status = outgoing_->svc_dir()->AddEntry(
-      fuchsia_lowpan_bootstrap::Thread::Name,
-      fbl::MakeRefCounted<fs::Service>(
-          [this](fidl::ServerEnd<fuchsia_lowpan_bootstrap::Thread> request) {
-            zx_status_t status =
-                bootstrap_impl_->Bind(std::move(request), loop_.dispatcher(), outgoing_->svc_dir());
-            if (status != ZX_OK) {
-              FX_LOGS(ERROR) << "error binding new server: " << status << std::endl;
-            }
-            return status;
-          }));
-
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error adding service in ot-stack for bootstrap fidl";
-    return status;
-  }
-
   return ZX_OK;
 }
 
@@ -370,6 +393,11 @@ void OtStackApp::InitOpenThreadLibrary(bool reset_rcp) {
 zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
   is_test_env_ = is_test_env;
   device_path_ = path;
+
+  bool bootstrap_only = files::IsFile(kMigrationConfigPath);
+  if (bootstrap_only) {
+    return SetupBootstrapFidlService();
+  }
 
   lowpan_spinel_ptr_ = std::make_unique<OtStackCallBackImpl>(*this);
 
