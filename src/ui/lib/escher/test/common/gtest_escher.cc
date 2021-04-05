@@ -14,7 +14,6 @@ namespace escher {
 namespace test {
 namespace {
 
-
 #if !ESCHER_USE_RUNTIME_GLSL
 static void LoadShadersFromDisk(HackFilesystemPtr fs) {
   // NOTE: this and ../shaders/shaders.gni must be kept in sync.
@@ -46,11 +45,60 @@ static void LoadShadersFromDisk(HackFilesystemPtr fs) {
 }
 #endif
 
+VulkanInstance::Params GetDefaultVulkanInstanceParams() {
+  VulkanInstance::Params instance_params(
+      {{},
+       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
+       false});
+  auto validation_layer_name = VulkanInstance::GetValidationLayerName();
+  if (validation_layer_name) {
+    instance_params.layer_names.insert(*validation_layer_name);
+  }
+#ifdef VK_USE_PLATFORM_FUCHSIA
+  instance_params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+#endif
+  return instance_params;
+}
+
+VulkanDeviceQueues::Params GetDefaultVulkanDeviceQueuesParams(bool enable_protected_memory) {
+  VulkanDeviceQueues::Params device_params(
+      {{VK_KHR_MAINTENANCE1_EXTENSION_NAME, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME},
+       {
+           VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
+       },
+       vk::SurfaceKHR()});
+#ifdef VK_USE_PLATFORM_FUCHSIA
+  device_params.required_extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+  device_params.required_extension_names.insert(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+  device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+  device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
+  if (enable_protected_memory)
+    device_params.flags = VulkanDeviceQueues::Params::kAllowProtectedMemory;
+#endif
+  return device_params;
+}
+
 }  // namespace
 
 Escher* GetEscher() {
   EXPECT_FALSE(VK_TESTS_SUPPRESSED());
   return EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
+}
+
+std::unique_ptr<Escher> CreateEscherWithProtectedMemoryEnabled() {
+  EXPECT_FALSE(VK_TESTS_SUPPRESSED());
+  auto vulkan_instance =
+      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance();
+  auto vulkan_device =
+      VulkanDeviceQueues::New(vulkan_instance, GetDefaultVulkanDeviceQueuesParams(true));
+  auto hack_filesystem =
+      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetFilesystem();
+  auto escher = std::make_unique<Escher>(vulkan_device, hack_filesystem, /*gpu_allocator*/ nullptr);
+  if (!escher->allow_protected_memory()) {
+    return nullptr;
+  }
+  return escher;
 }
 
 bool GlobalEscherUsesVirtualGpu() {
@@ -79,31 +127,9 @@ EscherEnvironment* EscherEnvironment::GetGlobalTestEnvironment() {
 
 void EscherEnvironment::SetUp() {
   if (!VK_TESTS_SUPPRESSED()) {
-    VulkanInstance::Params instance_params(
-        {{},
-         {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
-         false});
-    auto validation_layer_name = VulkanInstance::GetValidationLayerName();
-    if (validation_layer_name) {
-      instance_params.layer_names.insert(*validation_layer_name);
-    }
-
-    VulkanDeviceQueues::Params device_params(
-        {{VK_KHR_MAINTENANCE1_EXTENSION_NAME, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
-          VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME},
-         {
-             VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
-         },
-         vk::SurfaceKHR()});
-#ifdef VK_USE_PLATFORM_FUCHSIA
-    instance_params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
-    device_params.required_extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
-    device_params.required_extension_names.insert(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
-    device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
-    device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
-#endif
-    vulkan_instance_ = VulkanInstance::New(instance_params);
-    vulkan_device_ = VulkanDeviceQueues::New(vulkan_instance_, device_params);
+    vulkan_instance_ = VulkanInstance::New(GetDefaultVulkanInstanceParams());
+    vulkan_device_ =
+        VulkanDeviceQueues::New(vulkan_instance_, GetDefaultVulkanDeviceQueuesParams(false));
     hack_filesystem_ = HackFilesystem::New();
 #if !ESCHER_USE_RUNTIME_GLSL
     LoadShadersFromDisk(hack_filesystem_);

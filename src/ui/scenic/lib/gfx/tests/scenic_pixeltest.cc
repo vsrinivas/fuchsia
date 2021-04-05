@@ -1414,8 +1414,10 @@ INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, ParameterizedYuvPixelTest,
 
 // We cannot capture protected content, so we expect a black screenshot instead.
 TEST_F(ScenicPixelTest, ProtectedImage) {
-  auto escher_ptr = escher::test::GetEscher()->GetWeakPtr();
-  if (!escher_ptr->device()->caps().allow_protected_memory) {
+  // Check if we can create a test escher instance with protected memory usage. We are not going to
+  // use this escher instance for the test, but we expect Scenic to create a vulkan device with
+  // protected memory enabled if it is available.
+  if (!escher::test::CreateEscherWithProtectedMemoryEnabled()) {
     FX_LOGS(WARNING) << "Protected memory not supported. Test skipped.";
     GTEST_SKIP();
   }
@@ -1454,7 +1456,7 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   // WaitForBuffersAllocated() hangs if AddBufferCollection() isn't finished successfully.
   RunLoopUntilIdle();
 
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  fuchsia::sysmem::BufferCollectionPtr buffer_collection;
   zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(local_token),
                                                               buffer_collection.NewRequest());
   EXPECT_EQ(status, ZX_OK);
@@ -1471,22 +1473,37 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0] =
       fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
-  status = buffer_collection->SetConstraints(true, constraints);
-  EXPECT_EQ(status, ZX_OK);
+
+  // Wait for allocation.
+  // TODO(fxbug.dev/60837): Currently in order to make WaitForBuffersAllocated() see a response
+  // before the BufferCollections channel is closed, we have to call WaitForBuffersAllocated()
+  // asynchronously before SetConstraints(). We should change it back to sync pointers after this
+  // bug is fixed.
+  bool allocation_processed = false;
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
-  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  buffer_collection->WaitForBuffersAllocated(
+      [&allocation_processed, &allocation_status, &buffer_collection_info](
+          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
+        allocation_processed = true;
+        allocation_status = status;
+        buffer_collection_info = std::move(info);
+      });
+  RunLoopUntilIdle();
+  buffer_collection->SetConstraints(true, constraints);
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&allocation_processed]() { return allocation_processed; },
+                                        zx::sec(1)));
   if (allocation_status != ZX_OK) {
     // Protected memory might not be available in some devices which causes allocation failure.
     GTEST_SKIP() << "Protected memory cannot be allocated";
   }
-  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(allocation_status, ZX_OK);
   EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_secure);
   EXPECT_EQ(
       0u,
       fsl::GetObjectName(buffer_collection_info.buffers[0].vmo.get()).find("ImagePipe2Surface"));
-  status = buffer_collection->Close();
-  EXPECT_EQ(status, ZX_OK);
+  buffer_collection->Close();
+
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = 1;
   image_format.coded_height = 1;

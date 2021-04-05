@@ -15,27 +15,6 @@
 namespace {
 using namespace escher;
 
-// This function must be called after we set up the global EscherEnvironment, i.e. inside test body
-// functions.
-std::unique_ptr<Escher> GetEscherWithProtectedMemoryEnabled() {
-  VulkanDeviceQueues::Params device_params({{}, {}, vk::SurfaceKHR()});
-#ifdef OS_FUCHSIA
-  device_params.required_extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
-  device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
-  device_params.flags = VulkanDeviceQueues::Params::kAllowProtectedMemory;
-#endif
-  auto vulkan_instance =
-      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance();
-  auto vulkan_device = VulkanDeviceQueues::New(vulkan_instance, device_params);
-  auto hack_filesystem =
-      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetFilesystem();
-  auto escher = std::make_unique<Escher>(vulkan_device, hack_filesystem, /*gpu_allocator*/ nullptr);
-  if (!escher->allow_protected_memory()) {
-    return nullptr;
-  }
-  return escher;
-}
-
 // Encapsulates boilerplate of rendering a simple scene using PaperRenderer.
 void RenderFrameForProtectedMemoryTest(const PaperRendererPtr& renderer, const FramePtr& frame,
                                        const ImagePtr& image) {
@@ -68,13 +47,13 @@ using ProtectedMemoryTest = escher::test::TestWithVkValidationLayer;
 
 // Tests that we can create Escher with a protected Vk instance if platform supports.
 VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledEscher) {
-  auto escher = GetEscherWithProtectedMemoryEnabled();
+  auto escher = test::CreateEscherWithProtectedMemoryEnabled();
   EXPECT_TRUE(!escher || escher->allow_protected_memory());
 }
 
 // Tests that we can ask platform to provide protected enabled CommandBuffer.
 VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledCommandBuffer) {
-  auto escher = GetEscherWithProtectedMemoryEnabled();
+  auto escher = test::CreateEscherWithProtectedMemoryEnabled();
   if (!escher) {
     GTEST_SKIP();
   }
@@ -86,7 +65,7 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledCommandBuffer) {
 
 // Tests that we can create protected enabled Escher::Frame.
 VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledFrame) {
-  auto escher = GetEscherWithProtectedMemoryEnabled();
+  auto escher = test::CreateEscherWithProtectedMemoryEnabled();
   if (!escher) {
     GTEST_SKIP();
   }
@@ -100,7 +79,7 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledFrame) {
 
 // Tests that we can send draw text via paper renderer using a protected frame.
 VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledPaperRenderer) {
-  auto escher = GetEscherWithProtectedMemoryEnabled();
+  auto escher = test::CreateEscherWithProtectedMemoryEnabled();
   if (!escher) {
     GTEST_SKIP();
   }
@@ -125,7 +104,7 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledPaperRenderer) {
 // Tests that we can send draw text via paper renderer using a protected frame after a regular draw
 // call.
 VK_TEST_F(ProtectedMemoryTest, PaperRendererSwitchToProtected) {
-  auto escher = GetEscherWithProtectedMemoryEnabled();
+  auto escher = test::CreateEscherWithProtectedMemoryEnabled();
   if (!escher) {
     GTEST_SKIP();
   }

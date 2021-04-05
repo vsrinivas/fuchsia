@@ -24,6 +24,10 @@ namespace test {
 // (Generatlly this should be called before RUN_ALL_TESTS() is invoked in |run_all_unittests.cc|.)
 Escher* GetEscher();
 
+// This function must be called after we set up the global EscherEnvironment, i.e. inside test body
+// functions.
+std::unique_ptr<Escher> CreateEscherWithProtectedMemoryEnabled();
+
 // Googletest Environment containing Vulkan instance, Vulkan device and Escher instance.
 // This class will be created before RUN_ALL_TESTS() and be recycled automatically after all test
 // cases finish running.
