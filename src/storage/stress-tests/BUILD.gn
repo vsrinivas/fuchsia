@@ -72,7 +72,10 @@ fuchsia_test_package("storage-stress-tests") {
     ":minfs-crash",
     ":minfs-no-crash",
   ]
-  deps = [ "//src/storage/bin/blobfs" ]
+  deps = [
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+  ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
