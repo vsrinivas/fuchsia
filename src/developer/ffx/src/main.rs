@@ -5,6 +5,7 @@
 use {
     analytics::{add_crash_event, add_launch_event, get_notice},
     anyhow::{anyhow, Context, Result},
+    async_once::Once,
     ffx_core::{ffx_bail, ffx_error, init_metrics_svc, FfxError},
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, Ffx},
@@ -13,14 +14,12 @@ use {
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
-    futures::lock::Mutex,
     futures::{Future, FutureExt},
     lazy_static::lazy_static,
     ring::digest::{Context as ShaContext, Digest, SHA256},
     std::error::Error,
     std::fs::File,
     std::io::{BufReader, Read},
-    std::sync::Arc,
     std::time::{Duration, Instant},
 };
 
@@ -78,13 +77,16 @@ This command cannot be run against a target in the Fastboot state. Try
 rebooting the device or flashing the device into a running state.";
 
 lazy_static! {
-    static ref SPAWN_GUARD: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+    static ref DAEMON_ONCE: Once<DaemonProxy> = Once::new();
 }
 
 // This could get called multiple times by the plugin system via multiple threads - so make sure
 // the spawning only happens one thread at a time.
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
-    let _guard = SPAWN_GUARD.lock().await;
+    DAEMON_ONCE.get_or_try_init(init_daemon_proxy()).await.map(|proxy| proxy.clone())
+}
+
+async fn init_daemon_proxy() -> Result<DaemonProxy> {
     if !is_daemon_running().await {
         #[cfg(not(test))]
         ffx_daemon::spawn_daemon().await?;
@@ -381,6 +383,7 @@ async fn main() {
 mod test {
     use super::*;
     use ascendd;
+    use async_lock::Mutex;
     use async_net::unix::UnixListener;
     use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
     use fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream};
@@ -390,6 +393,7 @@ mod test {
     use futures::TryStreamExt;
     use hoist::OvernetInstance;
     use std::path::PathBuf;
+    use std::sync::Arc;
     use tempfile;
 
     fn setup_ascendd_temp() -> tempfile::TempPath {
@@ -400,7 +404,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_daemon_proxy_link_lost() {
+    async fn test_init_daemon_proxy_link_lost() {
         let sockpath = setup_ascendd_temp();
 
         // Start a listener that accepts and immediately closes the socket..
@@ -411,20 +415,20 @@ mod test {
             }
         });
 
-        let res = get_daemon_proxy().await;
+        let res = init_daemon_proxy().await;
         let str = format!("{}", res.err().unwrap());
         assert!(str.contains("link lost"));
         assert!(str.contains("ffx doctor"));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_daemon_proxy_timeout_no_connection() {
+    async fn test_init_daemon_proxy_timeout_no_connection() {
         let sockpath = setup_ascendd_temp();
 
         // Start a listener that never accepts the socket.
         let _listener = UnixListener::bind(sockpath.to_owned()).unwrap();
 
-        let res = get_daemon_proxy().await;
+        let res = init_daemon_proxy().await;
         let str = format!("{}", res.err().unwrap());
         assert!(str.contains("Timed out"));
         assert!(str.contains("ffx doctor"));
@@ -494,7 +498,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_daemon_proxy_hash_matches() {
+    async fn test_init_daemon_proxy_hash_matches() {
         let sockpath = setup_ascendd_temp();
 
         let sockpath1 = sockpath.to_owned();
@@ -507,13 +511,13 @@ mod test {
             fuchsia_async::Timer::new(Duration::from_millis(20)).await
         }
 
-        let proxy = get_daemon_proxy().await.unwrap();
+        let proxy = init_daemon_proxy().await.unwrap();
         proxy.quit().await.unwrap();
         daemons_task.await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_daemon_proxy_upgrade() {
+    async fn test_init_daemon_proxy_upgrade() {
         let sockpath = setup_ascendd_temp();
 
         // Spawn two daemons, the first out of date, the second is up to date.
@@ -529,7 +533,7 @@ mod test {
             fuchsia_async::Timer::new(Duration::from_millis(20)).await
         }
 
-        let proxy = get_daemon_proxy().await.unwrap();
+        let proxy = init_daemon_proxy().await.unwrap();
         proxy.quit().await.unwrap();
         daemons_task.await;
     }
