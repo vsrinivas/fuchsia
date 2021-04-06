@@ -8,7 +8,7 @@ The projects listed in this roadmap are subject to change and could be modified
 based on a change in priorities.
 
 While these lists of projects are not exhaustive, they provide high-level overviews
-of active projects that inform the way that we’re currently thinking about
+of active projects that inform the way that we're currently thinking about
 Fuchsia.
 
 **2021**

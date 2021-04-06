@@ -1,8 +1,8 @@
 # Defining a Stable Driver Runtime
 
-Project lead: surajmalhotra@google.com
-Status: Approved
-Area(s): Devices
+ * Project lead: surajmalhotra@google.com
+ * Status: Approved
+ * Area(s): Devices
 
 ## Problem statement
 
@@ -86,7 +86,7 @@ milestones:
 We will likely need to work with the FIDL team to allow LLCPP bindings to be
 abstracted away from zircon channels and ports to allow us to repurpose the
 bindings mostly as-is on a new transport with minimal user visible differences.
-We don’t anticipate any changes necessary to the frontend IDL, but changes to
+We don't anticipate any changes necessary to the frontend IDL, but changes to
 FIDL IR may be necessary.
 
 Additionally, migrating 300+ drivers will take a lot of effort and time, and

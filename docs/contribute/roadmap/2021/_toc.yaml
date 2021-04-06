@@ -6,5 +6,15 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Decentralized Product Integration"
+  path: /docs/contribute/roadmap/2021/decentralized_product_integration.md
 - title: "Defining a Stable Driver Runtime"
   path: /docs/contribute/roadmap/2021/stable_driver_runtime.md
+- title: "Flatland 2D Composition in Scenic"
+  path: /docs/contribute/roadmap/2021/flatland.md
+- title: "Flutter-on-Fuchsia Velocity"
+  path: /docs/contribute/roadmap/2021/flutter_on_fuchsia_velocity.md
+- title: "Scaling Product Assembly and Configuration"
+  path: /docs/contribute/roadmap/2021/product_assembly.md
+- title: "Structured Configuration"
+  path: /docs/contribute/roadmap/2021/structured_configuration.md

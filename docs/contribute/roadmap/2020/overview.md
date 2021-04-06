@@ -46,7 +46,7 @@ improve network performance.
 
 ## Components v2
 
-[Components v2](/docs/glossary.md#components-v2) is Fuchsia’s component
+[Components v2](/docs/glossary.md#components-v2) is Fuchsia's component
 architecture that replaces [Components v1](/docs/glossary.md#components-v1).
 
 The following projects are currently underway:
@@ -54,7 +54,7 @@ The following projects are currently underway:
 ### Continuing migration to Components v2
 
 The goal of the [Component Framework](/docs/glossary.md#component-framework) is
-to define Fuchsia’s units of software execution as components, which are
+to define Fuchsia's units of software execution as components, which are
 singular abstractions throughout the Fuchsia system.
 
 The Component Framework team is currently focusing on migrations in the
