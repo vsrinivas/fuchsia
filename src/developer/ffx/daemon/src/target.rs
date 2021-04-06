@@ -21,6 +21,7 @@ use {
     ffx_daemon_core::task::{SingleFlight, TaskSnapshot},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_bridge::TargetState as FidlTargetState,
     fidl_fuchsia_developer_remotecontrol::{
         IdentifyHostError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
     },
@@ -702,6 +703,10 @@ impl Target {
         self.inner.serial.read().await.clone()
     }
 
+    pub async fn state(&self) -> TargetState {
+        self.inner.state.lock().await.clone()
+    }
+
     pub async fn get_connection_state(&self) -> ConnectionState {
         let state = self.inner.state.lock().await;
         state.connection_state.clone()
@@ -986,12 +991,13 @@ impl EventSynthesizer<DaemonEvent> for Target {
 #[async_trait]
 impl ToFidlTarget for Target {
     async fn to_fidl_target(self) -> bridge::Target {
-        let (addrs, last_response, rcs_state, serial_number, build_config) = futures::join!(
+        let (addrs, last_response, rcs_state, serial_number, build_config, state) = futures::join!(
             self.addrs(),
             self.last_response(),
             self.rcs_state(),
             self.serial(),
-            self.build_config()
+            self.build_config(),
+            self.state(),
         );
 
         let (product_config, board_config) = build_config
@@ -1018,10 +1024,16 @@ impl ToFidlTarget for Target {
             product_config,
             board_config,
             rcs_state: Some(rcs_state),
+            target_state: Some(match state.connection_state {
+                ConnectionState::Disconnected => FidlTargetState::Disconnected,
+                ConnectionState::Manual | ConnectionState::Mdns(_) | ConnectionState::Rcs(_) => {
+                    FidlTargetState::Product
+                }
+                ConnectionState::Fastboot(_) => FidlTargetState::Fastboot,
+            }),
+            ssh_address: self.ssh_address_info().await,
             // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
-            target_state: Some(bridge::TargetState::Unknown),
-            ssh_address: self.ssh_address_info().await,
             ..bridge::Target::EMPTY
         }
     }

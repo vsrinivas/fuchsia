@@ -306,7 +306,12 @@ impl StringifiedTarget {
     }
 
     fn from_target_state(t: bridge::TargetState) -> String {
-        format!("{:?}", t)
+        match t {
+            bridge::TargetState::Unknown => "Unknown".to_string(),
+            bridge::TargetState::Disconnected => "Disconnected".to_string(),
+            bridge::TargetState::Product => "Product".to_string(),
+            bridge::TargetState::Fastboot => "Fastboot".to_string(),
+        }
     }
 }
 
@@ -699,5 +704,33 @@ mod test {
 
         let addrs = Vec::<TargetAddr>::new();
         assert_eq!((&addrs).to_ssh_addr(), None);
+    }
+
+    #[test]
+    fn test_stringified_product_state() {
+        let mut t = make_valid_target();
+        t.target_state = Some(bridge::TargetState::Product);
+        assert!(StringifiedTarget::try_from(t).is_ok());
+    }
+
+    #[test]
+    fn test_stringified_fastboot_state() {
+        let mut t = make_valid_target();
+        t.target_state = Some(bridge::TargetState::Fastboot);
+        assert!(StringifiedTarget::try_from(t).is_ok());
+    }
+
+    #[test]
+    fn test_stringified_unknown_state() {
+        let mut t = make_valid_target();
+        t.target_state = Some(bridge::TargetState::Unknown);
+        assert!(StringifiedTarget::try_from(t).is_ok());
+    }
+
+    #[test]
+    fn test_stringified_disconnected_state() {
+        let mut t = make_valid_target();
+        t.target_state = Some(bridge::TargetState::Disconnected);
+        assert!(StringifiedTarget::try_from(t).is_ok());
     }
 }

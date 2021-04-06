@@ -27,6 +27,9 @@ union TargetAddrInfo {
 // TODO(awdavies): Add more target states once they're more well defined.
 enum TargetState {
     UNKNOWN = 1;
+    DISCONNECTED = 2;
+    PRODUCT = 3;
+    FASTBOOT = 4;
 };
 
 // TODO(awdavies): Add more target types. Hardware? Product state?
