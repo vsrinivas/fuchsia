@@ -67,7 +67,7 @@ are in the entire package. The names double as paths for packaging and paths
 for presentation at runtime. Associated with each path is a hash of the
 content using the merkle root strategy documented as below.
 
-[Merkle Root](/docs/concepts/storage/merkleroot)
+[Merkle Root](/docs/concepts/packages/merkleroot.md)
 
 
 ## Conventions for Fuchsia Packages
