@@ -12,7 +12,7 @@
 #include <ddktl/metadata/audio.h>
 #include <soc/aml-common/aml-audio.h>
 #include <soc/aml-meson/sm1-clk.h>
-#include <soc/aml-s905d2/s905d2-gpio.h>
+#include <soc/aml-s905d3/s905d3-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 #include <ti/ti-audio.h>
 
@@ -166,18 +166,19 @@ zx_status_t Nelson::AudioInit() {
   };
 
   // TDM pin assignments.
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(1), S905D2_GPIOA_1_TDMB_SCLK_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(2), S905D2_GPIOA_2_TDMB_FS_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(3), S905D2_GPIOA_3_TDMB_D0_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(6), S905D2_GPIOA_6_TDMB_DIN3_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(1), S905D3_GPIOA_1_TDMB_SCLK_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(2), S905D3_GPIOA_2_TDMB_FS_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(3), S905D3_GPIOA_3_TDMB_D0_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(6), S905D3_GPIOA_6_TDMB_DIN3_FN);
   constexpr uint64_t ua = 2500;
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(1), ua, nullptr);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(2), ua, nullptr);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(3), ua, nullptr);
+  gpio_impl_.SetDriveStrength(S905D3_GPIOA(1), ua, nullptr);
+  gpio_impl_.SetDriveStrength(S905D3_GPIOA(2), ua, nullptr);
+  gpio_impl_.SetDriveStrength(S905D3_GPIOA(3), ua, nullptr);
 
   // PDM pin assignments
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(7), S905D2_GPIOA_7_PDM_DCLK_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(8), S905D2_GPIOA_8_PDM_DIN0_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(7), S905D3_GPIOA_7_PDM_DCLK_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(8), S905D3_GPIOA_8_PDM_DIN0_FN);  // First 2 MICs.
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(9), S905D3_GPIOA_9_PDM_DIN1_FN);  // Third MIC.
 
   // Board info.
   pdev_board_info_t board_info = {};
@@ -228,8 +229,8 @@ zx_status_t Nelson::AudioInit() {
 
   if (board_info.board_revision < BOARD_REV_P2) {
     // CODEC pin assignments.
-    gpio_impl_.SetAltFunction(S905D2_GPIOA(5), 0);  // GPIO
-    gpio_impl_.ConfigOut(S905D2_GPIOA(5), 0);
+    gpio_impl_.SetAltFunction(S905D3_GPIOA(5), 0);  // GPIO
+    gpio_impl_.ConfigOut(S905D3_GPIOA(5), 0);
 
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
@@ -253,8 +254,8 @@ zx_status_t Nelson::AudioInit() {
     }
   } else {
     // CODEC pin assignments.
-    gpio_impl_.SetAltFunction(S905D2_GPIOA(0), 0);  // BOOST_EN_SOC as GPIO.
-    gpio_impl_.ConfigOut(S905D2_GPIOA(0), 1);       // BOOST_EN_SOC to high.
+    gpio_impl_.SetAltFunction(S905D3_GPIOA(0), 0);  // BOOST_EN_SOC as GPIO.
+    gpio_impl_.ConfigOut(S905D3_GPIOA(0), 1);       // BOOST_EN_SOC to high.
     // From the TAS5805m codec reference manual:
     // "9.5.3.1 Startup Procedures
     // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
@@ -267,7 +268,7 @@ zx_status_t Nelson::AudioInit() {
     // state.
     // 6. The device is now in normal operation."
     // Step 3 PDN setup and 5ms delay is executed below.
-    gpio_impl_.ConfigOut(S905D2_GPIOA(5), 1);  // Set PDN_N to high.
+    gpio_impl_.ConfigOut(S905D3_GPIOA(5), 1);  // Set PDN_N to high.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     // I2S clocks are configured by the controller and the rest of the initialization is done
     // in the codec itself.
@@ -322,7 +323,7 @@ zx_status_t Nelson::AudioInit() {
     metadata::AmlPdmConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
     snprintf(metadata.product_name, sizeof(metadata.product_name), "nelson");
-    metadata.number_of_channels = 2;
+    metadata.number_of_channels = 3;
     metadata.version = metadata::AmlVersion::kS905D3G;
     metadata.sysClockDivFactor = 4;
     metadata.dClockDivFactor = 250;
