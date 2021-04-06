@@ -6,9 +6,8 @@ use anyhow;
 use json5format::*;
 use serde_json::Value;
 use serde_json5;
-use std::fs::read_to_string;
-#[allow(unused_imports)]
-use std::path::{Path, PathBuf};
+use std::fs::File;
+use std::path::PathBuf;
 
 /// Processes `json5_string`, a string representing a JSON5 object, and returns
 /// a tuple of two elements where the first element is a `ParsedDocument`
@@ -28,25 +27,37 @@ pub(crate) fn read_json5_fromfile(
     file: &PathBuf,
 ) -> Result<(ParsedDocument, String), anyhow::Error> {
     let path = file.as_path();
-    let object = read_to_string(path)?;
-    Ok(read_json5(object)?)
+
+    Ok(read_json5_from_input(&mut File::open(path)?)?)
 }
+
+/// Calls `read_json5` on the data from an object with a `Read` implementation.
+/// Returns a tuple representing the same data returned by `read_json5`.
+pub(crate) fn read_json5_from_input(
+    input: &mut (impl std::io::Read + Sized),
+) -> Result<(ParsedDocument, String), anyhow::Error> {
+    let mut buffer = String::new();
+    input.read_to_string(&mut buffer)?;
+    Ok(read_json5(buffer)?)
+}
+
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
     use super::*;
     use std::fs::OpenOptions;
     use std::io::prelude::*;
+    use std::io::Cursor;
     use std::path::PathBuf;
 
-    #[test]
-    #[ignore]
     /*
     The following test fails with the current implementation.
     Serializing the deserialized JSON using serde_json and serde_json5 sorts
     the data alphabetically at object level. Ideally, this would not happen,
     but it will likely not pose an issue for later additions to the tool.
     */
+    #[test]
+    #[ignore]
     fn serialized_outputs_equivalent_1() {
         let simple_json5 = String::from(
             r##"
@@ -71,6 +82,7 @@ mod tests {
             format.to_string(&parsed_json).unwrap()
         );
     }
+
     #[test]
     fn serialized_outputs_equivalent_2() {
         let simple_json5 = String::from(
@@ -404,5 +416,93 @@ baz: 5,
             format.to_string(&parsed_json5).unwrap(),
             format.to_string(&ParsedDocument::from_string(json5_string, None).unwrap()).unwrap()
         )
+    }
+
+    #[test]
+    fn read_json5_from_input_1() {
+        let json5_string = String::from(
+            r##"
+    {
+        // Foo
+        hello: 'world',
+
+        // Bar
+        yoinks: 'scoob',
+    }
+    "##,
+        );
+        let mut mock_stdin = Cursor::new((&json5_string).as_bytes());
+        let result_from_input = read_json5_from_input(&mut mock_stdin).unwrap();
+        let result_from_string = read_json5(json5_string).unwrap();
+
+        let format = Json5Format::new().unwrap();
+        assert_eq!(
+            format.to_string(&result_from_input.0).unwrap(),
+            format.to_string(&result_from_string.0).unwrap()
+        );
+
+        assert_eq!(&result_from_input.1, &result_from_string.1);
+    }
+
+    #[test]
+    fn read_json5_from_input_2() {
+        let json5_string = String::from(
+            r##"{
+    "name": {
+        "last": "Smith",
+        "first": "John",
+        "middle": "Jacob"
+    },
+    "children": [
+        "Buffy",
+        "Biff",
+        "Balto"
+    ],
+    // Consider adding a note field to the `other` contact option
+    "contact_options": [
+        {
+            "home": {
+                "email": "jj@notreallygmail.com",   // This was the original user id.
+                                                    // Now user id's are hash values.
+                "phone": "212-555-4321"
+            },
+            "other": {
+                "email": "volunteering@serviceprojectsrus.org"
+            },
+            "work": {
+                "phone": "212-555-1234",
+                "email": "john.j.smith@worksforme.gov"
+            }
+        }
+    ],
+    "address": {
+        "city": "Anytown",
+        "country": "USA",
+        "state": "New York",
+        "street": "101 Main Street"
+        /* Update schema to support multiple addresses:
+           "work": {
+               "city": "Anytown",
+               "country": "USA",
+               "state": "New York",
+               "street": "101 Main Street"
+           }
+        */
+    }
+}
+"##,
+        );
+
+        let mut mock_stdin = Cursor::new((&json5_string).as_bytes());
+        let result_from_input = read_json5_from_input(&mut mock_stdin).unwrap();
+        let result_from_string = read_json5(json5_string).unwrap();
+
+        let format = Json5Format::new().unwrap();
+        assert_eq!(
+            format.to_string(&result_from_input.0).unwrap(),
+            format.to_string(&result_from_string.0).unwrap()
+        );
+
+        assert_eq!(&result_from_input.1, &result_from_string.1);
     }
 }

@@ -147,10 +147,10 @@ async fn main() -> Result<(), anyhow::Error> {
     let args = Opt::from_args();
 
     if args.files.len() == 0 {
-        // TODO(73269) Add support for stdin
-        return Err(anyhow::anyhow!(
-            "jq5 currently only supports reading input from files, not stdin."
-        ));
+        let (parsed_json5, json_string) = reader::read_json5_from_input(&mut io::stdin())?;
+
+        let out = run_jq5(&args.filter, parsed_json5, json_string, &args.jq_path).await?;
+        io::stdout().write_all(out.as_bytes())?;
     } else {
         let outs = run(args.filter, args.files, &args.jq_path).await?;
 

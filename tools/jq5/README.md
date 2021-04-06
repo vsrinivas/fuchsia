@@ -4,7 +4,9 @@ most comments, especially if the structure of the output resembles that of the i
 of large-scale changes of `.cml` files.
 
 ## Invocation
-`jq5` can currently be invoked with `fx jq5 <my_filter> <file1> <file2> ... <filen>`, where `<my_filter>` is a valid `jq` filter and the files contain valid json5 objects and no other text. Support for stdin is forthcoming.
+`jq5` can currently be invoked with `fx jq5 <my_filter> <file1> <file2> ... <filen>`, where `<my_filter>` is a valid `jq` filter and the files contain valid json5 objects and no other text.
+
+The tool also has support for stdin. For example, one might use it by calling `cat <my_file> | fx jq5 <my_filter>`. They may also simply call `fx jq5 <my_filter>` and type the json5 object in manually. Unfortunately, unlike `jq`, `jq5` does not parse while receiving input, so errors will only be realized after stdin is closed.
 
 ## The Problem:
 `jq` offers rich features for manipulating the structure of JSON files, but unfortunately does not support the json5 format. In some cases it may be acceptable to translate the json5 objects in question to JSON before feeding them to `jq`. Such an approach would preserve all the actual data, but any comments would be lost.
