@@ -815,10 +815,6 @@
     ],
     environments: [
         // Components that simply need access to universe-resolver can use this environment.
-        //
-        // TODO(fxbug.dev/71657): universe-resolver cannot yet be included on the core product,
-        // so components should not use this environment if they need to function on the core
-        // product or anything derived from core that does not explicitly include universe-resolver.
         {
             name: "universe-resolver-env",
             extends: "realm",
