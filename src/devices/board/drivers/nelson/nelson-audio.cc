@@ -199,11 +199,14 @@ zx_status_t Nelson::AudioInit() {
   metadata.bus = metadata::AmlBus::TDM_B;
   metadata.version = metadata::AmlVersion::kS905D3G;
   metadata.dai.type = metadata::DaiType::I2s;
+  metadata.ring_buffer.number_of_channels = 1;
+
+  // Get the one ring buffer channel to output in the *left* I2S slot.
+  metadata.swaps = 0x10;
+  metadata.lanes_enable_mask[0] = 2;
+
   metadata.codecs.number_of_codecs = 1;
   metadata.codecs.types[0] = metadata::CodecType::Tas58xx;
-  metadata.ring_buffer.number_of_channels = 2;
-  metadata.swaps = 0x10;
-  metadata.lanes_enable_mask[0] = 3;
   metadata.codecs.channels_to_use_bitmask[0] = 3;
   pbus_metadata_t tdm_metadata[] = {
       {
