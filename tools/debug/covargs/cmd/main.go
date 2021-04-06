@@ -290,7 +290,24 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 					return
 				}
 				if isInstrumented(file.String()) {
-					files <- file
+					// Run llvm-cov with the individual module to make sure it's valid.
+					args := []string{
+						"show",
+						"-instr-profile", mergedFile,
+						"-summary-only",
+					}
+					for _, remapping := range pathRemapping {
+						args = append(args, "-path-equivalence", remapping)
+					}
+					args = append(args, file.String())
+					showCmd := Action{Path: llvmCov, Args: args}
+					data, err := showCmd.Run(ctx)
+					if err != nil {
+						logger.Warningf(ctx, "module %s returned err %v:\n%s", module, err, string(data))
+						file.Close()
+					} else {
+						files <- file
+					}
 				} else {
 					file.Close()
 				}
