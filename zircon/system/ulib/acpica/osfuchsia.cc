@@ -423,8 +423,9 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
   // Caution: PhysicalAddress might not be page-aligned, Length might not
   // be a page multiple.
 
-  ACPI_PHYSICAL_ADDRESS aligned_address = PhysicalAddress & ~(PAGE_SIZE - 1);
-  ACPI_PHYSICAL_ADDRESS end = (PhysicalAddress + Length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+  const size_t kPageSize = zx_system_get_page_size();
+  ACPI_PHYSICAL_ADDRESS aligned_address = PhysicalAddress & ~(kPageSize - 1);
+  ACPI_PHYSICAL_ADDRESS end = (PhysicalAddress + Length + kPageSize - 1) & ~(kPageSize - 1);
 
   uintptr_t vaddr;
   size_t length = end - aligned_address;
