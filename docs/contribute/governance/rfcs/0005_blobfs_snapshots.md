@@ -45,12 +45,12 @@ Journal           |
 Data              |
 
 To support the proposal here, we could allow different _slice types_ within
-FVM &nbsp;{#back-1}[\[1\]](#footnote-1). The types would apply to _extents_ of slices:
+FVM[^1]. The types would apply to _extents_ of slices:
 
 Type                       | Description                                                                                                                                           |
 -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 A/B slices  | This would be an extent of slices that have an alternate copy.                                                                                                       |
-A/B bitmap &nbsp;{#back-2}[\[2\]](#footnote-2) | This would be an extent of slices that have an alternate copy of a bitmap that represents allocations in a shared data extent. |
+A/B bitmap[^2]| This would be an extent of slices that have an alternate copy of a bitmap that represents allocations in a shared data extent.                                    |
 Shared data | This would be an extent of slices whose allocation is managed by an A/B bitmap extent.                                                                               |
 Shared      | This would be an extent that is shared between the two partitions, but only one of the partitions could write to the region at a time.                               |
 
@@ -63,7 +63,7 @@ Region            | Type
 Superblock        | A/B slices
 Allocation bitmap | A/B bitmap
 Inodes            | A/B slices
-Journal           | Shared &nbsp;{#back-3}[\[3\]](#footnote-3)
+Journal           | Shared[^3]
 Data              | Shared data
 
 Most of the time, only one of the partitions would be active, and the system
@@ -93,7 +93,7 @@ alternate A/B extents would appear at the same offset but with the top bit set
 The following diagram hopefully illustrates how each of the partitions would
 appear:
 
-![Partition Arrangement](resources/0005_blobfs_snapshots/fig_1.png)
+![Partition Arrangement](resources/0005_blobfs_snapshots/fig_1.png){:#fig-1}
 
 **Figure 1: Partition arrangement.**
 
@@ -113,13 +113,11 @@ The upgrade flow must be modified to facilitate the snapshotting interactions.
 The current flow is shown in [Figure 2](#fig-2), and the proposed alternative in
 [Figure 3](#fig-3). New APIs and interactions are colored.
 
-{#fig-2}
-![Current OTA](resources/0005_blobfs_snapshots/fig_2.png)
+![Current OTA](resources/0005_blobfs_snapshots/fig_2.png){:#fig-2}
 
 **Figure 2: Current upgrade implementation (high-level)**
 
-{#fig-3}
-![Proposed OTA](resources/0005_blobfs_snapshots/fig_3.png)
+![Proposed OTA](resources/0005_blobfs_snapshots/fig_3.png){:#fig-3}
 
 **Figure 3: Proposed upgrade implementation (high-level)**
 
@@ -129,8 +127,7 @@ Several new FVM operations must be implemented and integrated into the Software
 Delivery (SWD) stack. These APIs are used to drive a state machine ([Figure
 4](#fig-4)), which ultimately switches the system between partitions.
 
-{#fig-4}
-![Snapshot state machine](resources/0005_blobfs_snapshots/fig_4.png)
+![Snapshot state machine](resources/0005_blobfs_snapshots/fig_4.png){:#fig-4}
 
 **Figure 4: State machine for snapshotting.**
 
@@ -320,7 +317,7 @@ With this structure, the extents for Blobfs would be:
 
 Some state is required, to indicates which of the two partitions is currently
 writable, whether both partitions are active (or just one) and which partition
-should be considered bootable &nbsp;{#back-4}[\[4\]](#footnote-4).
+should be considered bootable[^4].
 
 No changes would be required to slice allocation, except that slices at
 alternate offsets would need to be allocated.
@@ -484,24 +481,24 @@ changed.
 
 ---
 
-{#footnote-1}[1]: Note that these additional slice types do not necessarily need
+[^1]: Note that these additional slice types do not necessarily need
     to be added to the FVM format; there are a number of ways of expressing this
     metadata and the precise format is left as an implementation
-    detail. [&#x21A9;&#xFE0E;︎](#back-1)
+    detail.
 
-{#footnote-2}[2]: We could, as a possible simplification, leave out the A/B
+[^2]: We could, as a possible simplification, leave out the A/B
     bitmap and shared data types and trust that Blobfs behaves
     correctly. However, including this within FVM gives us an extra level of
     protection against bugs in the Blobfs implementation. There is also the
     option of leaving room and adding this at a later
-    stage. [&#x21A9;&#xFE0E;︎](#back-2)
+    stage.
 
-{#footnote-3}[3]: The journal’s region can be shared. At the time at which the
+[^3]: The journal’s region can be shared. At the time at which the
     second partition is activated, the journal can be flushed at which time it
     is no longer needed for the locked, read-only partition; it is only needed
     to prevent inconsistencies on the writable
-    partition. [&#x21A9;&#xFE0E;︎](#back-3)
+    partition.
 
-{#footnote-4}[4]: It is possible this bootable state could be stored elsewhere
+[^4]: It is possible this bootable state could be stored elsewhere
     and passed to FVM at bind time, but it’s likely easier to just store this
-    state within FVM. [&#x21A9;&#xFE0E;︎](#back-4)
+    state within FVM.

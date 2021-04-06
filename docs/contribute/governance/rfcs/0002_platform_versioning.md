@@ -103,10 +103,9 @@ library. The API defines that set of functions, which means two IDK releases
 should expose the same set of functions in the `fit` library at the same API
 level.
 
-Syntactically, a Fuchsia *API level* is an unsigned, 64-bit integer.
-&nbsp;{#back-1}[\[1\]](#footnote-1) As the platform evolves (see *Evolution*
-below), API levels are assigned in increasing order and are intended to be
-understood by human beings, including end-developers.
+Syntactically, a Fuchsia *API level* is an unsigned, 64-bit integer[^1]. 
+As the platform evolves (see *Evolution* below), API levels are assigned in
+increasing order and are intended to be understood by human beings, including end-developers.
 
 #### ABI revision
 
@@ -465,9 +464,8 @@ operating systems from older APIs to newer APIs.
 
 ---
 
-{#footnote-1}[1]: [RFC-0083: FIDL Versioning][rfc-0083] amends this, restricting
+[^1]: [RFC-0083: FIDL Versioning][rfc-0083] amends this, restricting
     API levels to 63 bits in order to reserve the high bit for other uses.
-    [&#x21A9;&#xFE0E;︎](#back-1)
 
 [Fuchsia System Interface]: /docs/concepts/system/abi/system.md
 [Fuchsia IDK]: /docs/development/idk/README.md

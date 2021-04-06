@@ -34,9 +34,9 @@ arise when attempting to bump the application's pinned API level from 12 to 13.
 But these can be fixed asynchronously, without reverting the original change in
 Fuchsia and grinding the project to a halt.
 
-{#fig-1}
+
 ![API evolution diagram with text description above]
-(resources/0083_fidl_versioning/fig_1.png)
+(resources/0083_fidl_versioning/fig_1.png){:#fig-1}
 
 **Figure 1: API evolution before (left) and after (right) FIDL Versioning**
 
@@ -152,8 +152,8 @@ Fuchsia Platform. In this case, all libraries are versioned with respect to the
 
 ### Syntax
 
-An _availability attribute_ has the following form, inspired by [Swift's
-`available` attribute][swift-attr]: &nbsp;{#back-1}[\[1\]](#footnote-1)
+An _availability attribute_ has the following form, inspired by[^1] [Swift's
+`available` attribute][swift-attr]:
 
     @available(added=<V>, deprecated=<V>, removed=<V>)
 
@@ -718,8 +718,8 @@ i.e. without taking action to migrate.
 ---
 
 <!-- TODO(fxbug.dev/68792): Change "RFC:" to "RFC-NNNN:" once accepted. -->
-{#footnote-1}[1]: This document uses the syntax introduced by [RFC: New
-    FIDL Attributes Syntax][rfc-NNNN]. [&#x21A9;&#xFE0E;︎](#back-1)
+[^1]: This document uses the syntax introduced by [RFC: New
+    FIDL Attributes Syntax][rfc-NNNN].
 
 <!-- xrefs -->
 [rfc-0002]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
