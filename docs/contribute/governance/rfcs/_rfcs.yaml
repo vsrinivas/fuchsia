@@ -374,7 +374,7 @@
   area: ['Zircon']
   issue: ['65726']
   gerrit_change_id: ['495844']
-  status: ''
+  status: 'Accepted'
   reviewers: ['cpu@google.com', 'johngro@google.com', 'satsukiu@google.com']
   submitted: '2021-03-04'
   reviewed: '2021-03-18'
@@ -439,7 +439,7 @@
   area: ['PosixCompat']
   issue: ['70225']
   gerrit_change_id: ['485181']
-  status: ''
+  status: 'Accepted'
   reviewers: ['shayba@google.com', 'jln@google.com', 'abdulla@google.com', 'jamesr@google.com', 'pascallouis@google.com', 'hjfreyer@google.com', 'cpu@google.com']
   submitted: '2021-02-11'
   reviewed: '2021-03-25'
@@ -465,7 +465,7 @@
   area: ['Zircon']
   issue: ['67477']
   gerrit_change_id: ['485181']
-  status: ''
+  status: 'Accepted'
   reviewers: ['eieio@google.com', 'maniscalco@google.com', 'adanis@google.com']
   submitted: '2021-03-09'
   reviewed: '2021-04-06'
