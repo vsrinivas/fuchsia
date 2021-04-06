@@ -7,9 +7,9 @@ import json
 import os
 import unittest
 
-from . import test_env
-from ..lib.factory import Factory
-from .test_case import TestCaseWithFactory
+import test_env
+from lib.factory import Factory
+from test_case import TestCaseWithFactory
 
 
 class FactoryTest(TestCaseWithFactory):

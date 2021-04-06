@@ -89,7 +89,7 @@ if (current_toolchain == default_toolchain) {
 python_host_test("gen_reference_docs_test") {
   main_source = "gen_reference_docs_test.py"
   sources = [ "gen_reference_docs.py" ]
-  libraries = [ "//third_party/pyyaml/lib3/yaml" ]
+  libraries = [ "//third_party/pyyaml:yaml" ]
 }
 
 group("tests") {

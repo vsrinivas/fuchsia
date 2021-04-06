@@ -176,11 +176,6 @@ def _run_tests(pattern, factory):
     unittest.runner.TextTestRunner(verbosity=verbosity).run(tests)
 
 
-def run_unittests(args, factory):
-    """Runs unittests under the test directory."""
-    _run_tests('*_test.py', factory)
-
-
 def run_e2e_test(args, factory):
     """Runs the end-to-end test against a (resolved) fuzzer, if specified."""
     if args.name:

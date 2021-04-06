@@ -7,9 +7,9 @@ import os
 import unittest
 import subprocess
 
-from . import test_env
-from ..lib.device import Device
-from .test_case import TestCaseWithFactory
+import test_env
+from lib.device import Device
+from test_case import TestCaseWithFactory
 
 
 class DeviceTest(TestCaseWithFactory):

@@ -11,11 +11,11 @@ import sys
 import tempfile
 import unittest
 
-from . import test_env
-from ..lib import command
-from ..lib.host import Host
-from ..lib.factory import Factory
-from .test_case import TestCaseWithIO
+import test_env
+from lib import command
+from lib.host import Host
+from lib.factory import Factory
+from test_case import TestCaseWithIO
 
 
 # Override test loading so we can run a different set of tests depending on

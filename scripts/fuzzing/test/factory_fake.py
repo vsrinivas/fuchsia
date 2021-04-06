@@ -7,11 +7,11 @@ import json
 import os
 import sys
 
-from . import test_env
-from ..lib.factory import Factory
-from .host_fake import FakeHost
-from ..lib.buildenv import BuildEnv
-from ..lib.device import Device
+import test_env
+from lib.factory import Factory
+from host_fake import FakeHost
+from lib.buildenv import BuildEnv
+from lib.device import Device
 
 
 class FakeFactory(Factory):

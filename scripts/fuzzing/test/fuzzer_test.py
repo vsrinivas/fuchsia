@@ -8,8 +8,8 @@ import os
 import re
 import unittest
 
-from . import test_env
-from .test_case import TestCaseWithFuzzer
+import test_env
+from test_case import TestCaseWithFuzzer
 
 
 class FuzzerTest(TestCaseWithFuzzer):

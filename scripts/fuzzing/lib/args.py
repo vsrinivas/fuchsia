@@ -178,15 +178,6 @@ class ArgParser(argparse.ArgumentParser):
         update_parser._add_name_argument(required=True)
         update_parser.set_defaults(command=command.update_corpus)
 
-        unittest_parser = self._add_parser('unittest')
-        unittest_parser.description = [
-            'Run the unittests for this tool. This runs all tests from all test cases. To run',
-            'a single test, use "python <path/to/test.py> <test_name>" instead.'
-        ]
-        unittest_parser._add_verbose_flag()
-        unittest_parser.help = 'Run the unittests for this tool.'
-        unittest_parser.set_defaults(command=command.run_unittests)
-
         e2e_test_parser = self._add_parser('e2etest')
         e2e_test_parser.description = [
             'Run the end-to-end test for this tool. If a fuzzer is named, it',

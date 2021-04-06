@@ -7,9 +7,9 @@ import json
 import os
 import unittest
 
-from . import test_env
-from ..lib.buildenv import BuildEnv
-from .test_case import TestCaseWithFactory
+import test_env
+from lib.buildenv import BuildEnv
+from test_case import TestCaseWithFactory
 
 
 class BuildEnvTest(TestCaseWithFactory):

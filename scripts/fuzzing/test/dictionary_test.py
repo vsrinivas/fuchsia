@@ -6,8 +6,8 @@
 import os
 import unittest
 
-from . import test_env
-from .test_case import TestCaseWithFuzzer
+import test_env
+from test_case import TestCaseWithFuzzer
 
 
 class DictionaryTest(TestCaseWithFuzzer):

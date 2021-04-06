@@ -101,6 +101,8 @@ template("python_binary") {
     script = "//build/python/package_python_binary.py"
     depfile = "${target_out_dir}/${target_name}.d"
     args = [ "--sources" ] + rebase_path(sources, root_build_dir) + [
+             "--target_name",
+             target_name,
              "--main_source",
              rebase_path(invoker.main_source, root_build_dir),
              "--main_callable",
@@ -109,8 +111,8 @@ template("python_binary") {
              rebase_path(_library_infos_json, root_build_dir),
              "--depfile",
              rebase_path(depfile, root_build_dir),
-             "--out_dir",
-             rebase_path(target_out_dir, root_build_dir),
+             "--gen_dir",
+             rebase_path(target_gen_dir, root_build_dir),
              "--output",
              rebase_path(_output, root_build_dir),
            ]

@@ -3,107 +3,111 @@
 # found in the LICENSE file.
 
 import("//build/python/python.gni")
+import("//build/python/python_binary.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
 
 # Declares a host-side python test.
 #
+# Example
+#
+# ```
+# python_host_test("my_host_test") {
+#   main_source = "my_host_test.py"
+#   sources = [
+#     "test_helpers_foo.py",
+#     "test_helpers_bar.py",
+#   ]
+#   libraries = [
+#     "//path/to/foo:lib",
+#     "//path/to/bar:lib",
+#   ]
+#   extra_args = [ "--a_very_useful_flag" ]
+# }
+# ```
+#
 # Parameters
 #
-#   * main_source
-#      - Required: The .py file that will be interpreted.
-#      - Type: path
+#  main_source (required)
+#    The .py file that will be interpreted.
+#    Type: path
 #
-#   * sources
-#     - Optional: Other files that are used in the test.
-#     - Type: list(path)
+#  sources (optional)
+#    Other files that are used in the test.
+#    Type: list(path)
+#    Default: empty list
 #
-#   * libraries
-#     - Optional: Paths to directories of libraries this test imports.
-#     - Type: list(string)
+#  libraries (optional)
+#    Paths to python_libraries this test imports.
+#    Type: list(string)
+#    Default: empty list
 #
-#   * extra_args
-#     - Optional: Additional arguments to pass to the test.
-#     - Type: list(string)
+#  test_dir (optional)
+#    Path to where the test executes.
+#    Type: string
+#    Default: "${root_out_dir}/test_data/${target_dir}"
 #
-#   * deps
-#   * visibility
-#     - Optional: Usual GN meanings.
-
+#  extra_args (optional)
+#    Additional arguments to pass to the test.
+#    Type: list(string)
+#
+#   deps
+#   visibility
 template("python_host_test") {
   assert(defined(invoker.main_source), "main_source is required")
-  _target_dir = get_label_info(target_name, "dir")
-  _out_dir = "${root_out_dir}/test_data/${_target_dir}"
 
-  # Copy directories of libraries to _out_dir so they can be imported directly.
-  _lib_deps = []
-  if (defined(invoker.libraries)) {
-    foreach(_lib_path, invoker.libraries) {
-      _lib_name = get_path_info(_lib_path, "name")
-      _copy_target_name = "${target_name}_${_lib_name}_copy"
+  _python_binary_name = "${target_name}.pyz"
+  _python_binary_target = "${target_name}_python_binary"
+  python_binary(_python_binary_target) {
+    forward_variables_from(invoker,
+                           [
+                             "main_source",
+                             "sources",
+                           ])
 
-      action(_copy_target_name) {
-        # TODO(https://fxbug.dev/73140): fix hermeticity of copy_tree.py
-        hermetic_deps = false
-        script = "//build/copy_tree.py"
-        args = [
-          rebase_path(_lib_path, root_build_dir),
-          rebase_path("${_out_dir}/${_lib_name}", root_build_dir),
-          rebase_path("${_out_dir}/${_lib_name}.stamp", root_build_dir),
+    testonly = true
+    visibility = [ ":*" ]
 
-          # The .pyc files may be produced while this action is running,
-          # so we don't want to try to copy them while the're being written.
-          "--ignore_pattern",
-          "__pycache__",
-          "--ignore_pattern",
-          "*.pyc.*",
-          "--ignore_pattern",
-          "*.pyc",
-        ]
-        outputs = [
-          "${_out_dir}/${_lib_name}",
-          "${_out_dir}/${_lib_name}.stamp",
-        ]
-      }
+    output_name = _python_binary_name
+    main_callable = "unittest.main"
 
-      # Host-side tests must depend on host_test_data to have them available at
-      # runtime.
-      _lib_target_name = "${target_name}_${_lib_name}_lib"
-      _lib_deps += [ ":${_lib_target_name}" ]
-      host_test_data(_lib_target_name) {
-        sources = [ "${_out_dir}/${_lib_name}" ]
-        deps = [ ":${_copy_target_name}" ]
-      }
+    if (defined(invoker.libraries)) {
+      deps = invoker.libraries
     }
+  }
+
+  _target_dir = get_label_info(target_name, "dir")
+  _test_dir = "${root_out_dir}/test_data/${_target_dir}"
+  if (defined(invoker.test_dir)) {
+    _test_dir = invoker.test_dir
   }
 
   _host_test_data_target = "${target_name}_test_data"
   host_test_data(_host_test_data_target) {
     testonly = true
+    visibility = [ ":*" ]
 
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "visibility",
-                           ])
-    sources = [ invoker.main_source ]
-    if (defined(invoker.sources)) {
-      sources += invoker.sources
+    sources = [ get_label_info(":${_python_binary_target}", "target_out_dir") +
+                "/${_python_binary_name}" ]
+    outputs = [ "${_test_dir}/${_python_binary_name}" ]
+    deps = [ ":${_python_binary_target}" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
     }
-
-    outputs = [ "${_out_dir}/{{source_file_part}}" ]
   }
 
   host_test(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+
     binary_path = python_exe_path
-    args = [ rebase_path("${_out_dir}/${invoker.main_source}", root_build_dir) ]
+    args =
+        [ rebase_path("${_test_dir}/${_python_binary_name}", root_build_dir) ]
     if (defined(invoker.extra_args)) {
       args += invoker.extra_args
     }
     deps = [
-             ":${_host_test_data_target}",
-             "//build/python:interpreter",
-           ] + _lib_deps
-    forward_variables_from(invoker, [ "visibility" ])
+      ":${_host_test_data_target}",
+      "//build/python:interpreter",
+    ]
   }
 }

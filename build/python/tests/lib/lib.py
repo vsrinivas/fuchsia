@@ -7,3 +7,11 @@
 
 def f():
     print('lib.f')
+
+
+def truthy():
+    return True
+
+
+def falsy():
+    return False

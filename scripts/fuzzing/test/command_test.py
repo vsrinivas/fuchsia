@@ -7,9 +7,9 @@ import os
 import sys
 import unittest
 
-from . import test_env
-from ..lib import command
-from .test_case import TestCaseWithFuzzer
+import test_env
+from lib import command
+from test_case import TestCaseWithFuzzer
 
 
 class CommandTest(TestCaseWithFuzzer):

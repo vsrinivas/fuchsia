@@ -12,10 +12,10 @@ import tempfile
 import unittest
 from io import StringIO
 
-from . import test_env
-from ..lib.host import Host
-from .host_fake import FakeHost
-from .test_case import TestCaseWithIO
+import test_env
+from lib.host import Host
+from host_fake import FakeHost
+from test_case import TestCaseWithIO
 """ Test the real and fake implementations of the Host.
 
 The structure of these tests is organized into 5 classes:

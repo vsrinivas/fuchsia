@@ -6,8 +6,8 @@
 import subprocess
 from io import StringIO
 
-from . import test_env
-from ..lib.process import Process
+import test_env
+from lib.process import Process
 
 
 class FakeProcess(Process):

@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_library.gni")
+
+python_library("lib") {
+  sources = [
+    "__init__.py",
+    "args.py",
+    "buildenv.py",
+    "command.py",
+    "corpus.py",
+    "device.py",
+    "dictionary.py",
+    "factory.py",
+    "fuzzer.py",
+    "host.py",
+    "namespace.py",
+    "process.py",
+  ]
+}

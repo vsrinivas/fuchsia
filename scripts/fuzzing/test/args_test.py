@@ -5,9 +5,9 @@
 
 import unittest
 
-from . import test_env
-from ..lib import command
-from .test_case import TestCaseWithFactory
+import test_env
+from lib import command
+from test_case import TestCaseWithFactory
 
 
 class ArgsTest(TestCaseWithFactory):
@@ -49,7 +49,6 @@ class ArgsTest(TestCaseWithFactory):
             '  repro               Reproduce fuzzer findings by replaying test units.',
             '  start               Start a specific fuzzer.',
             '  stop                Stop a specific fuzzer.',
-            '  unittest            Run the unittests for this tool.',
             '  update              Update the BUILD.gn file for a fuzzer corpus.',
             '',
             'See "fx fuzz help [SUBCOMMAND]" for details on each subcommand.',
@@ -569,20 +568,6 @@ class ArgsTest(TestCaseWithFactory):
             name='name',
             libfuzzer_opts={'output': 'foo'},
             subprocess_args=['--sub', '-sub=val'])
-
-    def test_unittest_parser(self):
-        self.assertParseHelp(
-            ['help', 'unittest'], [
-                '',
-                'Usage: fx fuzz unittest [OPTIONS]',
-                '',
-                'Run the unittests for this tool. This runs all tests from all test cases. To run',
-                'a single test, use "python <path/to/test.py> <test_name>" instead.',
-                '',
-                'Options:',
-                '  -v,--verbose        Display additional output.',
-                '',
-            ])
 
     def test_e2e_test_parser(self):
         self.assertParseHelp(

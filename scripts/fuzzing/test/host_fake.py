@@ -9,9 +9,9 @@ import os
 import subprocess
 from io import StringIO
 
-from . import test_env
-from ..lib.host import Host
-from .process_fake import FakeProcess
+import test_env
+from lib.host import Host
+from process_fake import FakeProcess
 
 
 class FakeHost(Host):
@@ -153,8 +153,14 @@ class FakeHost(Host):
 
     def add_golden(self, name):
         """Add a 'real' golden file in the test directory to the fake filesystem."""
+
+        # This file is finally packaged into an archive, so go one extra level
+        # up to get the directory of the archive.
+        #
+        # TODO(https://fxbug.dev/73919): fix the path here so the tests can be
+        # executed directly.
         pathname = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)), name)
+            os.path.abspath(os.path.dirname(os.path.dirname(__file__))), name)
         with open(pathname) as f:
             golden = f.read()
         with self.open(name, 'w') as f:

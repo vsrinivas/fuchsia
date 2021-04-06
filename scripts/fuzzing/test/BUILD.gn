@@ -17,13 +17,23 @@ tests = [
   "namespace",
 ]
 
-foreach(t, tests) {
-  python_host_test(t + "_test") {
-    main_source = "run_single_test.py"
+foreach(test, tests) {
+  _test_target = "${test}_test"
+  _test_dir = "${root_out_dir}/test_data/" + get_label_info(_test_target, "dir")
+
+  _data_target = "${_test_target}_data"
+  host_test_data(_data_target) {
     sources = [
-      "../lib",
+      "data/v1.fuzzers.json",
+      "data/v2.fuzzers.json",
+    ]
+    outputs = [ "${_test_dir}/data/{{source_file_part}}" ]
+  }
+
+  python_host_test(_test_target) {
+    main_source = "${test}_test.py"
+    sources = [
       "__init__.py",
-      "data",
       "factory_fake.py",
       "host_fake.py",
       "process_fake.py",
@@ -31,19 +41,19 @@ foreach(t, tests) {
       "test_e2e.py",
       "test_env.py",
     ]
-    _target_dir = get_label_info(target_name, "dir")
-    extra_args = [
-      "-t",
-      rebase_path("${root_out_dir}/test_data/${_target_dir}", root_build_dir),
-      "-v",
-    ]
+    libraries = [ "../lib" ]
+    deps = [ ":${_data_target}" ]
+    test_dir = _test_dir
+    extra_args = [ "-v" ]
   }
 }
+
+# TODO(https://fxbug.dev/73835): Create test targets for `fx fuzz e2etest`.
 
 group("tests") {
   testonly = true
   public_deps = []
   foreach(t, tests) {
-    public_deps += [ ":" + t + "_test($host_toolchain)" ]
+    public_deps += [ ":${t}_test($host_toolchain)" ]
   }
 }

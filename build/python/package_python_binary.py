@@ -18,6 +18,12 @@ def main():
         'Creates a Python zip archive for the input main source')
 
     parser.add_argument(
+        '--target_name',
+        help='Name of the build target',
+        required=True,
+    )
+
+    parser.add_argument(
         '--main_source',
         help='Path to the source containing the main function',
         required=True,
@@ -30,8 +36,8 @@ def main():
     )
 
     parser.add_argument(
-        '--out_dir',
-        help='Path to output directory',
+        '--gen_dir',
+        help='Path to gen directory, used to stage temporary directories',
         required=True,
     )
     parser.add_argument('--output', help='Path to output', required=True)
@@ -64,12 +70,23 @@ def main():
 
     # Temporary directory to stage the source tree for this python binary,
     # including sources of itself and all the libraries it imports.
-    app_dir = os.path.join(args.out_dir, 'app')
+    #
+    # It is possible to have multiple python_binaries in the same directory, so
+    # using target name, which should be unique in the same directory, to
+    # distinguish between them.
+    app_dir = os.path.join(args.gen_dir, args.target_name)
     os.makedirs(app_dir, exist_ok=True)
 
     # Copy over the sources of this binary.
     for source in args.sources:
-        dest = os.path.join(app_dir, os.path.basename(source))
+        basename = os.path.basename(source)
+        if basename == '__main__.py':
+            print(
+                '__main__.py in sources of python_binary is not supported, see https://fxbug.dev/73576',
+                file=sys.stderr,
+            )
+            return 1
+        dest = os.path.join(app_dir, basename)
         shutil.copy2(source, dest)
         files_to_delete.append(dest)
 
@@ -89,10 +106,21 @@ def main():
 
     # Main module is the main source without its extension.
     main_module = os.path.splitext(os.path.basename(args.main_source))[0]
+    # Manually create a __main__.py file for the archive, instead of using the
+    # `main` parameter from `create_archive`. This way we can import everything
+    # from the main module (create_archive only `import pkg`), which is
+    # necessary for including all test cases for unit tests.
+    #
+    # TODO(https://fxbug.dev/73576): figure out another way to support unit
+    # tests when users need to provide their own custom __main__.py.
+    main_file = os.path.join(app_dir, "__main__.py")
+    with open(main_file, 'w') as f:
+        f.write(f'from {main_module} import *\n{args.main_callable}()')
+    files_to_delete.append(main_file)
+
     zipapp.create_archive(
         app_dir,
         target=args.output,
-        main=f'{main_module}:{args.main_callable}',
         interpreter='/usr/bin/env python3.8',
         compressed=True,
     )

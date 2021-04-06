@@ -8,10 +8,10 @@ import sys
 import unittest
 from io import StringIO
 
-from . import test_env
-from ..lib import args
-from .factory_fake import FakeFactory
-from .process_fake import FakeProcess
+import test_env
+from lib import args
+from factory_fake import FakeFactory
+from process_fake import FakeProcess
 
 
 class TestCaseWithIO(unittest.TestCase):
