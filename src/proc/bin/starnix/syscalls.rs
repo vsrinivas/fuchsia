@@ -9,7 +9,7 @@ use std::ffi::CStr;
 use zerocopy::AsBytes;
 
 use crate::executive::*;
-use crate::types::*;
+use crate::uapi::*;
 
 pub fn sys_write(
     ctx: &ThreadContext,
@@ -62,8 +62,8 @@ pub fn sys_mmap(
     ctx: &ThreadContext,
     addr: UserAddress,
     length: usize,
-    prot: i32,
-    flags: i32,
+    prot: u32,
+    flags: u32,
     fd: i32,
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
@@ -138,9 +138,9 @@ pub fn sys_writev(
         return Err(EINVAL);
     }
 
-    let mut iovecs: Vec<iovec> = Vec::new();
+    let mut iovecs: Vec<iovec_t> = Vec::new();
     iovecs.reserve(iovec_count); // TODO: try_reserve
-    iovecs.resize(iovec_count, iovec::default());
+    iovecs.resize(iovec_count, iovec_t::default());
     ctx.process.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
 
     info!("writev: fd={} iovec={:?}", fd, iovecs);
@@ -226,7 +226,7 @@ pub fn sys_getegid(ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
 
 pub fn sys_arch_prctl(
     ctx: &mut ThreadContext,
-    code: i32,
+    code: u32,
     addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     match code {

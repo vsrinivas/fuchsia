@@ -9,7 +9,7 @@ use {
     std::sync::Arc,
 };
 
-use crate::types::*;
+use crate::uapi::*;
 
 pub struct ProgramBreak {
     vmar: zx::Vmar,

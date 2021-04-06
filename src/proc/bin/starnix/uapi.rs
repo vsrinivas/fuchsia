@@ -7,17 +7,20 @@
 
 use {
     fuchsia_zircon::{self as zx, sys::zx_vaddr_t},
-    linux_uapi as uapi,
     std::fmt,
     std::ops,
     zerocopy::{AsBytes, FromBytes},
 };
 
+#[cfg(target_arch = "x86_64")]
+use linux_uapi::x86_64 as uapi;
+pub use uapi::*;
+
 pub type uid_t = uapi::__kernel_uid_t;
 pub type gid_t = uapi::__kernel_gid_t;
 pub type dev_t = uapi::__kernel_old_dev_t;
 pub type ino_t = uapi::__kernel_ino_t;
-pub type mode_t = u16; // uapi declares this as a c_uint.
+pub type mode_t = uapi::__kernel_mode_t;
 pub type off_t = uapi::__kernel_off_t;
 
 pub struct Errno(u32);
@@ -302,34 +305,6 @@ impl From<usize> for SyscallResult {
     }
 }
 
-pub const ARCH_SET_GS: i32 = uapi::ARCH_SET_GS as i32;
-pub const ARCH_SET_FS: i32 = uapi::ARCH_SET_FS as i32;
-
-pub const AT_SYSINFO_EHDR: u64 = uapi::AT_SYSINFO_EHDR as u64;
-pub const AT_NULL: u64 = uapi::AT_NULL as u64;
-pub const AT_IGNORE: u64 = uapi::AT_IGNORE as u64;
-pub const AT_EXECFD: u64 = uapi::AT_EXECFD as u64;
-pub const AT_PHDR: u64 = uapi::AT_PHDR as u64;
-pub const AT_PHENT: u64 = uapi::AT_PHENT as u64;
-pub const AT_PHNUM: u64 = uapi::AT_PHNUM as u64;
-pub const AT_PAGESZ: u64 = uapi::AT_PAGESZ as u64;
-pub const AT_BASE: u64 = uapi::AT_BASE as u64;
-pub const AT_FLAGS: u64 = uapi::AT_FLAGS as u64;
-pub const AT_ENTRY: u64 = uapi::AT_ENTRY as u64;
-pub const AT_NOTELF: u64 = uapi::AT_NOTELF as u64;
-pub const AT_UID: u64 = uapi::AT_UID as u64;
-pub const AT_EUID: u64 = uapi::AT_EUID as u64;
-pub const AT_GID: u64 = uapi::AT_GID as u64;
-pub const AT_EGID: u64 = uapi::AT_EGID as u64;
-pub const AT_PLATFORM: u64 = uapi::AT_PLATFORM as u64;
-pub const AT_HWCAP: u64 = uapi::AT_HWCAP as u64;
-pub const AT_CLKTCK: u64 = uapi::AT_CLKTCK as u64;
-pub const AT_SECURE: u64 = uapi::AT_SECURE as u64;
-pub const AT_BASE_PLATFORM: u64 = uapi::AT_BASE_PLATFORM as u64;
-pub const AT_RANDOM: u64 = uapi::AT_RANDOM as u64;
-pub const AT_HWCAP2: u64 = uapi::AT_HWCAP2 as u64;
-pub const AT_EXECFN: u64 = uapi::AT_EXECFN as u64;
-
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, AsBytes)]
 #[repr(C)]
 pub struct utsname_t {
@@ -353,7 +328,7 @@ pub struct stat_t {
     pub st_dev: dev_t,
     pub st_ino: ino_t,
     pub st_nlink: u64,
-    pub st_mode: u32, // should be mod_t
+    pub st_mode: mode_t,
     pub st_uid: uid_t,
     pub st_gid: gid_t,
     pub _pad0: u32,
@@ -369,23 +344,7 @@ pub struct stat_t {
 
 #[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes)]
 #[repr(C)]
-pub struct iovec {
+pub struct iovec_t {
     pub iov_base: UserAddress,
     pub iov_len: usize,
 }
-
-pub use uapi::UIO_FASTIOV;
-pub use uapi::UIO_MAXIOV;
-
-pub const PROT_READ: i32 = uapi::PROT_READ as i32;
-pub const PROT_WRITE: i32 = uapi::PROT_WRITE as i32;
-pub const PROT_EXEC: i32 = uapi::PROT_EXEC as i32;
-pub const PROT_SEM: i32 = uapi::PROT_SEM as i32;
-pub const PROT_NONE: i32 = uapi::PROT_NONE as i32;
-pub const PROT_GROWSDOWN: i32 = uapi::PROT_GROWSDOWN as i32;
-pub const PROT_GROWSUP: i32 = uapi::PROT_GROWSUP as i32;
-
-pub const MAP_SHARED: i32 = uapi::MAP_SHARED as i32;
-pub const MAP_PRIVATE: i32 = uapi::MAP_PRIVATE as i32;
-pub const MAP_FIXED: i32 = uapi::MAP_FIXED as i32;
-pub const MAP_ANONYMOUS: i32 = uapi::MAP_ANONYMOUS as i32;

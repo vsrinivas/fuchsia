@@ -12,7 +12,7 @@ use {
 };
 
 use crate::executive::*;
-use crate::types::*;
+use crate::uapi::*;
 
 pub struct ProcessParameters {
     pub name: CString,
@@ -23,7 +23,7 @@ pub struct ProcessParameters {
 fn populate_initial_stack(
     stack_vmo: &zx::Vmo,
     params: &ProcessParameters,
-    mut auxv: Vec<(u64, u64)>,
+    mut auxv: Vec<(u32, u64)>,
     stack_base: usize,
     original_stack_start_addr: usize,
 ) -> Result<usize, Status> {
@@ -75,8 +75,8 @@ fn populate_initial_stack(
     main_data.extend_from_slice(&ZERO);
     // auxv
     for (tag, val) in auxv {
-        main_data.extend_from_slice(&tag.to_ne_bytes());
-        main_data.extend_from_slice(&val.to_ne_bytes());
+        main_data.extend_from_slice(&(tag as u64).to_ne_bytes());
+        main_data.extend_from_slice(&(val as u64).to_ne_bytes());
     }
 
     // Time to push.

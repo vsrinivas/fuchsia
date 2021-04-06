@@ -6,7 +6,7 @@ use paste::paste;
 
 use crate::executive::ThreadContext;
 use crate::syscalls::*;
-use crate::types::*;
+use crate::uapi::*;
 
 trait FromSyscallArg {
     fn from_arg(arg: u64) -> Self;
@@ -14,6 +14,11 @@ trait FromSyscallArg {
 impl FromSyscallArg for i32 {
     fn from_arg(arg: u64) -> i32 {
         arg as i32
+    }
+}
+impl FromSyscallArg for u32 {
+    fn from_arg(arg: u64) -> u32 {
+        arg as u32
     }
 }
 impl FromSyscallArg for usize {
@@ -29,7 +34,6 @@ impl FromSyscallArg for UserAddress {
 trait IntoSyscallArg<T> {
     fn into_arg(self) -> T;
 }
-
 impl<T> IntoSyscallArg<T> for u64
 where
     T: FromSyscallArg,
@@ -46,7 +50,7 @@ macro_rules! syscall_match {
     } => {
         paste! {
             match $syscall_number as u32 {
-                $(linux_uapi::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
+                $(crate::uapi::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
                 _ => sys_unknown($ctx, $syscall_number),
             }
         }

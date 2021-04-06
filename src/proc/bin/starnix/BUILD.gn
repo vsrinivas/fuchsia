@@ -51,7 +51,7 @@ if (target_cpu == "x64") {
       "main.rs",
       "syscall_table.rs",
       "syscalls.rs",
-      "types.rs",
+      "uapi.rs",
     ]
   }
 

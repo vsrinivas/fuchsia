@@ -27,7 +27,7 @@ mod executive;
 mod loader;
 mod syscall_table;
 mod syscalls;
-mod types;
+mod uapi;
 
 use executive::*;
 use loader::*;
