@@ -102,9 +102,9 @@ fn handle_phy_event(
                             *first_association_complete = true;
                             return Ok(());
                         }
-                        if let Some(_) = second_association_confirm_sender_wrapper {
-                            let second_association_confirm_sender =
-                                second_association_confirm_sender_wrapper.take().unwrap();
+                        if let Some(second_association_confirm_sender) =
+                            second_association_confirm_sender_wrapper.take()
+                        {
                             second_association_confirm_sender.send(()).map_err(|e| {
                                 format_err!(
                                     "Unable to send confirmation of second association: {:?}",
