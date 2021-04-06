@@ -243,8 +243,6 @@ impl Channel {
         let opts = 0;
         let n_bytes = usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE)?;
         let n_handles = usize_into_u32(handles.len()).map_err(|_| Status::OUT_OF_RANGE)?;
-        assert!(n_bytes <= sys::ZX_CHANNEL_MAX_MSG_BYTES);
-        assert!(n_handles <= sys::ZX_CHANNEL_MAX_MSG_HANDLES);
         unsafe {
             let status = sys::zx_channel_write(
                 self.raw_handle(),
@@ -275,8 +273,10 @@ impl Channel {
         let n_bytes = usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE)?;
         let n_handle_dispositions =
             usize_into_u32(handle_dispositions.len()).map_err(|_| Status::OUT_OF_RANGE)?;
-        assert!(n_bytes <= sys::ZX_CHANNEL_MAX_MSG_BYTES);
-        assert!(n_handle_dispositions <= sys::ZX_CHANNEL_MAX_MSG_HANDLES);
+        if n_handle_dispositions > sys::ZX_CHANNEL_MAX_MSG_HANDLES {
+            // don't let the kernel check this bound for us because we have a fixed size array below
+            return Err(Status::OUT_OF_RANGE);
+        }
         unsafe {
             let mut zx_handle_dispositions: [std::mem::MaybeUninit<sys::zx_handle_disposition_t>;
                 sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize] =
@@ -328,8 +328,6 @@ impl Channel {
     ) -> Result<(), Status> {
         let write_num_bytes = usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE)?;
         let write_num_handles = usize_into_u32(handles.len()).map_err(|_| Status::OUT_OF_RANGE)?;
-        assert!(write_num_bytes <= sys::ZX_CHANNEL_MAX_MSG_BYTES);
-        assert!(write_num_handles <= sys::ZX_CHANNEL_MAX_MSG_HANDLES);
         buf.clear();
         let read_num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
         let read_num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
@@ -402,8 +400,10 @@ impl Channel {
         let write_num_bytes = usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE)?;
         let write_num_handle_dispositions =
             usize_into_u32(handle_dispositions.len()).map_err(|_| Status::OUT_OF_RANGE)?;
-        assert!(write_num_bytes <= sys::ZX_CHANNEL_MAX_MSG_BYTES);
-        assert!(write_num_handle_dispositions <= sys::ZX_CHANNEL_MAX_MSG_HANDLES);
+        if write_num_handle_dispositions > sys::ZX_CHANNEL_MAX_MSG_HANDLES {
+            // don't let the kernel check this bound for us because we have a fixed size array below
+            return Err(Status::OUT_OF_RANGE);
+        }
         let mut zx_handle_dispositions: [std::mem::MaybeUninit<sys::zx_handle_disposition_t>;
             sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize] =
             unsafe { std::mem::MaybeUninit::uninit().assume_init() };
@@ -781,6 +781,96 @@ mod tests {
 
         let result = p2.read_etc_raw(&mut vec![], &mut vec![]);
         assert_eq!(result, Err((5, 0)));
+    }
+
+    fn too_many_bytes() -> Vec<u8> {
+        vec![b'A'; (sys::ZX_CHANNEL_MAX_MSG_BYTES + 1) as usize]
+    }
+
+    fn too_many_handles() -> Vec<Handle> {
+        let mut handles = vec![];
+        for _ in 0..sys::ZX_CHANNEL_MAX_MSG_HANDLES + 1 {
+            handles.push(crate::Event::create().unwrap().into());
+        }
+        handles
+    }
+
+    fn too_many_dispositions() -> Vec<HandleDisposition<'static>> {
+        let mut handles = vec![];
+        for _ in 0..sys::ZX_CHANNEL_MAX_MSG_HANDLES + 1 {
+            handles.push(HandleDisposition {
+                handle_op: HandleOp::Move(crate::Event::create().unwrap().into()),
+                object_type: ObjectType::EVENT,
+                rights: Rights::TRANSFER,
+                result: Status::OK,
+            });
+        }
+        handles
+    }
+
+    #[test]
+    fn channel_write_too_many_bytes() {
+        Channel::create().unwrap().0.write(&too_many_bytes()[..], &mut vec![]).unwrap_err();
+    }
+
+    #[test]
+    fn channel_write_too_many_handles() {
+        Channel::create().unwrap().0.write(&vec![], &mut too_many_handles()[..]).unwrap_err();
+    }
+
+    #[test]
+    fn channel_write_etc_too_many_bytes() {
+        Channel::create().unwrap().0.write_etc(&too_many_bytes()[..], &mut []).unwrap_err();
+    }
+
+    #[test]
+    fn channel_write_etc_too_many_handles() {
+        Channel::create()
+            .unwrap()
+            .0
+            .write_etc(&vec![], &mut too_many_dispositions()[..])
+            .unwrap_err();
+    }
+
+    #[test]
+    fn channel_call_too_many_bytes() {
+        Channel::create()
+            .unwrap()
+            .0
+            .call(Time::INFINITE, &too_many_bytes()[..], &mut vec![], &mut MessageBuf::new())
+            .unwrap_err();
+    }
+
+    #[test]
+    fn channel_call_too_many_handles() {
+        Channel::create()
+            .unwrap()
+            .0
+            .call(Time::INFINITE, &vec![], &mut too_many_handles()[..], &mut MessageBuf::new())
+            .unwrap_err();
+    }
+
+    #[test]
+    fn channel_call_etc_too_many_bytes() {
+        Channel::create()
+            .unwrap()
+            .0
+            .call_etc(Time::INFINITE, &too_many_bytes()[..], &mut vec![], &mut MessageBufEtc::new())
+            .unwrap_err();
+    }
+
+    #[test]
+    fn channel_call_etc_too_many_handles() {
+        Channel::create()
+            .unwrap()
+            .0
+            .call_etc(
+                Time::INFINITE,
+                &vec![],
+                &mut too_many_dispositions()[..],
+                &mut MessageBufEtc::new(),
+            )
+            .unwrap_err();
     }
 
     #[test]
