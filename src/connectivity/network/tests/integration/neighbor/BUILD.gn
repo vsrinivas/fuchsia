@@ -27,5 +27,6 @@ rustc_test("neighbor") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:matches",
   ]
+  configs += [ "//build/config/rust:deny_unused_results" ]
   sources = [ "src/lib.rs" ]
 }

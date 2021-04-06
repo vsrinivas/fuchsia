@@ -104,3 +104,7 @@ config("allow_unused_extern_crates") {
 config("allow_legacy_derive_helpers") {
   rustflags = [ "-Alegacy-derive-helpers" ]
 }
+
+config("deny_unused_results") {
+  rustflags = [ "-Dunused_results" ]
+}
