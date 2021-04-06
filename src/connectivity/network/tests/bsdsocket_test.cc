@@ -1260,7 +1260,7 @@ TEST(LocalhostTest, Accept) {
             0)
       << strerror(errno);
   ASSERT_EQ(serveraddrlen, sizeof(serveraddr));
-  ASSERT_EQ(listen(serverfd.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(serverfd.get(), 0), 0) << strerror(errno);
 
   fbl::unique_fd clientfd;
   ASSERT_TRUE(clientfd = fbl::unique_fd(socket(AF_INET6, SOCK_STREAM, 0))) << strerror(errno);
@@ -1290,7 +1290,7 @@ TEST(LocalhostTest, AcceptAfterReset) {
   ASSERT_EQ(getsockname(server.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
-  ASSERT_EQ(listen(server.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(server.get(), 0), 0) << strerror(errno);
 
   {
     fbl::unique_fd client;
@@ -1429,7 +1429,7 @@ TEST(NetStreamTest, ConnectTwice) {
             -1);
   ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
 
-  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
   // TODO(fxbug.dev/61594): decide if we want to match Linux's behaviour.
   ASSERT_EQ(connect(client.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
@@ -1513,7 +1513,7 @@ void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
     ASSERT_EQ(getsockname(listener.get(), addr, &addr_len), 0) << strerror(errno);
     EXPECT_EQ(addr_len, addr_len_in);
   }
-  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
   // Connect asynchronously and immediately hang up the listener.
   int ret = connect(client.get(), addr, addr_len);
@@ -1538,6 +1538,7 @@ void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
     int n = poll(&pfd, 1, kTimeout);
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
+    ASSERT_EQ(pfd.revents, POLLIN | POLLERR | POLLHUP);
   }
 
   ASSERT_EQ(close(client.release()), 0) << strerror(errno);
@@ -1706,7 +1707,7 @@ class NetStreamSocketsTest : public ::testing::Test {
         << strerror(errno);
     ASSERT_EQ(addrlen, sizeof(addr));
 
-    ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+    ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
     ASSERT_TRUE(client_ = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
     ASSERT_EQ(connect(client_.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
@@ -2018,7 +2019,7 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
   ASSERT_EQ(getsockname(acptfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(acptfd.get(), 0), 0) << strerror(errno);
 
   fbl::unique_fd clientfd;
   ASSERT_TRUE(clientfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
@@ -2064,7 +2065,7 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   ASSERT_EQ(getsockname(acptfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(acptfd.get(), 0), 0) << strerror(errno);
 
   fbl::unique_fd clientfd;
   ASSERT_TRUE(clientfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
@@ -2113,7 +2114,7 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
   ASSERT_EQ(getsockname(acptfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(acptfd.get(), 0), 0) << strerror(errno);
 
   fbl::unique_fd connfd;
   ASSERT_TRUE(connfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
@@ -2170,7 +2171,7 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   ASSERT_EQ(getsockname(acptfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(acptfd.get(), 0), 0) << strerror(errno);
 
   fbl::unique_fd connfd;
   ASSERT_TRUE(connfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
@@ -2680,7 +2681,7 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
-  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+  ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
   ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
@@ -2750,10 +2751,6 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   //     accept queue after handshake completion.
   // (2) a test client that keeps trying to establish connection with
   //     server, but remains in SYN-SENT.
-#if !defined(__Fuchsia__)
-  // TODO(gvisor.dev/issue/3153): Unlike Linux, gVisor does not complete
-  // handshake for a connection when listen backlog is zero. Hence, we
-  // do not maintain the precursor client connection on Fuchsia.
   fbl::unique_fd precursor_client;
   ASSERT_TRUE(precursor_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0)))
       << strerror(errno);
@@ -2774,7 +2771,6 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
   ASSERT_EQ(pfd.revents, POLLIN);
-#endif
 
   // The test client connection would get established _only_ after both
   // these conditions are met:
@@ -2841,7 +2837,6 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   if (closeListener) {
     ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
   } else {
-#if !defined(__Fuchsia__)
     // Accept the precursor connection to make room for the test client
     // connection to complete.
     fbl::unique_fd precursor_accept;
@@ -2849,13 +2844,6 @@ TEST_P(ConnectingIOTest, BlockedIO) {
         << strerror(errno);
     ASSERT_EQ(close(precursor_accept.release()), 0) << strerror(errno);
     ASSERT_EQ(close(precursor_client.release()), 0) << strerror(errno);
-#endif
-
-    // TODO(gvisor.dev/issue/3153): Unlike Linux, gVisor does not accept a connection
-    // when listen backlog is zero.
-#if defined(__Fuchsia__)
-    ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
-#endif
 
     // Accept the test client connection.
     fbl::unique_fd test_accept;
@@ -2912,7 +2900,6 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
   // Linux completes one more connection than the listen backlog argument.
   // To ensure that there is at least one client connection that stays in
   // connecting state, keep 2 more client connections than the listen backlog.
-  // gVisor differs in this behavior though, gvisor.dev/issue/3153.
   constexpr int kClients = kBacklog + 2;
 
   struct sockaddr_in addr = {
@@ -3965,7 +3952,7 @@ TEST(NetStreamTest, MultipleListeningSockets) {
               0)
         << strerror(errno);
 
-    ASSERT_EQ(listen(listenfd.get(), 1), 0) << strerror(errno);
+    ASSERT_EQ(listen(listenfd.get(), 0), 0) << strerror(errno);
   }
 
   for (int i = 0; i < kListeningSockets; i++) {
@@ -4021,7 +4008,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
       EXPECT_EQ(getsockname(acptfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
           << strerror(errno);
       EXPECT_EQ(addrlen, sizeof(addr));
-      EXPECT_EQ(listen(acptfd.get(), 1), 0) << strerror(errno);
+      EXPECT_EQ(listen(acptfd.get(), 0), 0) << strerror(errno);
       EXPECT_EQ(
           connect(sendfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
           << strerror(errno);
