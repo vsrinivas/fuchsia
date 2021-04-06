@@ -381,37 +381,30 @@ void scanner_trigger_asynchronous_evict(uint64_t min_free_target, uint64_t free_
   scanner_request_event.Signal();
 }
 
-uint64_t scanner_synchronous_evict(uint64_t max_pages, scanner::EvictionLevel eviction_level,
-                                   scanner::Output output) {
+uint64_t scanner_synchronous_evict(uint64_t min_pages_to_evict,
+                                   scanner::EvictionLevel eviction_level, scanner::Output output) {
   if (!eviction_enabled) {
     return 0;
   }
-
-  DEBUG_ASSERT(discardable_evictions_percent <= 100);
-
-  // Compute the desired number of discardable pages to free (vs pager-backed).
-  uint64_t pages_to_free_discardable = max_pages * discardable_evictions_percent / 100;
-
-  uint64_t pages_freed = scanner_evict_discardable_vmos(pages_to_free_discardable);
-  if (output == scanner::Output::Print && pages_freed > 0) {
-    printf("[SCAN]: Evicted %lu pages from discardable vmos\n", pages_freed);
+  {
+    Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
+    scanner_eviction_target.pending = true;
+    // For synchronous eviction, set the eviction level and min target as requested.
+    scanner_eviction_target.level = eviction_level;
+    scanner_eviction_target.min_pages_free = min_pages_to_evict;
+    // No target free pages to get to. Evict based only on the min pages requested to evict.
+    scanner_eviction_target.free_target_pages = 0;
   }
 
-  // Free pager backed memory to get to |max_pages|.
-  uint64_t pages_to_free_pager_backed = max_pages - pages_freed;
-
-  list_node_t free_list;
-  list_initialize(&free_list);
-  uint64_t pages_freed_pager_backed =
-      scanner_evict_pager_backed(pages_to_free_pager_backed, eviction_level, &free_list);
-  pmm_free(&free_list);
-
-  if (output == scanner::Output::Print && pages_freed_pager_backed > 0) {
-    printf("[SCAN]: Evicted %lu user pager backed pages\n", pages_freed_pager_backed);
+  uint64_t pager_backed = 0, discardable = 0;
+  scanner_do_evict(&pager_backed, &discardable);
+  if (output == scanner::Output::Print && pager_backed > 0) {
+    printf("[SCAN]: Evicted %lu user pager backed pages\n", pager_backed);
   }
-  pages_freed += pages_freed_pager_backed;
-
-  return pages_freed;
+  if (output == scanner::Output::Print && discardable > 0) {
+    printf("[SCAN]: Evicted %lu pages from discardable vmos\n", discardable);
+  }
+  return pager_backed + discardable;
 }
 
 uint64_t scanner_do_zero_scan(uint64_t limit) {

@@ -54,8 +54,8 @@ void scanner_trigger_asynchronous_evict(
 // Performs a synchronous request to evict the requested number of pages. The return value is the
 // number of pages evicted. The |eviction_level| is a rough control that maps to how old a page
 // needs to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
-uint64_t scanner_synchronous_evict(uint64_t max_pages, scanner::EvictionLevel eviction_level,
-                                   scanner::Output output);
+uint64_t scanner_synchronous_evict(uint64_t min_pages_to_evict,
+                                   scanner::EvictionLevel eviction_level, scanner::Output output);
 
 // Sets the scanner to reclaim page tables when harvesting accessed bits in the future, unless
 // page table reclamation was explicitly disabled on the command line. Repeatedly enabling does not
