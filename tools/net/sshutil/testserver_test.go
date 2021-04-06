@@ -10,33 +10,45 @@ import (
 )
 
 func TestRunMultipleServers(t *testing.T) {
-	count := 3
-	for i := 0; i < count; i++ {
-		server, err := startSSHServer(nil, nil)
-		if err != nil {
-			t.Fatalf("failed to start ssh server #%d: %v", i, err)
+	const count = 3
+	var servers []*sshServer
+	defer func() {
+		for i := range servers {
+			if err := servers[i].stop(); err != nil {
+				t.Errorf("servers[%d].stop() = %s", i, err)
+			}
 		}
-		defer server.stop()
+	}()
+	for i := 0; i < count; i++ {
+		server, err := startSSHServer(context.Background(), nil, nil)
+		if err != nil {
+			t.Fatalf("failed to start ssh server #%d: %s", i, err)
+		}
+		servers = append(servers, server)
 	}
 }
 
 func TestConnectAndClose(t *testing.T) {
-	server, err := startSSHServer(nil, nil)
+	server, err := startSSHServer(context.Background(), nil, nil)
 	if err != nil {
-		t.Fatalf("failed to start ssh server: %v", err)
+		t.Fatalf("failed to start ssh server: %s", err)
 	}
-	defer server.stop()
+	defer func() {
+		if err := server.stop(); err != nil {
+			t.Errorf("server.stop() = %s", err)
+		}
+	}()
 
 	client, err := NewClient(
 		context.Background(),
 		ConstantAddrResolver{
-			Addr: server.addr,
+			Addr: server.listener.Addr(),
 		},
 		server.clientConfig,
 		DefaultConnectBackoff(),
 	)
 	if err != nil {
-		t.Errorf("failed to connect: %v", err)
+		t.Errorf("failed to connect: %s", err)
 	}
 
 	client.Close()

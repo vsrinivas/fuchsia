@@ -10,6 +10,7 @@
 package sshutil
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
@@ -17,9 +18,9 @@ import (
 	"io"
 	"log"
 	"net"
-	"sync"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -27,8 +28,8 @@ const (
 )
 
 type sshServer struct {
-	// The address (IP + port) that the server is running on.
-	addr net.Addr
+	// The server's listener.
+	listener net.Listener
 
 	// The configuration that clients can use to connect to the server.
 	clientConfig *ssh.ClientConfig
@@ -36,139 +37,135 @@ type sshServer struct {
 	// The configuration used by the server when accepting new connections.
 	serverConfig *ssh.ServerConfig
 
-	// The server listens on this channel and shuts down when stop() closes it.
-	stopping chan struct{}
-
 	// onNewChannel is a callback that gets called when the server receives a
 	// new channel.
 	onNewChannel func(ssh.NewChannel)
 
 	// onNewChannel is a callback that gets called when the server receives a
 	// new out-of-band request.
-	onRequest func(*ssh.Request)
+	onRequest func(ssh.Channel, *ssh.Request)
 
-	// wg tracks all the current goroutines that are able to serve connections,
+	// g tracks all the current goroutines that are able to serve connections,
 	// or launch new goroutines that themselves are able to serve connections.
-	wg sync.WaitGroup
+	g *errgroup.Group
 }
 
 // start launches the server and sets the server's address. It launches a
 // goroutine that listens for new connections until stop() is called.
-func (s *sshServer) start() error {
+func (s *sshServer) start(ctx context.Context) error {
 	// We don't care which port the server runs on as long as it doesn't collide
 	// with another process. Specifying ":0" gives us any available port.
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return err
 	}
-	s.addr = listener.Addr()
+	s.listener = listener
+
+	s.g, ctx = errgroup.WithContext(ctx)
 
 	// This goroutine is capable of launching new server goroutines, so the
 	// server can't be considered shut down if this goroutine is still running.
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-		defer func() {
-			if err := listener.Close(); err != nil {
-				log.Panicf("failed to close listener: %v", err)
-			}
-		}()
-
-		// Use buffered channels so that if this goroutine exits and stops
-		// reading from the channels, the listening goroutine doesn't block
-		// trying to send on one of the channels and leak.
-		tcpConns := make(chan net.Conn, 1)
-		listenerErrs := make(chan error, 1)
-
+	s.g.Go(func() error {
 		for {
-			go func() {
-				tcpConn, err := listener.Accept()
-				if err != nil {
-					listenerErrs <- err
-					return
-				}
-				tcpConns <- tcpConn
-			}()
-
-			select {
-			case <-s.stopping:
-				return
-			case err := <-listenerErrs:
-				log.Panicf("testserver listener error: %v\n", err)
-			case tcpConn := <-tcpConns:
-				conn, incomingChannels, incomingRequests, err := ssh.NewServerConn(tcpConn, s.serverConfig)
-				if err != nil {
-					log.Panicf("testserver connection error: %v\n", err)
-				}
-
-				s.wg.Add(1)
-				go func() {
-					defer s.wg.Done()
-					s.serveConnection(conn, incomingChannels, incomingRequests)
-				}()
+			tcpConn, err := listener.Accept()
+			if err != nil {
+				return err
 			}
+
+			conn, incomingChannels, incomingRequests, err := ssh.NewServerConn(tcpConn, s.serverConfig)
+			if err != nil {
+				return err
+			}
+
+			// Inner group for this connection.
+			g, ctx := errgroup.WithContext(ctx)
+			g.Go(func() error {
+				return s.serveRequests(ctx, nil, incomingRequests)
+			})
+
+			g.Go(func() error {
+				for {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case newChannel, ok := <-incomingChannels:
+						if !ok {
+							return nil
+						}
+						if fn := s.onNewChannel; fn != nil {
+							fn(newChannel)
+						}
+						g.Go(func() error {
+							ch, incomingRequests, err := newChannel.Accept()
+							if err != nil {
+								return err
+							}
+							defer func() {
+								if err := ch.Close(); err != nil && !errors.Is(err, io.EOF) {
+									log.Printf("ch.Close() = %s", err)
+								}
+							}()
+							return s.serveRequests(ctx, ch, incomingRequests)
+						})
+					}
+				}
+			})
+
+			s.g.Go(func() error {
+				// This might err out if the client is closed first, so don't bother
+				// checking the return value.
+				defer func() {
+					_ = conn.Close()
+				}()
+
+				return g.Wait()
+			})
 		}
-	}()
+	})
 
 	return nil
 }
 
 // stop shuts down the server.
-func (s *sshServer) stop() {
-	select {
-	case <-s.stopping:
-		return // Server has already been stopped, no more work to do.
-	default:
-		close(s.stopping)
+func (s *sshServer) stop() error {
+	if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+		log.Printf("listener.Close() = %s", err)
 	}
 	// Block until we know that no new handshakes can occur, and that any
 	// existing connections can no longer be served.
-	s.wg.Wait()
+	if err := s.g.Wait(); !errors.Is(err, net.ErrClosed) {
+		return err
+	}
+	return nil
 }
 
-func (s *sshServer) serveConnection(
-	conn *ssh.ServerConn,
-	incomingChannels <-chan ssh.NewChannel,
-	incomingRequests <-chan *ssh.Request,
-) {
-	// This might err out if the client is closed first, so don't bother
-	// checking the return value.
-	defer conn.Close()
-
+func (s *sshServer) serveRequests(ctx context.Context, ch ssh.Channel, incomingRequests <-chan *ssh.Request) error {
 	for {
 		select {
-		case <-s.stopping:
-			return
-		case newChannel, ok := <-incomingChannels:
-			if !ok {
-				return
-			}
-			if s.onNewChannel != nil {
-				s.onNewChannel(newChannel)
-			}
+		case <-ctx.Done():
+			return ctx.Err()
 		case req, ok := <-incomingRequests:
 			if !ok {
-				return
+				return nil
 			}
-			if s.onRequest != nil {
-				s.onRequest(req)
+			if fn := s.onRequest; fn != nil {
+				fn(ch, req)
 			}
 		}
 	}
 }
 
 // startSSHServer starts an ssh server on localhost, at any available port.
-func startSSHServer(onNewChannel func(ssh.NewChannel), onRequest func(*ssh.Request)) (*sshServer, error) {
+func startSSHServer(ctx context.Context, onNewChannel func(ssh.NewChannel), onRequest func(ssh.Channel, *ssh.Request)) (*sshServer, error) {
 	serverConfig, clientConfig, err := genSSHConfig()
 
 	server := &sshServer{
 		clientConfig: clientConfig,
 		serverConfig: serverConfig,
-		stopping:     make(chan struct{}),
 		onNewChannel: onNewChannel,
 		onRequest:    onRequest,
 	}
-	if err = server.start(); err != nil {
+	if err = server.start(ctx); err != nil {
 		return nil, err
 	}
 	return server, nil
@@ -220,44 +217,35 @@ func genPassword(length int) (string, error) {
 // will call a callback if the new channel request is a session with a single
 // request to execute a command. Any other channel or request type will result
 // in a panic.
-func onNewExecChannel(f func(cmd string, stdout io.Writer, stderr io.Writer) int) func(ssh.NewChannel) {
-	return func(newChannel ssh.NewChannel) {
-		if newChannel.ChannelType() != "session" {
-			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
-			return
-		}
-
-		ch, reqs, err := newChannel.Accept()
-		if err != nil {
-			log.Panicf("error accepting channel: %v", err)
-		}
-
-		go func() {
-			defer ch.Close()
-
-			req := <-reqs
-			switch req.Type {
-			case "exec":
-				var execMsg struct{ Command string }
-				if err := ssh.Unmarshal(req.Payload, &execMsg); err != nil {
-					log.Panicf("failed to unmarshal payload: %v", err)
-				}
-				if err := req.Reply(true, nil); err != nil {
-					log.Panicf("failed to send reply: %v", err)
-				}
-
-				exitStatus := f(execMsg.Command, ch, ch.Stderr())
-
-				exitMsg := struct {
-					ExitStatus uint32
-				}{ExitStatus: uint32(exitStatus)}
-
-				if _, err := ch.SendRequest("exit-status", false, ssh.Marshal(&exitMsg)); err != nil {
-					log.Panicf("failed to send exit status: %v", err)
-				}
-			default:
-				log.Panicf("unexpected request type: %v", req.Type)
+func onExecRequest(f func(cmd string, stdout io.Writer, stderr io.Writer) int) func(ssh.Channel, *ssh.Request) {
+	return func(ch ssh.Channel, req *ssh.Request) {
+		switch req.Type {
+		case "exec":
+			var execMsg struct{ Command string }
+			if err := ssh.Unmarshal(req.Payload, &execMsg); err != nil {
+				log.Panicf("failed to unmarshal payload: %s", err)
 			}
-		}()
+			if err := req.Reply(true, nil); err != nil {
+				log.Panicf("failed to send reply: %s", err)
+			}
+
+			exitStatus := f(execMsg.Command, ch, ch.Stderr())
+
+			exitMsg := struct {
+				ExitStatus uint32
+			}{ExitStatus: uint32(exitStatus)}
+
+			if _, err := ch.SendRequest("exit-status", false, ssh.Marshal(&exitMsg)); err != nil {
+				log.Panicf("failed to send exit status: %s", err)
+			}
+
+			if err := ch.Close(); err != nil {
+				log.Printf("failed to close channel: %s", err)
+			}
+		case keepaliveFuchsia:
+			// Ignore.
+		default:
+			log.Panicf("unexpected request type: %s", req.Type)
+		}
 	}
 }

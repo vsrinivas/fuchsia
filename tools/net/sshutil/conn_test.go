@@ -18,47 +18,38 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const testTimeout = 1 * time.Second
-
 func setUpConn(
 	ctx context.Context,
 	t *testing.T,
 	onNewChannel func(ssh.NewChannel),
-	onRequest func(*ssh.Request),
+	onRequest func(ssh.Channel, *ssh.Request),
 ) (*Conn, *sshServer) {
-	server, err := startSSHServer(onNewChannel, onRequest)
+	server, err := startSSHServer(ctx, onNewChannel, onRequest)
 	if err != nil {
-		t.Fatalf("failed to start ssh server: %v", err)
+		t.Fatalf("failed to start ssh server: %s", err)
 	}
-	t.Cleanup(server.stop)
+	t.Cleanup(func() {
+		if err := server.stop(); err != nil {
+			t.Error(err)
+		}
+	})
 
 	conn, err := connect(
 		ctx,
 		ConstantAddrResolver{
-			Addr: server.addr,
+			Addr: server.listener.Addr(),
 		},
 		server.clientConfig,
 		retry.NoRetries(),
 	)
 	if err != nil {
-		t.Fatalf("failed to create conn: %v", err)
+		t.Fatalf("failed to create conn: %s", err)
 	}
 	t.Cleanup(func() {
-		if err := conn.Close(); err != nil {
-			t.Log(err)
-		}
+		_ = conn.Close()
 	})
 
 	return conn, server
-}
-
-func assertChannelClosed(t *testing.T, ch <-chan struct{}, errorMessage string) {
-	t.Helper()
-	select {
-	case <-ch:
-	case <-time.After(testTimeout):
-		t.Errorf(errorMessage)
-	}
 }
 
 func TestKeepalive(t *testing.T) {
@@ -67,12 +58,14 @@ func TestKeepalive(t *testing.T) {
 	t.Run("sends pings when timer fires", func(t *testing.T) {
 		requestsReceived := make(chan *ssh.Request, 1)
 
-		conn, _ := setUpConn(ctx, t, nil, func(req *ssh.Request) {
+		conn, _ := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
 			if !req.WantReply {
 				t.Errorf("keepalive pings must have WantReply set")
 			}
 			requestsReceived <- req
-			req.Reply(true, []byte{})
+			if err := req.Reply(true, nil); err != nil {
+				t.Error(err)
+			}
 		})
 
 		// Sending on this channel triggers a keepalive ping.
@@ -81,16 +74,14 @@ func TestKeepalive(t *testing.T) {
 
 		keepaliveTicks <- time.Now()
 
-		select {
-		case <-requestsReceived:
-		case <-time.After(testTimeout):
-			t.Errorf("didn't receive keepalive ping after trigger sent")
-		}
+		<-requestsReceived
 	})
 
 	t.Run("disconnects conn if keepalive times out", func(t *testing.T) {
-		conn, _ := setUpConn(ctx, t, nil, func(req *ssh.Request) {
-			req.Reply(true, []byte{})
+		conn, _ := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
+			if err := req.Reply(true, nil); err != nil {
+				t.Error(err)
+			}
 		})
 
 		// Sending on this channel triggers the timeout handling mechanism for
@@ -105,17 +96,21 @@ func TestKeepalive(t *testing.T) {
 
 		keepaliveTicks <- time.Now()
 
-		assertChannelClosed(t, conn.DisconnectionListener(), "keepalive failure should have disconnected the conn")
+		<-conn.DisconnectionListener()
 	})
 
 	t.Run("disconnects conn if keepalive fails", func(t *testing.T) {
-		conn, server := setUpConn(ctx, t, nil, func(req *ssh.Request) {
-			req.Reply(true, []byte{})
+		conn, server := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
+			if err := req.Reply(true, nil); err != nil {
+				t.Error(err)
+			}
 		})
 
 		// The first keepalive request should fail immediately if the server is
 		// stopped.
-		server.stop()
+		if err := server.stop(); err != nil {
+			t.Error(err)
+		}
 
 		keepaliveTicks := make(chan time.Time)
 		keepaliveComplete := make(chan struct{})
@@ -126,13 +121,15 @@ func TestKeepalive(t *testing.T) {
 
 		keepaliveTicks <- time.Now()
 
-		assertChannelClosed(t, conn.DisconnectionListener(), "a keepalive failure didn't disconnect the conn")
-		assertChannelClosed(t, keepaliveComplete, "a keepalive failure didn't terminate the keepalive goroutine")
+		<-conn.DisconnectionListener()
+		<-keepaliveComplete
 	})
 
 	t.Run("stops sending when conn is closed", func(t *testing.T) {
-		conn, _ := setUpConn(ctx, t, nil, func(req *ssh.Request) {
-			req.Reply(true, []byte{})
+		conn, _ := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
+			if err := req.Reply(true, nil); err != nil {
+				t.Error(err)
+			}
 		})
 
 		keepaliveComplete := make(chan struct{})
@@ -141,10 +138,12 @@ func TestKeepalive(t *testing.T) {
 			close(keepaliveComplete)
 		}()
 
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			t.Error(err)
+		}
 
-		assertChannelClosed(t, conn.DisconnectionListener(), "conn.Close() didn't disconnect the conn")
-		assertChannelClosed(t, keepaliveComplete, "conn.Close() didn't terminate the keepalive goroutine")
+		<-conn.DisconnectionListener()
+		<-keepaliveComplete
 	})
 }
 
@@ -159,7 +158,8 @@ func TestRun(t *testing.T) {
 		client, _ := setUpClient(
 			ctx,
 			t,
-			onNewExecChannel(func(cmd string, stdout io.Writer, stderr io.Writer) int {
+			nil,
+			onExecRequest(func(cmd string, stdout io.Writer, stderr io.Writer) int {
 				switch cmd {
 				case "pass":
 					stdout.Write([]byte("pass stdout"))
@@ -174,7 +174,6 @@ func TestRun(t *testing.T) {
 					return 255
 				}
 			}),
-			nil,
 		)
 
 		check := func(cmd string, expectedExitStatus int, expectedStdout string, expectedStderr string) {
@@ -183,11 +182,11 @@ func TestRun(t *testing.T) {
 			err := client.Run(ctx, []string{cmd}, &stdout, &stderr)
 			if expectedExitStatus == 0 {
 				if err != nil {
-					t.Errorf("command %q failed: %v", cmd, err)
+					t.Errorf("command %q failed: %s", cmd, err)
 				}
 			} else if err != nil {
 				if e, ok := err.(*ssh.ExitError); !ok || e.ExitStatus() != expectedExitStatus {
-					t.Errorf("command %q failed: %v", cmd, err)
+					t.Errorf("command %q failed: %s", cmd, err)
 				}
 			}
 			actualStdout := stdout.String()
@@ -215,9 +214,13 @@ func TestRun(t *testing.T) {
 		// or write to the socket.
 		listener, err := net.Listen("tcp", ":0")
 		if err != nil {
-			t.Fatalf("failed to listen on port: %v", err)
+			t.Fatalf("failed to listen on port: %s", err)
 		}
-		defer listener.Close()
+		defer func() {
+			if err := listener.Close(); err != nil {
+				t.Log(err)
+			}
+		}()
 
 		serverErrs := make(chan error)
 		go func() {
@@ -235,13 +238,14 @@ func TestRun(t *testing.T) {
 			// be canceled.
 			<-done
 
-			conn.Close()
-
+			if err := conn.Close(); err != nil {
+				t.Error(err)
+			}
 		}()
 
 		_, clientConfig, err := genSSHConfig()
 		if err != nil {
-			t.Fatalf("failed to create ssh config: %v", err)
+			t.Fatalf("failed to create ssh config: %s", err)
 		}
 
 		// In order to test that we can break out of a stuck client, we
@@ -267,18 +271,18 @@ func TestRun(t *testing.T) {
 				retry.NoRetries(),
 			)
 			if client != nil {
-				client.Close()
+				if err := client.Close(); err != nil {
+					t.Error(err)
+				}
 			}
 			connectErrs <- err
 		}()
 
 		// Wait for the connection to be accepted.
 		select {
-		case <-time.After(testTimeout):
-			t.Fatalf("server didn't accept the connection in time")
 		case err := <-serverErrs:
 			if err != nil {
-				t.Errorf("server failed to accept connection: %v", err)
+				t.Errorf("server failed to accept connection: %s", err)
 			}
 		case <-accepted:
 		}
@@ -289,8 +293,6 @@ func TestRun(t *testing.T) {
 
 		// Wait for the connection to be canceled.
 		select {
-		case <-time.After(testTimeout):
-			t.Errorf("canceling the context should cause connect() to exit")
 		case err := <-connectErrs:
 			if !errors.Is(err, context.Canceled) {
 				t.Errorf("context was canceled but connect() returned wrong error: %v", err)
@@ -312,8 +314,6 @@ func TestRun(t *testing.T) {
 		cancel()
 
 		select {
-		case <-time.After(testTimeout):
-			t.Errorf("canceling the context should cause Run() to exit")
 		case err := <-errs:
 			if !errors.Is(err, context.Canceled) {
 				t.Errorf("context was canceled but Run() returned wrong error: %v", err)
@@ -324,7 +324,9 @@ func TestRun(t *testing.T) {
 	t.Run("exits early if session creation fails", func(t *testing.T) {
 		conn, server := setUpConn(ctx, t, nil, nil)
 
-		server.stop()
+		if err := server.stop(); err != nil {
+			t.Error(err)
+		}
 
 		errs := make(chan error)
 		go func() {
@@ -332,8 +334,6 @@ func TestRun(t *testing.T) {
 		}()
 
 		select {
-		case <-time.After(testTimeout):
-			t.Errorf("Run() should exit if the server becomes unavailable")
 		case err := <-errs:
 			if err == nil {
 				t.Errorf("Run() should return an error if the server is unavailable")

@@ -13,33 +13,37 @@ import (
 	"strconv"
 	"sync/atomic"
 	"testing"
-	"time"
+
+	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
-	"golang.org/x/crypto/ssh"
 )
 
 func setUpClient(
 	ctx context.Context,
 	t *testing.T,
 	onNewChannel func(ssh.NewChannel),
-	onRequest func(*ssh.Request),
+	onRequest func(ssh.Channel, *ssh.Request),
 ) (*Client, *sshServer) {
-	server, err := startSSHServer(onNewChannel, onRequest)
+	server, err := startSSHServer(ctx, onNewChannel, onRequest)
 	if err != nil {
-		t.Fatalf("failed to start ssh server: %v", err)
+		t.Fatalf("failed to start ssh server: %s", err)
 	}
-	t.Cleanup(server.stop)
+	t.Cleanup(func() {
+		if err := server.stop(); err != nil {
+			t.Error(err)
+		}
+	})
 
 	client, err := NewClient(
 		ctx,
 		ConstantAddrResolver{
-			Addr: server.addr,
+			Addr: server.listener.Addr(),
 		},
 		server.clientConfig,
 		retry.NoRetries())
 	if err != nil {
-		t.Fatalf("failed to create client: %v", err)
+		t.Fatalf("failed to create client: %s", err)
 	}
 	t.Cleanup(client.Close)
 
@@ -54,7 +58,8 @@ func TestReconnect(t *testing.T) {
 		client, _ := setUpClient(
 			ctx,
 			t,
-			onNewExecChannel(func(cmd string, stdout io.Writer, stderr io.Writer) int {
+			nil,
+			onExecRequest(func(cmd string, stdout io.Writer, stderr io.Writer) int {
 				expected := strconv.Itoa(int(atomic.AddInt64(&execCount, 1)))
 				if expected != cmd {
 					t.Fatalf("expected exec cmd to be %q, not %q", expected, cmd)
@@ -63,14 +68,13 @@ func TestReconnect(t *testing.T) {
 				stderr.Write([]byte(expected))
 				return 0
 			}),
-			nil,
 		)
 
 		// Check we can run a command before reconnecting.
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		if err := client.Run(ctx, []string{"1"}, &stdout, &stderr); err != nil {
-			t.Errorf("failed to run a command: %v", err)
+			t.Errorf("failed to run a command: %s", err)
 		}
 		if execCount != 1 {
 			t.Errorf("expected exec count to be 1, not %d", execCount)
@@ -84,17 +88,17 @@ func TestReconnect(t *testing.T) {
 
 		client.Close()
 
-		assertChannelClosed(t, client.DisconnectionListener(), "close should have disconnected the client")
+		<-client.DisconnectionListener()
 
 		if err := client.Reconnect(ctx); err != nil {
-			t.Errorf("failed to reconnect: %v", err)
+			t.Errorf("failed to reconnect: %s", err)
 		}
 
 		// Check we can still run a command after reconnecting.
 		stdout.Reset()
 		stderr.Reset()
 		if err := client.Run(ctx, []string{"2"}, &stdout, &stderr); err != nil {
-			t.Errorf("failed to run a command: %v", err)
+			t.Errorf("failed to run a command: %s", err)
 		}
 		if execCount != 2 {
 			t.Errorf("expected exec count to be 2, not %d", execCount)
@@ -114,7 +118,7 @@ func TestCloseDuringConnection(t *testing.T) {
 
 	serverConfig, clientConfig, err := genSSHConfig()
 	if err != nil {
-		t.Fatalf("failed to create ssh config: %v", err)
+		t.Fatalf("failed to create ssh config: %s", err)
 	}
 
 	connected := make(chan struct{})
@@ -126,9 +130,13 @@ func TestCloseDuringConnection(t *testing.T) {
 	// or write to the socket.
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		t.Fatalf("failed to listen on port: %v", err)
+		t.Fatalf("failed to listen on port: %s", err)
 	}
-	defer listener.Close()
+	defer func() {
+		if err := listener.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	serverErrs := make(chan error)
 	go func() {
@@ -148,7 +156,9 @@ func TestCloseDuringConnection(t *testing.T) {
 
 		<-connected
 
-		sshConn.Close()
+		if err := sshConn.Close(); err != nil {
+			t.Error(err)
+		}
 
 		// Accept the reconnection attempt, but never respond to it.
 		tcpConn, err = listener.Accept()
@@ -165,7 +175,9 @@ func TestCloseDuringConnection(t *testing.T) {
 		// be canceled.
 		<-done
 
-		tcpConn.Close()
+		if err := tcpConn.Close(); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	// Spawn a goroutine to establish the initial client.
@@ -193,13 +205,11 @@ func TestCloseDuringConnection(t *testing.T) {
 	// Wait for the connection to succeed.
 	var client *Client
 	select {
-	case <-time.After(testTimeout):
-		t.Fatalf("server didn't accept the connection in time")
 	case err := <-serverErrs:
-		t.Fatalf("server failed to accept connection: %v", err)
+		t.Fatalf("server failed to accept connection: %s", err)
 	case res := <-clientChan:
 		if res.err != nil {
-			t.Fatalf("client failed to connect: %v", err)
+			t.Fatalf("client failed to connect: %s", err)
 		}
 
 		client = res.client
@@ -218,12 +228,10 @@ func TestCloseDuringConnection(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(testTimeout):
-		t.Fatalf("client never attempted to reconnect")
 	case err := <-serverErrs:
-		t.Fatalf("server failed to accept reconnection: %v", err)
+		t.Fatalf("server failed to accept reconnection: %s", err)
 	case err := <-reconnectErrs:
-		t.Fatalf("client failed to reconnect: %v", err)
+		t.Fatalf("client failed to reconnect: %s", err)
 	case <-reconnected:
 	}
 
@@ -235,18 +243,12 @@ func TestCloseDuringConnection(t *testing.T) {
 	}()
 
 	// The close goroutine should succeed.
-	select {
-	case <-time.After(testTimeout):
-		t.Fatalf("client failed to close")
-	case <-clientClosed:
-	}
+	<-clientClosed
 
 	// The reconnection goroutine won't error out until the context is canceled.
 	reconnectCancel()
 
 	select {
-	case <-time.After(testTimeout):
-		t.Fatalf("client reconnection never failed")
 	case err := <-reconnectErrs:
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("client reconnection should have been canceled, not %v", err)

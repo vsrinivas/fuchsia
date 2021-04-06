@@ -21,6 +21,7 @@ go_library("sshutil") {
     ":constants",
     "//third_party/golibs:github.com/pkg/sftp",
     "//third_party/golibs:golang.org/x/crypto",
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/lib/logger",
     "//tools/lib/retry",
   ]
