@@ -1,0 +1,45 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines a build-time test that verifies that two files have the same
+# contents.
+#
+# Meant to be used during build migrations to ensure that two different
+# actions are producing files with the same contents.  Similar to the
+# golden_file template, but with slightly different arguments and error
+# messages to better convey why it's caused a build failure.
+#
+# Parameters
+#   first  (required)
+#     Path to the first file.
+#
+#   second (required)
+#     Path to the second file.
+#
+template("verify_files_match") {
+  assert(defined(invoker.first), "first is a required parameter")
+  assert(defined(invoker.second), "second is a required parameter")
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    script = "//build/testing/verify_files_match.py"
+
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    inputs = [
+      first,
+      second,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      rebase_path(first, root_build_dir),
+      rebase_path(second, root_build_dir),
+    ]
+  }
+}
