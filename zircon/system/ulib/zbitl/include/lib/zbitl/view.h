@@ -680,7 +680,7 @@ class View {
       const uint32_t payload_offset = PayloadOffset(*value_.header, next_item_offset);
       const uint32_t payload_size = value_.header.length();
       const uint32_t aligned_payload_size =
-          (payload_size + kPayloadSizeAlignment - 1) & kPayloadSizeAlignment;
+          (payload_size + kPayloadSizeAlignment - 1) & -kPayloadSizeAlignment;
       if (payload_offset > view_->limit_ || aligned_payload_size > view_->limit_ - payload_offset) {
         Fail("container too short for next item payload");
         return;
