@@ -171,6 +171,10 @@ VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
 
   // Wait until the device is connected.
   RunLoopUntil([this, out, id]() { return out->Ready() && devices_[id].info != std::nullopt; });
+
+  // Wait for device to become the default.
+  RunLoopUntil([this, id]() { return devices_[id].is_default; });
+  ExpectNoUnexpectedErrors("during CreateIntput");
   return out;
 }
 
