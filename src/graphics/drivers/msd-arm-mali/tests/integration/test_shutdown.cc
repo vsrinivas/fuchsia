@@ -69,8 +69,7 @@ static void looper_thread_entry() {
     if (result == 0) {
       complete_count++;
     } else {
-      // Wait rendering can't pass back a proper error yet
-      EXPECT_TRUE(result == MAGMA_STATUS_CONNECTION_LOST || result == MAGMA_STATUS_INTERNAL_ERROR);
+      EXPECT_EQ(result, MAGMA_STATUS_CONNECTION_LOST) << " result: " << result;
       test.reset();
       std::shared_lock lock(connection_create_mutex);
       test.reset(new TestConnection());

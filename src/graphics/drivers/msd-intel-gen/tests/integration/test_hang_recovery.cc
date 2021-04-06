@@ -97,7 +97,7 @@ class TestConnection : public magma::TestDeviceBase {
             break;
           }
         }
-        EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, magma_get_error(connection_));
         EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
         EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[buffer_size / 4 - 1]);
         break;
@@ -111,7 +111,7 @@ class TestConnection : public magma::TestDeviceBase {
             break;
           }
         }
-        EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, magma_get_error(connection_));
         EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
         EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[buffer_size / 4 - 1]);
         break;

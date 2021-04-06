@@ -143,6 +143,7 @@ source_set("connection_client") {
     "..:connection_client_header",
     "..:trace",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   # Fidl bindings should not introduce a dep on libasync-default.so

@@ -28,10 +28,12 @@ static magma_status_t MagmaChannelStatus(const zx_status_t status) {
     case ZX_OK:
       return MAGMA_STATUS_OK;
     case ZX_ERR_PEER_CLOSED:
+    case ZX_ERR_CANCELED:
       return MAGMA_STATUS_CONNECTION_LOST;
     case ZX_ERR_TIMED_OUT:
       return MAGMA_STATUS_TIMED_OUT;
     default:
+      DMESSAGE("MagmaChannelStatus: no match for zx status %d", status);
       return MAGMA_STATUS_INTERNAL_ERROR;
   }
 }
@@ -118,15 +120,45 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
   zx::channel server_endpoint_;
 };
 
+class PrimaryWrapper::AsyncHandler : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Primary> {
+ public:
+  // Parent outlives the object instance.
+  AsyncHandler(PrimaryWrapper* parent) : parent_(parent) {}
+
+  void Unbound(::fidl::UnbindInfo info) override {
+    unbind_info_ = info;
+    parent_->loop_.Shutdown();
+  }
+
+  auto& unbind_info() { return unbind_info_; }
+
+  void OnNotifyMessagesConsumed(
+      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event)
+      override {
+    parent_->inflight_count_ -= event->count;
+  }
+
+  void OnNotifyMemoryImported(
+      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) override {
+    parent_->inflight_bytes_ -= event->bytes;
+  }
+
+ private:
+  PrimaryWrapper* parent_;
+  std::optional<fidl::UnbindInfo> unbind_info_;
+};
+
 PrimaryWrapper::PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messages,
                                uint64_t max_inflight_bytes)
-    : client_(std::move(channel)),
+    : loop_(&kAsyncLoopConfigNeverAttachToThread),
+      async_handler_(std::make_shared<AsyncHandler>(this)),
+      client_(std::move(channel), loop_.dispatcher(), async_handler_),
       max_inflight_messages_(max_inflight_messages),
       max_inflight_bytes_(max_inflight_bytes) {
   if (max_inflight_messages == 0 || max_inflight_bytes == 0)
     return;
 
-  zx_status_t status = client_.EnableFlowControl().status();
+  zx_status_t status = client_->EnableFlowControl().status();
   if (status == ZX_OK) {
     flow_control_enabled_ = true;
   } else {
@@ -141,7 +173,7 @@ magma_status_t PrimaryWrapper::ImportBuffer(zx::vmo vmo) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl(size);
 
-  zx_status_t status = client_.ImportBuffer(std::move(vmo)).status();
+  zx_status_t status = client_->ImportBuffer(std::move(vmo)).status();
   if (status == ZX_OK) {
     UpdateFlowControl(size);
   }
@@ -151,7 +183,7 @@ magma_status_t PrimaryWrapper::ImportBuffer(zx::vmo vmo) {
 magma_status_t PrimaryWrapper::ReleaseBuffer(uint64_t buffer_id) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.ReleaseBuffer(buffer_id).status();
+  zx_status_t status = client_->ReleaseBuffer(buffer_id).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -162,7 +194,7 @@ magma_status_t PrimaryWrapper::ImportObject(zx::handle handle,
                                             magma::PlatformObject::Type object_type) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.ImportObject(std::move(handle), object_type).status();
+  zx_status_t status = client_->ImportObject(std::move(handle), object_type).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -173,7 +205,7 @@ magma_status_t PrimaryWrapper::ReleaseObject(uint64_t object_id,
                                              magma::PlatformObject::Type object_type) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.ReleaseObject(object_id, object_type).status();
+  zx_status_t status = client_->ReleaseObject(object_id, object_type).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -183,7 +215,7 @@ magma_status_t PrimaryWrapper::ReleaseObject(uint64_t object_id,
 magma_status_t PrimaryWrapper::CreateContext(uint32_t context_id) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.CreateContext(context_id).status();
+  zx_status_t status = client_->CreateContext(context_id).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -193,7 +225,7 @@ magma_status_t PrimaryWrapper::CreateContext(uint32_t context_id) {
 magma_status_t PrimaryWrapper::DestroyContext(uint32_t context_id) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.DestroyContext(context_id).status();
+  zx_status_t status = client_->DestroyContext(context_id).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -207,7 +239,7 @@ magma_status_t PrimaryWrapper::ExecuteCommandBufferWithResources(
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status = client_
-                           .ExecuteCommandBufferWithResources(
+                           ->ExecuteCommandBufferWithResources(
                                context_id, std::move(command_buffer), std::move(resources),
                                std::move(wait_semaphores), std::move(signal_semaphores))
                            .status();
@@ -223,7 +255,7 @@ magma_status_t PrimaryWrapper::ExecuteImmediateCommands(uint32_t context_id,
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status =
-      client_.ExecuteImmediateCommands(context_id, std::move(command_data), std::move(semaphores))
+      client_->ExecuteImmediateCommands(context_id, std::move(command_data), std::move(semaphores))
           .status();
   if (status == ZX_OK) {
     UpdateFlowControl();
@@ -237,7 +269,7 @@ magma_status_t PrimaryWrapper::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status =
-      client_.MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags).status();
+      client_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -247,7 +279,7 @@ magma_status_t PrimaryWrapper::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
 magma_status_t PrimaryWrapper::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.UnmapBufferGpu(buffer_id, gpu_va).status();
+  zx_status_t status = client_->UnmapBufferGpu(buffer_id, gpu_va).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -258,7 +290,7 @@ magma_status_t PrimaryWrapper::CommitBuffer(uint64_t buffer_id, uint64_t page_of
                                             uint64_t page_count) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.CommitBuffer(buffer_id, page_offset, page_count).status();
+  zx_status_t status = client_->CommitBuffer(buffer_id, page_offset, page_count).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -270,7 +302,7 @@ magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
                                              uint64_t length) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.BufferRangeOp(buffer_id, op, start, length).status();
+  zx_status_t status = client_->BufferRangeOp(buffer_id, op, start, length).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -280,7 +312,7 @@ magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
 magma_status_t PrimaryWrapper::AccessPerformanceCounters(zx::event event) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.AccessPerformanceCounters(std::move(event)).status();
+  zx_status_t status = client_->AccessPerformanceCounters(std::move(event)).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -290,7 +322,7 @@ magma_status_t PrimaryWrapper::AccessPerformanceCounters(zx::event event) {
 magma_status_t PrimaryWrapper::EnablePerformanceCounters(fidl::VectorView<uint64_t> counters) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.EnablePerformanceCounters(std::move(counters)).status();
+  zx_status_t status = client_->EnablePerformanceCounters(std::move(counters)).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -302,7 +334,7 @@ magma_status_t PrimaryWrapper::CreatePerformanceCounterBufferPool(uint64_t pool_
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status =
-      client_.CreatePerformanceCounterBufferPool(pool_id, std::move(event_channel)).status();
+      client_->CreatePerformanceCounterBufferPool(pool_id, std::move(event_channel)).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -312,7 +344,7 @@ magma_status_t PrimaryWrapper::CreatePerformanceCounterBufferPool(uint64_t pool_
 magma_status_t PrimaryWrapper::ReleasePerformanceCounterBufferPool(uint64_t pool_id) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.ReleasePerformanceCounterBufferPool(pool_id).status();
+  zx_status_t status = client_->ReleasePerformanceCounterBufferPool(pool_id).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -324,7 +356,7 @@ magma_status_t PrimaryWrapper::AddPerformanceCounterBufferOffsetsToPool(
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status =
-      client_.AddPerformanceCounterBufferOffsetsToPool(pool_id, std::move(offsets)).status();
+      client_->AddPerformanceCounterBufferOffsetsToPool(pool_id, std::move(offsets)).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -335,7 +367,7 @@ magma_status_t PrimaryWrapper::RemovePerformanceCounterBufferFromPool(uint64_t p
                                                                       uint64_t buffer_id) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.RemovePerformanceCounterBufferFromPool(pool_id, buffer_id).status();
+  zx_status_t status = client_->RemovePerformanceCounterBufferFromPool(pool_id, buffer_id).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -345,7 +377,7 @@ magma_status_t PrimaryWrapper::RemovePerformanceCounterBufferFromPool(uint64_t p
 magma_status_t PrimaryWrapper::DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.DumpPerformanceCounters(pool_id, trigger_id).status();
+  zx_status_t status = client_->DumpPerformanceCounters(pool_id, trigger_id).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -355,7 +387,7 @@ magma_status_t PrimaryWrapper::DumpPerformanceCounters(uint64_t pool_id, uint32_
 magma_status_t PrimaryWrapper::ClearPerformanceCounters(fidl::VectorView<uint64_t> counters) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_.ClearPerformanceCounters(std::move(counters)).status();
+  zx_status_t status = client_->ClearPerformanceCounters(std::move(counters)).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -393,11 +425,13 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
            count, max_inflight_messages_, bytes, max_inflight_bytes_, new_bytes);
     }
 
-    zx_signals_t pending = {};
-    zx_status_t status = client_.channel().wait_one(
-        ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-        wait ? zx::deadline_after(zx::sec(5)) : zx::deadline_after(zx::duration(0)), &pending);
-
+    // Flow control messages are handled in the PrimaryWrapper::AsyncHandler.
+    zx_status_t status = loop_.Run(
+        wait ? zx::deadline_after(zx::sec(5)) : zx::deadline_after(zx::duration(0)), true /*once*/);
+    if (status == ZX_ERR_BAD_STATE) {
+      DLOG("Loop was shutdown, client is unbound (channel closed)");
+      return;
+    }
     if (wait && status == ZX_ERR_TIMED_OUT) {
       MAGMA_LOG(WARNING, "Flow control: timed out messages %lu bytes %lu", count, bytes);
       continue;
@@ -406,40 +440,6 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
       MAGMA_LOG(ERROR, "Flow control: error waiting for message: %d", status);
       return;
     }
-
-    if ((pending & ZX_CHANNEL_READABLE) == 0)
-      return;
-
-    class EventHandler : public fidl::WireSyncEventHandler<fuchsia_gpu_magma::Primary> {
-     public:
-      explicit EventHandler(PrimaryWrapper* primary_wrapper) : primary_wrapper_(primary_wrapper) {}
-
-      void OnNotifyMessagesConsumed(
-          fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumedResponse* event) override {
-        primary_wrapper_->inflight_count_ -= event->count;
-      }
-
-      void OnNotifyMemoryImported(
-          fuchsia_gpu_magma::Primary::OnNotifyMemoryImportedResponse* event) override {
-        primary_wrapper_->inflight_bytes_ -= event->bytes;
-      }
-
-      zx_status_t Unknown() override {
-        MAGMA_LOG(ERROR, "Flow control: bad event handler ordinal");
-        return ZX_ERR_INVALID_ARGS;
-      }
-
-     private:
-      PrimaryWrapper* const primary_wrapper_;
-    };
-
-    EventHandler event_handler(this);
-    status = client_.HandleOneEvent(event_handler).status();
-    if (status != ZX_OK) {
-      DMESSAGE("Flow control: HandleEvents failed: %d", status);
-      return;
-    }
-
     if (wait) {
       DLOG("Flow control: waited %lld us message count %lu (max %lu) imported bytes %lu (max %lu)",
            std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() -
@@ -459,6 +459,47 @@ void PrimaryWrapper::UpdateFlowControl(uint64_t new_bytes) {
     return;
   inflight_count_ += 1;
   inflight_bytes_ += new_bytes;
+}
+
+magma_status_t PrimaryWrapper::GetError() {
+  std::lock_guard<std::mutex> lock(get_error_lock_);
+  if (error_ != MAGMA_STATUS_OK)
+    return error_;
+
+  // Use GetError() only to achieve the round-trip sync
+  auto result = client_->GetError_Sync();
+
+  if (!result.ok()) {
+    // Only run the loop if the channel has been closed - we don't want to process any
+    // incoming flow control events here.
+    DASSERT(result.status() == ZX_ERR_PEER_CLOSED || result.status() == ZX_ERR_CANCELED);
+
+    // Ensure no other threads are waiting for async events via flow control
+    std::lock_guard<std::mutex> loop_lock(flow_control_mutex_);
+
+    // Run the loop to process the unbind
+    loop_.RunUntilIdle();
+
+    auto unbind_info = async_handler_->unbind_info();
+    DASSERT(unbind_info);
+    if (unbind_info) {
+      DMESSAGE("Primary protocol unbind_info: reason %d status %d", unbind_info->reason,
+               unbind_info->status);
+      error_ = MAGMA_STATUS_INTERNAL_ERROR;
+      if (unbind_info->reason == fidl::UnbindInfo::kPeerClosed) {
+        if (unbind_info->status > 0) {
+          error_ = -unbind_info->status;
+        } else if (unbind_info->status == ZX_ERR_PEER_CLOSED) {
+          // ZX_ERR_PEER_CLOSED may be returned if the MSD crashes
+          error_ = MAGMA_STATUS_CONNECTION_LOST;
+        } else {
+          DASSERT(false);
+        }
+      }
+    }
+  }
+
+  return error_;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -527,16 +568,16 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     auto context_id = next_context_id_++;
     *context_id_out = context_id;
     magma_status_t result = client_.CreateContext(context_id);
-    if (result != MAGMA_STATUS_OK)
-      SetError(result);
+    // TODO(fxbug.dev/12993): return result
+    (void)result;
   }
 
   // Destroys a context for the given id
   void DestroyContext(uint32_t context_id) override {
     DLOG("ZirconPlatformConnectionClient: DestroyContext");
     magma_status_t result = client_.DestroyContext(context_id);
-    if (result != MAGMA_STATUS_OK)
-      SetError(result);
+    // TODO(fxbug.dev/12993): return result
+    (void)result;
   }
 
   void ExecuteCommandBufferWithResources(uint32_t context_id,
@@ -566,9 +607,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
                                                  command_buffer->wait_semaphore_count),
         fidl::VectorView<uint64_t>::FromExternal(signal_semaphores,
                                                  command_buffer->signal_semaphore_count));
-
-    if (result != MAGMA_STATUS_OK)
-      SetError(result);
+    // TODO(fxbug.dev/12993): return result
+    (void)result;
   }
 
   // Returns the number of commands that will fit within |max_bytes|.
@@ -622,8 +662,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       magma_status_t result = client_.ExecuteImmediateCommands(
           context_id, fidl::VectorView<uint8_t>::FromExternal(command_vec),
           fidl::VectorView<uint64_t>::FromExternal(semaphore_vec));
-      if (result != MAGMA_STATUS_OK)
-        SetError(result);
+      // TODO(fxbug.dev/12993): return result
+      (void)result;
       buffers_sent += buffers_to_send;
       messages_sent += 1;
     }
@@ -633,21 +673,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
 
   magma_status_t GetError() override {
     DLOG("ZirconPlatformConnectionClient: GetError");
-    // We need a lock around the channel write and read, because otherwise it's possible two
-    // threads will send the GetErrorOp, the first WaitError will get a response and read it,
-    // and the second WaitError will wake up because of the first response and error out because
-    // there's no message available to read yet.
-    std::lock_guard<std::mutex> lock(get_error_lock_);
-    magma_status_t error = error_;
-    error_ = 0;
-    if (error != MAGMA_STATUS_OK)
-      return error;
-
-    auto result = client_.GetError();
-    magma_status_t status = MagmaChannelStatus(result.status());
-    if (status != MAGMA_STATUS_OK)
-      return status;
-    return result.Unwrap()->magma_status;
+    return client_.GetError();
   }
 
   magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
@@ -796,12 +822,6 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return MAGMA_STATUS_OK;
   }
 
-  void SetError(magma_status_t error) {
-    std::lock_guard<std::mutex> lock(get_error_lock_);
-    if (!error_)
-      error_ = DRET_MSG(error, "ZirconPlatformConnectionClient encountered dispatcher error");
-  }
-
   uint32_t GetNotificationChannelHandle() override { return notification_channel_.get(); }
 
   magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size, size_t* buffer_size_out,
@@ -842,8 +862,6 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   PrimaryWrapper client_;
   zx::channel notification_channel_;
   uint32_t next_context_id_ = 1;
-  std::mutex get_error_lock_;
-  MAGMA_GUARDED(get_error_lock_) magma_status_t error_{};
 };
 
 std::unique_ptr<PlatformConnectionClient> PlatformConnectionClient::Create(

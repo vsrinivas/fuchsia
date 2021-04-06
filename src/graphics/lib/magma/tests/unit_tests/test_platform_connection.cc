@@ -775,14 +775,18 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithoutBytes) {
   constexpr uint64_t kMaxMessages = 10;
   constexpr uint64_t kMaxBytes = 10;
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     auto [wait, count, bytes] = wrapper.ShouldWait(0);
     EXPECT_FALSE(wait);
     EXPECT_EQ(1u, count);
     EXPECT_EQ(0u, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartMessages = 9;
     wrapper.set_for_test(kStartMessages, 0);
     auto [wait, count, bytes] = wrapper.ShouldWait(0);
@@ -791,7 +795,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithoutBytes) {
     EXPECT_EQ(0u, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartMessages = 10;
     wrapper.set_for_test(kStartMessages, 0);
     auto [wait, count, bytes] = wrapper.ShouldWait(0);
@@ -809,7 +815,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
   constexpr uint64_t kMaxMessages = 10;
   constexpr uint64_t kMaxBytes = 10;
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kNewBytes = 5;
     auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
     EXPECT_FALSE(wait);
@@ -817,7 +825,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kNewBytes = 15;
     auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
     EXPECT_FALSE(wait);  // Limit exceeded ok, we can pass a single message of any size
@@ -825,7 +835,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartBytes = 4;
     constexpr uint64_t kNewBytes = 10;
     wrapper.set_for_test(0, kStartBytes);
@@ -835,7 +847,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kStartBytes + kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartBytes = 5;
     constexpr uint64_t kNewBytes = 5;
     wrapper.set_for_test(0, 5);
@@ -845,7 +859,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kStartBytes + kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartBytes = 5;
     constexpr uint64_t kNewBytes = 6;
     wrapper.set_for_test(0, kStartBytes);
@@ -855,7 +871,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kStartBytes + kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartBytes = kMaxBytes;
     constexpr uint64_t kNewBytes = 0;
     wrapper.set_for_test(0, kStartBytes);
@@ -865,7 +883,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kStartBytes + kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartBytes = kMaxBytes + 1;
     constexpr uint64_t kNewBytes = 0;
     wrapper.set_for_test(0, kStartBytes);
@@ -875,7 +895,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kStartBytes + kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartBytes = kMaxBytes;
     constexpr uint64_t kNewBytes = 1;
     wrapper.set_for_test(0, kStartBytes);
@@ -885,7 +907,9 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(kStartBytes + kNewBytes, bytes);
   }
   {
-    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+    magma::PrimaryWrapper wrapper(std::move(local), kMaxMessages, kMaxBytes);
     constexpr uint64_t kStartBytes = kMaxBytes + 1;
     constexpr uint64_t kNewBytes = 1;
     wrapper.set_for_test(0, kStartBytes);

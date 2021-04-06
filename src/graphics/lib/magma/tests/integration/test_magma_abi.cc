@@ -237,9 +237,10 @@ class TestConnection {
 
     magma_map_buffer_gpu(connection_, buffer, 1024, 0, size / page_size(), MAGMA_GPU_MAP_FLAG_READ);
     magma_unmap_buffer_gpu(connection_, buffer, 2048);
-    EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection_));
+
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection_));
+
     EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR, magma_commit_buffer(connection_, buffer, 100, 100));
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_release_buffer(connection_, buffer);
   }
@@ -827,45 +828,14 @@ class TestConnection {
     magma_buffer_t buffer;
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &size, &buffer));
 
-    // For the following, all the commands themselves should succeed (because the channel is fine),
-    // but magma_get_error() should return MAGMA_STATUS_ACCESS_DENIED because performance counters
-    // weren't enabled yet.
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_connection_enable_performance_counters(connection_, &counter, 1));
     EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+
     magma_perf_count_pool_t pool;
     magma_handle_t handle;
-    EXPECT_EQ(MAGMA_STATUS_OK,
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST,
               magma_connection_create_performance_counter_buffer_pool(connection_, &pool, &handle));
-    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
-    struct magma_buffer_offset offset {};
-    offset.buffer_id = magma_get_buffer_id(buffer);
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_add_performance_counter_buffer_offsets_to_pool(
-                                   connection_, pool, &offset, 1));
-    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_dump_performance_counters(connection_, pool, 1));
-    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_connection_clear_performance_counters(connection_, &counter, 1));
-    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
-    uint32_t trigger_id;
-    uint64_t buffer_id;
-    uint32_t buffer_offset;
-    uint64_t time;
-    uint32_t result_flags;
-    // The server should close the channel because it didn't accept the connection.
-    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_connection_read_performance_counter_completion(
-                                                connection_, pool, &trigger_id, &buffer_id,
-                                                &buffer_offset, &time, &result_flags));
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
-
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_remove_performance_counter_buffer_from_pool(
-                                   connection_, pool, buffer));
-    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
-
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_connection_release_performance_counter_buffer_pool(connection_, pool));
-    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
 
     magma_release_buffer(connection_, buffer);
     magma_release_semaphore(connection_, semaphore);

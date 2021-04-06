@@ -113,6 +113,8 @@ struct BufferOffset {
     uint64 size;
 };
 
+/// If a system driver error occurs, the connection will be closed and a Status sent via epitaph.
+/// If negative, the Epitaph represents a Zircon error.
 protocol Primary {
     /// Imports a buffer for use in the system driver.
     ImportBuffer(zx.handle:VMO buffer);
@@ -145,7 +147,7 @@ protocol Primary {
                              bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE command_data,
                              vector<zx.koid>:MAX semaphores);
 
-    /// Retrieve the current magma error status.
+    /// Deprecated: Retrieve the current magma error status.
     GetError() -> (int32 magma_status);
 
     /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's

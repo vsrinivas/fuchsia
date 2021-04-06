@@ -6,6 +6,7 @@
 #define ZIRCON_PLATFORM_CONNECTION_CLIENT_H
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
 #include <mutex>
@@ -50,8 +51,10 @@ class PrimaryWrapper {
   magma_status_t ClearPerformanceCounters(fidl::VectorView<uint64_t> counters);
 
   // Skipped for GetError
-  auto GetError() { return client_.GetError(); }
-  auto IsPerformanceCounterAccessEnabled() { return client_.IsPerformanceCounterAccessEnabled(); }
+  magma_status_t GetError();
+  auto IsPerformanceCounterAccessEnabled() {
+    return client_->IsPerformanceCounterAccessEnabled_Sync();
+  }
 
   // Returns: bool wait, uint64_t message count, uint64_t imported bytes
   std::tuple<bool, uint64_t, uint64_t> ShouldWait(uint64_t new_bytes);
@@ -68,13 +71,19 @@ class PrimaryWrapper {
   void FlowControl(uint64_t new_bytes = 0) MAGMA_REQUIRES(flow_control_mutex_);
   void UpdateFlowControl(uint64_t new_bytes = 0) MAGMA_REQUIRES(flow_control_mutex_);
 
-  fuchsia_gpu_magma::Primary::SyncClient client_;
+  async::Loop loop_;
+  class AsyncHandler;
+  std::shared_ptr<AsyncHandler> async_handler_;
+  fidl::Client<fuchsia_gpu_magma::Primary> client_;
+
   const uint64_t max_inflight_messages_;
   const uint64_t max_inflight_bytes_;
   bool flow_control_enabled_ = false;
   uint64_t inflight_count_ = 0;
   uint64_t inflight_bytes_ = 0;
   std::mutex flow_control_mutex_;
+  std::mutex get_error_lock_;
+  MAGMA_GUARDED(get_error_lock_) magma_status_t error_{};
 };
 
 }  // namespace magma

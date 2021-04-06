@@ -191,10 +191,9 @@ class ZirconPlatformConnection : public fuchsia_gpu_magma::Primary::RawChannelIn
   void ClearPerformanceCounters(::fidl::VectorView<uint64_t> counters,
                                 ClearPerformanceCountersCompleter::Sync& completer) override;
 
-  void SetError(magma_status_t error) {
-    if (!error_)
-      error_ = DRET_MSG(error, "ZirconPlatformConnection encountered dispatcher error");
-  }
+  // Epitaph will be sent on the given completer if provided, else on the server binding.
+  void SetError(fidl::CompleterBase* completer, magma_status_t error);
+
   void FlowControl(uint64_t size = 0);
 
   // The binding will be valid after a successful |fidl::BindServer| operation,
