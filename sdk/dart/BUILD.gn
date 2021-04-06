@@ -105,10 +105,49 @@ sdk_atom("gen_snapshot_sdk") {
 group("tests") {
   testonly = true
 
-  deps = [
-    "fuchsia_vfs:tests",
-    "zircon:tests",
-  ]
+  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [
+      "//sdk/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_unittests($host_toolchain)",
+      "//sdk/dart/fuchsia_internationalization_flutter:tests($host_toolchain)",
+      "//sdk/dart/fuchsia_modular:fuchsia_modular_package_unittests($host_toolchain)",
+      "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_unittests($host_toolchain)",
+      "//sdk/dart/fuchsia_services:fuchsia_services_package_unittests($host_toolchain)",
+      "//sdk/dart/fuchsia_inspect_flutter:inspect_flutter_test($host_toolchain)",
+    ]
+  }
+
+  public_deps = [
+                  # TODO: This target should just aggregate the top-level directories and
+                  # most of these dependencies should be in those subdirectories.
+                  "//garnet/packages:garnet",
+                  "//garnet/packages/testing:run_test_component",
+                  "//garnet/packages/tests:scenic",
+                  "//garnet/packages/tools:scenic",
+                  "//src/modular/bundles:framework",
+                  "//src/modular/bundles:tools",
+                  "//src/modular/bundles:integration_testing",
+                  "//src/fonts",
+                  "//topaz/bin/dart_fidl_json/test:dart_fidl_json_test($host_toolchain)",
+
+                  "//sdk/dart/fuchsia_inspect:tests",
+
+                  # TODO(fxb/38305): Re-enable test when unblocked and inspect paths are corrected
+                  # "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester:inspect-dart-integration-test-driver",
+                  "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester",
+                  "//sdk/dart/fuchsia_inspect/test/integration:dart_inspect_vmo_test",
+                  "//sdk/dart/fuchsia_inspect/test/integration:dart_inspect_vmo_test_writer",
+                  "//sdk/dart/fuchsia_inspect/test/validator_puppet:tests",
+                  "//sdk/dart/fuchsia_logger:fuchsia_logger_package_unittests($host_toolchain)",
+                  "//sdk/dart/fuchsia_logger/test/integration:fuchsia-logger-integration-tests",
+                  "//sdk/dart/fuchsia_modular:fuchsia-modular-integration-tests",
+                  "//sdk/dart/fuchsia_modular_testing:fuchsia-modular-testing-integration-tests",
+                  "//sdk/dart/fuchsia_services:fuchsia-services-integration-tests",
+                  "//sdk/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",
+                  "//sdk/dart/fuchsia_vfs:tests",
+                  "//sdk/dart/zircon:tests",
+                ] + _flutter_tester_tests
 }
 
 action("dart_sdk_docs") {
