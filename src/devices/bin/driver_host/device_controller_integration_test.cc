@@ -437,8 +437,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
   zx_status_t call_status = ZX_OK;
-  auto resp = fuchsia_device::Controller::Call::Rebind(zx::unowned(parent_channel),
-                                                       ::fidl::StringView("", 0));
+  auto resp =
+      fuchsia_device::Controller::Call::Rebind(zx::unowned(parent_channel), ::fidl::StringView(""));
   ASSERT_OK(resp.status());
   if (resp->result.is_err()) {
     call_status = resp->result.err();
@@ -480,8 +480,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
   zx_status_t call_status = ZX_OK;
-  auto resp = fuchsia_device::Controller::Call::Rebind(zx::unowned(parent_channel),
-                                                       ::fidl::StringView("", 0));
+  auto resp =
+      fuchsia_device::Controller::Call::Rebind(zx::unowned(parent_channel), ::fidl::StringView(""));
   ASSERT_OK(resp.status());
   if (resp->result.is_err()) {
     call_status = resp->result.err();

@@ -196,7 +196,8 @@ zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const c
   auto event_mask = static_cast<::fuchsia_io2::wire::InotifyWatchMask>(mask);
   // Active remote connections are immutable, so referencing remote here
   // is safe. But we do not want to do a blocking call under the ns lock.
-  return fio::Directory::Call::AddInotifyFilter(vn->Remote(), fidl::unowned_str(path, length),
+  return fio::Directory::Call::AddInotifyFilter(vn->Remote(),
+                                                fidl::StringView::FromExternal(path, length),
                                                 event_mask, watch_descriptor, std::move(socket))
       .status();
 }

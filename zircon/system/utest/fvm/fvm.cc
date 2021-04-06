@@ -171,9 +171,8 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
   zx::channel fvm_channel;
   ASSERT_OK(fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()));
 
-  auto resp = fuchsia_device::Controller::Call::Bind(
-      zx::unowned_channel(fvm_channel.get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
+  auto resp = fuchsia_device::Controller::Call::Bind(zx::unowned_channel(fvm_channel.get()),
+                                                     ::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
   fvm_channel.reset();
@@ -186,8 +185,7 @@ void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
   fdio_cpp::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
 
   auto resp = fuchsia_device::Controller::Call::Rebind(
-      zx::unowned_channel(disk_caller.borrow_channel()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
+      zx::unowned_channel(disk_caller.borrow_channel()), ::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
 
@@ -536,9 +534,8 @@ TEST_F(FvmTest, TestLarge) {
 
   ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 
-  auto resp = fuchsia_device::Controller::Call::Bind(
-      zx::unowned_channel(channel->get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
+  auto resp = fuchsia_device::Controller::Call::Bind(zx::unowned_channel(channel->get()),
+                                                     ::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
 
@@ -2555,9 +2552,8 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   ASSERT_OK(fdio_get_service_handle(ramdisk_fd.get(), fvm_channel.reset_and_get_address()));
 
   // Bind should return ZX_ERR_IO when the load of a driver fails.
-  auto resp = fuchsia_device::Controller::Call::Bind(
-      zx::unowned_channel(fvm_channel.get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
+  auto resp = fuchsia_device::Controller::Call::Bind(zx::unowned_channel(fvm_channel.get()),
+                                                     ::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_FALSE(resp->result.is_response());
   ASSERT_EQ(resp->result.err(), ZX_ERR_INTERNAL);
@@ -2569,9 +2565,8 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // unloaded but Controller::Bind above does not wait until
   // the device is removed. Controller::Rebind ensures nothing is
   // bound to the device, before it tries to bind the driver again.
-  auto resp2 = fuchsia_device::Controller::Call::Rebind(
-      zx::unowned_channel(fvm_channel.get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
+  auto resp2 = fuchsia_device::Controller::Call::Rebind(zx::unowned_channel(fvm_channel.get()),
+                                                        ::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp2.status());
   ASSERT_TRUE(resp2->result.is_response());
   char fvm_path[PATH_MAX];

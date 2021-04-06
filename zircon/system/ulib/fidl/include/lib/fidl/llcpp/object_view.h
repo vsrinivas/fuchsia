@@ -5,9 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 #define LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 
-#include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
-#include <lib/fidl/llcpp/unowned_ptr.h>
 
 namespace fidl {
 
@@ -19,11 +17,7 @@ class ObjectView final {
   template <typename... Args>
   explicit ObjectView(AnyAllocator& allocator, Args&&... args)
       : object_(allocator.Allocate<T>(std::forward<Args>(args)...)) {}
-  // Uses an object already allocated and managed elsewhere.
-  ObjectView(unowned_ptr_t<T> other) { object_ = other.get(); }  // NOLINT
-  // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
-  ObjectView(unowned_ptr_t<aligned<T>> other) { object_ = &other.get()->value; }  // NOLINT
-  ObjectView(std::nullptr_t) {}                                                   // NOLINT
+  ObjectView(std::nullptr_t) {}  // NOLINT
 
   // These methods are the only way to reference data which is not managed by a FidlAllocator.
   // Their usage is dicouraged. The lifetime of the referenced string must be longer than the

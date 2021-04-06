@@ -6,7 +6,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/channel.h>

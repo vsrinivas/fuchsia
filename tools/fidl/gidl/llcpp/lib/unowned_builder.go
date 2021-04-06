@@ -86,7 +86,7 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, sizeof(double)); return d; })()", value)
 		}
 	case string:
-		return fmt.Sprintf("fidl::StringView(%s, %d)", strconv.Quote(value), len(value))
+		return fmt.Sprintf("fidl::StringView(%s)", strconv.Quote(value))
 	case gidlir.HandleWithRights:
 		if b.handleRepr == HandleReprDisposition || b.handleRepr == HandleReprInfo {
 			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)

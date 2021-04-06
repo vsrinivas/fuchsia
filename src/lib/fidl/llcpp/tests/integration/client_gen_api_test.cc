@@ -46,16 +46,15 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
 
   static constexpr char data[] = "TwoWay() sync managed";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
-                                         std::make_unique<Server>(data, sizeof(data)));
+                                         std::make_unique<Server>(data, strlen(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
-  auto result = client->TwoWay(fidl::StringView(data, sizeof(data)),
-                               [&done](Example::TwoWayResponse* response) {
-                                 ASSERT_EQ(sizeof(data), response->out.size());
-                                 EXPECT_EQ(0, strncmp(response->out.data(), data, sizeof(data)));
-                                 sync_completion_signal(&done);
-                               });
+  auto result = client->TwoWay(fidl::StringView(data), [&done](Example::TwoWayResponse* response) {
+    ASSERT_EQ(strlen(data), response->out.size());
+    EXPECT_EQ(0, strncmp(response->out.data(), data, strlen(data)));
+    sync_completion_signal(&done);
+  });
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
@@ -96,13 +95,13 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
 
   static constexpr char data[] = "TwoWay() sync caller-allocated";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
-                                         std::make_unique<Server>(data, sizeof(data)));
+                                         std::make_unique<Server>(data, strlen(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
   fidl::Buffer<Example::TwoWayRequest> buffer;
-  ResponseContext context(&done, data, sizeof(data));
-  auto result = client->TwoWay(buffer.view(), fidl::StringView(data, sizeof(data)), &context);
+  ResponseContext context(&done, data, strlen(data));
+  auto result = client->TwoWay(buffer.view(), fidl::StringView(data), &context);
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
@@ -125,8 +124,8 @@ TEST(GenAPITestCase, EventManaged) {
     sync_completion_t& done() { return done_; }
 
     void OnEvent(Example::OnEventResponse* event) {
-      ASSERT_EQ(sizeof(data), event->out.size());
-      EXPECT_EQ(0, strncmp(event->out.data(), data, sizeof(data)));
+      ASSERT_EQ(strlen(data), event->out.size());
+      EXPECT_EQ(0, strncmp(event->out.data(), data, strlen(data)));
       sync_completion_signal(&done_);
     }
 
@@ -138,11 +137,11 @@ TEST(GenAPITestCase, EventManaged) {
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), event_handler);
 
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
-                                         std::make_unique<Server>(data, sizeof(data)));
+                                         std::make_unique<Server>(data, strlen(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
-  ASSERT_OK(server_binding.value()->OnEvent(fidl::StringView(data, sizeof(data))));
+  ASSERT_OK(server_binding.value()->OnEvent(fidl::StringView(data)));
   ASSERT_OK(sync_completion_wait(&event_handler->done(), ZX_TIME_INFINITE));
 
   server_binding.value().Unbind();
@@ -220,7 +219,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
   ASSERT_TRUE(server_binding.is_ok());
 
   // Make a synchronous call which should fail as a result of the server end closing.
-  auto result = client->TwoWay_Sync(fidl::StringView("", 0));
+  auto result = client->TwoWay_Sync(fidl::StringView(""));
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
 
@@ -260,7 +259,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 
   // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.
-  Example::OnEventResponse resp{fidl::StringView("", 0)};
+  Example::OnEventResponse resp{fidl::StringView("")};
   fidl::OwnedEncodedMessage<Example::OnEventResponse> encoded(&resp);
   ASSERT_TRUE(encoded.ok());
   auto bytes = encoded.GetOutgoingMessage().CopyBytes();

@@ -17,16 +17,10 @@
 
 namespace fidl {
 
-// A FIDL string that either borrows or owns its contents.
-//
-// To borrow the contents of an |std::string|,
-// use |fidl::unowned_str(my_str)|.
+// A FIDL string that borrows its contents.
 class StringView final : private VectorView<const char> {
  public:
   StringView() : VectorView() {}
-  StringView(const char data[], uint64_t size) : VectorView(data, size) {}
-  StringView(unowned_ptr_t<const char[]>&& data, uint64_t size)
-      : VectorView(std::move(data), size) {}
   explicit StringView(VectorView<char>&& vv) : VectorView(std::move(vv)) {}
   explicit StringView(VectorView<const char>&& vv) : VectorView(std::move(vv)) {}
 
@@ -43,10 +37,17 @@ class StringView final : private VectorView<const char> {
   //
   template <size_t N>
   constexpr StringView(const char (&literal)[N], uint64_t size = N - 1)
-      : VectorView(fidl::unowned_ptr_t<const char>(static_cast<const char*>(literal)), size) {
+      : VectorView(static_cast<const char*>(literal), size) {
     static_assert(N > 0, "String should not be empty");
   }
 
+  // These methods are the only way to reference data which is not managed by a FidlAllocator.
+  // Their usage is dicouraged. The lifetime of the referenced string must be longer than the
+  // lifetime of the created StringView.
+  //
+  // For example:
+  // std::string foo = path + "/foo";
+  // fidl::StringView foo_view(foo);
   static StringView FromExternal(cpp17::string_view from) { return StringView(from); }
   static StringView FromExternal(const char* data, size_t size) { return StringView(data, size); }
 
@@ -77,6 +78,7 @@ class StringView final : private VectorView<const char> {
 
  private:
   explicit StringView(cpp17::string_view from) : VectorView(from.data(), from.size()) {}
+  StringView(const char* data, uint64_t size) : VectorView(data, size) {}
 };
 
 }  // namespace fidl

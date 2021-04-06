@@ -20,7 +20,6 @@ const fileHeaderTmpl = `
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>

@@ -129,7 +129,7 @@ struct sysdrv_device_t : public fuchsia_gpu_magma::Device::Interface {
       icd_infos.push_back(std::move(icd_info));
     }
 
-    completer.Reply(fidl::unowned_vec(icd_infos));
+    completer.Reply(fidl::VectorView<fuchsia_gpu_magma::wire::IcdInfo>::FromExternal(icd_infos));
   }
 
   void TestRestart(TestRestartCompleter::Sync& _completer) override {

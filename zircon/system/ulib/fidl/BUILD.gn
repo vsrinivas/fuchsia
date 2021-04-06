@@ -65,7 +65,6 @@ if (is_fuchsia) {
   zx_library("fidl-llcpp") {
     sdk = "source"
     sdk_headers = [
-      "lib/fidl/llcpp/aligned.h",
       "lib/fidl/llcpp/array.h",
       "lib/fidl/llcpp/async_binding.h",
       "lib/fidl/llcpp/async_transaction.h",
@@ -79,7 +78,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/extract_resource_on_destruction.h",
       "lib/fidl/llcpp/fidl_allocator.h",
       "lib/fidl/llcpp/internal/server_details.h",
-      "lib/fidl/llcpp/memory.h",
       "lib/fidl/llcpp/message_storage.h",
       "lib/fidl/llcpp/message.h",
       "lib/fidl/llcpp/object_view.h",
@@ -93,7 +91,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/traits.h",
       "lib/fidl/llcpp/transaction.h",
       "lib/fidl/llcpp/types.h",
-      "lib/fidl/llcpp/unowned_ptr.h",
       "lib/fidl/llcpp/vector_view.h",
       "lib/fidl/llcpp/wire_messaging.h",
     ]
@@ -150,17 +147,14 @@ if (is_fuchsia) {
     host = true
     sdk = "source"
     sdk_headers = [
-      "lib/fidl/llcpp/aligned.h",
       "lib/fidl/llcpp/array.h",
       "lib/fidl/llcpp/coding.h",
       "lib/fidl/llcpp/envelope.h",
       "lib/fidl/llcpp/fidl_allocator.h",
-      "lib/fidl/llcpp/memory.h",
       "lib/fidl/llcpp/object_view.h",
       "lib/fidl/llcpp/soft_migration.h",
       "lib/fidl/llcpp/string_view.h",
       "lib/fidl/llcpp/traits.h",
-      "lib/fidl/llcpp/unowned_ptr.h",
       "lib/fidl/llcpp/vector_view.h",
     ]
     sdk_migrated = true

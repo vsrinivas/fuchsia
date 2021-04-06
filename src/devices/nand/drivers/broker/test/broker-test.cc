@@ -134,9 +134,8 @@ NandDevice::NandDevice() {
     }
     zx_status_t call_status = ZX_OK;
     const char kBroker[] = "/boot/driver/nand-broker.so";
-    auto resp =
-        fuchsia_device::Controller::Call::Bind(zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-                                               ::fidl::StringView(kBroker, strlen(kBroker)));
+    auto resp = fuchsia_device::Controller::Call::Bind(
+        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), ::fidl::StringView(kBroker));
     zx_status_t status = resp.status();
     if (resp->result.is_err()) {
       call_status = resp->result.err();

@@ -48,11 +48,7 @@ fuchsia_unittest_package("fidl_llcpp_wire_type_api_tests") {
 
 test("fidl_llcpp_builder_tests_bin") {
   output_name = "fidl_llcpp_builder_tests"
-  sources = [
-    "aligned_test.cc",
-    "unowned_ptr_test.cc",
-    "vector_view_test.cc",
-  ]
+  sources = [ "vector_view_test.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

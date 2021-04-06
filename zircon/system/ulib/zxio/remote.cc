@@ -754,7 +754,7 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
   Remote rio(io);
   fio2::wire::InotifyWatchMask inotify_mask = static_cast<fio2::wire::InotifyWatchMask>(mask);
   auto result = fio::Directory::Call::AddInotifyFilter(
-      rio.control(), fidl::unowned_str(path, path_len), inotify_mask, watch_descriptor,
+      rio.control(), fidl::StringView::FromExternal(path, path_len), inotify_mask, watch_descriptor,
       zx::socket(socket_handle));
   return result.status();
 }

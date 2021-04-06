@@ -6,7 +6,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
-#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/vector_view.h>

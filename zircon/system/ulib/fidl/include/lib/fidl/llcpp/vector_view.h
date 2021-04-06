@@ -6,7 +6,6 @@
 #define LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 
 #include <lib/fidl/llcpp/fidl_allocator.h>
-#include <lib/fidl/llcpp/unowned_ptr.h>
 #include <lib/fidl/walker.h>
 #include <zircon/fidl.h>
 
@@ -42,8 +41,6 @@ class VectorView {
 
   VectorView() {}
 
-  VectorView(unowned_ptr_t<T[]>&& data, size_t count) : count_(count), data_(data.get()) {}
-
   // Allocates a vector using the allocator.
   VectorView(AnyAllocator& allocator, size_t count)
       : count_(count), data_(allocator.AllocateVector<T>(count)) {}
@@ -51,13 +48,7 @@ class VectorView {
       : count_(initial_count), data_(allocator.AllocateVector<T>(capacity)) {
     ZX_DEBUG_ASSERT(initial_count <= capacity);
   }
-  // Ideally these constructors wouldn't be needed, but automatic deduction into the unowned_ptr
-  // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
-  VectorView(unowned_ptr_t<T> data, size_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
-  template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  VectorView(unowned_ptr_t<std::remove_const_t<U>> data, size_t count)
-      : VectorView(unowned_ptr_t<T[]>(data), count) {}
-  VectorView(std::nullptr_t data, size_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
+  VectorView(std::nullptr_t data, size_t count) {}
 
   template <typename U>
   VectorView(VectorView<U>&& other) {
@@ -99,7 +90,6 @@ class VectorView {
   void set_count(size_t count) { count_ = count; }
 
   const T* data() const { return data_; }
-  void set_data(unowned_ptr_t<T[]> data) { data_ = data.get(); }
 
   T* mutable_data() const { return data_; }
 

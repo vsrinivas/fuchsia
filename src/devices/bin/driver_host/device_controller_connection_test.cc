@@ -115,7 +115,8 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_device_manager::DeviceController> {
+  class EventHandler
+      : public fidl::WireAsyncEventHandler<fuchsia_device_manager::DeviceController> {
    public:
     explicit EventHandler(DeviceControllerConnectionTest* connection) : connection_(connection) {}
 
@@ -137,7 +138,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
   auto result = client->BindDriver(
-      ::fidl::StringView("", 1), std::move(vmo),
+      ::fidl::StringView(""), std::move(vmo),
       [](fuchsia_device_manager::DeviceController::BindDriverResponse* response) {});
   ASSERT_OK(result.status());
 

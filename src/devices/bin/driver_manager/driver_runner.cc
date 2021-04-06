@@ -505,10 +505,10 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
                  response->result.err());
           }
         };
-        auto destroy =
-            realm_->DestroyChild(fsys::wire::ChildRef{.name = fidl::unowned_str(name),
-                                                      .collection = fidl::unowned_str(collection)},
-                                 std::move(destroy_callback));
+        auto destroy = realm_->DestroyChild(
+            fsys::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
+                                 .collection = fidl::StringView::FromExternal(collection)},
+            std::move(destroy_callback));
         if (!destroy.ok()) {
           LOGF(ERROR, "Failed to destroy component '%s': %s", name.data(), destroy.error());
         }

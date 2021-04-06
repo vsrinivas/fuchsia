@@ -10,7 +10,6 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/envelope.h>
-#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 
