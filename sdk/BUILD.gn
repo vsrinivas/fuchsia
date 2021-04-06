@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/banjo/toolchain.gni")
-import("//build/config/profile/sdk.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
@@ -11,60 +10,19 @@ import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
 import("config.gni")
 
-_sdk_public_deps = [
-  ":bootstrap",
-  ":core",
-  ":e2e_testing",
-  ":modular_testing",
-  ":zircon_sysroot",
-]
-
 # This default target should contain all public or partner SDKs.
 # Any public or partner SDKs added to this target should also be
 # added to ALLOWED_CTS_SDKS in //sdk/cts/build/allowed_cts_deps.gni.
 group("sdk") {
   testonly = true
 
-  public_deps = _sdk_public_deps
-  deps = [ ":verify_profile_list" ]
-}
-
-# NOTE: For more details about the two targets below, please read
-# //build/config/profile/sdk.gni.
-
-# Generate a file containing a list of source files from all sdk_source_set()
-# targets reachable from ":sdk", with an "src:" prefix on each line. This matches
-# Clang's sanitizer special case list format
-# (see https://clang.llvm.org/docs/SanitizerSpecialCaseList.html)
-#
-# This is used in //build/config/profile/BUILD.gn when the "profile" variant
-# is selected to restrict profiling to sources listed here, as well as
-# those from 'profile_source_files' and 'profile_source_files_list_files'.
-_generated_sdk_source_set_profile_list =
-    "$root_build_dir/sdk_source_set.profile_list"
-
-generated_file("generate_profile_list") {
-  testonly = true
-  outputs = [ _generated_sdk_source_set_profile_list ]
-  data_keys = [ "sdk_source_set_profile_sources" ]
-  data_deps = _sdk_public_deps
-}
-
-# An action that verifies that the content of sdk_source_set_profile_list
-# matches the output of generate_profile_list above, and prints a human
-# friendly message on how to fix the situation in case of failure.
-action("verify_profile_list") {
-  testonly = true
-  script = "//build/sdk/verify_source_set_profile_list.py"
-  inputs = [ coverage_sdk_source_sets_profile_list ]
-  sources = [ _generated_sdk_source_set_profile_list ]
-  outputs = [ "${_generated_sdk_source_set_profile_list}.verified" ]
-  args = [
-    "--output=" + rebase_path(outputs[0], root_build_dir),
-    "--source=" + rebase_path(inputs[0], root_build_dir),
-    "--generated=" + rebase_path(sources[0], root_build_dir),
+  public_deps = [
+    ":bootstrap",
+    ":core",
+    ":e2e_testing",
+    ":modular_testing",
+    ":zircon_sysroot",
   ]
-  deps = [ ":generate_profile_list" ]
 }
 
 group("sdk.modular") {

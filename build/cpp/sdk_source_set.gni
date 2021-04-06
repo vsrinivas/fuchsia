@@ -232,19 +232,6 @@ template("sdk_source_set") {
     if (defined(invoker.non_sdk_deps)) {
       non_sdk_deps += invoker.non_sdk_deps
     }
-
-    all_sources_with_prefix = []
-    foreach(source, rebase_path(all_sources + all_headers, root_build_dir)) {
-      all_sources_with_prefix += [ "src:" + source ]
-    }
-
-    # Used by the //sdk:sdk_source_set_sources target.
-    metadata = {
-      # This matches the format used by Clang's -fprofile-list option.
-      # See https://clang.llvm.org/docs/SanitizerSpecialCaseList.html
-      sdk_source_set_profile_sources = all_sources_with_prefix
-      sdk_source_set_barrier = []
-    }
   }
 }
 
