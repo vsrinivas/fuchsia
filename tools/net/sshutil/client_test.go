@@ -163,7 +163,7 @@ func TestCloseDuringConnection(t *testing.T) {
 
 		<-connected
 
-		if err := sshConn.Close(); err != nil {
+		if err := sshConn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 			t.Error(err)
 		}
 
