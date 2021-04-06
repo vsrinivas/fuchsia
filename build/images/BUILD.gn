@@ -1911,7 +1911,6 @@ action("flash_script_archive") {
 
 fastboot_manifest_archive_file = "$root_build_dir/flash_archive.json"
 generated_file("fastboot_manifest_archive") {
-  testonly = true
   outputs = [ fastboot_manifest_archive_file ]
   output_conversion = "json"
   deps = [ ":flash_script_archive" ]
@@ -2612,6 +2611,7 @@ copy("fastboot") {
 group("archive-extras") {
   deps = [
     ":build_args_metadata",
+    ":fastboot_manifest_archive",
     ":flash_script_archive",
   ]
 }
