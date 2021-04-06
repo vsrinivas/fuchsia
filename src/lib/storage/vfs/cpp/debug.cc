@@ -8,6 +8,6 @@
 
 namespace fs::debug_internal {
 
-void Log(fbl::StringPiece buffer) { std::cerr << buffer; }
+void Log(fbl::StringPiece buffer) { std::cerr << buffer << std::endl; }
 
 }  // namespace fs::debug_internal
