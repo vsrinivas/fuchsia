@@ -54,7 +54,11 @@ impl Isolate {
         // Mark that the notice has been given
         std::fs::write(metrics_path.join("ffx"), "1")?;
 
-        let xdg_config_home = home_dir.join(".local/share");
+        let xdg_config_home = if cfg!(target_os = "macos") {
+            home_dir.join("Library/Preferences")
+        } else {
+            home_dir.join(".local/share")
+        };
 
         let user_config_dir = xdg_config_home.join("Fuchsia/ffx/config");
         std::fs::create_dir_all(&user_config_dir)?;
@@ -121,6 +125,7 @@ impl Isolate {
 
         cmd.env("HOME", &*self.home_dir);
         cmd.env("XDG_CONFIG_HOME", &*self.xdg_config_home);
+        cmd.env("ASCENDD", &*self.ascendd_path);
         cmd
     }
 }
