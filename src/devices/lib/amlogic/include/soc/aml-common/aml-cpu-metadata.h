@@ -12,6 +12,7 @@ namespace amlogic_cpu {
 
 #define DEVICE_METADATA_AML_PERF_DOMAINS     (0x50524600 | DEVICE_METADATA_PRIVATE)  // PRF
 #define DEVICE_METADATA_AML_OP_POINTS        (0x4f505000 | DEVICE_METADATA_PRIVATE)  // OPP
+#define DEVICE_METADATA_AML_CPU              (0x55504300 | DEVICE_METADATA_PRIVATE)  // CPU
 
 // Note that this is only used for Sherlock's proxy driver and should be removed once that
 // driver is fully deprecated.

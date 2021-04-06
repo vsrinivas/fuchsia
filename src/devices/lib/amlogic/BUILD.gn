@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/unification/zx_library.gni")
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.amlogic.cpu.metadata") {
+  sources = [ "metadata.fidl" ]
+}
 
 zx_library("amlogic") {
   sdk = "source"
@@ -61,6 +66,7 @@ zx_library("amlogic") {
     "s905d2-pll-rates.c",
   ]
   deps = [
+    ":fuchsia.amlogic.cpu.metadata",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/mmio",

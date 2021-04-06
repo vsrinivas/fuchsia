@@ -36,7 +36,8 @@ driver_module("astro") {
     "astro-buttons.cc",
     "astro-canvas.cc",
     "astro-clk.cc",
-    "astro-cpu.cc",
+    # "astro-cpu.cc",
+    "astro-cpu-fidl.cc",
     "astro-display.cc",
     "astro-dsi.cc",
     "astro-gpio.cc",
@@ -61,6 +62,7 @@ driver_module("astro") {
   ]
   deps = [
     ":astro-bind",
+    "//src/devices/lib/amlogic:fuchsia.amlogic.cpu.metadata_llcpp",
     "//sdk/banjo/fuchsia.hardware.clockimpl",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpioimpl",

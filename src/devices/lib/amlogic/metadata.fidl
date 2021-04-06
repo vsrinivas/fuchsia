@@ -1,0 +1,26 @@
+// Copyright 2021 The Fuchsia Authors.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.amlogic.cpu.metadata;
+
+const int64 MAX_NAME_LENGTH = 64;
+const int64 MAX_OPERATING_POINTS = 128;
+const int64 MAX_CPU_DOMAINS = 64;
+
+
+table OperatingPoint {
+    1: uint32 frequency;
+    2: uint32 voltage;
+};
+
+table AmlogicCpuPerformanceDomain {
+    1: uint32 id;
+    2: uint32 core_count;
+    3: uint8 relative_performance;
+    4: string:MAX_NAME_LENGTH name;
+    5: vector<OperatingPoint>:MAX_OPERATING_POINTS operating_points;
+};
+
+table AmlogicCpuMetadata {
+    1: vector<AmlogicCpuPerformanceDomain>:MAX_CPU_DOMAINS domains;
+};

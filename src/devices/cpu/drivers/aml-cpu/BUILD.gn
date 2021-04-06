@@ -22,9 +22,10 @@ driver_module("aml-cpu") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  sources = [ "aml-cpu.cc" ]
+  sources = [ "aml-cpu-fidl.cc" ]
   deps = [
     ":aml-cpu-bind",
+    "//src/devices/lib/amlogic:fuchsia.amlogic.cpu.metadata_llcpp",
     "//sdk/banjo/fuchsia.hardware.clock",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.thermal",
@@ -49,7 +50,7 @@ test("aml-cpu-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-cpu-test.cc",
-    "aml-cpu.cc",
+    "aml-cpu-fidl.cc",
   ]
   output_name = "aml-cpu-test"
   deps = [
