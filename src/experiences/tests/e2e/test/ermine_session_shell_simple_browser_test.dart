@@ -141,16 +141,22 @@ void main() {
     final addButton = webdriver.findElement(By.id('increase'));
     expect(digitLink.text, '0');
     addButton.click();
-    expect(digitLink.text, '1');
+    await ermine.waitFor(() async {
+      return digitLink.text == '1';
+    });
     addButton.click();
-    expect(digitLink.text, '2');
+    await ermine.waitFor(() async {
+      return digitLink.text == '2';
+    });
     print('Clicked the + button next to the digit three times');
 
     // Refreshes the page
     final refresh = find.byValueKey('refresh');
     await browser.tap(refresh);
     digitLink = webdriver.findElement(By.id('target'));
-    expect(digitLink.text, '0');
+    await ermine.waitFor(() async {
+      return digitLink.text == '0';
+    });
     print('Hit RFRSH');
 
     final popupLink = webdriver.findElement(By.linkText('Popup'));

@@ -83,7 +83,7 @@ void main() {
     // Shortcut Meta + Esc should toggle back to Home screen.
     await shortcutCombo(Key.leftMeta, Key.escape);
     await ermine.driver.waitForAbsent(find.byValueKey('overview'));
-  });
+  }, skip: true);
 
   test('Toggle Ask using shortcut', () async {
     // Launch terminal. This should display Home screen with terminal view.
