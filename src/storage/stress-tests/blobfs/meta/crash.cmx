@@ -4,10 +4,8 @@
     ],
     "program": {
         "args": [
-            "-l",
-            "debug",
             "--disconnect-secs",
-            "20",
+            "30",
             "--time-limit-secs",
             "79200"
         ],

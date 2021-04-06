@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::blob::Blob,
     async_trait::async_trait,
-    fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{
+        SeekOrigin, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
+    },
+    fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
     log::debug,
     rand::{rngs::SmallRng, seq::SliceRandom, Rng},
@@ -21,169 +24,110 @@ const BLOCK_SIZE: u64 = fuchsia_merkle::BLOCK_SIZE as u64;
 /// The list of operations that this operator supports
 #[derive(Debug)]
 enum BlobfsOperation {
-    // Create [1, 200] files that are reasonable in size ([8, 4096] KiB)
-    CreateReasonableBlobs,
+    // Fill disk with files that are reasonable in size ([8, 4096] KiB)
+    FillDiskWithReasonableBlobs,
 
     // Fill the disk with files that are 8KiB in size
     FillDiskWithSmallBlobs,
 
-    // Open handles to a random number of blobs on disk
-    NewHandles,
+    // Read a random amount of data at a random offset from a random blob
+    ReadFromBlob,
 
-    // Close all open handles to all blobs
-    CloseAllHandles,
-
-    // From all open handles, read a random amount of data from a random offset
-    ReadFromAllHandles,
-
-    // Verify the contents of all blobs on disk
-    VerifyBlobs,
+    // Create a large blob that does not fit on disk and expect it to fail
+    CreateBlobThatDoesntFitOnDisk,
 }
 
 // Performs operations on blobs expected to exist on disk
 pub struct BlobActor {
-    // In-memory representations of all blobs as they exist on disk
-    pub blobs: Vec<Blob>,
-
     // Random number generator used by the operator
     pub rng: SmallRng,
+
+    // Size of the entire disk. This is used for creating a blob larger than the disk.
+    pub disk_size: u64,
 
     // Blobfs root directory
     pub root_dir: Directory,
 }
 
 impl BlobActor {
-    fn hashes(&self) -> Vec<String> {
-        self.blobs.iter().map(|b| b.merkle_root_hash().to_string()).collect()
+    async fn create_blob(&self, data: FileData) -> Result<(), Status> {
+        // Create the root hash for the blob
+        let data_bytes = data.generate_bytes();
+        let tree = MerkleTree::from_reader(&data_bytes[..]).unwrap();
+        let merkle_root_hash = tree.root().to_string();
+
+        // Write the file to disk
+        let file = self
+            .root_dir
+            .open_file(
+                &merkle_root_hash,
+                OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_WRITABLE,
+            )
+            .await?;
+        file.truncate(data.size_bytes).await?;
+        file.write(&data_bytes).await?;
+        file.close().await
     }
 
-    // Reads in all blobs stored on the filesystem and compares them to our in-memory
-    // model to ensure that everything is as expected.
-    async fn verify_blobs(&mut self) -> Result<(), Status> {
-        debug!("Verifying {} blobs...", self.blobs.len());
-        let on_disk_hashes = self.root_dir.entries().await?;
-
-        // Cleanup: Remove all blobs that no longer exist on disk
-        let mut blobs = vec![];
-        for blob in self.blobs.drain(..) {
-            if on_disk_hashes.iter().any(|h| h == blob.merkle_root_hash()) {
-                blobs.push(blob);
-            }
-        }
-        self.blobs = blobs;
-
-        let in_memory_hashes = self.hashes();
-
-        for hash in on_disk_hashes {
-            if !in_memory_hashes.contains(&hash) {
-                panic!("Found blob on disk that does not exist in memory: {}", hash);
-            }
-        }
-
-        for blob in &self.blobs {
-            blob.verify_from_disk(&self.root_dir).await?;
-        }
-
-        Ok(())
-    }
-
-    // Creates reasonable-sized blobs to fill a percentage of the free space
+    // Creates reasonable-sized blob to fill a percentage of the free space
     // available on disk.
-    async fn create_reasonable_blobs(&mut self) -> Result<(), Status> {
-        let num_blobs_to_create: u64 = self.rng.gen_range(1, 200);
-        debug!("Creating {} reasonable-size blobs...", num_blobs_to_create);
+    async fn fill_disk_with_reasonable_blobs(&mut self) -> Result<(), Status> {
+        debug!("Creating reasonable-sized blob");
 
-        // Start filling the space with blobs
-        for _ in 1..=num_blobs_to_create {
+        loop {
             // Create a blob whose uncompressed size is reasonable, or exactly the requested size
             // if the requested size is too small.
             let data =
                 FileData::new_with_reasonable_size(&mut self.rng, Compressibility::Compressible);
-            let blob = Blob::create(data, &self.root_dir).await?;
 
-            // Another blob was created
-            self.blobs.push(blob);
+            self.create_blob(data).await?;
         }
-
-        Ok(())
     }
 
-    // Creates open handles for a random number of blobs
-    async fn new_handles(&mut self) -> Result<(), Status> {
+    // Read a random amount of data at a random offset from a random blob
+    async fn read_from_blob(&mut self) -> Result<(), Status> {
         // Decide how many blobs to create new handles for
-        let num_blobs_with_new_handles = self.rng.gen_range(0, self.num_blobs());
-        debug!("Creating handles for {} blobs", num_blobs_with_new_handles);
+        let blob_list = self.root_dir.entries().await?;
 
-        // Randomly select blobs from the list and create handles to them
-        for _ in 0..num_blobs_with_new_handles {
-            // Choose a random blob and open a handle to it
-            let blob = self.blobs.choose_mut(&mut self.rng).unwrap();
-            let handle =
-                self.root_dir.open_file(blob.merkle_root_hash(), OPEN_RIGHT_READABLE).await?;
-            blob.handles().push(handle);
+        if blob_list.is_empty() {
+            // No blobs to read!
+            return Ok(());
         }
 
-        Ok(())
-    }
+        // Choose a random blob and open a handle to it
+        let blob = blob_list.choose(&mut self.rng).unwrap();
+        let file = self.root_dir.open_file(blob, OPEN_RIGHT_READABLE).await?;
 
-    // Closes all open handles to all blobs.
-    // Note that handles do not call `close()` when they are dropped.
-    // This is intentional because it offers a way to inelegantly close a file.
-    async fn close_all_handles(&mut self) -> Result<(), Status> {
-        debug!("Closing all open handles");
-        let mut count = 0;
-        for blob in &mut self.blobs {
-            for handle in blob.handles().drain(..) {
-                handle.close().await?;
-                count += 1;
-            }
+        debug!("Reading from {}", blob);
+        let data_size_bytes = file.uncompressed_size().await?;
+
+        if data_size_bytes == 0 {
+            // Nothing to read, blob is empty!
+            return Ok(());
         }
-        debug!("Closed {} handles to blobs", count);
-        Ok(())
-    }
 
-    // Reads random portions of a blob from all open handles
-    async fn read_from_all_handles(&mut self) -> Result<(), Status> {
-        debug!("Reading from all open handles");
-        let mut count: u64 = 0;
-        let mut total_bytes_read: u64 = 0;
-        for blob in &mut self.blobs {
-            let data_size_bytes = blob.data().size_bytes;
-            let data_bytes = blob.data().generate_bytes();
+        // Choose an offset
+        let offset = self.rng.gen_range(0, data_size_bytes - 1);
 
-            for handle in blob.handles() {
-                // Choose an offset (0 if the blob is empty)
-                let offset =
-                    if data_size_bytes == 0 { 0 } else { self.rng.gen_range(0, data_size_bytes) };
+        // Determine the length of this read
+        let end_pos = self.rng.gen_range(offset, data_size_bytes);
 
-                // Determine the length of this read (0 if the blob is empty)
-                let end_pos = if data_size_bytes == 0 {
-                    0
-                } else {
-                    self.rng.gen_range(offset, data_size_bytes)
-                };
+        assert!(end_pos >= offset);
+        let length = end_pos - offset;
 
-                assert!(end_pos >= offset);
-                let length = end_pos - offset;
+        // Read the data from the handle and verify it
+        file.seek(SeekOrigin::Start, offset).await?;
+        let actual_data_bytes = file.read_num_bytes(length).await?;
+        assert_eq!(actual_data_bytes.len(), length as usize);
 
-                // Read the data from the handle and verify it
-                handle.seek(SeekOrigin::Start, offset).await?;
-                let actual_data_bytes = handle.read_num_bytes(length).await?;
-                let expected_data_bytes = &data_bytes[offset as usize..end_pos as usize];
-                assert_eq!(expected_data_bytes, actual_data_bytes);
-
-                // We successfully read from a file
-                total_bytes_read += length;
-                count += 1;
-            }
-        }
-        debug!("Read {} bytes from {} handles", total_bytes_read, count);
+        debug!("Read {} bytes from {}", length, blob);
         Ok(())
     }
 
     // Fills the disk with blobs that are |BLOCK_SIZE| bytes in size (when uncompressed)
     // until the filesystem reports an error.
     async fn fill_disk_with_small_blobs(&mut self) -> Result<(), Status> {
+        debug!("Filling disk with small blobs");
         loop {
             // Keep making |BLOCK_SIZE| uncompressible blobs
             let data = FileData::new_with_exact_uncompressed_size(
@@ -192,38 +136,34 @@ impl BlobActor {
                 Compressibility::Uncompressible,
             );
 
-            let blob = Blob::create(data, &self.root_dir).await?;
-
-            // Another blob was created
-            self.blobs.push(blob);
+            self.create_blob(data).await?;
         }
     }
 
-    fn num_blobs(&self) -> usize {
-        self.blobs.len()
+    // Create a large blob that doesn't fit on disk. This is expected to fail.
+    async fn create_blob_that_doesnt_fit_on_disk(&mut self) -> Result<(), Status> {
+        debug!("Creating blob that doesn't fit on disk");
+        let data = FileData::new_with_exact_uncompressed_size(
+            &mut self.rng,
+            self.disk_size * 2,
+            Compressibility::Uncompressible,
+        );
+
+        match self.create_blob(data).await {
+            Ok(()) => panic!("Creating a blob larger than disk should have failed"),
+            Err(e) => Err(e),
+        }
     }
 
     // Returns a list of operations that are valid to perform,
     // given the current state of the filesystem.
     fn valid_operations(&self) -> Vec<BlobfsOperation> {
-        // It is always valid to do the following operations
-        let mut operations = vec![
-            BlobfsOperation::VerifyBlobs,
-            BlobfsOperation::CreateReasonableBlobs,
+        vec![
+            BlobfsOperation::ReadFromBlob,
+            BlobfsOperation::FillDiskWithReasonableBlobs,
             BlobfsOperation::FillDiskWithSmallBlobs,
-        ];
-
-        if self.num_blobs() > 0 {
-            operations.push(BlobfsOperation::NewHandles);
-        }
-
-        let handles_exist = self.blobs.iter().any(|blob| blob.num_handles() > 0);
-        if handles_exist {
-            operations.push(BlobfsOperation::CloseAllHandles);
-            operations.push(BlobfsOperation::ReadFromAllHandles);
-        }
-
-        operations
+            BlobfsOperation::CreateBlobThatDoesntFitOnDisk,
+        ]
     }
 }
 
@@ -234,12 +174,14 @@ impl Actor for BlobActor {
         let operation = operations.choose(&mut self.rng).unwrap();
 
         let result = match operation {
-            BlobfsOperation::VerifyBlobs => self.verify_blobs().await,
-            BlobfsOperation::CreateReasonableBlobs => self.create_reasonable_blobs().await,
+            BlobfsOperation::FillDiskWithReasonableBlobs => {
+                self.fill_disk_with_reasonable_blobs().await
+            }
             BlobfsOperation::FillDiskWithSmallBlobs => self.fill_disk_with_small_blobs().await,
-            BlobfsOperation::NewHandles => self.new_handles().await,
-            BlobfsOperation::CloseAllHandles => self.close_all_handles().await,
-            BlobfsOperation::ReadFromAllHandles => self.read_from_all_handles().await,
+            BlobfsOperation::ReadFromBlob => self.read_from_blob().await,
+            BlobfsOperation::CreateBlobThatDoesntFitOnDisk => {
+                self.create_blob_that_doesnt_fit_on_disk().await
+            }
         };
 
         match result {
@@ -249,14 +191,7 @@ impl Actor for BlobActor {
             Err(Status::CONNECTION_ABORTED)
             | Err(Status::PEER_CLOSED)
             | Err(Status::IO)
-            | Err(Status::IO_REFUSED) => {
-                // Drain out all the open handles.
-                // Do not bother closing them properly. They are about to become invalid.
-                for blob in &mut self.blobs {
-                    blob.handles().drain(..);
-                }
-                Err(ActorError::ResetEnvironment)
-            }
+            | Err(Status::IO_REFUSED) => Err(ActorError::ResetEnvironment),
             Err(s) => panic!("Error occurred during {:?}: {}", operation, s),
         }
     }

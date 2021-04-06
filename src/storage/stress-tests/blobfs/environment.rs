@@ -45,8 +45,8 @@ pub fn open_blobfs_root() -> Directory {
 impl BlobfsEnvironment {
     pub async fn new(args: Args) -> Self {
         // Create the VMO that the ramdisk is backed by
-        let vmo_size = args.ramdisk_block_count * args.ramdisk_block_size;
-        let vmo = Vmo::create(vmo_size).unwrap();
+        let disk_size = args.ramdisk_block_count * args.ramdisk_block_size;
+        let vmo = Vmo::create(disk_size).unwrap();
 
         // Initialize the VMO with FVM partition style and a single blobfs partition
 
@@ -82,7 +82,7 @@ impl BlobfsEnvironment {
 
         // Create the blob actor
         let blob_actor = Arc::new(Mutex::new(BlobActor {
-            blobs: vec![],
+            disk_size,
             root_dir: open_blobfs_root(),
             rng: SmallRng::from_seed(rng.gen()),
         }));
