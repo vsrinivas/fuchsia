@@ -5,9 +5,9 @@
 use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
-    fuchsia_zircon::DurationNum,
+    fuchsia_zircon::DurationNum as _,
     futures::{channel::oneshot, join, TryFutureExt},
-    log::info,
+    log::{info, warn},
     pin_utils::pin_mut,
     std::panic,
     wlan_common::bss::Protection::Wpa2Personal,
@@ -16,6 +16,10 @@ use {
 
 const SSID: &[u8] = b"fuchsia";
 const PASS_PHRASE: &str = "wpa2duel";
+
+// TODO(fxbug.dev/73871): Encode constants like this in the type system.
+const WAIT_FOR_PAYLOAD_INTERVAL: i64 = 500; // milliseconds
+const WAIT_FOR_ACK_INTERVAL: i64 = 500; // milliseconds
 
 fn packet_forwarder<'a>(
     peer_phy: &'a WlantapPhyProxy,
@@ -138,20 +142,92 @@ async fn send_then_receive(
     sender_to_peer: oneshot::Sender<()>,
     receiver_from_peer: oneshot::Receiver<()>,
 ) {
-    // send packet and wait for confirmation
-    send_fake_eth_frame(peer.addr, me.addr, me.payload, eth).await;
+    let mut sender_to_peer_ptr = Some(sender_to_peer);
+    let mut receiver_from_peer_ptr = Some(receiver_from_peer);
 
-    // wait for packet and send confirmation
-    let (header, payload) = get_next_frame(eth).await;
-    assert_eq!(header.da, me.addr);
-    assert_eq!(header.sa, peer.addr);
-    assert_eq!(&payload[..], peer.payload);
+    // This loop has three parts.
+    //
+    // 1. Send me.payload.
+    // 2. Wait to receive peer.payload.
+    // 3. Wait for receiver_from_peer to complete.
+    //
+    // Step 1 is assumed to complete on every iteration. If either of Step 2 or Step 3 timeout,
+    // it will be retried on the next iteration. Once Steps 1 through 3 are complete, the
+    // loop terminates.
+    while sender_to_peer_ptr.is_some() || receiver_from_peer_ptr.is_some() {
+        info!("{} sending payload to {}", me.name, peer.name);
+        send_fake_eth_frame(peer.addr, me.addr, me.payload, eth).await;
 
-    sender_to_peer.send(()).expect(&format!("confirming as {}", me.name));
-    // this function must not return unless peer receives our frame because packet_forwarder
-    // will stop "transmitting" the packet after the future finishes.
-    receiver_from_peer.await.expect(&format!("waiting for {} confirmation", peer.name));
-    info!("{} received packet from {}", me.name, peer.name);
+        match sender_to_peer_ptr.take() {
+            None => info!(
+                "{} already received payload from {}. Skipping wait for payload.",
+                me.name, peer.name
+            ),
+            Some(sender_to_peer) => {
+                info!("{} awaiting payload from {}", me.name, peer.name);
+                let get_next_frame_fut = get_next_frame(eth);
+                pin_mut!(get_next_frame_fut);
+                match test_utils::timeout_after(
+                    WAIT_FOR_PAYLOAD_INTERVAL.millis(),
+                    &mut get_next_frame_fut,
+                )
+                .await
+                {
+                    Err(()) => {
+                        warn!("{} timed out waiting for payload from {}.", me.name, peer.name);
+                        sender_to_peer_ptr = Some(sender_to_peer);
+                    }
+                    Ok((header, payload)) => {
+                        assert_eq!(header.da, me.addr);
+                        assert_eq!(header.sa, peer.addr);
+
+                        if &payload[..] == peer.payload {
+                            info!("{} received packet from {}. Acknowledging receipt through channel...", me.name, peer.name);
+                            sender_to_peer.send(()).expect(&format!("confirming as {}", me.name));
+                        } else {
+                            panic!("Unexpected payload received: {:?}", &payload[..]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Peer packets cannot be received unless the incoming packet_forwarder is running, so this
+        // function must wait until the peer receives the payload.
+        info!("{} awaiting acknowledgement of payload receipt from {}", me.name, peer.name);
+        match receiver_from_peer_ptr.take() {
+            None => info!(
+                "{} already received acknowledgement from {}. Skipping wait for acknowledgement.",
+                me.name, peer.name
+            ),
+            Some(mut receiver_from_peer) => {
+                match test_utils::timeout_after(
+                    WAIT_FOR_ACK_INTERVAL.millis(),
+                    &mut receiver_from_peer,
+                )
+                .await
+                {
+                    Err(()) => {
+                        warn!(
+                            "{} timed out waiting for acknowledgement from {}.",
+                            me.name, peer.name
+                        );
+                        receiver_from_peer_ptr = Some(receiver_from_peer);
+                    }
+                    Ok(receiver_result) => {
+                        receiver_result.expect(&format!(
+                            "{} waiting for {} acknowledgement",
+                            me.name, peer.name
+                        ));
+                        info!(
+                            "{} received acknowledgement from {}. Ending send_to_receive.",
+                            me.name, peer.name
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// At this stage the client communicates with an imaginary peer that is connected to the same AP.
@@ -210,13 +286,13 @@ async fn verify_ethernet_in_both_directions(
     pin_mut!(peer_behind_ap_fut);
 
     let client_with_timeout = client_helper.run_until_complete_or_timeout(
-        20.seconds(),
+        5.seconds(),
         "client trying to exchange data with a peer behind AP",
         packet_forwarder(&ap_proxy, "frame client -> ap"),
         client_fut,
     );
     let peer_behind_ap_with_timeout = ap_helper.run_until_complete_or_timeout(
-        20.seconds(),
+        5.seconds(),
         "AP forwarding data between client and its peer",
         packet_forwarder(&client_proxy, "frame ap ->  client"),
         peer_behind_ap_fut,

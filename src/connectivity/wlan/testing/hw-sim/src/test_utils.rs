@@ -11,7 +11,7 @@ use {
     },
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async::{Time, Timer},
+    fuchsia_async::{DurationExt, Time, TimeoutExt, Timer},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt},
@@ -308,4 +308,13 @@ pub async fn scan_for_networks(
     }
 
     scan_results
+}
+
+/// This function returns `Ok(r)`, where `r` is the return value from `main_future`,
+/// if `main_future` completes before the `timeout` duration. Otherwise, `Err(())` is returned.
+pub async fn timeout_after<R, F: Future<Output = R> + Unpin>(
+    timeout: zx::Duration,
+    main_future: &mut F,
+) -> Result<R, ()> {
+    async { Ok(main_future.await) }.on_timeout(timeout.after_now(), || Err(())).await
 }
