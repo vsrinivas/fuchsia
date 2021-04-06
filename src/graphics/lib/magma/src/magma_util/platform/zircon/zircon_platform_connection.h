@@ -154,6 +154,7 @@ class ZirconPlatformConnection : public fuchsia_gpu_magma::Primary::RawChannelIn
                                 ::fidl::VectorView<uint64_t> semaphore_vec,
                                 ExecuteImmediateCommandsCompleter::Sync& _completer) override;
   void GetError(GetErrorCompleter::Sync& _completer) override;
+  void Sync(SyncCompleter::Sync& _completer) override;
   void MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
                     uint64_t flags, MapBufferGpuCompleter::Sync& _completer) override;
   void UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,

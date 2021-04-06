@@ -50,8 +50,10 @@ class PrimaryWrapper {
   magma_status_t DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id);
   magma_status_t ClearPerformanceCounters(fidl::VectorView<uint64_t> counters);
 
-  // Skipped for GetError
+  // Skipped for GetError, Sync
   magma_status_t GetError();
+  magma_status_t Sync();
+
   auto IsPerformanceCounterAccessEnabled() {
     return client_->IsPerformanceCounterAccessEnabled_Sync();
   }

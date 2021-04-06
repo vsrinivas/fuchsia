@@ -148,7 +148,11 @@ protocol Primary {
                              vector<zx.koid>:MAX semaphores);
 
     /// Deprecated: Retrieve the current magma error status.
+    //TODO(fxbug.dev/12993) - remove
     GetError() -> (int32 magma_status);
+
+    /// Incurs a round-trip to the system driver, used to ensure all previous messages are seen.
+    Sync() -> ();
 
     /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
     /// address space at `gpu_va`.  `flags` is a set of flags from `MAGMA_GPU_MAP_FLAGS` that

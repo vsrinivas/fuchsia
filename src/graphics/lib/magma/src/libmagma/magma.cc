@@ -86,6 +86,10 @@ magma_status_t magma_get_error(magma_connection_t connection) {
   return magma::PlatformConnectionClient::cast(connection)->GetError();
 }
 
+magma_status_t magma_sync(magma_connection_t connection) {
+  return magma::PlatformConnectionClient::cast(connection)->Sync();
+}
+
 void magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
   magma::PlatformConnectionClient::cast(connection)->CreateContext(context_id_out);
 }

@@ -1226,3 +1226,8 @@ TEST(MagmaAbi, MaxBufferMappings) {
 
   magma_release_buffer(connection.connection(), buffer);
 }
+
+TEST(MagmaAbi, Sync) {
+  TestConnection connection;
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_sync(connection.connection()));
+}

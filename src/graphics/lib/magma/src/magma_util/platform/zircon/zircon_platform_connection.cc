@@ -288,6 +288,11 @@ void ZirconPlatformConnection::GetError(GetErrorCompleter::Sync& completer) {
   completer.Reply(MAGMA_STATUS_OK);
 }
 
+void ZirconPlatformConnection::Sync(SyncCompleter::Sync& completer) {
+  DLOG("ZirconPlatformConnection: Sync");
+  completer.Reply();
+}
+
 void ZirconPlatformConnection::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
                                             uint64_t page_offset, uint64_t page_count,
                                             uint64_t flags,

@@ -461,13 +461,17 @@ void PrimaryWrapper::UpdateFlowControl(uint64_t new_bytes) {
   inflight_bytes_ += new_bytes;
 }
 
+magma_status_t PrimaryWrapper::Sync() {
+  auto result = client_->Sync_Sync();
+  return MagmaChannelStatus(result.status());
+}
+
 magma_status_t PrimaryWrapper::GetError() {
   std::lock_guard<std::mutex> lock(get_error_lock_);
   if (error_ != MAGMA_STATUS_OK)
     return error_;
 
-  // Use GetError() only to achieve the round-trip sync
-  auto result = client_->GetError_Sync();
+  auto result = client_->Sync_Sync();
 
   if (!result.ok()) {
     // Only run the loop if the channel has been closed - we don't want to process any
@@ -674,6 +678,11 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t GetError() override {
     DLOG("ZirconPlatformConnectionClient: GetError");
     return client_.GetError();
+  }
+
+  magma_status_t Sync() override {
+    DLOG("ZirconPlatformConnectionClient: Sync");
+    return client_.Sync();
   }
 
   magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,

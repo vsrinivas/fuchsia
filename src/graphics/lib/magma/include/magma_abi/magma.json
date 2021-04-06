@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 73,
+    "next-free-ordinal": 74,
     "exports": [
       {
         "ordinal": 4,
@@ -19,7 +19,7 @@
         "ordinal": 5,
         "name": "magma_get_error",
         "type": "magma_status_t",
-        "description": "Returns the first recorded error since the last time this function was called, and clears the recorded error. Incurs a round-trip to the system driver",
+        "description": "When a system driver error occurs, the connection will be closed, and interfaces can return MAGMA_STATUS_CONNECTION_LOST.  In that case, this returns the system driver error.  This may incur a round-trip sync.",
         "arguments": [
           {
             "name": "connection",
@@ -1074,6 +1074,19 @@
             "name": "image_info_out",
             "type": "magma_image_info_t*",
             "description": "Output parameters describing the image."
+          }
+        ]
+      },
+      {
+        "ordinal": 73,
+        "name": "magma_sync",
+        "type": "magma_status_t",
+        "description": "Incurs a round-trip to the system driver, used to ensure all previous messages are seen.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
           }
         ]
       }

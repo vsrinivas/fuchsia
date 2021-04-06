@@ -25,8 +25,9 @@ void magma_release_connection(
     magma_connection_t connection);
 
 ///
-/// \brief Returns the first recorded error since the last time this function was called, and clears
-///        the recorded error. Incurs a round-trip to the system driver
+/// \brief When a system driver error occurs, the connection will be closed, and interfaces can
+///        return MAGMA_STATUS_CONNECTION_LOST.  In that case, this returns the system driver error.
+///        This may incur a round-trip sync.
 /// \param connection An open connection.
 ///
 magma_status_t magma_get_error(
@@ -589,6 +590,13 @@ magma_status_t magma_virt_get_image_info(
     magma_connection_t connection,
     magma_buffer_t image,
     magma_image_info_t* image_info_out);
+
+///
+/// \brief Incurs a round-trip to the system driver, used to ensure all previous messages are seen.
+/// \param connection An open connection.
+///
+magma_status_t magma_sync(
+    magma_connection_t connection);
 
 #if defined(__cplusplus)
 }
