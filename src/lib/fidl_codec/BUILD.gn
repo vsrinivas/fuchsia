@@ -115,44 +115,44 @@ group("tests") {
 
 action("json_for_test") {
   testonly = true
+
   deps = [
     ":fidl($fidl_toolchain)",
     ":fidl-composed($fidl_toolchain)",
     ":fidl-sys($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/fidl/cpp/test:frobinator",
+    "//sdk/fidl/fuchsia.io($fidl_toolchain)",
+    "//sdk/lib/fidl/cpp/test:frobinator($fidl_toolchain)",
   ]
-  outputs = [ "$target_gen_dir/library_loader_test_data.h" ]
-  hermetic_deps = false
+  inputs = [
+    "${root_build_dir}/fidling/gen/sdk/lib/fidl/cpp/test/frobinator.fidl.json",
+    "${root_build_dir}/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io.fidl.json",
+    "${root_build_dir}/fidling/gen/src/lib/fidl_codec/fidl.fidl.json",
+    "${root_build_dir}/fidling/gen/src/lib/fidl_codec/fidl-composed.fidl.json",
+    "${root_build_dir}/fidling/gen/src/lib/fidl_codec/fidl-sys.fidl.json",
+  ]
+  outputs = [ "${target_gen_dir}/library_loader_test_data.h" ]
+
   script = "generate_test_includes.sh"
   args = [
-    rebase_path(target_gen_dir, root_build_dir) + "/library_loader_test_data.h",
-    "FidlcodecExamples",
-    rebase_path(root_build_dir) +
-        "/fidling/gen/sdk/lib/fidl/cpp/test/frobinator.fidl.json",
-    rebase_path(root_build_dir) +
-        "/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io.fidl.json",
-    rebase_path(root_build_dir) +
-        "/fidling/gen/src/lib/fidl_codec/fidl.fidl.json",
-    rebase_path(root_build_dir) +
-        "/fidling/gen/src/lib/fidl_codec/fidl-composed.fidl.json",
-    rebase_path(root_build_dir) +
-        "/fidling/gen/src/lib/fidl_codec/fidl-sys.fidl.json",
-  ]
+           rebase_path("${target_gen_dir}/library_loader_test_data.h",
+                       root_build_dir),
+           "FidlcodecExamples",
+         ] + rebase_path(inputs, root_build_dir)
 }
 
 action("list_for_test") {
   testonly = true
   deps = [ "//sdk:core_fidl_json" ]
-  outputs = [ "$target_gen_dir/list_test_data.h" ]
-  hermetic_deps = false
+  inputs = [ "${root_gen_dir}/sdk/core.fidl_json.txt" ]
+  outputs = [ "${target_gen_dir}/list_test_data.h" ]
+  depfile = "${target_gen_dir}/list_test_data.h.d"
   script = "generate_test_includes.sh"
   args = [
-    rebase_path(target_gen_dir, root_build_dir) + "/list_test_data.h",
+    rebase_path("${target_gen_dir}/list_test_data.h", root_build_dir),
     "SdkExamples",
     "-content",
-    rebase_path(root_build_dir) + "/gen/sdk/core.fidl_json.txt",
+    rebase_path("${root_gen_dir}/sdk/core.fidl_json.txt", root_build_dir),
+    rebase_path(depfile, root_build_dir),
   ]
 }
 
