@@ -11,11 +11,13 @@ group("tests") {
   # tests.
   if (select_variant + [
         "coverage",
+        "coverage-sdk",
         "profile",
         "rustcoverage",
       ] -
       [
         "coverage",
+        "coverage-sdk",
         "profile",
         "rustcoverage",
       ] == select_variant) {

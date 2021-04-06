@@ -1201,6 +1201,14 @@ declare_args() {
     },
 
     {
+      configs = [ "//build/config/profile:coverage-sdk" ]
+      tags = [
+        "instrumented",
+        "coverage",
+      ]
+    },
+
+    {
       configs = [ "//build/config/sanitizers:ubsan" ]
 
       # The vptr instrumentation requires RTTI.  If -fno-rtti is passed then

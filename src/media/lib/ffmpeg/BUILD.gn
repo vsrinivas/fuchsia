@@ -13,6 +13,7 @@ ffmpeg_prebuilt_variants = [
   "asan-ubsan",
   "lto",
   "profile",
+  "coverage-sdk",
   "thinlto",
   "ubsan",
 ]
@@ -65,6 +66,13 @@ if (use_prebuilt_ffmpeg) {
 
   variant_prefix = toolchain_variant.name
   if (variant_prefix == "debug" || variant_prefix == "release") {
+    variant_prefix = ""
+  }
+
+  # THe 'coverage-sdk' build variant only builds the SDK sdk_source_set() targets
+  # with instrumentation, all other targets are built with the default toolchain
+  # suite otherwise.
+  if (variant_prefix == "coverage-sdk") {
     variant_prefix = ""
   }
   if (variant_prefix != "") {

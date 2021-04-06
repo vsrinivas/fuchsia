@@ -21,16 +21,22 @@ if (profile_source_files != []) {
   profile_source_files_list_files += [ _profile_source_files_file ]
 }
 
-variant("coverage") {
-  common_flags = [
-    "-fprofile-instr-generate",
-    "-fcoverage-mapping",
-  ]
+# Common flags for all coverage-based variants defined below.
+# IMPORTANT: This should not include any rust or linker flags!
+_coverage_common_flags = [
+  "-fprofile-instr-generate",
+  "-fcoverage-mapping",
+]
 
-  inputs = profile_source_files_list_files
-  foreach(file, profile_source_files_list_files) {
-    common_flags += [ "-fprofile-list=" + rebase_path(file, root_build_dir) ]
-  }
+_coverage_inputs = profile_source_files_list_files
+foreach(file, profile_source_files_list_files) {
+  _coverage_common_flags +=
+      [ "-fprofile-list=" + rebase_path(file, root_build_dir) ]
+}
+
+variant("coverage") {
+  common_flags = _coverage_common_flags
+  inputs = _coverage_inputs
 
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
@@ -43,11 +49,48 @@ variant("coverage") {
   }
 }
 
+# This variant is similar to `coverage` but is used to only compile sdk_source_set()
+# targets with coverage instrumentation. This works as follows:
+#
+# - Unlike `coverage`, this variant does not add assembler and compiler flags
+#   to enable profiling instrumentation.
+#
+# - The sdk_source_set() template adds the "coverage-sdk-source-config" config
+#   to its inner target when they are built in the "coverage-sdk" variant. This
+#   adds the necessary cflags/asmflags when building the target.
+#
+# - All final binaries (executables and shared libraries) are linked to the
+#   profiling runtime. Even if none of their code is actually instrumented.
+#
+# - Since this is an instrumented build variant, the libprefix is 'lib/coverage-sdk'
+#
+variant("coverage-sdk") {
+  inputs = _coverage_inputs
+
+  if (!is_kernel && is_fuchsia) {
+    # The statically-linked profiling runtime depends on libzircon.
+    # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
+    deps = [ "//src/zircon/lib/zircon" ]
+  }
+
+  # All instrumented build variants place their dynamic loader and dependency
+  # libraries under lib/<variant>/ so ensure generated executables will find
+  # it here.
+  dynamic_linker_flags = "-dynamic-linker=coverage-sdk/ld.so.1"
+  ldflags = [ "-Wl,$dynamic_linker_flags" ]
+  rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
+
+  ldflags += [ "-fprofile-instr-generate" ]
+}
+
+# This config should only be added to sdk_source_set() targets.
+config("coverage-sdk-source-config") {
+  cflags = _coverage_common_flags
+  asmflags = _coverage_common_flags
+}
+
 variant("profile") {
-  common_flags = [
-    "-fprofile-instr-generate",
-    "-fcoverage-mapping",
-  ]
+  common_flags = _coverage_common_flags
 
   inputs = profile_source_files_list_files
   foreach(file, profile_source_files_list_files) {

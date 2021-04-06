@@ -51,11 +51,13 @@ template("cm") {
   # for the profile variant we need to inject a use clause for DebugData.
   needs_debugdata = select_variant + [
                       "coverage",
+                      "coverage-sdk",
                       "profile",
                       "rustcoverage",
                     ] -
                     [
                       "coverage",
+                      "coverage-sdk",
                       "profile",
                       "rustcoverage",
                     ] != select_variant

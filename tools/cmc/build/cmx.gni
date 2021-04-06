@@ -232,11 +232,13 @@ template("cmx") {
 
   needs_debugdata = select_variant + [
                       "coverage",
+                      "coverage-sdk",
                       "profile",
                       "rustcoverage",
                     ] -
                     [
                       "coverage",
+                      "coverage-sdk",
                       "profile",
                       "rustcoverage",
                     ] != select_variant

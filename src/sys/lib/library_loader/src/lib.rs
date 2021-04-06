@@ -160,6 +160,8 @@ mod tests {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("profile"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "rustcoverage") {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("rustcoverage"), rights)?;
+        } else if entries.iter().any(|f| &f as &str == "coverage-sdk") {
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage-sdk"), rights)?;
         }
 
         let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;

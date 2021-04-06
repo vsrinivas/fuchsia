@@ -242,11 +242,13 @@ fuchsia_test_package("minfs-tests") {
   # when it stops flaking.
   if (select_variant + [
         "coverage",
+        "coverage-sdk",
         "profile",
         "rustcoverage",
       ] -
       [
         "coverage",
+        "coverage-sdk",
         "profile",
         "rustcoverage",
       ] == select_variant) {

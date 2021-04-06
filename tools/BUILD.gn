@@ -116,11 +116,13 @@ group("e2e_tests") {
   # TODO(fxbug.dev/63992): Temporarily disable bootserver_old tests on profile builders.
   if (select_variant + [
         "coverage",
+        "coverage-sdk",
         "profile",
         "rustcoverage",
       ] -
       [
         "coverage",
+        "coverage-sdk",
         "profile",
         "rustcoverage",
       ] == select_variant) {
