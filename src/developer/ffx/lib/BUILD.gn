@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 if (is_host) {
-  libs = [ "timeout" ]
+  libs = [
+    "timeout",
+    "async-once",
+  ]
 
   group("tests") {
     testonly = true
