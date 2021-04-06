@@ -21,9 +21,10 @@ use crate::sys::socket::addr::sys_control::SysControlAddr;
           target_os = "linux",
           target_os = "macos",
           target_os = "netbsd",
-          target_os = "openbsd"))]
+          target_os = "openbsd",
+          target_os = "fuchsia"))]
 pub use self::datalink::LinkAddr;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 pub use self::vsock::VsockAddr;
 
 /// These constants specify the protocol family to be used
@@ -41,7 +42,7 @@ pub enum AddressFamily {
     #[cfg(any(target_os = "android", target_os = "linux"))]
     Netlink = libc::AF_NETLINK,
     /// Low level packet interface (see [`packet(7)`](http://man7.org/linux/man-pages/man7/packet.7.html))
-    #[cfg(any(target_os = "android", target_os = "linux"))]
+    #[cfg(any(target_os = "android", target_os = "linux", target_os = "fuchsia"))]
     Packet = libc::AF_PACKET,
     /// KEXT Controls and Notifications
     #[cfg(any(target_os = "ios", target_os = "macos"))]
@@ -115,7 +116,7 @@ pub enum AddressFamily {
     Alg = libc::AF_ALG,
     #[cfg(target_os = "linux")]
     Nfc = libc::AF_NFC,
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     Vsock = libc::AF_VSOCK,
     #[cfg(any(target_os = "dragonfly",
               target_os = "freebsd",
@@ -242,7 +243,7 @@ impl AddressFamily {
                       target_os = "netbsd",
                       target_os = "openbsd"))]
             libc::AF_LINK => Some(AddressFamily::Link),
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "android", target_os = "linux"))]
             libc::AF_VSOCK => Some(AddressFamily::Vsock),
             _ => None
         }
@@ -647,7 +648,7 @@ pub enum SockAddr {
               target_os = "netbsd",
               target_os = "openbsd"))]
     Link(LinkAddr),
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     Vsock(VsockAddr),
 }
 
@@ -675,7 +676,7 @@ impl SockAddr {
         SysControlAddr::from_name(sockfd, name, unit).map(|a| SockAddr::SysControl(a))
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     pub fn new_vsock(cid: u32, port: u32) -> SockAddr {
         SockAddr::Vsock(VsockAddr::new(cid, port))
     }
@@ -700,7 +701,7 @@ impl SockAddr {
                       target_os = "netbsd",
                       target_os = "openbsd"))]
             SockAddr::Link(..) => AddressFamily::Link,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "android", target_os = "linux"))]
             SockAddr::Vsock(..) => AddressFamily::Vsock,
         }
     }
@@ -718,6 +719,7 @@ impl SockAddr {
     ///
     /// unsafe because it takes a raw pointer as argument.  The caller must
     /// ensure that the pointer is valid.
+    #[cfg(not(target_os = "fuchsia"))]
     pub(crate) unsafe fn from_libc_sockaddr(addr: *const libc::sockaddr) -> Option<SockAddr> {
         if addr.is_null() {
             None
@@ -751,7 +753,7 @@ impl SockAddr {
                         Some(SockAddr::Link(ether_addr))
                     }
                 },
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "android", target_os = "linux"))]
                 Some(AddressFamily::Vsock) => Some(SockAddr::Vsock(
                     VsockAddr(*(addr as *const libc::sockaddr_vm)))),
                 // Other address families are currently not supported and simply yield a None
@@ -837,7 +839,7 @@ impl SockAddr {
                 },
                 mem::size_of_val(addr) as libc::socklen_t
             ),
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "android", target_os = "linux"))]
             SockAddr::Vsock(VsockAddr(ref sa)) => (
                 // This cast is always allowed in C
                 unsafe {
@@ -869,7 +871,7 @@ impl fmt::Display for SockAddr {
                       target_os = "netbsd",
                       target_os = "openbsd"))]
             SockAddr::Link(ref ether_addr) => ether_addr.fmt(f),
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "android", target_os = "linux"))]
             SockAddr::Vsock(ref svm) => svm.fmt(f),
         }
     }
@@ -1045,7 +1047,7 @@ pub mod sys_control {
 }
 
 
-#[cfg(any(target_os = "android", target_os = "linux"))]
+#[cfg(any(target_os = "android", target_os = "linux", target_os = "fuchsia"))]
 mod datalink {
     use super::{fmt, AddressFamily};
 
@@ -1204,7 +1206,7 @@ mod datalink {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 pub mod vsock {
     use crate::sys::socket::addr::AddressFamily;
     use libc::{sa_family_t, sockaddr_vm};

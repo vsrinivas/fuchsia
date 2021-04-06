@@ -3,9 +3,69 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased] - ReleaseDate
+## [0.20.0] - 20 February 2021
 ### Added
+
+- Added a `passwd` field to `Group` (#[1338](https://github.com/nix-rust/nix/pull/1338))
+- Added `mremap` (#[1306](https://github.com/nix-rust/nix/pull/1306))
+- Added `personality` (#[1331](https://github.com/nix-rust/nix/pull/1331))
+- Added limited Fuchsia support (#[1285](https://github.com/nix-rust/nix/pull/1285))
+- Added `getpeereid` (#[1342](https://github.com/nix-rust/nix/pull/1342))
+- Implemented `IntoIterator` for `Dir`
+  (#[1333](https://github.com/nix-rust/nix/pull/1333)).
+
 ### Changed
+
+- Minimum supported Rust version is now 1.40.0.
+  ([#1356](https://github.com/nix-rust/nix/pull/1356))
+- i686-apple-darwin has been demoted to Tier 2 support, because it's deprecated
+  by Xcode.
+  (#[1350](https://github.com/nix-rust/nix/pull/1350))
+- Fixed calling `recvfrom` on an `AddrFamily::Packet` socket
+  (#[1344](https://github.com/nix-rust/nix/pull/1344))
+
+### Fixed
+- `TimerFd` now closes the underlying fd on drop.
+  ([#1381](https://github.com/nix-rust/nix/pull/1381))
+- Define `*_MAGIC` filesystem constants on Linux s390x
+  (#[1372](https://github.com/nix-rust/nix/pull/1372))
+- mqueue, sysinfo, timespec, statfs, test_ptrace_syscall() on x32
+  (#[1366](https://github.com/nix-rust/nix/pull/1366))
+
+### Removed
+
+- `Dir`, `SignalFd`, and `PtyMaster` are no longer `Clone`.
+  (#[1382](https://github.com/nix-rust/nix/pull/1382))
+- Removed `SockLevel`, which hasn't been used for a few years
+  (#[1362](https://github.com/nix-rust/nix/pull/1362))
+- Removed both `Copy` and `Clone` from `TimerFd`.
+  ([#1381](https://github.com/nix-rust/nix/pull/1381))
+
+## [0.19.1] - 28 November 2020
+### Fixed
+- Fixed bugs in `recvmmsg`.
+  (#[1341](https://github.com/nix-rust/nix/pull/1341))
+
+## [0.19.0] - 6 October 2020
+### Added
+- Added Netlink protocol families to the `SockProtocol` enum
+  (#[1289](https://github.com/nix-rust/nix/pull/1289))
+- Added `clock_gettime`, `clock_settime`, `clock_getres`,
+  `clock_getcpuclockid` functions and `ClockId` struct.
+  (#[1281](https://github.com/nix-rust/nix/pull/1281))
+- Added wrapper functions for `PTRACE_SYSEMU` and `PTRACE_SYSEMU_SINGLESTEP`.
+  (#[1300](https://github.com/nix-rust/nix/pull/1300))
+- Add support for Vsock on Android rather than just Linux.
+  (#[1301](https://github.com/nix-rust/nix/pull/1301))
+- Added `TCP_KEEPCNT` and `TCP_KEEPINTVL` TCP keepalive options.
+  (#[1283](https://github.com/nix-rust/nix/pull/1283))
+### Changed
+- Expose `SeekData` and `SeekHole` on all Linux targets
+  (#[1284](https://github.com/nix-rust/nix/pull/1284))
+- Changed unistd::{execv,execve,execvp,execvpe,fexecve,execveat} to take both `&[&CStr]` and `&[CString]` as its list argument(s).
+  (#[1278](https://github.com/nix-rust/nix/pull/1278))
+- Made `unistd::fork` an unsafe funtion, bringing it in line with [libstd's decision](https://github.com/rust-lang/rust/pull/58059).
+  (#[1293](https://github.com/nix-rust/nix/pull/1293))
 ### Fixed
 ### Removed
 
@@ -29,7 +89,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Derived `Ord`, `PartialOrd` for `unistd::Pid` (#[1189](https://github.com/nix-rust/nix/pull/1189))
 - Added `select::FdSet::fds` method to iterate over file descriptors in a set.
   ([#1207](https://github.com/nix-rust/nix/pull/1207))
-- Added support for UDP generic segmentation offload (GSO) and generic 
+- Added support for UDP generic segmentation offload (GSO) and generic
   receive offload (GRO) ([#1209](https://github.com/nix-rust/nix/pull/1209))
 - Added support for `sendmmsg` and `recvmmsg` calls
   (#[1208](https://github.com/nix-rust/nix/pull/1208))

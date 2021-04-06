@@ -1,9 +1,9 @@
+use crate::errno::Errno;
+use crate::sys::signal::Signal;
+use crate::unistd::Pid;
+use crate::Result;
 use cfg_if::cfg_if;
 use libc::{self, c_int};
-use crate::Result;
-use crate::errno::Errno;
-use crate::unistd::Pid;
-use crate::sys::signal::Signal;
 use std::convert::TryFrom;
 
 libc_bitflags!(
@@ -108,8 +108,7 @@ impl WaitStatus {
     pub fn pid(&self) -> Option<Pid> {
         use self::WaitStatus::*;
         match *self {
-            Exited(p, _)  | Signaled(p, _, _) |
-                Stopped(p, _) | Continued(p) => Some(p),
+            Exited(p, _) | Signaled(p, _, _) | Stopped(p, _) | Continued(p) => Some(p),
             StillAlive => None,
             #[cfg(any(target_os = "android", target_os = "linux"))]
             PtraceEvent(p, _, _) | PtraceSyscall(p) => Some(p),
@@ -118,31 +117,31 @@ impl WaitStatus {
 }
 
 fn exited(status: i32) -> bool {
-    unsafe { libc::WIFEXITED(status) }
+    libc::WIFEXITED(status)
 }
 
 fn exit_status(status: i32) -> i32 {
-    unsafe { libc::WEXITSTATUS(status) }
+    libc::WEXITSTATUS(status)
 }
 
 fn signaled(status: i32) -> bool {
-    unsafe { libc::WIFSIGNALED(status) }
+    libc::WIFSIGNALED(status)
 }
 
 fn term_signal(status: i32) -> Result<Signal> {
-    Signal::try_from(unsafe { libc::WTERMSIG(status) })
+    Signal::try_from(libc::WTERMSIG(status))
 }
 
 fn dumped_core(status: i32) -> bool {
-    unsafe { libc::WCOREDUMP(status) }
+    libc::WCOREDUMP(status)
 }
 
 fn stopped(status: i32) -> bool {
-    unsafe { libc::WIFSTOPPED(status) }
+    libc::WIFSTOPPED(status)
 }
 
 fn stop_signal(status: i32) -> Result<Signal> {
-    Signal::try_from(unsafe { libc::WSTOPSIG(status) })
+    Signal::try_from(libc::WSTOPSIG(status))
 }
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -151,7 +150,7 @@ fn syscall_stop(status: i32) -> bool {
     // of delivering SIGTRAP | 0x80 as the signal number for syscall
     // stops. This allows easily distinguishing syscall stops from
     // genuine SIGTRAP signals.
-    unsafe { libc::WSTOPSIG(status) == libc::SIGTRAP | 0x80 }
+    libc::WSTOPSIG(status) == libc::SIGTRAP | 0x80
 }
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -160,7 +159,7 @@ fn stop_additional(status: i32) -> c_int {
 }
 
 fn continued(status: i32) -> bool {
-    unsafe { libc::WIFCONTINUED(status) }
+    libc::WIFCONTINUED(status)
 }
 
 impl WaitStatus {

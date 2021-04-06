@@ -57,10 +57,11 @@ pub mod net;
 #[deny(missing_docs)]
 pub mod poll;
 #[deny(missing_docs)]
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "fuchsia")))]
 pub mod pty;
 pub mod sched;
 pub mod sys;
+pub mod time;
 // This can be implemented for other platforms as soon as libc
 // provides bindings for them.
 #[cfg(all(target_os = "linux",

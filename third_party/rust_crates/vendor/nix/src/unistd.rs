@@ -200,7 +200,7 @@ impl ForkResult {
 /// ```no_run
 /// use nix::unistd::{fork, ForkResult};
 ///
-/// match fork() {
+/// match unsafe{fork()} {
 ///    Ok(ForkResult::Parent { child, .. }) => {
 ///        println!("Continuing execution in parent process, new child has pid: {}", child);
 ///    }
@@ -230,9 +230,9 @@ impl ForkResult {
 ///
 /// [async-signal-safe]: http://man7.org/linux/man-pages/man7/signal-safety.7.html
 #[inline]
-pub fn fork() -> Result<ForkResult> {
+pub unsafe fn fork() -> Result<ForkResult> {
     use self::ForkResult::*;
-    let res = unsafe { libc::fork() };
+    let res = libc::fork();
 
     Errno::result(res).map(|res| match res {
         0 => Child,
@@ -426,6 +426,7 @@ pub fn chdir<P: ?Sized + NixPath>(path: &P) -> Result<()> {
 /// This function may fail in a number of different scenarios.  See the man
 /// pages for additional details on possible failure cases.
 #[inline]
+#[cfg(not(target_os = "fuchsia"))]
 pub fn fchdir(dirfd: RawFd) -> Result<()> {
     let res = unsafe { libc::fchdir(dirfd) };
 
@@ -715,9 +716,9 @@ pub fn fchownat<P: ?Sized + NixPath>(
     Errno::result(res).map(drop)
 }
 
-fn to_exec_array(args: &[&CStr]) -> Vec<*const c_char> {
+fn to_exec_array<S: AsRef<CStr>>(args: &[S]) -> Vec<*const c_char> {
     use std::iter::once;
-    args.iter().map(|s| s.as_ptr()).chain(once(ptr::null())).collect()
+    args.iter().map(|s| s.as_ref().as_ptr()).chain(once(ptr::null())).collect()
 }
 
 /// Replace the current process image with a new one (see
@@ -727,7 +728,7 @@ fn to_exec_array(args: &[&CStr]) -> Vec<*const c_char> {
 /// performs the same action but does not allow for customization of the
 /// environment for the new process.
 #[inline]
-pub fn execv(path: &CStr, argv: &[&CStr]) -> Result<Infallible> {
+pub fn execv<S: AsRef<CStr>>(path: &CStr, argv: &[S]) -> Result<Infallible> {
     let args_p = to_exec_array(argv);
 
     unsafe {
@@ -751,7 +752,7 @@ pub fn execv(path: &CStr, argv: &[&CStr]) -> Result<Infallible> {
 /// in the `args` list is an argument to the new process. Each element in the
 /// `env` list should be a string in the form "key=value".
 #[inline]
-pub fn execve(path: &CStr, args: &[&CStr], env: &[&CStr]) -> Result<Infallible> {
+pub fn execve<SA: AsRef<CStr>, SE: AsRef<CStr>>(path: &CStr, args: &[SA], env: &[SE]) -> Result<Infallible> {
     let args_p = to_exec_array(args);
     let env_p = to_exec_array(env);
 
@@ -772,7 +773,7 @@ pub fn execve(path: &CStr, args: &[&CStr], env: &[&CStr]) -> Result<Infallible> 
 /// would not work if "bash" was specified for the path argument, but `execvp`
 /// would assuming that a bash executable was on the system `PATH`.
 #[inline]
-pub fn execvp(filename: &CStr, args: &[&CStr]) -> Result<Infallible> {
+pub fn execvp<S: AsRef<CStr>>(filename: &CStr, args: &[S]) -> Result<Infallible> {
     let args_p = to_exec_array(args);
 
     unsafe {
@@ -792,7 +793,7 @@ pub fn execvp(filename: &CStr, args: &[&CStr]) -> Result<Infallible> {
 #[cfg(any(target_os = "haiku",
           target_os = "linux",
           target_os = "openbsd"))]
-pub fn execvpe(filename: &CStr, args: &[&CStr], env: &[&CStr]) -> Result<Infallible> {
+pub fn execvpe<SA: AsRef<CStr>, SE: AsRef<CStr>>(filename: &CStr, args: &[SA], env: &[SE]) -> Result<Infallible> {
     let args_p = to_exec_array(args);
     let env_p = to_exec_array(env);
 
@@ -820,7 +821,7 @@ pub fn execvpe(filename: &CStr, args: &[&CStr], env: &[&CStr]) -> Result<Infalli
           target_os = "linux",
           target_os = "freebsd"))]
 #[inline]
-pub fn fexecve(fd: RawFd, args: &[&CStr], env: &[&CStr]) -> Result<Infallible> {
+pub fn fexecve<SA: AsRef<CStr> ,SE: AsRef<CStr>>(fd: RawFd, args: &[SA], env: &[SE]) -> Result<Infallible> {
     let args_p = to_exec_array(args);
     let env_p = to_exec_array(env);
 
@@ -843,8 +844,8 @@ pub fn fexecve(fd: RawFd, args: &[&CStr], env: &[&CStr]) -> Result<Infallible> {
 /// is referenced as a file descriptor to the base directory plus a path.
 #[cfg(any(target_os = "android", target_os = "linux"))]
 #[inline]
-pub fn execveat(dirfd: RawFd, pathname: &CStr, args: &[&CStr],
-                env: &[&CStr], flags: super::fcntl::AtFlags) -> Result<Infallible> {
+pub fn execveat<SA: AsRef<CStr>,SE: AsRef<CStr>>(dirfd: RawFd, pathname: &CStr, args: &[SA],
+                env: &[SE], flags: super::fcntl::AtFlags) -> Result<Infallible> {
     let args_p = to_exec_array(args);
     let env_p = to_exec_array(env);
 
@@ -1018,20 +1019,14 @@ pub enum Whence {
     /// Specify an offset relative to the next location in the file greater than or
     /// equal to offset that contains some data. If offset points to
     /// some data, then the file offset is set to offset.
-    #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
-          all(target_os = "linux", not(any(target_env = "musl",
-                                           target_arch = "mips",
-                                           target_arch = "mips64")))))]
+    #[cfg(any(target_os = "dragonfly", target_os = "freebsd", target_os = "linux"))]
     SeekData = libc::SEEK_DATA,
     /// Specify an offset relative to the next hole in the file greater than
     /// or equal to offset. If offset points into the middle of a hole, then
     /// the file offset should be set to offset. If there is no hole past offset,
     /// then the file offset should be adjusted to the end of the file (i.e., there
     /// is an implicit hole at the end of any file).
-    #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
-          all(target_os = "linux", not(any(target_env = "musl",
-                                           target_arch = "mips",
-                                           target_arch = "mips64")))))]
+    #[cfg(any(target_os = "dragonfly", target_os = "freebsd", target_os = "linux"))]
     SeekHole = libc::SEEK_HOLE
 }
 
@@ -1101,7 +1096,7 @@ pub fn pipe2(flags: OFlag) -> Result<(RawFd, RawFd)> {
 ///
 /// See also
 /// [truncate(2)](http://pubs.opengroup.org/onlinepubs/9699919799/functions/truncate.html)
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "fuchsia")))]
 pub fn truncate<P: ?Sized + NixPath>(path: &P, len: off_t) -> Result<()> {
     let res = path.with_nix_path(|cstr| {
         unsafe {
@@ -1238,6 +1233,7 @@ pub fn unlinkat<P: ?Sized + NixPath>(
 
 
 #[inline]
+#[cfg(not(target_os = "fuchsia"))]
 pub fn chroot<P: ?Sized + NixPath>(path: &P) -> Result<()> {
     let res = path.with_nix_path(|cstr| {
         unsafe { libc::chroot(cstr.as_ptr()) }
@@ -1639,7 +1635,8 @@ pub mod alarm {
     //!
     //! Scheduling an alarm and waiting for the signal:
     //!
-    //! ```
+#![cfg_attr(target_os = "redox", doc = " ```rust,ignore")]
+#![cfg_attr(not(target_os = "redox"), doc = " ```rust")]
     //! use std::time::{Duration, Instant};
     //!
     //! use nix::unistd::{alarm, pause};
@@ -1648,14 +1645,23 @@ pub mod alarm {
     //! // We need to setup an empty signal handler to catch the alarm signal,
     //! // otherwise the program will be terminated once the signal is delivered.
     //! extern fn signal_handler(_: nix::libc::c_int) { }
-    //! unsafe { sigaction(Signal::SIGALRM, &SigAction::new(SigHandler::Handler(signal_handler), SaFlags::empty(), SigSet::empty())); }
+    //! let sa = SigAction::new(
+    //!     SigHandler::Handler(signal_handler),
+    //!     SaFlags::empty(),
+    //!     SigSet::empty()
+    //! );
+    //! unsafe {
+    //!     sigaction(Signal::SIGALRM, &sa);
+    //! }
     //!
     //! // Set an alarm for 1 second from now.
     //! alarm::set(1);
     //!
     //! let start = Instant::now();
     //! // Pause the process until the alarm signal is received.
-    //! pause();
+    //! let mut sigset = SigSet::empty();
+    //! sigset.add(Signal::SIGALRM);
+    //! sigset.wait();
     //!
     //! assert!(start.elapsed() >= Duration::from_secs(1));
     //! ```
@@ -2542,13 +2548,16 @@ pub struct User {
     /// Path to shell
     pub shell: PathBuf,
     /// Login class
-    #[cfg(not(any(target_os = "android", target_os = "linux")))]
+    #[cfg(not(any(target_os = "android", target_os = "fuchsia",
+                  target_os = "linux")))]
     pub class: CString,
     /// Last password change
-    #[cfg(not(any(target_os = "android", target_os = "linux")))]
+    #[cfg(not(any(target_os = "android", target_os = "fuchsia",
+                  target_os = "linux")))]
     pub change: libc::time_t,
     /// Expiration time of account
-    #[cfg(not(any(target_os = "android", target_os = "linux")))]
+    #[cfg(not(any(target_os = "android", target_os = "fuchsia",
+                  target_os = "linux")))]
     pub expire: libc::time_t
 }
 
@@ -2565,11 +2574,14 @@ impl From<&libc::passwd> for User {
                 shell: PathBuf::from(OsStr::from_bytes(CStr::from_ptr((*pw).pw_shell).to_bytes())),
                 uid: Uid::from_raw((*pw).pw_uid),
                 gid: Gid::from_raw((*pw).pw_gid),
-                #[cfg(not(any(target_os = "android", target_os = "linux")))]
+                #[cfg(not(any(target_os = "android", target_os = "fuchsia",
+                              target_os = "linux")))]
                 class: CString::new(CStr::from_ptr((*pw).pw_class).to_bytes()).unwrap(),
-                #[cfg(not(any(target_os = "android", target_os = "linux")))]
+                #[cfg(not(any(target_os = "android", target_os = "fuchsia",
+                              target_os = "linux")))]
                 change: (*pw).pw_change,
-                #[cfg(not(any(target_os = "android", target_os = "linux")))]
+                #[cfg(not(any(target_os = "android", target_os = "fuchsia",
+                              target_os = "linux")))]
                 expire: (*pw).pw_expire
             }
         }
@@ -2659,6 +2671,8 @@ impl User {
 pub struct Group {
     /// Group name
     pub name: String,
+    /// Group password
+    pub passwd: CString,
     /// Group ID
     pub gid: Gid,
     /// List of Group members
@@ -2671,6 +2685,7 @@ impl From<&libc::group> for Group {
         unsafe {
             Group {
                 name: CStr::from_ptr((*gr).gr_name).to_string_lossy().into_owned(),
+                passwd: CString::new(CStr::from_ptr((*gr).gr_passwd).to_bytes()).unwrap(),
                 gid: Gid::from_raw((*gr).gr_gid),
                 mem: Group::members((*gr).gr_mem)
             }
@@ -2777,6 +2792,7 @@ impl Group {
 
 /// Get the name of the terminal device that is open on file descriptor fd
 /// (see [`ttyname(3)`](http://man7.org/linux/man-pages/man3/ttyname.3.html)).
+#[cfg(not(target_os = "fuchsia"))]
 pub fn ttyname(fd: RawFd) -> Result<PathBuf> {
     const PATH_MAX: usize = libc::PATH_MAX as usize;
     let mut buf = vec![0_u8; PATH_MAX];
@@ -2790,4 +2806,24 @@ pub fn ttyname(fd: RawFd) -> Result<PathBuf> {
     let nul = buf.iter().position(|c| *c == b'\0').unwrap();
     buf.truncate(nul);
     Ok(OsString::from_vec(buf).into())
+}
+
+/// Get the effective user ID and group ID associated with a Unix domain socket.
+///
+/// See also [getpeereid(3)](https://www.freebsd.org/cgi/man.cgi?query=getpeereid)
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "dragonfly",
+))]
+pub fn getpeereid(fd: RawFd) -> Result<(Uid, Gid)> {
+    let mut uid = 1;
+    let mut gid = 1;
+
+    let ret = unsafe { libc::getpeereid(fd, &mut uid, &mut gid) };
+
+    Errno::result(ret).map(|_| (Uid(uid), Gid(gid)))
 }

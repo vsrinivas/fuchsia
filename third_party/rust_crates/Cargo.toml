@@ -217,7 +217,9 @@ handlebars = "2.0.0-beta.2"
 home = "0.5.3"
 hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }
 indoc = "0.3.3"
-nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
+# TODO(https://github.com/rust-lang/rust/issues/58590): nix is not generally
+# visible in fuchsia so we don't depend on #[cfg(unix)] things on target
+nix = "0.20"
 parking = "2"
 pem = "0.8.3"
 petgraph = "0.5.1"
@@ -494,7 +496,6 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 # It is replaced by our own build machinery.
 [gn.package.link-cplusplus."1.0.2"]
 [gn.package.memoffset."0.5.3"]
-[gn.package.nix."0.18.0"]
 [gn.package.nom."5.0.0"]
 [gn.package.parking_lot."0.9.0"]
 [gn.package.parking_lot_core."0.6.2"]

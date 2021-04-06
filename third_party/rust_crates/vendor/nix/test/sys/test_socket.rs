@@ -1,4 +1,3 @@
-use nix::ifaddrs::InterfaceAddress;
 use nix::sys::socket::{AddressFamily, InetAddr, UnixAddr, getsockname};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -9,6 +8,8 @@ use std::slice;
 use std::str::FromStr;
 use libc::c_char;
 use tempfile;
+#[cfg(any(target_os = "linux", target_os= "android"))]
+use crate::*;
 
 #[test]
 pub fn test_inetv4_addr_to_sock_addr() {
@@ -237,6 +238,9 @@ mod recvfrom {
         use nix::sys::socket::sockopt::{UdpGroSegment, UdpGsoSegment};
 
         #[test]
+        // Disable the test on emulated platforms because it fails in Cirrus-CI.  Lack of QEMU
+        // support is suspected.
+        #[cfg_attr(not(any(target_arch = "x86_64", target_arch="i686")), ignore)]
         pub fn gso() {
             require_kernel_version!(udp_offload::gso, ">= 4.18");
 
@@ -288,6 +292,9 @@ mod recvfrom {
         }
 
         #[test]
+        // Disable the test on emulated platforms because it fails in Cirrus-CI.  Lack of QEMU
+        // support is suspected.
+        #[cfg_attr(not(any(target_arch = "x86_64", target_arch="i686")), ignore)]
         pub fn gro() {
             require_kernel_version!(udp_offload::gro, ">= 5.3");
 
@@ -437,6 +444,76 @@ mod recvfrom {
 
         send_thread.join().unwrap();
     }
+
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "netbsd",
+    ))]
+    #[test]
+    pub fn udp_recvmmsg_dontwait_short_read() {
+        use nix::sys::uio::IoVec;
+        use nix::sys::socket::{MsgFlags, recvmmsg};
+
+        const NUM_MESSAGES_SENT: usize = 2;
+        const DATA: [u8; 4] = [1,2,3,4];
+
+        let std_sa = SocketAddr::from_str("127.0.0.1:6799").unwrap();
+        let inet_addr = InetAddr::from_std(&std_sa);
+        let sock_addr = SockAddr::new_inet(inet_addr);
+
+        let rsock = socket(AddressFamily::Inet,
+            SockType::Datagram,
+            SockFlag::empty(),
+            None
+        ).unwrap();
+        bind(rsock, &sock_addr).unwrap();
+        let ssock = socket(
+            AddressFamily::Inet,
+            SockType::Datagram,
+            SockFlag::empty(),
+            None,
+        ).expect("send socket failed");
+
+        let send_thread = thread::spawn(move || {
+            for _ in 0..NUM_MESSAGES_SENT {
+                sendto(ssock, &DATA[..], &sock_addr, MsgFlags::empty()).unwrap();
+            }
+        });
+        // Ensure we've sent all the messages before continuing so `recvmmsg`
+        // will return right away
+        send_thread.join().unwrap();
+
+        let mut msgs = std::collections::LinkedList::new();
+
+        // Buffers to receive >`NUM_MESSAGES_SENT` messages to ensure `recvmmsg`
+        // will return when there are fewer than requested messages in the
+        // kernel buffers when using `MSG_DONTWAIT`.
+        let mut receive_buffers = [[0u8; 32]; NUM_MESSAGES_SENT + 2];
+        let iovs: Vec<_> = receive_buffers.iter_mut().map(|buf| {
+            [IoVec::from_mut_slice(&mut buf[..])]
+        }).collect();
+
+        for iov in &iovs {
+            msgs.push_back(RecvMmsgData {
+                iov: iov,
+                cmsg_buffer: None,
+            })
+        };
+
+        let res = recvmmsg(rsock, &mut msgs, MsgFlags::MSG_DONTWAIT, None).expect("recvmmsg");
+        assert_eq!(res.len(), NUM_MESSAGES_SENT);
+
+        for RecvMsg { address, bytes, .. } in res.into_iter() {
+            assert_eq!(AddressFamily::Inet, address.unwrap().family());
+            assert_eq!(DATA.len(), bytes);
+        }
+
+        for buf in &receive_buffers[..NUM_MESSAGES_SENT] {
+            assert_eq!(&buf[..DATA.len()], DATA);
+        }
+    }
 }
 
 // Test error handling of our recvmsg wrapper
@@ -522,12 +599,13 @@ pub fn test_af_alg_cipher() {
                            ControlMessage, MsgFlags};
     use nix::sys::socket::sockopt::AlgSetKey;
 
+    skip_if_cirrus!("Fails for an unknown reason Cirrus CI.  Bug #1352");
     // Travis's seccomp profile blocks AF_ALG
     // https://docs.docker.com/engine/security/seccomp/
     skip_if_seccomp!(test_af_alg_cipher);
 
     let alg_type = "skcipher";
-    let alg_name = "ctr(aes)";
+    let alg_name = "ctr-aes-aesni";
     // 256-bits secret key
     let key = vec![0u8; 32];
     // 16-bytes IV
@@ -590,6 +668,7 @@ pub fn test_af_alg_aead() {
                            ControlMessage, MsgFlags};
     use nix::sys::socket::sockopt::{AlgSetKey, AlgSetAeadAuthSize};
 
+    skip_if_cirrus!("Fails for an unknown reason Cirrus CI.  Bug #1352");
     // Travis's seccomp profile blocks AF_ALG
     // https://docs.docker.com/engine/security/seccomp/
     skip_if_seccomp!(test_af_alg_aead);
@@ -948,7 +1027,7 @@ fn test_too_large_cmsgspace() {
 fn test_impl_scm_credentials_and_rights(mut space: Vec<u8>) {
     use libc::ucred;
     use nix::sys::uio::IoVec;
-    use nix::unistd::{pipe, read, write, close, getpid, getuid, getgid};
+    use nix::unistd::{pipe, write, close, getpid, getuid, getgid};
     use nix::sys::socket::{socketpair, sendmsg, recvmsg, setsockopt,
                            SockType, SockFlag,
                            ControlMessage, ControlMessageOwned, MsgFlags};
@@ -1081,7 +1160,7 @@ pub fn test_syscontrol() {
     target_os = "netbsd",
     target_os = "openbsd",
 ))]
-fn loopback_address(family: AddressFamily) -> Option<InterfaceAddress> {
+fn loopback_address(family: AddressFamily) -> Option<nix::ifaddrs::InterfaceAddress> {
     use std::io;
     use std::io::Write;
     use nix::ifaddrs::getifaddrs;
@@ -1411,7 +1490,7 @@ pub fn test_recv_ipv6pktinfo() {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 #[test]
 pub fn test_vsock() {
     use libc;
@@ -1428,13 +1507,13 @@ pub fn test_vsock() {
                     SockFlag::empty(), None)
              .expect("socket failed");
 
-    // VMADDR_CID_HYPERVISOR and VMADDR_CID_RESERVED are reserved, so we expect
+    // VMADDR_CID_HYPERVISOR and VMADDR_CID_LOCAL are reserved, so we expect
     // an EADDRNOTAVAIL error.
     let sockaddr = SockAddr::new_vsock(libc::VMADDR_CID_HYPERVISOR, port);
     assert_eq!(bind(s1, &sockaddr).err(),
                Some(Error::Sys(Errno::EADDRNOTAVAIL)));
 
-    let sockaddr = SockAddr::new_vsock(libc::VMADDR_CID_RESERVED, port);
+    let sockaddr = SockAddr::new_vsock(libc::VMADDR_CID_LOCAL, port);
     assert_eq!(bind(s1, &sockaddr).err(),
                Some(Error::Sys(Errno::EADDRNOTAVAIL)));
 

@@ -33,7 +33,7 @@ pub use self::addr::{
 pub use crate::sys::socket::addr::netlink::NetlinkAddr;
 #[cfg(any(target_os = "android", target_os = "linux"))]
 pub use crate::sys::socket::addr::alg::AlgAddr;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 pub use crate::sys::socket::addr::vsock::VsockAddr;
 
 pub use libc::{
@@ -92,6 +92,64 @@ pub enum SockProtocol {
     /// ([ref](https://developer.apple.com/library/content/documentation/Darwin/Conceptual/NKEConceptual/control/control.html))
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     KextControl = libc::SYSPROTO_CONTROL,
+    /// Receives routing and link updates and may be used to modify the routing tables (both IPv4 and IPv6), IP addresses, link
+    // parameters, neighbor setups, queueing disciplines, traffic classes and packet classifiers
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkRoute = libc::NETLINK_ROUTE,
+    /// Reserved for user-mode socket protocols
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkUserSock = libc::NETLINK_USERSOCK,
+    /// Query information about sockets of various protocol families from the kernel
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkSockDiag = libc::NETLINK_SOCK_DIAG,
+    /// SELinux event notifications.
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkSELinux = libc::NETLINK_SELINUX,
+    /// Open-iSCSI
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkISCSI = libc::NETLINK_ISCSI,
+    /// Auditing
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkAudit = libc::NETLINK_AUDIT,
+    /// Access to FIB lookup from user space
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkFIBLookup = libc::NETLINK_FIB_LOOKUP,
+    /// Netfilter subsystem
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkNetFilter = libc::NETLINK_NETFILTER,
+    /// SCSI Transports
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkSCSITransport = libc::NETLINK_SCSITRANSPORT,
+    /// Infiniband RDMA
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkRDMA = libc::NETLINK_RDMA,
+    /// Transport IPv6 packets from netfilter to user space.  Used by ip6_queue kernel module.
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkIPv6Firewall = libc::NETLINK_IP6_FW,
+    /// DECnet routing messages
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkDECNetRoutingMessage = libc::NETLINK_DNRTMSG,
+    /// Kernel messages to user space
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkKObjectUEvent = libc::NETLINK_KOBJECT_UEVENT,
+    /// Netlink interface to request information about ciphers registered with the kernel crypto API as well as allow
+    /// configuration of the kernel crypto API.
+    /// ([ref](https://www.man7.org/linux/man-pages/man7/netlink.7.html))
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    NetlinkCrypto = libc::NETLINK_CRYPTO,
 }
 
 libc_bitflags!{
@@ -437,10 +495,6 @@ pub enum ControlMessageOwned {
     ///
     /// # Examples
     ///
-    // Disable this test on FreeBSD i386
-    // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=222039
-    #[cfg_attr(not(all(target_os = "freebsd", target_arch = "x86")), doc = " ```")]
-    #[cfg_attr(all(target_os = "freebsd", target_arch = "x86"), doc = " ```no_run")]
     /// # #[macro_use] extern crate nix;
     /// # use nix::sys::socket::*;
     /// # use nix::sys::uio::IoVec;
@@ -793,12 +847,13 @@ impl<'a> ControlMessage<'a> {
             }
             #[cfg(any(target_os = "android", target_os = "linux"))]
             ControlMessage::AlgSetIv(iv) => {
+                #[allow(deprecated)] // https://github.com/rust-lang/libc/issues/1501
                 let af_alg_iv = libc::af_alg_iv {
                     ivlen: iv.len() as u32,
                     iv: [0u8; 0],
                 };
 
-                let size = mem::size_of::<libc::af_alg_iv>();
+                let size = mem::size_of_val(&af_alg_iv);
 
                 unsafe {
                     ptr::copy_nonoverlapping(
@@ -861,7 +916,7 @@ impl<'a> ControlMessage<'a> {
             }
             #[cfg(any(target_os = "android", target_os = "linux"))]
             ControlMessage::AlgSetIv(iv) => {
-                mem::size_of::<libc::af_alg_iv>() + iv.len()
+                mem::size_of_val(&iv) + iv.len()
             },
             #[cfg(any(target_os = "android", target_os = "linux"))]
             ControlMessage::AlgSetOp(op) => {
@@ -1162,17 +1217,18 @@ pub fn recvmmsg<'a, I>(
 
     let ret = unsafe { libc::recvmmsg(fd, output.as_mut_ptr(), output.len() as _, flags.bits() as _, timeout) };
 
-    let r = Errno::result(ret)?;
+    let _ = Errno::result(ret)?;
 
     Ok(output
         .into_iter()
+        .take(ret as usize)
         .zip(addresses.iter().map(|addr| unsafe{addr.assume_init()}))
         .zip(results.into_iter())
         .map(|((mmsghdr, address), (msg_controllen, cmsg_buffer))| {
             unsafe {
                 read_mhdr(
                     mmsghdr.msg_hdr,
-                    r as isize,
+                    mmsghdr.msg_len as isize,
                     msg_controllen,
                     address,
                     cmsg_buffer
@@ -1520,24 +1576,6 @@ pub fn send(fd: RawFd, buf: &[u8], flags: MsgFlags) -> Result<usize> {
  *
  */
 
-/// The protocol level at which to get / set socket options. Used as an
-/// argument to `getsockopt` and `setsockopt`.
-///
-/// [Further reading](http://pubs.opengroup.org/onlinepubs/9699919799/functions/setsockopt.html)
-#[repr(i32)]
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum SockLevel {
-    Socket = libc::SOL_SOCKET,
-    Tcp = libc::IPPROTO_TCP,
-    Ip = libc::IPPROTO_IP,
-    Ipv6 = libc::IPPROTO_IPV6,
-    Udp = libc::IPPROTO_UDP,
-    #[cfg(any(target_os = "android", target_os = "linux"))]
-    Netlink = libc::SOL_NETLINK,
-    #[cfg(any(target_os = "android", target_os = "linux"))]
-    Alg = libc::SOL_ALG,
-}
-
 /// Represents a socket option that can be accessed or set. Used as an argument
 /// to `getsockopt`
 pub trait GetSockOpt : Copy {
@@ -1664,6 +1702,15 @@ pub fn sockaddr_storage_to_addr(
             Ok(SockAddr::Unix(UnixAddr(sun, pathlen)))
         }
         #[cfg(any(target_os = "android", target_os = "linux"))]
+        libc::AF_PACKET => {
+            use libc::sockaddr_ll;
+            assert_eq!(len as usize, mem::size_of::<sockaddr_ll>());
+            let sll = unsafe {
+                *(addr as *const _ as *const sockaddr_ll)
+            };
+            Ok(SockAddr::Link(LinkAddr(sll)))
+        }
+        #[cfg(any(target_os = "android", target_os = "linux"))]
         libc::AF_NETLINK => {
             use libc::sockaddr_nl;
             let snl = unsafe {
@@ -1679,7 +1726,7 @@ pub fn sockaddr_storage_to_addr(
             };
             Ok(SockAddr::Alg(AlgAddr(salg)))
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "android", target_os = "linux"))]
         libc::AF_VSOCK => {
             use libc::sockaddr_vm;
             let svm = unsafe {

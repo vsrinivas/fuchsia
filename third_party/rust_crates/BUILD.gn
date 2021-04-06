@@ -366,7 +366,7 @@ group("mockall") {
 
 if (!(current_os == "fuchsia")) {
   group("nix") {
-    deps = [ ":nix-v0_18_0" ]
+    deps = [ ":nix-v0_20_0" ]
   }
 }
 
@@ -5075,10 +5075,10 @@ rust_library("nb-connect-v1_1_0") {
   ]
 }
 
-rust_library("nix-v0_18_0") {
+rust_library("nix-v0_20_0") {
   crate_name = "nix"
   crate_root = "//third_party/rust_crates/vendor/nix/src/lib.rs"
-  output_name = "nix-97c5d4ce3cdf961b"
+  output_name = "nix-212f6cb0e58efa58"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -5086,7 +5086,7 @@ rust_library("nix-v0_18_0") {
 
   deps = []
   deps += [ ":bitflags-v1_2_1" ]
-  deps += [ ":cfg-if-v0_1_10" ]
+  deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":libc-v0_2_88" ]
 
   rustenv = []
@@ -5094,8 +5094,8 @@ rust_library("nix-v0_18_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=97c5d4ce3cdf961b",
-    "-Cextra-filename=-97c5d4ce3cdf961b",
+    "-Cmetadata=212f6cb0e58efa58",
+    "-Cextra-filename=-212f6cb0e58efa58",
   ]
 }
 
