@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
@@ -17,6 +18,7 @@
 #include "dockyard_proxy.h"
 #include "dockyard_proxy_grpc.h"
 #include "dockyard_proxy_local.h"
+#include "fidl.h"
 #include "fuchsia_clock.h"
 #include "harvester.h"
 #include "info_resource.h"
@@ -42,7 +44,9 @@ int main(int argc, char** argv) {
   constexpr char COMMAND_LOCAL[] = "local";
   constexpr char COMMAND_VERSION[] = "version";
   constexpr char COMMAND_ONCE[] = "once";
+  constexpr char COMMAND_FIDL[] = "fidl";
 
+  bool use_fidl = false;
   bool use_grpc = true;
   bool run_loop_once = false;
 
@@ -69,6 +73,16 @@ int main(int argc, char** argv) {
     FX_LOGS(INFO) << "Option: Only run the update loop once, then exit.";
     run_loop_once = true;
   }
+  if (command_line.HasOption(COMMAND_FIDL)) {
+    FX_LOGS(INFO) << "Option: Connecting via FIDL.";
+
+    if (!use_grpc) {
+      FX_LOGS(ERROR) << "Cannot use FIDL for local-only transport.";
+      exit(EXIT_CODE_GENERAL_ERROR);
+    }
+
+    use_fidl = true;
+  }
 
   // Note: Neither of the following loops are "fast" or "slow" on their own.
   //       It's just a matter of what we choose to run on them.
@@ -93,56 +107,87 @@ int main(int argc, char** argv) {
 
   async_dispatcher_t* fast_dispatcher = fast_calls_loop.dispatcher();
 
-  std::unique_ptr<harvester::FuchsiaClock> clock =
+  std::shared_ptr<harvester::FuchsiaClock> clock =
       std::make_unique<harvester::FuchsiaClock>(
           fast_dispatcher, std::make_unique<timekeeper::SystemClock>(),
           zx::unowned_clock(zx_utc_reference_get()));
 
   // Set up.
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy;
+
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+
+  std::vector<std::unique_ptr<
+      fidl::Binding<fuchsia::systemmonitor::Harvester,
+                    std::unique_ptr<harvester::fidl::HarvesterImpl>>>>
+      harvester_bindings;
+
   if (use_grpc) {
-    const auto& positional_args = command_line.positional_args();
-    if (positional_args.empty()) {
-      // TODO(fxbug.dev/30): Adhere to CLI tool requirements for --help.
-      std::cerr << "Please specify an IP:Port, such as localhost:50051"
-                << std::endl;
-      exit(EXIT_CODE_GENERAL_ERROR);
-    }
+    if (use_fidl) {
+      FX_LOGS(INFO) << "Adding service...";
+      fidl::InterfaceRequestHandler<fuchsia::systemmonitor::Harvester> handler =
+          [&](fidl::InterfaceRequest<fuchsia::systemmonitor::Harvester>
+                  request) {
+            auto service_impl =
+                std::make_unique<harvester::fidl::HarvesterImpl>(
+                    fast_dispatcher, slow_calls_loop.dispatcher(), clock);
+            harvester_bindings
+                .emplace_back(
+                    std::make_unique<fidl::Binding<
+                        fuchsia::systemmonitor::Harvester,
+                        std::unique_ptr<harvester::fidl::HarvesterImpl>>>(
+                        std::move(service_impl)))
+                ->Bind(std::move(request));
+          };
+      context->outgoing()->AddPublicService(std::move(handler));
+      FX_LOGS(INFO) << "Service added.";
+    } else {
+      const auto& positional_args = command_line.positional_args();
+      if (positional_args.empty()) {
+        // TODO(fxbug.dev/30): Adhere to CLI tool requirements for --help.
+        std::cerr << "Please specify an IP:Port, such as localhost:50051"
+                  << std::endl;
+        exit(EXIT_CODE_GENERAL_ERROR);
+      }
 
-    // TODO(fxbug.dev/32): This channel isn't authenticated
-    // (InsecureChannelCredentials()).
-    dockyard_proxy = std::make_unique<harvester::DockyardProxyGrpc>(
-        grpc::CreateChannel(positional_args[0],
-                            grpc::InsecureChannelCredentials()),
-        std::move(clock));
+      // TODO(fxbug.dev/32): This channel isn't authenticated
+      // (InsecureChannelCredentials()).
+      dockyard_proxy = std::make_unique<harvester::DockyardProxyGrpc>(
+          grpc::CreateChannel(positional_args[0],
+                              grpc::InsecureChannelCredentials()),
+          std::move(clock));
 
-    if (!dockyard_proxy) {
-      FX_LOGS(ERROR) << "unable to create dockyard_proxy";
-      exit(EXIT_CODE_GENERAL_ERROR);
-    }
-    harvester::DockyardProxyStatus status = dockyard_proxy->Init();
-    if (status != harvester::DockyardProxyStatus::OK) {
-      FX_LOGS(ERROR) << harvester::DockyardErrorString("Init", status);
-      exit(EXIT_CODE_GENERAL_ERROR);
+      if (!dockyard_proxy) {
+        FX_LOGS(ERROR) << "unable to create dockyard_proxy";
+        exit(EXIT_CODE_GENERAL_ERROR);
+      }
+      harvester::DockyardProxyStatus status = dockyard_proxy->Init();
+      if (status != harvester::DockyardProxyStatus::OK) {
+        FX_LOGS(ERROR) << harvester::DockyardErrorString("Init", status);
+        exit(EXIT_CODE_GENERAL_ERROR);
+      }
     }
   } else {
     dockyard_proxy = std::make_unique<harvester::DockyardProxyLocal>();
   }
 
-  zx_handle_t info_resource;
-  zx_status_t ret = harvester::GetInfoResource(&info_resource);
-  if (ret != ZX_OK) {
-    exit(EXIT_CODE_GENERAL_ERROR);
+  std::unique_ptr<harvester::Harvester> harvester;
+  if (!use_fidl) {
+    zx_handle_t info_resource;
+    zx_status_t ret = harvester::GetInfoResource(&info_resource);
+    if (ret != ZX_OK) {
+      exit(EXIT_CODE_GENERAL_ERROR);
+    }
+
+    std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
+
+    harvester = std::make_unique<harvester::Harvester>(
+        info_resource, std::move(dockyard_proxy), std::move(os));
+    harvester->GatherDeviceProperties();
+    harvester->GatherFastData(fast_dispatcher);
+    harvester->GatherSlowData(slow_calls_loop.dispatcher());
+    harvester->GatherLogs();
   }
-
-  std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
-
-  harvester::Harvester harvester(info_resource, std::move(dockyard_proxy),
-                                 std::move(os));
-  harvester.GatherDeviceProperties();
-  harvester.GatherFastData(fast_dispatcher);
-  harvester.GatherSlowData(slow_calls_loop.dispatcher());
-  harvester.GatherLogs();
   // Best practice across Fuchsia codebase is to always start the trace provider
   // even if NTRACE is defined.
   trace::TraceProviderWithFdio trace_provider(trace_loop.dispatcher(),
