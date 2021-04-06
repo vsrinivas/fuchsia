@@ -70,9 +70,6 @@ class super final {
       ::fidl::WireInterface<::fidl_test_inheritance::super>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender = ::fidl::WireEventSender<::fidl_test_inheritance::super>;
-  using WeakEventSender =
-      ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::super>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritance
@@ -658,9 +655,6 @@ class sub final {
       ::fidl::WireInterface<::fidl_test_inheritance::sub>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender = ::fidl::WireEventSender<::fidl_test_inheritance::sub>;
-  using WeakEventSender =
-      ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::sub>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritance

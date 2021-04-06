@@ -894,10 +894,6 @@ class SimpleProtocol final {
       ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_nullable::SimpleProtocol>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_nullable::SimpleProtocol>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_nullable

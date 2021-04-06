@@ -59,7 +59,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
   // Converts the device pointer into an id we can use as a unique identifier.
   uint64_t zxdev_to_id(zx_device_t* dev) { return reinterpret_cast<uint64_t>(dev); }
 
-  Lifecycle::EventSender lifecycle_event_sender_;
+  fidl::WireEventSender<Lifecycle> lifecycle_event_sender_;
   // Child devices added via |AddChild|.
   std::vector<fbl::RefPtr<TestLifecycleDriverChild>> children_;
 };
@@ -169,7 +169,7 @@ void TestLifecycleDriver::SubscribeToLifecycle(fidl::ServerEnd<Lifecycle> client
   if (lifecycle_event_sender_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
-    lifecycle_event_sender_ = Lifecycle::EventSender(std::move(client));
+    lifecycle_event_sender_ = fidl::WireEventSender<Lifecycle>(std::move(client));
     completer.ReplySuccess();
   }
 }

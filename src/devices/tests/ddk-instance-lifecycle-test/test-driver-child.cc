@@ -83,7 +83,7 @@ void TestLifecycleDriverChildInstance::SubscribeToLifecycle(
   if (lifecycle_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
-    lifecycle_ = Lifecycle::EventSender(std::move(client));
+    lifecycle_ = fidl::WireEventSender<Lifecycle>(std::move(client));
     completer.ReplySuccess();
   }
 }

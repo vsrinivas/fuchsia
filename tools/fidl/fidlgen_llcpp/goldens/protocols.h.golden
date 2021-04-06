@@ -934,10 +934,6 @@ class Transitional final {
       ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_protocols::Transitional>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_protocols::Transitional>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
@@ -1953,10 +1949,6 @@ class ChannelProtocol final {
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_protocols::ChannelProtocol>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
@@ -4002,10 +3994,6 @@ class WithAndWithoutRequestResponse final {
           ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender = ::fidl::WireEventSender<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
@@ -6940,10 +6928,6 @@ class WithErrorSyntax final {
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_protocols::WithErrorSyntax>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_protocols::WithErrorSyntax>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols

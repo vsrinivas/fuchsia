@@ -77,10 +77,6 @@ class Parent final {
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_inheritancewithrecursivedecl::Parent>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl
@@ -523,10 +519,6 @@ class Child final {
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_inheritancewithrecursivedecl::Child>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_inheritancewithrecursivedecl::Child>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl

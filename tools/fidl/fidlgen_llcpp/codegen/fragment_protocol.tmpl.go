@@ -92,9 +92,6 @@ class {{ .Name }} final {
   static ::fidl::DispatchResult Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 
 {{- EndifFuchsia -}}
-
-  using EventSender = {{ .WireEventSender }};
-  using WeakEventSender = {{ .WireWeakEventSender }};
 };
 
 {{- template "ProtocolDispatcherDeclaration" . }}

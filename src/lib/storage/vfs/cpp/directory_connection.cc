@@ -46,7 +46,7 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Nod
     using OpenResult = fs::Vfs::OpenResult;
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
       if (describe) {
-        fio::Node::EventSender(std::move(channel)).OnOpen(result, fio::wire::NodeInfo());
+        fidl::WireEventSender<fio::Node>(std::move(channel)).OnOpen(result, fio::wire::NodeInfo());
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
       // Remote handoff to a remote filesystem node.
@@ -144,7 +144,7 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
   auto write_error = [describe = open_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
                                                               zx_status_t error) {
     if (describe) {
-      fio::Node::EventSender(std::move(channel)).OnOpen(error, fio::wire::NodeInfo());
+      fidl::WireEventSender<fio::Node>(std::move(channel)).OnOpen(error, fio::wire::NodeInfo());
     }
   };
 

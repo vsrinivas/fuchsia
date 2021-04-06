@@ -64,7 +64,7 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
         }
       });
 
-  typename ProtocolType::EventSender sender(std::move(endpoints->server));
+  fidl::WireEventSender<ProtocolType> sender(std::move(endpoints->server));
   while (state->KeepRunning()) {
     fidl::FidlAllocator<65536> allocator;
     FidlType aligned_value = builder(allocator);

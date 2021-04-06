@@ -293,7 +293,7 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
 
 }  // namespace
 
-void SendInitialDisplay(const fhd::Controller::EventSender& event_sender, fhd::wire::Mode* mode,
+void SendInitialDisplay(const fidl::WireEventSender<fhd::Controller>& event_sender, fhd::wire::Mode* mode,
                         uint32_t pixel_format) {
   fhd::wire::Info info;
   info.pixel_format = fidl::VectorView<uint32_t>::FromExternal(&pixel_format, 1);
@@ -307,7 +307,7 @@ void SendInitialDisplay(const fhd::Controller::EventSender& event_sender, fhd::w
 void TestDisplayStride(bool ram_domain) {
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
-  fhd::Controller::EventSender event_sender(std::move(server_channel));
+  fidl::WireEventSender<fhd::Controller> event_sender(std::move(server_channel));
 
   StubDisplayController controller(ram_domain);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);

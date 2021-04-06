@@ -82,10 +82,6 @@ class SecondProtocol final {
       ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_service::SecondProtocol>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_service::SecondProtocol>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_service
@@ -413,10 +409,6 @@ class FirstProtocol final {
       ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_service::FirstProtocol>;
-  using WeakEventSender =
-      ::fidl::internal::WireWeakEventSender<::fidl_test_service::FirstProtocol>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_service

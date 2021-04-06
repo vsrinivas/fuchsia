@@ -111,10 +111,6 @@ class Parent final {
       ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_protocolrequest::Parent>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_protocolrequest::Parent>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocolrequest
@@ -1683,10 +1679,6 @@ class Child final {
       ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_protocolrequest::Child>;
-  using WeakEventSender =
-      ::fidl::internal::WireWeakEventSender<::fidl_test_protocolrequest::Child>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocolrequest

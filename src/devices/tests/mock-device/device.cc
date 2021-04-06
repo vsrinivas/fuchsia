@@ -93,7 +93,7 @@ struct ProcessActionsContext {
   // owned (EventSender).
   // In the borrowing case, the channel must outlive this variant.
   using ChannelVariants =
-      std::variant<zx::unowned_channel, device_mock::MockDeviceThread::EventSender>;
+      std::variant<zx::unowned_channel, fidl::WireEventSender<device_mock::MockDeviceThread>>;
 
   // Constructs a process action context. Note that |channel_variants| must
   // outlive this context. Typically, the |channel_variants| is first created
@@ -110,7 +110,7 @@ struct ProcessActionsContext {
   // add/remove device requests.
   //
   // When this context is running in a separate thread, the context has the
-  // |device_mock::MockDeviceThread::EventSender| variant i.e. it is the
+  // |fidl::WireEventSender<device_mock::MockDeviceThread>| variant i.e. it is the
   // server-end of the MockDeviceThread protocol.
   // When this context is running in the same thread, the context has the
   // |zx::unowned_channel| variant, and is the client-end of the
@@ -162,13 +162,15 @@ MockDevice::MockDevice(zx_device_t* device, fidl::ClientEnd<device_mock::MockDev
 
 int MockDevice::ThreadFunc(void* raw_arg) {
   auto arg = std::unique_ptr<ThreadFuncArg>(static_cast<ThreadFuncArg*>(raw_arg));
-  std::variant<zx::unowned_channel, device_mock::MockDeviceThread::EventSender> event_sender =
-      device_mock::MockDeviceThread::EventSender(std::move(arg->server_end));
+  std::variant<zx::unowned_channel, fidl::WireEventSender<device_mock::MockDeviceThread>>
+      event_sender =
+          fidl::WireEventSender<device_mock::MockDeviceThread>(std::move(arg->server_end));
 
   while (true) {
     fbl::Array<device_mock::wire::Action> actions;
     zx_status_t status = WaitForPerformActions(
-        std::get<device_mock::MockDeviceThread::EventSender>(event_sender).channel(), &actions);
+        std::get<fidl::WireEventSender<device_mock::MockDeviceThread>>(event_sender).channel(),
+        &actions);
     if (status != ZX_OK) {
       ZX_ASSERT_MSG(status == ZX_ERR_STOP, "MockDevice thread exiting: %s\n",
                     zx_status_get_string(status));
@@ -445,7 +447,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         ctx->mock_device = nullptr;
         zx_status_t status = std::visit(
             matchers{
-                [&](device_mock::MockDeviceThread::EventSender& sender) {
+                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
                   return sender.UnbindReplyDone(action.unbind_reply().action_id);
                 },
                 [&](zx::unowned_channel& channel) {
@@ -467,7 +469,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         ctx->pending_suspend_txn->Reply(ZX_OK, 0);
         zx_status_t status = std::visit(
             matchers{
-                [&](device_mock::MockDeviceThread::EventSender& sender) {
+                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
                   return sender.SuspendReplyDone(action.suspend_reply().action_id);
                 },
                 [&](zx::unowned_channel& channel) {
@@ -489,7 +491,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         ctx->pending_resume_txn->Reply(ZX_OK, 0, 0);
         zx_status_t status = std::visit(
             matchers{
-                [&](device_mock::MockDeviceThread::EventSender& sender) {
+                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
                   return sender.ResumeReplyDone(action.resume_reply().action_id);
                 },
                 [&](zx::unowned_channel& channel) {
@@ -535,7 +537,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
 
         status =
             std::visit(matchers{
-                           [&](device_mock::MockDeviceThread::EventSender& sender) {
+                           [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
                              return sender.AddDeviceDone(add_device_action.action_id);
                            },
                            [&](zx::unowned_channel& channel) {

@@ -1547,7 +1547,7 @@ Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t 
       id_(client_id),
       server_handle_(server_channel.get()),
       fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)),
-      binding_state_(fhd::Controller::EventSender(std::move(server_channel))) {}
+      binding_state_(fidl::WireEventSender<fhd::Controller>(std::move(server_channel))) {}
 
 Client::~Client() { ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID); }
 

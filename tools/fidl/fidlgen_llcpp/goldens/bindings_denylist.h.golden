@@ -172,10 +172,6 @@ class OnlyLibfuzzerAndDeps final {
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender = ::fidl::WireEventSender<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist
@@ -792,10 +788,6 @@ class OnlyCppAndDeps final {
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
-      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist

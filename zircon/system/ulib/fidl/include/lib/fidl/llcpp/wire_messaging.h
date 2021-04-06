@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
-#include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <zircon/fidl.h>
@@ -98,6 +97,8 @@ fidl::internal::WireCaller<FidlProtocol> WireCall(
     const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
   return fidl::internal::WireCaller<FidlProtocol>(client_end);
 }
+
+enum class DispatchResult;
 
 // Dispatches the incoming message to one of the handlers functions in the protocol.
 // If there is no matching handler, it closes all the handles in |msg| and closes the channel with

@@ -127,14 +127,14 @@ class DisplayControllerBindingState {
   // active binding reference or event sender before events could be sent.
   DisplayControllerBindingState() = default;
 
-  explicit DisplayControllerBindingState(Protocol::EventSender&& event_sender)
+  explicit DisplayControllerBindingState(fidl::WireEventSender<Protocol>&& event_sender)
       : binding_state_(std::move(event_sender)) {}
 
   // Invokes |fn| with an polymorphic object that may be used to send events
   // in |Protocol|.
   //
   // |fn| must be a templated lambda that can receive both
-  // |fidl::ServerBindingRef<Protocol>| and |Protocol::EventSender|,
+  // |fidl::ServerBindingRef<Protocol>| and |fidl::WireEventSender<Protocol>|,
   // and returns a |zx_status_t|.
   template <typename EventSenderConsumer>
   zx_status_t SendEvents(EventSenderConsumer&& fn) {
@@ -144,7 +144,7 @@ class DisplayControllerBindingState {
           if constexpr (std::is_same_v<T, fidl::ServerBindingRef<Protocol>>) {
             return fn(*arg);
           }
-          if constexpr (std::is_same_v<T, Protocol::EventSender>) {
+          if constexpr (std::is_same_v<T, fidl::WireEventSender<Protocol>>) {
             return fn(arg);
           }
           ZX_PANIC("Invalid display controller binding state");
@@ -168,7 +168,7 @@ class DisplayControllerBindingState {
   }
 
  private:
-  std::variant<std::monostate, fidl::ServerBindingRef<Protocol>, Protocol::EventSender>
+  std::variant<std::monostate, fidl::ServerBindingRef<Protocol>, fidl::WireEventSender<Protocol>>
       binding_state_;
 };
 

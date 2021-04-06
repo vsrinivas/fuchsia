@@ -40,7 +40,7 @@ class TestLifecycleDriverChild : public DeviceType {
 
  private:
   // Connection to a Lifecycle client
-  fuchsia_device_instancelifecycle_test::Lifecycle::EventSender lifecycle_;
+  fidl::WireEventSender<fuchsia_device_instancelifecycle_test::Lifecycle> lifecycle_;
 };
 
 class TestLifecycleDriverChildInstance;
@@ -77,5 +77,5 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
   TestLifecycleDriverChild* parent_ctx_;
 
   // Connection to a Lifecycle client
-  fuchsia_device_instancelifecycle_test::Lifecycle::EventSender lifecycle_;
+  fidl::WireEventSender<fuchsia_device_instancelifecycle_test::Lifecycle> lifecycle_;
 };

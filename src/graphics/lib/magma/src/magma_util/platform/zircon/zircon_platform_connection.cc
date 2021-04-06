@@ -36,7 +36,7 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
 
  private:
   uint64_t pool_id_;
-  fuchsia_gpu_magma::PerformanceCounterEvents::EventSender event_sender_;
+  fidl::WireEventSender<fuchsia_gpu_magma::PerformanceCounterEvents> event_sender_;
 };
 
 void ZirconPlatformConnection::SetError(fidl::CompleterBase* completer, magma_status_t error) {

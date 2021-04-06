@@ -318,10 +318,6 @@ class SomeProtocol final {
       ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 #endif  // __Fuchsia__
-  using EventSender =
-      ::fidl::WireEventSender<::fidl_test_handles::SomeProtocol>;
-  using WeakEventSender =
-      ::fidl::internal::WireWeakEventSender<::fidl_test_handles::SomeProtocol>;
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_handles

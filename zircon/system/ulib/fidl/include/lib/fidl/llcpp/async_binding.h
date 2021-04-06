@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/types.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <lib/sync/completion.h>
@@ -177,7 +178,7 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
   struct ConstructionKey {};
 
  public:
-  using EventSender = typename Protocol::EventSender;
+  using EventSender = typename fidl::WireEventSender<Protocol>;
 
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
                                                     fidl::ServerEnd<Protocol>&& server_end,

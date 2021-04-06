@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/server_end.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 
 namespace fidl {
 
@@ -239,9 +240,9 @@ class ServerBindingRef {
 
   // Return the interface for sending FIDL events. If the server has been unbound, calls on the
   // interface return error with status ZX_ERR_CANCELED.
-  const typename Protocol::WeakEventSender* get() const { return &event_sender_; }
-  const typename Protocol::WeakEventSender* operator->() const { return &event_sender_; }
-  const typename Protocol::WeakEventSender& operator*() const { return event_sender_; }
+  const fidl::internal::WireWeakEventSender<Protocol>* get() const { return &event_sender_; }
+  const fidl::internal::WireWeakEventSender<Protocol>* operator->() const { return &event_sender_; }
+  const fidl::internal::WireWeakEventSender<Protocol>& operator*() const { return event_sender_; }
 
  private:
   // This is so that only |BindServerTypeErased| will be able to construct a
@@ -255,7 +256,7 @@ class ServerBindingRef {
   explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding<Protocol>> internal_binding)
       : event_sender_(std::move(internal_binding)) {}
 
-  typename Protocol::WeakEventSender event_sender_;
+  fidl::internal::WireWeakEventSender<Protocol> event_sender_;
 };
 
 }  // namespace fidl
