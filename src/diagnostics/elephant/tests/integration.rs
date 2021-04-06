@@ -90,7 +90,6 @@ async fn elephant_integration() {
     // Missing data can be replaced by new data.
     let _example_app = inspect_source(Some(42i32)).await;
     elephant_service.persist("test-component-metric").await.unwrap();
-    thread::sleep(time::Duration::from_secs(2));
     expect_file_change(FileChange { old: FileState::NoInt, new: FileState::Int(42), after: None });
 
     // The persisted data shouldn't be published until Elephant is killed and restarted.
@@ -203,6 +202,12 @@ fn expect_file_change(rules: FileChange) {
                 thread::sleep(time::Duration::from_millis(100));
                 continue;
             }
+            let parse_result: Result<Value, serde_json::Error> = serde_json::from_str(&contents);
+            if let Err(_) = parse_result {
+                warn!("Bad JSON data in the file. Partial writes happen sometimes. Retrying.");
+                thread::sleep(time::Duration::from_millis(100));
+                continue;
+            }
             return Some(contents);
         }
     }
@@ -215,10 +220,10 @@ fn expect_file_change(rules: FileChange) {
         }
     }
 
-    fn strings_match(left: &Option<String>, right: &Option<String>) -> bool {
+    fn strings_match(left: &Option<String>, right: &Option<String>, context: &str) -> bool {
         match (left, right) {
             (None, None) => true,
-            (Some(left), Some(right)) => inspect_strings_match(left, right),
+            (Some(left), Some(right)) => json_strings_match(left, right, context),
             _ => false,
         }
     }
@@ -230,11 +235,11 @@ fn expect_file_change(rules: FileChange) {
     loop {
         assert!(start_time + Duration::from_seconds(GIVE_UP_POLLING_SECS) > Time::get_monotonic());
         let contents = file_contents();
-        if rules.old != rules.new && strings_match(&contents, &old_string) {
+        if rules.old != rules.new && strings_match(&contents, &old_string, "old file check") {
             thread::sleep(time::Duration::from_millis(100));
             continue;
         }
-        if strings_match(&contents, &new_string) {
+        if strings_match(&contents, &new_string, "new file check") {
             if let Some(after) = rules.after {
                 assert!(Time::get_monotonic() > after);
             }
@@ -245,9 +250,24 @@ fn expect_file_change(rules: FileChange) {
     }
 }
 
-fn inspect_strings_match(observed: &str, expected: &str) -> bool {
-    let observed_json: Value = serde_json::from_str(&observed).expect("parsing json failed.");
-    let expected_json: Value = serde_json::from_str(expected).unwrap();
+fn json_strings_match(observed: &str, expected: &str, context: &str) -> bool {
+    fn parse_json(string: &str, context1: &str, context2: &str) -> Value {
+        let parse_result: Result<Value, serde_json::Error> = serde_json::from_str(&string);
+        match parse_result {
+            Ok(json) => json,
+            Err(badness) => {
+                error!("Error parsing json in {} {}: {}", context1, context2, badness);
+                serde_json::json!(string)
+            }
+        }
+    }
+    let observed_json = parse_json(observed, "observed", context);
+    let expected_json = parse_json(expected, "expected", context);
+    if observed_json != expected_json {
+        warn!("Observed != expected in {}", context);
+        warn!("Observed: {:?}", observed_json);
+        warn!("Expected: {:?}", expected_json);
+    }
     observed_json == expected_json
 }
 
@@ -281,9 +301,10 @@ async fn verify_elephant_publication(published: Published) {
     loop {
         let published_inspect = inspect_fetcher.fetch().await.unwrap();
         if published_inspect != "[]" {
-            assert!(inspect_strings_match(
+            assert!(json_strings_match(
                 &zero_timestamps(&published_inspect),
-                &expected_elephant_inspect(published)
+                &expected_elephant_inspect(published),
+                "elephant publication"
             ));
             break;
         }
