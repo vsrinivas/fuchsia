@@ -6,6 +6,7 @@
 
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zircon-internal/macros.h>
 #include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
@@ -16,6 +17,7 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <pdev/driver.h>
 #include <pdev/uart.h>
@@ -105,7 +107,9 @@ static uint32_t s905_uart_irq = 0;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static SpinLock uart_spinlock;
+namespace {
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
+}  // namespace
 
 static inline void uartreg_and_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
   volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
@@ -141,13 +145,12 @@ static interrupt_eoi uart_irq(void* arg) {
 
   /* handle TX */
   if (UARTREG(s905_uart_base, S905_UART_CONTROL) & S905_UART_CONTROL_TXINTEN) {
-    uart_spinlock.Acquire();
+    Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
     if (!(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL))
     /* Signal any waiting Tx */
     {
       uart_dputc_event.Signal();
     }
-    uart_spinlock.Release();
   }
 
   return IRQ_EOI_DEACTIVATE;
@@ -239,23 +242,23 @@ static int s905_uart_getc(bool wait) {
  * each time a byte is read from the Tx FIFO).
  */
 static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  interrupt_saved_state_t state;
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  uart_spinlock.AcquireIrqSave(state);
+
+  Guard<MonitoredSpinLock, IrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
   while (len > 0) {
     /* Is FIFO Full ? */
     while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL) {
-      uart_spinlock.ReleaseIrqRestore(state);
-      if (block) {
-        uart_dputc_event.Wait();
-      } else {
-        arch::Yield();
-      }
-      uart_spinlock.AcquireIrqSave(state);
+      guard.CallUnlocked([&block]() {
+        if (block) {
+          uart_dputc_event.Wait();
+        } else {
+          arch::Yield();
+        }
+      });
     }
 
     if (*str == '\n' && map_NL && !copied_CR) {
@@ -267,7 +270,6 @@ static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void s905_uart_start_panic() { uart_tx_irq_enabled = false; }

@@ -8,6 +8,7 @@
 #include <lib/arch/intrin.h>
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zircon-internal/macros.h>
 #include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
@@ -18,6 +19,7 @@
 #include <dev/interrupt.h>
 #include <dev/uart.h>
 #include <kernel/auto_lock.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
 #include <pdev/driver.h>
@@ -62,7 +64,9 @@ static Cbuf uart_rx_buf;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static SpinLock uart_spinlock;
+namespace {
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
+}  // namespace
 
 static inline void uartreg_and_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
   volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
@@ -99,7 +103,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
       uart_rx_buf.WriteChar(c);
     }
   }
-  uart_spinlock.Acquire();
+  Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
   if (isr & (1 << 5)) {  // txmis
     /*
      * Signal any waiting Tx and mask Tx interrupts once we
@@ -108,7 +112,6 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     uart_dputc_event.Signal();
     pl011_mask_tx();
   }
-  uart_spinlock.Release();
 
   return IRQ_EOI_DEACTIVATE;
 }
@@ -188,7 +191,7 @@ static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
     // case time holding it. If a large string is passed, for example, this routine
     // will write 16 bytes at a time into the fifo per iteration, dropping and
     // reacquiring the spinlock every cycle.
-    AutoSpinLock guard(&uart_spinlock);
+    Guard<MonitoredSpinLock, IrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
 
     uint32_t uart_fr = UARTREG(uart_base, UART_FR);
     if (uart_fr & (1 << 7)) {  // txfe
@@ -224,11 +227,11 @@ static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
         pl011_unmask_tx();
 
         // drop the spinlock before waiting
-        guard.release();
+        guard.Release();
         uart_dputc_event.Wait();
       } else {
         // drop the spinlock before yielding
-        guard.release();
+        guard.Release();
         arch::Yield();
       }
     }

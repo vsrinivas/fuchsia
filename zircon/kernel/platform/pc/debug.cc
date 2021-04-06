@@ -14,6 +14,7 @@
 #include <lib/cbuf.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <reg.h>
 #include <stdarg.h>
@@ -27,6 +28,7 @@
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <dev/interrupt.h>
+#include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
@@ -82,7 +84,10 @@ Cbuf console_input_buf;
 static uint32_t uart_fifo_depth;
 static bool uart_tx_irq_enabled = false;  // tx driven irq
 static AutounsignalEvent uart_dputc_event{true};
-static SpinLock uart_tx_spinlock;
+
+namespace {
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_tx_spinlock, MonitoredSpinLock);
+}  // namespace
 
 // Read a single byte from the given UART register.
 static uint8_t uart_read(uint8_t reg) {
@@ -627,7 +632,6 @@ static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* co
 // block : Blocking vs Non-Blocking
 // map_NL : If true, map a '\n' to '\r'+'\n'
 static void platform_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  interrupt_saved_state_t state;
   bool copied_CR = false;
   size_t wrote;
 
@@ -636,7 +640,7 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
     return;
   if (!uart_tx_irq_enabled)
     block = false;
-  uart_tx_spinlock.AcquireIrqSave(state);
+  Guard<MonitoredSpinLock, IrqSave> guard{uart_tx_spinlock::Get(), SOURCE_TAG};
   while (len > 0) {
     // Is FIFO empty ?
     while (!(uart_read(5) & (1 << 5))) {
@@ -644,13 +648,10 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
         // We want to Tx more and FIFO is empty, re-enable Tx interrupts before blocking.
         uart_write(1, static_cast<uint8_t>((1 << 0) | ((uart_tx_irq_enabled ? 1 : 0)
                                                        << 1)));  // rx and tx interrupt enable
-        uart_tx_spinlock.ReleaseIrqRestore(state);
-        uart_dputc_event.Wait();
+        guard.CallUnlocked([]() { uart_dputc_event.Wait(); });
       } else {
-        uart_tx_spinlock.ReleaseIrqRestore(state);
-        arch::Yield();
+        guard.CallUnlocked([]() { arch::Yield(); });
       }
-      uart_tx_spinlock.AcquireIrqSave(state);
     }
     // Fifo is completely empty now, we can shove an entire
     // fifo's worth of Tx...
@@ -661,7 +662,6 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
                                                      << 1)));  // rx and tx interrupt enable
     }
   }
-  uart_tx_spinlock.ReleaseIrqRestore(state);
 }
 
 void platform_dputs_thread(const char* str, size_t len) {

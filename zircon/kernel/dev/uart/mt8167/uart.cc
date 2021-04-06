@@ -5,6 +5,7 @@
 
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zircon-internal/macros.h>
 #include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
@@ -14,6 +15,7 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <pdev/driver.h>
 #include <pdev/uart.h>
@@ -104,7 +106,9 @@ static Cbuf uart_rx_buf;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static SpinLock uart_spinlock;
+namespace {
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
+}  // namespace
 
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 #define SOCREG(reg) (*(volatile uint32_t*)((soc_base) + (reg)))
@@ -132,12 +136,11 @@ static interrupt_eoi uart_irq_handler(void* arg) {
   // Signal if anyone is waiting to TX
   if (UARTREG(UART_LSR) & UART_LSR_THRE) {
     uartreg_and_eq(UART_IER, ~UART_IER_ETBEI);  // Disable TX interrupt
-    uart_spinlock.Acquire();
+    Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
     // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
     // 1. The reschedule flag is not supposed to be true in interrupt context.
     // 2. AutounsignalEvent only wakes up one thread per Signal() call.
     uart_dputc_event.Signal();
-    uart_spinlock.Release();
   }
 
   return IRQ_EOI_DEACTIVATE;
@@ -172,25 +175,24 @@ static int mt8167_uart_getc(bool wait) {
 }
 
 static void mt8167_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  interrupt_saved_state_t state;
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  uart_spinlock.AcquireIrqSave(state);
+  Guard<MonitoredSpinLock, IrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
 
   while (len > 0) {
     // is FIFO full?
     while (!(UARTREG(UART_LSR) & UART_LSR_THRE)) {
-      uart_spinlock.ReleaseIrqRestore(state);
-      if (block) {
-        uartreg_or_eq(UART_IER, UART_IER_ETBEI);  // Enable TX interrupt.
-        uart_dputc_event.Wait();
-      } else {
-        arch::Yield();
-      }
-      uart_spinlock.AcquireIrqSave(state);
+      guard.CallUnlocked([&block]() {
+        if (block) {
+          uartreg_or_eq(UART_IER, UART_IER_ETBEI);  // Enable TX interrupt.
+          uart_dputc_event.Wait();
+        } else {
+          arch::Yield();
+        }
+      });
     }
     if (*str == '\n' && map_NL && !copied_CR) {
       copied_CR = true;
@@ -201,7 +203,6 @@ static void mt8167_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void mt8167_start_panic() { uart_tx_irq_enabled = false; }

@@ -5,6 +5,7 @@
 
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zircon-internal/macros.h>
 #include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
@@ -14,6 +15,7 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <pdev/driver.h>
 #include <pdev/uart.h>
@@ -74,7 +76,9 @@ static Cbuf uart_rx_buf;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static SpinLock uart_spinlock;
+namespace {
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
+}  // namespace
 
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 
@@ -90,12 +94,11 @@ static interrupt_eoi uart_irq_handler(void* arg) {
 
   /* Signal if anyone is waiting to TX */
   if (UARTREG(MX8_UCR1) & UCR1_TRDYEN) {
-    uart_spinlock.Acquire();
+    Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
     if (!(UARTREG(MX8_USR2) & UTS_TXFULL)) {
       // signal
       uart_dputc_event.Signal();
     }
-    uart_spinlock.Release();
   }
 
   return IRQ_EOI_DEACTIVATE;
@@ -131,24 +134,23 @@ static int imx_uart_getc(bool wait) {
 }
 
 static void imx_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  interrupt_saved_state_t state;
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  uart_spinlock.AcquireIrqSave(state);
+  Guard<MonitoredSpinLock, IrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
 
   while (len > 0) {
     // is FIFO full?
     while ((UARTREG(MX8_UTS) & UTS_TXFULL)) {
-      uart_spinlock.ReleaseIrqRestore(state);
-      if (block) {
-        uart_dputc_event.Wait();
-      } else {
-        arch::Yield();
-      }
-      uart_spinlock.AcquireIrqSave(state);
+      guard.CallUnlocked([&block]() {
+        if (block) {
+          uart_dputc_event.Wait();
+        } else {
+          arch::Yield();
+        }
+      });
     }
     if (*str == '\n' && map_NL && !copied_CR) {
       copied_CR = true;
@@ -159,7 +161,6 @@ static void imx_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void imx_start_panic() { uart_tx_irq_enabled = false; }

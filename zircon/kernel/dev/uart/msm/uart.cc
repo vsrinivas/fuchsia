@@ -9,6 +9,7 @@
 
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zircon-internal/macros.h>
 #include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
@@ -18,6 +19,7 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <pdev/driver.h>
 #include <pdev/uart.h>
@@ -119,7 +121,9 @@ static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 static AutounsignalEvent uart_txemt_event{true};
 
-static SpinLock uart_spinlock;
+namespace {
+DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
+}  // namespace
 
 static inline uint32_t uart_read(int offset) { return readl(uart_base + offset); }
 
@@ -274,24 +278,23 @@ static int msm_getc(bool wait) {
 static void msm_start_panic(void) { uart_tx_irq_enabled = false; }
 
 static void msm_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  interrupt_saved_state_t state;
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  uart_spinlock.AcquireIrqSave(state);
+  Guard<MonitoredSpinLock, IrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
 
   while (len > 0) {
     // is FIFO full?
     while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
-      uart_spinlock.ReleaseIrqRestore(state);
-      if (block) {
-        uart_dputc_event.Wait();
-      } else {
-        uart_txemt_event.Wait();
-      }
-      uart_spinlock.AcquireIrqSave(state);
+      guard.CallUnlocked([&block]() {
+        if (block) {
+          uart_dputc_event.Wait();
+        } else {
+          uart_txemt_event.Wait();
+        }
+      });
     }
     if (*str == '\n' && map_NL && !copied_CR) {
       copied_CR = true;
@@ -302,7 +305,6 @@ static void msm_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static const struct pdev_uart_ops uart_ops = {
