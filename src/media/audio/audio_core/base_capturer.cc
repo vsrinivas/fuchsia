@@ -448,6 +448,10 @@ void BaseCapturer::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
     return;
   }
 
+  // We're done with this packet queue. We're transititioning to OperatingSync.
+  // Later, if we transition back to OperatingAsync, we'll create a brand new packet queue.
+  packet_queue()->Shutdown();
+
   // Stash our callback, transition to AsyncStopping, then poke the work thread to shut down.
   FX_DCHECK(pending_async_stop_cbk_ == nullptr);
   pending_async_stop_cbk_ = std::move(cbk);

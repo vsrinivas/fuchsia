@@ -226,6 +226,32 @@ TEST_F(AudioCapturerTestOldAPI, DiscardAllNoReply_AfterAsyncCapture) {
   RunLoopUntilIdle();
 }
 
+// Stopping an async capturer should succeed when all packets are in flight.
+TEST_F(AudioCapturerTestOldAPI, StopAsyncWithAllPacketsInFlight) {
+  const auto kFramesPerPacket = 1600;
+  const auto kPackets = 10;
+  const auto kFramesPerSecond = kFramesPerPacket * kPackets;  // below we assume 1 packet == 100ms
+  SetFormat(kFramesPerSecond);
+  SetUpPayloadBuffer(kFramesPerSecond);
+
+  // Don't recycle any packets.
+  int count = 0;
+  audio_capturer_.events().OnPacketProduced =
+      AddCallback("OnPacketProduced", [&count](auto packet) { count++; });
+
+  // Wait until all packets are in flight.
+  audio_capturer_->StartAsyncCapture(kFramesPerPacket);
+  RunLoopUntil([&count]() { return count == kPackets; });
+
+  // Wait for over one mix period (100ms). This is not necessary for the test, however it
+  // increases the chance of a mix period running before our StopAsyncCapture call, which
+  // increases our chance of finding bugs (e.g. fxbug.dev/72776).
+  usleep(150 * 1000);
+
+  audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
+  ExpectCallback();
+}
+
 // AudioCapturer methods
 //
 
