@@ -36,8 +36,8 @@ std::variant<zx_status_t, CpuPerformanceDomain> CpuPerformanceDomain::CreateFrom
     return st;
   }
 
-  cpuctrl::Device::SyncClient cpu_client(std::move(cpu_local));
-  fuchsia_device::Controller::SyncClient device_client(std::move(device_local));
+  fidl::WireSyncClient<cpuctrl::Device> cpu_client(std::move(cpu_local));
+  fidl::WireSyncClient<fuchsia_device::Controller> device_client(std::move(device_local));
 
   CpuPerformanceDomain result(std::move(cpu_client), std::move(device_client));
   return result;

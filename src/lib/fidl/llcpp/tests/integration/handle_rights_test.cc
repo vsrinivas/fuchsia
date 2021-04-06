@@ -84,9 +84,9 @@ class HandleRightsTest : public ::testing::Test {
                      std::make_unique<HandleRightsServer>());
   }
 
-  test::HandleRights::SyncClient SyncClient() {
+  fidl::WireSyncClient<test::HandleRights> SyncClient() {
     EXPECT_TRUE(client_end_.is_valid());
-    return test::HandleRights::SyncClient(std::move(client_end_));
+    return fidl::WireSyncClient<test::HandleRights>(std::move(client_end_));
   }
 
   fidl::Client<test::HandleRights> AsyncClient(

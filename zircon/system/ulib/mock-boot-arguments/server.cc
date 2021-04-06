@@ -18,7 +18,7 @@
 namespace mock_boot_arguments {
 
 void Server::CreateClient(async_dispatcher* dispatcher,
-                          fuchsia_boot::Arguments::SyncClient* argclient) {
+                          fidl::WireSyncClient<fuchsia_boot::Arguments>* argclient) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -26,7 +26,7 @@ void Server::CreateClient(async_dispatcher* dispatcher,
         "mock_boot_arguments: failed to create client for mock boot arguments, failed to create "
         "channel: %s\n",
         zx_status_get_string(status));
-    *argclient = fuchsia_boot::Arguments::SyncClient{zx::channel()};
+    *argclient = fidl::WireSyncClient<fuchsia_boot::Arguments>{zx::channel()};
     return;
   }
 
@@ -36,11 +36,11 @@ void Server::CreateClient(async_dispatcher* dispatcher,
         "mock_boot_arguments: failed to create client for mock boot arguments, failed to bind: "
         "%s\n",
         zx_status_get_string(status));
-    *argclient = fuchsia_boot::Arguments::SyncClient{zx::channel()};
+    *argclient = fidl::WireSyncClient<fuchsia_boot::Arguments>{zx::channel()};
     return;
   }
 
-  *argclient = fuchsia_boot::Arguments::SyncClient{std::move(local)};
+  *argclient = fidl::WireSyncClient<fuchsia_boot::Arguments>{std::move(local)};
 }
 
 void Server::GetString(fidl::StringView view, GetStringCompleter::Sync& completer) {

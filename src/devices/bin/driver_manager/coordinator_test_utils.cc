@@ -11,7 +11,7 @@
 
 CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
                                 mock_boot_arguments::Server* boot_args,
-                                fuchsia_boot::Arguments::SyncClient* client) {
+                                fidl::WireSyncClient<fuchsia_boot::Arguments>* client) {
   // The DummyFsProvider is stateless.  Create a single static one here so that we don't need to
   // manage pointer lifetime for it below.
   static DummyFsProvider dummy_fs_provider;

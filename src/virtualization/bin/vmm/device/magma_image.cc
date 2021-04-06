@@ -83,9 +83,9 @@ class VulkanImageCreator {
   vk::UniqueInstance instance_;
   vk::PhysicalDevice physical_device_;
   vk::UniqueDevice device_;
-  fuchsia_sysmem::Allocator::SyncClient sysmem_allocator_;
-  fuchsia_sysmem::BufferCollectionToken::SyncClient local_token_;
-  fuchsia_sysmem::BufferCollectionToken::SyncClient vulkan_token_;
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator_;
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> local_token_;
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> vulkan_token_;
   std::shared_ptr<AsyncHandler> async_handler_;
   fidl::Client<fuchsia_sysmem::BufferCollection> collection_;
 };
@@ -187,7 +187,7 @@ zx_status_t VulkanImageCreator::InitSysmem() {
       return client_end.status_value();
     }
 
-    sysmem_allocator_ = fuchsia_sysmem::Allocator::SyncClient(std::move(*client_end));
+    sysmem_allocator_ = fidl::WireSyncClient<fuchsia_sysmem::Allocator>(std::move(*client_end));
   }
 
   sysmem_allocator_.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
@@ -206,7 +206,8 @@ zx_status_t VulkanImageCreator::InitSysmem() {
       return result.status();
     }
 
-    local_token_ = fuchsia_sysmem::BufferCollectionToken::SyncClient(std::move(endpoints->client));
+    local_token_ =
+        fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>(std::move(endpoints->client));
   }
 
   {
@@ -223,7 +224,8 @@ zx_status_t VulkanImageCreator::InitSysmem() {
       return result.status();
     }
 
-    vulkan_token_ = fuchsia_sysmem::BufferCollectionToken::SyncClient(std::move(endpoints->client));
+    vulkan_token_ =
+        fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>(std::move(endpoints->client));
   }
 
   {

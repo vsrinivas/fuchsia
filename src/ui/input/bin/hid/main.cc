@@ -62,7 +62,7 @@ constexpr size_t kDevPathSize = 128;
 struct input_args_t {
   Command command;
 
-  std::optional<fuchsia_hardware_input::Device::SyncClient> sync_client;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_input::Device>> sync_client;
 
   char devpath[kDevPathSize];
   size_t num_reads;
@@ -314,7 +314,7 @@ static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
   if (status != ZX_OK) {
     return status;
   }
-  args->sync_client = fuchsia_hardware_input::Device::SyncClient(std::move(chan));
+  args->sync_client = fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(chan));
 
   // TODO: support setting num_reads across all devices. requires a way to
   // signal shutdown to all input threads.
@@ -439,7 +439,7 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
   if (status != ZX_OK) {
     return status;
   }
-  args->sync_client = fuchsia_hardware_input::Device::SyncClient(std::move(chan));
+  args->sync_client = fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(chan));
   snprintf(args->devpath, kDevPathSize, "%s", argv[1]);
 
   if (args->command == Command::descriptor) {

@@ -31,7 +31,7 @@ using fuchsia_fs::wire::FilesystemInfoQuery;
 
 class QueryServiceTest : public BlobfsWithFvmTest {
  protected:
-  fuchsia_fs::Query::SyncClient ConnectToQueryService() {
+  fidl::WireSyncClient<fuchsia_fs::Query> ConnectToQueryService() {
     auto endpoints = fidl::CreateEndpoints<fuchsia_fs::Query>();
     EXPECT_EQ(endpoints.status_value(), ZX_OK);
     auto [query_client_end, query_server_end] = *std::move(endpoints);
@@ -41,11 +41,11 @@ class QueryServiceTest : public BlobfsWithFvmTest {
         fdio_service_connect_at(fs().GetOutgoingDirectory()->get(), query_service_path.c_str(),
                                 query_server_end.TakeChannel().release()),
         ZX_OK);
-    return fuchsia_fs::Query::SyncClient(std::move(query_client_end));
+    return fidl::WireSyncClient<fuchsia_fs::Query>(std::move(query_client_end));
   }
 
   void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
-    fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
+    fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
     auto call_result = query_service.GetInfo(FilesystemInfoQuery::kMask);
     ASSERT_EQ(call_result.status(), ZX_OK);
     const auto& query_result = call_result.value().result;
@@ -108,7 +108,7 @@ TEST_F(QueryServiceTest, QueryInfo) {
 }
 
 TEST_F(QueryServiceTest, SelectiveQueryInfoEmpty) {
-  fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
+  fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
   auto call_result = query_service.GetInfo(FilesystemInfoQuery());
   ASSERT_EQ(call_result.status(), ZX_OK);
   const auto& query_result = call_result.value().result;
@@ -117,7 +117,7 @@ TEST_F(QueryServiceTest, SelectiveQueryInfoEmpty) {
 }
 
 TEST_F(QueryServiceTest, SelectiveQueryInfoSingleField) {
-  fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
+  fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
   auto call_result = query_service.GetInfo(FilesystemInfoQuery::TOTAL_BYTES);
   ASSERT_EQ(call_result.status(), ZX_OK);
   const auto& query_result = call_result.value().result;
@@ -149,7 +149,7 @@ TEST_F(QueryServiceTest, IsNodeInFilesystemPositiveCase) {
   zx::event token(std::move(token_raw));
 
   // This token is in the filesystem.
-  fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
+  fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
   auto result = query_service.IsNodeInFilesystem(std::move(token));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_TRUE(result->is_in_filesystem);
@@ -161,7 +161,7 @@ TEST_F(QueryServiceTest, IsNodeInFilesystemNegativeCase) {
   zx::event::create(0, &token);
 
   // This token should not be in the filesystem.
-  fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
+  fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
   auto result = query_service.IsNodeInFilesystem(std::move(token));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_FALSE(result->is_in_filesystem);

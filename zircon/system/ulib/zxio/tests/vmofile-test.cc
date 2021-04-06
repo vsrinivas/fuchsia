@@ -19,7 +19,7 @@ class VmoFileNonZeroOffsetTest : public zxtest::Test {
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
     ASSERT_OK(zx::channel::create(0u, &h1, &h2));
 
-    ASSERT_OK(zxio_vmofile_init(&storage, fuchsia_io::File::SyncClient(std::move(h1)),
+    ASSERT_OK(zxio_vmofile_init(&storage, fidl::WireSyncClient<fuchsia_io::File>(std::move(h1)),
                                 std::move(backing), /* offset */ 4, /* length */ len,
                                 /* seek */ 3));
     io = &storage.io;
@@ -119,7 +119,7 @@ TEST(VmoFileTest, GetExact) {
   ASSERT_OK(zx::channel::create(0u, &h1, &h2));
 
   zxio_storage_t storage;
-  ASSERT_OK(zxio_vmofile_init(&storage, fuchsia_io::File::SyncClient(std::move(h1)),
+  ASSERT_OK(zxio_vmofile_init(&storage, fidl::WireSyncClient<fuchsia_io::File>(std::move(h1)),
                               std::move(backing), /* offset */ 0, /* length */ len, /* seek */ 3));
   zxio_t* io = &storage.io;
 

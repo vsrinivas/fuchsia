@@ -49,8 +49,8 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
     zx::channel client_endpoint;
     zx_status_t status = zx::channel::create(0, &client_endpoint, &server_endpoint_);
     if (status == ZX_OK)
-      perf_counter_events_ =
-          fuchsia_gpu_magma::PerformanceCounterEvents::SyncClient(std::move(client_endpoint));
+      perf_counter_events_ = fidl::WireSyncClient<fuchsia_gpu_magma::PerformanceCounterEvents>(
+          std::move(client_endpoint));
     return status;
   }
   uint64_t pool_id() override { return pool_id_; }
@@ -76,7 +76,8 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
       return DRET(MAGMA_STATUS_CONNECTION_LOST);
     }
 
-    class EventHandler : public fidl::WireSyncEventHandler<fuchsia_gpu_magma::PerformanceCounterEvents> {
+    class EventHandler
+        : public fidl::WireSyncEventHandler<fuchsia_gpu_magma::PerformanceCounterEvents> {
      public:
       EventHandler(uint32_t* trigger_id_out, uint64_t* buffer_id_out, uint32_t* buffer_offset_out,
                    uint64_t* time_out, uint32_t* result_flags_out)
@@ -116,7 +117,7 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
  private:
   uint64_t pool_id_;
 
-  fuchsia_gpu_magma::PerformanceCounterEvents::SyncClient perf_counter_events_;
+  fidl::WireSyncClient<fuchsia_gpu_magma::PerformanceCounterEvents> perf_counter_events_;
   zx::channel server_endpoint_;
 };
 

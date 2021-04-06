@@ -193,7 +193,7 @@ zx_status_t set_system_state_transition_behavior(statecontrol_fidl::wire::System
     return status;
   }
   auto system_state_transition_behavior_client =
-      device_manager_fidl::SystemStateTransition::SyncClient(std::move(local));
+      fidl::WireSyncClient<device_manager_fidl::SystemStateTransition>(std::move(local));
 
   auto resp = system_state_transition_behavior_client.SetTerminationSystemState(state);
   if (resp.status() != ZX_OK) {
@@ -217,7 +217,8 @@ zx_status_t initiate_component_shutdown() {
     fprintf(stderr, "[shutdown-shim]: error connecting to component_manager\n");
     return status;
   }
-  auto system_controller_client = sys2_fidl::SystemController::SyncClient(std::move(local));
+  auto system_controller_client =
+      fidl::WireSyncClient<sys2_fidl::SystemController>(std::move(local));
 
   printf("[shutdown-shim]: calling system_controller_client.Shutdown()\n");
   auto resp = system_controller_client.Shutdown();
@@ -270,7 +271,7 @@ void drive_shutdown_manually(statecontrol_fidl::wire::SystemPowerState state) {
   fprintf(stderr, "[shutdown-shim]: manual shutdown successfully initiated\n");
 }
 
-zx_status_t send_command(statecontrol_fidl::Admin::SyncClient statecontrol_client,
+zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecontrol_client,
                          statecontrol_fidl::wire::SystemPowerState fallback_state,
                          statecontrol_fidl::wire::RebootReason* reboot_reason) {
   switch (fallback_state) {
@@ -354,8 +355,8 @@ zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_s
   zx_status_t status = connect_to_protocol_with_timeout(&statecontrol_fidl::Admin::Name[0], &local);
   if (status == ZX_OK) {
     printf("[shutdown-shim]: trying to forward command\n");
-    status = send_command(statecontrol_fidl::Admin::SyncClient(std::move(local)), fallback_state,
-                          reboot_reason);
+    status = send_command(fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(local)),
+                          fallback_state, reboot_reason);
     if (status != ZX_ERR_UNAVAILABLE) {
       return status;
     }
@@ -429,7 +430,7 @@ void StateControlAdminServer::Mexec(
   zx::channel local;
   zx_status_t status = connect_to_protocol_with_timeout(&statecontrol_fidl::Admin::Name[0], &local);
   if (status == ZX_OK) {
-    status = send_command(statecontrol_fidl::Admin::SyncClient(std::move(local)),
+    status = send_command(fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(local)),
                           statecontrol_fidl::wire::SystemPowerState::MEXEC, nullptr);
     if (status == ZX_OK) {
       completer.ReplySuccess();

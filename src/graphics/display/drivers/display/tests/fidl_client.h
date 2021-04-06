@@ -38,7 +38,7 @@ class TestFidlClient {
     fuchsia_hardware_display::wire::ImageConfig image_config_;
   };
 
-  TestFidlClient(fuchsia_sysmem::Allocator::SyncClient* sysmem) : sysmem_(sysmem) {}
+  TestFidlClient(fidl::WireSyncClient<fuchsia_sysmem::Allocator>* sysmem) : sysmem_(sysmem) {}
   ~TestFidlClient();
 
   bool CreateChannel(zx_handle_t provider, bool is_vc);
@@ -50,8 +50,8 @@ class TestFidlClient {
   uint64_t display_id() const;
 
   fbl::Vector<Display> displays_;
-  std::unique_ptr<fuchsia_hardware_display::Controller::SyncClient> dc_ TA_GUARDED(mtx());
-  fuchsia_sysmem::Allocator::SyncClient* sysmem_;
+  std::unique_ptr<fidl::WireSyncClient<fuchsia_hardware_display::Controller>> dc_ TA_GUARDED(mtx());
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator>* sysmem_;
   zx::handle device_handle_;
   bool has_ownership_ = false;
   uint64_t image_id_ = 0;

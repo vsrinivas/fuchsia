@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -13,7 +14,6 @@
 
 #include <optional>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
@@ -316,7 +316,7 @@ class SkipBlockTest : public zxtest::Test {
   Binder ddk_;
   FakeNand nand_;
   FakeBadBlock bad_block_;
-  std::optional<fuchsia_hardware_skipblock::SkipBlock::SyncClient> client_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock>> client_;
 };
 
 TEST_F(SkipBlockTest, Create) { ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent())); }

@@ -106,7 +106,8 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
       return status;
     }
 
-    fuchsia_logger::LogSink::SyncClient logger_client(zx::channel(config->log_sink_channel));
+    fidl::WireSyncClient<fuchsia_logger::LogSink> logger_client(
+        zx::channel(config->log_sink_channel));
 
     auto result = logger_client.Connect(std::move(remote));
     if (result.status() != ZX_OK) {

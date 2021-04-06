@@ -99,7 +99,7 @@ class InputReportReaderTests : public zxtest::Test {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     auto result = fidl::BindServer(loop_.dispatcher(), std::move(server), &mouse_);
-    input_device_ = fuchsia_input_report::InputDevice::SyncClient(std::move(client));
+    input_device_ = fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(client));
     ASSERT_EQ(loop_.StartThread("MouseDeviceThread"), ZX_OK);
   }
 
@@ -108,29 +108,29 @@ class InputReportReaderTests : public zxtest::Test {
  protected:
   MouseDevice mouse_;
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
-  fuchsia_input_report::InputDevice::SyncClient input_device_;
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> input_device_;
 };
 
 TEST_F(InputReportReaderTests, LifeTimeTest) {
   // Get an InputReportsReader.
-  fuchsia_input_report::InputReportsReader::SyncClient reader;
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     input_device_.GetInputReportsReader(std::move(server));
-    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
   }
 }
 
 TEST_F(InputReportReaderTests, ReadInputReportsTest) {
   // Get an InputReportsReader.
-  fuchsia_input_report::InputReportsReader::SyncClient reader;
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     input_device_.GetInputReportsReader(std::move(server));
-    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
   }
 
@@ -163,12 +163,12 @@ TEST_F(InputReportReaderTests, ReadInputReportsTest) {
 
 TEST_F(InputReportReaderTests, ReaderAddsRequiredFields) {
   // Get an InputReportsReader.
-  fuchsia_input_report::InputReportsReader::SyncClient reader;
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     input_device_.GetInputReportsReader(std::move(server));
-    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
   }
 
@@ -192,22 +192,22 @@ TEST_F(InputReportReaderTests, ReaderAddsRequiredFields) {
 
 TEST_F(InputReportReaderTests, TwoReaders) {
   // Get the first reader.
-  fuchsia_input_report::InputReportsReader::SyncClient reader_one;
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader_one;
   {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     input_device_.GetInputReportsReader(std::move(server));
-    reader_one = fuchsia_input_report::InputReportsReader::SyncClient(std::move(client));
+    reader_one = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
   }
 
   // Get the second reader.
-  fuchsia_input_report::InputReportsReader::SyncClient reader_two;
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader_two;
   {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     input_device_.GetInputReportsReader(std::move(server));
-    reader_two = fuchsia_input_report::InputReportsReader::SyncClient(std::move(client));
+    reader_two = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
   }
 

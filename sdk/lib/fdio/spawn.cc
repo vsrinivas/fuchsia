@@ -136,7 +136,7 @@ static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) 
 // associated loader service, if the name resolves within the current realm.
 static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
                                 zx::channel* out_ldsvc, char* err_msg) {
-  fprocess::Resolver::SyncClient resolver;
+  fidl::WireSyncClient<fprocess::Resolver> resolver;
   zx::channel request;
   zx_status_t status = zx::channel::create(0, &request, resolver.mutable_channel());
   if (status != ZX_OK) {
@@ -323,9 +323,9 @@ static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
   return ZX_OK;
 }
 
-static zx_status_t send_handles(fprocess::Launcher::SyncClient* launcher, size_t handle_capacity,
-                                uint32_t flags, zx_handle_t job, zx::channel ldsvc,
-                                zx_handle_t utc_clock, size_t action_count,
+static zx_status_t send_handles(fidl::WireSyncClient<fprocess::Launcher>* launcher,
+                                size_t handle_capacity, uint32_t flags, zx_handle_t job,
+                                zx::channel ldsvc, zx_handle_t utc_clock, size_t action_count,
                                 const fdio_spawn_action_t* actions, char* err_msg) {
   // TODO(abarth): In principle, we should chunk array into separate
   // messages if we exceed ZX_CHANNEL_MAX_MSG_HANDLES.
@@ -499,9 +499,10 @@ cleanup:
   return status;
 }
 
-static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size_t name_count,
-                                  fdio_flat_namespace_t* flat, size_t action_count,
-                                  const fdio_spawn_action_t* actions, char* err_msg) {
+static zx_status_t send_namespace(fidl::WireSyncClient<fprocess::Launcher>* launcher,
+                                  size_t name_count, fdio_flat_namespace_t* flat,
+                                  size_t action_count, const fdio_spawn_action_t* actions,
+                                  char* err_msg) {
   fprocess::wire::NameInfo names[name_count];
   // VLAs cannot be initialized.
   memset(names, 0, sizeof(names));
@@ -619,7 +620,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   size_t name_count = 0;
   size_t handle_capacity = 0;
   std::vector<std::string_view> shared_dirs;
-  fprocess::Launcher::SyncClient launcher;
+  fidl::WireSyncClient<fprocess::Launcher> launcher;
   zx::channel request;
   zx::channel ldsvc;
   const char* process_name = nullptr;

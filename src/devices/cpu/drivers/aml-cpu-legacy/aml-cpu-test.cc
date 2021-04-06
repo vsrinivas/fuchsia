@@ -78,8 +78,8 @@ class FakeMmio {
   std::unique_ptr<ddk_fake::FakeMmioRegRegion> mmio_;
 };
 
-using CpuCtrlSyncClient = fuchsia_cpuctrl::Device::SyncClient;
-using ThermalSyncClient = fuchsia_thermal::Device::SyncClient;
+using CpuCtrlSyncClient = fidl::WireSyncClient<fuchsia_cpuctrl::Device>;
+using ThermalSyncClient = fidl::WireSyncClient<fuchsia_thermal::Device>;
 using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
 
 constexpr size_t kBigClusterIdx =

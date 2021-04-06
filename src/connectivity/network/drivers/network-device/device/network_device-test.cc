@@ -92,7 +92,7 @@ class NetworkDeviceTest : public zxtest::Test {
     return loop_->dispatcher();
   }
 
-  netdev::Device::SyncClient OpenConnection() {
+  fidl::WireSyncClient<netdev::Device> OpenConnection() {
     auto endpoints = fidl::CreateEndpoints<netdev::Device>();
     EXPECT_OK(endpoints.status_value());
     auto [client_end, server_end] = std::move(*endpoints);

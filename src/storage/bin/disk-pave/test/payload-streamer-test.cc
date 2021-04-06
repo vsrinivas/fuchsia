@@ -45,7 +45,7 @@ class PayloadStreamerTest : public zxtest::Test {
  protected:
   async::Loop loop_;
   std::optional<disk_pave::PayloadStreamer> streamer_;
-  std::optional<fuchsia_paver::PayloadStream::SyncClient> client_;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::PayloadStream>> client_;
 
  private:
   char tempfile_name_[20] = "/tmp/payload.XXXXXX";

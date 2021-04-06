@@ -394,7 +394,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -448,7 +448,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   // Wait until codecs have received a SetGainState call.
   sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
@@ -618,7 +618,7 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   auto props = client.GetProperties();
   ASSERT_OK(props.status());
@@ -665,7 +665,7 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   auto props = client.GetProperties();
   ASSERT_OK(props.status());
@@ -717,7 +717,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   // Default sets 48'000.
   {
@@ -790,7 +790,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   // 1st case configure and keep everything enabled.
   // Clear all muting.
@@ -907,7 +907,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   // 1st case configure and keep everything enabled.
   // Clear all muting.
@@ -1046,7 +1046,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   // 1st case configure and keep everything enabled.
   // Clear all muting.
@@ -1360,7 +1360,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
     fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
-    audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+    fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
@@ -1386,7 +1386,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
     fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
-    audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+    fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
@@ -1440,7 +1440,7 @@ TEST_F(AmlG12TdmTest, Inspect) {
   auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
-  audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);

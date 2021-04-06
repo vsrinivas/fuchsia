@@ -188,7 +188,7 @@ std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice() {
 
 zx_status_t MeasureBandwith(const Printer* const printer, zx::channel channel,
                             const ram_metrics::wire::BandwidthMeasurementConfig& config) {
-  ram_metrics::Device::SyncClient client{std::move(channel)};
+  fidl::WireSyncClient<ram_metrics::Device> client{std::move(channel)};
   auto info = client.MeasureBandwidth(config);
   if (!info.ok()) {
     return info.status();
@@ -202,7 +202,7 @@ zx_status_t MeasureBandwith(const Printer* const printer, zx::channel channel,
 }
 
 zx_status_t GetDdrWindowingResults(zx::channel channel) {
-  ram_metrics::Device::SyncClient client{std::move(channel)};
+  fidl::WireSyncClient<ram_metrics::Device> client{std::move(channel)};
   auto info = client.GetDdrWindowingResults();
   if (!info.ok()) {
     return info.status();

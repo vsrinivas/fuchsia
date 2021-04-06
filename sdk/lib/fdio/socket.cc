@@ -127,11 +127,12 @@ socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, struct sockadd
 }
 
 template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, fsocket::DatagramSocket::SyncClient> ||
-                                      std::is_same_v<T, fsocket::StreamSocket::SyncClient>>>
+          typename =
+              std::enable_if_t<std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
+                               std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>>>
 struct BaseSocket {
-  static_assert(std::is_same_v<T, fsocket::DatagramSocket::SyncClient> ||
-                std::is_same_v<T, fsocket::StreamSocket::SyncClient>);
+  static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
+                std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>);
 
  public:
   explicit BaseSocket(T& client) : client_(client) {}
@@ -548,7 +549,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
 using zxio_datagram_socket_t = struct zxio_datagram_socket {
   zxio_t io;
   zx::eventpair event;
-  fsocket::DatagramSocket::SyncClient client;
+  fidl::WireSyncClient<fsocket::DatagramSocket> client;
 };
 
 static_assert(sizeof(zxio_datagram_socket_t) <= sizeof(zxio_storage_t),
@@ -857,7 +858,7 @@ using zxio_stream_socket_t = struct zxio_stream_socket {
 
   zxio_pipe_t pipe;
 
-  fsocket::StreamSocket::SyncClient client;
+  fidl::WireSyncClient<fsocket::StreamSocket> client;
 };
 
 static_assert(sizeof(zxio_stream_socket_t) <= sizeof(zxio_storage_t),

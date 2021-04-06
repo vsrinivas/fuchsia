@@ -27,7 +27,7 @@ class EchoClientApp {
  public:
   EchoClientApp(::fidl::StringView&& server_url)
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
-        client_(Echo::SyncClient(ConnectTo(std::move(server_url)))) {}
+        client_(fidl::WireSyncClient<Echo>(ConnectTo(std::move(server_url)))) {}
 
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
 
@@ -133,7 +133,7 @@ class EchoClientApp {
   std::unique_ptr<sys::ComponentContext> context_;
   std::shared_ptr<sys::ServiceDirectory> echo_provider_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  Echo::SyncClient client_;
+  fidl::WireSyncClient<Echo> client_;
 };
 
 class EchoConnection final : public Echo::Interface {

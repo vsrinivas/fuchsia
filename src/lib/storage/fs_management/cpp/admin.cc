@@ -203,7 +203,7 @@ zx_status_t fs_register(zx_handle_t export_root) {
     return status;
   }
 
-  fshost::Registry::SyncClient registry_client(std::move(registry_client_chan));
+  fidl::WireSyncClient<fshost::Registry> registry_client(std::move(registry_client_chan));
   auto register_resp = registry_client.RegisterFilesystem(std::move(export_client));
   if (!register_resp.ok()) {
     return register_resp.status();

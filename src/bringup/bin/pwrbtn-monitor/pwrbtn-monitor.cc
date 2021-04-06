@@ -83,7 +83,7 @@ zx_status_t FindSystemPowerDown(const hid::DeviceDescriptor* desc, uint8_t* repo
 }
 
 struct PowerButtonInfo {
-  std::optional<fuchsia_hardware_input::Device::SyncClient> client;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_input::Device>> client;
   uint8_t report_id;
   size_t bit_offset;
   bool has_report_id_byte;
@@ -118,7 +118,7 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
     printf("pwrbtn-monitor: service handle conversion failed: %d\n", status);
     return status;
   }
-  auto client = fuchsia_hardware_input::Device::SyncClient(std::move(chan));
+  auto client = fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(chan));
 
   // Get the report descriptor.
   auto result = client.GetReportDesc();
@@ -163,7 +163,7 @@ zx_status_t send_poweroff() {
     return ZX_ERR_INTERNAL;
   }
 
-  auto admin_client = statecontrol_fidl::Admin::SyncClient(std::move(channel_local));
+  auto admin_client = fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(channel_local));
   auto resp = admin_client.Poweroff();
 
   if (resp.status() != ZX_OK) {

@@ -48,11 +48,11 @@ zx_status_t PackageResolver::ConnectToResolverService() {
   if (status != ZX_OK) {
     return status;
   }
-  resolver_client_ = fuchsia_pkg::PackageResolver::SyncClient(std::move(local));
+  resolver_client_ = fidl::WireSyncClient<fuchsia_pkg::PackageResolver>(std::move(local));
   return ZX_OK;
 }
 
-zx::status<fio::Directory::SyncClient> PackageResolver::Resolve(
+zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
     const std::string_view& package_url) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0u, &local, &remote);
@@ -76,11 +76,11 @@ zx::status<fio::Directory::SyncClient> PackageResolver::Resolve(
     LOGF(ERROR, "Failed to resolve package");
     return zx::error(!result.ok() ? ZX_ERR_INTERNAL : result.Unwrap()->result.err());
   }
-  return zx::ok(fio::Directory::SyncClient(std::move(local)));
+  return zx::ok(fidl::WireSyncClient<fio::Directory>(std::move(local)));
 }
 
 zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::LoadDriverPackage(
-    fio::Directory::SyncClient* package_dir) {
+    fidl::WireSyncClient<fio::Directory>* package_dir) {
   const uint32_t kFileRights = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE;
   const uint32_t kDriverVmoFlags = fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXEC;
   constexpr char kLibDir[] = "lib";
@@ -97,7 +97,7 @@ zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::LoadDriverPac
     return zx::error(ZX_ERR_INTERNAL);
   }
   // This could be simplified by using POSIX APIs instead.
-  fio::Directory::SyncClient lib_dir(std::move(local));
+  fidl::WireSyncClient<fio::Directory> lib_dir(std::move(local));
 
   auto libname_result = GetDriverLibname(&lib_dir);
   if (!libname_result.is_ok()) {
@@ -118,7 +118,7 @@ zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::LoadDriverPac
     LOGF(ERROR, "Failed to open driver file: %s", libname_result.value().c_str());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  fio::File::SyncClient file_client(std::move(local));
+  fidl::WireSyncClient<fio::File> file_client(std::move(local));
   auto file_res = file_client.GetBuffer(kDriverVmoFlags);
   if (!file_res.ok() || file_res.Unwrap()->s != ZX_OK) {
     LOGF(ERROR, "Failed to get driver vmo");
@@ -131,7 +131,8 @@ zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::LoadDriverPac
   return zx::ok(PackageResolver::FetchDriverVmoResult{libname_result.value(), std::move(buf->vmo)});
 }
 
-zx::status<std::string> PackageResolver::GetDriverLibname(fio::Directory::SyncClient* lib_dir) {
+zx::status<std::string> PackageResolver::GetDriverLibname(
+    fidl::WireSyncClient<fio::Directory>* lib_dir) {
   auto dirent_result = lib_dir->ReadDirents(fio::wire::MAX_BUF);
   if (!dirent_result.ok() || dirent_result.status() != ZX_OK) {
     return zx::error(dirent_result.status());

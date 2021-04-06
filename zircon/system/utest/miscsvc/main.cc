@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-
 #include <fuchsia/paver/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <zxtest/zxtest.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -30,7 +30,7 @@ TEST(MiscSvcTest, PaverSvccEnumeratesSuccessfully) {
   zx::channel local2, remote2;
   ASSERT_OK(zx::channel::create(0, &local2, &remote2));
 
-  Paver::SyncClient paver(std::move(local));
+  fidl::WireSyncClient<Paver> paver(std::move(local));
   auto result = paver.FindDataSink(std::move(local2));
   ASSERT_OK(result.status());
 }

@@ -37,7 +37,7 @@ zx_status_t get_root_job(zx::job* root_job) {
     return status;
   }
 
-  fkernel::RootJob::SyncClient client{std::move(local)};
+  fidl::WireSyncClient<fkernel::RootJob> client{std::move(local)};
   auto result = client.Get();
   if (!result.ok()) {
     return result.status();
@@ -98,13 +98,13 @@ class SystemInstanceTest : public zxtest::Test {
     ASSERT_OK(zx::channel::create(0, &client, &server));
     boot_args_server_.reset(new FakeBootArgsServer());
     fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), boot_args_server_.get());
-    boot_args_client_ = fboot::Arguments::SyncClient(std::move(client));
+    boot_args_client_ = fidl::WireSyncClient<fboot::Arguments>(std::move(client));
 
     under_test_.reset(new SystemInstanceForTest());
   }
 
   std::unique_ptr<FakeBootArgsServer> boot_args_server_;
-  fboot::Arguments::SyncClient boot_args_client_;
+  fidl::WireSyncClient<fboot::Arguments> boot_args_client_;
   std::unique_ptr<SystemInstanceForTest> under_test_;
 
  private:

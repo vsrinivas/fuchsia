@@ -361,7 +361,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
       collection_->Close();
   }
 
-  Status Bind(fuchsia_sysmem::Allocator::SyncClient& allocator, uint32_t token_handle) {
+  Status Bind(fidl::WireSyncClient<fuchsia_sysmem::Allocator>& allocator, uint32_t token_handle) {
     DASSERT(!collection_);
     zx::channel h1;
     zx::channel h2;
@@ -373,7 +373,8 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Internal error: %d", status);
 
-    collection_ = std::make_unique<fuchsia_sysmem::BufferCollection::SyncClient>(std::move(h1));
+    collection_ =
+        std::make_unique<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>>(std::move(h1));
 
     return MAGMA_STATUS_OK;
   }
@@ -448,12 +449,12 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
   }
 
  private:
-  std::unique_ptr<fuchsia_sysmem::BufferCollection::SyncClient> collection_;
+  std::unique_ptr<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> collection_;
 };
 
 class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
  public:
-  ZirconPlatformSysmemConnection(fuchsia_sysmem::Allocator::SyncClient allocator)
+  ZirconPlatformSysmemConnection(fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator)
       : sysmem_allocator_(std::move(allocator)) {
     sysmem_allocator_.SetDebugClientInfo(
         fidl::StringView::FromExternal(magma::PlatformProcessHelper::GetCurrentProcessName()),
@@ -574,7 +575,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to allocate buffer: %d", status);
 
-    fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(h1));
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(h1));
 
     if (!name.empty()) {
       collection.SetName(10, fidl::StringView::FromExternal(name));
@@ -602,13 +603,13 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     return MAGMA_STATUS_OK;
   }
 
-  fuchsia_sysmem::Allocator::SyncClient sysmem_allocator_;
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator_;
 };
 
 // static
 std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Import(uint32_t handle) {
   zx::channel channel = zx::channel(handle);
-  fuchsia_sysmem::Allocator::SyncClient sysmem_allocator(std::move(channel));
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator(std::move(channel));
   return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
 }
 

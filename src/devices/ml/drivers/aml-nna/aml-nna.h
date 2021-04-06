@@ -9,11 +9,11 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/fidl.h>
 
@@ -74,7 +74,7 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   ddk::MmioBuffer hiu_mmio_;
   ddk::MmioBuffer power_mmio_;
   ddk::MmioBuffer memory_pd_mmio_;
-  fuchsia_hardware_registers::Device::SyncClient reset_;
+  fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_;
 
   pdev_protocol_t parent_pdev_;
 

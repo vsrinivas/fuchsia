@@ -353,8 +353,8 @@ class ControlDeviceTest : public testing::Test {
     ASSERT_OK(pipe_.SetUpPipeDevice());
     ASSERT_TRUE(pipe_.IsPipeReady());
 
-    fidl_client_ =
-        fuchsia_hardware_goldfish::ControlDevice::SyncClient(std::move(ddk_.FidlClient()));
+    fidl_client_ = fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice>(
+        std::move(ddk_.FidlClient()));
   }
 
   void TearDown() override {
@@ -373,7 +373,7 @@ class ControlDeviceTest : public testing::Test {
 
   fake_ddk::Bind ddk_;
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient fidl_client_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> fidl_client_;
 };
 
 TEST_F(ControlDeviceTest, Bind) {

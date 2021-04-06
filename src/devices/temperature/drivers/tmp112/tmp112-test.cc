@@ -17,7 +17,7 @@ bool FloatNear(float a, float b) { return std::abs(a - b) < 0.001f; }
 
 namespace temperature {
 
-using TemperatureClient = fuchsia_hardware_temperature::Device::SyncClient;
+using TemperatureClient = fidl::WireSyncClient<fuchsia_hardware_temperature::Device>;
 
 class Tmp112DeviceTest : public zxtest::Test {
  public:

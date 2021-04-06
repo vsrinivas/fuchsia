@@ -170,7 +170,7 @@ class SerialDeviceTest : public zxtest::Test {
  public:
   SerialDeviceTest();
   ~SerialDeviceTest();
-  fuchsia_hardware_serial::NewDevice::SyncClient& fidl() {
+  fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>& fidl() {
     if (!fidl_.has_value()) {
       // Connect
       auto connection =
@@ -187,7 +187,7 @@ class SerialDeviceTest : public zxtest::Test {
   // DISALLOW_COPY_ASSIGN_AND_MOVE(SerialDeviceTest);
 
  private:
-  std::optional<fuchsia_hardware_serial::NewDevice::SyncClient> fidl_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>> fidl_;
   SerialTester tester_;
   serial::SerialDevice* device_;
 };
@@ -203,7 +203,7 @@ SerialDeviceTest::SerialDeviceTest() {
 
 SerialDeviceTest::~SerialDeviceTest() { device_->DdkRelease(); }
 
-static zx_status_t SerialWrite(fuchsia_hardware_serial::NewDevice::SyncClient* interface,
+static zx_status_t SerialWrite(fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>* interface,
                                std::vector<uint8_t>* data) {
   zx_status_t status = interface->Write(fidl::VectorView<uint8_t>::FromExternal(*data)).status();
   if (status != ZX_OK) {
@@ -212,7 +212,7 @@ static zx_status_t SerialWrite(fuchsia_hardware_serial::NewDevice::SyncClient* i
   return ZX_OK;
 }
 
-static zx_status_t Read(fuchsia_hardware_serial::NewDevice::SyncClient* interface,
+static zx_status_t Read(fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>* interface,
                         std::vector<uint8_t>* data) {
   auto result = interface->Read();
   if (result.status() != ZX_OK) {

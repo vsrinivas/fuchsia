@@ -65,8 +65,9 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   return 0;
 }
 
-int ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient client, GpioFunc func, uint8_t write_value,
-               fuchsia_hardware_gpio::wire::GpioFlags in_flag, uint8_t out_value, uint64_t ds_ua) {
+int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFunc func,
+               uint8_t write_value, fuchsia_hardware_gpio::wire::GpioFlags in_flag,
+               uint8_t out_value, uint64_t ds_ua) {
   switch (func) {
     case Read: {
       auto result = client.Read();

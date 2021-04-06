@@ -34,7 +34,7 @@ typedef struct zxio_vmofile {
 
   sync_mutex_t lock;
 
-  fio::File::SyncClient control;
+  fidl::WireSyncClient<fio::File> control;
 } zxio_vmofile_t;
 
 static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
@@ -257,8 +257,8 @@ static constexpr zxio_ops_t zxio_vmofile_ops = []() {
   return ops;
 }();
 
-zx_status_t zxio_vmofile_init(zxio_storage_t* storage, fio::File::SyncClient control, zx::vmo vmo,
-                              zx_off_t offset, zx_off_t length, zx_off_t seek) {
+zx_status_t zxio_vmofile_init(zxio_storage_t* storage, fidl::WireSyncClient<fio::File> control,
+                              zx::vmo vmo, zx_off_t offset, zx_off_t length, zx_off_t seek) {
   auto file = new (storage) zxio_vmofile_t{
       .io = storage->io,
       .vmo = std::move(vmo),

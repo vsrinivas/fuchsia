@@ -28,7 +28,7 @@ TEST_F(LoaderServiceTest, LoadObject) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   // Libraries not in the allowlist should fail to load.
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libother.so", zx::error(ZX_ERR_ACCESS_DENIED)));

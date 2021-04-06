@@ -46,9 +46,9 @@ static async_dispatcher_t* dc_dispatcher = nullptr;
 // for messages.
 static async::Wait dc_wait;
 
-static std::unique_ptr<fhd::Controller::SyncClient> dc_client;
+static std::unique_ptr<fidl::WireSyncClient<fhd::Controller>> dc_client;
 
-static std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator;
+static std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator;
 static uint64_t next_buffer_collection_id = 1;
 
 static struct list_node display_list = LIST_INITIAL_VALUE(display_list);
@@ -68,7 +68,7 @@ struct list_node* get_display_list() {
   return &display_list;
 }
 
-sysmem::Allocator::SyncClient* get_sysmem_allocator() { return sysmem_allocator.get(); }
+fidl::WireSyncClient<sysmem::Allocator>* get_sysmem_allocator() { return sysmem_allocator.get(); }
 
 #endif  // BUILD_FOR_DISPLAY_TEST
 
@@ -293,7 +293,7 @@ zx_status_t apply_configuration() {
 
 static zx_status_t create_buffer_collection(
     display_info_t* display, uint64_t id,
-    std::unique_ptr<sysmem::BufferCollection::SyncClient>* collection_client) {
+    std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>>* collection_client) {
   fidl::ClientEnd<sysmem::BufferCollectionToken> token;
   {
     zx::status token_server = fidl::CreateEndpoints(&token);
@@ -335,7 +335,7 @@ static zx_status_t create_buffer_collection(
     }
   }
 
-  sysmem::BufferCollection::SyncClient collection;
+  fidl::WireSyncClient<sysmem::BufferCollection> collection;
   {
     auto endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
     if (endpoints.is_error()) {
@@ -398,7 +398,7 @@ static zx_status_t create_buffer_collection(
 
   RETURN_IF_ERROR(collection.SetConstraints(true, constraints), "vc: Failed to set constraints");
   *collection_client =
-      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(collection));
+      std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(collection));
   return ZX_OK;
 }
 
@@ -410,7 +410,7 @@ zx_status_t alloc_display_info_vmo(display_info_t* display) {
   display->image_config.type = IMAGE_TYPE_SIMPLE;
   if (get_single_framebuffer(&display->image_vmo, &display->stride) != ZX_OK) {
     uint64_t buffer_collection_id = next_buffer_collection_id++;
-    std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_client;
+    std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> collection_client;
     zx_status_t status =
         create_buffer_collection(display, buffer_collection_id, &collection_client);
     if (status != ZX_OK) {
@@ -611,8 +611,8 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
 
 #if BUILD_FOR_DISPLAY_TEST
 void initialize_display_channel(fidl::ClientEnd<fhd::Controller> channel) {
-  dc_client =
-      std::make_unique<fhd::Controller::SyncClient>(fidl::BindSyncClient(std::move(channel)));
+  dc_client = std::make_unique<fidl::WireSyncClient<fhd::Controller>>(
+      fidl::BindSyncClient(std::move(channel)));
 
   dc_wait.set_object(dc_client->channel().get());
 }
@@ -656,7 +656,8 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
 
   dc_device = device_client.release();
-  dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_endpoints->client));
+  dc_client =
+      std::make_unique<fidl::WireSyncClient<fhd::Controller>>(std::move(dc_endpoints->client));
 
   zx_handle_close(dc_wait.object());
 
@@ -802,7 +803,8 @@ bool vc_sysmem_connect() {
     return false;
   }
 
-  sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(*std::move(sysmem_client));
+  sysmem_allocator =
+      std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(*std::move(sysmem_client));
   sysmem_allocator->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                        fsl::GetCurrentProcessKoid());
   return true;

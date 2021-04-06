@@ -79,7 +79,7 @@ class PtyTestCase : public zxtest::Test {
   TestConsoleState* state() { return &state_; }
 
   // Return a connection to the pty service
-  void Connect(fuchsia_hardware_pty::Device::SyncClient* client) {
+  void Connect(fidl::WireSyncClient<fuchsia_hardware_pty::Device>* client) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
     ASSERT_OK(endpoints.status_value());
     ASSERT_OK(vfs_.Serve(svc_, fidl::ServerEnd<fuchsia_io::Node>(endpoints->server.TakeChannel()),
@@ -104,7 +104,7 @@ TEST_F(PtyTestCase, Describe) {
     return ZX_OK;
   };
 
-  fuchsia_hardware_pty::Device::SyncClient client;
+  fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
   auto result = client.Describe();
   ASSERT_OK(result.status());
@@ -135,7 +135,7 @@ TEST_F(PtyTestCase, Read) {
     return ZX_OK;
   };
 
-  fuchsia_hardware_pty::Device::SyncClient client;
+  fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
   auto result = client.Read(sizeof(kResponse));
   ASSERT_OK(result.status());
@@ -159,7 +159,7 @@ TEST_F(PtyTestCase, Write) {
     return ZX_OK;
   };
 
-  fuchsia_hardware_pty::Device::SyncClient client;
+  fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
   auto result = client.Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
   ASSERT_OK(result.status());
@@ -171,7 +171,7 @@ TEST_F(PtyTestCase, Write) {
 
 // Verify that the TTY operations get dispatched
 TEST_F(PtyTestCase, TtyOp) {
-  fuchsia_hardware_pty::Device::SyncClient client;
+  fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
   auto result = client.GetWindowSize();
   // Get peer closed, since our HandleFsSpecificMessage returned an error.

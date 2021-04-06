@@ -12,11 +12,11 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/trace/event.h>
-#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -393,7 +393,8 @@ zx_status_t AmlGpu::Bind() {
     return status;
   }
   reset_register.Connect(std::move(register_server_end));
-  reset_register_ = fuchsia_hardware_registers::Device::SyncClient(std::move(register_client_end));
+  reset_register_ =
+      fidl::WireSyncClient<fuchsia_hardware_registers::Device>(std::move(register_client_end));
 
   if (info.pid == PDEV_PID_AMLOGIC_S905D3 && properties_.supports_protected_mode) {
     // S905D3 needs to use an SMC into the TEE to do protected mode switching.

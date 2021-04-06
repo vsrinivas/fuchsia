@@ -153,11 +153,13 @@ class BlockDeviceController {
   }
 
  private:
-  fuchsia_hardware_usb_virtual_bus::Bus::SyncClient& virtual_bus() { return bus_->virtual_bus(); }
-  usb_peripheral::Device::SyncClient& peripheral() { return bus_->peripheral(); }
+  fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>& virtual_bus() {
+    return bus_->virtual_bus();
+  }
+  fidl::WireSyncClient<usb_peripheral::Device>& peripheral() { return bus_->peripheral(); }
 
   USBVirtualBus* bus_;
-  std::optional<usb_peripheral_block::Device::SyncClient> cachecontrol_;
+  std::optional<fidl::WireSyncClient<usb_peripheral_block::Device>> cachecontrol_;
 };
 
 class UmsTest : public zxtest::Test {

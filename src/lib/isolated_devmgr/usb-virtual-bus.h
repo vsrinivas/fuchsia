@@ -33,15 +33,19 @@ class USBVirtualBusBase {
   void ClearPeripheralDeviceFunctions();
   int GetRootFd();
   fbl::unique_fd& devfs_root() { return devfs_; };
-  fuchsia_hardware_usb_peripheral::Device::SyncClient& peripheral() { return peripheral_.value(); }
-  fuchsia_hardware_usb_virtual_bus::Bus::SyncClient& virtual_bus() { return virtual_bus_.value(); }
+  fidl::WireSyncClient<fuchsia_hardware_usb_peripheral::Device>& peripheral() {
+    return peripheral_.value();
+  }
+  fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>& virtual_bus() {
+    return virtual_bus_.value();
+  }
 
  private:
   fbl::unique_fd devfs_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr_;
-  std::optional<fuchsia_hardware_usb_peripheral::Device::SyncClient> peripheral_;
-  std::optional<fuchsia_hardware_usb_virtual_bus::Bus::SyncClient> virtual_bus_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_usb_peripheral::Device>> peripheral_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>> virtual_bus_;
   DISALLOW_COPY_ASSIGN_AND_MOVE(USBVirtualBusBase);
 };
 

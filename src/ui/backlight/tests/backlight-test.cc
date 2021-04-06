@@ -21,7 +21,8 @@ namespace FidlBacklight = fuchsia_hardware_backlight;
 
 class BacklightDevice {
  public:
-  BacklightDevice(zx::channel ch) : client_(FidlBacklight::Device::SyncClient(std::move(ch))) {
+  BacklightDevice(zx::channel ch)
+      : client_(fidl::WireSyncClient<FidlBacklight::Device>(std::move(ch))) {
     if (GetBrightnessNormalized(&orig_brightness_) != ZX_OK) {
       printf("Error getting original brightness. Defaulting to 1.0\n");
       orig_brightness_ = 1.0;
@@ -94,7 +95,7 @@ class BacklightDevice {
   }
 
  private:
-  FidlBacklight::Device::SyncClient client_;
+  fidl::WireSyncClient<FidlBacklight::Device> client_;
   double orig_brightness_;
 };
 

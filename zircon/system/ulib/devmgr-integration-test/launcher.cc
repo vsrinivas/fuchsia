@@ -209,7 +209,7 @@ struct IsolatedDevmgr::ExceptionLoopState {
     if (!local.is_ok()) {
       return;
     }
-    fuchsia_exception::Handler::SyncClient handler(std::move(*local));
+    fidl::WireSyncClient<fuchsia_exception::Handler> handler(std::move(*local));
     fuchsia_exception::wire::ExceptionInfo einfo;
     einfo.process_koid = info.pid;
     einfo.thread_koid = info.tid;

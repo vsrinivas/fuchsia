@@ -22,7 +22,7 @@ namespace {
 
 using uuid::Uuid;
 
-std::optional<fuchsia_boot::Arguments::SyncClient> OpenBootArgumentClient(
+std::optional<fidl::WireSyncClient<fuchsia_boot::Arguments>> OpenBootArgumentClient(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
   if (!svc_root.is_valid()) {
     return {};
@@ -37,7 +37,7 @@ std::optional<fuchsia_boot::Arguments::SyncClient> OpenBootArgumentClient(
   return {fidl::BindSyncClient(std::move(*local))};
 }
 
-bool GetBool(fuchsia_boot::Arguments::SyncClient& client, ::fidl::StringView key,
+bool GetBool(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, ::fidl::StringView key,
              bool default_on_missing_or_failure) {
   auto key_data = key.data();
   auto result = client.GetBool(std::move(key), default_on_missing_or_failure);

@@ -38,7 +38,7 @@ TEST(SysinfoTest, GetBoardName) {
   zx::channel channel;
   ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
             "Failed to get channel");
-  SysInfo::SyncClient sysinfo(std::move(channel));
+  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardName().
   auto result = sysinfo.GetBoardName();
@@ -55,7 +55,7 @@ TEST(SysinfoTest, GetBoardRevision) {
   zx::channel channel;
   ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
             "Failed to get channel");
-  SysInfo::SyncClient sysinfo(std::move(channel));
+  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardRevision().
   auto result = sysinfo.GetBoardRevision();
@@ -71,7 +71,7 @@ TEST(SysinfoTest, GetBootloaderVendor) {
   zx::channel channel;
   ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
             "Failed to get channel");
-  SysInfo::SyncClient sysinfo(std::move(channel));
+  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetBootloaderVendor().
   auto result = sysinfo.GetBootloaderVendor();
@@ -87,7 +87,7 @@ TEST(SysinfoTest, GetInterruptControllerInfo) {
   zx::channel channel;
   ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
             "Failed to get channel");
-  SysInfo::SyncClient sysinfo(std::move(channel));
+  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetInterruptControllerInfo().
   auto result = sysinfo.GetInterruptControllerInfo();

@@ -599,7 +599,7 @@ zx_status_t OpteeClient::InitRpmbClient(void) {
     return status;
   }
 
-  rpmb_client_ = fuchsia_hardware_rpmb::Rpmb::SyncClient(std::move(client));
+  rpmb_client_ = fidl::WireSyncClient<fuchsia_hardware_rpmb::Rpmb>(std::move(client));
 
   return ZX_OK;
 }

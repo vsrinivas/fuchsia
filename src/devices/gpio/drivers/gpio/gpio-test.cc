@@ -62,7 +62,7 @@ class GpioTest : public zxtest::Test {
 };
 
 TEST_F(GpioTest, TestFidlAll) {
-  fuchsia_hardware_gpio::Gpio::SyncClient client(std::move(client_));
+  fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client(std::move(client_));
 
   gpio_impl_.ExpectRead(ZX_OK, 0, 20);
   auto result_read = client.Read();

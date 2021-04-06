@@ -16,7 +16,7 @@ TEST(ArgsTest, CheckDisabled) {
   loop.StartThread();
   Arguments args;
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   mock_boot_arguments::Server boot_server;
   std::map<std::string, std::string> arguments;
 
@@ -39,7 +39,7 @@ TEST(ArgsTest, CheckBootBools) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   loop.StartThread();
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   mock_boot_arguments::Server boot_server;
   std::map<std::string, std::string> arguments;
 
@@ -64,7 +64,7 @@ TEST(ArgsTest, CheckColorScheme) {
   loop.StartThread();
   Arguments args;
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   mock_boot_arguments::Server boot_server;
   std::map<std::string, std::string> arguments;
 
@@ -133,7 +133,7 @@ TEST(ArgsTest, CheckFont) {
   loop.StartThread();
   Arguments args;
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   mock_boot_arguments::Server boot_server;
   std::map<std::string, std::string> arguments;
 
@@ -186,7 +186,7 @@ TEST(ArgsTest, CheckKeymap) {
   loop.StartThread();
   Arguments args;
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   mock_boot_arguments::Server boot_server;
   std::map<std::string, std::string> arguments;
 

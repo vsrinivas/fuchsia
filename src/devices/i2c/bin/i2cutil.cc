@@ -40,7 +40,7 @@ static zx_status_t convert_args(char** argv, size_t length, uint8_t* buffer) {
   return ZX_OK;
 }
 
-static zx_status_t write_bytes(fuchsia_hardware_i2c::Device2::SyncClient client,
+static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client,
                                fbl::Span<uint8_t> write_buffer) {
   bool is_write[] = {true};
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
@@ -59,7 +59,7 @@ static zx_status_t write_bytes(fuchsia_hardware_i2c::Device2::SyncClient client,
   return status;
 }
 
-static zx_status_t read_byte(fuchsia_hardware_i2c::Device2::SyncClient client,
+static zx_status_t read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client,
                              fbl::Span<uint8_t> address, uint8_t* out_byte) {
   bool is_write[] = {true, false};
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
@@ -82,7 +82,7 @@ static zx_status_t read_byte(fuchsia_hardware_i2c::Device2::SyncClient client,
   return status;
 }
 
-static zx_status_t transact(fuchsia_hardware_i2c::Device2::SyncClient client, int argc,
+static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client, int argc,
                             char** argv) {
   size_t n_elements = argc - 3;
   size_t n_segments = 0;
@@ -228,7 +228,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
   }
 
   zx::channel channel(svc);
-  fuchsia_hardware_i2c::Device2::SyncClient client(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client(std::move(channel));
 
   zx_status_t status = ZX_OK;
 

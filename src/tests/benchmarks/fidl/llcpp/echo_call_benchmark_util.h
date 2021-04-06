@@ -39,7 +39,7 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   EchoServerImpl<ProtocolType, FidlType> server;
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &server);
   loop.StartThread();
-  typename ProtocolType::SyncClient client(std::move(endpoints->client));
+  typename fidl::WireSyncClient<ProtocolType> client(std::move(endpoints->client));
 
   while (state->KeepRunning()) {
     fidl::FidlAllocator<65536> allocator;

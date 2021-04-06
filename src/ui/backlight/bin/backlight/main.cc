@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  FidlBacklight::Device::SyncClient client(std::move(local));
+  fidl::WireSyncClient<FidlBacklight::Device> client(std::move(local));
 
   if (strcmp(argv[1], "--read") == 0) {
     auto response = client.GetStateNormalized();

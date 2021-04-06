@@ -123,7 +123,7 @@ TEST_F(GpioUtilTest, ReadTest) {
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockRead().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -146,7 +146,7 @@ TEST_F(GpioUtilTest, WriteTest) {
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockWrite().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -169,7 +169,7 @@ TEST_F(GpioUtilTest, ConfigInTest) {
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockConfigIn().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -192,7 +192,7 @@ TEST_F(GpioUtilTest, ConfigOutTest) {
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockConfigOut().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -215,7 +215,7 @@ TEST_F(GpioUtilTest, SetDriveStrengthTest) {
   EXPECT_EQ(ds_ua, 2000);
 
   gpio_->MockSetDriveStrength().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }

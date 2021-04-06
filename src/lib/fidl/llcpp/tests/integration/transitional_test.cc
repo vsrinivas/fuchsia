@@ -47,9 +47,9 @@ class TransitionalTest : public ::testing::Test {
     loop_->JoinThreads();
   }
 
-  test::TransitionMethods::SyncClient TakeClient() {
+  fidl::WireSyncClient<test::TransitionMethods> TakeClient() {
     EXPECT_TRUE(client_end_.is_valid());
-    return test::TransitionMethods::SyncClient(std::move(client_end_));
+    return fidl::WireSyncClient<test::TransitionMethods>(std::move(client_end_));
   }
 
  private:

@@ -92,7 +92,7 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
   zx::channel local_endpoint, server_endpoint;
   zx::channel::create(0u, &local_endpoint, &server_endpoint);
   fdio_service_connect("/svc/fuchsia.sysmem.Allocator", server_endpoint.release());
-  sysmem::Allocator::SyncClient sysmem_allocator(std::move(local_endpoint));
+  fidl::WireSyncClient<sysmem::Allocator> sysmem_allocator(std::move(local_endpoint));
   sysmem_allocator.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                       fsl::GetCurrentProcessKoid());
 
@@ -100,7 +100,7 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
   zx::channel::create(0u, &client_collection_channel, &server_collection);
 
   sysmem_allocator.AllocateNonSharedCollection(std::move(server_collection));
-  sysmem::BufferCollection::SyncClient collection(std::move(client_collection_channel));
+  fidl::WireSyncClient<sysmem::BufferCollection> collection(std::move(client_collection_channel));
 
   collection.SetName(1000000, "sysmem-memory-pressure");
 

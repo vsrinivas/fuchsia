@@ -12,7 +12,7 @@
 
 #include <cstring>
 
-zx_status_t ParseArgs(fuchsia_boot::Arguments::SyncClient& client, Arguments* out) {
+zx_status_t ParseArgs(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Arguments* out) {
   fidl::StringView string_keys[]{
       fidl::StringView{"virtcon.colorscheme"},
       fidl::StringView{"virtcon.font"},

@@ -21,7 +21,7 @@ namespace fldsvc = fuchsia_ldsvc;
 // Create a subclass to access the test-only constructor on FshostBootArgs.
 class FshostBootArgsForTest : public FshostBootArgs {
  public:
-  explicit FshostBootArgsForTest(fuchsia_boot::Arguments::SyncClient boot_args)
+  explicit FshostBootArgsForTest(fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args)
       : FshostBootArgs(std::move(boot_args)) {}
 };
 
@@ -34,7 +34,7 @@ class PkgfsLoaderServiceTest : public LoaderServiceTest {
     ASSERT_NO_FATAL_FAILURE(CreateTestDirectory(std::move(blobfs_config), &blobfs_fd));
 
     boot_args_server_ = mock_boot_arguments::Server{std::move(boot_args_config)};
-    fuchsia_boot::Arguments::SyncClient client;
+    fidl::WireSyncClient<fuchsia_boot::Arguments> client;
     // We can run the mock boot args server on the same loop as the memfs directory, since they
     // don't interact. The loop was already started by CreateTestDirectory.
     boot_args_server_.CreateClient(fs_loop().dispatcher(), &client);
@@ -67,7 +67,7 @@ TEST_F(PkgfsLoaderServiceTest, LoadObject) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "no_arg", zx::error(ZX_ERR_NOT_FOUND)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "no_blob", zx::error(ZX_ERR_NOT_FOUND)));

@@ -18,7 +18,7 @@ TEST(VirtconSetup, VirtconDefaults) {
   mock_boot_arguments::Server boot_server(std::move(arguments));
   loop.StartThread();
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   auto result = console_launcher::GetVirtconArgs(&boot_args);
@@ -37,7 +37,7 @@ TEST(VirtconSetup, VirtconNeedDebuglog) {
   mock_boot_arguments::Server boot_server(std::move(arguments));
   loop.StartThread();
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   auto result = console_launcher::GetVirtconArgs(&boot_args);
@@ -55,7 +55,7 @@ TEST(VirtconSetup, VirtconNetbootWithNetsvcDisabled) {
   mock_boot_arguments::Server boot_server(std::move(arguments));
   loop.StartThread();
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   auto result = console_launcher::GetVirtconArgs(&boot_args);
@@ -74,7 +74,7 @@ TEST(VirtconSetup, VirtconDontRequireSystem) {
   mock_boot_arguments::Server boot_server(std::move(arguments));
   loop.StartThread();
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   auto result = console_launcher::GetVirtconArgs(&boot_args);
@@ -94,7 +94,7 @@ TEST(VirtconSetup, VirtconLaunchWithNetboot) {
   mock_boot_arguments::Server boot_server(std::move(arguments));
   loop.StartThread();
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   auto result = console_launcher::GetVirtconArgs(&boot_args);

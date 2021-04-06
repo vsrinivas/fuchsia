@@ -35,7 +35,7 @@ TEST_F(LoaderServiceTest, ConnectBindDone) {
   {
     auto status = loader->Connect();
     ASSERT_TRUE(status.is_ok());
-    fldsvc::Loader::SyncClient client(std::move(status.value()));
+    fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("science")));
 
     // Done should cleanly shutdown connection from server side.
@@ -50,7 +50,7 @@ TEST_F(LoaderServiceTest, ConnectBindDone) {
     auto [client_end, server_end] = *std::move(endpoints);
     auto status = loader->Bind(std::move(server_end));
     ASSERT_TRUE(status.is_ok());
-    fldsvc::Loader::SyncClient client(std::move(client_end));
+    fidl::WireSyncClient<fldsvc::Loader> client(std::move(client_end));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("science")));
   }
 }
@@ -71,16 +71,16 @@ TEST_F(LoaderServiceTest, OpenConnectionsKeepLoaderAlive) {
   auto loader =
       LoaderService::Create(loader_loop().dispatcher(), std::move(root_fd), test_info->name());
 
-  fldsvc::Loader::SyncClient client1, client2;
+  fidl::WireSyncClient<fldsvc::Loader> client1, client2;
   {
     auto status = loader->Connect();
     ASSERT_TRUE(status.is_ok());
-    client1 = fldsvc::Loader::SyncClient(std::move(status.value()));
+    client1 = fidl::WireSyncClient<fldsvc::Loader>(std::move(status.value()));
   }
   {
     auto status = loader->Connect();
     ASSERT_TRUE(status.is_ok());
-    client2 = fldsvc::Loader::SyncClient(std::move(status.value()));
+    client2 = fidl::WireSyncClient<fldsvc::Loader>(std::move(status.value()));
   }
 
   // Drop our copy of the LoaderService. Open connections should continue working.
@@ -92,7 +92,7 @@ TEST_F(LoaderServiceTest, OpenConnectionsKeepLoaderAlive) {
   auto result = client2.Clone(std::move(server_chan));
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result.Unwrap()->rv);
-  fldsvc::Loader::SyncClient client3(std::move(client_chan));
+  fidl::WireSyncClient<fldsvc::Loader> client3(std::move(client_chan));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client1, "libfoo.so", zx::ok("science")));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client2, "libfoo.so", zx::ok("science")));
@@ -100,18 +100,18 @@ TEST_F(LoaderServiceTest, OpenConnectionsKeepLoaderAlive) {
 
   // Note this closes the channels from the client side rather than using Done, which is exercised
   // in another test, since this is closer to real Loader usage.
-  client1 = fldsvc::Loader::SyncClient();
+  client1 = fidl::WireSyncClient<fldsvc::Loader>();
   EXPECT_NO_FATAL_FAILURE(LoadObject(client2, "libfoo.so", zx::ok("science")));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client3, "libfoo.so", zx::ok("science")));
 
   // Connection cloned from another should work the same as connections created from LoaderService.
-  client2 = fldsvc::Loader::SyncClient();
+  client2 = fidl::WireSyncClient<fldsvc::Loader>();
   EXPECT_NO_FATAL_FAILURE(LoadObject(client3, "libfoo.so", zx::ok("science")));
 
   // Verify that the directory fd used to create the loader is properly closed once all connections
   // are closed.
   ASSERT_OK(fd_channel->get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-  client3 = fldsvc::Loader::SyncClient();
+  client3 = fidl::WireSyncClient<fldsvc::Loader>();
   // Must shutdown the loader_loop (which joins its thread) to ensure this is not racy. Otherwise
   // the server FIDL bindings may not have handled the client-side channel closure yet.
   loader_loop().Shutdown();
@@ -128,7 +128,7 @@ TEST_F(LoaderServiceTest, LoadObject) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("science")));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libmissing.so", zx::error(ZX_ERR_NOT_FOUND)));
@@ -146,7 +146,7 @@ TEST_F(LoaderServiceTest, Config) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("must")));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libasan_only.so", zx::error(ZX_ERR_NOT_FOUND)));
@@ -197,7 +197,7 @@ TEST_F(LoaderServiceTest, ClonedConnectionHasDefaultConfig) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   ASSERT_NO_FATAL_FAILURE(Config(client, "asan", zx::ok(ZX_OK)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("black")));
@@ -210,7 +210,7 @@ TEST_F(LoaderServiceTest, ClonedConnectionHasDefaultConfig) {
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result.Unwrap()->rv);
   {
-    fldsvc::Loader::SyncClient client(std::move(client_chan));
+    fidl::WireSyncClient<fldsvc::Loader> client(std::move(client_chan));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::error(ZX_ERR_NOT_FOUND)));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libasan_only.so", zx::error(ZX_ERR_NOT_FOUND)));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libno_san.so", zx::ok("matter")));
@@ -226,7 +226,7 @@ TEST_F(LoaderServiceTest, InvalidLoadObject) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "/", zx::error(ZX_ERR_NOT_FILE)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "..", zx::error(ZX_ERR_INVALID_ARGS)));
@@ -240,7 +240,7 @@ TEST_F(LoaderServiceTest, InvalidConfig) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   EXPECT_NO_FATAL_FAILURE(Config(client, "!", zx::ok(ZX_ERR_INVALID_ARGS)));
   EXPECT_NO_FATAL_FAILURE(Config(client, "/", zx::ok(ZX_ERR_INVALID_ARGS)));

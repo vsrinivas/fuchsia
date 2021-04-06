@@ -106,11 +106,11 @@ class IntegrationTest : public TestBase {
     TestBase::SetUp();
     zx::channel client, server;
     EXPECT_OK(zx::channel::create(0, &client, &server));
-    auto connector =
-        std::make_unique<sysmem::DriverConnector::SyncClient>(zx::channel(sysmem_fidl()->get()));
+    auto connector = std::make_unique<fidl::WireSyncClient<sysmem::DriverConnector>>(
+        zx::channel(sysmem_fidl()->get()));
     EXPECT_TRUE(connector->Connect(std::move(server)).ok());
     __UNUSED auto c = connector->mutable_channel()->release();
-    sysmem_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(client));
+    sysmem_ = std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(client));
     sysmem_->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                 fsl::GetCurrentProcessKoid());
   }
@@ -124,7 +124,7 @@ class IntegrationTest : public TestBase {
     TestBase::TearDown();
   }
 
-  std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_;
 };
 
 TEST_F(IntegrationTest, DISABLED_ClientsCanBail) {

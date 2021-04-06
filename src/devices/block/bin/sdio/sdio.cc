@@ -10,7 +10,7 @@
 
 namespace sdio {
 
-using SdioClient = fuchsia_hardware_sdio::Device::SyncClient;
+using SdioClient = fidl::WireSyncClient<fuchsia_hardware_sdio::Device>;
 using namespace fuchsia_hardware_sdio;
 using namespace fuchsia_hardware_sdio::wire;
 

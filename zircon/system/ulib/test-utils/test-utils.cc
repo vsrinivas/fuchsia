@@ -134,7 +134,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   status = fdio_service_connect(service_name.c_str(), launcher_request.release());
   tu_check("connecting to launcher service", status);
 
-  fprocess::Launcher::SyncClient launcher(std::move(launcher_channel));
+  fidl::WireSyncClient<fprocess::Launcher> launcher(std::move(launcher_channel));
 
   // Add arguments.
 

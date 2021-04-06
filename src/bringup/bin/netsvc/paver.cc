@@ -183,7 +183,7 @@ zx_status_t ProcessWriteFirmwareResult(const WriteFirmwareResult& res, const cha
 
 }  // namespace
 
-zx_status_t Paver::WriteABImage(fuchsia_paver::DataSink::SyncClient data_sink,
+zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> data_sink,
                                 fuchsia_mem::wire::Buffer buffer) {
   zx::channel boot_manager_chan, remote;
   auto status = zx::channel::create(0, &boot_manager_chan, &remote);
@@ -200,7 +200,7 @@ zx_status_t Paver::WriteABImage(fuchsia_paver::DataSink::SyncClient data_sink,
     exit_code_.store(status);
     return 0;
   }
-  std::optional<fuchsia_paver::BootManager::SyncClient> boot_manager;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::BootManager>> boot_manager;
   boot_manager.emplace(std::move(boot_manager_chan));
 
   // First find out whether or not ABR is supported.
@@ -310,7 +310,7 @@ zx_status_t Paver::ClearSysconfig() {
     return status_find_sysconfig.status();
   }
 
-  fuchsia_paver::Sysconfig::SyncClient client(std::move(sysconfig_local));
+  fidl::WireSyncClient<fuchsia_paver::Sysconfig> client(std::move(sysconfig_local));
 
   auto wipe_result = client.Wipe();
   auto wipe_status =
@@ -338,7 +338,7 @@ zx_status_t Paver::ClearSysconfig() {
 
 zx_status_t Paver::OpenDataSink(
     fuchsia_mem::wire::Buffer buffer,
-    std::optional<fuchsia_paver::DynamicDataSink::SyncClient>* data_sink) {
+    std::optional<fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>>* data_sink) {
   modify_partition_table_info_t partition_info = {};
   auto status = buffer.vmo.read(&partition_info, 0, sizeof(partition_info));
   if (status != ZX_OK) {
@@ -391,7 +391,7 @@ zx_status_t Paver::OpenDataSink(
 }
 
 zx_status_t Paver::InitPartitionTables(fuchsia_mem::wire::Buffer buffer) {
-  std::optional<fuchsia_paver::DynamicDataSink::SyncClient> data_sink;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>> data_sink;
   auto status = OpenDataSink(std::move(buffer), &data_sink);
   if (status != ZX_OK) {
     fprintf(stderr, "netsvc: Unable to open data sink.\n");
@@ -408,7 +408,7 @@ zx_status_t Paver::InitPartitionTables(fuchsia_mem::wire::Buffer buffer) {
 }
 
 zx_status_t Paver::WipePartitionTables(fuchsia_mem::wire::Buffer buffer) {
-  std::optional<fuchsia_paver::DynamicDataSink::SyncClient> data_sink;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>> data_sink;
   auto status = OpenDataSink(std::move(buffer), &data_sink);
   if (status != ZX_OK) {
     fprintf(stderr, "netsvc: Unable to open data sink.\n");
@@ -499,7 +499,7 @@ int Paver::MonitorBuffer() {
     exit_code_.store(status);
     return 0;
   }
-  fuchsia_paver::DataSink::SyncClient data_sink(std::move(data_sink_chan));
+  fidl::WireSyncClient<fuchsia_paver::DataSink> data_sink(std::move(data_sink_chan));
 
   // Blocks until paving is complete.
   switch (command_) {

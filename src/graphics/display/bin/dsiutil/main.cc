@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
     printf("Failed to connect to dsi-base %d\n", status);
     return -1;
   }
-  fidl_dsi::DsiBase::SyncClient client(std::move(local));
+  fidl::WireSyncClient<fidl_dsi::DsiBase> client(std::move(local));
 
   uint8_t tbuf[1];
   if (strcmp(argv[1], "off") == 0) {

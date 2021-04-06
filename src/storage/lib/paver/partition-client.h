@@ -96,7 +96,7 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
   zx::status<vmoid_t> RegisterVmo(const zx::vmo& vmo);
   zx::status<> ReadBlockInfo();
 
-  fuchsia_hardware_block::Block::SyncClient partition_;
+  fidl::WireSyncClient<fuchsia_hardware_block::Block> partition_;
   std::optional<block_client::Client> client_;
   std::optional<fuchsia_hardware_block::wire::BlockInfo> block_info_;
 };

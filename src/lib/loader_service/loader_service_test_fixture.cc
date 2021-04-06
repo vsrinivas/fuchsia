@@ -110,7 +110,7 @@ void LoaderServiceTest::AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& ro
   }
 }
 
-void LoaderServiceTest::LoadObject(fldsvc::Loader::SyncClient& client, std::string name,
+void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client, std::string name,
                                    zx::status<std::string> expected) {
   auto result = client.LoadObject(fidl::StringView::FromExternal(name));
   ASSERT_TRUE(result.ok());
@@ -130,7 +130,7 @@ void LoaderServiceTest::LoadObject(fldsvc::Loader::SyncClient& client, std::stri
   }
 }
 
-void LoaderServiceTest::Config(fldsvc::Loader::SyncClient& client, std::string config,
+void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client, std::string config,
                                zx::status<zx_status_t> expected) {
   auto result = client.Config(fidl::StringView::FromExternal(config));
   ASSERT_EQ(result.status(), expected.status_value());

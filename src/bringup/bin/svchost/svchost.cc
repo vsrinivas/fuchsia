@@ -51,7 +51,7 @@ zx::status<zx::job> GetRootJob(const zx::channel& svc_root) {
     return zx::error(status);
   }
 
-  fuchsia_kernel::RootJob::SyncClient job_client(std::move(local));
+  fidl::WireSyncClient<fuchsia_kernel::RootJob> job_client(std::move(local));
   auto job_result = job_client.Get();
   if (!job_result.ok()) {
     fprintf(stderr, "svchost: unable to get root job\n");
@@ -74,7 +74,7 @@ zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
     return zx::error(status);
   }
 
-  fuchsia_boot::RootResource::SyncClient client(std::move(local));
+  fidl::WireSyncClient<fuchsia_boot::RootResource> client(std::move(local));
   auto result = client.Get();
   if (!result.ok()) {
     fprintf(stderr, "svchost: unable to get root resource\n");
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing(dispatcher);
 
   // Parse boot arguments.
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   {
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
       fprintf(stderr, "svchost: unable to connect to fuchsia.boot.Arguments");
       return 1;
     }
-    boot_args = fuchsia_boot::Arguments::SyncClient(std::move(local));
+    boot_args = fidl::WireSyncClient<fuchsia_boot::Arguments>(std::move(local));
   }
   svchost::Arguments args;
   zx_status_t status = svchost::ParseArgs(boot_args, &args);

@@ -84,7 +84,7 @@ class __EXPORT SyncClient {
   const sysconfig_header* GetHeader(zx_status_t* status_out = nullptr);
 
  private:
-  SyncClient(fuchsia_hardware_skipblock::SkipBlock::SyncClient skip_block)
+  SyncClient(fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock> skip_block)
       : skip_block_(std::move(skip_block)) {}
 
   zx_status_t InitializeReadMapper();
@@ -97,7 +97,7 @@ class __EXPORT SyncClient {
 
   zx_status_t LoadFromStorage();
 
-  fuchsia_hardware_skipblock::SkipBlock::SyncClient skip_block_;
+  fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock> skip_block_;
 
   // Lazily initialized on reads.
   fzl::OwnedVmoMapper read_mapper_;

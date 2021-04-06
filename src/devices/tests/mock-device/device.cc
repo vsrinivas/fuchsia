@@ -85,7 +85,7 @@ class MockDevice : public MockDeviceType {
 
   // Our half of the controller channel.  We will send requests for input on
   // it.
-  device_mock::MockDevice::SyncClient controller_;
+  fidl::WireSyncClient<device_mock::MockDevice> controller_;
 };
 
 struct ProcessActionsContext {
@@ -158,7 +158,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
 
 MockDevice::MockDevice(zx_device_t* device, fidl::ClientEnd<device_mock::MockDevice> controller)
     : MockDeviceType(device),
-      controller_(device_mock::MockDevice::SyncClient(std::move(controller))) {}
+      controller_(fidl::WireSyncClient<device_mock::MockDevice>(std::move(controller))) {}
 
 int MockDevice::ThreadFunc(void* raw_arg) {
   auto arg = std::unique_ptr<ThreadFuncArg>(static_cast<ThreadFuncArg*>(raw_arg));

@@ -396,7 +396,7 @@ void SimpleCountNumDirectories() {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   Server server(std::move(server_chan));
   ASSERT_OK(server.Start());
-  gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
+  fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   constexpr size_t kNumDirents = 80;
   std::unique_ptr<char[]> name(new char[gen::wire::TEST_MAX_PATH]);
@@ -428,7 +428,7 @@ void CallerAllocateCountNumDirectories() {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   Server server(std::move(server_chan));
   ASSERT_OK(server.Start());
-  gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
+  fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   Random random;
   constexpr size_t kNumDirents = 80;
@@ -465,7 +465,7 @@ void CallerAllocateReadDir() {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   Server server(std::move(server_chan));
   ASSERT_OK(server.Start());
-  gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
+  fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   ASSERT_EQ(server.ReadDirNumCalls(), 0);
   constexpr uint64_t kNumIterations = 100;
@@ -497,7 +497,7 @@ void SimpleConsumeDirectories() {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   Server server(std::move(server_chan));
   ASSERT_OK(server.Start());
-  gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
+  fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
   ASSERT_OK(client.ConsumeDirectories(golden_dirents()).status());
@@ -510,7 +510,7 @@ void CallerAllocateConsumeDirectories() {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   Server server(std::move(server_chan));
   ASSERT_OK(server.Start());
-  gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
+  fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesRequest> request_buffer;
@@ -528,7 +528,7 @@ void SimpleOneWayDirents() {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   Server server(std::move(server_chan));
   ASSERT_OK(server.Start());
-  gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
+  fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   zx::eventpair client_ep, server_ep;
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
@@ -546,7 +546,7 @@ void CallerAllocateOneWayDirents() {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   Server server(std::move(server_chan));
   ASSERT_OK(server.Start());
-  gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
+  fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   zx::eventpair client_ep, server_ep;
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));

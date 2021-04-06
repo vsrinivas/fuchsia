@@ -301,9 +301,9 @@ class FlexibleEnvelopeTest : public ::testing::Test {
     loop_->JoinThreads();
   }
 
-  test::ReceiveFlexibleEnvelope::SyncClient TakeClient() {
+  fidl::WireSyncClient<test::ReceiveFlexibleEnvelope> TakeClient() {
     EXPECT_TRUE(client_end_.is_valid());
-    return test::ReceiveFlexibleEnvelope::SyncClient(std::move(client_end_));
+    return fidl::WireSyncClient<test::ReceiveFlexibleEnvelope>(std::move(client_end_));
   }
 
  private:

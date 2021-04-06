@@ -101,8 +101,8 @@ void RunAndMeasure(const char* test_name, unsigned iterations, const T& closure)
          kTestOutputPrefix, min / static_cast<float>(iterations));
 }
 
-void RunPingPongBenchmark(fuchsia_hardware_goldfish::Pipe::SyncClient& pipe, unsigned size,
-                          unsigned iterations) {
+void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>& pipe,
+                          unsigned size, unsigned iterations) {
   {
     auto result = pipe.SetBufferSize(size);
     ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
@@ -147,10 +147,10 @@ int main(int argc, char** argv) {
   zx::channel pipe_server;
   ZX_ASSERT(zx::channel::create(0, &pipe_client, &pipe_server) == ZX_OK);
 
-  fuchsia_hardware_goldfish::PipeDevice::SyncClient pipe_device(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::PipeDevice> pipe_device(std::move(channel));
   ZX_ASSERT(pipe_device.OpenPipe(std::move(pipe_server)).ok());
 
-  fuchsia_hardware_goldfish::Pipe::SyncClient pipe(std::move(pipe_client));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe> pipe(std::move(pipe_client));
   zx::vmo vmo;
 
   {

@@ -29,7 +29,7 @@ const char kCommandHelp[] = R"(  --command
   -c
       Execute the given command.)";
 
-App::App(fuchsia_shell::Shell::SyncClient* client, async_dispatcher_t* dispatcher)
+App::App(fidl::WireSyncClient<fuchsia_shell::Shell>* client, async_dispatcher_t* dispatcher)
     : console_(this, dispatcher, STDIN_FILENO), executor_(client) {}
 
 App::~App() = default;

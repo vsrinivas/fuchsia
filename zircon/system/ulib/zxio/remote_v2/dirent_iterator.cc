@@ -39,7 +39,7 @@ class DirentIteratorImpl {
       return status;
     }
     new (iterator) DirentIteratorImpl(
-        directory, fio2::DirectoryIterator::SyncClient(std::move(iterator_client_end)));
+        directory, fidl::WireSyncClient<fio2::DirectoryIterator>(std::move(iterator_client_end)));
     return ZX_OK;
   }
 
@@ -84,7 +84,7 @@ class DirentIteratorImpl {
   }
 
  private:
-  explicit DirentIteratorImpl(zxio_t* io, fio2::DirectoryIterator::SyncClient iterator)
+  explicit DirentIteratorImpl(zxio_t* io, fidl::WireSyncClient<fio2::DirectoryIterator> iterator)
       : io_(reinterpret_cast<zxio_remote_v2_t*>(io)),
         boxed_(std::make_unique<Boxed>()),
         iterator_(std::move(iterator)) {
@@ -129,7 +129,7 @@ class DirentIteratorImpl {
   std::unique_ptr<Boxed> boxed_;
   fidl::VectorView<fio2::wire::DirectoryEntry> entries_ = {};
   uint64_t index_ = 0;
-  fio2::DirectoryIterator::SyncClient iterator_;
+  fidl::WireSyncClient<fio2::DirectoryIterator> iterator_;
   uint64_t opaque_[2];
 };
 

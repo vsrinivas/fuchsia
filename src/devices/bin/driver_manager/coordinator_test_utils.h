@@ -43,7 +43,7 @@ class DummyFsProvider : public FsProvider {
 
 CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
                                 mock_boot_arguments::Server* boot_args,
-                                fuchsia_boot::Arguments::SyncClient* client);
+                                fidl::WireSyncClient<fuchsia_boot::Arguments>* client);
 void InitializeCoordinator(Coordinator* coordinator);
 
 void CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver);

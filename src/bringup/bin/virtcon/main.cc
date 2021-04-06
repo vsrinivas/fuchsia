@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         << "Failed to redirect stdout to debuglog, assuming test environment and continuing";
   }
 
-  fuchsia_boot::Arguments::SyncClient boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   {
     auto client = service::Connect<fuchsia_boot::Arguments>();
     if (client.is_error()) {

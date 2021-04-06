@@ -72,7 +72,7 @@ TEST(NetStreamTest, RaceClose) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  fuchsia_posix_socket::StreamSocket::SyncClient client;
+  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
   zx_status_t status =
       fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address());
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
@@ -103,7 +103,7 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  fuchsia_posix_socket::StreamSocket::SyncClient client;
+  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
   zx_status_t status;
   ASSERT_EQ(
       status = fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address()),
@@ -175,13 +175,15 @@ class SocketTest : public testing::Test {
   struct sockaddr_in addr_;
 };
 
-using StreamSocketImpl = SocketImpl<SOCK_STREAM, fuchsia_posix_socket::StreamSocket::SyncClient,
-                                    fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket,
-                                    stream_handle, ZX_SOCKET_PEER_CLOSED>;
+using StreamSocketImpl =
+    SocketImpl<SOCK_STREAM, fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket>,
+               fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket, stream_handle,
+               ZX_SOCKET_PEER_CLOSED>;
 
-using DatagramSocketImpl = SocketImpl<SOCK_DGRAM, fuchsia_posix_socket::DatagramSocket::SyncClient,
-                                      fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket,
-                                      zx::eventpair, datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
+using DatagramSocketImpl =
+    SocketImpl<SOCK_DGRAM, fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket>,
+               fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket, zx::eventpair, datagram_handle,
+               ZX_EVENTPAIR_PEER_CLOSED>;
 
 class SocketTestNames {
  public:
@@ -278,7 +280,7 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_TRUE(connfd = fbl::unique_fd(accept(serverfd.get(), nullptr, nullptr))) << strerror(errno);
   ASSERT_EQ(close(serverfd.release()), 0) << strerror(errno);
 
-  fuchsia_posix_socket::StreamSocket::SyncClient client;
+  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
   zx_status_t status;
   ASSERT_EQ(status = fdio_fd_transfer(connfd.release(),
                                       client.mutable_channel()->reset_and_get_address()),
@@ -369,7 +371,7 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
 
   // Now that the socket's endpoint has been closed, clone the socket again to increase the
   // endpoint's reference count, then close all copies of the socket.
-  std::array<fuchsia_posix_socket::StreamSocket::SyncClient, 10> clients;
+  std::array<fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket>, 10> clients;
   for (auto& client : clients) {
     zx_status_t status;
     ASSERT_EQ(

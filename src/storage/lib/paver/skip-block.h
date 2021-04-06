@@ -65,7 +65,7 @@ class SkipBlockPartitionClient : public PartitionClient {
  private:
   zx::status<> ReadPartitionInfo();
 
-  fuchsia_hardware_skipblock::SkipBlock::SyncClient partition_;
+  fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock> partition_;
   std::optional<fuchsia_hardware_skipblock::wire::PartitionInfo> partition_info_;
 };
 

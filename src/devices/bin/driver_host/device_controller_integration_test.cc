@@ -35,7 +35,7 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
       devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &root_fd);
   ASSERT_OK(status);
 
-  fuchsia_device_test::RootDevice::SyncClient test_root{zx::channel{}};
+  fidl::WireSyncClient<fuchsia_device_test::RootDevice> test_root{zx::channel{}};
   status = fdio_get_service_handle(root_fd.release(),
                                    test_root.mutable_channel()->reset_and_get_address());
   ASSERT_OK(status);

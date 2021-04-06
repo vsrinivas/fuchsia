@@ -89,7 +89,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
  public:
   static CoordinatorConfig CreateConfig(async_dispatcher_t* bootargs_dispatcher,
                                         mock_boot_arguments::Server* boot_args,
-                                        fuchsia_boot::Arguments::SyncClient* client,
+                                        fidl::WireSyncClient<fuchsia_boot::Arguments>* client,
                                         bool enable_ephemeral) {
     auto config = DefaultConfig(bootargs_dispatcher, boot_args, client);
     config.enable_ephemeral = enable_ephemeral;
@@ -175,7 +175,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   bool coordinator_loop_thread_running_ = false;
 
   mock_boot_arguments::Server boot_args_{{}};
-  fuchsia_boot::Arguments::SyncClient args_client_{zx::channel()};
+  fidl::WireSyncClient<fuchsia_boot::Arguments> args_client_{zx::channel()};
 
   // The admin/bootargs servers need their own loop/thread, because if we schedule them
   // on coordinator_loop then coordinator will deadlock waiting

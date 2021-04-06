@@ -23,8 +23,8 @@ bool FloatNear(float a, float b) { return std::abs(a - b) < 0.1f; }
 
 namespace thermal {
 
-using TemperatureClient = fuchsia_hardware_temperature::Device::SyncClient;
-using AdcClient = fuchsia_hardware_adc::Device::SyncClient;
+using TemperatureClient = fidl::WireSyncClient<fuchsia_hardware_temperature::Device>;
+using AdcClient = fidl::WireSyncClient<fuchsia_hardware_adc::Device>;
 
 NtcInfo ntc_info[] = {
     {.part = "ncpXXwf104",

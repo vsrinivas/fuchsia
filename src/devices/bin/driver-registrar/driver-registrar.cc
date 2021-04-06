@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "fdio_service_connect failed, pathc %s, status %d\n", svc_path.c_str(), status);
     return status;
   }
-  fuchsia_driver_registrar::DriverRegistrar::SyncClient client(std::move(local));
+  fidl::WireSyncClient<fuchsia_driver_registrar::DriverRegistrar> client(std::move(local));
 
   auto resp =
       client.Register(fuchsia_pkg::wire::PackageUrl{fidl::StringView::FromExternal(argv[1])});

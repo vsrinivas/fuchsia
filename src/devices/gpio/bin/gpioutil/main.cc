@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  int ret = ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient(std::move(local)), func, write_value,
-                       in_flag, out_value, ds_ua);
+  int ret = ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(local)), func,
+                       write_value, in_flag, out_value, ds_ua);
   if (ret == -1) {
     printf("Client call failed!\n\n");
     usage();

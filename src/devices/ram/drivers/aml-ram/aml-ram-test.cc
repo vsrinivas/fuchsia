@@ -110,7 +110,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
   mmio_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
   mmio_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
 
-  ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
+  fidl::WireSyncClient<ram_metrics::Device> client{std::move(ddk_.FidlClient())};
 
   // Invalid cycles (too low).
   {
@@ -216,7 +216,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
             return value;
           });
 
-  ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
+  fidl::WireSyncClient<ram_metrics::Device> client{std::move(ddk_.FidlClient())};
   auto info = client.MeasureBandwidth(config);
   ASSERT_TRUE(info.ok());
   ASSERT_FALSE(info->result.is_err());

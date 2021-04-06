@@ -72,12 +72,12 @@ class CoreDisplayTest : public zxtest::Test {
   zx_status_t ReleaseCapture(uint64_t id) const;
   void CaptureSetup();
 
-  std::unique_ptr<fhd::Controller::SyncClient> dc_client_;
-  std::unique_ptr<sysinfo::SysInfo::SyncClient> sysinfo_;
-  std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator_;
+  std::unique_ptr<fidl::WireSyncClient<fhd::Controller>> dc_client_;
+  std::unique_ptr<fidl::WireSyncClient<sysinfo::SysInfo>> sysinfo_;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator_;
   zx::event client_event_;
-  std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> token_;
-  std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollectionToken>> token_;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> collection_;
 
  private:
   zx::channel device_client_channel_;
@@ -105,7 +105,8 @@ void CoreDisplayTest::SetUp() {
   ASSERT_TRUE(open_status.ok());
   ASSERT_EQ(ZX_OK, open_status.value().s);
 
-  dc_client_ = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel_));
+  dc_client_ =
+      std::make_unique<fidl::WireSyncClient<fhd::Controller>>(std::move(dc_client_channel_));
 
   class EventHandler : public fidl::WireSyncEventHandler<fhd::Controller> {
    public:
@@ -146,7 +147,7 @@ void CoreDisplayTest::SetUp() {
   status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server_channel.release());
   ASSERT_OK(status);
   sysmem_allocator_ =
-      std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client_channel_));
+      std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(sysmem_client_channel_));
 }
 
 void CoreDisplayTest::TearDown() {
@@ -174,7 +175,8 @@ void CoreDisplayTest::CreateToken() {
   auto status = zx::channel::create(0, &token_server, &token_client);
   ASSERT_OK(status);
 
-  token_ = std::make_unique<sysmem::BufferCollectionToken::SyncClient>(std::move(token_client));
+  token_ = std::make_unique<fidl::WireSyncClient<sysmem::BufferCollectionToken>>(
+      std::move(token_client));
 
   // Pass token server to sysmem allocator
   auto alloc_status = sysmem_allocator_->AllocateSharedCollection(std::move(token_server));
@@ -187,7 +189,7 @@ void CoreDisplayTest::DuplicateAndImportToken() {
   zx::channel token_dup_server;
   auto status = zx::channel::create(0, &token_dup_server, &token_dup_client);
   ASSERT_OK(status);
-  sysmem::BufferCollectionToken::SyncClient display_token(std::move(token_dup_client));
+  fidl::WireSyncClient<sysmem::BufferCollectionToken> display_token(std::move(token_dup_client));
   auto dup_res = token_->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
   ASSERT_TRUE(dup_res.ok());
   ASSERT_OK(dup_res.status());
@@ -247,8 +249,8 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  collection_ =
-      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(collection_client));
+  collection_ = std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(
+      std::move(collection_client));
   auto collection_resp = collection_->SetConstraints(true, constraints);
   ASSERT_OK(collection_resp.status());
 

@@ -106,12 +106,13 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
   }
 
  protected:
-  fuchsia_hardware_backlight::Device::SyncClient client() {
-    return fuchsia_hardware_backlight::Device::SyncClient(std::move(messenger_.local()));
+  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> client() {
+    return fidl::WireSyncClient<fuchsia_hardware_backlight::Device>(std::move(messenger_.local()));
   }
 
-  fuchsia_hardware_power_sensor::Device::SyncClient sensorSyncClient() {
-    return fuchsia_hardware_power_sensor::Device::SyncClient(std::move(messenger_.local()));
+  fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> sensorSyncClient() {
+    return fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device>(
+        std::move(messenger_.local()));
   }
 
   mock_i2c::MockI2c mock_i2c_;
@@ -281,7 +282,7 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
 
   EXPECT_OK(dev_->Init());
 
-  fuchsia_hardware_backlight::Device::SyncClient backlight_client(client());
+  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
   auto result = backlight_client.GetNormalizedBrightnessScale();
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result.value().result.is_err());
@@ -303,7 +304,7 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
 
   EXPECT_OK(dev_->Init());
 
-  fuchsia_hardware_backlight::Device::SyncClient backlight_client(client());
+  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
 
   mock_i2c_.ExpectWrite({kCfgReg}).ExpectReadStop({0x7e}).ExpectWriteStop(
       {kCurrentLsbReg, 0xab, 0x72});
@@ -340,7 +341,7 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
 
   EXPECT_OK(dev_->Init());
 
-  fuchsia_hardware_backlight::Device::SyncClient backlight_client(client());
+  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
 
   mock_i2c_.ExpectWrite({kCfgReg}).ExpectReadStop({0x7e}).ExpectWriteStop(
       {kCurrentLsbReg, 0xab, 0x72});
@@ -435,7 +436,7 @@ TEST_F(Lp8556DeviceTest, GetPowerWatts) {
   VerifySetBrightness(true, 1.0);
   EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 0.000144), 0.000001f);
 
-  fuchsia_hardware_power_sensor::Device::SyncClient sensor_client(sensorSyncClient());
+  fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> sensor_client(sensorSyncClient());
   auto result = sensor_client.GetPowerWatts();
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result.value().result.is_err());

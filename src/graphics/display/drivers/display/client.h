@@ -317,14 +317,14 @@ class Client : public fuchsia_hardware_display::Controller::RawChannelInterface 
   uint8_t client_minimum_rgb_ = 0;
   sync_completion_t fidl_unbound_;
 
-  fuchsia_sysmem::Allocator::SyncClient sysmem_allocator_;
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator_;
 
   struct Collections {
     // Sent to the hardware driver.
-    fuchsia_sysmem::BufferCollection::SyncClient driver;
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> driver;
     // If the VC is using this, |kernel| is the collection used for setting
     // it as kernel framebuffer.
-    fuchsia_sysmem::BufferCollection::SyncClient kernel;
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> kernel;
   };
   std::map<uint64_t, Collections> collection_map_;
 

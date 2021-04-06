@@ -116,7 +116,7 @@ TEST_F(BootfsLoaderServiceTest, LoadObject) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  fldsvc::Loader::SyncClient client(std::move(status.value()));
+  fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "missing", zx::error(ZX_ERR_NOT_FOUND)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("foo")));

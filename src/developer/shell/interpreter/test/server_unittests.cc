@@ -22,7 +22,7 @@ TEST(Server, ShutdownService) {
   ASSERT_EQ(ZX_OK, server->IncomingConnection(std::move(endpoints->server)));
 
   // Call |fuchsia.shell/Shell.Shutdown| on the connection.
-  fuchsia_shell::Shell::SyncClient client(std::move(endpoints->client));
+  fidl::WireSyncClient<fuchsia_shell::Shell> client(std::move(endpoints->client));
   auto result = client.Shutdown();
   ASSERT_EQ(ZX_OK, result.status())
       << "Shutdown failed: " << result.status_string() << ", " << result.error();

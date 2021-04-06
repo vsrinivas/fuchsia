@@ -21,7 +21,8 @@ namespace memory {
 
 class OSImpl : public OS, public TaskEnumerator {
  private:
-  zx_status_t GetKernelStats(std::unique_ptr<fuchsia_kernel::Stats::SyncClient>* stats) override {
+  zx_status_t GetKernelStats(
+      std::unique_ptr<fidl::WireSyncClient<fuchsia_kernel::Stats>>* stats) override {
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
@@ -33,7 +34,7 @@ class OSImpl : public OS, public TaskEnumerator {
       return status;
     }
 
-    *stats = std::make_unique<fuchsia_kernel::Stats::SyncClient>(std::move(local));
+    *stats = std::make_unique<fidl::WireSyncClient<fuchsia_kernel::Stats>>(std::move(local));
     return ZX_OK;
   }
 
@@ -81,7 +82,7 @@ class OSImpl : public OS, public TaskEnumerator {
     return zx_object_get_info(handle, topic, buffer, buffer_size, actual, avail);
   }
 
-  zx_status_t GetKernelMemoryStats(fuchsia_kernel::Stats::SyncClient* stats_client,
+  zx_status_t GetKernelMemoryStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client,
                                    zx_info_kmem_stats_t* kmem) override {
     TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStats");
     if (stats_client == nullptr) {
@@ -104,9 +105,9 @@ class OSImpl : public OS, public TaskEnumerator {
     return ZX_OK;
   }
 
-  zx_status_t GetKernelMemoryStatsExtended(fuchsia_kernel::Stats::SyncClient* stats_client,
-                                           zx_info_kmem_stats_extended_t* kmem_ext,
-                                           zx_info_kmem_stats_t* kmem) override {
+  zx_status_t GetKernelMemoryStatsExtended(
+      fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client,
+      zx_info_kmem_stats_extended_t* kmem_ext, zx_info_kmem_stats_t* kmem) override {
     TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStatsExtended");
     if (stats_client == nullptr) {
       return ZX_ERR_BAD_STATE;

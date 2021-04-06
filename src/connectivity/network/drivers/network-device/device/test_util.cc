@@ -213,7 +213,7 @@ zx_status_t FakeNetworkDeviceImpl::CreateChild(async_dispatcher_t* dispatcher,
   return status;
 }
 
-zx_status_t TestSession::Open(netdev::Device::SyncClient& netdevice, const char* name,
+zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, const char* name,
                               netdev::wire::SessionFlags flags, uint16_t num_descriptors,
                               uint64_t buffer_size,
                               fidl::VectorView<netdev::wire::FrameType> frame_types) {

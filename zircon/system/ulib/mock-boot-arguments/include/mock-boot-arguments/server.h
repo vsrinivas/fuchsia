@@ -17,7 +17,8 @@ class Server final : public fuchsia_boot::Arguments::Interface {
   explicit Server(std::map<std::string, std::string>&& args) : arguments{args} {}
   explicit Server() : arguments{} {}
 
-  void CreateClient(async_dispatcher* dispatcher, fuchsia_boot::Arguments::SyncClient* argclient);
+  void CreateClient(async_dispatcher* dispatcher,
+                    fidl::WireSyncClient<fuchsia_boot::Arguments>* argclient);
 
   void GetString(fidl::StringView view, GetStringCompleter::Sync& completer) override;
   void GetStrings(fidl::VectorView<fidl::StringView> keys,

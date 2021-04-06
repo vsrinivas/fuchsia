@@ -274,7 +274,7 @@ class PaverServiceTest : public zxtest::Test {
   }
 
   void* provider_ctx_ = nullptr;
-  std::optional<fuchsia_paver::Paver::SyncClient> client_;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::Paver>> client_;
   async::Loop loop_;
   // The paver makes synchronous calls into /svc, so it must run in a separate loop to not
   // deadlock.
@@ -442,9 +442,9 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
   void TestSysconfigWipeBufferedClient(uint32_t offset_in_pages, uint32_t sysconfig_pages);
 
-  std::optional<fuchsia_paver::BootManager::SyncClient> boot_manager_;
-  std::optional<fuchsia_paver::DataSink::SyncClient> data_sink_;
-  std::optional<fuchsia_paver::Sysconfig::SyncClient> sysconfig_;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::BootManager>> boot_manager_;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::DataSink>> data_sink_;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::Sysconfig>> sysconfig_;
 
   std::unique_ptr<SkipBlockDevice> device_;
   fbl::unique_fd fvm_;
@@ -1803,7 +1803,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
   }
 
   IsolatedDevmgr devmgr_;
-  std::optional<fuchsia_paver::DynamicDataSink::SyncClient> data_sink_;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>> data_sink_;
 };
 
 TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
@@ -1995,7 +1995,7 @@ TEST_F(PaverServiceLuisTest, SysconfigNotSupportedAndFailWithPeerClosed) {
   auto result = client_->FindSysconfig(std::move(sysconfig_remote));
   ASSERT_OK(result.status());
 
-  fuchsia_paver::Sysconfig::SyncClient sysconfig(std::move(sysconfig_local));
+  fidl::WireSyncClient<fuchsia_paver::Sysconfig> sysconfig(std::move(sysconfig_local));
   auto wipe_result = sysconfig.Wipe();
   ASSERT_EQ(wipe_result.status(), ZX_ERR_PEER_CLOSED);
 }

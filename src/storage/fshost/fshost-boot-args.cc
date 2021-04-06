@@ -34,10 +34,12 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
                       "environment and continuing";
     return std::make_shared<FshostBootArgs>(std::nullopt);
   }
-  return std::make_shared<FshostBootArgs>(fuchsia_boot::Arguments::SyncClient(std::move(local)));
+  return std::make_shared<FshostBootArgs>(
+      fidl::WireSyncClient<fuchsia_boot::Arguments>(std::move(local)));
 }
 
-FshostBootArgs::FshostBootArgs(std::optional<fuchsia_boot::Arguments::SyncClient> boot_args)
+FshostBootArgs::FshostBootArgs(
+    std::optional<fidl::WireSyncClient<fuchsia_boot::Arguments>> boot_args)
     : boot_args_(std::move(boot_args)) {
   if (!boot_args_) {
     return;

@@ -37,7 +37,7 @@ TEST(NameProviderTest, GetDeviceName) {
             ZX_OK)
       << zx_status_get_string(status);
 
-  fuchsia_device::NameProvider::SyncClient name_provider(std::move(c0));
+  fidl::WireSyncClient<fuchsia_device::NameProvider> name_provider(std::move(c0));
   auto response = name_provider.GetDeviceName();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
   auto result = std::move(response.Unwrap()->result);

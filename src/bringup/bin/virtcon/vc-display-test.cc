@@ -207,7 +207,8 @@ class StubDisplayController : public fhd::Controller::Interface {
   const std::list<uint64_t>& images() const { return images_; }
   const std::list<uint64_t>& layers() const { return layers_; }
 
-  const std::unordered_map<uint64_t, std::unique_ptr<sysmem::BufferCollection::SyncClient>>&
+  const std::unordered_map<uint64_t,
+                           std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>>>&
   buffer_collections() const {
     return buffer_collections_;
   }
@@ -219,7 +220,7 @@ class StubDisplayController : public fhd::Controller::Interface {
   std::list<uint64_t> layers_;
   uint64_t next_layer_ = 1;
 
-  std::unordered_map<uint64_t, std::unique_ptr<sysmem::BufferCollection::SyncClient>>
+  std::unordered_map<uint64_t, std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>>>
       buffer_collections_;
 };
 
@@ -257,8 +258,9 @@ class StubMultiBufferDisplayController : public StubDisplayController {
     ASSERT_OK(get_sysmem_allocator()
                   ->BindSharedCollection(std::move(collection_token), std::move(endpoints->server))
                   .status());
-    buffer_collections_[collection_id] = std::make_unique<sysmem::BufferCollection::SyncClient>(
-        fidl::BindSyncClient(std::move(endpoints->client)));
+    buffer_collections_[collection_id] =
+        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(
+            fidl::BindSyncClient(std::move(endpoints->client)));
 
     _completer.Reply(ZX_OK);
   }

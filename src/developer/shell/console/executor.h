@@ -21,7 +21,7 @@ namespace shell::console {
 class Executor {
  public:
   // Provide a |client| where the other endpoint is an interpreter.  Caller retains ownership.
-  Executor(fuchsia_shell::Shell::SyncClient* client);
+  Executor(fidl::WireSyncClient<fuchsia_shell::Shell>* client);
   ~Executor();
 
   // Execute the given command.
@@ -38,7 +38,7 @@ class Executor {
 
  private:
   uint64_t context_id_;
-  fuchsia_shell::Shell::SyncClient* client_;
+  fidl::WireSyncClient<fuchsia_shell::Shell>* client_;
 };
 
 }  // namespace shell::console

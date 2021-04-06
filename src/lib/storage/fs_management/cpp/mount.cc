@@ -68,7 +68,7 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   if ((status = fdio_open(parent_path, flags, parent_server.release())) != ZX_OK) {
     return status;
   }
-  fio::DirectoryAdmin::SyncClient parent_client(std::move(parent));
+  fidl::WireSyncClient<fio::DirectoryAdmin> parent_client(std::move(parent));
   auto resp =
       parent_client.MountAndCreate(std::move(root), fidl::StringView::FromExternal(name), 0);
   if (!resp.ok()) {
@@ -321,7 +321,7 @@ zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
                           mount_point_server.release())) != ZX_OK) {
     return status;
   }
-  fio::DirectoryAdmin::SyncClient mount_client(std::move(mount_point));
+  fidl::WireSyncClient<fio::DirectoryAdmin> mount_client(std::move(mount_point));
   auto resp = mount_client.Mount(zx::channel(root_handle));
   if (!resp.ok()) {
     return resp.status();

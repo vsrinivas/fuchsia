@@ -319,7 +319,7 @@ class DeviceTest : public zxtest::Test {
 
  private:
   fbl::RefPtr<FakeTimer> timer_;
-  std::optional<fuchsia_hardware_usb_device::Device::SyncClient> fidl_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_usb_device::Device>> fidl_;
   FakeHci hci_;
   Binder ddk_;
   // UsbDevice context pointer owned by us through FakeDDK

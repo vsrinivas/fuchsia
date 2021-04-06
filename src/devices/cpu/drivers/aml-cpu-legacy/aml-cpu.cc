@@ -13,9 +13,9 @@
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
 
+#include <map>
 #include <memory>
 #include <optional>
-#include <map>
 
 #include <ddktl/fidl.h>
 #include <soc/aml-common/aml-cpu-metadata.h>
@@ -38,7 +38,7 @@ uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_
   return static_cast<uint16_t>(n_operating_points - pstate - 1);
 }
 
-std::optional<amlogic_cpu::fuchsia_thermal::Device::SyncClient> CreateFidlClient(
+std::optional<fidl::WireSyncClient<amlogic_cpu::fuchsia_thermal::Device>> CreateFidlClient(
     const ddk::ThermalProtocolClient& protocol_client, zx_status_t* status) {
   // This channel pair will be used to talk to the Thermal Device's FIDL
   // interface.
@@ -57,7 +57,7 @@ std::optional<amlogic_cpu::fuchsia_thermal::Device::SyncClient> CreateFidlClient
     return {};
   }
 
-  return amlogic_cpu::fuchsia_thermal::Device::SyncClient(std::move(channel_local));
+  return fidl::WireSyncClient<amlogic_cpu::fuchsia_thermal::Device>(std::move(channel_local));
 }
 
 }  // namespace
@@ -76,9 +76,11 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   // Determine the cluster size of each cluster.
   size_t cluster_count_size = 0;
-  status = device_get_metadata_size(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, &cluster_count_size);
+  status =
+      device_get_metadata_size(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, &cluster_count_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get metadata DEVICE_METADATA_CLUSTER_SIZE size. st = %d", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get metadata DEVICE_METADATA_CLUSTER_SIZE size. st = %d", __func__,
+           status);
     return status;
   }
 
@@ -89,14 +91,18 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   size_t actual;
   const size_t num_cluster_count_entries = cluster_count_size / sizeof(legacy_cluster_size_t);
-  std::unique_ptr<legacy_cluster_size_t[]> cluster_sizes = std::make_unique<legacy_cluster_size_t[]>(num_cluster_count_entries);
-  status = device_get_metadata(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, cluster_sizes.get(), cluster_count_size, &actual);
+  std::unique_ptr<legacy_cluster_size_t[]> cluster_sizes =
+      std::make_unique<legacy_cluster_size_t[]>(num_cluster_count_entries);
+  status = device_get_metadata(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, cluster_sizes.get(),
+                               cluster_count_size, &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get cluster size metadata from board driver, st = %d", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get cluster size metadata from board driver, st = %d", __func__,
+           status);
     return status;
   }
   if (actual != cluster_count_size) {
-    zxlogf(ERROR, "%s: Expected %lu bytes in cluster size metadata, got %lu", __func__, cluster_count_size, actual);
+    zxlogf(ERROR, "%s: Expected %lu bytes in cluster size metadata, got %lu", __func__,
+           cluster_count_size, actual);
     return ZX_ERR_INTERNAL;
   }
 
@@ -104,7 +110,6 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   for (size_t i = 0; i < num_cluster_count_entries; i++) {
     cluster_core_counts[cluster_sizes[i].pd_id] = cluster_sizes[i].core_count;
   }
-
 
   // The Thermal Driver is our parent and it exports an interface with one
   // method (Connect) which allows us to connect to its FIDL interface.
@@ -196,7 +201,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
         return status;
       }
     }
-    auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(*thermal_fidl_client), i, cluster_core_count->second);
+    auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(*thermal_fidl_client), i,
+                                               cluster_core_count->second);
     thermal_fidl_client.reset();
 
     cpu_device->SetCpuInfo(cpu_version_packed);

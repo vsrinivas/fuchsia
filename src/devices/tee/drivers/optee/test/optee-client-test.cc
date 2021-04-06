@@ -67,7 +67,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
         new OpteeClient(this, std::move(service_provider), optee::Uuid{kOpteeOsUuid}));
     fidl::BindServer<fuchsia_tee::Application::Interface>(loop_.dispatcher(), std::move(server),
                                                           optee_client_.get());
-    optee_client_fidl_ = fuchsia_tee::Application::SyncClient(std::move(client));
+    optee_client_fidl_ = fidl::WireSyncClient<fuchsia_tee::Application>(std::move(client));
   }
 
   SharedMemoryManager::DriverMemoryPool *driver_pool() const override {
@@ -99,7 +99,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   zx_vaddr_t shared_memory_vaddr_;
 
   std::unique_ptr<OpteeClient> optee_client_;
-  fuchsia_tee::Application::SyncClient optee_client_fidl_;
+  fidl::WireSyncClient<fuchsia_tee::Application> optee_client_fidl_;
   async::Loop loop_;
 };
 

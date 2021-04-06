@@ -40,12 +40,13 @@ class PackageResolver : public PackageResolverInterface {
   // Connects to the package resolver service if not already connected.
   zx_status_t ConnectToResolverService();
   // Creates the directory client for |package_url|.
-  zx::status<fuchsia_io::Directory::SyncClient> Resolve(const std::string_view& package_url);
+  zx::status<fidl::WireSyncClient<fuchsia_io::Directory>> Resolve(
+      const std::string_view& package_url);
   zx::status<FetchDriverVmoResult> LoadDriverPackage(
-      fuchsia_io::Directory::SyncClient* package_dir);
-  zx::status<std::string> GetDriverLibname(fuchsia_io::Directory::SyncClient* lib_dir);
+      fidl::WireSyncClient<fuchsia_io::Directory>* package_dir);
+  zx::status<std::string> GetDriverLibname(fidl::WireSyncClient<fuchsia_io::Directory>* lib_dir);
 
-  fuchsia_pkg::PackageResolver::SyncClient resolver_client_;
+  fidl::WireSyncClient<fuchsia_pkg::PackageResolver> resolver_client_;
 };
 
 }  // namespace internal

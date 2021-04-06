@@ -57,7 +57,7 @@ class TestFile : public fio::testing::File_TestBase {
     EXPECT_EQ(ZX_OK, fdio_open(path_.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                server_end.release()));
 
-    fuchsia_io::File::SyncClient file(std::move(client_end));
+    fidl::WireSyncClient<fuchsia_io::File> file(std::move(client_end));
     auto result = file.GetBuffer(flags);
     EXPECT_TRUE(result.ok());
     auto buffer = fmem::Buffer::New();

@@ -72,7 +72,7 @@ TEST(TiIna231Test, GetPowerWatts) {
 
   EXPECT_OK(dut.DdkAdd("ti-ina231"));
 
-  power_sensor_fidl::Device::SyncClient client(std::move(ddk.FidlClient()));
+  fidl::WireSyncClient<power_sensor_fidl::Device> client(std::move(ddk.FidlClient()));
 
   {
     fake_i2c.set_power(4792);

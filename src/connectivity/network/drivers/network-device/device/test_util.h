@@ -169,7 +169,7 @@ class TestSession {
 
   TestSession() = default;
 
-  zx_status_t Open(netdev::Device::SyncClient& netdevice, const char* name,
+  zx_status_t Open(fidl::WireSyncClient<netdev::Device>& netdevice, const char* name,
                    netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::PRIMARY,
                    uint16_t num_descriptors = kDefaultDescriptorCount,
                    uint64_t buffer_size = kDefaultBufferLength,

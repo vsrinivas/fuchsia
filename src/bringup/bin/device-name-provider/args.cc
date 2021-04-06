@@ -56,7 +56,7 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
     return -1;
   }
 
-  fuchsia_boot::Arguments::SyncClient client(std::move(local));
+  fidl::WireSyncClient<fuchsia_boot::Arguments> client(std::move(local));
   fidl::StringView string_keys[]{
       fidl::StringView{"netsvc.interface"},
       fidl::StringView{"zircon.nodename"},

@@ -19,7 +19,7 @@ zx_status_t Init() {
   if (status != ZX_OK) {
     return status;
   }
-  fuchsia_boot::WriteOnlyLog::SyncClient write_only_log(std::move(local));
+  fidl::WireSyncClient<fuchsia_boot::WriteOnlyLog> write_only_log(std::move(local));
   auto result = write_only_log.Get();
   if (result.status() != ZX_OK) {
     return result.status();

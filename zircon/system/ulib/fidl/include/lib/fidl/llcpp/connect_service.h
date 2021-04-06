@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/result.h>
 #include <zircon/fidl.h>
 
@@ -23,8 +24,8 @@ namespace fidl {
 // Creates a synchronous FIDL client for the FIDL protocol `FidlProtocol`, bound to the
 // given channel.
 template <typename FidlProtocol>
-typename FidlProtocol::SyncClient BindSyncClient(ClientEnd<FidlProtocol> client_end) {
-  return typename FidlProtocol::SyncClient(std::move(client_end));
+typename fidl::WireSyncClient<FidlProtocol> BindSyncClient(ClientEnd<FidlProtocol> client_end) {
+  return typename fidl::WireSyncClient<FidlProtocol>(std::move(client_end));
 }
 
 template <typename Protocol>

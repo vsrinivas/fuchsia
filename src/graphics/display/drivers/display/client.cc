@@ -114,7 +114,7 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
     _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
     return;
   }
-  sysmem::BufferCollection::SyncClient& collection = it->second.driver;
+  fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
 
   auto check_status = collection.CheckBuffersAllocated();
   if (check_status.error() || check_status->status != ZX_OK) {
@@ -250,8 +250,8 @@ void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collec
   }
 
   collection_map_[collection_id] =
-      Collections{sysmem::BufferCollection::SyncClient(std::move(collection_client)),
-                  sysmem::BufferCollection::SyncClient(std::move(vc_collection))};
+      Collections{fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection_client)),
+                  fidl::WireSyncClient<sysmem::BufferCollection>(std::move(vc_collection))};
   _completer.Reply(ZX_OK);
 }
 
@@ -820,7 +820,7 @@ void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t
   }
 
   // Check whether buffer has already been allocated for the requested collection id.
-  sysmem::BufferCollection::SyncClient& collection = it->second.driver;
+  fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
   auto check_status = collection.CheckBuffersAllocated();
   if (check_status.error() || check_status->status != ZX_OK) {
     _completer.ReplyError(ZX_ERR_SHOULD_WAIT);
@@ -1524,7 +1524,7 @@ fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_sta
     // TODO(fxbug.dev/33157) TODO: Fail creation once all drivers implement this.
     zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d", status);
   } else {
-    sysmem_allocator_ = sysmem::Allocator::SyncClient(std::move(sysmem_allocator_client));
+    sysmem_allocator_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(sysmem_allocator_client));
     sysmem_allocator_.SetDebugClientInfo(
         fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
   }

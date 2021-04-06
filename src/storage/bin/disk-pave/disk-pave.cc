@@ -227,7 +227,7 @@ struct UseBlockDeviceError {
 // together with a status.
 template <typename Protocol>
 fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
-    fuchsia_paver::Paver::SyncClient& paver_client, const char* block_device_path,
+    fidl::WireSyncClient<fuchsia_paver::Paver>& paver_client, const char* block_device_path,
     fidl::ServerEnd<Protocol> data_sink_remote) {
   static_assert(std::is_same_v<Protocol, fuchsia_paver::DataSink> ||
                 std::is_same_v<Protocol, fuchsia_paver::DynamicDataSink>);

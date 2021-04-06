@@ -20,21 +20,21 @@
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace {
-fuchsia_sysmem::Allocator::SyncClient CreateSysmemAllocator() {
+fidl::WireSyncClient<fuchsia_sysmem::Allocator> CreateSysmemAllocator() {
   zx::channel allocator_client;
   zx::channel allocator_server;
   EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
   EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
             ZX_OK);
 
-  fuchsia_sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator(std::move(allocator_client));
 
   allocator.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
                                fsl::GetCurrentProcessKoid());
   return allocator;
 }
 
-void SetDefaultCollectionName(fuchsia_sysmem::BufferCollection::SyncClient& collection) {
+void SetDefaultCollectionName(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection) {
   constexpr uint32_t kTestNamePriority = 1000u;
   std::string test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
   EXPECT_TRUE(
@@ -53,10 +53,10 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
   zx::channel pipe_server;
   EXPECT_EQ(zx::channel::create(0, &pipe_client, &pipe_server), ZX_OK);
 
-  fuchsia_hardware_goldfish::PipeDevice::SyncClient pipe_device(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::PipeDevice> pipe_device(std::move(channel));
   EXPECT_TRUE(pipe_device.OpenPipe(std::move(pipe_server)).ok());
 
-  fuchsia_hardware_goldfish::Pipe::SyncClient pipe(std::move(pipe_client));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe> pipe(std::move(pipe_client));
   const size_t kSize = 3 * 4096;
   {
     auto result = pipe.SetBufferSize(kSize);
@@ -185,7 +185,7 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
       .heap_permitted_count = 1,
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
 
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
@@ -209,7 +209,7 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
     fidl::FidlAllocator allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
@@ -308,7 +308,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
       .min_coded_height = 32,
   };
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -431,9 +431,9 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
   constraints[1].image_format_constraints[0].required_max_coded_width = 1024;
   constraints[1].image_format_constraints[0].required_max_coded_height = 256;
 
-  BufferCollection::SyncClient collection[kNumClients];
+  fidl::WireSyncClient<BufferCollection> collection[kNumClients];
   for (size_t i = 0; i < kNumClients; i++) {
-    collection[i] = BufferCollection::SyncClient(std::move(collection_client[i])),
+    collection[i] = fidl::WireSyncClient<BufferCollection>(std::move(collection_client[i])),
     SetDefaultCollectionName(collection[i]);
     EXPECT_TRUE(collection[i].SetConstraints(true, std::move(constraints[i])).ok());
   };
@@ -534,7 +534,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_HOST_VISIBLE}};
   constraints.image_format_constraints_count = 0;
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -617,7 +617,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
       .heap_permitted_count = 1,
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -640,7 +640,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
     fidl::FidlAllocator allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
@@ -718,7 +718,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
   zx::vmo vmo_copy;
   EXPECT_EQ(non_sysmem_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
     fidl::FidlAllocator allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
@@ -790,7 +790,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
       .heap_permitted_count = 1,
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -813,7 +813,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   // ----------------------------------------------------------------------//
   // Try creating color buffer.
   zx::vmo vmo_copy;
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(
+      std::move(control_channel));
 
   {
     // Verify that a CreateColorBuffer2() call without width will fail.
@@ -932,7 +933,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
       .heap_permitted_count = 1,
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -955,7 +956,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
   // ----------------------------------------------------------------------//
   // Try creating data buffers.
   zx::vmo vmo_copy;
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(
+      std::move(control_channel));
 
   {
     // Verify that a CreateBuffer2() call without width will fail.
@@ -1029,7 +1031,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
       .heap_permitted_count = 1,
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -1052,7 +1054,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
     auto result = control.GetBufferHandle(std::move(vmo_copy));
     ASSERT_TRUE(result.ok());
@@ -1071,7 +1073,8 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
   zx::channel child_channel2;
   EXPECT_EQ(zx::channel::create(0, &child_channel, &child_channel2), ZX_OK);
 
-  fuchsia_hardware_goldfish::AddressSpaceDevice::SyncClient asd_parent(std::move(parent_channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceDevice> asd_parent(
+      std::move(parent_channel));
   {
     auto result = asd_parent.OpenChildDriver(
         fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType::DEFAULT,
@@ -1081,7 +1084,7 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
 
   constexpr uint64_t kHeapSize = 16ULL * 1048576ULL;
 
-  fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient asd_child(
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver> asd_child(
       std::move(child_channel2));
   uint64_t paddr = 0;
   zx::vmo vmo;
@@ -1244,7 +1247,8 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   zx::channel child_channel2;
   EXPECT_EQ(zx::channel::create(0, &child_channel, &child_channel2), ZX_OK);
 
-  fuchsia_hardware_goldfish::AddressSpaceDevice::SyncClient asd_parent(std::move(parent_channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceDevice> asd_parent(
+      std::move(parent_channel));
   {
     auto result = asd_parent.OpenChildDriver(
         fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType::DEFAULT,
@@ -1255,7 +1259,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   // Allocate device memory block using address space device.
   constexpr uint64_t kHeapSize = 32768ULL;
 
-  fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient asd_child(
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver> asd_child(
       std::move(child_channel2));
   uint64_t physical_addr = 0;
   zx::vmo address_space_vmo;
@@ -1292,7 +1296,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
       .heap_permitted_count = 1,
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -1317,7 +1321,8 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(
+      std::move(control_channel));
   {
     // Verify that a CreateColorBuffer2() call with host-visible memory property,
     // but without physical address will fail.
@@ -1413,7 +1418,7 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
       .heap_permitted_count = 1,
       .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
@@ -1436,7 +1441,7 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
     fidl::FidlAllocator allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
@@ -1475,7 +1480,7 @@ TEST(GoldfishControlTests, CreateSyncKhr) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
 
   zx::eventpair event_client, event_server;
   zx_status_t status = zx::eventpair::create(0u, &event_client, &event_server);

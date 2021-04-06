@@ -197,7 +197,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_FALSE(manager.IsShutdown());
 
   // Call stop on the lifecycle channel
-  fuchsia_process_lifecycle::Lifecycle::SyncClient client(std::move(lifecycle));
+  fidl::WireSyncClient<fuchsia_process_lifecycle::Lifecycle> client(std::move(lifecycle));
   auto result = client.Stop();
   ASSERT_OK(result.status());
 

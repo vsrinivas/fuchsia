@@ -68,7 +68,7 @@ bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
   }
 
   fbl::AutoLock lock(mtx());
-  dc_ = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client));
+  dc_ = std::make_unique<fidl::WireSyncClient<fhd::Controller>>(std::move(dc_client));
   device_handle_.reset(device_client.release());
   return true;
 }
@@ -243,7 +243,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmem(const fhd::wire::ImageConfig& 
 zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageConfig& image_config,
                                                         uint64_t* image_id) {
   // Create all the tokens.
-  std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> local_token;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollectionToken>> local_token;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK) {
@@ -255,7 +255,8 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
       zxlogf(ERROR, "Failed to allocate shared collection %d", result.status());
       return result.status();
     }
-    local_token = std::make_unique<sysmem::BufferCollectionToken::SyncClient>(std::move(client));
+    local_token =
+        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollectionToken>>(std::move(client));
     EXPECT_NE(ZX_HANDLE_INVALID, local_token->channel().get());
   }
   zx::channel display_token;
@@ -299,7 +300,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
   // Use the local collection so we can read out the error if allocation
   // fails, and to ensure everything's allocated before trying to import it
   // into another process.
-  std::unique_ptr<sysmem::BufferCollection::SyncClient> sysmem_collection;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> sysmem_collection;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
@@ -309,7 +310,8 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
       zxlogf(ERROR, "Failed to bind shared collection");
       return ZX_ERR_NO_MEMORY;
     }
-    sysmem_collection = std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
+    sysmem_collection =
+        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(client));
   }
   sysmem_collection->SetName(10000u, "display-client-unittest");
   sysmem::wire::BufferCollectionConstraints constraints = {};

@@ -111,7 +111,7 @@ class UsbOneEndpointTest : public zxtest::Test {
     zx::channel input_channel;
     ASSERT_OK(fdio_get_service_handle(fd_input.release(), input_channel.reset_and_get_address()));
 
-    sync_client_ = fuchsia_hardware_input::Device::SyncClient(std::move(input_channel));
+    sync_client_ = fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(input_channel));
   }
 
   void TearDown() override {
@@ -124,7 +124,7 @@ class UsbOneEndpointTest : public zxtest::Test {
  protected:
   USBVirtualBus bus_;
   fbl::String devpath_;
-  std::optional<fuchsia_hardware_input::Device::SyncClient> sync_client_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_input::Device>> sync_client_;
 };
 
 class UsbTwoEndpointTest : public zxtest::Test {
@@ -143,7 +143,7 @@ class UsbTwoEndpointTest : public zxtest::Test {
     zx::channel input_channel;
     ASSERT_OK(fdio_get_service_handle(fd_input.release(), input_channel.reset_and_get_address()));
 
-    sync_client_ = fuchsia_hardware_input::Device::SyncClient(std::move(input_channel));
+    sync_client_ = fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(input_channel));
   }
 
   void TearDown() override {
@@ -156,7 +156,7 @@ class UsbTwoEndpointTest : public zxtest::Test {
  protected:
   USBVirtualBus bus_;
   fbl::String devpath_;
-  std::optional<fuchsia_hardware_input::Device::SyncClient> sync_client_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_input::Device>> sync_client_;
 };
 
 TEST_F(UsbOneEndpointTest, SetAndGetReport) {

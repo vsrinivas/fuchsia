@@ -74,9 +74,9 @@ class ResultTest : public ::testing::Test {
     loop_->JoinThreads();
   }
 
-  test::ErrorMethods::SyncClient TakeClient() {
+  fidl::WireSyncClient<test::ErrorMethods> TakeClient() {
     EXPECT_TRUE(client_end_.is_valid());
-    return test::ErrorMethods::SyncClient(std::move(client_end_));
+    return fidl::WireSyncClient<test::ErrorMethods>(std::move(client_end_));
   }
 
  private:
@@ -229,7 +229,7 @@ TEST(MagicNumberTest, EventRead) {
 }
 
 TEST(SyncClientTest, DefaultInitializationError) {
-  test::ErrorMethods::SyncClient client;
+  fidl::WireSyncClient<test::ErrorMethods> client;
   ASSERT_FALSE(client.channel().is_valid());
 
   auto resp = client.NoArgsPrimitiveError(false);
@@ -307,9 +307,9 @@ class HandleTest : public ::testing::Test {
     fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(endpoints->server), server_.get());
   }
 
-  test::HandleProvider::SyncClient TakeClient() {
+  fidl::WireSyncClient<test::HandleProvider> TakeClient() {
     EXPECT_TRUE(client_end_.is_valid());
-    return test::HandleProvider::SyncClient(std::move(client_end_));
+    return fidl::WireSyncClient<test::HandleProvider>(std::move(client_end_));
   }
 
  private:

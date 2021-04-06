@@ -207,7 +207,7 @@ TEST(BasicTypesTest, SyncCallStruct) {
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
   // generated interface API
-  basictypes::TestInterface::SyncClient test(std::move(client));
+  fidl::WireSyncClient<basictypes::TestInterface> test(std::move(client));
 
   basictypes::wire::SimpleStruct simple_struct = {};
   simple_struct.field = 123;
@@ -251,7 +251,7 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
   // generated interface API
-  basictypes::TestInterface::SyncClient test(std::move(client));
+  fidl::WireSyncClient<basictypes::TestInterface> test(std::move(client));
 
   basictypes::wire::SimpleStruct simple_struct = {};
   simple_struct.field = 123;

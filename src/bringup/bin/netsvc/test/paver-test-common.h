@@ -237,7 +237,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
       completer.Reply(status);
       return;
     }
-    fuchsia_paver::PayloadStream::SyncClient stream(std::move(payload_stream));
+    fidl::WireSyncClient<fuchsia_paver::PayloadStream> stream(std::move(payload_stream));
     auto result = stream.RegisterVmo(std::move(vmo));
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {

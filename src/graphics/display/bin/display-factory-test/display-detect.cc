@@ -79,7 +79,7 @@ uint8_t GetGpioValue(const char* gpio_path) {
     return -1;
   }
 
-  gpio::Gpio::SyncClient client(std::move(local));
+  fidl::WireSyncClient<gpio::Gpio> client(std::move(local));
   auto res = client.Read();
   if (!res.ok() || res.value().result.is_err()) {
     return -1;

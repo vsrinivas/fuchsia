@@ -103,7 +103,7 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   return zx::ok(std::move(launcher));
 }
 
-std::optional<Arguments> GetArguments(fuchsia_boot::Arguments::SyncClient* client) {
+std::optional<Arguments> GetArguments(fidl::WireSyncClient<fuchsia_boot::Arguments>* client) {
   Arguments ret;
 
   fuchsia_boot::wire::BoolPair bool_keys[]{
@@ -172,7 +172,8 @@ std::optional<fbl::unique_fd> ConsoleLauncher::GetVirtioFd(const Arguments& args
     return std::nullopt;
   }
 
-  fuchsia_hardware_virtioconsole::Device::SyncClient virtio_client(std::move(virtio_channel));
+  fidl::WireSyncClient<fuchsia_hardware_virtioconsole::Device> virtio_client(
+      std::move(virtio_channel));
   virtio_client.GetChannel(std::move(remote));
 
   fdio_t* fdio;

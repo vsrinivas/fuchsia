@@ -153,7 +153,7 @@ class BufferCollection : public Node, public fuchsia_sysmem::BufferCollection::I
   // This may remain non-set if SetEventSink() is never used by a client.  A
   // client may send SetEventSink() up to once.
   //
-  std::optional<fuchsia_sysmem::BufferCollectionEvents::SyncClient> events_;
+  std::optional<fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionEvents>> events_;
 
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.

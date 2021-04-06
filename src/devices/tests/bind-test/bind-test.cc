@@ -38,7 +38,7 @@ class BindCompilerTest : public testing::Test {
         devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "test/test", &root_fd);
     ASSERT_EQ(status, ZX_OK);
 
-    fuchsia_device_test::RootDevice::SyncClient root_device{zx::channel{}};
+    fidl::WireSyncClient<fuchsia_device_test::RootDevice> root_device{zx::channel{}};
     status = fdio_get_service_handle(root_fd.release(),
                                      root_device.mutable_channel()->reset_and_get_address());
     ASSERT_EQ(status, ZX_OK);

@@ -92,7 +92,8 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
     ASSERT_OK(zx::channel::create(0, &sysmem_server, &sysmem_client));
     ASSERT_OK(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server.release()));
 
-    sysmem_allocator_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
+    sysmem_allocator_ =
+        std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(sysmem_client));
     sysmem_allocator_->SetDebugClientInfo(
         fidl::StringView::FromExternal(fsl::GetCurrentProcessName() + "-debug-client"),
         fsl::GetCurrentProcessKoid());
@@ -217,7 +218,7 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
         sysmem_allocator_->BindSharedCollection(std::move(collection_token), std::move(server))
             .ok());
     current_buffer_collection_ =
-        std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
+        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(client));
 
     _completer.Reply(ZX_OK);
   }
@@ -285,8 +286,8 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
   }
 
  private:
-  std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator_;
-  std::unique_ptr<sysmem::BufferCollection::SyncClient> current_buffer_collection_;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator_;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> current_buffer_collection_;
   bool use_ram_domain_;
 };
 

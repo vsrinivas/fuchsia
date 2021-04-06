@@ -22,7 +22,7 @@
 namespace {
 
 using Device = fuchsia_hardware_pty::Device;
-using Connection = Device::SyncClient;
+using Connection = fidl::WireSyncClient<Device>;
 
 class PtyTestCase : public zxtest::Test {
  public:

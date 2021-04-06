@@ -52,14 +52,14 @@ using testing::display::PrimaryLayer;
 using testing::display::VirtualLayer;
 
 static zx_handle_t device_handle;
-static std::unique_ptr<fhd::Controller::SyncClient> dc;
+static std::unique_ptr<fidl::WireSyncClient<fhd::Controller>> dc;
 static bool has_ownership;
 
 constexpr uint64_t kEventId = 13;
 constexpr uint32_t kCollectionId = 12;
 uint64_t capture_id = 0;
 zx::event client_event_;
-std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_;
+std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> collection_;
 zx::vmo capture_vmo;
 
 enum TestBundle {
@@ -122,7 +122,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
     return false;
   }
 
-  dc = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client));
+  dc = std::make_unique<fidl::WireSyncClient<fhd::Controller>>(std::move(dc_client));
   device_handle = device_client.release();
 
   class EventHandler : public fidl::WireSyncEventHandler<fhd::Controller> {
@@ -351,9 +351,9 @@ zx_status_t capture_setup() {
     printf("Could not connect to sysmem Allocator %d\n", status);
     return status;
   }
-  std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator;
   sysmem_allocator =
-      std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client_channel));
+      std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(sysmem_client_channel));
 
   // Create and import token
   zx::channel token_server;
@@ -363,8 +363,9 @@ zx_status_t capture_setup() {
     printf("Could not create token channel %d\n", status);
     return status;
   }
-  std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> token =
-      std::make_unique<sysmem::BufferCollectionToken::SyncClient>(std::move(token_client));
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollectionToken>> token =
+      std::make_unique<fidl::WireSyncClient<sysmem::BufferCollectionToken>>(
+          std::move(token_client));
 
   // pass token server to sysmem allocator
   auto alloc_status = sysmem_allocator->AllocateSharedCollection(std::move(token_server));
@@ -381,7 +382,7 @@ zx_status_t capture_setup() {
     printf("Could not create duplicate token channel %d\n", status);
     return status;
   }
-  sysmem::BufferCollectionToken::SyncClient display_token(std::move(token_dup_client));
+  fidl::WireSyncClient<sysmem::BufferCollectionToken> display_token(std::move(token_dup_client));
   auto dup_res = token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
   if (dup_res.status() != ZX_OK) {
     printf("Could not duplicate token: %s\n", dup_res.error());
@@ -452,8 +453,8 @@ zx_status_t capture_setup() {
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  collection_ =
-      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(collection_client));
+  collection_ = std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(
+      std::move(collection_client));
   auto collection_resp = collection_->SetConstraints(true, constraints);
   if (collection_resp.status() != ZX_OK) {
     printf("Could not set buffer constraints: %s\n", collection_resp.error());

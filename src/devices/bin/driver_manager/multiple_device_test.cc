@@ -392,7 +392,8 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
   ASSERT_OK(devmgr::ComponentLifecycleServer::Create(
       coordinator_loop()->dispatcher(), &coordinator(), std::move(component_lifecycle_server),
       std::move(suspend_callback)));
-  fuchsia_process_lifecycle::Lifecycle::SyncClient client(std::move(component_lifecycle_client));
+  fidl::WireSyncClient<fuchsia_process_lifecycle::Lifecycle> client(
+      std::move(component_lifecycle_client));
   auto result = client.Stop();
   ASSERT_OK(result.status());
   event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);

@@ -60,10 +60,10 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t 
       bg_color_(bg_color),
       modifier_(modifier) {}
 
-Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t height,
+Image* Image::Create(fidl::WireSyncClient<fhd::Controller>* dc, uint32_t width, uint32_t height,
                      zx_pixel_format_t format, Pattern pattern, uint32_t fg_color,
                      uint32_t bg_color, uint64_t modifier) {
-  std::unique_ptr<sysmem::Allocator::SyncClient> allocator;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> allocator;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
@@ -71,10 +71,10 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
       fprintf(stderr, "Failed to connect to sysmem\n");
       return nullptr;
     }
-    allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(client));
+    allocator = std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(client));
   }
 
-  std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> token;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollectionToken>> token;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
@@ -82,7 +82,8 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
       fprintf(stderr, "Failed to allocate shared collection\n");
       return nullptr;
     }
-    token = std::make_unique<sysmem::BufferCollectionToken::SyncClient>(std::move(client));
+    token =
+        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollectionToken>>(std::move(client));
   }
   zx_handle_t display_token_handle;
   {
@@ -118,7 +119,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     return nullptr;
   }
 
-  std::unique_ptr<sysmem::BufferCollection::SyncClient> collection;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> collection;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
@@ -127,7 +128,8 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
       fprintf(stderr, "Failed to bind shared collection\n");
       return nullptr;
     }
-    collection = std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
+    collection =
+        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(client));
   }
 
   sysmem::wire::BufferCollectionConstraints constraints = {};
@@ -444,7 +446,7 @@ void Image::GetConfig(fhd::wire::ImageConfig* config_out) {
   }
 }
 
-bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
+bool Image::Import(fidl::WireSyncClient<fhd::Controller>* dc, image_import_t* info_out) {
   for (int i = 0; i < 2; i++) {
     static int event_id = fhd::wire::INVALID_DISP_ID + 1;
     zx::event e1, e2;

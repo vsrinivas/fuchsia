@@ -89,7 +89,8 @@ class Control : public ControlType,
   // Used by heaps. Removes a specific heap from the linked list.
   void RemoveHeap(Heap* heap);
 
-  fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient* address_space_child() const {
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>* address_space_child()
+      const {
     return address_space_child_.get();
   }
 
@@ -142,9 +143,9 @@ class Control : public ControlType,
 
   zx::event pipe_event_;
 
-  std::unique_ptr<fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient>
+  std::unique_ptr<fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>>
       address_space_child_;
-  std::unique_ptr<fuchsia_hardware_goldfish::SyncTimeline::SyncClient> sync_timeline_;
+  std::unique_ptr<fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncTimeline>> sync_timeline_;
 
   // TODO(fxbug.dev/3213): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);

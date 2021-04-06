@@ -123,7 +123,7 @@ struct CoordinatorConfig {
   // Event that is signaled by the kernel in OOM situation.
   zx::event oom_event;
   // Client for the Arguments service.
-  fuchsia_boot::Arguments::SyncClient* boot_args;
+  fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args;
   // Whether we require /system.
   bool require_system = false;
   // Whether we require ASan drivers.
@@ -254,7 +254,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
-  fuchsia_boot::Arguments::SyncClient* boot_args() const { return config_.boot_args; }
+  fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }
   SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }

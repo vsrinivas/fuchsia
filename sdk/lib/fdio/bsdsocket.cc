@@ -28,7 +28,7 @@ namespace fio = fuchsia_io;
 namespace fnet = fuchsia_net;
 namespace fsocket = fuchsia_posix_socket;
 
-zx::status<fsocket::Provider::SyncClient>& fdio_get_socket_provider() {
+zx::status<fidl::WireSyncClient<fsocket::Provider>>& fdio_get_socket_provider() {
   return get_client<fsocket::Provider>();
 }
 

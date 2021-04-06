@@ -19,7 +19,7 @@
 namespace amlogic_cpu {
 
 using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
-using CpuCtrlClient = fuchsia_cpuctrl::Device::SyncClient;
+using CpuCtrlClient = fidl::WireSyncClient<fuchsia_cpuctrl::Device>;
 using inspect::InspectTestHelper;
 
 #define MHZ(x) ((x)*1000000)
@@ -66,8 +66,7 @@ class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
       : dut_(ddk::ClockProtocolClient(pll_clock_.GetProto()),
              ddk::ClockProtocolClient(cpu_clock_.GetProto()),
              ddk::ClockProtocolClient(scaler_clock_.GetProto()),
-             ddk::PowerProtocolClient(power_.GetProto()), kTestOperatingPoints,
-             kTestCoreCount),
+             ddk::PowerProtocolClient(power_.GetProto()), kTestOperatingPoints, kTestCoreCount),
         operating_points_(kTestOperatingPoints) {}
 
   void SetUp() override {

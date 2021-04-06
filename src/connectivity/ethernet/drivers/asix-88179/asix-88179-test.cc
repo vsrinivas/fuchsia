@@ -120,7 +120,7 @@ class UsbAx88179Test : public zxtest::Test {
 
   void SetDeviceOnline() {
     fbl::unique_fd fd(openat(bus_.GetRootFd(), test_function_path_.c_str(), O_RDWR));
-    ax88179::Hooks::SyncClient test_client;
+    fidl::WireSyncClient<ax88179::Hooks> test_client;
     ASSERT_OK(fdio_get_service_handle(fd.release(),
                                       test_client.mutable_channel()->reset_and_get_address()));
 
@@ -158,7 +158,7 @@ class UsbAx88179Test : public zxtest::Test {
   USBVirtualBus bus_;
   fbl::String dev_path_;
   fbl::String test_function_path_;
-  ethernet::Device::SyncClient ethernet_client_;
+  fidl::WireSyncClient<ethernet::Device> ethernet_client_;
   zx::fifo rx_fifo_;
   zx::fifo tx_fifo_;
 };

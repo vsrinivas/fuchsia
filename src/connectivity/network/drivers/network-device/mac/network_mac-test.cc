@@ -43,7 +43,7 @@ class MacDeviceTest : public zxtest::Test {
     return impl_.CreateChild(&device_);
   }
 
-  fit::result<netdev::MacAddressing::SyncClient, zx_status_t> OpenInstance() {
+  fit::result<fidl::WireSyncClient<netdev::MacAddressing>, zx_status_t> OpenInstance() {
     auto endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
     if (endpoints.is_error()) {
       return fit::error(endpoints.status_value());

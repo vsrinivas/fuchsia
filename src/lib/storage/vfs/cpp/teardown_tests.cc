@@ -263,7 +263,7 @@ TEST(Teardown, TeardownSlowClone) {
 
   zx::channel client2, server2;
   ASSERT_OK(zx::channel::create(0, &client2, &server2));
-  fuchsia_io::Node::SyncClient fidl_client2(std::move(client2));
+  fidl::WireSyncClient<fuchsia_io::Node> fidl_client2(std::move(client2));
   ASSERT_OK(fidl_client2.Clone(0, std::move(server2)).status());
 
   // The connection is now:

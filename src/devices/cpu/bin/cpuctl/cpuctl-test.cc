@@ -167,8 +167,8 @@ void FakeCpuDevice::GetCurrentPerformanceState(
 class TestCpuPerformanceDomain : public CpuPerformanceDomain {
  public:
   // Permit Explicit Construction
-  TestCpuPerformanceDomain(cpuctrl::Device::SyncClient cpu_client,
-                           fuchsia_device::Controller::SyncClient device_client)
+  TestCpuPerformanceDomain(fidl::WireSyncClient<cpuctrl::Device> cpu_client,
+                           fidl::WireSyncClient<fuchsia_device::Controller> device_client)
       : CpuPerformanceDomain(std::move(cpu_client), std::move(device_client)) {}
 };
 
@@ -188,8 +188,8 @@ void PerformanceDomainTest::SetUp() {
   zx::channel cpu_client_channel(cpu_.GetMessengerChannel().get());
   zx::channel device_client_channel(cpu_.GetMessengerChannel().get());
 
-  cpuctrl::Device::SyncClient cpu_client(std::move(cpu_client_channel));
-  fuchsia_device::Controller::SyncClient device_client(std::move(device_client_channel));
+  fidl::WireSyncClient<cpuctrl::Device> cpu_client(std::move(cpu_client_channel));
+  fidl::WireSyncClient<fuchsia_device::Controller> device_client(std::move(device_client_channel));
 
   pd_ = std::make_unique<TestCpuPerformanceDomain>(std::move(cpu_client), std::move(device_client));
 }

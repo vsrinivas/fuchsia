@@ -38,8 +38,8 @@ namespace sysmem = fuchsia_sysmem;
 
 static zx_handle_t device_handle = ZX_HANDLE_INVALID;
 
-std::unique_ptr<fhd::Controller::SyncClient> dc_client;
-std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator;
+std::unique_ptr<fidl::WireSyncClient<fhd::Controller>> dc_client;
+std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator;
 
 static uint64_t display_id;
 static uint64_t layer_id;
@@ -123,12 +123,13 @@ class EndpointOrError {
 
 static zx_status_t create_buffer_collection(
     const char** err_msg_out,
-    std::unique_ptr<sysmem::BufferCollection::SyncClient>* collection_client) {
-  auto token = EndpointOrError<sysmem::BufferCollectionToken::SyncClient>::Create();
+    std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>>* collection_client) {
+  auto token = EndpointOrError<fidl::WireSyncClient<sysmem::BufferCollectionToken>>::Create();
   CHECK_RSP(token, "Failed to create collection channel");
   CHECKED_CALL(sysmem_allocator->AllocateSharedCollection(token.TakeServer()),
                "Failed to allocate shared collection");
-  auto display_token = EndpointOrError<sysmem::BufferCollectionToken::SyncClient>::Create();
+  auto display_token =
+      EndpointOrError<fidl::WireSyncClient<sysmem::BufferCollectionToken>>::Create();
   CHECK_RSP(display_token, "Failed to allocate display token");
   CHECKED_CALL(token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token.TakeServer()),
                "Failed to duplicate token");
@@ -155,7 +156,7 @@ static zx_status_t create_buffer_collection(
     return set_display_constraints->res;
   }
 
-  auto collection = EndpointOrError<sysmem::BufferCollection::SyncClient>::Create();
+  auto collection = EndpointOrError<fidl::WireSyncClient<sysmem::BufferCollection>>::Create();
   CHECK_RSP(collection, "Failed to create collection channel");
 
   CHECKED_CALL(sysmem_allocator->BindSharedCollection(std::move(*token->mutable_channel()),
@@ -191,7 +192,7 @@ static zx_status_t create_buffer_collection(
 
   collection->SetConstraints(true, constraints);
   *collection_client =
-      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(*collection));
+      std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(*collection));
   return ZX_OK;
 }
 
@@ -250,7 +251,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
 
 zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
                                  zx::channel dc_client_channel) {
-  dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel));
+  dc_client = std::make_unique<fidl::WireSyncClient<fhd::Controller>>(std::move(dc_client_channel));
   auto close_dc_handle = fit::defer([]() {
     zx_handle_close(device_handle);
     dc_client.reset();
@@ -270,7 +271,8 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
     return status;
   }
 
-  sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
+  sysmem_allocator =
+      std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(sysmem_client));
   sysmem_allocator->SetDebugClientInfo(
       fidl::StringView::FromExternal(fsl::GetCurrentProcessName() + "-framebuffer"),
       fsl::GetCurrentProcessKoid());
@@ -355,7 +357,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
 
   zx::vmo local_vmo;
 
-  std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_client;
+  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> collection_client;
 
   status = create_buffer_collection(err_msg_out, &collection_client);
   if (status != ZX_OK) {

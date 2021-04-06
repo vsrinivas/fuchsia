@@ -8,12 +8,12 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl-async-2/fidl_struct.h>
-#include <lib/ddk/hw/arch_ops.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
@@ -85,18 +85,18 @@ void WaitForSysmemAvailability() {
   ASSERT_OK(verify_connectivity(allocator_client));
 }
 
-#define IF_FAILURES_RETURN() \
-  do { \
+#define IF_FAILURES_RETURN()           \
+  do {                                 \
     if (CURRENT_TEST_HAS_FAILURES()) { \
-      return; \
-    } \
+      return;                          \
+    }                                  \
   } while (0)
 
-#define IF_FAILURES_RETURN_FALSE() \
-  do { \
+#define IF_FAILURES_RETURN_FALSE()     \
+  do {                                 \
     if (CURRENT_TEST_HAS_FAILURES()) { \
-      return false; \
-    } \
+      return false;                    \
+    }                                  \
   } while (0)
 
 zx_status_t connect_to_sysmem_driver(zx::channel* allocator2_client_param) {
@@ -1049,7 +1049,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
 
   SetDefaultCollectionName(collection_client);
 
-  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
   auto sync_result = collection.Sync();
   ASSERT_TRUE(sync_result.ok(), "");
 
@@ -1142,14 +1142,14 @@ TEST(Sysmem, AttachLifetimeTracking) {
   status =
       zx::channel::create(/*flags=*/0, &attached_collection_client, &attached_collection_server);
   ASSERT_OK(status, "");
-  fuchsia_sysmem::BufferCollection::SyncClient attached_collection(
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> attached_collection(
       std::move(attached_collection_client));
   fidl::ServerEnd<fuchsia_sysmem::BufferCollection> attached_collection_server_end(
       std::move(attached_collection_server));
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
   ASSERT_EQ(status, ZX_OK, "");
-  fuchsia_sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator(std::move(allocator_client));
   auto bind_result = allocator.BindSharedCollection(std::move(attached_token_client_end),
                                                     std::move(attached_collection_server_end));
   ASSERT_OK(bind_result.status());

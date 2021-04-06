@@ -101,11 +101,11 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     auto server = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
     ASSERT_NOT_NULL(server);
 
-    audio_fidl::Device::SyncClient client_wrap(tester_.FidlClient<audio_fidl::Device>());
+    fidl::WireSyncClient<audio_fidl::Device> client_wrap(tester_.FidlClient<audio_fidl::Device>());
     fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
     ASSERT_EQ(channel_wrap.status(), ZX_OK);
 
-    audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+    fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
@@ -142,7 +142,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
     fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
-    audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+    fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
@@ -206,11 +206,11 @@ TEST_F(AudioStreamInTest, Inspect) {
   auto server = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(tester_.FidlClient<audio_fidl::Device>());
+  fidl::WireSyncClient<audio_fidl::Device> client_wrap(tester_.FidlClient<audio_fidl::Device>());
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
 
-  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
 

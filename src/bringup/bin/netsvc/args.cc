@@ -48,7 +48,7 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
     return -1;
   }
 
-  fuchsia_boot::Arguments::SyncClient client(std::move(local));
+  fidl::WireSyncClient<fuchsia_boot::Arguments> client(std::move(local));
   auto string_resp = client.GetString(fidl::StringView{"netsvc.interface"});
   if (string_resp.ok()) {
     auto& value = string_resp->value;

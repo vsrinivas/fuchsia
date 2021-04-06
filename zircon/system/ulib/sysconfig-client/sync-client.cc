@@ -61,7 +61,7 @@ constexpr size_t kAstroPageSize = 4 * kKilobyte;
 constexpr zx_vm_option_t kVmoRw = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 
 zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
-                                   std::optional<skipblock::SkipBlock::SyncClient>* out) {
+                                   std::optional<fidl::WireSyncClient<skipblock::SkipBlock>>* out) {
   fbl::unique_fd dir_fd(openat(devfs_root.get(), "class/skip-block/", O_RDONLY));
   if (!dir_fd) {
     return ZX_ERR_IO;
@@ -91,7 +91,7 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
     if (status != ZX_OK) {
       return ZX_OK;
     }
-    skipblock::SkipBlock::SyncClient skip_block(std::move(local));
+    fidl::WireSyncClient<skipblock::SkipBlock> skip_block(std::move(local));
     auto result = skip_block.GetPartitionInfo();
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
@@ -104,7 +104,7 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
       return ZX_OK;
     }
 
-    auto* out = static_cast<std::optional<skipblock::SkipBlock::SyncClient>*>(cookie);
+    auto* out = static_cast<std::optional<fidl::WireSyncClient<skipblock::SkipBlock>>*>(cookie);
     *out = std::move(skip_block);
     return ZX_ERR_STOP;
   };
@@ -333,7 +333,7 @@ zx_status_t SyncClient::Create(const fbl::unique_fd& devfs_root, std::optional<S
     return status;
   }
 
-  std::optional<skipblock::SkipBlock::SyncClient> skip_block;
+  std::optional<fidl::WireSyncClient<skipblock::SkipBlock>> skip_block;
   status = FindSysconfigPartition(devfs_root, &skip_block);
   if (status != ZX_OK) {
     return status;

@@ -377,12 +377,12 @@ extern fdio_state_t __fdio_global_state;
 #define fdio_root_ns (__fdio_global_state.ns)
 
 template <class T>
-zx::status<typename T::SyncClient>& get_client() {
-  static zx::status<typename T::SyncClient> client;
+zx::status<typename fidl::WireSyncClient<T>>& get_client() {
+  static zx::status<typename fidl::WireSyncClient<T>> client;
   static std::once_flag once;
 
   std::call_once(once, [&]() {
-    client = [&]() -> zx::status<typename T::SyncClient> {
+    client = [&]() -> zx::status<typename fidl::WireSyncClient<T>> {
       auto endpoints = fidl::CreateEndpoints<T>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
@@ -398,6 +398,6 @@ zx::status<typename T::SyncClient>& get_client() {
   return client;
 }
 
-zx::status<fuchsia_posix_socket::Provider::SyncClient>& fdio_get_socket_provider();
+zx::status<fidl::WireSyncClient<fuchsia_posix_socket::Provider>>& fdio_get_socket_provider();
 
 #endif  // LIB_FDIO_INTERNAL_H_

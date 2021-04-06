@@ -21,7 +21,7 @@ namespace fuv = fuchsia_update_verify;
 
 class VerifierServiceTest : public BlobfsTest {
  protected:
-  fuv::BlobfsVerifier::SyncClient ConnectToHealthCheckService() {
+  fidl::WireSyncClient<fuv::BlobfsVerifier> ConnectToHealthCheckService() {
     auto endpoints = fidl::CreateEndpoints<fuv::BlobfsVerifier>();
     EXPECT_EQ(endpoints.status_value(), ZX_OK);
     auto [client_end, server_end] = *std::move(endpoints);
@@ -30,7 +30,7 @@ class VerifierServiceTest : public BlobfsTest {
     EXPECT_EQ(fdio_service_connect_at(fs().GetOutgoingDirectory()->get(), service_path.c_str(),
                                       server_end.TakeChannel().release()),
               ZX_OK);
-    return fuv::BlobfsVerifier::SyncClient(std::move(client_end));
+    return fidl::WireSyncClient<fuv::BlobfsVerifier>(std::move(client_end));
   }
 };
 

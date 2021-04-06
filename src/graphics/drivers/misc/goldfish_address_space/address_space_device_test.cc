@@ -282,7 +282,8 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   EXPECT_EQ(ctrl_regs->handle, kChildDriverHandle);
 
   // Test availability of the FIDL channel communication.
-  fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient client(std::move(child_client));
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver> client(
+      std::move(child_client));
 
   // Set up return status and offset on the mock PCI device
   // to accept AllocateBlock() calls.

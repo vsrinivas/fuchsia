@@ -242,7 +242,8 @@ InterpreterTestContext* InterpreterTest::GetContext(uint64_t context_id) {
 
 void InterpreterTest::SetUp() {
   auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
-  shell_ = std::make_unique<fuchsia_shell::Shell::SyncClient>(std::move(endpoints->client));
+  shell_ =
+      std::make_unique<fidl::WireSyncClient<fuchsia_shell::Shell>>(std::move(endpoints->client));
 
   // Reset context ids.
   last_context_id_ = 0;

@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/buttons/c/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -14,7 +15,6 @@
 
 #include <cstddef>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <zxtest/zxtest.h>
 
@@ -433,7 +433,7 @@ TEST(HidButtonsTest, GetStateTest) {
     zx::channel client_end, server_end;
     EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
     device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
-    Buttons::SyncClient client(std::move(client_end));
+    fidl::WireSyncClient<Buttons> client(std::move(client_end));
 
     // Reconfigure Polarity due to interrupt.
     device.GetGpio(1).ExpectRead(ZX_OK, 1);  // Read value.
@@ -483,7 +483,7 @@ TEST(HidButtonsTest, Notify1) {
     zx::channel client_end, server_end;
     EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
     device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
-    Buttons::SyncClient client(std::move(client_end));
+    fidl::WireSyncClient<Buttons> client(std::move(client_end));
     auto result1 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::MUTE));
     EXPECT_OK(result1.status());
 
@@ -624,7 +624,7 @@ TEST(HidButtonsTest, Notify2) {
     zx::channel client_end2, server_end2;
     EXPECT_OK(zx::channel::create(0, &client_end2, &server_end2));
     device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end2));
-    Buttons::SyncClient client2(std::move(client_end2));
+    fidl::WireSyncClient<Buttons> client2(std::move(client_end2));
     auto result2_1 = client2.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::MUTE));
     EXPECT_OK(result2_1.status());
 
@@ -633,7 +633,7 @@ TEST(HidButtonsTest, Notify2) {
       zx::channel client_end1, server_end1;
       EXPECT_OK(zx::channel::create(0, &client_end1, &server_end1));
       device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end1));
-      Buttons::SyncClient client1(std::move(client_end1));
+      fidl::WireSyncClient<Buttons> client1(std::move(client_end1));
       auto result1_1 = client1.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::MUTE));
       EXPECT_OK(result1_1.status());
 
@@ -982,7 +982,7 @@ TEST(HidButtonsTest, MicAndCamMute) {
   zx::channel client_end, server_end;
   EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
   device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
-  Buttons::SyncClient client(std::move(client_end));
+  fidl::WireSyncClient<Buttons> client(std::move(client_end));
   {
     uint8_t types = (1 << static_cast<uint8_t>(ButtonType::MUTE)) |
                     (1 << static_cast<uint8_t>(ButtonType::CAM_MUTE));

@@ -453,7 +453,7 @@ zx_status_t OtStackApp::SetDeviceSetupClientInDevmgr(const std::string& path) {
   }
 
   device_setup_client_ptr_ =
-      std::make_unique<fidl_spinel::DeviceSetup::SyncClient>(std::move(*client_end));
+      std::make_unique<fidl::WireSyncClient<fidl_spinel::DeviceSetup>>(std::move(*client_end));
   return ZX_OK;
 }
 
@@ -474,7 +474,7 @@ zx_status_t OtStackApp::SetDeviceSetupClientInIsolatedDevmgr(const std::string& 
   }
 
   device_setup_client_ptr_ =
-      std::make_unique<fidl_spinel::DeviceSetup::SyncClient>(std::move(*client_end));
+      std::make_unique<fidl::WireSyncClient<fidl_spinel::DeviceSetup>>(std::move(*client_end));
   return ZX_OK;
 }
 
@@ -509,7 +509,8 @@ zx_status_t OtStackApp::SetupOtRadioDev() {
   }
 
   device_channel_ = zx::unowned_channel(client_end.channel());
-  device_client_ptr_ = std::make_unique<fidl_spinel::Device::SyncClient>(std::move(client_end));
+  device_client_ptr_ =
+      std::make_unique<fidl::WireSyncClient<fidl_spinel::Device>>(std::move(client_end));
   connected_to_device_ = true;
 
   status = device_channel_->wait_async(port_, kPortRadioChannelRead,
@@ -561,7 +562,8 @@ void OtStackApp::EventThread() {
         ::fidl::Result result = HandleOneEvent(device_client_ptr_->client_end());
         if (!result.ok() || (handler_status_ != ZX_OK)) {
           FX_PLOGS(ERROR, result.ok() ? handler_status_ : result.status())
-              << "error calling fidl_spinel::Device::SyncClient::HandleEvents(), terminating event "
+              << "error calling fidl::WireSyncClient<fidl_spinel::Device>::HandleEvents(), "
+                 "terminating event "
                  "thread";
           DisconnectDevice();
           loop_.Shutdown();

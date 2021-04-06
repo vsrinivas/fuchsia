@@ -126,7 +126,7 @@ class Ft8201Test : public zxtest::Test {
 };
 
 TEST_F(Ft8201Test, GetDescriptor) {
-  fuchsia_input_report::InputDevice::SyncClient client(std::move(ddk_.FidlClient()));
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(std::move(ddk_.FidlClient()));
 
   auto response = client.GetDescriptor();
 
@@ -172,12 +172,12 @@ TEST_F(Ft8201Test, GetDescriptor) {
 }
 
 TEST_F(Ft8201Test, ReadReport) {
-  fuchsia_input_report::InputDevice::SyncClient client(std::move(ddk_.FidlClient()));
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(std::move(ddk_.FidlClient()));
 
   zx::channel reader_client, reader_server;
   ASSERT_OK(zx::channel::create(0, &reader_client, &reader_server));
   client.GetInputReportsReader(std::move(reader_server));
-  fuchsia_input_report::InputReportsReader::SyncClient reader(std::move(reader_client));
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader(std::move(reader_client));
   device_->WaitForNextReader();
 
   EXPECT_OK(gpio_interrupt_.trigger(0, zx::clock::get_monotonic()));

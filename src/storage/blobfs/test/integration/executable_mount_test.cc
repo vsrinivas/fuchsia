@@ -44,7 +44,7 @@ class ExecutableMountTest : public FdioTest {
         fdio_service_connect("/svc/fuchsia.kernel.VmexResource", remote.TakeChannel().release());
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to fuchsia.kernel.VmexResource: %u", status);
 
-    auto client = fuchsia_kernel::VmexResource::SyncClient{std::move(local)};
+    auto client = fidl::WireSyncClient<fuchsia_kernel::VmexResource>{std::move(local)};
     auto result = client.Get();
     ZX_ASSERT_MSG(result.ok(), "fuchsia.kernel.VmexResource.Get() failed: %u", result.status());
 

@@ -46,7 +46,7 @@ class Keyboard {
 
   // Have the keyboard start watching a given device.
   // |caller| represents the keyboard device.
-  zx_status_t Setup(fuchsia_input_report::InputDevice::SyncClient keyboard_client);
+  zx_status_t Setup(fidl::WireSyncClient<fuchsia_input_report::InputDevice> keyboard_client);
 
   // Process a given set of keys and send them to the handler.
   void ProcessInput(const fuchsia_input_report::wire::InputReport& report);
@@ -72,7 +72,7 @@ class Keyboard {
   keypress_handler_t handler_ = {};
 
   zx::duration repeat_interval_ = zx::duration::infinite();
-  std::optional<fuchsia_input_report::InputDevice::SyncClient> keyboard_client_;
+  std::optional<fidl::WireSyncClient<fuchsia_input_report::InputDevice>> keyboard_client_;
   fidl::Client<fuchsia_input_report::InputReportsReader> reader_client_;
 
   int modifiers_ = 0;

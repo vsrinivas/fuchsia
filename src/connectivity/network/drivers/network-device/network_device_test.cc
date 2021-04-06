@@ -68,7 +68,7 @@ class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
     return NetworkDevice::Create(nullptr, fake_ddk::kFakeParent);
   }
 
-  fit::result<netdev::Device::SyncClient, zx_status_t> ConnectNetDevice() {
+  fit::result<fidl::WireSyncClient<netdev::Device>, zx_status_t> ConnectNetDevice() {
     auto endpoints = fidl::CreateEndpoints<netdev::Device>();
     if (endpoints.is_error()) {
       return fit::error(endpoints.status_value());
@@ -84,7 +84,7 @@ class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
     return fit::ok(fidl::BindSyncClient(std::move(client_end)));
   }
 
-  fit::result<netdev::MacAddressing::SyncClient, zx_status_t> ConnectMac() {
+  fit::result<fidl::WireSyncClient<netdev::MacAddressing>, zx_status_t> ConnectMac() {
     auto endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
     if (endpoints.is_error()) {
       return fit::error(endpoints.status_value());

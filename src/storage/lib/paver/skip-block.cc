@@ -61,7 +61,7 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
 
   // Note: converting from |fuchsia.hardware.block.partition/Partition| to
   // |fuchsia.device/Controller| works because devfs connections compose |Controller|.
-  device::Controller::SyncClient block_client(
+  fidl::WireSyncClient<device::Controller> block_client(
       fidl::ClientEnd<device::Controller>(status.value().TakeChannel()));
 
   auto result = block_client.GetTopologicalPath();
@@ -116,7 +116,7 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
     }
   }
 
-  block::Ftl::SyncClient client(std::move(local));
+  fidl::WireSyncClient<block::Ftl> client(std::move(local));
   auto result2 = client.Format();
 
   return zx::make_status(result2.ok() ? result2.value().status : result2.status());

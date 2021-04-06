@@ -25,7 +25,7 @@ class SysInfo : public fuchsia_sysinfo::SysInfo::Interface {
   zx_status_t GetBoardRevision(uint32_t* board_revision);
   zx_status_t GetBootloaderVendor(std::string* bootloader_vendor);
   zx_status_t GetInterruptControllerInfo(fuchsia_sysinfo::wire::InterruptControllerInfo* info);
-  zx_status_t ConnectToPBus(fuchsia_sysinfo::SysInfo::SyncClient* client);
+  zx_status_t ConnectToPBus(fidl::WireSyncClient<fuchsia_sysinfo::SysInfo>* client);
 };
 }  // namespace sysinfo
 #endif  // SRC_BRINGUP_BIN_SYSINFO_SYSINFO_H_

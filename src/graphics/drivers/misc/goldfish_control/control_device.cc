@@ -216,7 +216,7 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   }
 
   address_space_child_ =
-      std::make_unique<fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient>(
+      std::make_unique<fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>>(
           std::move(address_space_child_client));
 
   return ZX_OK;
@@ -242,7 +242,7 @@ zx_status_t Control::InitSyncDeviceLocked() {
     return status;
   }
 
-  sync_timeline_ = std::make_unique<fuchsia_hardware_goldfish::SyncTimeline::SyncClient>(
+  sync_timeline_ = std::make_unique<fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncTimeline>>(
       std::move(timeline_client));
   return ZX_OK;
 }

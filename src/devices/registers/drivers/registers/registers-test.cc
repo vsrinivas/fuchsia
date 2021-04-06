@@ -46,12 +46,12 @@ class FakeRegistersDevice : public RegistersDevice<T> {
       return;
     }
     registers_.back()->RegistersConnect(std::move(server_end));
-    clients_.emplace(
-        config.bind_id(),
-        std::make_shared<fuchsia_hardware_registers::Device::SyncClient>(std::move(client_end)));
+    clients_.emplace(config.bind_id(),
+                     std::make_shared<fidl::WireSyncClient<fuchsia_hardware_registers::Device>>(
+                         std::move(client_end)));
   }
 
-  std::shared_ptr<fuchsia_hardware_registers::Device::SyncClient> GetClient(uint64_t id) {
+  std::shared_ptr<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> GetClient(uint64_t id) {
     return clients_[id];
   }
 
@@ -59,7 +59,8 @@ class FakeRegistersDevice : public RegistersDevice<T> {
 
  private:
   std::vector<std::unique_ptr<Register<T>>> registers_;
-  std::map<uint64_t, std::shared_ptr<fuchsia_hardware_registers::Device::SyncClient>> clients_;
+  std::map<uint64_t, std::shared_ptr<fidl::WireSyncClient<fuchsia_hardware_registers::Device>>>
+      clients_;
 };
 
 class RegistersDeviceTest : public zxtest::Test {
@@ -100,7 +101,8 @@ class RegistersDeviceTest : public zxtest::Test {
   std::vector<fbl::Array<ddk_mock::MockMmioReg>> regs_;
   std::vector<std::unique_ptr<ddk_mock::MockMmioRegRegion>> mock_mmio_;
 
-  std::map<uint64_t, std::unique_ptr<fuchsia_hardware_registers::Device::SyncClient>> clients_;
+  std::map<uint64_t, std::unique_ptr<fidl::WireSyncClient<fuchsia_hardware_registers::Device>>>
+      clients_;
 
   fidl::FidlAllocator<2048> allocator_;
 };

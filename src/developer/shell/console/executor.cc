@@ -18,7 +18,8 @@
 
 namespace shell::console {
 
-Executor::Executor(fuchsia_shell::Shell::SyncClient* client) : context_id_(0), client_(client) {}
+Executor::Executor(fidl::WireSyncClient<fuchsia_shell::Shell>* client)
+    : context_id_(0), client_(client) {}
 
 Executor::~Executor() = default;
 

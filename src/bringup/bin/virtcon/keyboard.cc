@@ -226,7 +226,8 @@ zx_status_t Keyboard::StartReading() {
     return result.status();
   }
 
-  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_input_report::InputReportsReader> {
+  class EventHandler
+      : public fidl::WireAsyncEventHandler<fuchsia_input_report::InputReportsReader> {
    public:
     explicit EventHandler(Keyboard* keyboard) : keyboard_(keyboard) {}
 
@@ -260,7 +261,8 @@ void Keyboard::InputReaderUnbound(fidl::UnbindInfo info) {
   }
 }
 
-zx_status_t Keyboard::Setup(fuchsia_input_report::InputDevice::SyncClient keyboard_client) {
+zx_status_t Keyboard::Setup(
+    fidl::WireSyncClient<fuchsia_input_report::InputDevice> keyboard_client) {
   keyboard_client_ = std::move(keyboard_client);
   // XXX - check for LEDS here.
 

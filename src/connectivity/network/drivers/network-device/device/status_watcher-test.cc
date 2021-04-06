@@ -113,7 +113,7 @@ class WatchClient {
   }
 
   fbl::Mutex lock_;
-  netdev::StatusWatcher::SyncClient channel_;
+  fidl::WireSyncClient<netdev::StatusWatcher> channel_;
   zx::event event_;
   std::thread thread_;
   std::queue<ObservedStatus> observed_status_ __TA_GUARDED(lock_);

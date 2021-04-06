@@ -42,7 +42,7 @@ class BlockWatcherPauser {
       : watcher_(fidl::BindSyncClient(std::move(chan))), valid_(false) {}
   zx::status<> Pause();
 
-  fuchsia_fshost::BlockWatcher::SyncClient watcher_;
+  fidl::WireSyncClient<fuchsia_fshost::BlockWatcher> watcher_;
   bool valid_;
 };
 

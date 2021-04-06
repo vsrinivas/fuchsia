@@ -72,11 +72,12 @@ class Paver : public PaverInterface {
 
   uint8_t* buffer() { return static_cast<uint8_t*>(buffer_mapper_.start()); }
 
-  zx_status_t WriteABImage(fuchsia_paver::DataSink::SyncClient data_sink,
+  zx_status_t WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> data_sink,
                            fuchsia_mem::wire::Buffer buffer);
 
-  zx_status_t OpenDataSink(fuchsia_mem::wire::Buffer buffer,
-                           std::optional<fuchsia_paver::DynamicDataSink::SyncClient>* data_sink);
+  zx_status_t OpenDataSink(
+      fuchsia_mem::wire::Buffer buffer,
+      std::optional<fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>>* data_sink);
   zx_status_t InitPartitionTables(fuchsia_mem::wire::Buffer buffer);
   zx_status_t WipePartitionTables(fuchsia_mem::wire::Buffer buffer);
 
@@ -107,7 +108,7 @@ class Paver : public PaverInterface {
   // File descriptor to dev.
   fbl::unique_fd devfs_root_;
 
-  std::optional<fuchsia_paver::Paver::SyncClient> paver_svc_;
+  std::optional<fidl::WireSyncClient<fuchsia_paver::Paver>> paver_svc_;
 
   fuchsia_paver::wire::Configuration configuration_;
   // Only meaningful when command == Command::kAsset.

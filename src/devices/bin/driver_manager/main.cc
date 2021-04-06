@@ -62,7 +62,7 @@ struct DriverManagerParams {
   std::vector<fbl::String> eager_fallback_drivers;
 };
 
-DriverManagerParams GetDriverManagerParams(fuchsia_boot::Arguments::SyncClient& client) {
+DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
   fuchsia_boot::wire::BoolPair bool_req[]{
       // TODO(bwb): remove this or figure out how to make it work
       {"devmgr.devhost.asan", false},
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  auto boot_args = fuchsia_boot::Arguments::SyncClient{std::move(local)};
+  auto boot_args = fidl::WireSyncClient<fuchsia_boot::Arguments>{std::move(local)};
   auto driver_manager_params = GetDriverManagerParams(boot_args);
   auto driver_manager_args = ParseDriverManagerArgs(argc, argv);
 

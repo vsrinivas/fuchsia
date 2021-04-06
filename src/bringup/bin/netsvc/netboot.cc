@@ -80,7 +80,7 @@ bool GetMexecResource(zx::resource* resource) {
   if (!ConnectToService(Resource::Name, local)) {
     return false;
   }
-  Resource::SyncClient client(std::move(local));
+  fidl::WireSyncClient<Resource> client(std::move(local));
   if (auto result = client.Get(); !result.ok()) {
     printf("failed to get root resource %s\n", result.status_string());
     return false;

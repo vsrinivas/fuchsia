@@ -395,9 +395,9 @@ class HandleCloseTest : public ::testing::Test {
     fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server), server_.get());
   }
 
-  test::HandleProvider::SyncClient TakeClient() {
+  fidl::WireSyncClient<test::HandleProvider> TakeClient() {
     EXPECT_TRUE(client_end_.is_valid());
-    return test::HandleProvider::SyncClient(std::move(client_end_));
+    return fidl::WireSyncClient<test::HandleProvider>(std::move(client_end_));
   }
 
  private:

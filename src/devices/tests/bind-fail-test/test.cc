@@ -32,7 +32,7 @@ TEST(BindFailTest, BindFail) {
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
     ASSERT_OK(fdio_get_service_handle(fd.release(), sys_chan.reset_and_get_address()));
   }
-  fuchsia_device::Controller::SyncClient sys_dev(std::move(sys_chan));
+  fidl::WireSyncClient<fuchsia_device::Controller> sys_dev(std::move(sys_chan));
 
   auto result = sys_dev.Bind(fidl::StringView{kDriver});
   ASSERT_OK(result.status());

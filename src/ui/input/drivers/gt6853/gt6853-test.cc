@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/ddk/metadata.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-i2c/fake-i2c.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -14,7 +15,6 @@
 #include <array>
 #include <vector>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
@@ -355,7 +355,7 @@ class Gt6853Test : public zxtest::Test {
 TEST_F(Gt6853Test, GetDescriptor) {
   ASSERT_OK(Init());
 
-  fuchsia_input_report::InputDevice::SyncClient client(std::move(ddk_.FidlClient()));
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(std::move(ddk_.FidlClient()));
 
   auto response = client.GetDescriptor();
 
@@ -398,12 +398,12 @@ TEST_F(Gt6853Test, GetDescriptor) {
 TEST_F(Gt6853Test, ReadReport) {
   ASSERT_OK(Init());
 
-  fuchsia_input_report::InputDevice::SyncClient client(std::move(ddk_.FidlClient()));
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(std::move(ddk_.FidlClient()));
 
   zx::channel reader_client, reader_server;
   ASSERT_OK(zx::channel::create(0, &reader_client, &reader_server));
   client.GetInputReportsReader(std::move(reader_server));
-  fuchsia_input_report::InputReportsReader::SyncClient reader(std::move(reader_client));
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader(std::move(reader_client));
   device_->WaitForNextReader();
 
   EXPECT_OK(gpio_interrupt_.trigger(0, zx::clock::get_monotonic()));

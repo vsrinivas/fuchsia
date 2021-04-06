@@ -41,12 +41,12 @@ class ScopedInterpreter {
   }
 
   // Returns a pointer to the SyncClient that is valid during the lifetime of this object.
-  fuchsia_shell::Shell::SyncClient* client() { return &client_; }
+  fidl::WireSyncClient<fuchsia_shell::Shell>* client() { return &client_; }
 
  private:
   async::Loop loop_;
   shell::interpreter::server::Server server_;
-  fuchsia_shell::Shell::SyncClient client_;
+  fidl::WireSyncClient<fuchsia_shell::Shell> client_;
 };
 
 }  // namespace shell::console

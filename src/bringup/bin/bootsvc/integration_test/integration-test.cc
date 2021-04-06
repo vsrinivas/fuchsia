@@ -67,7 +67,7 @@ uint32_t fd_get_flags(fbl::unique_fd fd) {
     return 0;
   }
 
-  fio::Node::SyncClient client(std::move(file_channel));
+  fidl::WireSyncClient<fio::Node> client(std::move(file_channel));
   auto result = client.NodeGetFlags();
   if (result.status() != ZX_OK) {
     return 0;

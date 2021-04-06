@@ -239,7 +239,7 @@ class EthernetInterface {
   uint32_t tx_depth() const { return tx_depth_; }
 
  private:
-  ethernet::Device::SyncClient ethernet_client_;
+  fidl::WireSyncClient<ethernet::Device> ethernet_client_;
   zx::fifo tx_fifo_;
   zx::fifo rx_fifo_;
   uint32_t tx_depth_;
