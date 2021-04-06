@@ -29,26 +29,27 @@ class AudioCoreHardwareTest : public TestFixture {
 
   // We'll use just one payload buffer here.
   static constexpr uint32_t kPayloadBufferId = 0;
-  static constexpr uint32_t kBufferDurationMsec = 1000;
+  static constexpr uint32_t kBufferDurationMsec = 500;
 
   static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
       fuchsia::media::AudioSampleFormat::FLOAT;
   static constexpr uint32_t kBytesPerSample = 4;
+  static constexpr int32_t kNumChannels = 2;
+  static constexpr int32_t kFrameRate = 48000;
 
   void SetUp() override;
-
-  bool WaitForCaptureDevice();
 
   void ConnectToAudioCore();
   void ConnectToAudioCapturer();
 
-  void ConnectToGainControl();
-  void SetGainsToUnity();
+  void WaitForCaptureDevice();
+  void FailOnDeviceAddRemoveDefaultEvent();
 
-  void GetDefaultCaptureFormat();
   void SetCapturerFormat();
-
   void MapMemoryForCapturer();
+
+  void ConnectToStreamGainControl();
+  void SetGainsToUnity();
 
   void OnPacketProduced(fuchsia::media::StreamPacket packet);
   void DisplayReceivedAudio();
@@ -60,10 +61,11 @@ class AudioCoreHardwareTest : public TestFixture {
   fuchsia::media::audio::GainControlPtr stream_gain_control_;
 
   std::unordered_set<uint64_t> capture_device_tokens_;
-  bool capture_device_is_default_ = false;
-
-  uint32_t channel_count_;
-  uint32_t frames_per_second_;
+  std::optional<uint64_t> default_capture_device_token() { return default_capture_device_token_; }
+  void set_default_capture_device_token(std::optional<uint64_t> token) {
+    default_capture_device_token_ = token;
+  }
+  static float ScaleToDb(float scale_val) { return std::log10(std::abs(scale_val)) * 20.0f; }
 
   fzl::VmoMapper payload_buffer_map_;
   float* payload_buffer_ = nullptr;
@@ -72,6 +74,9 @@ class AudioCoreHardwareTest : public TestFixture {
   uint32_t vmo_buffer_byte_count_;
 
   uint32_t received_payload_frames_ = 0;
+
+ private:
+  std::optional<uint64_t> default_capture_device_token_ = std::nullopt;
 };
 
 }  // namespace media::audio::test

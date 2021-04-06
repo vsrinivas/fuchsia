@@ -7,6 +7,9 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include <cmath>
+#include <optional>
+
 // TODO(fxbug.dev/49807): This test should automatically fail if underflows are detected. That
 // functionality should be ported from HermeticAudioTest to here.
 
@@ -24,20 +27,22 @@ void AudioCoreHardwareTest::SetUp() {
   TestFixture::SetUp();
 
   ConnectToAudioCore();
-  ASSERT_TRUE(WaitForCaptureDevice());
+  WaitForCaptureDevice();
   ConnectToAudioCapturer();
 
-  ConnectToGainControl();
+  SetCapturerFormat();
+  MapMemoryForCapturer();
+
+  FailOnDeviceAddRemoveDefaultEvent();
+  ASSERT_TRUE(default_capture_device_token().has_value());
+
+  ConnectToStreamGainControl();
   SetGainsToUnity();
 
-  GetDefaultCaptureFormat();
-  SetCapturerFormat();
-
-  MapMemoryForCapturer();
   RunLoopUntilIdle();
 }
 
-bool AudioCoreHardwareTest::WaitForCaptureDevice() {
+void AudioCoreHardwareTest::WaitForCaptureDevice() {
   audio_device_enumerator_ = sys::ServiceDirectory::CreateFromNamespace()
                                  ->Connect<fuchsia::media::AudioDeviceEnumerator>();
 
@@ -45,27 +50,34 @@ bool AudioCoreHardwareTest::WaitForCaptureDevice() {
 
   audio_device_enumerator_.events().OnDeviceAdded =
       ([this](fuchsia::media::AudioDeviceInfo device) {
+        ASSERT_NE(device.token_id, 0ul) << "Added device token cannot be 0";
+
         if (device.is_input) {
           capture_device_tokens_.insert(device.token_id);
           if (device.is_default) {
-            capture_device_is_default_ = true;
+            set_default_capture_device_token(device.token_id);
           }
         }
       });
 
   audio_device_enumerator_.events().OnDeviceRemoved = ([this](uint64_t token_id) {
+    ASSERT_NE(token_id, 0ul) << "Removed device token cannot be 0";
+
     size_t num_removed = capture_device_tokens_.erase(token_id);
-    FAIL() << "OnDeviceRemoved: " << num_removed << " input devices just departed";
+    if (default_capture_device_token() == token_id) {
+      ASSERT_GT(num_removed, 0ul) << "Removed device was our default, but not in our set";
+      set_default_capture_device_token(std::nullopt);
+    }
   });
 
   audio_device_enumerator_.events().OnDefaultDeviceChanged =
       ([this](uint64_t old_default_token, uint64_t new_default_token) {
-        if (capture_device_tokens_.count(new_default_token) > 0) {
-          capture_device_is_default_ = true;
-        } else if (capture_device_tokens_.count(old_default_token) > 0 && new_default_token == 0) {
-          capture_device_is_default_ = false;
-          FAIL() << "OnDefaultDeviceChanged: " << old_default_token
-                 << " is no longer default input (now 0)";
+        bool new_default_is_known = (capture_device_tokens_.count(new_default_token) > 0);
+        bool old_default_is_known = (capture_device_tokens_.count(old_default_token) > 0);
+        if (new_default_is_known) {
+          set_default_capture_device_token(new_default_token);
+        } else if (old_default_is_known && new_default_token == 0) {
+          set_default_capture_device_token(std::nullopt);
         }
       });
 
@@ -75,15 +87,30 @@ bool AudioCoreHardwareTest::WaitForCaptureDevice() {
           if (device.is_input) {
             capture_device_tokens_.insert(device.token_id);
             if (device.is_default) {
-              capture_device_is_default_ = true;
+              set_default_capture_device_token(device.token_id);
             }
           }
         }
       });
 
-  RunLoopWithTimeoutOrUntil([this]() { return ErrorOccurred() || capture_device_is_default_; },
-                            kDurationResponseExpected);
-  return capture_device_is_default_;
+  RunLoopWithTimeoutOrUntil(
+      [this]() { return ErrorOccurred() || default_capture_device_token().has_value(); },
+      kDurationResponseExpected);
+}
+
+void AudioCoreHardwareTest::FailOnDeviceAddRemoveDefaultEvent() {
+  audio_device_enumerator_.events().OnDeviceAdded =
+      ([](fuchsia::media::AudioDeviceInfo added_device) {
+        FAIL() << "Received OnDeviceAdded during testing";
+      });
+
+  audio_device_enumerator_.events().OnDeviceRemoved =
+      ([](uint64_t removed_token_id) { FAIL() << "Received OnDeviceRemoved during testing"; });
+
+  audio_device_enumerator_.events().OnDefaultDeviceChanged =
+      ([](uint64_t old_default_token_id, uint64_t new_default_token_id) {
+        FAIL() << "Received OnDefaultDeviceChanged during testing";
+      });
 }
 
 void AudioCoreHardwareTest::ConnectToAudioCore() {
@@ -94,14 +121,45 @@ void AudioCoreHardwareTest::ConnectToAudioCore() {
 void AudioCoreHardwareTest::ConnectToAudioCapturer() {
   ASSERT_TRUE(audio_core_.is_bound());
 
-  constexpr bool kNotLoopback = false;
-  audio_core_->CreateAudioCapturer(kNotLoopback, audio_capturer_.NewRequest());
+  audio_core_->CreateAudioCapturer(false /* NOT loopback */, audio_capturer_.NewRequest());
   AddErrorHandler(audio_capturer_, "AudioCapturer");
 
   audio_capturer_->SetUsage(kUsage);
 }
 
-void AudioCoreHardwareTest::ConnectToGainControl() {
+// Capture in a specific format, to minimize rate-conversion or rechannelization effects.
+void AudioCoreHardwareTest::SetCapturerFormat() {
+  audio_capturer_->SetPcmStreamType({
+      .sample_format = kSampleFormat,
+      .channels = kNumChannels,
+      .frames_per_second = kFrameRate,
+  });
+}
+
+// Create a shared payload buffer, map it into our process, duplicate the VMO handle and pass it to
+// the capturer as a payload buffer.
+void AudioCoreHardwareTest::MapMemoryForCapturer() {
+  vmo_buffer_frame_count_ = (kBufferDurationMsec * kFrameRate) / 1000;
+  vmo_buffer_byte_count_ = vmo_buffer_frame_count_ * kNumChannels * kBytesPerSample;
+
+  zx::vmo audio_capturer_vmo;
+  constexpr zx_vm_option_t kMapOptions = ZX_VM_PERM_READ;
+  constexpr zx_rights_t kVmoRights =
+      ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
+
+  zx_status_t status = payload_buffer_map_.CreateAndMap(vmo_buffer_byte_count_, kMapOptions,
+                                                        /* vmar_manager= */ nullptr,
+                                                        &audio_capturer_vmo, kVmoRights);
+  EXPECT_EQ(status, ZX_OK) << "VmoMapper::CreateAndMap failed: " << zx_status_get_string(status)
+                           << " (" << status << ")";
+
+  audio_capturer_->AddPayloadBuffer(kPayloadBufferId, std::move(audio_capturer_vmo));
+
+  payload_buffer_ = reinterpret_cast<float*>(payload_buffer_map_.start());
+  ASSERT_NE(payload_buffer_, nullptr);
+}
+
+void AudioCoreHardwareTest::ConnectToStreamGainControl() {
   ASSERT_TRUE(audio_capturer_.is_bound());
 
   audio_capturer_->BindGainControl(stream_gain_control_.NewRequest());
@@ -122,55 +180,9 @@ void AudioCoreHardwareTest::SetGainsToUnity() {
   }
 }
 
-// Fetch the initial media type and adjust channel_count_ and frames_per_second_ if needed.
-void AudioCoreHardwareTest::GetDefaultCaptureFormat() {
-  audio_capturer_->GetStreamType(
-      AddCallback("GetStreamType", [this](fuchsia::media::StreamType stream_type) {
-        ASSERT_TRUE(stream_type.medium_specific.is_audio()) << "Default format is not audio!";
-        const auto& format = stream_type.medium_specific.audio();
-
-        channel_count_ = format.channels;
-        frames_per_second_ = format.frames_per_second;
-      }));
-
-  ExpectCallback();
-
-  vmo_buffer_frame_count_ = (kBufferDurationMsec * frames_per_second_) / 1000;
-  vmo_buffer_byte_count_ = vmo_buffer_frame_count_ * channel_count_ * kBytesPerSample;
-}
-
-// Capture in the input's default format, to minimize rate-conversion or rechannelization effects.
-void AudioCoreHardwareTest::SetCapturerFormat() {
-  fuchsia::media::AudioStreamType audio_stream_type;
-  audio_stream_type.sample_format = kSampleFormat;
-  audio_stream_type.channels = channel_count_;
-  audio_stream_type.frames_per_second = frames_per_second_;
-
-  audio_capturer_->SetPcmStreamType(audio_stream_type);
-}
-
-// Create a shared payload buffer, map it into our process, duplicate the VMO handle and pass it to
-// the capturer as a payload buffer.
-void AudioCoreHardwareTest::MapMemoryForCapturer() {
-  zx::vmo audio_capturer_vmo;
-  constexpr zx_vm_option_t kMapOptions = ZX_VM_PERM_READ;
-  constexpr zx_rights_t kVmoRights =
-      ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
-
-  zx_status_t status = payload_buffer_map_.CreateAndMap(vmo_buffer_byte_count_, kMapOptions,
-                                                        /* vmar_manager= */ nullptr,
-                                                        &audio_capturer_vmo, kVmoRights);
-  EXPECT_EQ(status, ZX_OK) << "VmoMapper::CreateAndMap failed: " << zx_status_get_string(status)
-                           << " (" << status << ")";
-
-  audio_capturer_->AddPayloadBuffer(kPayloadBufferId, std::move(audio_capturer_vmo));
-
-  payload_buffer_ = reinterpret_cast<float*>(payload_buffer_map_.start());
-}
-
 // A packet containing captured audio data was just returned to us -- handle it.
 void AudioCoreHardwareTest::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
-  received_payload_frames_ = pkt.payload_size / (channel_count_ * kBytesPerSample);
+  received_payload_frames_ = pkt.payload_size / (kNumChannels * kBytesPerSample);
 
   EXPECT_EQ(pkt.payload_offset, 0u);
   EXPECT_EQ(pkt.payload_size, vmo_buffer_byte_count_);
@@ -178,9 +190,7 @@ void AudioCoreHardwareTest::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
 
 // Used when debugging repeatable test failures
 void AudioCoreHardwareTest::DisplayReceivedAudio() {
-  ASSERT_NE(payload_buffer_, nullptr);
-
-  for (auto idx = 0u; idx < received_payload_frames_ * channel_count_; ++idx) {
+  for (auto idx = 0u; idx < received_payload_frames_ * kNumChannels; ++idx) {
     if (idx % 16 == 0) {
       printf("\n[%3x]", idx);
     }
@@ -199,9 +209,8 @@ void AudioCoreHardwareTest::DisplayReceivedAudio() {
 // To validate the hardware initialization and our input pipeline (at a VERY coarse level), we
 // record a buffer from the live audio input, checking that we receive at least 1 non-'0.0' value.
 //
-// Note that we do this at the audio input device's native (default) frame_rate and channel_count,
-// to minimize any loss in transparency from frame-rate-conversion or rechannelization.
-TEST_F(AudioCoreHardwareTest, ZeroesInLiveCapture) {
+// We use a standard format frame_rate, to minimize frame-rate-conversion or rechannelization.
+TEST_F(AudioCoreHardwareTest, AnalogNoiseDetectable) {
   const uint32_t payload_offset = 0u;
 
   audio_capturer_->CaptureAt(kPayloadBufferId, payload_offset, vmo_buffer_frame_count_,
@@ -210,20 +219,57 @@ TEST_F(AudioCoreHardwareTest, ZeroesInLiveCapture) {
                              }));
   // Wait for the capture buffer to be returned.
   ExpectCallback();
+  ASSERT_GT(received_payload_frames_, 0u) << "No data frames captured";
 
-  bool found_nonzero_value = false;
-
-  ASSERT_NE(payload_buffer_, nullptr);
-  for (auto idx = 0u; idx < received_payload_frames_ * channel_count_; ++idx) {
-    if (payload_buffer_[idx] != 0.0f) {
-      found_nonzero_value = true;
-      break;
-    }
+  float sum_squares = 0.0f;
+  for (auto idx = 0u; idx < received_payload_frames_ * kNumChannels; ++idx) {
+    sum_squares += (payload_buffer_[idx] * payload_buffer_[idx]);
   }
+  ASSERT_GT(sum_squares, 0.0f) << "Captured signal is all zeroes. "
+                               << "Things to check: Is Mic-Mute switch on? "
+                               << "Did audio driver set input HW sensitivity too low? "
+                               << "Is this a digital input? "
+                               << "Is VirtualAudioDevice the default input?";
 
-  EXPECT_TRUE(found_nonzero_value) << "Mic mute? HW sensitivity too low? Digital input? VAD?";
+  float rms = std::sqrt(sum_squares / received_payload_frames_);
+  FX_LOGS(INFO) << "Across " << received_payload_frames_ << " frames, we measured " << std::fixed
+                << std::setprecision(2) << ScaleToDb(rms) << " dB RMS of ambient noise";
 }
 
-// TODO(mpuryear): add test case to detect DC offset, using variance from the average value.
+TEST_F(AudioCoreHardwareTest, MinimalDcOffset) {
+  const uint32_t payload_offset = 0u;
+
+  audio_capturer_->CaptureAt(kPayloadBufferId, payload_offset, vmo_buffer_frame_count_,
+                             AddCallback("CaptureAt", [this](fuchsia::media::StreamPacket packet) {
+                               OnPacketProduced(packet);
+                             }));
+  ExpectCallback();
+  ASSERT_GT(received_payload_frames_, 0u) << "No data frames captured";
+
+  float sum = 0.0f;
+  bool nonzero_sample_found = false;
+  for (auto idx = 0u; idx < received_payload_frames_ * kNumChannels; ++idx) {
+    sum += payload_buffer_[idx];
+    nonzero_sample_found = nonzero_sample_found || (payload_buffer_[idx] != 0.0f);
+  }
+  if (!nonzero_sample_found) {
+    GTEST_SKIP() << "Captured signal is all zeroes. DC offset cannot be measured";
+  }
+
+  float mean = sum / received_payload_frames_;
+  float sum_square_diffs = 0.0;
+  for (auto idx = 0u; idx < received_payload_frames_ * kNumChannels; ++idx) {
+    float diff = payload_buffer_[idx] - mean;
+    sum_square_diffs += (diff * diff);
+  }
+  EXPECT_GT(sum_square_diffs, 0.0f) << "Captured signal is purely constant";
+
+  float std_dev = std::sqrt(sum_square_diffs / received_payload_frames_);
+  EXPECT_TRUE(std_dev > std::abs(mean))
+      << "This device has a detectable " << (mean > 0.0f ? "positive" : "negative")
+      << " DC Offset. Standard deviation (" << std::fixed << std::setprecision(7) << std_dev
+      << ") should exceed the absolute mean (" << mean << ", approx " << std::setprecision(2)
+      << ScaleToDb(std::abs(mean)) << " dB)";
+}
 
 }  // namespace media::audio::test
