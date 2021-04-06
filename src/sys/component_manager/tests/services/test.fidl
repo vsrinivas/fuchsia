@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test.services;
+
+/// A simple Service that reports the name of its instance.
+service Service {
+    InstanceReporter instance_reporter;
+};
+
+/// Reports the name of its encapsulating Service's instance.
+protocol InstanceReporter {
+    ReportInstance() -> (string:MAX instance);
+};

@@ -1,0 +1,95 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+group("services") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":services-integration-tests" ]
+}
+
+fidl("fuchsia.test.services") {
+  sources = [ "test.fidl" ]
+}
+
+rustc_test("services-integration-tests-bin") {
+  deps = [
+    ":fuchsia.test.services-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/sys/lib/cm_rust",
+    "//src/sys/lib/fuchsia-component-test",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+  sources = [ "src/integration_test.rs" ]
+  source_root = "src/integration_test.rs"
+}
+
+rustc_binary("instance-bin") {
+  testonly = true
+  deps = [
+    ":fuchsia.test.services-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+  sources = [ "src/instance.rs" ]
+  source_root = "src/instance.rs"
+}
+
+fuchsia_component("integration-tests-cmp") {
+  testonly = true
+  component_name = "integration-tests"
+  manifest = "meta/integration-tests.cml"
+  unstable_features = [ "services" ]
+  deps = [ ":services-integration-tests-bin" ]
+}
+
+fuchsia_component("collection-cmp") {
+  testonly = true
+  component_name = "collection"
+  manifest = "meta/collection.cml"
+  unstable_features = [ "services" ]
+}
+
+fuchsia_component("instance-a-cmp") {
+  testonly = true
+  component_name = "instance-a"
+  manifest = "meta/instance-a.cml"
+  unstable_features = [ "services" ]
+  deps = [ ":instance-bin" ]
+}
+
+fuchsia_component("instance-b-cmp") {
+  testonly = true
+  component_name = "instance-b"
+  manifest = "meta/instance-b.cml"
+  unstable_features = [ "services" ]
+  deps = [ ":instance-bin" ]
+}
+
+# Run with `fx test services-integration-tests`.
+fuchsia_test_package("services-integration-tests") {
+  test_components = [ ":integration-tests-cmp" ]
+  deps = [
+    ":collection-cmp",
+    ":instance-a-cmp",
+    ":instance-b-cmp",
+  ]
+}
