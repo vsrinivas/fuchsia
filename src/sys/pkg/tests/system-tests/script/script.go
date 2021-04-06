@@ -32,11 +32,7 @@ func RunScript(
 		return nil
 	}
 
-	// It's possible the script could reboot the device, which means we
-	// need to reconnect to sl4f. So register a disconnection listener so
-	// we know if we disconnect.
-	ch := make(chan struct{})
-	device.RegisterDisconnectListener(ch)
+	ch := device.DisconnectionListener()
 
 	logger.Debugf(ctx, "running script: %s", script)
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", script)

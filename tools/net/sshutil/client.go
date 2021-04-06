@@ -63,14 +63,10 @@ func (c *Client) Close() {
 	}
 }
 
-// RegisterDisconnectListener adds a waiter that gets notified when the ssh
-// client is disconnected.
-func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
-	c.mu.Lock()
-	conn := c.conn
-	c.mu.Unlock()
-
-	conn.RegisterDisconnectListener(ch)
+// DisconnectionListener returns a channel that is closed when the client is
+// disconnected.
+func (c *Client) DisconnectionListener() <-chan struct{} {
+	return c.conn.DisconnectionListener()
 }
 
 // Reconnect will disconnect and then reconnect the client, using the client's

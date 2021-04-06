@@ -37,15 +37,12 @@ const (
 
 // Conn is a wrapper around ssh that supports keepalive and auto-reconnection.
 type Conn struct {
+	mu sync.Mutex
 	*ssh.Client
 
 	addr         net.Addr
 	config       *ssh.ClientConfig
 	shuttingDown chan struct{}
-
-	// This mutex protects the following fields
-	mu                     sync.Mutex
-	disconnectionListeners []chan struct{}
 }
 
 // newConn creates a new ssh client to the address and launches a goroutine to
@@ -294,19 +291,20 @@ func (c *Conn) Close() {
 	default:
 		close(c.shuttingDown)
 	}
-	c.disconnect()
+	c.mu.Lock()
+	client := c.Client
+	c.Client = nil
+	c.mu.Unlock()
+
+	if client != nil {
+		client.Close()
+	}
 }
 
-// RegisterDisconnectListener adds a waiter that gets notified when the ssh
-// client is disconnected.
-func (c *Conn) RegisterDisconnectListener(ch chan struct{}) {
-	c.mu.Lock()
-	if c.Client == nil {
-		close(ch)
-	} else {
-		c.disconnectionListeners = append(c.disconnectionListeners, ch)
-	}
-	c.mu.Unlock()
+// DisconnectionListener returns a channel that is closed when the client is
+// disconnected.
+func (c *Conn) DisconnectionListener() <-chan struct{} {
+	return c.shuttingDown
 }
 
 // NewSFTPClient returns an SFTP client that uses the currently underlying
@@ -319,22 +317,6 @@ func (c *Conn) NewSFTPClient() (*sftp.Client, error) {
 		return nil, errors.New("ssh connection is closed, cannot create new SFTP client")
 	}
 	return sftp.NewClient(c.Client)
-}
-
-// disconnect from ssh, and notify anyone waiting for disconnection.
-func (c *Conn) disconnect() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.Client != nil {
-		c.Client.Close()
-		c.Client = nil
-	}
-
-	for _, listener := range c.disconnectionListeners {
-		close(listener)
-	}
-	c.disconnectionListeners = []chan struct{}{}
 }
 
 // Send periodic keepalives. If we don't do this, then we might not observe
@@ -383,7 +365,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 		select {
 		case <-c.shuttingDown:
 			// Ignore the keepalive result if we are shutting down.
-			c.disconnect()
+			c.Close()
 
 		case err := <-ch:
 			// disconnect if we hit an error sending a keepalive.
@@ -401,14 +383,14 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 						err,
 					)
 				}
-				c.disconnect()
+				c.Close()
 				return
 			}
 
 		case <-timeout():
 			timeoutDuration := time.Since(sendTime)
 			logger.Debugf(ctx, "ssh keepalive timed out after %.3fs, disconnecting", timeoutDuration.Seconds())
-			c.disconnect()
+			c.Close()
 			return
 		}
 	}

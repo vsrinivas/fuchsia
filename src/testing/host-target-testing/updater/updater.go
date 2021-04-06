@@ -31,7 +31,7 @@ const (
 
 type client interface {
 	ExpectReboot(ctx context.Context, f func() error) error
-	RegisterDisconnectListener(ch chan struct{})
+	DisconnectionListener() <-chan struct{}
 	ServePackageRepository(
 		ctx context.Context,
 		repo *packages.Repository,
@@ -84,8 +84,7 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 		}
 		defer server.Shutdown(ctx)
 
-		ch := make(chan struct{})
-		c.RegisterDisconnectListener(ch)
+		ch := c.DisconnectionListener()
 
 		cmd := []string{
 			"/bin/update",

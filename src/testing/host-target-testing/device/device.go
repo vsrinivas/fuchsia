@@ -147,10 +147,10 @@ func (c *Client) Run(ctx context.Context, command []string, stdout io.Writer, st
 	return c.sshClient.Run(ctx, command, stdout, stderr)
 }
 
-// RegisterDisconnectListener adds a waiter that gets notified when the ssh and
-// shell is disconnected.
-func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
-	c.sshClient.RegisterDisconnectListener(ch)
+// DisconnectionListener returns a channel that is closed when the client is
+// disconnected.
+func (c *Client) DisconnectionListener() <-chan struct{} {
+	return c.sshClient.DisconnectionListener()
 }
 
 func (c *Client) GetSSHConnection(ctx context.Context) (string, error) {
@@ -224,12 +224,9 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 }
 
 func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
-	ch := make(chan struct{})
-	c.RegisterDisconnectListener(ch)
+	ch := c.DisconnectionListener()
 
 	if err := f(); err != nil {
-		// It's okay if we leak the disconnect listener, it'll get
-		// cleaned up next time the device disconnects.
 		return err
 	}
 
@@ -287,14 +284,9 @@ func (c *Client) ExpectReboot(ctx context.Context, f func() error) error {
 		return fmt.Errorf("reboot check file has wrong value: expected %q, got %q", bootID, actual)
 	}
 
-	// We are finally ready to run the closure. Setup a disconnection listener,
-	// then execute the closure.
-	ch := make(chan struct{})
-	c.RegisterDisconnectListener(ch)
+	ch := c.DisconnectionListener()
 
 	if err := f(); err != nil {
-		// It's okay if we leak the disconnect listener, it'll get
-		// cleaned up next time the device disconnects.
 		return err
 	}
 

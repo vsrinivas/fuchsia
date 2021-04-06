@@ -48,7 +48,8 @@ func setUpConn(
 	return conn, server
 }
 
-func assertChannelClosed(t *testing.T, ch chan struct{}, errorMessage string) {
+func assertChannelClosed(t *testing.T, ch <-chan struct{}, errorMessage string) {
+	t.Helper()
 	select {
 	case <-ch:
 	case <-time.After(testTimeout):
@@ -88,9 +89,6 @@ func TestKeepalive(t *testing.T) {
 			req.Reply(true, []byte{})
 		})
 
-		disconnects := make(chan struct{})
-		conn.RegisterDisconnectListener(disconnects)
-
 		// Sending on this channel triggers the timeout handling mechanism for
 		// the next keepalive ping.
 		keepaliveTimeouts := make(chan time.Time, 1)
@@ -103,16 +101,13 @@ func TestKeepalive(t *testing.T) {
 
 		keepaliveTicks <- time.Now()
 
-		assertChannelClosed(t, disconnects, "keepalive failure should have disconnected the conn")
+		assertChannelClosed(t, conn.DisconnectionListener(), "keepalive failure should have disconnected the conn")
 	})
 
 	t.Run("disconnects conn if keepalive fails", func(t *testing.T) {
 		conn, server := setUpConn(ctx, t, nil, func(req *ssh.Request) {
 			req.Reply(true, []byte{})
 		})
-
-		disconnects := make(chan struct{})
-		conn.RegisterDisconnectListener(disconnects)
 
 		// The first keepalive request should fail immediately if the server is
 		// stopped.
@@ -127,7 +122,7 @@ func TestKeepalive(t *testing.T) {
 
 		keepaliveTicks <- time.Now()
 
-		assertChannelClosed(t, disconnects, "a keepalive failure didn't disconnect the conn")
+		assertChannelClosed(t, conn.DisconnectionListener(), "a keepalive failure didn't disconnect the conn")
 		assertChannelClosed(t, keepaliveComplete, "a keepalive failure didn't terminate the keepalive goroutine")
 	})
 
@@ -142,12 +137,9 @@ func TestKeepalive(t *testing.T) {
 			close(keepaliveComplete)
 		}()
 
-		disconnects := make(chan struct{})
-		conn.RegisterDisconnectListener(disconnects)
-
 		conn.Close()
 
-		assertChannelClosed(t, disconnects, "conn.Close() didn't disconnect the conn")
+		assertChannelClosed(t, conn.DisconnectionListener(), "conn.Close() didn't disconnect the conn")
 		assertChannelClosed(t, keepaliveComplete, "conn.Close() didn't terminate the keepalive goroutine")
 	})
 }

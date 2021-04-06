@@ -82,12 +82,9 @@ func TestReconnect(t *testing.T) {
 			t.Errorf("expected stderr to be \"1\", not %q", stdout.String())
 		}
 
-		disconnects := make(chan struct{})
-		client.RegisterDisconnectListener(disconnects)
-
 		client.Close()
 
-		assertChannelClosed(t, disconnects, "close should have disconnected the client")
+		assertChannelClosed(t, client.DisconnectionListener(), "close should have disconnected the client")
 
 		if err := client.Reconnect(ctx); err != nil {
 			t.Errorf("failed to reconnect: %v", err)
