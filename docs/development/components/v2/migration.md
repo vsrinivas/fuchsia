@@ -52,6 +52,7 @@ Take advantage of this when writing your CML file!
     extension, with the following contents:
 
     ```json5
+    // fonts.cml
     {
         include: [
             // Enable system logging
@@ -104,9 +105,12 @@ be explicitly specified in CML.
 ```json5
 // fonts.cmx
 {
-    "program": {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    {{ '<strong>' }}"program": {
         "binary": "bin/font_provider"
-    }
+    },{{ '</strong>' }}
     ...
 }
 ```
@@ -114,10 +118,14 @@ be explicitly specified in CML.
 ```json5
 // fonts.cml
 {
-    program: {
+    include: [
+        // Enable system logging
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    {{ '<strong>' }}program: {
         runner: "elf",
         binary: "bin/font_provider",
-    }
+    },{{ '</strong>' }}
 }
 ```
 
@@ -129,16 +137,19 @@ approximate equivalent of the [`services`][cmx-services] list in CMX.
 ```json5
 // fonts.cmx
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
-        "binary": "bin/app"
-    }
-    "sandbox": {
+        "binary": "bin/font_provider"
+    },
+    {{ '<strong>' }}"sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.pkg.FontResolver"
         ]
         ...
-    }
+    }{{ '</strong>' }}
 }
 ```
 
@@ -156,13 +167,13 @@ corresponding service `protocol`.
       runner: "elf",
       binary: "bin/font_provider",
     },
-    use: [
+    {{ '<strong>' }}use: [
         {
             protocol: [
                 "fuchsia.pkg.FontResolver",
             ],
         },
-    ],
+    ],{{ '</strong>' }}
 }
 ```
 
@@ -207,11 +218,11 @@ that apply to every product configuration.
           runner: "elf",
           binary: "bin/font_provider",
         },
-        capabilities: [
+        {{ '<strong>' }}capabilities: [
             {
                 protocol: [ "fuchsia.fonts.Provider" ],
             },
-        ],
+        ],{{ '</strong>' }}
         use: [
             {
                 protocol: [
@@ -219,12 +230,12 @@ that apply to every product configuration.
                 ],
             },
         ],
-        expose: [
+        {{ '<strong>' }}expose: [
             {
                 protocol: "fuchsia.fonts.Provider",
                 from: "self",
             },
-        ],
+        ],{{ '</strong>' }}
     }
     ```
 
@@ -285,6 +296,9 @@ Consider the following example test component:
 ```json5
 // fonts_test.cmx
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/font_test"
     }
@@ -989,42 +1003,23 @@ to many components.
 
 ### Resolvers
 
-If your component is not part of the `base` package set you must route the
-`universe` resolver to it. You can check if your package is in the `base` set.
+If your component is not part of the `base` package set for your product,
+you must route the `universe` resolver to it. Resolvers are routed to components
+using environments, and `core.cml` has a shared environment named
+`universe-resolver-env` for components outside of `base`.
+
+Use the `list-packages` command to report the package sets where your component
+package is included.
 
 ```posix-terminal
-fx list-packages --base
+fx list-packages --verbose {{ '<var label="package name">my-package</var>' }}
 ```
 
-Note: You can use `--cache` and `--universe` to inspect what is in the `cache`
-and `universe` sets, respectively.
+If the package is not listed with the `base` tag, follow the remaining
+instructions in this section.
 
-Resolvers are routed to components via environments. First define the
-environment in the `environments` section.
-
-```json5
-// core.cml
-{
-  environments: [
-    ...
-    {
-      name: "my_component_env",
-      // inherits things from your parent's realm, almost always the right thing
-      extends: "realm",
-      resolvers: [
-        {
-          resolver: "universe-resolver",
-          scheme: "fuchsia-pkg",
-          // "#universe-resolver" is a child of core
-          from: "#universe-resolver",
-        },
-      ],
-    },
-  ]
-}
-```
-
-Then assign the `environment` to your component.
+When [adding your component](#add-component-to-topology), assign the shared
+`universe-resolver-env` as your component's `environment`.
 
 ```json5
 // core.cml
@@ -1034,7 +1029,7 @@ Then assign the `environment` to your component.
     {
       name: "my_component",
       url: "fuchsia-pkg://fuchsia.com/my-pkg#meta/my_component.cm",
-      environment: "#my_component_env",
+      {{ '<strong>' }}environment: "#universe-resolver-env",{{ '</strong>' }}
     },
   ],
 }
@@ -1124,11 +1119,11 @@ parent realm.
     ],
     offer: [
         ...
-        {
+        {{ '<strong>' }}{
             storage: "{{ '<var label="storage">data</var>' }}",
             from: "self",
             to: [ "#my_component" ],
-        },
+        },{{ '</strong>' }}
     ]
 }
 ```
@@ -1202,11 +1197,11 @@ the following to route storage access to your test driver from the test root:
     ],
     offer: [
         ...
-        {
+        {{ '<strong>' }}{
             storage: "{{ '<var label="storage">data</var>' }}",
             from: "parent",
             to: [ "#test_driver" ],
-        },
+        },{{ '</strong>' }}
     ],
 }
 ```
@@ -1237,13 +1232,14 @@ the following to your CML file:
 ```json5
 // my_component.cml
 {
-  use: [
-      ...
-      {
-          directory: "{{ '<var label="directory">config-ssl</var>' }}",
-          rights: [ "r*" ],
-          path: "{{ '<var label="directory path">/config/ssl</var>' }}",
-      },
+    use: [
+        ...
+        {
+            directory: "{{ '<var label="directory">config-ssl</var>' }}",
+            rights: [ "r*" ],
+            path: "{{ '<var label="directory path">/config/ssl</var>' }}",
+        },
+    ],
 }
 ```
 
@@ -1267,12 +1263,12 @@ the directory capabilities to your component.
         },
     ],
     offer: [
-        {
+        ...
+        {{ '<strong>' }}{
             directory: "{{ '<var label="directory">config-ssl</var>' }}",
             from: "parent",
             to: [ "#my_component" ],
-        },
-        ...
+        },{{ '</strong>' }}
     ],
 }
 ```
@@ -1308,11 +1304,11 @@ the following to route directory access to your test driver from the test root:
     ],
     offer: [
         ...
-        {
+        {{ '<strong>' }}{
             directory: "{{ '<var label="directory">config-ssl</var>' }}",
             from: "parent",
             to: [ "#test_driver" ],
-        },
+        },{{ '</strong>' }}
     ],
 }
 ```
@@ -1341,13 +1337,14 @@ the following to your CML file:
 ```json5
 // my_component.cml
 {
-  use: [
-      ...
-      {
-          directory: "config-data",
-          rights: [ "r*" ],
-          path: "/config/data",
-      },
+    use: [
+        ...
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
 }
 ```
 #### Route directory from the parent realm
@@ -1366,13 +1363,13 @@ the directory capability with the appropriate subdirectory to your component.
         },
     ],
     offer: [
-        {
+        ...
+        {{ '<strong>' }}{
             directory: "config-data",
             from: "parent",
             to: [ "#my_component" ],
             subdir: "{{ '<var label="package name">my-package</var>' }}",
-        },
-        ...
+        },{{ '</strong>' }}
     ],
 }
 ```
@@ -1399,12 +1396,12 @@ the following to route directory access to your test driver from the test root:
     ],
     offer: [
         ...
-        {
+        {{ '<strong>' }}{
             directory: "config-data",
             from: "parent",
             to: [ "#test_driver" ],
             subdir: "{{ '<var label="package name">my-package</var>' }}",
-        },
+        },{{ '</strong>' }}
     ],
 }
 ```
@@ -1472,14 +1469,14 @@ parent realm.
     ],
     offer: [
         ...
-        {
+        {{ '<strong>' }}{
             directory: "dev",
             from: "parent",
             as: "{{ '<var label="device">dev-input-report</var>' }}",
             to: [ "#my_component" ],
             subdir: "{{ '<var label="device subpath">class/input-report</var>' }}",
-        },
-    ]
+        },{{ '</strong>' }}
+    ],
 }
 ```
 
@@ -1516,7 +1513,7 @@ your test driver from the test root:
         },
     ],
     offer: [
-        {
+        {{ '<strong>' }}{
             protocol: "fuchsia.sys2.EventSource",
             from: "parent",
             to: [ "#test_driver" ],
@@ -1525,7 +1522,7 @@ your test driver from the test root:
             event: [ "{{ '<var label="event name">started</var>' }}" ],
             from: "framework",
             to: [ "#test_driver" ],
-        },
+        },{{ '</strong>' }}
     ],
 }
 ```
@@ -1550,7 +1547,7 @@ In your test driver, consume the events routed by the test root:
             from: "parent",
             modes: [ "async" ],
         },
-    ]
+    ],
 }
 ```
 
