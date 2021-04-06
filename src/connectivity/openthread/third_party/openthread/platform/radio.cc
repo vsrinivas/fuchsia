@@ -48,14 +48,9 @@ extern "C" void otPlatRadioSetPromiscuous(otInstance *a_instance, bool a_enable)
 
 extern "C" void platformRadioInit(const otPlatformConfig *a_platform_config) {
   SuccessOrDie(sRadioSpinel.GetSpinelInterface().Init(a_platform_config));
-#ifdef OPENTHREAD_LIB_POST_UPDATE_20210324
   sRadioSpinel.Init(a_platform_config->reset_rcp,
                     /* aRestoreDatasetFromNcp */ false,
                     /* aSkipRcpCompatibilityCheck */ false);
-#else
-  sRadioSpinel.Init(a_platform_config->reset_rcp,
-                    /* aRestoreDatasetFromNcp */ false);
-#endif
 }
 
 extern "C" otError otPlatRadioEnable(otInstance *a_instance) {
