@@ -68,9 +68,6 @@ class Parent final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>;
 
-  using ClientImpl = ::fidl::internal::WireClientImpl<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>;
 
@@ -516,9 +513,6 @@ class Child final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>;
-
-  using ClientImpl = ::fidl::internal::WireClientImpl<
-      ::fidl_test_inheritancewithrecursivedecl::Child>;
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>;

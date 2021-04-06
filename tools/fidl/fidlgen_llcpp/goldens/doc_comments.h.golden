@@ -838,9 +838,6 @@ class Interface final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_doccomments::Interface>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_doccomments::Interface>;
 
   // TODO(ianloic): Remove this when all users have migrated.

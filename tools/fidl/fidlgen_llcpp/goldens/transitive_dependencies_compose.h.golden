@@ -70,9 +70,6 @@ class Top final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_transitivedependenciescompose::Top>;
 
-  using ClientImpl = ::fidl::internal::WireClientImpl<
-      ::fidl_test_transitivedependenciescompose::Top>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>;
 

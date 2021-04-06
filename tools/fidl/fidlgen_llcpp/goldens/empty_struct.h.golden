@@ -185,9 +185,6 @@ class EmptyProtocol final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>;
 

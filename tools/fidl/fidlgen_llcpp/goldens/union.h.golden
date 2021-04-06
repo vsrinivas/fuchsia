@@ -3153,9 +3153,6 @@ class TestProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_union::TestProtocol>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_union::TestProtocol>;
 
   // TODO(ianloic): Remove this when all users have migrated.

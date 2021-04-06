@@ -75,9 +75,6 @@ class SecondProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_service::SecondProtocol>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_service::SecondProtocol>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -408,9 +405,6 @@ class FirstProtocol final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_service::FirstProtocol>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_service::FirstProtocol>;
-
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol>;
 
   using Interface = ::fidl::WireInterface<::fidl_test_service::FirstProtocol>;
 

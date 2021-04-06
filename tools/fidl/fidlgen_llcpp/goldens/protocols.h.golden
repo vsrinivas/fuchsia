@@ -927,9 +927,6 @@ class Transitional final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocols::Transitional>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_protocols::Transitional>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1947,9 +1944,6 @@ class ChannelProtocol final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol>;
-
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>;
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>;
@@ -3997,9 +3991,6 @@ class WithAndWithoutRequestResponse final {
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
   using SyncClient = fidl::WireSyncClient<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-
-  using ClientImpl = ::fidl::internal::WireClientImpl<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
   using Interface = ::fidl::WireInterface<
@@ -6940,9 +6931,6 @@ class WithErrorSyntax final {
 
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax>;
-
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>;
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>;

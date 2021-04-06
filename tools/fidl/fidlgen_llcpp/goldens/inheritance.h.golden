@@ -63,9 +63,6 @@ class super final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::super>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_inheritance::super>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::super>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -653,9 +650,6 @@ class sub final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_inheritance::sub>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_inheritance::sub>;
-
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>;
 
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::sub>;
 

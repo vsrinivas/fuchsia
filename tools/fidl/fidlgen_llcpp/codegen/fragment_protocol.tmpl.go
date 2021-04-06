@@ -83,8 +83,6 @@ class {{ .Name }} final {
 
   using SyncClient = fidl::WireSyncClient<{{ . }}>;
 
-  using ClientImpl = {{ .WireClientImpl }};
-
   using Interface = {{ .WireInterface }};
   {{- if .ShouldEmitTypedChannelCascadingInheritance }}
   using RawChannelInterface = {{ .WireRawChannelInterface }};

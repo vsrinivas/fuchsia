@@ -311,9 +311,6 @@ class SomeProtocol final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_handles::SomeProtocol>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>;
 
   // TODO(ianloic): Remove this when all users have migrated.

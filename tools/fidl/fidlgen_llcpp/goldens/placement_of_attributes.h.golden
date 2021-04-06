@@ -632,9 +632,6 @@ class ExampleProtocol final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>;
 
-  using ClientImpl = ::fidl::internal::WireClientImpl<
-      ::fidl_test_placementofattributes::ExampleProtocol>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>;
 

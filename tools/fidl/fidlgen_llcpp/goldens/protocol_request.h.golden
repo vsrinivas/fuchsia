@@ -104,9 +104,6 @@ class Parent final {
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Parent>;
 
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>;
-
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>;
 
   // TODO(ianloic): Remove this when all users have migrated.
@@ -1678,9 +1675,6 @@ class Child final {
   using Call = ::fidl::internal::WireCaller<::fidl_test_protocolrequest::Child>;
 
   using SyncClient = fidl::WireSyncClient<::fidl_test_protocolrequest::Child>;
-
-  using ClientImpl =
-      ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child>;
 
   using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Child>;
 

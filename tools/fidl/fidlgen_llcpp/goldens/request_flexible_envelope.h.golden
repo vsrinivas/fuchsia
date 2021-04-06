@@ -369,9 +369,6 @@ class Protocol final {
   using SyncClient =
       fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>;
 
-  using ClientImpl = ::fidl::internal::WireClientImpl<
-      ::fidl_test_requestflexibleenvelope::Protocol>;
-
   using Interface =
       ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>;
 
