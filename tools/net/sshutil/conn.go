@@ -397,8 +397,8 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 				return
 			}
 
-		case <-timeout():
-			timeoutDuration := time.Since(sendTime)
+		case t := <-timeout():
+			timeoutDuration := t.Sub(sendTime)
 			logger.Debugf(ctx, "ssh keepalive timed out after %.3fs, disconnecting", timeoutDuration.Seconds())
 			if err := c.Close(); err != nil {
 				logger.Debugf(ctx, "error disconnecting: %s", err)
