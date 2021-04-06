@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -248,5 +250,57 @@ func TestCheckNinjaNoop(t *testing.T) {
 				t.Errorf("Unexpected ninja no-op result: got %v, expected %v", noop, tc.expectNoop)
 			}
 		})
+	}
+}
+
+func TestNinjaGraph(t *testing.T) {
+	ctx := context.Background()
+	stdout := "ninja\ngraph\nstdout"
+	r := ninjaRunner{
+		runner: &fakeSubprocessRunner{
+			mockStdout: []byte(stdout),
+		},
+		ninjaPath: "ninja",
+		buildDir:  t.TempDir(),
+	}
+	path, err := ninjaGraph(ctx, r, []string{"foo", "bar"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(path)
+	fileContentsBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fileContents := string(fileContentsBytes)
+	if diff := cmp.Diff(stdout, fileContents); diff != "" {
+		t.Errorf("Unexpected ninja graph file diff (-want +got):\n%s", diff)
+	}
+}
+
+func TestNinjaCompdb(t *testing.T) {
+	ctx := context.Background()
+	stdout := "ninja\ncompdb\nstdout"
+	r := ninjaRunner{
+		runner: &fakeSubprocessRunner{
+			mockStdout: []byte(stdout),
+		},
+		ninjaPath: "ninja",
+		buildDir:  t.TempDir(),
+	}
+	path, err := ninjaCompdb(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(path)
+	fileContentsBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fileContents := string(fileContentsBytes)
+	if diff := cmp.Diff(stdout, fileContents); diff != "" {
+		t.Errorf("Unexpected ninja compdb file diff (-want +got):\n%s", diff)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -21,6 +22,9 @@ import (
 const (
 	// Name of the QEMU kernel image as it appears in images.json.
 	qemuKernelImageName = "qemu-kernel"
+
+	// ninjaLogPath is the path to the main ninja log relative to the build directory.
+	ninjaLogPath = ".ninja_log"
 )
 
 var (
@@ -64,20 +68,23 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	if err != nil {
 		return nil, err
 	}
+	// The ninja log is generated automatically by Ninja and its path is
+	// constant relative to the build directory.
+	artifacts.NinjaLogPath = filepath.Join(contextSpec.BuildDir, ninjaLogPath)
 
-	runner := ninjaRunner{
+	r := ninjaRunner{
 		runner:    &runner.SubprocessRunner{},
 		ninjaPath: thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja"),
 		buildDir:  contextSpec.BuildDir,
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
-	if msg, err := runNinja(ctx, runner, targets); err != nil {
+	if msg, err := runNinja(ctx, r, targets); err != nil {
 		artifacts.FailureSummary = msg
 		return artifacts, err
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
-		noop, err := checkNinjaNoop(ctx, runner, targets, hostplatform.IsMac())
+		noop, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac())
 		if err != nil {
 			return nil, err
 		}
@@ -96,6 +103,19 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 				summaryLines,
 				"\n",
 			)
+		}
+	}
+
+	// As an optimization, we only bother collecting graph and compdb data if we
+	// have a way to return it to the caller.
+	if contextSpec.ArtifactDir != "" {
+		artifacts.NinjaGraphPath, err = ninjaGraph(ctx, r, targets)
+		if err != nil {
+			return nil, err
+		}
+		artifacts.NinjaCompdbPath, err = ninjaCompdb(ctx, r)
+		if err != nil {
+			return nil, err
 		}
 	}
 

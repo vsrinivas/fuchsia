@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -213,4 +214,35 @@ func checkNinjaNoop(
 	}
 
 	return true, nil
+}
+
+// ninjaGraph runs the ninja graph tool and pipes its stdout to a temporary
+// file, returning the path to the resulting file.
+func ninjaGraph(ctx context.Context, r ninjaRunner, targets []string) (string, error) {
+	graphFile, err := ioutil.TempFile("", "*-graph.dot")
+	if err != nil {
+		return "", err
+	}
+	defer graphFile.Close()
+	args := append([]string{"-t", "graph"}, targets...)
+	if err := r.run(ctx, args, graphFile, os.Stderr); err != nil {
+		return "", err
+	}
+	return graphFile.Name(), nil
+}
+
+// ninjaCompdb runs the ninja compdb tool and pipes its stdout to a temporary
+// file, returning the path to the resulting file.
+func ninjaCompdb(ctx context.Context, r ninjaRunner) (string, error) {
+	compdbFile, err := ioutil.TempFile("", "*-compile-commands.json")
+	if err != nil {
+		return "", err
+	}
+	defer compdbFile.Close()
+	// Don't specify targets, as we want all build edges to be generated.
+	args := []string{"-t", "compdb"}
+	if err := r.run(ctx, args, compdbFile, os.Stderr); err != nil {
+		return "", err
+	}
+	return compdbFile.Name(), nil
 }

@@ -34,4 +34,13 @@ message BuildArtifacts {
   // Mapping from ZBI test name to QEMU kernel image for the test. Only
   // populated if ZBI tests were built.
   map<string, google.protobuf.Struct> zbi_test_qemu_kernel_images = 6;
+
+  // Absolute path to the Ninja log file.
+  string ninja_log_path = 7;
+
+  // Absolute path to a Ninja graph file.
+  string ninja_graph_path = 8;
+
+  // Absolute path to a Ninja compdb file.
+  string ninja_compdb_path = 9;
 }
