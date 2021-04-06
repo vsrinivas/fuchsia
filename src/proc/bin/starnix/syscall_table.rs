@@ -79,6 +79,7 @@ pub fn dispatch_syscall(
         brk[1],
         writev[3],
         access[2],
+        getpid[0],
         exit[1],
         uname[1],
         readlink[3],
@@ -86,7 +87,9 @@ pub fn dispatch_syscall(
         getgid[0],
         geteuid[0],
         getegid[0],
+        sched_getscheduler[1],
         arch_prctl[2],
         exit_group[1],
+        getrandom[3],
     }
 }

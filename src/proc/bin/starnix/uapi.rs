@@ -176,8 +176,8 @@ pub const EHWPOISON: Errno = Errno(uapi::EHWPOISON);
 // but this converter is a reasonable first-approximation. The translation matches
 // fdio_status_to_errno. See fxbug.dev/30921 for more context.
 // TODO: Replace clients with more context-specific mappings.
-impl From<zx::Status> for Errno {
-    fn from(status: zx::Status) -> Self {
+impl Errno {
+    pub fn from_status(status: zx::Status) -> Self {
         match status {
             zx::Status::NOT_FOUND => ENOENT,
             zx::Status::NO_MEMORY => ENOMEM,
@@ -284,6 +284,12 @@ impl SyscallResult {
 impl From<UserAddress> for SyscallResult {
     fn from(value: UserAddress) -> Self {
         SyscallResult(value.ptr() as u64)
+    }
+}
+
+impl From<i32> for SyscallResult {
+    fn from(value: i32) -> Self {
+        SyscallResult(value as u64)
     }
 }
 
