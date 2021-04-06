@@ -4,6 +4,6 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/diagnostics_bridge_lib_test",
+        binary: "bin/diagnostics_bridge_lib_test",
     },
 }

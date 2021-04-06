@@ -6,8 +6,8 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/test_spec.gni")
+import("//src/sys/build/components.gni")
 
 group("runner") {
   public_deps = [ ":bin" ]
@@ -40,12 +40,6 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-test_package("remote-control-runner-tests") {
+fuchsia_unittest_package("remote-control-runner-tests") {
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "remote_control_runner_bin_test"
-    },
-  ]
 }

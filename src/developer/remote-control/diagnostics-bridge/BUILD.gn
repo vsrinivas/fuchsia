@@ -6,8 +6,8 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/test_spec.gni")
+import("//src/sys/build/components.gni")
 
 group("diagnostics-bridge") {
   public_deps = [ ":lib" ]
@@ -47,13 +47,7 @@ rustc_library("lib") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("remote-diagnostics-bridge-tests") {
+fuchsia_unittest_package("remote-diagnostics-bridge-tests") {
+  manifest = "meta/diagnostics_bridge_lib_test.cml"
   deps = [ ":lib_test" ]
-
-  v2_tests = [
-    {
-      name = "diagnostics_bridge_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
