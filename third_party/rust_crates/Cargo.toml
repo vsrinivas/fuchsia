@@ -286,9 +286,9 @@ winapi-util = { path = "tiny_mirrors/winapi-util" }
 [gn.config]
 remove_cfgs = [
   # Fuchsia defaults targets to 2018 edition. third_party can be any version
-  "//build/config:rust_edition_2018",
+  "//build/config/rust:edition_2018",
   # Fuchsia forces targets to comply with 2018 idioms. third_party can ignore this
-  "//build/config:rust_2018_idioms",
+  "//build/config/rust:2018_idioms",
 ]
 add_cfgs = []
 

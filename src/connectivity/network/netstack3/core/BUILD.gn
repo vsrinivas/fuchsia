@@ -10,8 +10,8 @@ rustc_library("netstack3-core") {
   version = "0.1.0"
   edition = "2018"
 
-  configs -= [ "//build/config:rust_no_features" ]
-  configs += [ "//build/config:netstack3_only_specialization_feature" ]
+  configs -= [ "//build/config/rust:no_features" ]
+  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
   deps = [
     # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
@@ -73,8 +73,8 @@ rustc_test("netstack3-core_test") {
   edition = "2018"
   name = "netstack3_core_lib_test"
 
-  configs -= [ "//build/config:rust_no_features" ]
-  configs += [ "//build/config:netstack3_only_specialization_feature" ]
+  configs -= [ "//build/config/rust:no_features" ]
+  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
   deps = [
     # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.

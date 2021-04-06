@@ -34,10 +34,10 @@ rustc_library("tuf") {
 
   source_root = "//third_party/rust-mirrors/rust-tuf/src/lib.rs"
 
-  configs -= [ "//build/config:rust_2018_idioms" ]
+  configs -= [ "//build/config/rust:2018_idioms" ]
 
   # TODO(fxbug.dev/67118) resolve and remove
-  configs += [ "//build/config:rust_allow_redundant_semicolons" ]
+  configs += [ "//build/config/rust:allow_redundant_semicolons" ]
 
   deps = [
     "//third_party/rust_crates:chrono",
@@ -69,7 +69,7 @@ rustc_test("tuf_lib_test") {
 
   source_root = "//third_party/rust-mirrors/rust-tuf/src/lib.rs"
 
-  configs -= [ "//build/config:rust_2018_idioms" ]
+  configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = [
     "//third_party/rust_crates:chrono",

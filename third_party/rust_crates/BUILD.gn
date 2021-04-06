@@ -921,8 +921,8 @@ rust_library("adler32-v1_0_4") {
   crate_root = "//third_party/rust_crates/vendor/adler32/src/lib.rs"
   output_name = "adler32-49c7289baa3c93e2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -942,8 +942,8 @@ rust_library("aho-corasick-v0_7_10") {
   crate_root = "//third_party/rust_crates/vendor/aho-corasick/src/lib.rs"
   output_name = "aho_corasick-4442fbca81319248"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -966,8 +966,8 @@ rust_library("ansi_term-v0_11_0") {
   crate_root = "//third_party/rust_crates/vendor/ansi_term/src/lib.rs"
   output_name = "ansi_term-c2aacb35c8d0666a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -990,8 +990,8 @@ rust_library("anyhow-v1_0_38") {
   crate_root = "//third_party/rust_crates/vendor/anyhow/src/lib.rs"
   output_name = "anyhow-34b5b8ef286e2000"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1013,8 +1013,8 @@ rust_library("arbitrary-v0_4_0") {
   crate_root = "//third_party/rust_crates/vendor/arbitrary/src/lib.rs"
   output_name = "arbitrary-7339b6a6d9177c8a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1037,8 +1037,8 @@ rust_library("arc-swap-v0_4_4") {
   crate_root = "//third_party/rust_crates/vendor/arc-swap/src/lib.rs"
   output_name = "arc_swap-575b61fb70feca0a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1058,8 +1058,8 @@ rust_library("argh-v0_1_4") {
   crate_root = "//third_party/rust_crates/vendor/argh/src/lib.rs"
   output_name = "argh-bd83e7fcbd154aa3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1081,8 +1081,8 @@ rust_proc_macro("argh_derive-v0_1_4") {
   crate_root = "//third_party/rust_crates/vendor/argh_derive/src/lib.rs"
   output_name = "argh_derive-d03e76f8d081cdf5"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1107,8 +1107,8 @@ rust_library("argh_shared-v0_1_4") {
   crate_root = "//third_party/rust_crates/vendor/argh_shared/src/lib.rs"
   output_name = "argh_shared-8b110dad3a849fb"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1128,8 +1128,8 @@ rust_library("ascii-v0_8_7") {
   crate_root = "//third_party/rust_crates/vendor/ascii/src/lib.rs"
   output_name = "ascii-d2b82686072c612a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1151,8 +1151,8 @@ rust_library("async-channel-v1_6_1") {
   crate_root = "//third_party/rust_crates/vendor/async-channel/src/lib.rs"
   output_name = "async_channel-c9fb29c233c87151"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1175,8 +1175,8 @@ rust_library("async-executor-v1_4_0") {
   crate_root = "//third_party/rust_crates/vendor/async-executor/src/lib.rs"
   output_name = "async_executor-51b5d0432e317abf"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1202,8 +1202,8 @@ rust_library("async-fs-v1_5_0") {
   crate_root = "//third_party/rust_crates/vendor/async-fs/src/lib.rs"
   output_name = "async_fs-c416b168eaffeca9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1226,8 +1226,8 @@ rust_library("async-io-v1_3_1") {
   crate_root = "//third_party/rust_crates/vendor/async-io/src/lib.rs"
   output_name = "async_io-25bd5ddaa58d5ff3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1263,8 +1263,8 @@ rust_library("async-lock-v2_3_0") {
   crate_root = "//third_party/rust_crates/vendor/async-lock/src/lib.rs"
   output_name = "async_lock-f387e568e95b5301"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1285,8 +1285,8 @@ rust_library("async-net-v1_5_0") {
   crate_root = "//third_party/rust_crates/vendor/async-net/src/lib.rs"
   output_name = "async_net-71edc5ce98ea85de"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1310,8 +1310,8 @@ rust_library("async-task-v4_0_3") {
   crate_root = "//third_party/rust_crates/vendor/async-task/src/lib.rs"
   output_name = "async_task-9e0c33b950a5d71e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1333,8 +1333,8 @@ rust_proc_macro("async-trait-v0_1_40") {
   crate_root = "//third_party/rust_crates/vendor/async-trait/src/lib.rs"
   output_name = "async_trait-c6b6d222802967e6"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1357,8 +1357,8 @@ rust_library("atom-v0_3_5") {
   crate_root = "//third_party/rust_crates/vendor/atom/src/lib.rs"
   output_name = "atom-e5d6d7aa13ea54d2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1378,8 +1378,8 @@ rust_library("atomic-waker-v1_0_0") {
   crate_root = "//third_party/rust_crates/vendor/atomic-waker/src/lib.rs"
   output_name = "atomic_waker-ac068411b12dd2e8"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1399,8 +1399,8 @@ rust_library("atty-v0_2_11") {
   crate_root = "//third_party/rust_crates/vendor/atty/src/lib.rs"
   output_name = "atty-8928199b13c115d5"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1429,8 +1429,8 @@ rust_library("backtrace-v0_3_42") {
   crate_root = "//third_party/rust_crates/vendor/backtrace/src/lib.rs"
   output_name = "backtrace-8890db06d187a09"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:libunwind" ]
@@ -1464,8 +1464,8 @@ rust_library("backtrace-sys-v0_1_32") {
   crate_root = "//third_party/rust_crates/vendor/backtrace-sys/src/lib.rs"
   output_name = "backtrace_sys-ad4f80b07cdcc6a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1486,8 +1486,8 @@ rust_library("base64-v0_11_0") {
   crate_root = "//third_party/rust_crates/vendor/base64-0.11.0/src/lib.rs"
   output_name = "base64-ba233daa82312979"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1509,8 +1509,8 @@ rust_library("base64-v0_13_0") {
   crate_root = "//third_party/rust_crates/vendor/base64/src/lib.rs"
   output_name = "base64-5335de7b20fd4c04"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1532,8 +1532,8 @@ rust_library("base64-v0_9_3") {
   crate_root = "//third_party/rust_crates/vendor/base64-0.9.3/src/lib.rs"
   output_name = "base64-4feaf160d10ad83f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1555,8 +1555,8 @@ rust_library("bincode-v1_1_1") {
   crate_root = "//third_party/rust_crates/vendor/bincode/src/lib.rs"
   output_name = "bincode-ca4f5e63cc529fc0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1578,8 +1578,8 @@ rust_library("bit-set-v0_5_0") {
   crate_root = "//third_party/rust_crates/vendor/bit-set/src/lib.rs"
   output_name = "bit_set-ff87f32c24820532"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1602,8 +1602,8 @@ rust_library("bit-vec-v0_5_0") {
   crate_root = "//third_party/rust_crates/vendor/bit-vec/src/lib.rs"
   output_name = "bit_vec-56024dde80975899"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1624,8 +1624,8 @@ rust_library("bitfield-v0_13_1") {
   crate_root = "//third_party/rust_crates/vendor/bitfield/src/lib.rs"
   output_name = "bitfield-1fad8370b10e06b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1645,8 +1645,8 @@ rust_library("bitflags-v1_2_1") {
   crate_root = "//third_party/rust_crates/vendor/bitflags/src/lib.rs"
   output_name = "bitflags-8e1938b48c59a475"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1668,8 +1668,8 @@ rust_library("blocking-v1_0_2") {
   crate_root = "//third_party/rust_crates/vendor/blocking/src/lib.rs"
   output_name = "blocking-b6dd8248f836f05"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1695,8 +1695,8 @@ rust_library("brotli-sys-v0_3_2") {
   crate_root = "//third_party/rust_crates/vendor/brotli-sys/src/lib.rs"
   output_name = "brotli_sys-ad0de28a565fc089"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1717,8 +1717,8 @@ rust_library("brotli2-v0_3_2") {
   crate_root = "//third_party/rust_crates/vendor/brotli2/src/lib.rs"
   output_name = "brotli2-a2408c65b4caa1c0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1740,8 +1740,8 @@ rust_library("bstr-v0_2_12") {
   crate_root = "//third_party/rust_crates/vendor/bstr/src/lib.rs"
   output_name = "bstr-e2e94202b5ae2111"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1773,8 +1773,8 @@ rust_library("buf_redux-v0_8_1") {
   crate_root = "//third_party/rust_crates/vendor/buf_redux/src/lib.rs"
   output_name = "buf_redux-c5ef6bbd4411a19d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1796,8 +1796,8 @@ rust_library("bumpalo-v3_2_1") {
   crate_root = "//third_party/rust_crates/vendor/bumpalo/src/lib.rs"
   output_name = "bumpalo-6c0f43d1ab0e9655"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1818,8 +1818,8 @@ rust_library("bytecount-v0_6_0") {
   crate_root = "//third_party/rust_crates/vendor/bytecount/src/lib.rs"
   output_name = "bytecount-b4fade0a2dc4ee4a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1839,8 +1839,8 @@ rust_library("byteorder-v1_3_1") {
   crate_root = "//third_party/rust_crates/vendor/byteorder/src/lib.rs"
   output_name = "byteorder-e4429ddc31d502a7"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1864,8 +1864,8 @@ rust_library("bytes-v0_5_4") {
   crate_root = "//third_party/rust_crates/vendor/bytes/src/lib.rs"
   output_name = "bytes-b8d56db65f2354f4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1887,8 +1887,8 @@ rust_library("c2-chacha-v0_2_3") {
   crate_root = "//third_party/rust_crates/vendor/c2-chacha/src/lib.rs"
   output_name = "c2_chacha-e250d97399ca3ae3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1911,8 +1911,8 @@ rust_library("cache-padded-v1_1_1") {
   crate_root = "//third_party/rust_crates/vendor/cache-padded/src/lib.rs"
   output_name = "cache_padded-d5ffac023176ef0c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1932,8 +1932,8 @@ rust_library("cargo_metadata-v0_9_1") {
   crate_root = "//third_party/rust_crates/vendor/cargo_metadata/src/lib.rs"
   output_name = "cargo_metadata-cc51a76810d0c63c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1958,8 +1958,8 @@ rust_library("cast-v0_2_2") {
   crate_root = "//third_party/rust_crates/vendor/cast/src/lib.rs"
   output_name = "cast-2e8d76cdb85d3e9e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -1981,8 +1981,8 @@ rust_library("cfg-if-v0_1_10") {
   crate_root = "//third_party/rust_crates/vendor/cfg-if-0.1.10/src/lib.rs"
   output_name = "cfg_if-de3fee777d28505f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2002,8 +2002,8 @@ rust_library("cfg-if-v1_0_0") {
   crate_root = "//third_party/rust_crates/vendor/cfg-if/src/lib.rs"
   output_name = "cfg_if-5f200286e6ae9b7a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2023,8 +2023,8 @@ rust_library("chrono-v0_4_11") {
   crate_root = "//third_party/rust_crates/vendor/chrono/src/lib.rs"
   output_name = "chrono-17ee6ee5e9d39f92"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2051,8 +2051,8 @@ rust_library("chrono-english-v0_1_4") {
   crate_root = "//third_party/rust_crates/vendor/chrono-english/src/lib.rs"
   output_name = "chrono_english-d51fdb87bc2739a0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2075,8 +2075,8 @@ rust_library("chunked_transfer-v0_3_1") {
   crate_root = "//third_party/rust_crates/vendor/chunked_transfer/src/lib.rs"
   output_name = "chunked_transfer-fcaf6689849b0a6b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2096,8 +2096,8 @@ rust_library("clap-v2_33_0") {
   crate_root = "//third_party/rust_crates/vendor/clap/src/lib.rs"
   output_name = "clap-b00b06b1e3d703b7"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2133,8 +2133,8 @@ rust_library("cloudabi-v0_0_3") {
   crate_root = "//third_party/rust_crates/vendor/cloudabi/cloudabi.rs"
   output_name = "cloudabi-e4327fa628aa1d7e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2157,8 +2157,8 @@ rust_library("codespan-reporting-v0_9_5") {
   crate_root = "//third_party/rust_crates/vendor/codespan-reporting/src/lib.rs"
   output_name = "codespan_reporting-32ae5083927f74fe"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2180,8 +2180,8 @@ rust_library("concurrent-queue-v1_2_2") {
   crate_root = "//third_party/rust_crates/vendor/concurrent-queue/src/lib.rs"
   output_name = "concurrent_queue-13df2ce2106c7e2c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2202,8 +2202,8 @@ rust_library("core-foundation-v0_7_0") {
   crate_root = "//third_party/rust_crates/vendor/core-foundation/src/lib.rs"
   output_name = "core_foundation-ba67193d114fb832"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2225,8 +2225,8 @@ rust_library("core-foundation-sys-v0_7_0") {
   crate_root = "//third_party/rust_crates/vendor/core-foundation-sys/src/lib.rs"
   output_name = "core_foundation_sys-c586e370c66e3e5e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2249,8 +2249,8 @@ rust_library("crc-v1_8_1") {
   crate_root = "//third_party/rust_crates/vendor/crc/src/lib.rs"
   output_name = "crc-b07cba2eb65fd100"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2272,8 +2272,8 @@ rust_library("crc32fast-v1_2_0") {
   crate_root = "//third_party/rust_crates/vendor/crc32fast/src/lib.rs"
   output_name = "crc32fast-6606a11d9036fb05"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2297,8 +2297,8 @@ rust_library("criterion-v0_2_11") {
   crate_root = "//third_party/rust_crates/vendor/criterion/src/lib.rs"
   output_name = "criterion-b8034bd1e116f938"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2335,8 +2335,8 @@ rust_library("crossbeam-v0_7_3") {
   crate_root = "//third_party/rust_crates/vendor/crossbeam/src/lib.rs"
   output_name = "crossbeam-398f15e80c220e91"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2367,8 +2367,8 @@ rust_library("crossbeam-channel-v0_4_2") {
   crate_root = "//third_party/rust_crates/vendor/crossbeam-channel/src/lib.rs"
   output_name = "crossbeam_channel-b1ac2d23ad50ed6a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2390,8 +2390,8 @@ rust_library("crossbeam-deque-v0_7_3") {
   crate_root = "//third_party/rust_crates/vendor/crossbeam-deque/src/lib.rs"
   output_name = "crossbeam_deque-1b8ed12e68dce902"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2414,8 +2414,8 @@ rust_library("crossbeam-epoch-v0_8_2") {
   crate_root = "//third_party/rust_crates/vendor/crossbeam-epoch/src/lib.rs"
   output_name = "crossbeam_epoch-c9fde0457794d33"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2444,8 +2444,8 @@ rust_library("crossbeam-queue-v0_2_1") {
   crate_root = "//third_party/rust_crates/vendor/crossbeam-queue/src/lib.rs"
   output_name = "crossbeam_queue-e8eb2d3b2d6a8126"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2469,8 +2469,8 @@ rust_library("crossbeam-utils-v0_7_2") {
   crate_root = "//third_party/rust_crates/vendor/crossbeam-utils/src/lib.rs"
   output_name = "crossbeam_utils-5b2f6810d5833e99"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2495,8 +2495,8 @@ rust_library("crossterm-v0_17_7") {
   crate_root = "//third_party/rust_crates/vendor/crossterm/src/lib.rs"
   output_name = "crossterm-ccfb3daa259048ba"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2530,8 +2530,8 @@ rust_library("crossterm_winapi-v0_6_1") {
       "//third_party/rust_crates/tiny_mirrors/crossterm_winapi/src/lib.rs"
   output_name = "crossterm_winapi-3884a110943dbe32"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2551,8 +2551,8 @@ rust_library("csv-v1_1_3") {
   crate_root = "//third_party/rust_crates/vendor/csv/src/lib.rs"
   output_name = "csv-c447310fd6863403"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2577,8 +2577,8 @@ rust_library("csv-core-v0_1_10") {
   crate_root = "//third_party/rust_crates/vendor/csv-core/src/lib.rs"
   output_name = "csv_core-736f88686751ea8f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2600,8 +2600,8 @@ rust_library("cxx-v0_3_5") {
   crate_root = "//third_party/rust_crates/vendor/cxx/src/lib.rs"
   output_name = "cxx-a0e30dc94fbcc11c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2624,8 +2624,8 @@ executable("cxxbridge-cmd-cxxbridge-v0_3_5") {
   crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/main.rs"
   output_name = "cxxbridge"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2651,8 +2651,8 @@ rust_library("cxxbridge-cmd-v0_3_5") {
   crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/lib.rs"
   output_name = "cxxbridge_cmd-39c6ea6fb5b67294"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2678,8 +2678,8 @@ rust_proc_macro("cxxbridge-macro-v0_3_5") {
   crate_root = "//third_party/rust_crates/vendor/cxxbridge-macro/src/lib.rs"
   output_name = "cxxbridge_macro-89f33f149f6ab750"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2702,8 +2702,8 @@ rust_library("darling-v0_12_0") {
   crate_root = "//third_party/rust_crates/vendor/darling/src/lib.rs"
   output_name = "darling-4ce981851fdcfb80"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2727,8 +2727,8 @@ rust_library("darling_core-v0_12_0") {
   crate_root = "//third_party/rust_crates/vendor/darling_core/src/lib.rs"
   output_name = "darling_core-fbdd95e1b2070c13"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2756,8 +2756,8 @@ rust_proc_macro("darling_macro-v0_12_0") {
   crate_root = "//third_party/rust_crates/vendor/darling_macro/src/lib.rs"
   output_name = "darling_macro-ad9e3192968cb445"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2780,8 +2780,8 @@ rust_library("data-encoding-v2_1_2") {
   crate_root = "//third_party/rust_crates/vendor/data-encoding/src/lib.rs"
   output_name = "data_encoding-29add1a44d9631dd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2801,8 +2801,8 @@ rust_library("deflate-v0_7_19") {
   crate_root = "//third_party/rust_crates/vendor/deflate/src/lib.rs"
   output_name = "deflate-65e9287bc3778641"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2827,8 +2827,8 @@ rust_proc_macro("derivative-v2_1_1") {
   crate_root = "//third_party/rust_crates/vendor/derivative/src/lib.rs"
   output_name = "derivative-e4b38514ab785324"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2851,8 +2851,8 @@ rust_proc_macro("derive_arbitrary-v0_4_0") {
   crate_root = "//third_party/rust_crates/vendor/derive_arbitrary/src/lib.rs"
   output_name = "derive_arbitrary-707386e28fd45df8"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2875,8 +2875,8 @@ rust_library("derp-v0_0_13") {
   crate_root = "//third_party/rust_crates/vendor/derp/src/lib.rs"
   output_name = "derp-a056a6fa5b02e971"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2897,8 +2897,8 @@ rust_library("difference-v2_0_0") {
   crate_root = "//third_party/rust_crates/vendor/difference/src/lib.rs"
   output_name = "difference-729c4c18786eef68"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2919,8 +2919,8 @@ rust_library("downcast-v0_10_0") {
   crate_root = "//third_party/rust_crates/vendor/downcast/src/lib.rs"
   output_name = "downcast-417417cb956aacf6"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2942,8 +2942,8 @@ rust_library("easy-parallel-v3_1_0") {
   crate_root = "//third_party/rust_crates/vendor/easy-parallel/src/lib.rs"
   output_name = "easy_parallel-87f77231f1b1949b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2963,8 +2963,8 @@ rust_library("either-v1_5_0") {
   crate_root = "//third_party/rust_crates/vendor/either/src/lib.rs"
   output_name = "either-22a1bbc0eb940e7e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -2984,8 +2984,8 @@ rust_library("encode_unicode-v0_3_5") {
   crate_root = "//third_party/rust_crates/vendor/encode_unicode/src/lib.rs"
   output_name = "encode_unicode-ab58d040036a3fcc"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3007,8 +3007,8 @@ rust_proc_macro("enum-as-inner-v0_3_0") {
   crate_root = "//third_party/rust_crates/vendor/enum-as-inner/src/lib.rs"
   output_name = "enum_as_inner-1ccf1af5f033dd92"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3032,8 +3032,8 @@ rust_library("error-chain-v0_12_0") {
   crate_root = "//third_party/rust_crates/vendor/error-chain/src/lib.rs"
   output_name = "error_chain-ba7b1075069f9cf9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3057,8 +3057,8 @@ rust_library("euclid-v0_22_1") {
   crate_root = "//third_party/rust_crates/vendor/euclid/src/lib.rs"
   output_name = "euclid-f36cc8a923068aca"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3081,8 +3081,8 @@ rust_library("eui48-v0_4_6") {
   crate_root = "//third_party/rust_crates/vendor/eui48/src/lib.rs"
   output_name = "eui48-82065d8958fea295"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3107,8 +3107,8 @@ rust_library("event-listener-v2_5_1") {
   crate_root = "//third_party/rust_crates/vendor/event-listener/src/lib.rs"
   output_name = "event_listener-db0b634d4cbcc40b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3128,8 +3128,8 @@ rust_library("fastrand-v1_4_0") {
   crate_root = "//third_party/rust_crates/vendor/fastrand/src/lib.rs"
   output_name = "fastrand-3e2364b5ac67c966"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3152,8 +3152,8 @@ rust_library("fatfs-v0_4_0") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/fatfs/src/lib.rs"
   output_name = "fatfs-2449189d41d04e86"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3183,8 +3183,8 @@ rust_library("filetime-v0_2_4") {
   crate_root = "//third_party/rust_crates/vendor/filetime/src/lib.rs"
   output_name = "filetime-244356ab2e506ab"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3215,8 +3215,8 @@ rust_library("fixedbitset-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/fixedbitset/src/lib.rs"
   output_name = "fixedbitset-da79ca35469fac93"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3236,8 +3236,8 @@ rust_library("flate2-v1_0_14") {
   crate_root = "//third_party/rust_crates/vendor/flate2/src/lib.rs"
   output_name = "flate2-28efad300e8652f3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3266,8 +3266,8 @@ rust_library("float-cmp-v0_8_0") {
   crate_root = "//third_party/rust_crates/vendor/float-cmp/src/lib.rs"
   output_name = "float_cmp-25495b83f43346cf"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3291,8 +3291,8 @@ rust_library("fnv-v1_0_6") {
   crate_root = "//third_party/rust_crates/vendor/fnv/lib.rs"
   output_name = "fnv-aea2659b6e57ee72"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3312,8 +3312,8 @@ rust_library("fragile-v1_0_0") {
   crate_root = "//third_party/rust_crates/vendor/fragile/src/lib.rs"
   output_name = "fragile-4fff0e17f0e7f677"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3333,8 +3333,8 @@ rust_library("fuchsia-cprng-v0_1_1") {
   crate_root = "//src/lib/zircon/rust/fuchsia-cprng/src/lib.rs"
   output_name = "fuchsia_cprng-2003c73715c7fc44"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3354,8 +3354,8 @@ rust_library("futures-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures/src/lib.rs"
   output_name = "futures-3c827392713a33d4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3388,8 +3388,8 @@ rust_library("futures-channel-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-channel/src/lib.rs"
   output_name = "futures_channel-b39fef7f7e0ccfdb"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3416,8 +3416,8 @@ rust_library("futures-core-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-core/src/lib.rs"
   output_name = "futures_core-500995c1b38b3168"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3440,8 +3440,8 @@ rust_library("futures-executor-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-executor/src/lib.rs"
   output_name = "futures_executor-2734ae8d07d9de54"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3466,8 +3466,8 @@ rust_library("futures-io-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-io/src/lib.rs"
   output_name = "futures_io-9aea778235a8986b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3489,8 +3489,8 @@ rust_library("futures-lite-v1_11_3") {
   crate_root = "//third_party/rust_crates/vendor/futures-lite/src/lib.rs"
   output_name = "futures_lite-722154d5ee232ef5"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3524,8 +3524,8 @@ rust_proc_macro("futures-macro-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-macro/src/lib.rs"
   output_name = "futures_macro-73a0fcada5a31a3d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3549,8 +3549,8 @@ rust_library("futures-sink-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-sink/src/lib.rs"
   output_name = "futures_sink-64118f29c373e8cb"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3573,8 +3573,8 @@ rust_library("futures-task-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-task/src/lib.rs"
   output_name = "futures_task-f09f9a0427b82b9e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3599,8 +3599,8 @@ rust_library("futures-test-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-test/src/lib.rs"
   output_name = "futures_test-93976893ae27e0cf"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3632,8 +3632,8 @@ rust_library("futures-util-v0_3_12") {
   crate_root = "//third_party/rust_crates/vendor/futures-util/src/lib.rs"
   output_name = "futures_util-9cbfc1877c4fcb4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3681,8 +3681,8 @@ rust_library("getopts-v0_2_18") {
   crate_root = "//third_party/rust_crates/vendor/getopts/src/lib.rs"
   output_name = "getopts-ee306262a9b3a5b0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3703,8 +3703,8 @@ rust_library("getrandom-v0_1_13") {
   crate_root = "//third_party/rust_crates/vendor/getrandom-0.1.13/src/lib.rs"
   output_name = "getrandom-37dd2a246b257ac6"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3732,8 +3732,8 @@ rust_library("getrandom-v0_2_2") {
   crate_root = "//third_party/rust_crates/vendor/getrandom/src/lib.rs"
   output_name = "getrandom-a3378427d5ef87b9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3760,8 +3760,8 @@ rust_library("glob-v0_3_0") {
   crate_root = "//third_party/rust_crates/vendor/glob/src/lib.rs"
   output_name = "glob-aa5b2e2c44f5f401"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3781,8 +3781,8 @@ rust_library("gpt-v2_0_0") {
   crate_root = "//third_party/rust_crates/vendor/gpt/src/lib.rs"
   output_name = "gpt-92cda70d62a05801"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3806,8 +3806,8 @@ rust_library("gzip-header-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/gzip-header/src/lib.rs"
   output_name = "gzip_header-afa30ac783b3f0e9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3828,8 +3828,8 @@ rust_library("h2-v0_2_5") {
   crate_root = "//third_party/rust_crates/vendor/h2/src/lib.rs"
   output_name = "h2-85a3d30816d5adab"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3860,8 +3860,8 @@ rust_library("half-v1_6_0") {
   crate_root = "//third_party/rust_crates/vendor/half/src/lib.rs"
   output_name = "half-d9b7b38cc4103d3d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3881,8 +3881,8 @@ rust_library("handlebars-v2_0_0-beta_2") {
   crate_root = "//third_party/rust_crates/vendor/handlebars/src/lib.rs"
   output_name = "handlebars-64c1f63c35898973"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3918,8 +3918,8 @@ rust_library("hashbrown-v0_2_2") {
   crate_root = "//third_party/rust_crates/vendor/hashbrown/src/lib.rs"
   output_name = "hashbrown-d251d5dab4b25374"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3942,8 +3942,8 @@ rust_library("heck-v0_3_1") {
   crate_root = "//third_party/rust_crates/vendor/heck/src/lib.rs"
   output_name = "heck-e3dad0497ab5b0fe"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3964,8 +3964,8 @@ rust_library("hermit-abi-v0_1_8") {
   crate_root = "//third_party/rust_crates/vendor/hermit-abi/src/lib.rs"
   output_name = "hermit_abi-f84c675d3602a4e4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -3987,8 +3987,8 @@ rust_library("hex-v0_3_2") {
   crate_root = "//third_party/rust_crates/vendor/hex/src/lib.rs"
   output_name = "hex-67ad4b3000c63154"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4008,8 +4008,8 @@ rust_library("home-v0_5_3") {
   crate_root = "//third_party/rust_crates/vendor/home/src/lib.rs"
   output_name = "home-9a402443b9ac5998"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4032,8 +4032,8 @@ rust_library("http-v0_2_1") {
   crate_root = "//third_party/rust_crates/vendor/http/src/lib.rs"
   output_name = "http-369d781893ae7aaa"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4056,8 +4056,8 @@ rust_library("http-body-v0_3_1") {
   crate_root = "//third_party/rust_crates/vendor/http-body/src/lib.rs"
   output_name = "http_body-a81727a56a76505"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4079,8 +4079,8 @@ rust_library("httparse-v1_3_3") {
   crate_root = "//third_party/rust_crates/vendor/httparse/src/lib.rs"
   output_name = "httparse-52a50b12991f65bb"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4103,8 +4103,8 @@ rust_library("hyper-v0_13_6") {
   crate_root = "//third_party/rust_crates/vendor/hyper/src/lib.rs"
   output_name = "hyper-e2c6feeec5315f6c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4140,8 +4140,8 @@ rust_library("hyper-rustls-v0_20_0") {
   crate_root = "//third_party/rust_crates/vendor/hyper-rustls/src/lib.rs"
   output_name = "hyper_rustls-b9f204e9124022d3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4171,8 +4171,8 @@ rust_library("ident_case-v1_0_1") {
   crate_root = "//third_party/rust_crates/vendor/ident_case/src/lib.rs"
   output_name = "ident_case-b27b32febfa5a05a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4192,8 +4192,8 @@ rust_library("idna-v0_1_5") {
   crate_root = "//third_party/rust_crates/vendor/idna-0.1.5/src/lib.rs"
   output_name = "idna-682a1dbddbc2bf79"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4216,8 +4216,8 @@ rust_library("idna-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/idna/src/lib.rs"
   output_name = "idna-5c3c4f537fb8313f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4240,8 +4240,8 @@ rust_library("indexmap-v1_0_2") {
   crate_root = "//third_party/rust_crates/vendor/indexmap/src/lib.rs"
   output_name = "indexmap-e44704bec4fb41ed"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4261,8 +4261,8 @@ rust_library("indoc-v0_3_3") {
   crate_root = "//third_party/rust_crates/vendor/indoc/src/lib.rs"
   output_name = "indoc-f092045a458190be"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4284,8 +4284,8 @@ rust_proc_macro("indoc-impl-v0_3_3") {
   crate_root = "//third_party/rust_crates/vendor/indoc-impl/src/lib.rs"
   output_name = "indoc_impl-32e49cf2e672c9bc"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4310,8 +4310,8 @@ rust_library("inflate-v0_4_5") {
   crate_root = "//third_party/rust_crates/vendor/inflate/src/lib.rs"
   output_name = "inflate-e2d006b321248ecb"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4333,8 +4333,8 @@ rust_library("instant-v0_1_9") {
   crate_root = "//third_party/rust_crates/vendor/instant/src/lib.rs"
   output_name = "instant-83da69adfa026a2e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4355,8 +4355,8 @@ rust_library("itertools-v0_8_0") {
   crate_root = "//third_party/rust_crates/vendor/itertools/src/lib.rs"
   output_name = "itertools-1f61a40f0ca305b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4379,8 +4379,8 @@ rust_library("itoa-v0_4_3") {
   crate_root = "//third_party/rust_crates/vendor/itoa/src/lib.rs"
   output_name = "itoa-f3a32c9a05744438"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4402,8 +4402,8 @@ rust_library("json5format-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/json5format/src/lib.rs"
   output_name = "json5format-51d5f403fa4d32fa"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4425,8 +4425,8 @@ rust_library("jsonway-v2_0_0") {
   crate_root = "//third_party/rust_crates/vendor/jsonway/src/lib.rs"
   output_name = "jsonway-5ed994a48b787f8e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4448,8 +4448,8 @@ rust_library("lazy_static-v1_4_0") {
   crate_root = "//third_party/rust_crates/vendor/lazy_static/src/lib.rs"
   output_name = "lazy_static-cdf593bd3fb3d68f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4469,8 +4469,8 @@ rust_library("libc-v0_2_88") {
   crate_root = "//third_party/rust_crates/vendor/libc/src/lib.rs"
   output_name = "libc-a3dc2328a30dda9a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4506,8 +4506,8 @@ rust_library("libm-v0_2_1") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/libm/src/lib.rs"
   output_name = "libm-9acc3111b7a9209b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4527,8 +4527,8 @@ rust_library("link-cplusplus-v1_0_2") {
   crate_root = "//third_party/rust_crates/vendor/link-cplusplus/src/lib.rs"
   output_name = "link_cplusplus-ca3941f03f39e09b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4549,8 +4549,8 @@ rust_library("linked-hash-map-v0_5_3") {
   crate_root = "//third_party/rust_crates/vendor/linked-hash-map/src/lib.rs"
   output_name = "linked_hash_map-b9b35caede8d8189"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4570,8 +4570,8 @@ rust_library("lipsum-v0_6_0") {
   crate_root = "//third_party/rust_crates/vendor/lipsum/src/lib.rs"
   output_name = "lipsum-3f3d810083da13c9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4592,8 +4592,8 @@ rust_library("lock_api-v0_3_4") {
   crate_root = "//third_party/rust_crates/vendor/lock_api-0.3.4/src/lib.rs"
   output_name = "lock_api-12f3d9bb96757377"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4614,8 +4614,8 @@ rust_library("lock_api-v0_4_2") {
   crate_root = "//third_party/rust_crates/vendor/lock_api/src/lib.rs"
   output_name = "lock_api-926aab83183a93db"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4636,8 +4636,8 @@ rust_library("log-v0_3_9") {
   crate_root = "//third_party/rust_crates/vendor/log-0.3.9/src/lib.rs"
   output_name = "log-4bbdf7782c62a657"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4660,8 +4660,8 @@ rust_library("log-v0_4_11") {
   crate_root = "//third_party/rust_crates/vendor/log/src/lib.rs"
   output_name = "log-f850217d8dbd0f9a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4684,8 +4684,8 @@ rust_library("lru-cache-v0_1_2") {
   crate_root = "//third_party/rust_crates/vendor/lru-cache/src/lib.rs"
   output_name = "lru_cache-d0de9f2b92e5e947"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4706,8 +4706,8 @@ rust_library("maplit-v1_0_1") {
   crate_root = "//third_party/rust_crates/vendor/maplit/src/lib.rs"
   output_name = "maplit-42f6d562ec404170"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4727,8 +4727,8 @@ rust_library("matches-v0_1_8") {
   crate_root = "//third_party/rust_crates/vendor/matches/lib.rs"
   output_name = "matches-5301f47ad84dbc66"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4748,8 +4748,8 @@ rust_library("maybe-owned-v0_3_2") {
   crate_root = "//third_party/rust_crates/vendor/maybe-owned/src/lib.rs"
   output_name = "maybe_owned-cd58fab7b411c920"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4769,8 +4769,8 @@ rust_library("maybe-uninit-v2_0_0") {
   crate_root = "//third_party/rust_crates/vendor/maybe-uninit/src/lib.rs"
   output_name = "maybe_uninit-fb89acfa5fdd5d93"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4793,8 +4793,8 @@ rust_library("memchr-v2_3_3") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/memchr/src/lib.rs"
   output_name = "memchr-523a962cdfbcb111"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4821,8 +4821,8 @@ rust_library("memoffset-v0_5_3") {
   crate_root = "//third_party/rust_crates/vendor/memoffset/src/lib.rs"
   output_name = "memoffset-86fca2d18c439f83"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4842,8 +4842,8 @@ rust_library("mime-v0_2_6") {
   crate_root = "//third_party/rust_crates/vendor/mime/src/lib.rs"
   output_name = "mime-d925572a37a44efa"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4864,8 +4864,8 @@ rust_library("mime_guess-v1_8_6") {
   crate_root = "//third_party/rust_crates/vendor/mime_guess/src/lib.rs"
   output_name = "mime_guess-d58800c9ff9e34fd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4888,8 +4888,8 @@ rust_library("miniz_oxide-v0_3_6") {
   crate_root = "//third_party/rust_crates/vendor/miniz_oxide/src/lib.rs"
   output_name = "miniz_oxide-9a756a7abca21ed4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4910,8 +4910,8 @@ rust_library("mio-v0_7_0") {
   crate_root = "//third_party/rust_crates/vendor/mio/src/lib.rs"
   output_name = "mio-35621ccd559c52ed"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4944,8 +4944,8 @@ rust_library("miow-v0_3_5") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/miow/src/lib.rs"
   output_name = "miow-dc82f42c60569f01"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4965,8 +4965,8 @@ rust_library("mockall-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/mockall/src/lib.rs"
   output_name = "mockall-101dad7ffbea75df"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -4993,8 +4993,8 @@ rust_proc_macro("mockall_derive-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/mockall_derive/src/lib.rs"
   output_name = "mockall_derive-6535f5e9d7922162"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5018,8 +5018,8 @@ rust_library("multipart-v0_15_4") {
   crate_root = "//third_party/rust_crates/vendor/multipart/src/lib.rs"
   output_name = "multipart-49e1a74e1e6b3693"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5055,8 +5055,8 @@ rust_library("nb-connect-v1_1_0") {
   crate_root = "//third_party/rust_crates/vendor/nb-connect/src/lib.rs"
   output_name = "nb_connect-9b9caa2f737a76f4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5080,8 +5080,8 @@ rust_library("nix-v0_20_0") {
   crate_root = "//third_party/rust_crates/vendor/nix/src/lib.rs"
   output_name = "nix-212f6cb0e58efa58"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5104,8 +5104,8 @@ rust_library("nom-v5_0_0") {
   crate_root = "//third_party/rust_crates/vendor/nom/src/lib.rs"
   output_name = "nom-75597d9e6590c988"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5134,8 +5134,8 @@ rust_library("nom_locate-v2_0_0") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/nom_locate/src/lib.rs"
   output_name = "nom_locate-9b54fbce8f44d169"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5162,8 +5162,8 @@ rust_library("normalize-line-endings-v0_3_0") {
       "//third_party/rust_crates/vendor/normalize-line-endings/src/lib.rs"
   output_name = "normalize_line_endings-4054253ee9a0f431"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5183,8 +5183,8 @@ rust_library("ntapi-v0_3_4") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/ntapi/src/lib.rs"
   output_name = "ntapi-3fb9016f4c012ee1"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5207,8 +5207,8 @@ rust_library("num-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/num/src/lib.rs"
   output_name = "num-fd01d44f35253e6d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5237,8 +5237,8 @@ rust_library("num-bigint-v0_2_2") {
   crate_root = "//third_party/rust_crates/vendor/num-bigint/src/lib.rs"
   output_name = "num_bigint-61c27594421f5cd0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5265,8 +5265,8 @@ rust_library("num-complex-v0_2_1") {
   crate_root = "//third_party/rust_crates/vendor/num-complex/src/lib.rs"
   output_name = "num_complex-8a072fd0857db963"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5289,8 +5289,8 @@ rust_proc_macro("num-derive-v0_2_4") {
   crate_root = "//third_party/rust_crates/vendor/num-derive/src/lib.rs"
   output_name = "num_derive-2401d71751fbb28b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5314,8 +5314,8 @@ rust_library("num-integer-v0_1_39") {
   crate_root = "//third_party/rust_crates/vendor/num-integer/src/lib.rs"
   output_name = "num_integer-784ce5b14502b374"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5338,8 +5338,8 @@ rust_library("num-iter-v0_1_37") {
   crate_root = "//third_party/rust_crates/vendor/num-iter/src/lib.rs"
   output_name = "num_iter-56f02b88a493c33a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5364,8 +5364,8 @@ rust_library("num-rational-v0_2_1") {
   crate_root = "//third_party/rust_crates/vendor/num-rational/src/lib.rs"
   output_name = "num_rational-7e86b517853427e3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5392,8 +5392,8 @@ rust_library("num-traits-v0_2_11") {
   crate_root = "//third_party/rust_crates/vendor/num-traits/src/lib.rs"
   output_name = "num_traits-a6e1ee504861eea7"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5416,8 +5416,8 @@ rust_library("num_cpus-v1_12_0") {
   crate_root = "//third_party/rust_crates/vendor/num_cpus/src/lib.rs"
   output_name = "num_cpus-5d7427ef5ac8370a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5441,8 +5441,8 @@ rust_library("numtoa-v0_1_0") {
   crate_root = "//third_party/rust_crates/vendor/numtoa/src/lib.rs"
   output_name = "numtoa-7acb857cdac0bf2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5463,8 +5463,8 @@ rust_library("once_cell-v1_5_2") {
   crate_root = "//third_party/rust_crates/vendor/once_cell/src/lib.rs"
   output_name = "once_cell-706b9fb730eeb6c2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5489,8 +5489,8 @@ rust_library("openat-v0_1_17") {
   crate_root = "//third_party/rust_crates/vendor/openat/src/lib.rs"
   output_name = "openat-b3aae38d235053dc"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5511,8 +5511,8 @@ rust_library("openssl-probe-v0_1_2") {
   crate_root = "//third_party/rust_crates/vendor/openssl-probe/src/lib.rs"
   output_name = "openssl_probe-759570083bb12b65"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5532,8 +5532,8 @@ rust_library("owning_ref-v0_4_0") {
   crate_root = "//third_party/rust_crates/vendor/owning_ref/src/lib.rs"
   output_name = "owning_ref-163177019c6dfe3a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5554,8 +5554,8 @@ rust_library("parking-v2_0_0") {
   crate_root = "//third_party/rust_crates/vendor/parking/src/lib.rs"
   output_name = "parking-f53320ef53395fc3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5575,8 +5575,8 @@ rust_library("parking_lot-v0_10_2") {
   crate_root = "//third_party/rust_crates/vendor/parking_lot-0.10.2/src/lib.rs"
   output_name = "parking_lot-b84453ff4ae0bc4f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5599,8 +5599,8 @@ rust_library("parking_lot-v0_11_1") {
   crate_root = "//third_party/rust_crates/vendor/parking_lot/src/lib.rs"
   output_name = "parking_lot-a739a418d82fd597"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5624,8 +5624,8 @@ rust_library("parking_lot-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/parking_lot-0.9.0/src/lib.rs"
   output_name = "parking_lot-6721767503fecbee"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5649,8 +5649,8 @@ rust_library("parking_lot_core-v0_6_2") {
       "//third_party/rust_crates/vendor/parking_lot_core-0.6.2/src/lib.rs"
   output_name = "parking_lot_core-32ade8d5cf038200"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5689,8 +5689,8 @@ rust_library("parking_lot_core-v0_7_2") {
       "//third_party/rust_crates/vendor/parking_lot_core-0.7.2/src/lib.rs"
   output_name = "parking_lot_core-2c323f53cefd1228"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5728,8 +5728,8 @@ rust_library("parking_lot_core-v0_8_3") {
   crate_root = "//third_party/rust_crates/vendor/parking_lot_core/src/lib.rs"
   output_name = "parking_lot_core-21f257089bd39d94"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5765,8 +5765,8 @@ rust_proc_macro("paste-v1_0_0") {
   crate_root = "//third_party/rust_crates/vendor/paste/src/lib.rs"
   output_name = "paste-467ce9508308aa2b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5786,8 +5786,8 @@ rust_library("pem-v0_8_3") {
   crate_root = "//third_party/rust_crates/vendor/pem/src/lib.rs"
   output_name = "pem-cdefa2bfba638b2c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5810,8 +5810,8 @@ rust_library("percent-encoding-v1_0_1") {
   crate_root = "//third_party/rust_crates/vendor/percent-encoding-1.0.1/lib.rs"
   output_name = "percent_encoding-ac2a99b38019401d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5831,8 +5831,8 @@ rust_library("percent-encoding-v2_1_0") {
   crate_root = "//third_party/rust_crates/vendor/percent-encoding/lib.rs"
   output_name = "percent_encoding-d6833841fde4a923"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5852,8 +5852,8 @@ rust_library("pest-v2_1_0") {
   crate_root = "//third_party/rust_crates/vendor/pest/src/lib.rs"
   output_name = "pest-c441aed71f967ff5"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5874,8 +5874,8 @@ rust_proc_macro("pest_derive-v2_1_0") {
   crate_root = "//third_party/rust_crates/vendor/pest_derive/src/lib.rs"
   output_name = "pest_derive-1b54193ee8a497b9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5897,8 +5897,8 @@ rust_library("pest_generator-v2_1_3") {
   crate_root = "//third_party/rust_crates/vendor/pest_generator/src/lib.rs"
   output_name = "pest_generator-8216af62d67b03b3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5923,8 +5923,8 @@ rust_library("pest_meta-v2_1_0") {
   crate_root = "//third_party/rust_crates/vendor/pest_meta/src/lib.rs"
   output_name = "pest_meta-97d599c12fc59f03"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5946,8 +5946,8 @@ rust_library("petgraph-v0_5_1") {
   crate_root = "//third_party/rust_crates/vendor/petgraph/src/lib.rs"
   output_name = "petgraph-f655956878203040"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5973,8 +5973,8 @@ rust_library("phf-v0_7_24") {
   crate_root = "//third_party/rust_crates/vendor/phf/src/lib.rs"
   output_name = "phf-b1c3ba777c6cb9d2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -5996,8 +5996,8 @@ rust_library("phf_shared-v0_7_24") {
   crate_root = "//third_party/rust_crates/vendor/phf_shared/src/lib.rs"
   output_name = "phf_shared-310fac8e05c2d167"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6020,8 +6020,8 @@ rust_library("pin-project-v0_4_26") {
   crate_root = "//third_party/rust_crates/vendor/pin-project-0.4.26/src/lib.rs"
   output_name = "pin_project-a02b7c35a51bd146"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6042,8 +6042,8 @@ rust_library("pin-project-v1_0_4") {
   crate_root = "//third_party/rust_crates/vendor/pin-project/src/lib.rs"
   output_name = "pin_project-22de70c7a2098ec0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6065,8 +6065,8 @@ rust_proc_macro("pin-project-internal-v0_4_26") {
       "//third_party/rust_crates/vendor/pin-project-internal-0.4.26/src/lib.rs"
   output_name = "pin_project_internal-c9d209096f69f67a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6092,8 +6092,8 @@ rust_proc_macro("pin-project-internal-v1_0_4") {
       "//third_party/rust_crates/vendor/pin-project-internal/src/lib.rs"
   output_name = "pin_project_internal-f37959f5f2096c25"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6117,8 +6117,8 @@ rust_library("pin-project-lite-v0_1_4") {
       "//third_party/rust_crates/vendor/pin-project-lite-0.1.4/src/lib.rs"
   output_name = "pin_project_lite-56ada01194125122"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6138,8 +6138,8 @@ rust_library("pin-project-lite-v0_2_4") {
   crate_root = "//third_party/rust_crates/vendor/pin-project-lite/src/lib.rs"
   output_name = "pin_project_lite-fea8de17d894bcb8"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6159,8 +6159,8 @@ rust_library("pin-utils-v0_1_0") {
   crate_root = "//third_party/rust_crates/vendor/pin-utils/src/lib.rs"
   output_name = "pin_utils-f6d0191654b565d6"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6180,8 +6180,8 @@ rust_library("png-v0_14_0") {
   crate_root = "//third_party/rust_crates/vendor/png/src/lib.rs"
   output_name = "png-496bf2b92540669a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6208,8 +6208,8 @@ rust_library("podio-v0_1_6") {
   crate_root = "//third_party/rust_crates/vendor/podio/src/lib.rs"
   output_name = "podio-9f03c94555630577"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6229,8 +6229,8 @@ rust_library("polling-v2_0_2") {
   crate_root = "//third_party/rust_crates/vendor/polling/src/lib.rs"
   output_name = "polling-2a1f69f38bc0860c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6261,8 +6261,8 @@ rust_library("ppv-lite86-v0_2_6") {
   crate_root = "//third_party/rust_crates/vendor/ppv-lite86/src/lib.rs"
   output_name = "ppv_lite86-4f2afd05532d6926"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6284,8 +6284,8 @@ rust_library("predicates-v1_0_7") {
   crate_root = "//third_party/rust_crates/vendor/predicates/src/lib.rs"
   output_name = "predicates-18699c217c61a73d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6315,8 +6315,8 @@ rust_library("predicates-core-v1_0_2") {
   crate_root = "//third_party/rust_crates/vendor/predicates-core/src/lib.rs"
   output_name = "predicates_core-9278ecd8b23c9da2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6336,8 +6336,8 @@ rust_library("predicates-tree-v1_0_2") {
   crate_root = "//third_party/rust_crates/vendor/predicates-tree/src/lib.rs"
   output_name = "predicates_tree-2fdd83d7979f6648"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6359,8 +6359,8 @@ rust_library("pretty-v0_5_2") {
   crate_root = "//third_party/rust_crates/vendor/pretty/src/lib.rs"
   output_name = "pretty-80700aa60373011"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6381,8 +6381,8 @@ rust_library("pretty_assertions-v0_5_1") {
   crate_root = "//third_party/rust_crates/vendor/pretty_assertions/src/lib.rs"
   output_name = "pretty_assertions-fcd9aa92a106be53"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6404,8 +6404,8 @@ rust_library("prettytable-rs-v0_8_0") {
   crate_root = "//third_party/rust_crates/vendor/prettytable-rs/src/lib.rs"
   output_name = "prettytable-1855933ce08984ad"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6434,8 +6434,8 @@ rust_proc_macro("proc-macro-hack-v0_5_19") {
   crate_root = "//third_party/rust_crates/vendor/proc-macro-hack/src/lib.rs"
   output_name = "proc_macro_hack-abe60bc39ac4cdbe"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6455,8 +6455,8 @@ rust_library("proc-macro-nested-v0_1_7") {
   crate_root = "//third_party/rust_crates/vendor/proc-macro-nested/src/lib.rs"
   output_name = "proc_macro_nested-2f16aa10e567d43e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6479,8 +6479,8 @@ rust_library("proc-macro2-v0_4_27") {
   crate_root = "//third_party/rust_crates/vendor/proc-macro2-0.4.27/src/lib.rs"
   output_name = "proc_macro2-b6435296c5b4a378"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6506,8 +6506,8 @@ rust_library("proc-macro2-v1_0_24") {
   crate_root = "//third_party/rust_crates/vendor/proc-macro2/src/lib.rs"
   output_name = "proc_macro2-9cab0afb36d26785"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6536,8 +6536,8 @@ rust_library("proptest-v0_9_3") {
   crate_root = "//third_party/rust_crates/vendor/proptest/src/lib.rs"
   output_name = "proptest-5501bd7bbeeb32df"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6580,8 +6580,8 @@ rust_proc_macro("proptest-derive-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/proptest-derive/src/lib.rs"
   output_name = "proptest_derive-c677256b817d9125"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6604,8 +6604,8 @@ rust_library("publicsuffix-v1_5_2") {
   crate_root = "//third_party/rust_crates/vendor/publicsuffix/src/lib.rs"
   output_name = "publicsuffix-432c80925f3efce9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6630,8 +6630,8 @@ rust_library("pulldown-cmark-v0_6_0") {
   crate_root = "//third_party/rust_crates/vendor/pulldown-cmark/src/lib.rs"
   output_name = "pulldown_cmark-de13a6fc690a4786"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6657,8 +6657,8 @@ rust_library("pulse-v0_5_3") {
   crate_root = "//third_party/rust_crates/vendor/pulse/src/lib.rs"
   output_name = "pulse-c8d41d8ba488b402"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6681,8 +6681,8 @@ rust_library("quick-error-v1_2_2") {
   crate_root = "//third_party/rust_crates/vendor/quick-error/src/lib.rs"
   output_name = "quick_error-5bd842b4b1c97fb4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6702,8 +6702,8 @@ rust_library("quote-v0_6_11") {
   crate_root = "//third_party/rust_crates/vendor/quote-0.6.11/src/lib.rs"
   output_name = "quote-4a6a7c47667b0a02"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6726,8 +6726,8 @@ rust_library("quote-v1_0_7") {
   crate_root = "//third_party/rust_crates/vendor/quote/src/lib.rs"
   output_name = "quote-9f1f949289306afa"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6750,8 +6750,8 @@ rust_library("rand-v0_3_23") {
   crate_root = "//third_party/rust_crates/vendor/rand-0.3.23/src/lib.rs"
   output_name = "rand-2c666fe219af820b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6773,8 +6773,8 @@ rust_library("rand-v0_4_6") {
   crate_root = "//third_party/rust_crates/vendor/rand-0.4.6/src/lib.rs"
   output_name = "rand-875e21dccd44d7c9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6810,8 +6810,8 @@ rust_library("rand-v0_5_6") {
   crate_root = "//third_party/rust_crates/vendor/rand-0.5.6/src/lib.rs"
   output_name = "rand-1f6e0de9691219e8"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6851,8 +6851,8 @@ rust_library("rand-v0_6_5") {
   crate_root = "//third_party/rust_crates/vendor/rand-0.6.5/src/lib.rs"
   output_name = "rand-49454de2a45e84d2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6894,8 +6894,8 @@ rust_library("rand-v0_7_2") {
   crate_root = "//third_party/rust_crates/vendor/rand/src/lib.rs"
   output_name = "rand-20e81bc4d0ea2cd2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6935,8 +6935,8 @@ rust_library("rand_chacha-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/rand_chacha-0.1.1/src/lib.rs"
   output_name = "rand_chacha-4d71541867d8f94f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6958,8 +6958,8 @@ rust_library("rand_chacha-v0_2_1") {
   crate_root = "//third_party/rust_crates/vendor/rand_chacha/src/lib.rs"
   output_name = "rand_chacha-e6eac7ee40461c84"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -6982,8 +6982,8 @@ rust_library("rand_core-v0_3_1") {
   crate_root = "//third_party/rust_crates/vendor/rand_core-0.3.1/src/lib.rs"
   output_name = "rand_core-1d548fa20a792394"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7006,8 +7006,8 @@ rust_library("rand_core-v0_4_0") {
   crate_root = "//third_party/rust_crates/vendor/rand_core-0.4.0/src/lib.rs"
   output_name = "rand_core-b977c15482d5a8aa"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7029,8 +7029,8 @@ rust_library("rand_core-v0_5_1") {
   crate_root = "//third_party/rust_crates/vendor/rand_core/src/lib.rs"
   output_name = "rand_core-3b8db019998b7ccd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7054,8 +7054,8 @@ rust_library("rand_hc-v0_1_0") {
   crate_root = "//third_party/rust_crates/vendor/rand_hc-0.1.0/src/lib.rs"
   output_name = "rand_hc-e9f4f74a87ae5d3b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7076,8 +7076,8 @@ rust_library("rand_hc-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/rand_hc/src/lib.rs"
   output_name = "rand_hc-dcd34d22f422cc06"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7098,8 +7098,8 @@ rust_library("rand_isaac-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/rand_isaac/src/lib.rs"
   output_name = "rand_isaac-3b88f072e0dd7a40"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7120,8 +7120,8 @@ rust_library("rand_jitter-v0_1_3") {
   crate_root = "//third_party/rust_crates/vendor/rand_jitter/src/lib.rs"
   output_name = "rand_jitter-f950fa4b6ab9b786"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7149,8 +7149,8 @@ rust_library("rand_os-v0_1_2") {
   crate_root = "//third_party/rust_crates/vendor/rand_os/src/lib.rs"
   output_name = "rand_os-b32b7b23928c4779"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7186,8 +7186,8 @@ rust_library("rand_pcg-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/rand_pcg/src/lib.rs"
   output_name = "rand_pcg-acb26d14eb85350b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7209,8 +7209,8 @@ rust_library("rand_xorshift-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/rand_xorshift/src/lib.rs"
   output_name = "rand_xorshift-7904c04fa5190cb3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7231,8 +7231,8 @@ rust_library("rand_xoshiro-v0_1_0") {
   crate_root = "//third_party/rust_crates/vendor/rand_xoshiro/src/lib.rs"
   output_name = "rand_xoshiro-1085831e9652f99c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7254,8 +7254,8 @@ rust_library("rayon-v1_3_0") {
   crate_root = "//third_party/rust_crates/vendor/rayon/src/lib.rs"
   output_name = "rayon-9313a85f140dc837"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7278,8 +7278,8 @@ rust_library("rayon-core-v1_7_0") {
   crate_root = "//third_party/rust_crates/vendor/rayon-core/src/lib.rs"
   output_name = "rayon_core-1bba12a11050e3f7"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7304,8 +7304,8 @@ rust_library("rdrand-v0_4_0") {
   crate_root = "//third_party/rust_crates/vendor/rdrand/src/lib.rs"
   output_name = "rdrand-f63300c5315f5e88"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7329,8 +7329,8 @@ rust_library("redox_syscall-v0_1_51") {
       "//third_party/rust_crates/vendor/redox_syscall-0.1.51/src/lib.rs"
   output_name = "syscall-744b5901ce7227f5"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7350,8 +7350,8 @@ rust_library("redox_syscall-v0_2_5") {
   crate_root = "//third_party/rust_crates/vendor/redox_syscall/src/lib.rs"
   output_name = "syscall-23505b3cf82590b2"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7372,8 +7372,8 @@ rust_library("redox_termios-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/redox_termios/src/lib.rs"
   output_name = "redox_termios-961497fce38cbc39"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7398,8 +7398,8 @@ rust_library("regex-v1_3_5") {
   crate_root = "//third_party/rust_crates/vendor/regex/src/lib.rs"
   output_name = "regex-be3eec66bf66867d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7442,8 +7442,8 @@ rust_library("regex-automata-v0_1_9") {
       "//third_party/rust_crates/tiny_mirrors/regex-automata/src/lib.rs"
   output_name = "regex_automata-cdaa0041c57f3413"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7464,8 +7464,8 @@ rust_library("regex-syntax-v0_6_17") {
   crate_root = "//third_party/rust_crates/vendor/regex-syntax/src/lib.rs"
   output_name = "regex_syntax-579ced0738b0164d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7494,8 +7494,8 @@ rust_library("remove_dir_all-v0_5_1") {
   crate_root = "//third_party/rust_crates/vendor/remove_dir_all/src/lib.rs"
   output_name = "remove_dir_all-202715e376d8ea96"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7518,8 +7518,8 @@ rust_library("ring-v0_16_12") {
   crate_root = "//third_party/rust_crates/vendor/ring/src/lib.rs"
   output_name = "ring-34f98e503c3d6a69"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7560,8 +7560,8 @@ rust_library("rouille-v3_0_0") {
   crate_root = "//third_party/rust_crates/vendor/rouille/src/lib.rs"
   output_name = "rouille-88f0139a27ad0c5d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7603,8 +7603,8 @@ rust_library("rust-crypto-v0_2_36") {
   crate_root = "//third_party/rust-mirrors/rust-crypto/src/lib.rs"
   output_name = "crypto-6b666b5d7cfb935b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7629,8 +7629,8 @@ rust_library("rust_icu_common-v0_4_1") {
   output_name = "rust_icu_common-5ea49d4a625e7171"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7657,8 +7657,8 @@ rust_library("rust_icu_sys-v0_4_1") {
   output_name = "rust_icu_sys-439d56b271a229ad"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7684,8 +7684,8 @@ rust_library("rust_icu_ucal-v0_4_1") {
   output_name = "rust_icu_ucal-cd365d62746eef63"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7714,8 +7714,8 @@ rust_library("rust_icu_udat-v0_4_1") {
   output_name = "rust_icu_udat-4f04b1f71806b24c"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7746,8 +7746,8 @@ rust_library("rust_icu_udata-v0_4_1") {
   output_name = "rust_icu_udata-c54105825d314371"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7774,8 +7774,8 @@ rust_library("rust_icu_uenum-v0_4_1") {
   output_name = "rust_icu_uenum-8907af5918bf4b28"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7802,8 +7802,8 @@ rust_library("rust_icu_uloc-v0_4_1") {
   output_name = "rust_icu_uloc-5bd85400b66e0f51"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7833,8 +7833,8 @@ rust_library("rust_icu_ustring-v0_4_1") {
   output_name = "rust_icu_ustring-48284c7e1b9382a0"
   configs += [ "//src/lib/icu:version" ]
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7861,8 +7861,8 @@ rust_library("rustc-demangle-v0_1_16") {
   crate_root = "//third_party/rust_crates/vendor/rustc-demangle/src/lib.rs"
   output_name = "rustc_demangle-79f810e86b22e50c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7882,8 +7882,8 @@ rust_library("rustc-hash-v1_0_1") {
   crate_root = "//third_party/rust_crates/vendor/rustc-hash/src/lib.rs"
   output_name = "rustc_hash-d18fd5c05c7b0ca4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7904,8 +7904,8 @@ rust_library("rustc-serialize-v0_3_24") {
   crate_root = "//third_party/rust_crates/vendor/rustc-serialize/src/lib.rs"
   output_name = "rustc_serialize-cf1d65d911e642f1"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7925,8 +7925,8 @@ rust_library("rustls-v0_17_0") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/rustls/src/lib.rs"
   output_name = "rustls-e5718d4d3f3f0783"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7955,8 +7955,8 @@ rust_library("rustls-native-certs-v0_3_0") {
   crate_root = "//third_party/rust_crates/vendor/rustls-native-certs/src/lib.rs"
   output_name = "rustls_native_certs-3145d897db9d9dcb"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -7986,8 +7986,8 @@ rust_library("rusty-fork-v0_2_1") {
   crate_root = "//third_party/rust_crates/vendor/rusty-fork/src/lib.rs"
   output_name = "rusty_fork-ac04dd6dceaad5be"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8013,8 +8013,8 @@ rust_library("ryu-v1_0_3") {
   crate_root = "//third_party/rust_crates/vendor/ryu/src/lib.rs"
   output_name = "ryu-892abe88d9705b75"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8037,8 +8037,8 @@ rust_library("safemem-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/safemem-0.2.0/src/lib.rs"
   output_name = "safemem-4153149682bcbffa"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8058,8 +8058,8 @@ rust_library("safemem-v0_3_0") {
   crate_root = "//third_party/rust_crates/vendor/safemem/src/lib.rs"
   output_name = "safemem-aa454cc1e0ab7f9f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8081,8 +8081,8 @@ rust_library("same-file-v1_0_4") {
   crate_root = "//third_party/rust_crates/vendor/same-file/src/lib.rs"
   output_name = "same_file-460d9eb4eb179eea"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8105,8 +8105,8 @@ rust_library("scanlex-v0_1_4") {
   crate_root = "//third_party/rust_crates/vendor/scanlex/src/lib.rs"
   output_name = "scanlex-d586196f33c095ac"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8126,8 +8126,8 @@ rust_library("schannel-v0_1_19") {
   crate_root = "//third_party/rust_crates/vendor/schannel/src/lib.rs"
   output_name = "schannel-140c87c712698950"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8149,8 +8149,8 @@ rust_library("scopeguard-v1_1_0") {
   crate_root = "//third_party/rust_crates/vendor/scopeguard/src/lib.rs"
   output_name = "scopeguard-6ef302a7f864fbb3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8172,8 +8172,8 @@ rust_library("sct-v0_6_0") {
   crate_root = "//third_party/rust_crates/vendor/sct/src/lib.rs"
   output_name = "sct-879ad9017e22db73"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8196,8 +8196,8 @@ rust_library("security-framework-v0_4_4") {
       "//third_party/rust_crates/tiny_mirrors/security-framework/src/lib.rs"
   output_name = "security_framework-bc94113e1496fc39"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8223,8 +8223,8 @@ rust_library("security-framework-sys-v0_4_3") {
       "//third_party/rust_crates/vendor/security-framework-sys/src/lib.rs"
   output_name = "security_framework_sys-76a9cfb3164f386"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8246,8 +8246,8 @@ rust_library("semver-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/semver/src/lib.rs"
   output_name = "semver-cafeca1c46011ca9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8271,8 +8271,8 @@ rust_library("semver-parser-v0_7_0") {
   crate_root = "//third_party/rust_crates/vendor/semver-parser/src/lib.rs"
   output_name = "semver_parser-cd0215f2368b3722"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8292,8 +8292,8 @@ rust_library("serde-v1_0_116") {
   crate_root = "//third_party/rust_crates/vendor/serde/src/lib.rs"
   output_name = "serde-51abe0aa53b0d3ac"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8331,8 +8331,8 @@ rust_library("serde_cbor-v0_11_1") {
   crate_root = "//third_party/rust_crates/vendor/serde_cbor/src/lib.rs"
   output_name = "serde_cbor-196735531d02fccc"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8356,8 +8356,8 @@ rust_proc_macro("serde_derive-v1_0_116") {
   crate_root = "//third_party/rust_crates/vendor/serde_derive/src/lib.rs"
   output_name = "serde_derive-5a8d3d0247af7cfd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8382,8 +8382,8 @@ rust_library("serde_json-v1_0_59") {
   crate_root = "//third_party/rust_crates/vendor/serde_json/src/lib.rs"
   output_name = "serde_json-7635f31531fde4db"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8409,8 +8409,8 @@ rust_library("serde_json5-v0_1_0") {
   crate_root = "//third_party/rust-mirrors/serde_json5/third_party/src/lib.rs"
   output_name = "serde_json5-c6c8351d886fc9d3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8433,8 +8433,8 @@ rust_proc_macro("serde_repr-v0_1_3") {
   crate_root = "//third_party/rust_crates/vendor/serde_repr/src/lib.rs"
   output_name = "serde_repr-821e19f1d7a82d0e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8457,8 +8457,8 @@ rust_library("serial_test-v0_5_1") {
   crate_root = "//third_party/rust_crates/vendor/serial_test/src/lib.rs"
   output_name = "serial_test-cf7a4047894f2a7b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8481,8 +8481,8 @@ rust_proc_macro("serial_test_derive-v0_5_1") {
   crate_root = "//third_party/rust_crates/vendor/serial_test_derive/src/lib.rs"
   output_name = "serial_test_derive-349c76aef8defaba"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8505,8 +8505,8 @@ rust_library("sha1-v0_6_0") {
   crate_root = "//third_party/rust_crates/vendor/sha1/src/lib.rs"
   output_name = "sha1-3b0af8831da37bad"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8526,8 +8526,8 @@ rust_library("sharded-slab-v0_0_9") {
   crate_root = "//third_party/rust_crates/vendor/sharded-slab/src/lib.rs"
   output_name = "sharded_slab-a5fb9ebc6e519d9e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8548,8 +8548,8 @@ rust_library("signal-hook-v0_1_16") {
   crate_root = "//third_party/rust_crates/vendor/signal-hook/src/lib.rs"
   output_name = "signal_hook-37c66c596290553a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8579,8 +8579,8 @@ rust_library("signal-hook-registry-v1_2_0") {
       "//third_party/rust_crates/vendor/signal-hook-registry/src/lib.rs"
   output_name = "signal_hook_registry-89f29a6954981833"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8602,8 +8602,8 @@ rust_library("simplelog-v0_8_0") {
   crate_root = "//third_party/rust_crates/vendor/simplelog/src/lib.rs"
   output_name = "simplelog-9ab6e681583324e0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8628,8 +8628,8 @@ rust_library("siphasher-v0_2_3") {
   crate_root = "//third_party/rust_crates/vendor/siphasher/src/lib.rs"
   output_name = "siphasher-c0f71ec8ce76c479"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8649,8 +8649,8 @@ rust_library("slab-v0_4_2") {
   crate_root = "//third_party/rust_crates/vendor/slab/src/lib.rs"
   output_name = "slab-8335b1c9e90ee478"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8670,8 +8670,8 @@ rust_library("smallvec-v0_6_13") {
   crate_root = "//third_party/rust_crates/vendor/smallvec-0.6.13/lib.rs"
   output_name = "smallvec-15257cc85e7a16b9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8694,8 +8694,8 @@ rust_library("smallvec-v1_6_1") {
   crate_root = "//third_party/rust_crates/vendor/smallvec/src/lib.rs"
   output_name = "smallvec-129929172b61f7b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8715,8 +8715,8 @@ rust_library("socket2-v0_4_0") {
   crate_root = "//third_party/rust_crates/vendor/socket2/src/lib.rs"
   output_name = "socket2-7e4be65d21727b28"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8743,8 +8743,8 @@ rust_library("spin-v0_5_2") {
   crate_root = "//third_party/rust_crates/vendor/spin/src/lib.rs"
   output_name = "spin-50733eeb0bba4c8d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8764,8 +8764,8 @@ rust_library("splines-v2_2_0") {
   crate_root = "//third_party/rust_crates/vendor/splines/src/lib.rs"
   output_name = "splines-d1b51f4ec5d923f7"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8787,8 +8787,8 @@ rust_library("stable_deref_trait-v1_1_1") {
   crate_root = "//third_party/rust_crates/vendor/stable_deref_trait/src/lib.rs"
   output_name = "stable_deref_trait-1bde01aa2aa758b9"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8810,8 +8810,8 @@ rust_library("static_assertions-v1_1_0") {
   crate_root = "//third_party/rust_crates/vendor/static_assertions/src/lib.rs"
   output_name = "static_assertions-5fff9c36214c34b7"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8832,8 +8832,8 @@ rust_library("streaming-stats-v0_2_3") {
       "//third_party/rust_crates/tiny_mirrors/streaming-stats/src/lib.rs"
   output_name = "stats-2c02c5c2e153793"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8854,8 +8854,8 @@ rust_library("strsim-v0_10_0") {
   crate_root = "//third_party/rust_crates/vendor/strsim/src/lib.rs"
   output_name = "strsim-aa21785775b7b33b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8875,8 +8875,8 @@ rust_library("strsim-v0_8_0") {
   crate_root = "//third_party/rust_crates/vendor/strsim-0.8.0/src/lib.rs"
   output_name = "strsim-a6895684b05e64cd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8896,8 +8896,8 @@ rust_library("structopt-v0_2_14") {
   crate_root = "//third_party/rust_crates/vendor/structopt/src/lib.rs"
   output_name = "structopt-282f1735ac1cc133"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8920,8 +8920,8 @@ rust_proc_macro("structopt-derive-v0_2_14") {
   crate_root = "//third_party/rust_crates/vendor/structopt-derive/src/lib.rs"
   output_name = "structopt_derive-809c043d87d920da"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8945,8 +8945,8 @@ rust_library("syn-v0_15_26") {
   crate_root = "//third_party/rust_crates/vendor/syn-0.15.26/src/lib.rs"
   output_name = "syn-45b33f047f6103c6"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -8979,8 +8979,8 @@ rust_library("syn-v1_0_58") {
   crate_root = "//third_party/rust_crates/vendor/syn/src/lib.rs"
   output_name = "syn-59df571bc0ccf4fd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9014,8 +9014,8 @@ rust_library("synstructure-v0_12_1") {
   crate_root = "//third_party/rust_crates/vendor/synstructure/src/lib.rs"
   output_name = "synstructure-379147eabfeddd75"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9039,8 +9039,8 @@ rust_library("tar-v0_4_25") {
   crate_root = "//third_party/rust_crates/vendor/tar/src/lib.rs"
   output_name = "tar-f84162c57b5f3fa8"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9074,8 +9074,8 @@ rust_library("tempdir-v0_3_7") {
   crate_root = "//third_party/rust_crates/vendor/tempdir/src/lib.rs"
   output_name = "tempdir-5354d0e7cf9ac43a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9097,8 +9097,8 @@ rust_library("tempfile-v3_1_0") {
   crate_root = "//third_party/rust_crates/vendor/tempfile/src/lib.rs"
   output_name = "tempfile-7b1346fb1d7972df"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9134,8 +9134,8 @@ rust_library("term-v0_5_1") {
   crate_root = "//third_party/rust_crates/vendor/term/src/lib.rs"
   output_name = "term-2cb16ccbdf283d91"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9160,8 +9160,8 @@ rust_library("termcolor-v1_1_0") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/termcolor/src/lib.rs"
   output_name = "termcolor-aa3f8d5c992f6147"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9184,8 +9184,8 @@ rust_library("termion-v1_5_3") {
   crate_root = "//third_party/rust_crates/vendor/termion/src/lib.rs"
   output_name = "termion-bd203e66cab9a985"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9217,8 +9217,8 @@ rust_library("termios-v0_3_2") {
   crate_root = "//third_party/rust_crates/vendor/termios/src/lib.rs"
   output_name = "termios-ef75c1b73286d58d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9239,8 +9239,8 @@ rust_proc_macro("test-case-v1_1_0") {
   crate_root = "//third_party/rust_crates/vendor/test-case/src/lib.rs"
   output_name = "test_case-f2bb0d885c2bf58f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9265,8 +9265,8 @@ rust_library("textwrap-v0_11_0") {
   crate_root = "//third_party/rust_crates/vendor/textwrap/src/lib.rs"
   output_name = "textwrap-942fc263da8a1e95"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9287,8 +9287,8 @@ rust_library("thiserror-v1_0_23") {
   crate_root = "//third_party/rust_crates/vendor/thiserror/src/lib.rs"
   output_name = "thiserror-dcdc66d3bbb690d3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9309,8 +9309,8 @@ rust_proc_macro("thiserror-impl-v1_0_23") {
   crate_root = "//third_party/rust_crates/vendor/thiserror-impl/src/lib.rs"
   output_name = "thiserror_impl-c420f1faeabf2d9a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9333,8 +9333,8 @@ rust_library("thread_local-v1_0_1") {
   crate_root = "//third_party/rust_crates/vendor/thread_local/src/lib.rs"
   output_name = "thread_local-c08961bcca26f08e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9355,8 +9355,8 @@ rust_library("threadpool-v1_7_1") {
   crate_root = "//third_party/rust_crates/vendor/threadpool/src/lib.rs"
   output_name = "threadpool-d926d0ce4d1b599c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9377,8 +9377,8 @@ rust_library("time-v0_1_42") {
   crate_root = "//third_party/rust_crates/vendor/time/src/lib.rs"
   output_name = "time-8624bef189b0fa67"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9409,8 +9409,8 @@ rust_library("timebomb-v0_1_2") {
   crate_root = "//third_party/rust_crates/vendor/timebomb/src/lib.rs"
   output_name = "timebomb-29a9884c96189d4e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9432,8 +9432,8 @@ rust_library("tiny_http-v0_6_2") {
   crate_root = "//third_party/rust_crates/vendor/tiny_http/src/lib.rs"
   output_name = "tiny_http-c62ae95a2a7c45ea"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9459,8 +9459,8 @@ rust_library("tokio-v0_2_21") {
   crate_root = "//third_party/rust_crates/vendor/tokio/src/lib.rs"
   output_name = "tokio-4301d3f497b41b04"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9492,8 +9492,8 @@ rust_library("tokio-rustls-v0_13_1") {
   crate_root = "//third_party/rust_crates/vendor/tokio-rustls/src/lib.rs"
   output_name = "tokio_rustls-4bae2a85418b59f8"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9517,8 +9517,8 @@ rust_library("tokio-util-v0_3_1") {
   crate_root = "//third_party/rust_crates/vendor/tokio-util/src/lib.rs"
   output_name = "tokio_util-3bb14110668d9fbe"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9546,8 +9546,8 @@ rust_library("toml-v0_5_6") {
   crate_root = "//third_party/rust_crates/vendor/toml/src/lib.rs"
   output_name = "toml-2563c91c8a85577d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9569,8 +9569,8 @@ rust_library("tower-service-v0_3_0") {
   crate_root = "//third_party/rust_crates/vendor/tower-service/src/lib.rs"
   output_name = "tower_service-2289a8e10b994b8a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9590,8 +9590,8 @@ rust_library("tracing-v0_1_25") {
   crate_root = "//third_party/rust_crates/vendor/tracing/src/lib.rs"
   output_name = "tracing-c94323666e971838"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9621,8 +9621,8 @@ rust_proc_macro("tracing-attributes-v0_1_13") {
   crate_root = "//third_party/rust_crates/vendor/tracing-attributes/src/lib.rs"
   output_name = "tracing_attributes-e32085986140309a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9645,8 +9645,8 @@ rust_library("tracing-core-v0_1_17") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/tracing-core/src/lib.rs"
   output_name = "tracing_core-54e4edd42ff24907"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9670,8 +9670,8 @@ rust_library("tracing-futures-v0_2_5") {
   crate_root = "//third_party/rust_crates/vendor/tracing-futures/src/lib.rs"
   output_name = "tracing_futures-3433c9509e7eda17"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9697,8 +9697,8 @@ rust_library("tracing-log-v0_1_2") {
   crate_root = "//third_party/rust_crates/vendor/tracing-log/src/lib.rs"
   output_name = "tracing_log-ccb7308262919f5b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9725,8 +9725,8 @@ rust_library("tracing-subscriber-v0_2_7") {
   crate_root = "//third_party/rust_crates/vendor/tracing-subscriber/src/lib.rs"
   output_name = "tracing_subscriber-206edd79a73e7358"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9754,8 +9754,8 @@ rust_library("treeline-v0_1_0") {
   crate_root = "//third_party/rust_crates/vendor/treeline/src/lib.rs"
   output_name = "treeline-73b2c02cee81d97b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9775,8 +9775,8 @@ rust_library("trust-dns-proto-v0_19_2") {
   crate_root = "//third_party/rust_crates/vendor/trust-dns-proto/src/lib.rs"
   output_name = "trust_dns_proto-f1194200ce4c7ef0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9808,8 +9808,8 @@ rust_library("trust-dns-resolver-v0_19_2") {
   crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
   output_name = "trust_dns_resolver-b1fe29499f1925ce"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9839,8 +9839,8 @@ rust_library("try-lock-v0_2_2") {
   crate_root = "//third_party/rust_crates/vendor/try-lock/src/lib.rs"
   output_name = "try_lock-d2aa576612eef943"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9860,8 +9860,8 @@ rust_library("ttf-parser-v0_10_1") {
   crate_root = "//third_party/rust_crates/vendor/ttf-parser/src/lib.rs"
   output_name = "ttf_parser-17d6faa32a9b2844"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9884,8 +9884,8 @@ rust_library("twoway-v0_1_8") {
   crate_root = "//third_party/rust_crates/vendor/twoway/src/lib.rs"
   output_name = "twoway-b1a1d820a8c2c969"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9908,8 +9908,8 @@ rust_library("typed-arena-v1_4_1") {
   crate_root = "//third_party/rust_crates/vendor/typed-arena/src/lib.rs"
   output_name = "typed_arena-18c1bf68df33fe8c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9931,8 +9931,8 @@ rust_library("ucd-trie-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/ucd-trie/src/lib.rs"
   output_name = "ucd_trie-91d111d170cc5f0b"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9954,8 +9954,8 @@ rust_library("unic-char-property-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/unic-char-property/src/lib.rs"
   output_name = "unic_char_property-445d81b4a0ae40c1"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -9980,8 +9980,8 @@ rust_library("unic-char-range-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/unic-char-range/src/lib.rs"
   output_name = "unic_char_range-9b60d6d5dd1543b8"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10006,8 +10006,8 @@ rust_library("unic-common-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/unic-common/src/lib.rs"
   output_name = "unic_common-48117e25b313876"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10032,8 +10032,8 @@ rust_library("unic-ucd-block-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/unic-ucd-block/src/lib.rs"
   output_name = "unic_ucd_block-5587140b130c5f84"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10060,8 +10060,8 @@ rust_library("unic-ucd-version-v0_9_0") {
   crate_root = "//third_party/rust_crates/vendor/unic-ucd-version/src/lib.rs"
   output_name = "unic_ucd_version-cfee15212f1e7220"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10086,8 +10086,8 @@ rust_library("unicase-v1_4_2") {
   crate_root = "//third_party/rust_crates/vendor/unicase-1.4.2/src/lib.rs"
   output_name = "unicase-324a0505811b5eab"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10109,8 +10109,8 @@ rust_library("unicase-v2_5_1") {
   crate_root = "//third_party/rust_crates/vendor/unicase/src/lib.rs"
   output_name = "unicase-be8b50383665a777"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10133,8 +10133,8 @@ rust_library("unicode-bidi-v0_3_4") {
   crate_root = "//third_party/rust_crates/vendor/unicode-bidi/src/lib.rs"
   output_name = "unicode_bidi-6196d3d9fc63e289"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10157,8 +10157,8 @@ rust_library("unicode-normalization-v0_1_8") {
       "//third_party/rust_crates/vendor/unicode-normalization/src/lib.rs"
   output_name = "unicode_normalization-601188fd7b0d2a4d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10180,8 +10180,8 @@ rust_library("unicode-segmentation-v1_2_1") {
       "//third_party/rust_crates/vendor/unicode-segmentation/src/lib.rs"
   output_name = "unicode_segmentation-6ac80cf67426e677"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10201,8 +10201,8 @@ rust_library("unicode-width-v0_1_5") {
   crate_root = "//third_party/rust_crates/vendor/unicode-width/src/lib.rs"
   output_name = "unicode_width-6f95bd0c0297e7ef"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10223,8 +10223,8 @@ rust_library("unicode-xid-v0_1_0") {
   crate_root = "//third_party/rust_crates/vendor/unicode-xid-0.1.0/src/lib.rs"
   output_name = "unicode_xid-8c0b837e1e0cd2cd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10245,8 +10245,8 @@ rust_library("unicode-xid-v0_2_0") {
   crate_root = "//third_party/rust_crates/vendor/unicode-xid/src/lib.rs"
   output_name = "unicode_xid-8b9ce29b16dc5a7f"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10267,8 +10267,8 @@ rust_library("unindent-v0_1_3") {
   crate_root = "//third_party/rust_crates/vendor/unindent/src/lib.rs"
   output_name = "unindent-80aa0ce7cd6efa63"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10288,8 +10288,8 @@ rust_library("untrusted-v0_7_0") {
   crate_root = "//third_party/rust_crates/vendor/untrusted/src/untrusted.rs"
   output_name = "untrusted-5f8476d9b2f7fe29"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10309,8 +10309,8 @@ rust_library("url-v1_7_2") {
   crate_root = "//third_party/rust_crates/vendor/url-1.7.2/src/lib.rs"
   output_name = "url-a33a870434d6f716"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10333,8 +10333,8 @@ rust_library("url-v2_1_0") {
   crate_root = "//third_party/rust_crates/vendor/url/src/lib.rs"
   output_name = "url-10398e48bf00aca4"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10357,8 +10357,8 @@ rust_library("utf8parse-v0_1_1") {
   crate_root = "//third_party/rust_crates/vendor/utf8parse/src/lib.rs"
   output_name = "utf8parse-ef54bf3166380f1"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10378,8 +10378,8 @@ rust_library("uuid-v0_7_2") {
   crate_root = "//third_party/rust_crates/vendor/uuid-0.7.2/src/lib.rs"
   output_name = "uuid-9a6c95af1cabc2e6"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10406,8 +10406,8 @@ rust_library("uuid-v0_8_2") {
   crate_root = "//third_party/rust_crates/vendor/uuid/src/lib.rs"
   output_name = "uuid-919b1371cee9e3ba"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10432,8 +10432,8 @@ rust_library("valico-v2_4_2") {
   crate_root = "//third_party/rust_crates/vendor/valico/src/lib.rs"
   output_name = "valico-179ee54e44a59467"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10462,8 +10462,8 @@ rust_library("vec-arena-v1_1_0") {
   crate_root = "//third_party/rust_crates/vendor/vec-arena/src/lib.rs"
   output_name = "vec_arena-cae5ec25c5855f5"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10483,8 +10483,8 @@ rust_library("vec_map-v0_8_1") {
   crate_root = "//third_party/rust_crates/vendor/vec_map/src/lib.rs"
   output_name = "vec_map-d78a1471c87b7920"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10504,8 +10504,8 @@ rust_library("vk-sys-v0_4_0") {
   crate_root = "//third_party/rust_crates/vendor/vk-sys/src/lib.rs"
   output_name = "vk_sys-64c5d0becd520497"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10525,8 +10525,8 @@ rust_library("void-v1_0_2") {
   crate_root = "//third_party/rust_crates/vendor/void/src/lib.rs"
   output_name = "void-3a0ca0e9ebe9ddab"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10548,8 +10548,8 @@ rust_library("vte-v0_3_3") {
   crate_root = "//third_party/rust_crates/vendor/vte/src/lib.rs"
   output_name = "vte-8f5a30c97a835161"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10570,8 +10570,8 @@ rust_library("wait-timeout-v0_1_5") {
   crate_root = "//third_party/rust_crates/vendor/wait-timeout/src/lib.rs"
   output_name = "wait_timeout-6681f14e0f8d09c3"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10592,8 +10592,8 @@ rust_library("waker-fn-v1_1_0") {
   crate_root = "//third_party/rust_crates/vendor/waker-fn/src/lib.rs"
   output_name = "waker_fn-5c6a90a186ee2ada"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10613,8 +10613,8 @@ rust_library("walkdir-v2_3_1") {
   crate_root = "//third_party/rust_crates/vendor/walkdir/src/lib.rs"
   output_name = "walkdir-3afd3201e5295e86"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10639,8 +10639,8 @@ rust_library("want-v0_3_0") {
   crate_root = "//third_party/rust_crates/vendor/want/src/lib.rs"
   output_name = "want-7ea5f0f15ff169c0"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10662,8 +10662,8 @@ rust_library("wasi-v0_10_1+wasi-snapshot-preview1") {
   crate_root = "//third_party/rust_crates/vendor/wasi/src/lib.rs"
   output_name = "wasi-7728795b1b2960eb"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10685,8 +10685,8 @@ rust_library("wasi-v0_7_0") {
   crate_root = "//third_party/rust_crates/vendor/wasi-0.7.0/src/lib.rs"
   output_name = "wasi-db34952771d0e0f1"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10708,8 +10708,8 @@ rust_library("wasm-bindgen-v0_2_60") {
   crate_root = "//third_party/rust_crates/vendor/wasm-bindgen/src/lib.rs"
   output_name = "wasm_bindgen-170fd7409417d807"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10735,8 +10735,8 @@ rust_library("wasm-bindgen-backend-v0_2_60") {
       "//third_party/rust_crates/vendor/wasm-bindgen-backend/src/lib.rs"
   output_name = "wasm_bindgen_backend-14835867b17fa11a"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10764,8 +10764,8 @@ rust_proc_macro("wasm-bindgen-macro-v0_2_60") {
   crate_root = "//third_party/rust_crates/vendor/wasm-bindgen-macro/src/lib.rs"
   output_name = "wasm_bindgen_macro-787ef10a23c0675c"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10789,8 +10789,8 @@ rust_library("wasm-bindgen-macro-support-v0_2_60") {
       "//third_party/rust_crates/vendor/wasm-bindgen-macro-support/src/lib.rs"
   output_name = "wasm_bindgen_macro_support-4017d91a063a2714"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10816,8 +10816,8 @@ rust_library("wasm-bindgen-shared-v0_2_60") {
   crate_root = "//third_party/rust_crates/vendor/wasm-bindgen-shared/src/lib.rs"
   output_name = "wasm_bindgen_shared-9fdc313316279fe6"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10837,8 +10837,8 @@ rust_library("web-sys-v0_3_36") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/web-sys/src/lib.rs"
   output_name = "web_sys-41fe16a596d7ee0d"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10860,8 +10860,8 @@ rust_library("webpki-v0_21_0") {
   crate_root = "//third_party/rust_crates/vendor/webpki/src/webpki.rs"
   output_name = "webpki-cf5d3581502ba661"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10886,8 +10886,8 @@ rust_library("wepoll-sys-v3_0_1") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/wepoll-sys/src/lib.rs"
   output_name = "wepoll_sys-ab562e75c3795c15"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10907,8 +10907,8 @@ rust_library("winapi-v0_3_9") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/winapi/src/lib.rs"
   output_name = "winapi-36dcf2c9d4b87e51"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10966,8 +10966,8 @@ rust_library("winapi-util-v0_1_5") {
   crate_root = "//third_party/rust_crates/tiny_mirrors/winapi-util/src/lib.rs"
   output_name = "winapi_util-d22658bf7990adbd"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -10987,8 +10987,8 @@ rust_library("xattr-v0_2_2") {
   crate_root = "//third_party/rust_crates/vendor/xattr/src/lib.rs"
   output_name = "xattr-b313ffbe9c2b6197"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -11011,8 +11011,8 @@ rust_library("xml-rs-v0_8_0") {
   crate_root = "//third_party/rust_crates/vendor/xml-rs/src/lib.rs"
   output_name = "xml-9187c9c232fb3a0e"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []
@@ -11032,8 +11032,8 @@ rust_library("zip-v0_5_5") {
   crate_root = "//third_party/rust_crates/vendor/zip/src/lib.rs"
   output_name = "zip-ac1fb914318fbe66"
   configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
   ]
 
   deps = []

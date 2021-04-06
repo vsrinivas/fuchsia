@@ -72,7 +72,7 @@ template("ffx") {
                              "non_rust_deps",
                            ])
 
-    configs += [ "//build/config:rust_panic_abort" ]
+    configs += [ "//build/config/rust:panic_abort" ]
   }
 
   group(ffx_name + "_tests") {

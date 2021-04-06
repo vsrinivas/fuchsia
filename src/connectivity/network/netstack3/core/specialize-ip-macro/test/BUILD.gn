@@ -9,8 +9,8 @@ rustc_test("lib_test") {
   version = "0.1.0"
   edition = "2018"
 
-  configs -= [ "//build/config:rust_no_features" ]
-  configs += [ "//build/config:netstack3_only_specialization_feature" ]
+  configs -= [ "//build/config/rust:no_features" ]
+  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
   deps = [
     "//src/connectivity/lib/net-types",

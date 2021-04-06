@@ -262,16 +262,19 @@ if (zircon_toolchain == false) {
     "//build/config:no_exceptions",
     "//build/config:no_rtti",
     "//build/config:symbol_visibility_hidden",
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_incremental",
-    "//build/config:rust_no_features",
-    "//build/config:rust_target",
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:incremental",
+    "//build/config/rust:no_features",
+    "//build/config/rust:target",
+    "//build/config/rust:2018_idioms",
+
+    # TODO(https://fxbug.dev/73468): Remove this once users are transitioned to new path.
     "//build/config:rust_2018_idioms",
     "//build/config:werror",
   ]
 
   if (is_analysis) {
-    default_common_binary_configs += [ "//build/config:rust_analysis" ]
+    default_common_binary_configs += [ "//build/config/rust:analysis" ]
   }
 
   if (is_debug) {
@@ -286,8 +289,8 @@ if (zircon_toolchain == false) {
       "//build/config/fuchsia:large_rust_stack",
       "//build/config/fuchsia:thread_safety_annotations",
       "//build/config:icf",
-      "//build/config:rust_panic_abort",
-      "//build/config:rust_v0_symbol_mangling",
+      "//build/config/rust:panic_abort",
+      "//build/config/rust:v0_symbol_mangling",
 
       # TODO(mcgrathr): Perhaps restrict this to only affected code.
       # For now, safest to do it everywhere.
@@ -508,7 +511,7 @@ set_defaults("rustc_dylib") {
 
 set_defaults("rustc_macro") {
   configs = default_shared_library_configs +
-            [ "//build/config:rust_allow_unused_extern_crates" ]
+            [ "//build/config/rust:allow_unused_extern_crates" ]
 }
 
 set_defaults("rustc_staticlib") {

@@ -45,7 +45,7 @@ rustc_library("term-model") {
   edition = "2018"
 
   # TODO(fxbug.dev/69442) remove this allowance
-  configs += [ "//build/config:rust_allow_legacy_derive_helpers" ]
+  configs += [ "//build/config/rust:allow_legacy_derive_helpers" ]
 
   deps = term_deps
   sources = term_sources
@@ -57,7 +57,7 @@ rustc_test("term-model_test") {
   edition = "2018"
 
   # TODO(fxbug.dev/69442) remove this allowance
-  configs += [ "//build/config:rust_allow_legacy_derive_helpers" ]
+  configs += [ "//build/config/rust:allow_legacy_derive_helpers" ]
 
   deps = term_deps
   sources = term_sources

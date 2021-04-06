@@ -263,14 +263,14 @@ template("rustc_binary") {
 
     # in-tree default in 2018 edition
     if (defined(invoker.edition) && invoker.edition == "2015") {
-      configs -= [ "//build/config:rust_edition_2018" ]
-      configs += [ "//build/config:rust_edition_2015" ]
+      configs -= [ "//build/config/rust:edition_2018" ]
+      configs += [ "//build/config/rust:edition_2015" ]
     }
 
     # some binary targets override the optimization level
     if (defined(invoker.force_opt)) {
       if (invoker.force_opt == "z") {
-        configs += [ "//build/config:rust_opt_level_z" ]
+        configs += [ "//build/config/rust:opt_level_z" ]
       }
     }
 

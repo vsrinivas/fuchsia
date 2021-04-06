@@ -24,20 +24,9 @@ declare_args() {
     enable_frame_pointers = is_debug
   }
 
-  # Controls whether the rust compiler uses v0 symbol mangling scheme
-  # (see https://github.com/rust-lang/rfcs/blob/HEAD/text/2603-rust-symbol-name-mangling-v0.md).
-  # The v0 symbol mangling scheme requires upstream LLVM support when demangling,
-  # so it is not on by default.
-  # TODO(fxbug.dev/57302): Enable v0 mangling by default.
-  rust_v0_symbol_mangling = false
-
   # **NOTE:** This is for **experimentation only** and should not normally be
   # changed.  Set the version of the C++ standard to compile for, 17 or 20.
   experimental_cxx_version = 17
-
-  # Enable incremental rust compilation. Takes a path to the directory to use
-  # as the cache.
-  rust_incremental = ""
 }
 
 # No frame pointers for host compiles.
@@ -45,86 +34,8 @@ if (!is_fuchsia) {
   enable_frame_pointers = false
 }
 
-# Turns on the rust compilation analysis generator. This will produce a
-# directory $OUT/save-analysis-temp, which will dump all the source analysis
-# that the compiler collected while analyzing the source.  This config is
-# included conditionally, see //build/config/BUILDCONFIG.gn for details.
-config("rust_analysis") {
-  rustflags = [ "-Zsave-analysis" ]
-}
-
-config("rust_edition_2018") {
-  rustflags = [ "--edition=2018" ]
-}
-
-config("rust_edition_2015") {
-  rustflags = [ "--edition=2015" ]
-}
-
-config("rust_opt_level_z") {
-  rustflags = [ "-Copt-level=z" ]
-}
-
-config("rust_no_features") {
-  rustflags = [ "-Zallow-features=" ]
-}
-
-config("rust_incremental") {
-  if (rust_incremental != "") {
-    rustflags = [ "-Cincremental=" + rust_incremental ]
-  }
-}
-
-config("netstack3_only_specialization_feature") {
-  rustflags = [
-    "-Zallow-features=min_specialization,specialization",
-    "-Aincomplete-features",
-  ]
-}
-
+# TODO(https://fxbug.dev/73468): Remove this once users are transitioned to new path.
 config("rust_2018_idioms") {
-  rustflags = [ "-Wrust-2018-idioms" ]
-}
-
-config("rust_target") {
-  rustflags = [
-    "--target",
-    rust_target,
-    "--cap-lints=$rust_cap_lints",
-  ]
-}
-
-config("rust_panic_abort") {
-  rustflags = [
-    "-Cpanic=abort",
-    "-Cforce-unwind-tables=yes",
-    "-Zpanic_abort_tests",
-  ]
-}
-
-config("rust_v0_symbol_mangling") {
-  if (rust_v0_symbol_mangling) {
-    rustflags = [ "-Zsymbol-mangling-version=v0" ]
-  }
-}
-
-config("rust_allow_unknown_lints") {
-  rustflags = [ "-Aunknown-lints" ]
-}
-
-# TODO(fxbug.dev/67118) remove this allowance
-config("rust_allow_redundant_semicolons") {
-  rustflags = [ "-Aredundant-semicolons" ]
-}
-
-# TODO(fxbug.dev/68148) remove this allowance
-config("rust_allow_unused_extern_crates") {
-  rustflags = [ "-Aunused-extern-crates" ]
-}
-
-# TODO(fxbug.dev/69442) remove this allowance
-config("rust_allow_legacy_derive_helpers") {
-  rustflags = [ "-Alegacy-derive-helpers" ]
 }
 
 config("language") {
@@ -181,7 +92,7 @@ config("compiler") {
   configs = [
     ":color_diagnostics",
     ":crash-diagnostics-dir",
-    ":rust_panic_cfg",
+    "rust:panic_cfg",
     ":time-trace",
     ":toolchain_version_stamp",
   ]
@@ -876,12 +787,6 @@ config("no-shadow-call-stack") {
   if (current_cpu == "arm64") {
     cflags = [ "-fsanitize=no-shadow-call-stack" ]
   }
-}
-
-# Defines a Rust cfg flag with the value of the rust_panic build arg.
-# Useful for changing behavior of code based on panic behavior.
-config("rust_panic_cfg") {
-  rustflags = [ "--cfg=rust_panic=\"${rust_panic}\"" ]
 }
 
 config("werror") {
