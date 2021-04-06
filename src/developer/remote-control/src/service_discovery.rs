@@ -7,9 +7,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::ServiceMatch,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     fidl_fuchsia_io as io,
-    selectors::{
-        convert_string_selector_to_regex, sanitize_string_for_selectors, WILDCARD_REGEX_EQUIVALENT,
-    },
+    selectors::match_selector_against_single_node,
     std::path::{Component, PathBuf},
     tracing::warn,
 };
@@ -152,21 +150,6 @@ impl Into<ServiceMatch> for &PathEntry {
     }
 }
 
-fn selector_matches_string(selector: &StringSelector, str: &str) -> bool {
-    let re = regex::Regex::new(
-        // The Regex library will insert implicit ".*" on both sides of a regex.
-        // We don't want that behavior - users can insert * if they want
-        // fuzzy matches.
-        &format!(
-            "^{}$",
-            convert_string_selector_to_regex(selector, WILDCARD_REGEX_EQUIVALENT, None).unwrap()
-        ),
-    )
-    .unwrap();
-
-    re.is_match(&sanitize_string_for_selectors(&str))
-}
-
 pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<PathEntry>, Error> {
     let segments = selector.component_selector.as_ref().unwrap().moniker_segments.as_ref().unwrap();
     let mut selectors = segments
@@ -229,7 +212,7 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
             };
 
             for entry in entries {
-                if selector_matches_string(selector.selector, &entry.name) {
+                if match_selector_against_single_node(&entry.name, selector.selector)? {
                     let mut new_path = path.clone_push(&entry.name, selector.selector_type);
                     if selector.selector_type == EntryType::ComponentSubdir
                         && new_path.component_subdir != "expose"

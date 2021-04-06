@@ -21,32 +21,32 @@ use {
 pub static SELECTOR_DELIMITER: char = ':';
 
 // Character used to delimit nodes within a component hierarchy path.
-pub static PATH_NODE_DELIMITER: char = '/';
+static PATH_NODE_DELIMITER: char = '/';
 
 // Character used to escape interperetation of this parser's "special
 // characers"; *, /, :, and \.
 static ESCAPE_CHARACTER: char = '\\';
 
 // Pattern used to encode wildcard.
-pub static WILDCARD_SYMBOL_STR: &str = "*";
-pub static WILDCARD_SYMBOL_CHAR: char = '*';
+pub(crate) static WILDCARD_SYMBOL_STR: &str = "*";
+static WILDCARD_SYMBOL_CHAR: char = '*';
 
-pub static RECURSIVE_WILDCARD_SYMBOL_STR: &str = "**";
+static RECURSIVE_WILDCARD_SYMBOL_STR: &str = "**";
 
 // Globs will match everything along a moniker, but won't match empty strings.
-pub static GLOB_REGEX_EQUIVALENT: &str = ".+";
+static GLOB_REGEX_EQUIVALENT: &str = ".+";
 
 // Wildcards will match anything except for an unescaped slash, since their match
 // only extends to a single moniker "node".
 //
 // It is OK for a wildcard to match nothing when appearing as a pattern match.
 // For example, "hello*" matches both "hello world" and "hello".
-pub static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])*"#;
+static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])*"#;
 
 // Recursive wildcards will match anything, including an unescaped slash.
 //
 // It is OK for a recursive wildcard to match nothing when appearing in a pattern match.
-pub static RECURSIVE_WILDCARD_REGEX_EQUIVALENT: &str = ".*";
+static RECURSIVE_WILDCARD_REGEX_EQUIVALENT: &str = ".*";
 
 // Extract moniker from component path.
 // For example, for path "/hub/c/archivist.cmx" this function will return "archivist.cmx".
@@ -217,7 +217,7 @@ fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
 ///    1) Require a present component_moniker field.
 ///    2) Require that all entries within the component_moniker vector are valid per
 ///       Selectors::validate_node_path specification.
-pub fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
+fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
     match &component_selector.moniker_segments {
         Some(moniker) => {
             if moniker.is_empty() {
@@ -505,7 +505,7 @@ fn convert_escaped_char_to_regex(
 /// align with the format of sanitized text from the system. The resulting regex will
 /// be a literal matcher for escape-characters followed by special characters in the
 /// selector lanaguage.
-pub fn convert_string_selector_to_regex(
+fn convert_string_selector_to_regex(
     node: &StringSelector,
     wildcard_symbol_replacement: &str,
     recursive_wildcard_symbol_replacement: Option<&str>,
@@ -810,6 +810,20 @@ pub fn selector_to_string(selector: Selector) -> Result<String, Error> {
     }
 
     Ok(segments.join(":"))
+}
+
+/// Matches a string against a single StringSelector.
+/// This will only match against a single "level" and does not support recursive globbing.
+pub fn match_selector_against_single_node(
+    node: &impl AsRef<str>,
+    selector: &StringSelector,
+) -> Result<bool, Error> {
+    let regex = Regex::new(&format!(
+        "^{}$",
+        convert_string_selector_to_regex(selector, WILDCARD_REGEX_EQUIVALENT, None)?
+    ))?;
+
+    Ok(regex.is_match(&sanitize_string_for_selectors(node.as_ref())))
 }
 
 #[cfg(test)]
