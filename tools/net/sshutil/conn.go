@@ -37,8 +37,10 @@ const (
 
 // Conn is a wrapper around ssh that supports keepalive and auto-reconnection.
 type Conn struct {
-	mu sync.Mutex
-	*ssh.Client
+	mu struct {
+		sync.Mutex
+		client *ssh.Client
+	}
 
 	addr         net.Addr
 	config       *ssh.ClientConfig
@@ -102,12 +104,13 @@ func connect(ctx context.Context, resolver Resolver, config *ssh.ClientConfig, b
 		return nil, ConnectionError{fmt.Errorf("cannot connect to address %q: %w", addr, err)}
 	}
 
-	return &Conn{
-		Client:       client,
+	c := Conn{
 		addr:         addr,
 		config:       config,
 		shuttingDown: make(chan struct{}),
-	}, nil
+	}
+	c.mu.client = client
+	return &c, nil
 }
 
 func connectToSSH(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
@@ -184,7 +187,7 @@ func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writ
 	// prevents a long running `Run` command from blocking the keepalive
 	// goroutine.
 	c.mu.Lock()
-	client := c.Client
+	client := c.mu.client
 	c.mu.Unlock()
 
 	if client == nil {
@@ -292,8 +295,8 @@ func (c *Conn) Close() {
 		close(c.shuttingDown)
 	}
 	c.mu.Lock()
-	client := c.Client
-	c.Client = nil
+	client := c.mu.client
+	c.mu.client = nil
 	c.mu.Unlock()
 
 	if client != nil {
@@ -313,10 +316,10 @@ func (c *Conn) DisconnectionListener() <-chan struct{} {
 func (c *Conn) NewSFTPClient() (*sftp.Client, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.Client == nil {
-		return nil, errors.New("ssh connection is closed, cannot create new SFTP client")
+	if client := c.mu.client; client != nil {
+		return sftp.NewClient(client)
 	}
-	return sftp.NewClient(c.Client)
+	return nil, errors.New("ssh connection is closed, cannot create new SFTP client")
 }
 
 // Send periodic keepalives. If we don't do this, then we might not observe
@@ -341,7 +344,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 		}
 
 		c.mu.Lock()
-		client := c.Client
+		client := c.mu.client
 		c.mu.Unlock()
 
 		// Exit early if the client's already been shut down.

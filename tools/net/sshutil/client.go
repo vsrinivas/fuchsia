@@ -130,9 +130,10 @@ func (c *Client) Run(ctx context.Context, command []string, stdout io.Writer, st
 // LocalAddr returns the local address being used by the underlying ssh.Client.
 func (c *Client) LocalAddr() net.Addr {
 	c.mu.Lock()
-	conn := c.conn
-	c.mu.Unlock()
-	return conn.LocalAddr()
+	defer c.mu.Unlock()
+	c.conn.mu.Lock()
+	defer c.conn.mu.Unlock()
+	return c.conn.mu.client.LocalAddr()
 }
 
 // NewSFTPClient returns an SFTP client that uses the currently underlying
