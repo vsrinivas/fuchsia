@@ -42,8 +42,6 @@ type Conn struct {
 		client *ssh.Client
 	}
 
-	addr         net.Addr
-	config       *ssh.ClientConfig
 	shuttingDown chan struct{}
 }
 
@@ -105,8 +103,6 @@ func connect(ctx context.Context, resolver Resolver, config *ssh.ClientConfig, b
 	}
 
 	c := Conn{
-		addr:         addr,
-		config:       config,
 		shuttingDown: make(chan struct{}),
 	}
 	c.mu.client = client
@@ -382,7 +378,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 					logger.Debugf(
 						ctx,
 						"error sending keepalive to %s, disconnecting: %s",
-						c.addr,
+						c.mu.client.RemoteAddr(),
 						err,
 					)
 				}
