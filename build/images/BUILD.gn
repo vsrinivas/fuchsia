@@ -2141,7 +2141,6 @@ foreach(target, archive_targets + paver_targets) {
     testonly = true
     outputs = target.outputs
     depfile = "${outputs[0]}.d"
-    hermetic_deps = false
     script = "pack-images.py"
     args = [
       "--depfile=" + rebase_path(depfile, root_build_dir),
