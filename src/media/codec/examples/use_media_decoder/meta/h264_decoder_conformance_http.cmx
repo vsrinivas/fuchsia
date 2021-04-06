@@ -1,6 +1,9 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
-        "binary": "bin/h264_decoder_conformance_http"
+        "binary": "test/h264_decoder_conformance_test"
     },
     "sandbox": {
         "dev": [
