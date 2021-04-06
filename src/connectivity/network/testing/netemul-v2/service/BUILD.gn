@@ -43,19 +43,28 @@ fuchsia_component("netemul-sandbox-component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("netemul_v2_bin_test") {
-  testonly = true
-  manifest = "meta/netemul-v2-tests.cml"
-  deps = [ ":bin_test" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":netemul-v2-tests" ]
 }
 
+# TODO(https://fxbug.dev/71088): combine the test driver and the test root once
+# `use from child` is supported.
+fuchsia_component("netemul-sandbox-v2-test-root") {
+  testonly = true
+  manifest = "meta/netemul-sandbox-v2-test-root.cml"
+}
+
+fuchsia_component("netemul-sandbox-v2-test-driver") {
+  testonly = true
+  manifest = "meta/netemul-sandbox-v2-test-driver.cml"
+  deps = [ ":bin_test" ]
+}
+
 fuchsia_test_package("netemul-v2-tests") {
-  test_components = [ ":netemul_v2_bin_test" ]
-  deps =
-      [ "//src/connectivity/network/testing/netemul-v2/test-support:counter" ]
+  test_components = [ ":netemul-sandbox-v2-test-root" ]
+  deps = [
+    ":netemul-sandbox-v2-test-driver",
+    "//src/connectivity/network/testing/netemul-v2/test-support:counter",
+  ]
 }

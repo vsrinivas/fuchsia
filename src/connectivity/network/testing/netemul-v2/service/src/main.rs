@@ -279,6 +279,7 @@ mod tests {
         let ((), ()) = futures::future::join(fut, test(sandbox)).await;
     }
 
+    const TEST_DRIVER_COMPONENT_NAME: &str = "test_driver";
     const COUNTER_COMPONENT_NAME: &str = "counter";
     const COUNTER_SERVICE_NAME: &str =
         <CounterMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME;
@@ -581,6 +582,12 @@ mod tests {
                         },
                     )
                 })
+                // Collect the `TestRealm`s because we want all the test realms to be alive for the
+                // duration of the test.
+                //
+                // Each `TestRealm` owns a `ManagedRealmProxy`, which has RAII semantics: when the
+                // proxy is dropped, the backing test realm managed by the sandbox is also
+                // destroyed.
                 .collect::<Vec<_>>();
             for (i, realm) in realms.iter().enumerate() {
                 let i = u32::try_from(i).unwrap();
@@ -596,6 +603,7 @@ mod tests {
                 }
                 let TestRealm { realm } = realm;
                 let selector = vec![
+                    TEST_DRIVER_COMPONENT_NAME.into(),
                     realm.get_moniker().await.expect(&format!(
                         "fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}",
                         i
