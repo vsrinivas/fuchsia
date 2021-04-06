@@ -12,6 +12,7 @@
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <threads.h>
@@ -23,6 +24,8 @@
 #include <memory>
 #include <vector>
 
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
@@ -98,8 +101,11 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
       return;
     }
     const auto& path = result->result.response().path;
-    if (std::string(path.data(), path.size()) != expected_block_device_) {
-      return;
+    {
+      fbl::AutoLock al(&lock_);
+      if (std::string(path.data(), path.size()) != expected_block_device_) {
+        return;
+      }
     }
     fidl::BindSingleInFlightOnly<fuchsia_paver::DynamicDataSink::RawChannelInterface>(
         dispatcher_, std::move(dynamic_data_sink), this);
@@ -107,6 +113,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
 
   void FindBootManager(zx::channel boot_manager,
                        FindBootManagerCompleter::Sync& _completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kInitializeAbr);
     if (abr_supported_) {
       fidl::BindSingleInFlightOnly<fuchsia_paver::BootManager::Interface>(
@@ -115,6 +122,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
   }
 
   void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryCurrentConfiguration);
     completer.ReplySuccess(fuchsia_paver::wire::Configuration::A);
   }
@@ -122,18 +130,21 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
   void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync& _completer) override {}
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryActiveConfiguration);
     completer.ReplySuccess(fuchsia_paver::wire::Configuration::A);
   }
 
   void QueryConfigurationStatus(fuchsia_paver::wire::Configuration configuration,
                                 QueryConfigurationStatusCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryConfigurationStatus);
     completer.ReplySuccess(fuchsia_paver::wire::ConfigurationStatus::HEALTHY);
   }
 
   void SetConfigurationActive(fuchsia_paver::wire::Configuration configuration,
                               SetConfigurationActiveCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kSetConfigurationActive);
     zx_status_t status;
     switch (configuration) {
@@ -158,6 +169,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
 
   void SetConfigurationUnbootable(fuchsia_paver::wire::Configuration configuration,
                                   SetConfigurationUnbootableCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kSetConfigurationUnbootable);
     zx_status_t status;
     switch (configuration) {
@@ -180,23 +192,27 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
 
   void SetConfigurationHealthy(fuchsia_paver::wire::Configuration configuration,
                                SetConfigurationHealthyCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kSetConfigurationHealthy);
     completer.Reply(ZX_OK);
   }
 
   void Flush(fuchsia_paver::DynamicDataSink::RawChannelInterface::FlushCompleter::Sync& completer)
       override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kDataSinkFlush);
     completer.Reply(ZX_OK);
   }
 
   void Flush(fuchsia_paver::BootManager::Interface::FlushCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kBootManagerFlush);
     completer.Reply(ZX_OK);
   }
 
   void ReadAsset(fuchsia_paver::wire::Configuration configuration, fuchsia_paver::wire::Asset asset,
                  ReadAssetCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kReadAsset);
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
@@ -204,6 +220,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
   void WriteAsset(fuchsia_paver::wire::Configuration configuration,
                   fuchsia_paver::wire::Asset asset, fuchsia_mem::wire::Buffer payload,
                   WriteAssetCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteAsset);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
@@ -213,6 +230,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
                      fuchsia_mem::wire::Buffer payload,
                      WriteFirmwareCompleter::Sync& completer) override {
     using fuchsia_paver::wire::WriteFirmwareResult;
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteFirmware);
     last_firmware_type_ = std::string(type.data(), type.size());
 
@@ -229,7 +247,10 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
   }
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync& completer) override {
-    AppendCommand(Command::kWriteVolumes);
+    {
+      fbl::AutoLock al(&lock_);
+      AppendCommand(Command::kWriteVolumes);
+    }
     // Register VMO.
     zx::vmo vmo;
     auto status = zx::vmo::create(1024, 0, &vmo);
@@ -248,11 +269,15 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
     status = [&]() {
       size_t data_transferred = 0;
       for (;;) {
-        if (wait_for_start_signal_) {
-          sync_completion_wait(&start_signal_, ZX_TIME_INFINITE);
-          sync_completion_reset(&start_signal_);
-        } else {
-          signal_size_ = expected_payload_size_ + 1;
+        {
+          fbl::AutoLock al(&lock_);
+          if (wait_for_start_signal_) {
+            al.release();
+            sync_completion_wait(&start_signal_, ZX_TIME_INFINITE);
+            sync_completion_reset(&start_signal_);
+          } else {
+            signal_size_ = expected_payload_size_ + 1;
+          }
         }
         while (data_transferred < signal_size_) {
           auto result = stream.ReadData();
@@ -283,6 +308,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
 
   void WriteBootloader(fuchsia_mem::wire::Buffer payload,
                        WriteBootloaderCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteBootloader);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
@@ -290,22 +316,26 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
 
   void WriteDataFile(fidl::StringView filename, fuchsia_mem::wire::Buffer payload,
                      WriteDataFileCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteDataFile);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
   void WipeVolume(WipeVolumeCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWipeVolume);
     completer.ReplySuccess({});
   }
 
   void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kInitPartitionTables);
     completer.Reply(ZX_OK);
   }
 
   void WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWipePartitionTables);
     completer.Reply(ZX_OK);
   }
@@ -317,36 +347,53 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
     sync_completion_reset(&done_signal_);
   }
 
-  const std::vector<Command> GetCommandTrace() { return command_trace_; }
+  const std::vector<Command> GetCommandTrace() {
+    fbl::AutoLock al(&lock_);
+    return command_trace_;
+  }
 
-  const std::string& last_firmware_type() const { return last_firmware_type_; }
+  std::string last_firmware_type() const {
+    fbl::AutoLock al(&lock_);
+    return last_firmware_type_;
+  }
 
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
-  void set_supported_firmware_type(std::string type) { supported_firmware_type_ = type; }
+  void set_supported_firmware_type(std::string type) {
+    fbl::AutoLock al(&lock_);
+    supported_firmware_type_ = type;
+  }
   void set_abr_supported(bool supported) { abr_supported_ = supported; }
   void set_wait_for_start_signal(bool wait) { wait_for_start_signal_ = wait; }
-  void set_expected_device(std::string expected) { expected_block_device_ = expected; }
+  void set_expected_device(std::string expected) {
+    fbl::AutoLock al(&lock_);
+    expected_block_device_ = expected;
+  }
 
-  AbrData& abr_data() { return abr_data_; }
+  const AbrData abr_data() {
+    fbl::AutoLock al(&lock_);
+    return abr_data_;
+  }
 
  private:
-  bool wait_for_start_signal_ = false;
+  std::atomic<bool> wait_for_start_signal_ = false;
   sync_completion_t start_signal_;
   sync_completion_t done_signal_;
   std::atomic<size_t> signal_size_;
 
-  std::string last_firmware_type_;
+  mutable fbl::Mutex lock_;
 
-  size_t expected_payload_size_ = 0;
-  std::string expected_block_device_;
-  std::string supported_firmware_type_;
-  bool abr_supported_ = false;
-  AbrData abr_data_ = kInitAbrData;
+  std::string last_firmware_type_ TA_GUARDED(lock_);
 
-  async_dispatcher_t* dispatcher_ = nullptr;
+  std::atomic<size_t> expected_payload_size_ = 0;
+  std::string expected_block_device_ TA_GUARDED(lock_);
+  std::string supported_firmware_type_ TA_GUARDED(lock_);
+  std::atomic<bool> abr_supported_ = false;
+  AbrData abr_data_ TA_GUARDED(lock_) = kInitAbrData;
 
-  std::vector<Command> command_trace_;
-  void AppendCommand(Command cmd) { command_trace_.push_back(cmd); }
+  std::atomic<async_dispatcher_t*> dispatcher_ = nullptr;
+
+  std::vector<Command> command_trace_ TA_GUARDED(lock_);
+  void AppendCommand(Command cmd) TA_REQ(lock_) { command_trace_.push_back(cmd); }
 };
 
 class FakeSvc {
