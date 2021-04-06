@@ -52,7 +52,7 @@ executable("caching_ptr_unittest_exe") {
   deps = [
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_provider",
+    "//src/developer/forensics/testing/stubs:channel_control",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:caching_ptr",
     "//src/lib/fxl",
@@ -72,7 +72,7 @@ executable("channel_provider_ptr_unittest_exe") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_provider",
+    "//src/developer/forensics/testing/stubs:channel_control",
     "//src/developer/forensics/utils/fidl:channel_provider_ptr",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -200,7 +200,7 @@ executable("oneshot_ptr_unittest_exe") {
   deps = [
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_provider",
+    "//src/developer/forensics/testing/stubs:channel_control",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//src/lib/fxl",

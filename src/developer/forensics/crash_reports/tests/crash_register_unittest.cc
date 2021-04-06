@@ -17,7 +17,7 @@
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/product.h"
-#include "src/developer/forensics/testing/stubs/channel_provider.h"
+#include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/file.h"
@@ -59,7 +59,7 @@ class CrashRegisterTest : public UnitTestFixture {
   }
 
  protected:
-  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
+  void SetUpChannelControlServer(std::unique_ptr<stubs::ChannelControlBase> server) {
     channel_provider_server_ = std::move(server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -112,7 +112,7 @@ class CrashRegisterTest : public UnitTestFixture {
   files::ScopedTempDir tmp_dir_;
   std::shared_ptr<InfoContext> info_context_;
   std::unique_ptr<CrashRegister> crash_register_;
-  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
 TEST_F(CrashRegisterTest, Upsert_Basic) {
@@ -233,7 +233,7 @@ TEST_F(CrashRegisterTest, Upsert_UpdateIfSameComponentUrl) {
 }
 
 TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>("some channel"));
+  SetUpChannelControlServer(std::make_unique<stubs::ChannelControl>("some channel"));
 
   const auto expected = Product{
       .name = "Fuchsia",
@@ -244,8 +244,8 @@ TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
   EXPECT_TRUE(ReadRegisterJson().empty());
 };
 
-TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelProvider) {
-  SetUpChannelProviderServer(nullptr);
+TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelControl) {
+  SetUpChannelControlServer(nullptr);
 
   const auto expected = Product{
       .name = "Fuchsia",
@@ -279,7 +279,7 @@ TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
 };
 
 TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>("some channel"));
+  SetUpChannelControlServer(std::make_unique<stubs::ChannelControl>("some channel"));
 
   CrashReportingProduct product;
   product.set_name("some name");

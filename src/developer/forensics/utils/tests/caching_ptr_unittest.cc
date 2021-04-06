@@ -4,13 +4,13 @@
 
 #include "src/developer/forensics/utils/fidl/caching_ptr.h"
 
-#include <fuchsia/update/channel/cpp/fidl.h>
+#include <fuchsia/update/channelcontrol/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/stubs/channel_provider.h"
+#include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 
@@ -38,14 +38,14 @@ class CachingChannelPtr {
     });
   }
 
-  CachingPtr<fuchsia::update::channel::Provider, std::string> connection_;
+  CachingPtr<fuchsia::update::channelcontrol::ChannelControl, std::string> connection_;
 };
 
 constexpr char kChannel[] = "my-channel";
 constexpr zx::duration kTimeout = zx::sec(1);
 
 // We need to use an actual FIDL interface to test CachingPtr, so we use
-// fuchsia::update::channel::Provider and stubs::ChannelProvider in our test cases.
+// fuchsia::update::channelcontrol::ChannelControl and stubs::ChannelControl in our test cases.
 class CachingPtrTest : public UnitTestFixture {
  public:
   CachingPtrTest() : executor_(dispatcher()), channel_provider_server_() {}
@@ -61,7 +61,7 @@ class CachingPtrTest : public UnitTestFixture {
   }
 
   void SetUpChannelProviderServer(
-      std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server) {
+      std::unique_ptr<stubs::ChannelControlBase> channel_provider_server) {
     channel_provider_server_ = std::move(channel_provider_server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -70,12 +70,12 @@ class CachingPtrTest : public UnitTestFixture {
 
  private:
   async::Executor executor_;
-  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
 TEST_F(CachingPtrTest, Check_CachesValueInConstructor) {
   CachingChannelPtr channel_ptr(dispatcher(), services());
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderExpectsOneCall>(kChannel));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlExpectsOneCall>(kChannel));
 
   RunLoopUntilIdle();
 
@@ -89,7 +89,7 @@ TEST_F(CachingPtrTest, Check_CachesValueInConstructor) {
 
 TEST_F(CachingPtrTest, Check_CachesErrorInConstructor) {
   CachingChannelPtr channel_ptr(dispatcher(), services());
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderExpectsOneCall>(""));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlExpectsOneCall>(""));
 
   RunLoopUntilIdle();
 
@@ -104,7 +104,7 @@ TEST_F(CachingPtrTest, Check_CachesErrorInConstructor) {
 TEST_F(CachingPtrTest, Check_ErrorOnTimeout) {
   CachingChannelPtr channel_ptr(dispatcher(), services());
 
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderNeverReturns>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlNeverReturns>());
 
   const auto channel_result = ExecutePromise(channel_ptr.GetChannel(kTimeout));
 
@@ -115,7 +115,7 @@ TEST_F(CachingPtrTest, Check_ErrorOnTimeout) {
 TEST_F(CachingPtrTest, Check_SuccessOnSecondAttempt) {
   CachingChannelPtr channel_ptr(dispatcher(), services());
   SetUpChannelProviderServer(
-      std::make_unique<stubs::ChannelProviderClosesFirstConnection>(kChannel));
+      std::make_unique<stubs::ChannelControlClosesFirstConnection>(kChannel));
 
   RunLoopUntilIdle();
 

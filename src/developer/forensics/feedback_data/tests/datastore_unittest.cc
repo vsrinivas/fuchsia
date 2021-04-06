@@ -28,7 +28,7 @@
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/testing/stubs/board_info_provider.h"
-#include "src/developer/forensics/testing/stubs/channel_provider.h"
+#include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
@@ -114,7 +114,7 @@ class DatastoreTest : public UnitTestFixture {
     }
   }
 
-  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
+  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelControlBase> server) {
     channel_provider_server_ = std::move(server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -198,7 +198,7 @@ class DatastoreTest : public UnitTestFixture {
 
   // Stubs servers.
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
-  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
   std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
@@ -257,7 +257,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
 }
 
 TEST_F(DatastoreTest, GetAnnotations_Channel) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>("my-channel"));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>("my-channel"));
   SetUpDatastore({kAnnotationSystemUpdateChannelCurrent}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
   ::fit::result<Annotations> annotations = GetAnnotations();

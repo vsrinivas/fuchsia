@@ -27,7 +27,7 @@
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.update.channel.Provider"
+            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }

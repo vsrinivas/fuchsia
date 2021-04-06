@@ -18,7 +18,7 @@
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/testing/stubs/channel_provider.h"
+#include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/event.h"
@@ -35,7 +35,7 @@ class ChannelProviderTest : public UnitTestFixture {
   ChannelProviderTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
+  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelControlBase> server) {
     channel_provider_server_ = std::move(server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -80,11 +80,11 @@ class ChannelProviderTest : public UnitTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
 TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
-  auto channel_provider_server = std::make_unique<stubs::ChannelProvider>("my-channel");
+  auto channel_provider_server = std::make_unique<stubs::ChannelControl>("my-channel");
   SetUpChannelProviderServer(std::move(channel_provider_server));
 
   const auto result = GetCurrentChannel();
@@ -93,7 +93,7 @@ TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
 }
 
 TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderReturnsEmptyChannel>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlReturnsEmptyChannel>());
 
   const auto result = GetCurrentChannel();
 
@@ -101,7 +101,7 @@ TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
 }
 
 TEST_F(ChannelProviderTest, Succeed_NoRequestedKeysInAllowlist) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderReturnsEmptyChannel>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlReturnsEmptyChannel>());
 
   const auto result = GetCurrentChannel({"not-returned-by-channel-provider"});
 
@@ -117,7 +117,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNotAvailable) {
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderClosesConnection>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlClosesConnection>());
 
   const auto result = GetCurrentChannel();
 
@@ -125,7 +125,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderNeverReturns>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlNeverReturns>());
 
   const auto result = GetCurrentChannel();
 

@@ -7,7 +7,7 @@
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/update/channel/cpp/fidl.h>
+#include <fuchsia/update/channelcontrol/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
@@ -126,10 +126,11 @@ class FeedbackDataIntegrationTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&log_listener] { return log_listener.HasLogs(); });
   }
 
-  // Makes sure the component serving fuchsia.update.channel.Provider is up and running as the
-  // GetCurrent() request could time out on machines where the component is too slow to start.
+  // Makes sure the component serving fuchsia.update.channelcontrol.ChannelControl is up and running
+  // as the GetCurrent() request could time out on machines where the component is too slow to
+  // start.
   void WaitForChannelProvider() {
-    fuchsia::update::channel::ProviderSyncPtr channel_provider;
+    fuchsia::update::channelcontrol::ChannelControlSyncPtr channel_provider;
     environment_services_->Connect(channel_provider.NewRequest());
     std::string unused;
     ASSERT_EQ(channel_provider->GetCurrent(&unused), ZX_OK);

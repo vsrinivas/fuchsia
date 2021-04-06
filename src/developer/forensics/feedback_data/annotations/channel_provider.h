@@ -21,7 +21,7 @@ namespace feedback_data {
 
 class ChannelProvider : public AnnotationProvider {
  public:
-  // fuchsia.update.channel.Provider is expected to be in |services|.
+  // fuchsia.update.channelcontrol.ChannelControl is expected to be in |services|.
   ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                   cobalt::Logger* cobalt);
 

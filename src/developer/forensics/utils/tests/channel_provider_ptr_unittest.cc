@@ -17,7 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/stubs/channel_provider.h"
+#include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 
 namespace forensics {
@@ -30,7 +30,7 @@ class ChannelProviderPtrTest : public UnitTestFixture {
 
  protected:
   void SetUpChannelProviderServer(
-      std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server) {
+      std::unique_ptr<stubs::ChannelControlBase> channel_provider_server) {
     channel_provider_server_ = std::move(channel_provider_server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -62,11 +62,11 @@ class ChannelProviderPtrTest : public UnitTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
 TEST_F(ChannelProviderPtrTest, Succeed_SomeChannel) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>("my-channel");
+  auto channel_provider = std::make_unique<stubs::ChannelControl>("my-channel");
   SetUpChannelProviderServer(std::move(channel_provider));
 
   const auto result = GetCurrentChannel();
@@ -76,7 +76,7 @@ TEST_F(ChannelProviderPtrTest, Succeed_SomeChannel) {
 }
 
 TEST_F(ChannelProviderPtrTest, Succeed_EmptyChannel) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderReturnsEmptyChannel>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlReturnsEmptyChannel>());
 
   const auto result = GetCurrentChannel();
 

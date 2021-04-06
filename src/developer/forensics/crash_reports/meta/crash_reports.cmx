@@ -21,7 +21,7 @@
             "fuchsia.net.http.Loader",
             "fuchsia.posix.socket.Provider",
             "fuchsia.settings.Privacy",
-            "fuchsia.update.channel.Provider"
+            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }

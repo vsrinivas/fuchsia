@@ -18,7 +18,7 @@
                 "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
-                "fuchsia.update.channel.Provider": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
+                "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
             },
             "system-services": [
                 "fuchsia.boot.ReadOnlyLog",
@@ -51,7 +51,7 @@
             "fuchsia.logger.Log",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
-            "fuchsia.update.channel.Provider"
+            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }

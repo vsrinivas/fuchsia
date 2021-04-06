@@ -4,13 +4,13 @@
 
 #include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 
-#include <fuchsia/update/channel/cpp/fidl.h>
+#include <fuchsia/update/channelcontrol/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/stubs/channel_provider.h"
+#include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -23,7 +23,7 @@ constexpr char kChannel[] = "my-channel";
 constexpr zx::duration kTimeout = zx::sec(1);
 
 // We need to use an actual FIDL interface to test OneShotPtr, so we use
-// fuchsia::update::channel::Provider and stubs::ChannelProvider in our test cases.
+// fuchsia::update::channelcontrol::ChannelControl and stubs::ChannelControl in our test cases.
 class OneShotPtrTest : public UnitTestFixture {
  public:
   OneShotPtrTest() : executor_(dispatcher()), channel_provider_server_() {}
@@ -39,7 +39,7 @@ class OneShotPtrTest : public UnitTestFixture {
   }
 
   void SetUpChannelProviderServer(
-      std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server) {
+      std::unique_ptr<stubs::ChannelControlBase> channel_provider_server) {
     channel_provider_server_ = std::move(channel_provider_server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -48,15 +48,16 @@ class OneShotPtrTest : public UnitTestFixture {
 
  private:
   async::Executor executor_;
-  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
 TEST_F(OneShotPtrTest, Check_Success) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>(kChannel);
+  auto channel_provider = std::make_unique<stubs::ChannelControl>(kChannel);
 
   SetUpChannelProviderServer(std::move(channel_provider));
 
-  OneShotPtr<fuchsia::update::channel::Provider, std::string> channel_ptr(dispatcher(), services());
+  OneShotPtr<fuchsia::update::channelcontrol::ChannelControl, std::string> channel_ptr(dispatcher(),
+                                                                                       services());
 
   channel_ptr->GetCurrent([&](std::string channel) {
     if (channel_ptr.IsAlreadyDone()) {
@@ -73,7 +74,7 @@ TEST_F(OneShotPtrTest, Check_Success) {
 
 TEST_F(OneShotPtrTest, Fail_NoServer) {
   SetUpChannelProviderServer(nullptr);
-  OneShotPtr<fuchsia::update::channel::Provider> channel_ptr(dispatcher(), services());
+  OneShotPtr<fuchsia::update::channelcontrol::ChannelControl> channel_ptr(dispatcher(), services());
 
   // Make a call to ensure we connect to the server.
   channel_ptr->GetCurrent([&](std::string channel) {});
@@ -83,8 +84,8 @@ TEST_F(OneShotPtrTest, Fail_NoServer) {
 }
 
 TEST_F(OneShotPtrTest, Fail_ClosedChannel) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderClosesConnection>());
-  OneShotPtr<fuchsia::update::channel::Provider> channel_ptr(dispatcher(), services());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlClosesConnection>());
+  OneShotPtr<fuchsia::update::channelcontrol::ChannelControl> channel_ptr(dispatcher(), services());
 
   // Make a call to ensure we connect to the server.
   channel_ptr->GetCurrent([&](std::string channel) {});
@@ -95,8 +96,8 @@ TEST_F(OneShotPtrTest, Fail_ClosedChannel) {
 }
 
 TEST_F(OneShotPtrTest, Fail_Timeout) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderNeverReturns>());
-  OneShotPtr<fuchsia::update::channel::Provider> channel_ptr(dispatcher(), services());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlNeverReturns>());
+  OneShotPtr<fuchsia::update::channelcontrol::ChannelControl> channel_ptr(dispatcher(), services());
 
   bool did_timeout = false;
   const auto result = ExecutePromise(
@@ -107,11 +108,11 @@ TEST_F(OneShotPtrTest, Fail_Timeout) {
 }
 
 TEST_F(OneShotPtrTest, Crash_MultipleUses) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>(kChannel);
+  auto channel_provider = std::make_unique<stubs::ChannelControl>(kChannel);
 
   SetUpChannelProviderServer(std::move(channel_provider));
 
-  OneShotPtr<fuchsia::update::channel::Provider> channel_ptr(dispatcher(), services());
+  OneShotPtr<fuchsia::update::channelcontrol::ChannelControl> channel_ptr(dispatcher(), services());
 
   channel_ptr->GetCurrent([&](std::string channel) {});
 

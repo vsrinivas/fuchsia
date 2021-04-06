@@ -23,17 +23,17 @@ source_set("board_info_provider") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("channel_provider") {
+source_set("channel_control") {
   testonly = true
 
   sources = [
-    "channel_provider.cc",
-    "channel_provider.h",
+    "channel_control.cc",
+    "channel_control.h",
   ]
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.update.channel",
+    "//sdk/fidl/fuchsia.update.channelcontrol",
   ]
 
   deps = [ "//zircon/public/lib/zx" ]
