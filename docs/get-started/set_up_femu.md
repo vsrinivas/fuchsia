@@ -66,7 +66,7 @@ Note: Command will differ depending on the type of machines you use.
 
 * {Corp}
 
-  To use FEMU on a corp machine, see [go/fuchsia-emulator-corp](https://go/fuchsia-emulator-corp).
+  To use FEMU on a corp machine, see [go/fuchsia-emulator-corp](http://go/fuchsia-emulator-corp).
 
 * {Non-Corp}
 
