@@ -370,6 +370,16 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   std::unique_ptr<SystemStateManager> system_state_manager_;
   SystemPowerState shutdown_system_state_;
 
+  // Given a device, return all of the Drivers whose bind programs match with the device.
+  // The returned vector is organized by priority, so if only one driver is being bound it
+  // should be the first in the vector.
+  // If `drvlibname` is not empty then the device will only be checked against the driver
+  // with that specific name.
+  zx::status<std::vector<const Driver*>> MatchDevice(const fbl::RefPtr<Device>& dev,
+                                                     std::string_view drvlibname);
+  zx_status_t MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
+                                  bool autobind);
+
   // Bind debugger interface
   void GetBindProgram(::fidl::StringView driver_path,
                       GetBindProgramCompleter::Sync& completer) override;

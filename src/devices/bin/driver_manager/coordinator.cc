@@ -1357,23 +1357,12 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 
 zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
                                             bool autobind, const AttemptBindFunc& attempt_bind) {
-  if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
-      !(dev->flags & DEV_CTX_MULTI_BIND)) {
-    return ZX_ERR_ALREADY_BOUND;
+  zx_status_t status = MatchDeviceToDriver(dev, drv, autobind);
+  if (status != ZX_OK) {
+    return status;
   }
 
-  if (autobind && dev->should_skip_autobind()) {
-    return ZX_ERR_NEXT;
-  }
-
-  if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
-    return ZX_ERR_NEXT;
-  }
-  if (!driver_is_bindable(drv, dev->protocol_id(), dev->props(), autobind)) {
-    return ZX_ERR_NEXT;
-  }
-
-  zx_status_t status = attempt_bind(drv, dev);
+  status = attempt_bind(drv, dev);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to bind driver '%s' to device '%s': %s", drv->name.data(),
          dev->name().data(), zx_status_get_string(status));
@@ -1420,6 +1409,72 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   return ZX_OK;
 }
 
+zx_status_t Coordinator::MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
+                                             bool autobind) {
+  if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
+      !(dev->flags & DEV_CTX_MULTI_BIND)) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  if (autobind && dev->should_skip_autobind()) {
+    return ZX_ERR_NEXT;
+  }
+
+  if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
+    return ZX_ERR_NEXT;
+  }
+  if (!driver_is_bindable(driver, dev->protocol_id(), dev->props(), autobind)) {
+    return ZX_ERR_NEXT;
+  }
+  return ZX_OK;
+}
+
+zx::status<std::vector<const Driver*>> Coordinator::MatchDevice(const fbl::RefPtr<Device>& dev,
+                                                                std::string_view drvlibname) {
+  // shouldn't be possible to get a bind request for a proxy device
+  if (dev->flags & DEV_CTX_PROXY) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  std::vector<const Driver*> matched_drivers;
+
+  // A libname of "" means a general rebind request
+  // instead of a specific request
+  bool autobind = drvlibname.size() == 0;
+
+  for (const Driver& driver : drivers_) {
+    if (!autobind && drvlibname.compare(driver.libname)) {
+      continue;
+    }
+    if (driver.never_autoselect) {
+      continue;
+    }
+    zx_status_t status = MatchDeviceToDriver(dev, &driver, autobind);
+    if (status == ZX_ERR_ALREADY_BOUND) {
+      return zx::error(ZX_ERR_ALREADY_BOUND);
+    }
+    if (status == ZX_ERR_NEXT) {
+      continue;
+    }
+
+    if (status == ZX_OK) {
+      matched_drivers.push_back(&driver);
+    }
+
+    // If the device doesn't support multibind (this is a devmgr-internal setting),
+    // then return on first match or failure.
+    // Otherwise, keep checking all the drivers.
+    if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      return zx::ok(std::move(matched_drivers));
+    }
+  }
+
+  return zx::ok(std::move(matched_drivers));
+}
+
 zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
                                     bool new_device) {
   // shouldn't be possible to get a bind request for a proxy device
@@ -1451,29 +1506,17 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
   }
 
   // TODO: disallow if we're in the middle of enumeration, etc
-  for (const auto& drv : drivers_) {
-    if (!autobind && drvlibname.compare(drv.libname)) {
-      continue;
-    }
-    if (drv.never_autoselect) {
-      continue;
-    }
-    zx_status_t status = BindDriverToDevice(dev, &drv, autobind);
-    if (status == ZX_ERR_ALREADY_BOUND) {
-      return status;
-    }
-    if (status == ZX_ERR_NEXT) {
-      continue;
-    }
+  zx::status<std::vector<const Driver*>> result = MatchDevice(dev, drvlibname);
+  if (!result.is_ok()) {
+    return result.error_value();
+  }
 
-    // If the device supports multibind (this is a devmgr-internal setting),
-    // keep trying to match more drivers even if one fails.
-    if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
-      if (status != ZX_OK) {
-        return status;
-      } else {
-        break;
-      }
+  auto drivers = std::move(result.value());
+  for (const Driver* driver : drivers) {
+    zx_status_t status = AttemptBind(driver, dev);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to bind driver '%s' to device '%s': %s", driver->name.data(),
+           dev->name().data(), zx_status_get_string(status));
     }
   }
 
