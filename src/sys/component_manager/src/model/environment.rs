@@ -9,16 +9,21 @@ use {
         },
         resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
     },
-    ::routing::error::ComponentInstanceError,
+    ::routing::environment::EnvironmentInterface,
     async_trait::async_trait,
-    cm_rust::{CapabilityName, EnvironmentDecl, RegistrationSource, RunnerRegistration},
+    cm_rust::EnvironmentDecl,
     fidl_fuchsia_sys2 as fsys,
     std::{
-        collections::HashMap,
         sync::{Arc, Weak},
         time::Duration,
     },
 };
+
+// TODO(https://fxbug.dev/71901): remove aliases once the routing lib has a stable API.
+pub type EnvironmentExtends = ::routing::environment::EnvironmentExtends;
+pub type RunnerRegistry = ::routing::environment::RunnerRegistry;
+pub type DebugRegistry = ::routing::environment::DebugRegistry;
+pub type DebugRegistration = ::routing::environment::DebugRegistration;
 
 /// A realm's environment, populated from a component's [`EnvironmentDecl`].
 /// An environment defines intrinsic behaviors of a component's realm. Components
@@ -44,24 +49,6 @@ pub struct Environment {
 }
 
 pub const DEFAULT_STOP_TIMEOUT: Duration = Duration::from_secs(5);
-
-/// How this environment extends its parent's.
-#[derive(Debug, Clone)]
-pub enum EnvironmentExtends {
-    /// This environment extends the environment of its parent's.
-    Realm,
-    /// This environment was created from scratch.
-    None,
-}
-
-impl From<fsys::EnvironmentExtends> for EnvironmentExtends {
-    fn from(e: fsys::EnvironmentExtends) -> Self {
-        match e {
-            fsys::EnvironmentExtends::Realm => Self::Realm,
-            fsys::EnvironmentExtends::None => Self::None,
-        }
-    }
-}
 
 impl Environment {
     /// Creates a new empty environment parented to component manager.
@@ -132,65 +119,27 @@ impl Environment {
     pub fn stop_timeout(&self) -> Duration {
         self.stop_timeout
     }
+}
 
-    /// Returns the runner registered to `name` and the component that created the environment the
-    /// runner was registered to. Returns `None` if there was no match.
-    pub fn get_registered_runner(
-        &self,
-        name: &CapabilityName,
-    ) -> Result<Option<(ExtendedInstance, RunnerRegistration)>, ComponentInstanceError> {
-        let parent = self.parent.upgrade()?;
-        match self.runner_registry.get_runner(name) {
-            Some(reg) => Ok(Some((parent, reg.clone()))),
-            None => match self.extends {
-                EnvironmentExtends::Realm => match parent {
-                    ExtendedInstance::Component(parent) => {
-                        parent.environment.get_registered_runner(name)
-                    }
-                    ExtendedInstance::AboveRoot(_) => {
-                        unreachable!("root env can't extend")
-                    }
-                },
-                EnvironmentExtends::None => {
-                    return Ok(None);
-                }
-            },
-        }
+impl EnvironmentInterface<ComponentInstance> for Environment {
+    fn name(&self) -> Option<&str> {
+        self.name.as_deref()
     }
 
-    /// Returns the debug capability registered to `name`, the realm that created the environment
-    /// and the capability was registered to (`None` for component manager's realm) and name of the
-    /// environment that registered the capability. Returns `None` if there was no match.
-    pub fn get_debug_capability(
-        &self,
-        name: &CapabilityName,
-    ) -> Result<Option<(ExtendedInstance, Option<String>, DebugRegistration)>, ComponentInstanceError>
-    {
-        let parent = self.parent.upgrade()?;
-        match self.debug_registry.get_capability(name) {
-            Some(reg) => Ok(Some((parent, self.name.clone(), reg.clone()))),
-            None => match self.extends {
-                EnvironmentExtends::Realm => match parent {
-                    ExtendedInstance::Component(parent) => {
-                        parent.environment.get_debug_capability(name)
-                    }
-                    ExtendedInstance::AboveRoot(_) => {
-                        unreachable!("root env can't extend")
-                    }
-                },
-                EnvironmentExtends::None => {
-                    return Ok(None);
-                }
-            },
-        }
-    }
-
-    pub fn name(&self) -> &Option<String> {
-        &self.name
-    }
-
-    pub fn parent(&self) -> &WeakExtendedInstance {
+    fn parent(&self) -> &WeakExtendedInstance {
         &self.parent
+    }
+
+    fn extends(&self) -> &EnvironmentExtends {
+        &self.extends
+    }
+
+    fn runner_registry(&self) -> &RunnerRegistry {
+        &self.runner_registry
+    }
+
+    fn debug_registry(&self) -> &DebugRegistry {
+        &self.debug_registry
     }
 }
 
@@ -215,69 +164,6 @@ impl Resolver for Environment {
     }
 }
 
-/// The set of runners available in a realm's environment.
-///
-/// [`RunnerRegistration`]: fidl_fuchsia_sys2::RunnerRegistration
-pub struct RunnerRegistry {
-    runners: HashMap<CapabilityName, RunnerRegistration>,
-}
-
-impl RunnerRegistry {
-    pub fn default() -> Self {
-        Self { runners: HashMap::new() }
-    }
-
-    pub fn new(runners: HashMap<CapabilityName, RunnerRegistration>) -> Self {
-        Self { runners }
-    }
-
-    pub fn from_decl(regs: &Vec<RunnerRegistration>) -> Self {
-        let mut runners = HashMap::new();
-        for reg in regs {
-            runners.insert(reg.target_name.clone(), reg.clone());
-        }
-        Self { runners }
-    }
-    pub fn get_runner(&self, name: &CapabilityName) -> Option<&RunnerRegistration> {
-        self.runners.get(name)
-    }
-}
-
-/// The set of debug capabilities available in this environment.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct DebugRegistry {
-    debug_capabilities: HashMap<CapabilityName, DebugRegistration>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DebugRegistration {
-    pub source: RegistrationSource,
-    pub source_name: CapabilityName,
-}
-
-impl From<Vec<cm_rust::DebugRegistration>> for DebugRegistry {
-    fn from(regs: Vec<cm_rust::DebugRegistration>) -> Self {
-        let mut debug_capabilities = HashMap::new();
-        for reg in regs {
-            match reg {
-                cm_rust::DebugRegistration::Protocol(r) => {
-                    debug_capabilities.insert(
-                        r.target_name,
-                        DebugRegistration { source_name: r.source_name, source: r.source },
-                    );
-                }
-            };
-        }
-        Self { debug_capabilities }
-    }
-}
-
-impl DebugRegistry {
-    pub fn get_capability(&self, name: &CapabilityName) -> Option<&DebugRegistration> {
-        self.debug_capabilities.get(name)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -296,10 +182,11 @@ mod tests {
                 },
             },
         },
+        cm_rust::{CapabilityName, RegistrationSource, RunnerRegistration},
         maplit::hashmap,
         matches::assert_matches,
         moniker::AbsoluteMoniker,
-        std::sync::Weak,
+        std::{collections::HashMap, sync::Weak},
     };
 
     #[test]

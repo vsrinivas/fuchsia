@@ -439,20 +439,6 @@ make_noop_visitor!(ProtocolVisitor, {
     CapabilityDecl => ProtocolDecl,
 });
 
-impl SourceName for DebugRegistration {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl RegistrationDeclCommon for DebugRegistration {
-    const TYPE: &'static str = "protocol";
-
-    fn source(&self) -> &RegistrationSource {
-        &self.source
-    }
-}
-
 /// Routes a Protocol capability from `target` to its source, starting from `use_decl`.
 pub async fn route_protocol(
     use_decl: UseProtocolDecl,
@@ -467,7 +453,7 @@ pub async fn route_protocol(
     if let UseSource::Debug = use_decl.source {
         // Find the component instance in which the debug capability was registered with the environment.
         let (env_component_instance, env_name, registration_decl) =
-            match target.environment.get_debug_capability(&use_decl.source_name)? {
+            match target.environment().get_debug_capability(&use_decl.source_name)? {
                 Some((ExtendedInstance::Component(env_component_instance), env_name, reg)) => {
                     (env_component_instance, env_name, reg)
                 }
@@ -884,7 +870,7 @@ pub async fn route_runner(
 ) -> Result<CapabilitySource, RoutingError> {
     // Find the component instance in which the runner was registered with the environment.
     let (env_component_instance, registration_decl) =
-        match target.environment.get_registered_runner(&runner)? {
+        match target.environment().get_registered_runner(&runner)? {
             Some((ExtendedInstance::Component(env_component_instance), registration_decl)) => {
                 (env_component_instance, registration_decl)
             }

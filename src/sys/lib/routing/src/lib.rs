@@ -5,4 +5,5 @@
 pub mod capability_source;
 pub mod component_instance;
 pub mod config;
+pub mod environment;
 pub mod error;

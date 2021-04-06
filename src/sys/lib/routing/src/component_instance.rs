@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::ComponentInstanceError,
+    crate::{environment::EnvironmentInterface, error::ComponentInstanceError},
     moniker::{AbsoluteMoniker, ChildMoniker},
     std::fmt,
     std::{
@@ -29,6 +29,9 @@ pub trait ComponentInstanceInterface: Sized {
 
     /// Returns this `ComponentInstanceInterface`'s absolute moniker.
     fn abs_moniker(&self) -> &AbsoluteMoniker;
+
+    /// Returns a representation of this `ComponentInstanceInterface`'s environment.
+    fn environment(&self) -> &dyn EnvironmentInterface<Self>;
 
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
     fn try_get_parent(&self) -> Result<ExtendedInstanceInterface<Self>, ComponentInstanceError>;

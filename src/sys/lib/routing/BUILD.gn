@@ -42,6 +42,7 @@ rustc_library("routing") {
     "src/capability_source.rs",
     "src/component_instance.rs",
     "src/config.rs",
+    "src/environment.rs",
     "src/error.rs",
     "src/lib.rs",
   ]

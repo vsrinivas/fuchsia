@@ -30,6 +30,7 @@ use {
             ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
             WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
         },
+        environment::EnvironmentInterface,
         error::ComponentInstanceError,
     },
     clonable_error::ClonableError,
@@ -649,6 +650,10 @@ impl ComponentInstanceInterface for ComponentInstance {
 
     fn abs_moniker(&self) -> &AbsoluteMoniker {
         &self.abs_moniker
+    }
+
+    fn environment(&self) -> &dyn EnvironmentInterface<Self> {
+        self.environment.as_ref()
     }
 
     fn try_get_parent(&self) -> Result<ExtendedInstance, ComponentInstanceError> {
