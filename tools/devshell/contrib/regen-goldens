@@ -6,62 +6,98 @@
 #### CATEGORY=Source tree
 ### regenerates golden files in the source tree
 
-## Usage: fx regen-goldens PATTERN ... [FLAGS]
+## Usage: fx regen-goldens PATTERN ... [--list] [--reset] [FX_TEST_FLAGS]
 ##
 ## Regenerates golden files for tools that match the given substring patterns.
-## If no patterns are provided, regenerates for all tools. Forwards all flags to
-## `fx test`, such as -o/--output to show test output (files being regenerated).
+## If no patterns are provided, regenerates for all tools.
+##
+##   --list   List matching tools and their golden directories, and exit.
+##   --reset  Delete existing goldens first. (See "Troubleshooting" below.)
+## 
+##   All other flags are forwarded to fx test. A useful one is -o/--output to
+##   show test output, which prints the filenames being regenerated.
 ##
 ## Examples:
 ##
-## fx regen-goldens           # regen all goldens
-## fx regen-goldens fidlgen   # regen goldens for all fidlgen_* tools
-## fx regen-goldens fidlc -o  # regen fidlc goldens, printing verbose output
+##   fx regen-goldens           # regen all goldens
+##   fx regen-goldens fidlgen_  # regen fidlgen_* goldens
+##   fx regen-goldens fidlc -o  # regen fidlc goldens, with verbose output
 ##
-## Supported tools:
-##   fidlc, fidldoc, fidlgen_cpp, fidlgen_dart, fidlgen_go, fidlgen_hlcpp,
-##   fidlgen_libfuzzer, fidlgen_llcpp, fidlgen_rust, fidlgen_syzkaller, gidl_hlcpp,
-##   gidl_llcpp
+## Troubleshooting:
+##
+##   Try passing the --reset flag if you encounter one of these situations:
+##
+##   GN error, when goldens.txt is missing:
+##     ERROR at //build/testing/golden_test.gni:86:28: Could not read file.
+##       goldens_list = read_file("${invoker.goldens_dir}/goldens.txt", ...)
+##
+##   Ninja error, when goldens.txt contains nonexistent files:
+##     ninja: error: '.../foo.golden', needed by 'host_x64/gen/.../foo.golden',
+##     missing and no known rule to make it
+##
+##   Formatting error, when goldens have invalid syntax (e.g. from a merge conflict):
+##     ACTION //..._reformat_goldens(//build/toolchain:host_x64)
+##     /usr/bin/env /bin/sh -c \'.../rustfmt\'\ ...
+##     error: expected identifier, found `<<`
 
 set -eo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
+# Each tool $t has a NAME=${t%% *} and DIR=${t##* }, for which there must exist
+# $(dirname $DIR)/BUILD.gn containing golden_test("${NAME}_golden_tests") with
+# goldens_dir="$(basename $DIR)". See //build/testing/golden_test.gni for more
+# information about golden tests. Please keep this list sorted alphabetically.
 readonly all_tools=(
-    "fidlc"
-    "fidldoc"
-    "fidlgen_cpp"
-    "fidlgen_dart"
-    "fidlgen_go"
-    "fidlgen_hlcpp"
-    "fidlgen_hlcpp_natural_types"
-    "fidlgen_libfuzzer"
-    "fidlgen_llcpp"
-    "fidlgen_rust"
-    "fidlgen_syzkaller"
-    "gidl_hlcpp"
-    "gidl_llcpp"
+    "fidlc tools/fidl/fidlc/goldens"
+    "fidldoc tools/fidl/fidldoc/goldens"
+    "fidlgen_cpp tools/fidl/fidlgen_cpp/goldens"
+    "fidlgen_dart tools/fidl/fidlgen_dart/goldens"
+    "fidlgen_go tools/fidl/fidlgen_go/goldens"
+    "fidlgen_hlcpp tools/fidl/fidlgen_hlcpp/goldens/bindings"
+    "fidlgen_hlcpp_natural_types tools/fidl/fidlgen_hlcpp/goldens/natural_types"
+    "fidlgen_libfuzzer tools/fidl/fidlgen_libfuzzer/goldens"
+    "fidlgen_llcpp tools/fidl/fidlgen_llcpp/goldens"
+    "fidlgen_rust tools/fidl/fidlgen_rust/goldens"
+    "fidlgen_syzkaller tools/fidl/fidlgen_syzkaller/goldens"
+    "gidl_hlcpp sdk/cts/tests/pkg/fidl/cpp/gidl_goldens"
+    "gidl_llcpp src/lib/fidl/llcpp/tests/conformance/gidl_goldens"
 )
+
+# This environment variable is only set during tests.
+# See //tools/devshell/tests/subcommands/fx_regen_goldens_test.
+if [[ -z ${REGEN_GOLDENS_SKIP_CHECK+x} ]]; then
+    for t in "${all_tools[@]}"; do
+        dir=${t##* }
+        if ! [[ -d "$dir" ]]; then
+            echo "WARNING: regen-goldens has invalid goldens dir '$dir'" >&2
+        fi
+    done
+fi
 
 tools=()
 flags=()
+list=false
+reset=false
 
 for arg in "$@"; do
-    case "$arg" in
+    case $arg in
         -h|--help) fx-command-help; exit ;;
+        --list) list=true ;;
+        --reset) reset=true ;;
         -*) flags+=("$arg") ;;
         *)
             found=false
             for t in "${all_tools[@]}"; do
-                if [[ "$t" == *"$arg"* ]]; then
+                if [[ "${t%% *}" == *"$arg"* ]]; then
                     tools+=("$t")
                     found=true
                 fi
             done
             if [[ "$found" == false ]]; then
                 echo "No tools match the pattern '$arg'." >&2
-                echo "Run \`fx regen-goldens -h\` to see supported tools." >&2
+                echo "Run \`fx regen-goldens --list\` to see supported tools." >&2
                 exit 1
             fi
             ;;
@@ -72,10 +108,47 @@ if [[ "${#tools[@]}" -eq 0 ]]; then
     tools=("${all_tools[@]}")
 fi
 
+if [[ $list == true ]]; then
+    { IFS=$'\n'; lines=${tools[*]}; }
+    column -t <<< "$lines"
+    exit
+fi
+
+if [[ $reset == true ]]; then
+    for t in "${tools[@]}"; do
+        echo "Deleting goldens for: ${t%% *}"
+        dir="$FUCHSIA_DIR/${t##* }"
+        if ! [[ -d "$dir" ]]; then
+            echo "ERROR: directory not found: $dir" >&2
+            exit 1
+        fi
+        find "$dir" -maxdepth 1 -type f -name "*.golden" -delete
+        echo -n > "$dir/goldens.txt"
+    done
+fi
+
 tests=()
 for t in "${tools[@]}"; do
-    tests+=("${t}_golden_tests")
+    tests+=("${t%% *}_golden_tests")
 done
 
-echo "Regenerating goldens for: ${tools[*]}"
-"$(find_executable test)" "${tests[@]}" "${flags[@]}" -- --regen
+echo "Regenerating goldens for: ${tools[*]%% *}"
+exit_code=0
+"$(find_executable test)" "${tests[@]}" "${flags[@]}" -- --regen || exit_code=$?
+
+# The fx test exit codes are defined in scripts/fxtest/lib/constants.dart.
+case $exit_code in
+    2) # fatal error (all "Troubleshooting" examples exit with code 2)
+        if [[ $reset == false ]]; then
+            echo
+            echo "Hint: Try again with --reset: \`fx regen-goldens $* --reset\`"
+        fi
+        ;;
+    3) # test not found
+        if ! grep -q "//bundles:tests" "$FUCHSIA_BUILD_DIR/args.gn"; then
+            echo
+            echo "Hint: Try again after \`fx set ... --with //bundles:tests\`"
+        fi
+        ;;
+esac
+exit $exit_code

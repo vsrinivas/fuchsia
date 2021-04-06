@@ -65,11 +65,6 @@ import("//build/testing/host_test_data.gni")
 #   visibility
 #
 template("golden_test") {
-  not_needed(invoker,
-             [
-               "testonly",
-               "public_deps",
-             ])
   assert(defined(invoker.goldens_dir))
   assert(defined(invoker.entries))
   assert(defined(invoker.deps))
@@ -82,7 +77,7 @@ template("golden_test") {
   copied_goldens_dir = "${target_gen_dir}/${target_name}"
   manifest_file = "${target_gen_dir}/${target_name}_manifest.json"
 
-  # read the checked-in list of golden files
+  # Read the checked-in list of golden files.
   goldens_list = read_file("${invoker.goldens_dir}/goldens.txt", "list lines")
   assert(goldens_list ==
              process_file_template(goldens_list, "{{source_file_part}}"),
@@ -99,25 +94,33 @@ template("golden_test") {
   # Reformat or copy the goldens from the source directory by piping each
   # golden file through `reformat_goldens`.
   target_reformat_goldens = "${target_name}_reformat_goldens"
-  action_foreach(target_reformat_goldens) {
-    hermetic_deps = false
+  if (goldens_list == []) {
+    # No-op target to avoid breaking `gn gen` when goldens.txt is empty
+    # (action_foreach is not allowed to have zero source files).
+    group(target_reformat_goldens) {
+    }
+    not_needed([ "reformat_goldens" ])
+  } else {
+    action_foreach(target_reformat_goldens) {
+      hermetic_deps = false
 
-    testonly = true
-    visibility = [ ":*" ]
+      testonly = true
+      visibility = [ ":*" ]
 
-    # Always copy & format the goldens when the generated files change to avoid
-    # comparing stale goldens.
-    deps = invoker.deps
+      # Always copy & format the goldens when the generated files change to avoid
+      # comparing stale goldens.
+      deps = invoker.deps
 
-    script = "/bin/sh"
-    sources = rebase_path(goldens_list, ".", invoker.goldens_dir)
-    outputs = [ "${copied_goldens_dir}/{{source_file_part}}" ]
-    output_dir = rebase_path(copied_goldens_dir, root_build_dir)
-    args = [
-      "-c",
-      "${reformat_goldens} < '{{source}}' > " +
-          "'${output_dir}/{{source_file_part}}'",
-    ]
+      script = "/bin/sh"
+      sources = rebase_path(goldens_list, ".", invoker.goldens_dir)
+      outputs = [ "${copied_goldens_dir}/{{source_file_part}}" ]
+      output_dir = rebase_path(copied_goldens_dir, root_build_dir)
+      args = [
+        "-c",
+        "${reformat_goldens} < '{{source}}' > " +
+            "'${output_dir}/{{source_file_part}}'",
+      ]
+    }
   }
 
   # Make the copy of the goldens available to the test at runtime.

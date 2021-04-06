@@ -18,18 +18,45 @@ BT_MOCKED_TOOLS=(
   "tools/devshell/test"
 )
 
-declare fx fxtest_mock output
+declare fx fxtest_mock fxtest_mock_impl output fidlc_goldens
+
+# regen-goldens maintains a list of golden directories for all the tools.
+# Verifying them here would mean copying paths in three places: regen-goldens,
+# BUILD.gn (data dependencies), and here. So instead of that, regen-goldens
+# verifies them on every run. We export a variable to disable it during tests,
+# since the golden directories do not exist in the test sandbox.
+export REGEN_GOLDENS_SKIP_CHECK
 
 BT_SET_UP() {
   source "$BT_TEMP_DIR/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx=$(btf::setup_fx)
   fxtest_mock="$BT_TEMP_DIR/tools/devshell/test.mock_state"
+  fxtest_mock_impl="$BT_TEMP_DIR/tools/devshell/test.mock_side_effects"
   output="$BT_TEMP_DIR/_fx_regen_goldens_output"
+  fidlc_goldens="$BT_TEMP_DIR/tools/fidl/fidlc/goldens"
+  mkdir -p "$fidlc_goldens"
 }
 
 TEST_help() {
   BT_EXPECT "$fx" regen-goldens --help &> /dev/null
   BT_EXPECT_FILE_DOES_NOT_EXIST "$fxtest_mock"
+}
+
+TEST_list_all() {
+  BT_EXPECT "$fx" regen-goldens --list &> "$output"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "$fxtest_mock"
+  # It should list all tools. Check for a couple of them.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlc
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidldoc
+  # It should also show their golden directories.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" /goldens
+}
+
+TEST_list_substring_match() {
+  BT_EXPECT "$fx" regen-goldens --list lcpp &> "$output"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "$fxtest_mock"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlgen_hlcpp
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlgen_llcpp
 }
 
 TEST_regen_all() {
@@ -58,14 +85,14 @@ TEST_regen_two_exact() {
 
 TEST_regen_substring_match() {
   BT_EXPECT "$fx" regen-goldens lcpp &> "$output"
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlgen_{h,l}lcpp
-  btf::expect-mock-args "$fxtest_mock" \
-    fidlgen_hlcpp_golden_tests \
-    fidlgen_hlcpp_natural_types_golden_tests \
-    fidlgen_llcpp_golden_tests \
-    gidl_hlcpp_golden_tests \
-    gidl_llcpp_golden_tests \
-    -- --regen
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlgen_hlcpp
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlgen_llcpp
+  BT_ASSERT_FILE_EXISTS "$fxtest_mock"
+  source "$fxtest_mock"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" \
+    fidlgen_hlcpp_golden_tests
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" \
+    fidlgen_llcpp_golden_tests
 }
 
 TEST_fails_no_match() {
@@ -80,6 +107,43 @@ TEST_regen_with_flags() {
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlc
   btf::expect-mock-args \
     "$fxtest_mock" fidl{c,doc}_golden_tests --before -and --after -- --regen
+}
+
+TEST_reset() {
+  echo "contents will be deleted" > "$fidlc_goldens/goldens.txt"
+  echo "file will be deleted" > "$fidlc_goldens/something.golden"
+  echo "untouched" > "$fidlc_goldens/something.not_a_golden"
+  BT_EXPECT "$fx" regen-goldens fidlc --reset &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" "Deleting goldens for: fidlc"
+  btf::expect-mock-args "$fxtest_mock" fidlc_golden_tests -- --regen
+  BT_EXPECT_FILE_EXISTS "$fidlc_goldens/goldens.txt"
+  BT_EXPECT_FILE_CONTAINS "$fidlc_goldens/goldens.txt" ""
+  BT_EXPECT_FILE_DOES_NOT_EXIST "$fidlc_goldens/something.golden"
+  BT_EXPECT_FILE_EXISTS "$fidlc_goldens/something.not_a_golden"
+  BT_EXPECT_FILE_CONTAINS "$fidlc_goldens/something.not_a_golden" "untouched"
+}
+
+TEST_fatal_error_suggests_reset() {
+  echo "exit 2" > "$fxtest_mock_impl"
+  BT_EXPECT_FAIL "$fx" regen-goldens fidlc &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" "Hint:"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" "fx regen-goldens fidlc --reset"
+  # Unless you already ran with --reset:
+  touch "$fidlc_goldens/goldens.txt"
+  BT_EXPECT_FAIL "$fx" regen-goldens fidlc --reset &> "$output"
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "$output" "Hint:"
+}
+
+TEST_test_not_found_suggests_bundle() {
+  echo "exit 3" > "$fxtest_mock_impl"
+  echo > "$BT_TEMP_DIR/out/default/args.gn"
+  BT_EXPECT_FAIL "$fx" regen-goldens fidlc &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" "Hint:"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" "\--with //bundles:tests"
+  # Unless you already have it:
+  echo "--with //bundles:tests" > "$BT_TEMP_DIR/out/default/args.gn"
+  BT_EXPECT_FAIL "$fx" regen-goldens fidlc &> "$output"
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "$output" "Hint:"
 }
 
 BT_RUN_TESTS "$@"
