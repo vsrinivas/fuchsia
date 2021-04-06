@@ -10,6 +10,78 @@
 [Life of a Pixel](life_of_a_pixel.md) shows how a client Present request is
 integrated into a Scenic frame.
 
+## Scenic contract with clients
+
+If you want to use [`Present2`](/sdk/fidl/fuchsia.ui.scenic/session.fidl) in a
+way where frame scheduling is both correct and performant, consider the
+guarantees that Scenic provides surrounding:
+
+* [Vsync accuracy](#vsync-accuracy)
+
+### Vsync accuracy {#vsync-accuracy}
+
+Scenic makes no guarantees as to the accuracy or precision of the future Vsync
+information it provides to clients. Scenic merely forwards whatever information
+it receives from the hardware which may be incorrect.
+
+There are two identified Vsync issues, [minor drift](#minor-vsync-drift)
+and [major disruptions](#major-vsync-disruptions), with some implications
+for what [`Present2`](/sdk/fidl/fuchsia.ui.scenic/session.fidl) clients should
+do.
+
+#### Minor Vsync drift {#minor-vsync-drift}
+
+One problem is when VSync occurs (on the scale of microseconds) before the time
+that Scenic reports.
+
+Assume a client receives a future Vsync time of 1000us, in a
+[`FuturePresentationTimes`](/sdk/fidl/fuchsia.scenic.scheduling/prediction_info.fidl)
+object. The client then calls
+[`Present2`](/sdk/fidl/fuchsia.ui.scenic/session.fidl) with a requested
+presentation time of 1000us, expecting that its content will be displayed at
+1000us. However, it is possible that the true Vsync might actually occur at
+995us, and the client will effectively drop a frame as Scenic will only
+attempt to display the client's content at the following Vsync.
+
+It is therefore recommended that clients request presentation times half a Vsync
+interval offset from their true target time, to account for this drift in a
+Vsync interval independent way.
+
+#### Major Vsync disruptions {#major-vsync-disruptions}
+
+Another problem is a Vsync occuring milliseconds after it was supposed to,
+with the following Vsync resuming the previously established pattern.
+
+Assume the display has a 60Hz refresh rate. You can then expect Vsyncs to
+occur at times 0ms, 16.7ms, 33.3ms, 50ms and so on. On some hardware, a Vsync
+can be delayed. This might lead to Vsyncs occuring at times 0ms, **22ms**,
+33.3ms, 50ms and so on.
+
+This issue happens sporadically and without warning, so there is no way to
+effectively prevent it. In order to mitigate its effects, clients are
+expected to take extra care to ensure that their
+[`requested_presentation_time`](/sdk/fidl/fuchsia.ui.scenic/session.fidl)s
+remain monotonically increasing. If not, the client's session will be shut down.
+
+To have your `requested_presentation_time` remain monotonically increasing, add
+the following logic to your scheduling code:
+
+```cpp
+// Do some operations.
+requested_presentation_time = CalculateNextPresentationTime();
+// Lower bound the requested time.
+requested_presentation_time = std::max(requested_presentation_time, previous_requested_presentation_time);
+
+previous_requested_presentation_time = requested_presentation_time;
+session->Present2(requested_presentation_time, ...);
+```
+
+This code is correct because the new requested time will always be greater or
+equal to the old requested time.
+
+This code is performant because it will never cause you to miss a frame
+unnecessarily, regardless of whatever `CalculateNextPresentationTime()` does.
+
 ## Present2 Best Practices Examples
 
 These examples show how the API can be used for different use cases. The
