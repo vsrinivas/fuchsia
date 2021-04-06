@@ -76,18 +76,6 @@ pub trait KeyDispatcher {
     async fn dispatch(&self, event: ui_input3::KeyEvent) -> Result<bool>;
 }
 
-/// A [KeyDispatcher] that uses `ImeService` to dispatch keypresses.
-pub struct ImeServiceKeyDispatcher<'a> {
-    pub ime_service: &'a ui_input::ImeServiceProxy,
-}
-
-#[async_trait]
-impl<'a> KeyDispatcher for ImeServiceKeyDispatcher<'a> {
-    async fn dispatch(&self, event: ui_input3::KeyEvent) -> Result<bool> {
-        Ok(self.ime_service.dispatch_key3(event).await?)
-    }
-}
-
 /// A [KeyDispatcher] that uses `fuchsia.ui.input.InputMethodEditor` to dispatch keypresses.
 pub struct InputMethodEditorDispatcher<'a> {
     pub ime: &'a ui_input::InputMethodEditorProxy,
@@ -138,8 +126,8 @@ impl<'a> KeySimulator<'a> {
         self.dispatcher.dispatch(event).await
     }
 
-    // Simulate keypress by injecting into IME service.
-    pub async fn simulate_keypress(&self, key: input::Key) -> Result<()> {
+    // Simulate a key press and release of `key`.
+    async fn simulate_keypress(&self, key: input::Key) -> Result<()> {
         self.dispatch(ui_input3::KeyEvent {
             type_: Some(ui_input3::KeyEventType::Pressed),
             key: Some(key),
@@ -155,13 +143,8 @@ impl<'a> KeySimulator<'a> {
         Ok(())
     }
 
-    // Simulate keypress by injecting into IME.
-    pub async fn simulate_ime_keypress(&self, key: input::Key) {
-        self.simulate_ime_keypress_with_held_keys(key, Vec::new()).await
-    }
-
-    // Simulate keypress by injecting into IME, with `held_keys` pressed down.
-    pub async fn simulate_ime_keypress_with_held_keys(
+    // Simulate keypress with `held_keys` pressed down.
+    async fn simulate_ime_keypress_with_held_keys(
         &self,
         key: input::Key,
         held_keys: Vec<input::Key>,
@@ -187,12 +170,12 @@ impl<'a> KeySimulator<'a> {
     }
 }
 
-// Simulate keypress by injecting into IME service.
+// Simulate keypress by injecting an event into supplied key event injector.
 pub async fn simulate_keypress(
-    ime_service: &ui_input::ImeServiceProxy,
+    key_event_injector: &ui_input3::KeyEventInjectorProxy,
     key: input::Key,
 ) -> Result<()> {
-    let key_dispatcher = ImeServiceKeyDispatcher { ime_service: &ime_service };
+    let key_dispatcher = KeyEventInjectorDispatcher { key_event_injector: &key_event_injector };
     let key_simulator = KeySimulator::new(&key_dispatcher);
     key_simulator.simulate_keypress(key).await
 }

@@ -5,7 +5,6 @@
 library fuchsia.ui.input;
 
 using fuchsia.ui.input2;
-using fuchsia.ui.input3;
 
 /// The service provided by an IME
 [Discoverable]
@@ -20,16 +19,8 @@ protocol ImeService {
 
     // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
     // TODO(fxbug.dev/70474): remove this method.
-    InjectInput(InputEvent event);
-
-    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
-    // TODO(fxbug.dev/70474): remove this method.
+    // TODO(fxbug.dev/47689): Work is ongoing to remove all input2 code.
     DispatchKey(fuchsia.ui.input2.KeyEvent event) -> (bool handled);
-
-    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
-    // TODO(fxbug.dev/70474): remove this method.
-    [Transitional]
-    DispatchKey3(fuchsia.ui.input3.KeyEvent event) -> (bool handled);
 };
 
 /// Onscreen keyboard containers connect to this to know when a keyboard

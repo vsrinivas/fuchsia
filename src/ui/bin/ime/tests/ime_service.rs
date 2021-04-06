@@ -4,21 +4,20 @@
 
 #![cfg(test)]
 
-use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_input as input, fidl_fuchsia_ui_input as ui_input,
-    fuchsia_async::{self as fasync},
-    fuchsia_component::client::connect_to_service,
-    futures::{StreamExt, TryStreamExt},
-    input_synthesis::usages::Usages,
-};
-
 use crate::test_helpers::{bind_editor, get_state_update, simulate_keypress};
+use anyhow::{Context as _, Result};
+use fidl_fuchsia_input as input;
+use fidl_fuchsia_ui_input as ui_input;
+use fidl_fuchsia_ui_input3 as ui_input3;
+use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
+use futures::{StreamExt, TryStreamExt};
+use input_synthesis::usages::Usages;
 
 mod test_helpers;
 
 #[fasync::run_singlethreaded(test)]
-async fn test_visibility_service_sends_initial_update() -> Result<(), Error> {
+async fn test_visibility_service_sends_initial_update() -> Result<()> {
     let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
     let mut visiblity_event_stream = visibility_service.take_event_stream();
@@ -35,7 +34,7 @@ async fn test_visibility_service_sends_initial_update() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_visibility_service_resends_update_after_closing_keyboard() -> Result<(), Error> {
+async fn test_visibility_service_resends_update_after_closing_keyboard() -> Result<()> {
     let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
     let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
@@ -59,7 +58,7 @@ async fn test_visibility_service_resends_update_after_closing_keyboard() -> Resu
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_visibility_service_resends_update_after_opening_keyboard() -> Result<(), Error> {
+async fn test_visibility_service_resends_update_after_opening_keyboard() -> Result<()> {
     let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
     let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
@@ -86,7 +85,7 @@ async fn test_visibility_service_resends_update_after_opening_keyboard() -> Resu
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_open_and_close_from_keyboard() -> Result<(), Error> {
+async fn test_open_and_close_from_keyboard() -> Result<()> {
     let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
     let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
@@ -122,14 +121,25 @@ async fn test_open_and_close_from_keyboard() -> Result<(), Error> {
     Ok(())
 }
 
+/// Connects to a service that provides key injection.
+fn connect_to_key_event_service() -> Result<ui_input3::KeyEventInjectorProxy> {
+    connect_to_service::<ui_input3::KeyEventInjectorMarker>()
+        .context("Failed to connect to fuchsia.ui.input3.KeyEventInjector")
+}
+
+fn connect_to_ime_service() -> Result<ui_input::ImeServiceProxy> {
+    connect_to_service::<ui_input::ImeServiceMarker>()
+        .context("Failed to connect to fuchsia.ui.input.ImeService")
+}
+
 #[fasync::run_singlethreaded(test)]
-async fn test_input_updates_ime_state() -> Result<(), Error> {
-    let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
-        .context("Failed to connect to ImeService")?;
+async fn test_input_updates_ime_state() -> Result<()> {
+    let ime_service = connect_to_ime_service()?;
+    let key_event_service = connect_to_key_event_service()?;
 
     let (_ime, mut editor_stream) = bind_editor(&ime_service)?;
 
-    simulate_keypress(&ime_service, input::Key::A).await?;
+    simulate_keypress(&key_event_service, input::Key::A).await?;
 
     // get first message with keypress event but no state update
     let (state, event) = get_state_update(&mut editor_stream).await?;
@@ -153,7 +163,7 @@ async fn test_input_updates_ime_state() -> Result<(), Error> {
     assert_eq!(state.text, "a");
 
     // press left arrow
-    simulate_keypress(&ime_service, input::Key::Left).await?;
+    simulate_keypress(&key_event_service, input::Key::Left).await?;
 
     // get first message with keypress event but no state update
     let (state, event) = get_state_update(&mut editor_stream).await?;
@@ -182,14 +192,14 @@ async fn test_input_updates_ime_state() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_input_triggers_action() -> Result<(), Error> {
-    let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
-        .context("Failed to connect to ImeService")?;
+async fn test_input_triggers_action() -> Result<()> {
+    let ime_service = connect_to_ime_service()?;
+    let key_event_service = connect_to_key_event_service()?;
 
     let (_ime, mut editor_stream) = bind_editor(&ime_service)?;
 
     // send key events
-    simulate_keypress(&ime_service, input::Key::Enter).await?;
+    simulate_keypress(&key_event_service, input::Key::Enter).await?;
 
     // get first message with keypress event
     let (_state, event) = get_state_update(&mut editor_stream).await?;

@@ -4,6 +4,7 @@
             "injected-services": {
                 "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx",
                 "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx",
+                "fuchsia.ui.input3.KeyEventInjector": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx",
                 "fuchsia.ui.input3.Keyboard": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx"
             }
         }
@@ -22,6 +23,7 @@
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.input3.KeyEventInjector",
             "fuchsia.ui.input3.Keyboard"
         ]
     }

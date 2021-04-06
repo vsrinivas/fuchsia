@@ -108,37 +108,16 @@ impl Service {
     }
 
     pub fn spawn_ime_service(&self, mut stream: ui_input::ImeServiceRequestStream) {
-        let mut keyboard3 = self.keyboard3.clone();
         let mut ime_service = self.ime_service.clone();
         fuchsia_async::Task::spawn(
             async move {
                 while let Some(msg) =
                     stream.try_next().await.context("error running keyboard service")?
                 {
-                    match msg {
-                        // TODO(fxbug.dev/73274): This arm is to be removed in favor of
-                        // `spawn_key_event_injector` above.
-                        ui_input::ImeServiceRequest::DispatchKey3 { event, responder, .. } => {
-                            let key_event =
-                                KeyEvent::new(&event, keyboard3.get_keys_pressed().await)?;
-                            ime_service.inject_input(key_event.clone()).await.unwrap_or_else(|e| {
-                                fx_log_warn!("error injecting input into IME: {:?}", e)
-                            });
-                            let was_handled = keyboard3
-                                .handle_key_event(event)
-                                .await
-                                .context("error handling input3 keyboard event")?;
-                            responder
-                                .send(was_handled)
-                                .context("error responding to DispatchKey3")?;
-                        }
-                        _ => {
-                            ime_service
-                                .handle_ime_service_msg(msg)
-                                .await
-                                .context("Handle IME service messages")?;
-                        }
-                    }
+                    ime_service
+                        .handle_ime_service_msg(msg)
+                        .await
+                        .context("Handle IME service messages")?;
                 }
                 Ok(())
             }

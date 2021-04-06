@@ -8,8 +8,8 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_debug;
 use {
     anyhow::{Context as _, Result},
-    fidl_fuchsia_input as input, fidl_fuchsia_ui_input as ui_input,
-    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
+    fidl_fuchsia_ui_views as ui_views,
     fuchsia_component::client::connect_to_service,
     fuchsia_scenic as scenic,
     futures::{
@@ -159,32 +159,6 @@ fn connect_to_focus_controller() -> Result<fidl_focus::ControllerProxy> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_disconnecting_keyboard_client_disconnects_listener() -> Result<()> {
-    fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
-        .expect("syslog init should not fail");
-
-    let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
-        .context("Failed to connect to IME Service")?;
-    let key_dispatcher = test_helpers::ImeServiceKeyDispatcher { ime_service: &ime_service };
-    let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
-
-    let keyboard_service_client = connect_to_service::<ui_input3::KeyboardMarker>()
-        .context("Failed to connect to input3 Keyboard service")?;
-
-    let keyboard_service_other_client = connect_to_service::<ui_input3::KeyboardMarker>()
-        .context("Failed to establish another connection to input3 Keyboard service")?;
-
-    test_disconnecting_keyboard_client_disconnects_listener_with_connections(
-        connect_to_focus_controller()?,
-        &key_simulator,
-        // This one will be dropped as part of the test, so needs to be moved.
-        keyboard_service_client,
-        &keyboard_service_other_client,
-    )
-    .await
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn test_disconnecting_keyboard_client_disconnects_listener_via_key_event_injector(
 ) -> Result<()> {
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
@@ -287,31 +261,6 @@ async fn test_sync_cancel_with_connections(
     .await?;
 
     Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_sync_cancel() -> Result<()> {
-    fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
-        .expect("syslog init should not fail");
-
-    let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
-        .context("Failed to connect to IME Service")?;
-    let key_dispatcher = test_helpers::ImeServiceKeyDispatcher { ime_service: &ime_service };
-    let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
-
-    let keyboard_service_client = connect_to_service::<ui_input3::KeyboardMarker>()
-        .context("Failed to connect to input3 Keyboard service")?;
-
-    let keyboard_service_other_client = connect_to_service::<ui_input3::KeyboardMarker>()
-        .context("Failed to establish another connection to input3 Keyboard service")?;
-
-    test_sync_cancel_with_connections(
-        connect_to_focus_controller()?,
-        &key_simulator,
-        &keyboard_service_client,
-        &keyboard_service_other_client,
-    )
-    .await
 }
 
 #[fasync::run_singlethreaded(test)]

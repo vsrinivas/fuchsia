@@ -7,8 +7,7 @@ use {
     crate::input_handler::InputHandler,
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input as fidl_ui_input,
-    fidl_fuchsia_ui_input3 as fidl_ui_input3,
+    fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::fx_log_err,
     input_synthesis::{keymaps, usages},
@@ -18,8 +17,8 @@ use {
 /// [`ImeHandler`] is responsible for dispatching key events to the IME service, thus making sure
 /// that key events are delivered to application runtimes (e.g., web, Flutter).
 pub struct ImeHandler {
-    /// The proxy to the IME service.
-    ime_proxy: fidl_ui_input::ImeServiceProxy,
+    /// The FIDL proxy (client-side stub) to the service for key event injection.
+    key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
 
     /// Tracks the state of shift keys, for keymapping purposes.
     modifier_tracker: keymaps::ModifierState,
@@ -91,19 +90,22 @@ impl InputHandler for ImeHandler {
 
 #[allow(dead_code)]
 impl ImeHandler {
-    /// Creates a new [`ImeHandler`] and connects to the IME service.
+    /// Creates a new [`ImeHandler`] by connecting out to the key event injector.
     pub async fn new() -> Result<Self, Error> {
-        let ime = connect_to_service::<fidl_ui_input::ImeServiceMarker>()?;
+        let key_event_injector = connect_to_service::<fidl_ui_input3::KeyEventInjectorMarker>()?;
 
-        Self::new_handler(ime).await
+        Self::new_handler(key_event_injector).await
     }
 
     /// Creates a new [`ImeHandler`].
     ///
     /// # Parameters
-    /// `ime_proxy`: A proxy to the IME service.
-    async fn new_handler(ime_proxy: fidl_ui_input::ImeServiceProxy) -> Result<Self, Error> {
-        let handler = ImeHandler { ime_proxy, modifier_tracker: Default::default() };
+    /// `key_event_injector`: A proxy (FIDL client-side stub) to the key event
+    /// injector FIDL service.
+    async fn new_handler(
+        key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
+    ) -> Result<Self, Error> {
+        let handler = ImeHandler { key_event_injector, modifier_tracker: Default::default() };
 
         Ok(handler)
     }
@@ -115,7 +117,7 @@ impl ImeHandler {
     /// `event_time`: The time in nanoseconds when the events were first recorded.
     async fn dispatch_keys(&mut self, key_events: Vec<fidl_ui_input3::KeyEvent>) {
         for key_event in key_events {
-            match self.ime_proxy.dispatch_key3(key_event).await {
+            match self.key_event_injector.inject(key_event).await {
                 Err(err) => fx_log_err!("Failed to dispatch key to IME: {:?}", err),
                 _ => {}
             };
@@ -196,37 +198,46 @@ mod tests {
 
     async fn assert_ime_receives_events(
         expected_events: Vec<fidl_ui_input3::KeyEvent>,
-        mut ime_request_stream: fidl_ui_input::ImeServiceRequestStream,
+        mut request_stream: fidl_ui_input3::KeyEventInjectorRequestStream,
     ) {
         let mut expected_events_iter = expected_events.iter().peekable();
-        while let Some(Ok(fidl_ui_input::ImeServiceRequest::DispatchKey3 {
-            event,
+        while let Some(Ok(fidl_ui_input3::KeyEventInjectorRequest::Inject {
+            key_event,
             responder,
             ..
-        })) = ime_request_stream.next().await
+        })) = request_stream.next().await
         {
-            assert_eq!(&event, expected_events_iter.next().unwrap());
+            assert_eq!(&key_event, expected_events_iter.next().unwrap());
 
             // All the expected events have been received, so make sure no more events
             // are present before returning.
             if expected_events_iter.peek().is_none() {
-                responder.send(true).expect("error responding to DispatchKey");
+                responder
+                    .send(fidl_ui_input3::KeyEventStatus::Handled)
+                    .expect("error responding to DispatchKey");
                 return;
             }
-            responder.send(true).expect("error responding to DispatchKey");
+            responder
+                .send(fidl_ui_input3::KeyEventStatus::Handled)
+                .expect("error responding to DispatchKey");
         }
 
         assert!(false);
     }
 
+    fn connect_to_key_event_injector(
+    ) -> (fidl_ui_input3::KeyEventInjectorProxy, fidl_ui_input3::KeyEventInjectorRequestStream)
+    {
+        fidl::endpoints::create_proxy_and_stream::<fidl_ui_input3::KeyEventInjectorMarker>()
+            .expect("Failed to create proxy and stream for fuchsia.ui.input3.KeyEventInjector")
+    }
+
     /// Tests that a pressed key event is dispatched.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -252,17 +263,15 @@ mod tests {
         }];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
 
     /// Tests that a released key event is dispatched.
     #[fasync::run_singlethreaded(test)]
     async fn released_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -287,17 +296,15 @@ mod tests {
         }];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
 
     /// Tests that both pressed and released keys are dispatched appropriately.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_and_released_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -349,16 +356,14 @@ mod tests {
         ];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
     /// Tests that modifier keys are dispatched appropriately.
     #[fasync::run_singlethreaded(test)]
     async fn repeated_modifier_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -417,16 +422,14 @@ mod tests {
         ];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn nonprintable_key_meanings_set_correctly() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -496,16 +499,14 @@ mod tests {
         ];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn tab() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -537,16 +538,14 @@ mod tests {
         }];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn shift_shift_a() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -605,16 +604,14 @@ mod tests {
         ];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn ctrl_tab() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
+        let (proxy, request_stream) = connect_to_key_event_injector();
         let ime_handler =
-            ImeHandler::new_handler(ime_proxy).await.expect("Failed to create ImeHandler.");
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -660,7 +657,7 @@ mod tests {
         ];
 
         handle_events(ime_handler, input_events);
-        assert_ime_receives_events(expected_events, ime_request_stream).await;
+        assert_ime_receives_events(expected_events, request_stream).await;
     }
 
     /// If this test fails to compile, it means that a new value is added to the FIDL enum
