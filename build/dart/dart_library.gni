@@ -416,7 +416,12 @@ if (current_toolchain == dart_toolchain) {
       action(analysis_target_name) {
         forward_variables_from(concurrent_jobs.local, "*")
 
-        script = "//build/dart/run_analysis.py"
+        # This script is built by "//build/dart:run_analysis". However, because
+        # that target is not defined in this file we can't use
+        # `get_target_outputs`, which only supports targets previously defined
+        # in the current file. We don't want to include that target as part of
+        # the template, to avoid repeatedly building it for every dart_library.
+        script = "${root_out_dir}/obj/build/dart/run_analysis.pyz"
 
         depfile = "$target_gen_dir/$target_name.analysis.d"
 
@@ -431,7 +436,7 @@ if (current_toolchain == dart_toolchain) {
                    dart_analyzer_binary,
                    options_file,
                    source_file,
-                 ] + rebased_sources + third_party_yaml_lib3_srcs
+                 ] + rebased_sources
 
         output_file = "$target_gen_dir/$target_name.analyzed"
         outputs = [ output_file ]
@@ -460,6 +465,7 @@ if (current_toolchain == dart_toolchain) {
         deps = _dart_deps + dart_sdk_deps + [
                  ":$_all_deps_sources_target",
                  ":$_dart_package_config_target_name",
+                 "//build/dart:run_analysis",
                ]
 
         forward_variables_from(invoker, [ "testonly" ])
@@ -678,9 +684,14 @@ if (current_toolchain == dart_toolchain) {
       metadata_target_name = "${target_name}_sdk_metadata"
       metadata_file = "$target_gen_dir/$target_name.sdk_meta.json"
       action(metadata_target_name) {
-        script = "//build/dart/sdk/gen_meta_file.py"
+        # This script is built by "//build/dart:gen_meta_file". However, because
+        # that target is not defined in this file we can't use
+        # `get_target_outputs`, which only supports targets previously defined
+        # in the current file. We don't want to include that target as part of
+        # the template, to avoid repeatedly building it for every dart_library.
+        script = "${root_out_dir}/obj/build/dart/gen_meta_file.pyz"
 
-        inputs = sdk_metas + third_party_pubspecs + third_party_yaml_lib3_srcs
+        inputs = sdk_metas + third_party_pubspecs
 
         outputs = [ metadata_file ]
 
@@ -700,7 +711,7 @@ if (current_toolchain == dart_toolchain) {
           args += [ "--dart-library-null-safe" ]
         }
 
-        deps = sdk_deps
+        deps = sdk_deps + [ "//build/dart:gen_meta_file" ]
 
         forward_variables_from(invoker, [ "testonly" ])
       }

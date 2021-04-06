@@ -2,7 +2,6 @@
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Generate Dart reference docs for one or more Fuchsia packages.
 
 This script uses Dartdoc, which documents a single package. If called with more
@@ -17,16 +16,6 @@ import os
 import shutil
 import subprocess
 import sys
-
-FUCHSIA_ROOT = os.path.dirname(  # $root
-    os.path.dirname(             # build
-    os.path.dirname(             # dart
-    os.path.abspath(__file__))))
-if sys.version_info[0] >= 3:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
-else:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
-
 import yaml
 
 _PUBSPEC_CONTENT = """name: Fuchsia
@@ -62,15 +51,12 @@ def is_dart_package_dir(package_dir):
     return True
 
 
-
 def collect_top_level_files(package_dir):
     """Return a list of dart filenames under the package's lib directory."""
-    return sorted([
+    return sorted(
         os.path.basename(p)
-        for p in os.listdir(
-            os.path.join(package_dir, 'lib'))
-        if os.path.basename(p).endswith('.dart')
-    ])
+        for p in os.listdir(os.path.join(package_dir, 'lib'))
+        if os.path.basename(p).endswith('.dart'))
 
 
 def compose_pubspec_content(package_dict):
@@ -159,17 +145,17 @@ def generate_docs(package_dir, out_dir, dart_prebuilt_dir):
         shutil.rmtree(out_dir)
 
     # Run dartdoc.
-    excludedPackages = ['Dart', 'logging']
+    excluded_packages = ['Dart', 'logging']
     process = subprocess.run(
         [
             os.path.join(dart_prebuilt_dir, 'dartdoc'),
             '--auto-include-dependencies',
             '--exclude-packages',
-            ','.join(excludedPackages),
+            ','.join(excluded_packages),
             '--output',
             out_dir,
             '--format',
-            'md'
+            'md',
         ],
         cwd=package_dir,
         capture_output=True,
@@ -207,10 +193,7 @@ def main():
         default='',
         help="Location of dart prebuilts, usually a Dart SDK's bin directory")
     parser.add_argument(
-        'packages',
-        type=str,
-        nargs='+',
-        help='Paths of packages to document')
+        'packages', type=str, nargs='+', help='Paths of packages to document')
 
     args = parser.parse_args()
     if len(args.packages) == 1:

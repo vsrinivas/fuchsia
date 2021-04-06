@@ -4,6 +4,7 @@
 
 import("//build/dart/dart.gni")
 import("//build/python/python.gni")
+import("//build/python/python_binary.gni")
 import("//build/sdk/sdk_atom.gni")
 
 kernel_snapshot = "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/snapshots/gen_kernel.dart.snapshot"
@@ -150,9 +151,16 @@ group("tests") {
                 ] + _flutter_tester_tests
 }
 
+_gen_reference_docs_script_target = "gen_reference_docs_script"
+python_binary(_gen_reference_docs_script_target) {
+  main_source = "//build/dart/gen_reference_docs.py"
+  output_name = "gen_reference_docs.pyz"
+  deps = [ "//third_party/pyyaml:yaml" ]
+}
+
 action("dart_sdk_docs") {
-  script = rebase_path("//build/dart/gen_reference_docs.py", root_build_dir)
-  inputs = third_party_yaml_lib3_srcs
+  script_output = get_target_outputs(":${_gen_reference_docs_script_target}")
+  script = script_output[0]
 
   docs_out_dir = "$target_out_dir/docs"
 
@@ -189,4 +197,6 @@ action("dart_sdk_docs") {
     rebase_path("//sdk/dart/fuchsia_webview_flutter"),
     rebase_path("//sdk/dart/zircon"),
   ]
+
+  deps = [ ":${_gen_reference_docs_script_target}" ]
 }

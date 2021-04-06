@@ -728,12 +728,16 @@ def is_known_wrapper(command: ToolCommand) -> bool:
       True if the command is one of the known wrapper scripts that encapsulates
         another command in tail position after '--'.
     """
-    # Catch cases when Python interpreter is explicit and implicit.
-    if command.tool.endswith('.py'):
+    # Cover both cases when the tool:
+    #
+    # 1. is executed directly, for example: ./build.py
+    if command.tool.endswith(('.py', '.pyz')):
         python_script = command.tool
+    # 2. is explicitly executed by an interpreter
+    #    for example: path/to/prebuilt/python3.8 build.py
     elif _tool_is_python(command.tool):
         script_index = _find_first_index(
-            command.args, lambda x: x.endswith('.py'))
+            command.args, lambda x: x.endswith(('.py', '.pyz')))
         assert script_index != -1, f"Expected to find Python script after interpreter: {command.args}"
         python_script = command.args[script_index]
     else:

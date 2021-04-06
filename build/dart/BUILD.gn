@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/toolchain.gni")
+import("//build/python/python_binary.gni")
 import("//build/python/python_host_test.gni")
 import("//build/toolchain/basic_toolchain.gni")
 import("//build/toolchain/concurrent_jobs.gni")
@@ -14,6 +15,16 @@ declare_args() {
   # with many parallel jobs e.g. when using goma. To avoid out-of-memory
   # errors we explicitly reduce the number of jobs.
   concurrent_dart_jobs = default_concurrent_jobs.dart
+}
+
+python_binary("run_analysis") {
+  main_source = "run_analysis.py"
+  deps = [ "//third_party/pyyaml:yaml" ]
+}
+
+python_binary("gen_meta_file") {
+  main_source = "sdk/gen_meta_file.py"
+  deps = [ "//third_party/pyyaml:yaml" ]
 }
 
 # TODO(fxb/58062): Delete after all packages are migrated away from dart_app

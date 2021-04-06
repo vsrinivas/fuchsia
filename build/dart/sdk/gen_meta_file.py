@@ -7,18 +7,6 @@ import argparse
 import json
 import os
 import sys
-
-FUCHSIA_ROOT = os.path.dirname(  # $root
-    os.path.dirname(             # build
-    os.path.dirname(             # dart
-    os.path.dirname(             # sdk
-    os.path.abspath(__file__)))))
-
-if sys.version_info[0] >= 3:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
-else:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
-
 import yaml
 
 # The list of packages that should be pulled from a Flutter SDK instead of pub.
