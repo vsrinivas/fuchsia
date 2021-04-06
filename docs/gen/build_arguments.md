@@ -726,7 +726,7 @@ errors we explicitly reduce the number of jobs.
 
 **Current value (from the default):** `32`
 
-From //build/dart/BUILD.gn:15
+From //build/dart/BUILD.gn:16
 
 ### config_have_heap
 Tells openweave to include files that require heap access.
@@ -741,22 +741,6 @@ If true, uses a netstack tailored for network conformance testing.
 **Current value (from the default):** `false`
 
 From //src/connectivity/network/BUILD.gn:13
-
-### coverage_sdk_source_sets
-Set this to true to profile sdk_source_set() instances reachable from the
-top-level //sdk target. This will ensure that the build generates a profile
-list file, and add its path to 'profile_source_files_list_files' automatically.
-
-NOTE: This is ignored if the "profile" build variant is not enabled!
-Example usage:
-
- fx set core.x64 --with //sdk --variant profile --args 'coverage_sdk_source_sets = true'
- fx build
-
-
-**Current value (from the default):** `false`
-
-From //build/config/profile/sdk.gni:16
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -2897,7 +2881,7 @@ From //build/security.gni:36
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/6afcfb3fd05d79dc7b98c85c9065fd57b8ece89a/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/e80f3bd4ae03df48cde9590013c2111aa437f142/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
