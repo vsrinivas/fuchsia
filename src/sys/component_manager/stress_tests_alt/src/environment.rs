@@ -62,7 +62,7 @@ impl Environment for TreeStressorEnvironment {
         let mut runners = vec![];
         for (index, actor) in self.tree_actors.iter().enumerate() {
             let name = format!("tree_actor_{}", index);
-            runners.push(ActorRunner::new(name, 0, actor.clone()))
+            runners.push(ActorRunner::new(name, None, actor.clone()))
         }
         runners
     }

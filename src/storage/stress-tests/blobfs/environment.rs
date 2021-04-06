@@ -15,6 +15,7 @@ use {
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
+    std::time::Duration,
     storage_stress_test_utils::{
         fvm::{get_volume_path, FvmInstance},
         io::Directory,
@@ -115,13 +116,21 @@ impl Environment for BlobfsEnvironment {
 
     fn actor_runners(&mut self) -> Vec<ActorRunner> {
         let mut runners = vec![
-            ActorRunner::new("blob_actor", 0, self.blob_actor.clone()),
-            ActorRunner::new("deletion_actor", 10, self.deletion_actor.clone()),
+            ActorRunner::new("blob_actor", None, self.blob_actor.clone()),
+            ActorRunner::new(
+                "deletion_actor",
+                Some(Duration::from_secs(10)),
+                self.deletion_actor.clone(),
+            ),
         ];
 
         if let Some(secs) = self.args.disconnect_secs {
             if secs > 0 {
-                let runner = ActorRunner::new("instance_actor", secs, self.instance_actor.clone());
+                let runner = ActorRunner::new(
+                    "instance_actor",
+                    Some(Duration::from_secs(secs)),
+                    self.instance_actor.clone(),
+                );
                 runners.push(runner);
             }
         }

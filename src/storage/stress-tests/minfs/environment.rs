@@ -15,6 +15,7 @@ use {
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::path::PathBuf,
     std::sync::Arc,
+    std::time::Duration,
     storage_stress_test_utils::{
         fvm::{get_volume_path, FvmInstance},
         io::Directory,
@@ -122,13 +123,21 @@ impl Environment for MinfsEnvironment {
 
     fn actor_runners(&mut self) -> Vec<ActorRunner> {
         let mut runners = vec![
-            ActorRunner::new("file_actor", 0, self.file_actor.clone()),
-            ActorRunner::new("deletion_actor", 5, self.deletion_actor.clone()),
+            ActorRunner::new("file_actor", None, self.file_actor.clone()),
+            ActorRunner::new(
+                "deletion_actor",
+                Some(Duration::from_secs(5)),
+                self.deletion_actor.clone(),
+            ),
         ];
 
         if let Some(secs) = self.args.disconnect_secs {
             if secs > 0 {
-                let runner = ActorRunner::new("instance_actor", secs, self.instance_actor.clone());
+                let runner = ActorRunner::new(
+                    "instance_actor",
+                    Some(Duration::from_secs(secs)),
+                    self.instance_actor.clone(),
+                );
                 runners.push(runner);
             }
         }

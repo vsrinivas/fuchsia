@@ -19,8 +19,8 @@ pub struct ActorRunner {
     // The name of this actor
     pub name: String,
 
-    // The number of seconds to wait between actor operations
-    pub delay: u64,
+    // The duration to wait between actor operations
+    pub delay: Option<Duration>,
 
     // A mutable reference to the actor for this configuration.
     // The runner will lock on the actor when it is performing an operation.
@@ -29,7 +29,11 @@ pub struct ActorRunner {
 }
 
 impl ActorRunner {
-    pub fn new<A: Actor>(name: impl ToString, delay: u64, actor: Arc<Mutex<A>>) -> Self {
+    pub fn new<A: Actor>(
+        name: impl ToString,
+        delay: Option<Duration>,
+        actor: Arc<Mutex<A>>,
+    ) -> Self {
         Self { name: name.to_string(), delay, actor: actor as Arc<Mutex<dyn Actor>> }
     }
 
@@ -39,12 +43,12 @@ impl ActorRunner {
         Task::blocking(async move {
             let mut local_count: u64 = 0;
             loop {
-                if self.delay > 0 {
+                if let Some(delay) = self.delay {
                     debug!(
-                        "[{}][{}][{}] Sleeping for {} seconds",
-                        generation, self.name, local_count, self.delay
+                        "[{}][{}][{}] Sleeping for {:?}",
+                        generation, self.name, local_count, delay
                     );
-                    sleep(Duration::from_secs(self.delay));
+                    sleep(delay);
                 }
 
                 debug!("[{}][{}][{}] Performing...", generation, self.name, local_count);

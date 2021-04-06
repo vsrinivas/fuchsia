@@ -12,6 +12,7 @@ use {
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
+    std::time::Duration,
     storage_stress_test_utils::fvm::FvmInstance,
     stress_test::{actor::ActorRunner, environment::Environment, random_seed},
 };
@@ -95,13 +96,13 @@ impl Environment for FvmEnvironment {
 
         for (guid, actor) in &self.volume_actors {
             let actor_name = format!("volume_actor_{}", guid.value[0]);
-            runners.push(ActorRunner::new(actor_name, 0, actor.clone()));
+            runners.push(ActorRunner::new(actor_name, None, actor.clone()));
         }
 
         if self.args.disconnect_secs > 0 {
             runners.push(ActorRunner::new(
                 "instance_actor",
-                self.args.disconnect_secs,
+                Some(Duration::from_secs(self.args.disconnect_secs)),
                 self.instance_actor.clone(),
             ))
         }

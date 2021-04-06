@@ -20,6 +20,7 @@ use {
     futures::lock::Mutex,
     log::info,
     std::sync::Arc,
+    std::time::Duration,
     stress_test::{actor::ActorRunner, environment::Environment},
     test_utils_lib::opaque_test::OpaqueTest,
 };
@@ -188,7 +189,11 @@ impl Environment for ScenicEnvironment {
     }
 
     fn actor_runners(&mut self) -> Vec<ActorRunner> {
-        vec![ActorRunner::new("tap_actor", self.args.touch_delay_secs, self.tap_actor.clone())]
+        vec![ActorRunner::new(
+            "tap_actor",
+            Some(Duration::from_secs(self.args.touch_delay_secs)),
+            self.tap_actor.clone(),
+        )]
     }
 
     async fn reset(&mut self) {
