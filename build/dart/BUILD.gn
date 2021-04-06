@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/toolchain.gni")
+import("//build/python/python_host_test.gni")
 import("//build/toolchain/basic_toolchain.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 
@@ -74,7 +75,9 @@ if (current_toolchain == dart_toolchain) {
   pool("dart_pool") {
     depth = concurrent_dart_jobs
   }
-} else {
+}
+
+if (current_toolchain == default_toolchain) {
   # A toolchain dedicated to processing and analyzing Dart packages.
   # The only targets in this toolchain are action() targets, so it
   # has no real tools.  But every toolchain needs stamp and copy.
@@ -83,7 +86,16 @@ if (current_toolchain == dart_toolchain) {
   }
 }
 
+python_host_test("gen_reference_docs_test") {
+  main_source = "gen_reference_docs_test.py"
+  sources = [ "gen_reference_docs.py" ]
+  libraries = [ "//third_party/pyyaml/lib3/yaml" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    ":gen_reference_docs_test($host_toolchain)",
+    "tests",
+  ]
 }
