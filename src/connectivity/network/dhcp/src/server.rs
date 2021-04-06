@@ -1675,16 +1675,11 @@ pub mod tests {
         server: &Server<DS>,
     ) -> Message {
         let mut msg = new_server_message(message_type, client_message, server);
-        msg.options.extend(
-            [
-                DhcpOption::IpAddressLeaseTime(100),
-                DhcpOption::RenewalTimeValue(50),
-                DhcpOption::RebindingTimeValue(75),
-            ]
-            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-            .iter()
-            .cloned(),
-        );
+        msg.options.extend(std::array::IntoIter::new([
+            DhcpOption::IpAddressLeaseTime(100),
+            DhcpOption::RenewalTimeValue(50),
+            DhcpOption::RebindingTimeValue(75),
+        ]));
         let () = add_server_options(&mut msg, server);
         msg
     }
@@ -2962,9 +2957,8 @@ pub mod tests {
         let () = time_source.move_forward(Duration::from_secs(1));
         let () = server.release_expired_leases()?;
 
-        let client_ips =
-            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-            [client_1_ip, client_2_ip, client_3_ip].iter().cloned().collect::<HashSet<_>>();
+        let client_ips: HashSet<_> =
+            std::array::IntoIter::new([client_1_ip, client_2_ip, client_3_ip]).collect();
         matches::assert_matches!(
             &server.cache.iter().collect::<Vec<_>>()[..],
             [
@@ -3026,8 +3020,7 @@ pub mod tests {
         assert!(server.cache.is_empty(), "{:?}", server.cache);
         assert_eq!(
             server.pool.available_addrs,
-            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-            [client_1_ip, client_2_ip, client_3_ip].iter().cloned().collect()
+            std::array::IntoIter::new([client_1_ip, client_2_ip, client_3_ip]).collect(),
         );
         assert!(server.pool.allocated_addrs.is_empty(), "{:?}", server.pool.allocated_addrs);
         // Delete actions occur in non-deterministic (HashMap iteration) order, so we must not
@@ -3084,9 +3077,8 @@ pub mod tests {
         let () = time_source.move_forward(Duration::from_secs(1));
         let () = server.release_expired_leases()?;
 
-        let client_ips =
-            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-            [client_1_ip, client_3_ip].iter().cloned().collect::<HashSet<_>>();
+        let client_ips: HashSet<_> =
+            std::array::IntoIter::new([client_1_ip, client_3_ip]).collect();
         matches::assert_matches!(
             &server.cache.iter().collect::<Vec<_>>()[..],
             [
@@ -3095,11 +3087,7 @@ pub mod tests {
             ] if [id1, id3].iter().all(|id| [&client_1_id, &client_3_id].contains(id)) &&
                 [ip1, ip3].iter().all(|ip| client_ips.contains(*ip))
         );
-        assert_eq!(
-            server.pool.available_addrs,
-            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-            [client_2_ip].iter().cloned().collect()
-        );
+        assert_eq!(server.pool.available_addrs, std::array::IntoIter::new([client_2_ip]).collect());
         assert_eq!(server.pool.allocated_addrs, client_ips);
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -3696,7 +3684,7 @@ pub mod tests {
             .allocate_addr(client)
             .with_context(|| format!("allocate_addr({}) failed", client))?;
         let client_id = ClientIdentifier::from(random_mac_generator());
-        server.cache = [(
+        server.cache = std::array::IntoIter::new([(
             client_id.clone(),
             CachedConfig {
                 client_addr: Some(client),
@@ -3704,10 +3692,7 @@ pub mod tests {
                 lease_start_epoch_seconds: 0,
                 lease_length_seconds: 42,
             },
-        )]
-        // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-        .iter()
-        .cloned()
+        )])
         .collect();
         let () = server.dispatch_clear_leases().context("dispatch_clear_leases() failed")?;
         let empty_map = HashMap::new();

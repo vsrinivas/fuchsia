@@ -639,14 +639,15 @@ mod tests {
             seed = 1;
         }
 
-        // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-        let bytes: Vec<u8> = [seed as u32, (seed >> 32) as u32, seed as u32, (seed >> 32) as u32]
-            .iter()
-            .copied()
-            .fold(Vec::new(), |mut acc, n| {
-                acc.extend_from_slice(&n.to_ne_bytes()[..]);
-                acc
-            });
+        let bytes: Vec<u8> = std::array::IntoIter::new([
+            seed as u32,
+            (seed >> 32) as u32,
+            seed as u32,
+            (seed >> 32) as u32,
+        ])
+        .map(u32::to_ne_bytes)
+        .flat_map(std::array::IntoIter::new)
+        .collect();
         XorShiftRng::from_seed(bytes.as_slice().try_into().unwrap())
     }
 

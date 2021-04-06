@@ -284,15 +284,12 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 		if len(unknownTuples) == 0 {
 			return "None"
 		}
-		// TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
 		var b strings.Builder
-		b.WriteString("Some(std::iter::empty()")
+		b.WriteString("Some(std::array::IntoIter::new([")
 		for _, tuple := range unknownTuples {
-			if _, err := fmt.Fprintf(&b, ".chain(std::iter::once(%s))", tuple); err != nil {
-				panic(err)
-			}
+			b.WriteString(tuple)
 		}
-		b.WriteString(".collect())")
+		b.WriteString("]).collect())")
 		return b.String()
 	}
 	tableFields = append(tableFields, fmt.Sprintf("unknown_data: %s", unknownData()))
