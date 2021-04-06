@@ -190,7 +190,8 @@ impl ImeService {
             uii::ImeServiceRequest::HideKeyboard { .. } => {
                 self.hide_keyboard().await;
             }
-            uii::ImeServiceRequest::DispatchKey { .. } => {
+            uii::ImeServiceRequest::DispatchKey { .. }
+            | uii::ImeServiceRequest::ViewFocusChanged { .. } => {
                 // Transitional: DispatchKey should be handled by keyboard/Service.
                 // See Service.spawn_ime_service() for handing DispatchKey.
                 // In future, Keyboard service will receive keys directly.

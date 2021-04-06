@@ -9,8 +9,6 @@ use {
     futures::{TryFutureExt, TryStreamExt},
 };
 
-use fidl_fuchsia_ui_keyboard_focus as fidl_focus;
-
 use crate::ime_service::ImeService;
 use crate::keyboard::{events::KeyEvent, keyboard3};
 
@@ -27,32 +25,6 @@ impl Service {
     pub async fn new(ime_service: ImeService) -> Result<Service, Error> {
         let keyboard3 = keyboard3::KeyboardService::new();
         Ok(Service { ime_service, keyboard3 })
-    }
-
-    /// Starts a task that processes `fuchsia.ui.keyboard.focus.Controller`.
-    /// This method returns immediately without blocking.
-    pub fn spawn_focus_controller(&self, mut stream: fidl_focus::ControllerRequestStream) {
-        let keyboard3 = self.keyboard3.clone();
-        fuchsia_async::Task::spawn(
-            async move {
-                while let Some(msg) = stream.try_next().await.context(concat!(
-                    "keyboard::Service::spawn_focus_controller: ",
-                    "error while reading the request stream for ",
-                    "fuchsia.ui.keyboard.focus.Controller"
-                ))? {
-                    match msg {
-                        fidl_focus::ControllerRequest::Notify { view_ref, responder, .. } => {
-                            let view_ref = keyboard3::ViewRef::new(view_ref);
-                            keyboard3.handle_focus_change(view_ref).await;
-                            responder.send()?;
-                        }
-                    }
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        )
-        .detach();
     }
 
     /// Starts a task that processes `fuchsia.ui.input3.KeyEventInjector` requests.
@@ -108,16 +80,30 @@ impl Service {
     }
 
     pub fn spawn_ime_service(&self, mut stream: ui_input::ImeServiceRequestStream) {
+        let keyboard3 = self.keyboard3.clone();
         let mut ime_service = self.ime_service.clone();
         fuchsia_async::Task::spawn(
             async move {
                 while let Some(msg) =
                     stream.try_next().await.context("error running keyboard service")?
                 {
-                    ime_service
-                        .handle_ime_service_msg(msg)
-                        .await
-                        .context("Handle IME service messages")?;
+                    match msg {
+                        ui_input::ImeServiceRequest::ViewFocusChanged {
+                            view_ref,
+                            responder,
+                            ..
+                        } => {
+                            let view_ref = keyboard3::ViewRef::new(view_ref);
+                            keyboard3.handle_focus_change(view_ref).await;
+                            responder.send()?;
+                        }
+                        _ => {
+                            ime_service
+                                .handle_ime_service_msg(msg)
+                                .await
+                                .context("Handle IME service messages")?;
+                        }
+                    }
                 }
                 Ok(())
             }

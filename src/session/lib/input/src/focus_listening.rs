@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_ui_keyboard_focus as fidl_focus;
 use {
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_ui_focus as focus, fidl_fuchsia_ui_shortcut as fidl_ui_shortcut,
+    fidl_fuchsia_ui_focus as focus, fidl_fuchsia_ui_input as fidl_ui_input,
+    fidl_fuchsia_ui_shortcut as fidl_ui_shortcut,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::fx_log_err,
     futures::StreamExt,
@@ -14,7 +14,7 @@ use {
 /// Registers as a focus chain listener and dispatches focus chain updates to IME
 /// and shortcut manager.
 pub async fn handle_focus_changes() -> Result<(), Error> {
-    let ime = connect_to_service::<fidl_focus::ControllerMarker>()?;
+    let ime = connect_to_service::<fidl_ui_input::ImeServiceMarker>()?;
     let shortcut_manager = connect_to_service::<fidl_ui_shortcut::ManagerMarker>()?;
 
     let (focus_chain_listener_client_end, focus_chain_listener) =
@@ -30,14 +30,14 @@ pub async fn handle_focus_changes() -> Result<(), Error> {
 }
 
 /// Dispatches focus chain updates from `focus_chain_listener` to
-/// `focus_ctl` and `shortcut_manager`.
+/// `ime` and `shortcut_manager`.
 ///
 /// # Parameters
-/// `focus_ctl`: A proxy to the focus controller.
+/// `ime`: A proxy to the IME service.
 /// `shortcut_manager`: A proxy to the shortcut manager service.
 /// `focus_chain_listener`: A channel that receives focus chain updates.
 async fn dispatch_focus_changes(
-    focus_ctl: fidl_focus::ControllerProxy,
+    ime: fidl_ui_input::ImeServiceProxy,
     shortcut_manager: fidl_ui_shortcut::ManagerProxy,
     mut focus_chain_listener: focus::FocusChainListenerRequestStream,
 ) -> Result<(), Error> {
@@ -50,7 +50,7 @@ async fn dispatch_focus_changes(
                 if let Some(ref focus_chain) = focus_chain.focus_chain {
                     if let Some(ref view_ref) = focus_chain.last() {
                         let mut view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
-                        focus_ctl.notify(&mut view_ref_dup).await?;
+                        ime.view_focus_changed(&mut view_ref_dup).await?;
                     }
                 };
 
@@ -74,18 +74,22 @@ mod tests {
         fuchsia_scenic as scenic, fuchsia_zircon::AsHandleRef, futures::join,
     };
 
-    /// Listens for a ViewRef from a view focus change request on `request_stream`.
+    /// Listens for a ViewRef from a view focus change request on `ime_request_stream`.
     ///
     /// # Parameters
-    /// `request_stream`: A channel where ViewFocusChanged requests are received.
+    /// `ime_request_stream`: A channel where ViewFocusChanged requests are received.
     ///
     /// # Returns
     /// The ViewRef of the focused view.
-    async fn expect_focus_ctl_focus_change(
-        mut request_stream: fidl_focus::ControllerRequestStream,
+    async fn expect_ime_focus_change(
+        mut ime_request_stream: fidl_ui_input::ImeServiceRequestStream,
     ) -> fidl_ui_views::ViewRef {
-        match request_stream.next().await {
-            Some(Ok(fidl_focus::ControllerRequest::Notify { view_ref, responder, .. })) => {
+        match ime_request_stream.next().await {
+            Some(Ok(fidl_ui_input::ImeServiceRequest::ViewFocusChanged {
+                view_ref,
+                responder,
+                ..
+            })) => {
                 let _ = responder.send();
                 view_ref
             }
@@ -120,8 +124,8 @@ mod tests {
     /// Tests focused view routing from FocusChainListener to IME service and shortcut manager.
     #[fuchsia_async::run_until_stalled(test)]
     async fn dispatch_focus() -> Result<(), Error> {
-        let (focus_proxy, focus_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_focus::ControllerMarker>()?;
+        let (ime_proxy, ime_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()?;
         let (shortcut_manager_proxy, shortcut_manager_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_shortcut::ManagerMarker>()?;
 
@@ -129,9 +133,8 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_focus::FocusChainListenerMarker>()?;
 
         fuchsia_async::Task::spawn(async move {
-            let _ =
-                dispatch_focus_changes(focus_proxy, shortcut_manager_proxy, focus_chain_listener)
-                    .await;
+            let _ = dispatch_focus_changes(ime_proxy, shortcut_manager_proxy, focus_chain_listener)
+                .await;
         })
         .detach();
 
@@ -144,7 +147,7 @@ mod tests {
 
         let (_, view_ref, got_focus_chain) = join!(
             focus_chain_listener_client_end.on_focus_change(focus_chain),
-            expect_focus_ctl_focus_change(focus_request_stream),
+            expect_ime_focus_change(ime_request_stream),
             expect_shortcut_focus_change(shortcut_manager_request_stream),
         );
 

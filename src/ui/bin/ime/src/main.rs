@@ -32,7 +32,6 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(|stream| keyboard_service.spawn_ime_service(stream))
         // Requires clients to have `fuchsia.ui.input3.KeyEventInjector` in the sandbox.
         .add_fidl_service(|stream| keyboard_service.spawn_key_event_injector(stream))
-        .add_fidl_service(|stream| keyboard_service.spawn_focus_controller(stream))
         .add_fidl_service(|stream| ime_service.bind_ime_visibility_service(stream))
         .add_fidl_service(|stream| ime_service.bind_text_input_context(stream));
 
