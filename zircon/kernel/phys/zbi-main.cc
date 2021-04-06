@@ -18,37 +18,39 @@
 
 FILE FILE::stdout_;
 
+namespace {
+
+using UartKernelDriver = uart::all::KernelDriver<uart::BasicIoProvider, uart::Unsynchronized>;
+
+// Configure the global "stdout" variable to use the given UART configuration.
+//
+// This allows functions such as printf() to output via the UART.
+void ConfigureStdout(const uart::all::Driver& uart) {
+  static UartKernelDriver global_uart;
+  global_uart = uart;
+  global_uart.Visit([](auto&& driver) {
+    driver.Init();
+
+    // Update stdout global to write to the configured driver.
+    FILE::stdout_ = FILE{&driver};
+  });
+}
+
+}  // namespace
+
 void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // Apply any relocations required to ourself.
   ApplyRelocations();
 
-  // The serial console starts out as the uart::null driver that just drops
-  // everything on the floor.  This is local in PhysMain rather than being
-  // global so it can be nontrivally default-constructed in case that's needed.
-  // The global stdout points into it, which would usually be a red flag with a
-  // local variable, but that's OK here since this function can never return.
-  uart::all::KernelDriver<uart::BasicIoProvider, uart::Unsynchronized> uart;
-
-  // This must be called after uart is reset to make stdout use the new value.
-  auto set_stdout = [&uart]() {
-    uart.Visit([](auto&& driver) {
-      // Initialize the selected serial console driver so driver.Write() works.
-      driver.Init();
-
-      // Point stdout at it so printf calls driver.Write().
-      FILE::stdout_ = FILE{&driver};
-    });
-  };
-
-  // Initialize stdout early to use the "null" (bit bucket) driver, so
-  // any random printf calls from the library code don't crash.
-  set_stdout();
+  // Initially set up stdout to write to the null uart driver.
+  ConfigureStdout(uart::null::Driver());
 
   // Scan through the ZBI looking for items that configure the serial console.
   // Note that as each item is encountered, it resets uart to the appropriate
   // variant and sets its configuration values.  So a later item will override
   // the selection and configuration of an earlier item.  But this all happens
   // before anything touches hardware.
+  UartKernelDriver uart;
   zbitl::View<ktl::span<ktl::byte>> zbi_view(
       // We don't have any outside information on the maximum size of the
       // ZBI.  We'll just have to trust the length in the ZBI header, so tell
@@ -77,14 +79,12 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   }
   zbi_view.ignore_error();
 
-  // Now copy the configuration possibly changed by kernel.serial back in.
-  uart = boot_opts.serial;
-
-  // Reinitialize stdout to use what the ZBI or command line requested.  Note
-  // we don't do this after parsing ZBI items and before parsing command line
-  // options, because if kernel.serial overrode what the ZBI items said, we
-  // shouldn't be sending output to the wrong UART in between.
-  set_stdout();
+  // Configure the selected UART.
+  //
+  // Note we don't do this after parsing ZBI items and before parsing command
+  // line options, because if kernel.serial overrode what the ZBI items said,
+  // we shouldn't be sending output to the wrong UART in between.
+  ConfigureStdout(boot_opts.serial);
 
   // The global is a pointer just for uniformity between the code in phys and
   // in the kernel proper.

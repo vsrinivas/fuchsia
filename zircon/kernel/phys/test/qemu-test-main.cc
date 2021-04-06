@@ -18,7 +18,7 @@ void PhysMain(void* bootloader_data, arch::EarlyTicks ticks) {
   // Apply any relocations required to ourself.
   ApplyRelocations();
 
-  uart::qemu::KernelDriver<> uart;
+  static uart::qemu::KernelDriver<> uart;
   FILE::stdout_ = FILE{&uart};
 
   // Early boot may have filled the screen with logs. Add a newline to
