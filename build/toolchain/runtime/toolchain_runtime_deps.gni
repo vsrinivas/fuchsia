@@ -71,10 +71,16 @@ _clang_runtime = read_file(_clang_runtime_file, "json")
 # Linking issues appear because these dependencies are not listed properly, so
 # work-around this by patching _clang_runtime for Asan.
 
+_cflags = []
+if (use_cxx_relative_vtables) {
+  _cflags += [ "-fexperimental-relative-c++-abi-vtables" ]
+}
+
 # First, record a map of runtimes for Fuchsia for Asan without -static-libstdc++
 _asan_runtimes_map = []
 foreach(entry, _clang_runtime) {
-  if (entry.cflags == [ "-fsanitize=address" ] && entry.ldflags == []) {
+  if (entry.cflags == _cflags + [ "-fsanitize=address" ] &&
+      entry.ldflags == []) {
     _targets = []
     _targets = entry.target
     _target = _targets[0]
@@ -95,7 +101,7 @@ foreach(entry, _clang_runtime) {
   _new_clang_runtime += [
     {
       forward_variables_from(entry, "*")
-      if (cflags == [ "-fsanitize=address" ] &&
+      if (cflags == _cflags + [ "-fsanitize=address" ] &&
           ldflags == [ "-static-libstdc++" ]) {
         _target = target[0]
         if (string_replace(_target, "-fuchsia", "") != _target) {
@@ -118,7 +124,8 @@ _clang_runtime = _new_clang_runtime
 
 _ubsan_runtimes_map = []
 foreach(entry, _clang_runtime) {
-  if (entry.cflags == [ "-fsanitize=undefined" ] && entry.ldflags == []) {
+  if (entry.cflags == _cflags + [ "-fsanitize=undefined" ] &&
+      entry.ldflags == []) {
     _targets = []
     _targets = entry.target
     _target = _targets[0]
@@ -138,7 +145,7 @@ foreach(entry, _clang_runtime) {
   _new_clang_runtime += [
     {
       forward_variables_from(entry, "*")
-      if (cflags == [ "-fsanitize=undefined" ] &&
+      if (cflags == _cflags + [ "-fsanitize=undefined" ] &&
           ldflags == [ "-static-libstdc++" ]) {
         _target = target[0]
         if (string_replace(_target, "-fuchsia", "") != _target) {

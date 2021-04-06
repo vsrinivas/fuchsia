@@ -14,6 +14,10 @@ declare_args() {
   # Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
   # primarily for external tools that use bitcode for analysis.
   clang_embed_bitcode = false
+
+  # Controls if we enable relative-vtables for C++ targets.
+  # TODO(fxbug.dev/45314): Set this to true in a followup one-line CL.
+  use_cxx_relative_vtables = false
 }
 
 if (current_cpu == "arm64") {

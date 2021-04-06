@@ -47,6 +47,7 @@ config("compiler") {
     ":compiler_sysroot",
     ":compiler_target",
     ":compiler_cpu",
+    ":compiler_relative_vtables",
   ]
   if (use_ccache) {
     configs += [ ":ccache" ]
@@ -79,6 +80,13 @@ config("compiler_target") {
   cflags = [ "--target=$clang_target" ]
   asmflags = cflags
   ldflags = cflags
+}
+
+config("compiler_relative_vtables") {
+  if (use_cxx_relative_vtables) {
+    cflags_cc = [ "-fexperimental-relative-c++-abi-vtables" ]
+    ldflags = [ "-fexperimental-relative-c++-abi-vtables" ]
+  }
 }
 
 config("compiler_cpu") {
