@@ -1,5 +1,6 @@
 {
     select: {
+      avrcp_connection_failures: "INSPECT:bt-avrcp.cmx:root/metrics:connection_errors",
       le_connection_failures: "INSPECT:bootstrap/driver_manager:root/bt-host/adapter/low_energy_connection_manager:recent_connection_failures",
     },
     act: {
@@ -7,6 +8,11 @@
             type: "Warning",
             trigger: "le_connection_failures > 0",
             print: "Bluetooth: There have been 1+ Bluetooth Low Energy connection failures in the bt-host driver recently"
+        },
+        avrcp_connection_failures: {
+            type: "Warning",
+            trigger: "avrcp_connection_failures > 0",
+            print: "Bluetooth: There have been 1+ AVRCP connection failures recently"
         }
     },
     test: {
@@ -20,6 +26,18 @@
             no: [ "le_connection_failures"],
             values: {
                 le_connection_failures: 0
+            }
+        },
+        test_one_avrcp_connection_failure: {
+            yes: [ "avrcp_connection_failures"],
+            values: {
+                avrcp_connection_failures: 1
+            }
+        },
+        test_no_avrcp_connection_failure: {
+            no: [ "avrcp_connection_failures"],
+            values: {
+                avrcp_connection_failures: 0
             }
         }
     }
