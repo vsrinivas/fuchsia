@@ -6,7 +6,6 @@ use {
     crate::config_management,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
-    wlan_common::channel::Channel,
     wlan_metrics_registry::{
         PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
     },
@@ -69,21 +68,12 @@ pub fn convert_to_sme_disconnect_reason(
 pub struct ScanResult {
     /// Network properties used to distinguish between networks and to group
     /// individual APs.
-    pub id: NetworkIdentifier,
+    pub ssid: Ssid,
+    pub security_type_detailed: SecurityTypeDetailed,
     /// Individual access points offering the specified network.
     pub entries: Vec<Bss>,
     /// Indication if the detected network is supported by the implementation.
     pub compatibility: Compatibility,
-}
-impl From<ScanResult> for fidl_policy::ScanResult {
-    fn from(input: ScanResult) -> Self {
-        fidl_policy::ScanResult {
-            id: Some(input.id),
-            entries: Some(input.entries.into_iter().map(fidl_policy::Bss::from).collect()),
-            compatibility: Some(input.compatibility),
-            ..fidl_policy::ScanResult::EMPTY
-        }
-    }
 }
 
 // An internal version of fidl_policy::Bss with extended information
@@ -105,20 +95,6 @@ pub struct Bss {
     pub compatible: bool,
     /// The BSS description with information that SME needs for connecting.
     pub bss_desc: Option<Box<fidl_internal::BssDescription>>,
-}
-impl From<Bss> for fidl_policy::Bss {
-    fn from(input: Bss) -> Self {
-        // Get the frequency. On error, default to Some(0) rather than None to protect against
-        // consumer code that expects this field to always be set.
-        let frequency = Channel::from_fidl(input.channel).get_center_freq().unwrap_or(0);
-        fidl_policy::Bss {
-            bssid: Some(input.bssid),
-            rssi: Some(input.rssi),
-            frequency: Some(frequency.into()), // u16.into() -> u32
-            timestamp_nanos: Some(input.timestamp_nanos),
-            ..fidl_policy::Bss::EMPTY
-        }
-    }
 }
 
 /// Data for connecting to a specific network and keeping track of what is connected to.

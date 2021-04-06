@@ -283,12 +283,18 @@ async fn handle_client_request_scan(
             saved_networks.get_networks().await,
         );
 
+    let wpa3_supported =
+        iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
+            error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
+            false
+        });
+
     scan::perform_scan(
         iface_manager,
         saved_networks.clone(),
         Some(output_iterator),
-        network_selector.generate_scan_result_updater(),
-        scan::LocationSensorUpdater {},
+        network_selector.generate_scan_result_updater(wpa3_supported),
+        scan::LocationSensorUpdater { wpa3_supported },
         |_| {
             if potentially_hidden_saved_networks.is_empty() {
                 None

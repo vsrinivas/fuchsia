@@ -4865,7 +4865,8 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
 
         // Insert a saved network.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let ssid = TEST_SSID.as_bytes().to_vec();
+        let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
@@ -4876,8 +4877,7 @@ mod tests {
 
         // Update the saved networks with knowledge of the test SSID and credentials.
         {
-            let save_network_fut =
-                test_values.saved_networks.store(network_id.clone(), credential.clone());
+            let save_network_fut = test_values.saved_networks.store(network_id, credential.clone());
             pin_mut!(save_network_fut);
             assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
 
@@ -4893,7 +4893,8 @@ mod tests {
         // Inject a scan result into the network selector.
         {
             let scan_results = vec![client_types::ScanResult {
-                id: fidl_fuchsia_wlan_policy::NetworkIdentifier::from(network_id),
+                ssid: ssid.clone(),
+                security_type_detailed: client_types::SecurityTypeDetailed::Wpa1,
                 entries: vec![client_types::Bss {
                     bssid: [20, 30, 40, 50, 60, 70],
                     rssi: -15,
@@ -4910,7 +4911,7 @@ mod tests {
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];
-            let mut network_selector_updater = selector.generate_scan_result_updater();
+            let mut network_selector_updater = selector.generate_scan_result_updater(true);
             let update_fut = network_selector_updater.update_scan_results(&scan_results);
             pin_mut!(update_fut);
             assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
@@ -4982,7 +4983,8 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
 
         // Insert a saved network.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let ssid = TEST_SSID.as_bytes().to_vec();
+        let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
@@ -4993,8 +4995,7 @@ mod tests {
 
         // Update the saved networks with knowledge of the test SSID and credentials.
         {
-            let save_network_fut =
-                test_values.saved_networks.store(network_id.clone(), credential.clone());
+            let save_network_fut = test_values.saved_networks.store(network_id, credential.clone());
             pin_mut!(save_network_fut);
             assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
 
@@ -5010,7 +5011,8 @@ mod tests {
         // Inject a scan result into the network selector.
         {
             let scan_results = vec![client_types::ScanResult {
-                id: fidl_fuchsia_wlan_policy::NetworkIdentifier::from(network_id),
+                ssid: ssid.clone(),
+                security_type_detailed: client_types::SecurityTypeDetailed::Wpa1,
                 entries: vec![client_types::Bss {
                     bssid: [20, 30, 40, 50, 60, 70],
                     rssi: -15,
@@ -5027,7 +5029,7 @@ mod tests {
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];
-            let mut network_selector_updater = selector.generate_scan_result_updater();
+            let mut network_selector_updater = selector.generate_scan_result_updater(true);
             let update_fut = network_selector_updater.update_scan_results(&scan_results);
             pin_mut!(update_fut);
             assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));

@@ -56,7 +56,7 @@ pub fn generate_random_bss_info() -> fidl_sme::BssInfo {
         channel: generate_random_channel(),
         snr_db: rng.gen_range(-20, 50),
         compatible: rng.gen::<bool>(),
-        protection: match rng.gen_range(0, 5) {
+        protection: match rng.gen_range(0, 6) {
             0 => fidl_sme::Protection::Open,
             1 => fidl_sme::Protection::Wep,
             2 => fidl_sme::Protection::Wpa1,
