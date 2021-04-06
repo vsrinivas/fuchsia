@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use paste::paste;
+
 use crate::executive::ThreadContext;
 use crate::syscalls::*;
 use crate::types::*;
@@ -40,11 +42,13 @@ where
 macro_rules! syscall_match {
     {
         $ctx:ident; $syscall_number:ident; $args:ident;
-        $($call:ident => $func:ident[$num_args:tt],)*
+        $($call:ident [$num_args:tt],)*
     } => {
-        match $syscall_number {
-            $($call => syscall_match!(@call $ctx; $args; $func[$num_args]),)*
-            _ => sys_unknown($ctx, $syscall_number),
+        paste! {
+            match $syscall_number as u32 {
+                $(linux_uapi::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
+                _ => sys_unknown($ctx, $syscall_number),
+            }
         }
     };
 
@@ -59,26 +63,26 @@ macro_rules! syscall_match {
 
 pub fn dispatch_syscall(
     ctx: &mut ThreadContext,
-    syscall_number: syscall_number_t,
+    syscall_number: u64,
     args: (u64, u64, u64, u64, u64, u64),
 ) -> Result<SyscallResult, Errno> {
     syscall_match! {
         ctx; syscall_number; args;
-        SYS_WRITE => sys_write[3],
-        SYS_FSTAT => sys_fstat[2],
-        SYS_MMAP => sys_mmap[6],
-        SYS_MPROTECT => sys_mprotect[3],
-        SYS_BRK => sys_brk[1],
-        SYS_WRITEV => sys_writev[3],
-        SYS_ACCESS => sys_access[2],
-        SYS_EXIT => sys_exit[1],
-        SYS_UNAME => sys_uname[1],
-        SYS_READLINK => sys_readlink[3],
-        SYS_GETUID => sys_getuid[0],
-        SYS_GETGID => sys_getgid[0],
-        SYS_GETEUID => sys_geteuid[0],
-        SYS_GETEGID => sys_getegid[0],
-        SYS_ARCH_PRCTL => sys_arch_prctl[2],
-        SYS_EXIT_GROUP => sys_exit_group[1],
+        write[3],
+        fstat[2],
+        mmap[6],
+        mprotect[3],
+        brk[1],
+        writev[3],
+        access[2],
+        exit[1],
+        uname[1],
+        readlink[3],
+        getuid[0],
+        getgid[0],
+        geteuid[0],
+        getegid[0],
+        arch_prctl[2],
+        exit_group[1],
     }
 }

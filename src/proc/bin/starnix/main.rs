@@ -32,7 +32,6 @@ mod types;
 use executive::*;
 use loader::*;
 use syscall_table::dispatch_syscall;
-use types::*;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -71,7 +70,7 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
             continue;
         }
 
-        let syscall_number = report.context.synth_data as syscall_number_t;
+        let syscall_number = report.context.synth_data as u64;
         ctx.registers = ctx.handle.read_state_general_regs()?;
         let regs = &ctx.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);

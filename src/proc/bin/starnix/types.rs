@@ -302,25 +302,6 @@ impl From<usize> for SyscallResult {
     }
 }
 
-pub type syscall_number_t = u64;
-
-pub const SYS_WRITE: syscall_number_t = uapi::__NR_write as syscall_number_t;
-pub const SYS_FSTAT: syscall_number_t = uapi::__NR_fstat as syscall_number_t;
-pub const SYS_MMAP: syscall_number_t = uapi::__NR_mmap as syscall_number_t;
-pub const SYS_MPROTECT: syscall_number_t = uapi::__NR_mprotect as syscall_number_t;
-pub const SYS_BRK: syscall_number_t = uapi::__NR_brk as syscall_number_t;
-pub const SYS_WRITEV: syscall_number_t = uapi::__NR_writev as syscall_number_t;
-pub const SYS_ACCESS: syscall_number_t = uapi::__NR_access as syscall_number_t;
-pub const SYS_EXIT: syscall_number_t = uapi::__NR_exit as syscall_number_t;
-pub const SYS_UNAME: syscall_number_t = uapi::__NR_uname as syscall_number_t;
-pub const SYS_READLINK: syscall_number_t = uapi::__NR_readlink as syscall_number_t;
-pub const SYS_GETUID: syscall_number_t = uapi::__NR_getuid as syscall_number_t;
-pub const SYS_GETGID: syscall_number_t = uapi::__NR_getgid as syscall_number_t;
-pub const SYS_GETEUID: syscall_number_t = uapi::__NR_geteuid as syscall_number_t;
-pub const SYS_GETEGID: syscall_number_t = uapi::__NR_getegid as syscall_number_t;
-pub const SYS_ARCH_PRCTL: syscall_number_t = uapi::__NR_arch_prctl as syscall_number_t;
-pub const SYS_EXIT_GROUP: syscall_number_t = uapi::__NR_exit_group as syscall_number_t;
-
 pub const ARCH_SET_GS: i32 = uapi::ARCH_SET_GS as i32;
 pub const ARCH_SET_FS: i32 = uapi::ARCH_SET_FS as i32;
 
