@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -19,6 +20,30 @@
 
 #include "lib/async-loop/loop.h"
 
+namespace fake_ddk {
+class FidlMessenger;
+}
+
+template <>
+class fidl::internal::WireWeakEventSender<fake_ddk::FidlMessenger> {
+ public:
+  explicit WireWeakEventSender(std::weak_ptr<fidl::internal::AsyncBinding> binding)
+      : binding_(std::move(binding)) {}
+  std::weak_ptr<fidl::internal::AsyncBinding> binding_;
+};
+
+template <>
+class fidl::WireEventSender<fake_ddk::FidlMessenger> {
+ public:
+  explicit WireEventSender(::fidl::ServerEnd<fake_ddk::FidlMessenger> server_end)
+      : server_end_(std::move(server_end.channel())) {}
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+ private:
+  ::fidl::ServerEnd<fake_ddk::FidlMessenger> server_end_;
+};
 namespace fake_ddk {
 
 typedef zx_status_t(MessageOp)(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
@@ -54,23 +79,8 @@ class FidlMessenger : public fidl::internal::IncomingMessageDispatcher {
   // bindings. Future evolution of LLCPP may cause this code to break.
   using _EnclosingProtocol = FidlMessenger;
   using Interface = FidlMessenger;
-  class WeakEventSender {
-   public:
-    explicit WeakEventSender(std::weak_ptr<fidl::internal::AsyncBinding> binding)
-        : binding_(std::move(binding)) {}
-    std::weak_ptr<fidl::internal::AsyncBinding> binding_;
-  };
-  class EventSender {
-   public:
-    explicit EventSender(::fidl::ServerEnd<FidlMessenger> server_end)
-        : server_end_(std::move(server_end.channel())) {}
-
-    const ::zx::channel& channel() const { return server_end_.channel(); }
-    ::zx::channel& channel() { return server_end_.channel(); }
-
-   private:
-    ::fidl::ServerEnd<FidlMessenger> server_end_;
-  };
+  using WeakEventSender = fidl::internal::WireWeakEventSender<fake_ddk::FidlMessenger>;
+  using EventSender = fidl::WireEventSender<fake_ddk::FidlMessenger>;
 
   explicit FidlMessenger() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   explicit FidlMessenger(const async_loop_config_t* config) : loop_(config) {}
