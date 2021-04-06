@@ -27,7 +27,7 @@ rustc_library("serial_link") {
   if (is_fuchsia) {
     deps += []
   } else {
-    deps += [ "//third_party/rust_crates:async-std" ]
+    deps += [ "//third_party/rust_crates:async-fs" ]
   }
 
   sources = [

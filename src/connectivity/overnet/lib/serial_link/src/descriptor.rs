@@ -84,7 +84,7 @@ async fn platform_enumerate_paths() -> Result<Vec<PathBuf>, std::io::Error> {
 #[cfg(target_os = "linux")]
 async fn platform_enumerate_paths() -> Result<Vec<PathBuf>, std::io::Error> {
     use {
-        async_std::fs::{read_dir, read_to_string},
+        async_fs::{read_dir, read_to_string},
         futures::{lock::Mutex, prelude::*},
         std::os::unix::fs::MetadataExt,
     };
@@ -100,7 +100,7 @@ async fn platform_enumerate_paths() -> Result<Vec<PathBuf>, std::io::Error> {
             async move {
                 let mut device = dir.path().clone();
                 device.push("device/driver");
-                if device.exists().await {
+                if device.exists() {
                     let mut dev = dir.path().clone();
                     dev.push("dev");
                     let dev = read_to_string(dev).await?;

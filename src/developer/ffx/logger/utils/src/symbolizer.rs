@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Result},
+    async_io::Async,
     async_lock::Mutex,
     ffx_config::{get, get_sdk},
     fuchsia_async::Task,
@@ -12,7 +13,6 @@ use {
         AsyncBufReadExt, AsyncWriteExt, FutureExt, SinkExt, StreamExt,
     },
     futures_lite::io::BufReader,
-    smol::Async,
     std::path::PathBuf,
     std::process::{Child, Command, Stdio},
     std::sync::Arc,

@@ -70,31 +70,8 @@ mod test {
         }
     }
 
-    #[cfg(not(target_os = "fuchsia"))]
-    fn init_ascendd() -> ascendd::Ascendd {
-        let n: u128 = rand::random();
-        let ascendd_path = format!("/tmp/ascendd-for-hoist-test.{}.sock", n);
-        std::env::set_var("ASCENDD", &ascendd_path);
-        ascendd::Ascendd::new(
-            ascendd::Opt { sockpath: Some(ascendd_path), ..Default::default() },
-            Box::new(async_std::io::stdout()),
-        )
-        .unwrap()
-    }
-
-    #[cfg(not(target_os = "fuchsia"))]
-    lazy_static::lazy_static! {
-        static ref ASCENDD: ascendd::Ascendd = init_ascendd();
-    }
-
-    fn init() {
-        #[cfg(not(target_os = "fuchsia"))]
-        lazy_static::initialize(&ASCENDD);
-    }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn one_bad_channel_doesnt_take_everything_down() {
-        init();
         let (tx_complete, mut rx_complete) = oneshot::channel();
         let (tx_complete_ack, rx_complete_ack) = oneshot::channel();
         let service_consumer1 = hoist().connect_as_service_consumer().unwrap();
@@ -127,7 +104,6 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn one_bad_link_doesnt_take_the_rest_down() {
-        init();
         let mesh_controller = &hoist().connect_as_mesh_controller().unwrap();
         let (s1a, s1b) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         let (s2a, s2b) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();

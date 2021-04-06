@@ -41,10 +41,7 @@ CORE_DEPS = [
 if (is_fuchsia) {
   CORE_DEPS += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
 } else {
-  CORE_DEPS += [
-    "//third_party/rust_crates:smol",
-    "//third_party/rust_crates:tempfile",
-  ]
+  CORE_DEPS += [ "//third_party/rust_crates:tempfile" ]
 }
 
 CORE_SOURCES = [

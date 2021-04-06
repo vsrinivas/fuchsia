@@ -315,7 +315,7 @@ struct TargetInner {
 
 impl Debug for TargetInner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        smol::block_on(async {
+        async_io::block_on(async {
             f.debug_struct("TargetInner")
                 .field("id", &self.id)
                 .field("ids", &self.ids.lock().await.clone())

@@ -261,7 +261,7 @@ mod task_tests {
 #[cfg(test)]
 mod timer_tests {
     use super::*;
-    use crate::temp::{Either, TempFutureExt};
+    use futures::future::Either;
 
     #[test]
     fn shorter_fires_first_instant() {
@@ -270,9 +270,9 @@ mod timer_tests {
         let now = Instant::now();
         let shorter = Timer::new(now + Duration::from_millis(100));
         let longer = Timer::new(now + Duration::from_secs(1));
-        match exec.run_singlethreaded(shorter.select(longer)) {
-            Either::Left(()) => {}
-            Either::Right(()) => panic!("wrong timer fired"),
+        match exec.run_singlethreaded(future::select(shorter, longer)) {
+            Either::Left((_, _)) => {}
+            Either::Right((_, _)) => panic!("wrong timer fired"),
         }
     }
 

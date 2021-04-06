@@ -7,7 +7,6 @@
 use {
     crate::HOIST,
     anyhow::{bail, format_err, Error},
-    async_std::io::ErrorKind::TimedOut,
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
     fidl_fuchsia_overnet::{
         HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
@@ -19,6 +18,7 @@ use {
     fuchsia_async::{Task, Timer},
     futures::prelude::*,
     overnet_core::{log_errors, ListPeersContext, Router, RouterOptions, SecurityContext},
+    std::io::ErrorKind::TimedOut,
     std::time::SystemTime,
     std::{
         sync::atomic::{AtomicU64, Ordering},
@@ -119,7 +119,7 @@ impl Hoist {
         log::trace!("Overnet connection label: {:?}", label);
         let now = SystemTime::now();
         let uds = loop {
-            match async_std::os::unix::net::UnixStream::connect(path.clone())
+            match async_net::unix::UnixStream::connect(path.clone())
                 .on_timeout(Duration::from_millis(100), || {
                     Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
                 })
