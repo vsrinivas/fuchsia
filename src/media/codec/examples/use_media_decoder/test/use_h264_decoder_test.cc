@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
   // least on sherlock.  See DECODE_CORRECTNESS_COMMENTS in vdec1.cc.
   uint32_t fail_count = 0;
   uint32_t success_count = 0;
-  constexpr uint32_t kTryCount = 10;
+  constexpr uint32_t kTryCount = 20;
   for (uint32_t try_ordinal = 0; try_ordinal < kTryCount; ++try_ordinal) {
     LOGF("success_count: %u fail_count: %u", success_count, fail_count);
     if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,

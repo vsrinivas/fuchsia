@@ -122,15 +122,15 @@ struct UseVideoDecoderTestParams final {
       while (per_frame_golden_sha256[count]) {
         ++count;
       }
-      printf("per_frame_golden_sha256 provided - count: %u", count);
+      printf("per_frame_golden_sha256 provided - count: %u\n", count);
     }
 
     if (compare_to_sw_decode != kDefaultCompareToSwDecode) {
-      printf("compare_to_sw_decode: %u", compare_to_sw_decode);
+      printf("compare_to_sw_decode: %u\n", compare_to_sw_decode);
     }
 
     if (frame_to_compare != kDefaultFrameToCompare) {
-      printf("frame_to_compare set");
+      printf("frame_to_compare set\n");
       // avoid recursion beyond 2
       ZX_ASSERT(!compare_to_sw_decode);
     }
