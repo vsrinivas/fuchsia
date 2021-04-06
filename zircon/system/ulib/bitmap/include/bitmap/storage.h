@@ -85,7 +85,7 @@ class VmoStorage {
 
   zx_status_t Allocate(size_t size) {
     Release();
-    size_ = fbl::round_up(size, static_cast<size_t>(PAGE_SIZE));
+    size_ = fbl::round_up(size, static_cast<size_t>(zx_system_get_page_size()));
     zx_status_t status;
     if ((status = zx::vmo::create(size_, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
       return status;
@@ -104,7 +104,7 @@ class VmoStorage {
       return ZX_OK;
     }
 
-    size = fbl::round_up(size, static_cast<size_t>(PAGE_SIZE));
+    size = fbl::round_up(size, static_cast<size_t>(zx_system_get_page_size()));
     zx_status_t status;
     if ((status = vmo_.set_size(size)) != ZX_OK) {
       return status;

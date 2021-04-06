@@ -417,16 +417,16 @@ static void GrowAcrossPage(void) {
             "Expected tail end of bitmap to be unset");
 
   // We can't set bits out of range
-  EXPECT_NE(bitmap.SetOne(16 * PAGE_SIZE - 1), ZX_OK);
+  EXPECT_NE(bitmap.SetOne(16 * zx_system_get_page_size() - 1), ZX_OK);
 
-  EXPECT_EQ(bitmap.Grow(16 * PAGE_SIZE), ZX_OK);
-  EXPECT_EQ(bitmap.Find(true, 101, 16 * PAGE_SIZE, 1, &bitoff_start), ZX_ERR_NO_RESOURCES,
-            "Expected tail end of bitmap to be unset");
+  EXPECT_EQ(bitmap.Grow(16 * zx_system_get_page_size()), ZX_OK);
+  EXPECT_EQ(bitmap.Find(true, 101, 16 * zx_system_get_page_size(), 1, &bitoff_start),
+            ZX_ERR_NO_RESOURCES, "Expected tail end of bitmap to be unset");
 
   // Now we can set the previously inaccessible bits
-  EXPECT_FALSE(bitmap.GetOne(16 * PAGE_SIZE - 1));
-  EXPECT_EQ(bitmap.SetOne(16 * PAGE_SIZE - 1), ZX_OK);
-  EXPECT_TRUE(bitmap.GetOne(16 * PAGE_SIZE - 1));
+  EXPECT_FALSE(bitmap.GetOne(16 * zx_system_get_page_size() - 1));
+  EXPECT_EQ(bitmap.SetOne(16 * zx_system_get_page_size() - 1), ZX_OK);
+  EXPECT_TRUE(bitmap.GetOne(16 * zx_system_get_page_size() - 1));
 
   // But our original 'set bit' is still set
   EXPECT_TRUE(bitmap.GetOne(100), "Growing should not unset bits");
@@ -434,9 +434,9 @@ static void GrowAcrossPage(void) {
   // If we shrink and re-expand the bitmap, it should
   // have cleared the underlying bits
   EXPECT_EQ(bitmap.Shrink(99), ZX_OK);
-  EXPECT_EQ(bitmap.Grow(16 * PAGE_SIZE), ZX_OK);
+  EXPECT_EQ(bitmap.Grow(16 * zx_system_get_page_size()), ZX_OK);
   EXPECT_FALSE(bitmap.GetOne(100));
-  EXPECT_FALSE(bitmap.GetOne(16 * PAGE_SIZE - 1));
+  EXPECT_FALSE(bitmap.GetOne(16 * zx_system_get_page_size() - 1));
 }
 
 template <typename RawBitmap>
@@ -491,7 +491,7 @@ static void GrowFailure(void) {
   EXPECT_EQ(bitmap.Grow(64), ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(bitmap.Grow(128), ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(bitmap.Grow(128 + 1), ZX_ERR_NO_RESOURCES);
-  EXPECT_EQ(bitmap.Grow(8 * PAGE_SIZE), ZX_ERR_NO_RESOURCES);
+  EXPECT_EQ(bitmap.Grow(8 * zx_system_get_page_size()), ZX_ERR_NO_RESOURCES);
 }
 
 #define TEMPLATIZED_TEST(test, specialization) \
