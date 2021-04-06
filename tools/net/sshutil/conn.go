@@ -61,13 +61,26 @@ func newConn(ctx context.Context, resolver Resolver, config *ssh.ClientConfig, b
 		keepaliveCtx = logger.WithLogger(keepaliveCtx, v)
 	}
 
+	// Create a dedicated session for keepalives to avoid blocking behind
+	// long-running commands.
+	s, err := conn.newSession(ctx, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	go func() {
+		defer func() {
+			if err := s.Close(); err != nil {
+				logger.Debugf(ctx, "error closing keepalive session: %s", err)
+			}
+		}()
+
 		t := time.NewTicker(defaultKeepaliveInterval)
 		defer t.Stop()
 		timeout := func() <-chan time.Time {
 			return time.After(defaultKeepaliveTimeout)
 		}
-		conn.keepalive(keepaliveCtx, t.C, timeout)
+		conn.keepalive(keepaliveCtx, s.session, t.C, timeout)
 	}()
 	return conn, nil
 }
@@ -178,20 +191,16 @@ func connectToSSH(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) 
 	}
 }
 
-func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writer) (*Session, error) {
-	// Temporarily grab the lock and make a copy of the client. This
-	// prevents a long running `Run` command from blocking the keepalive
-	// goroutine.
+func (c *Conn) newSession(ctx context.Context, stdout io.Writer, stderr io.Writer) (*Session, error) {
 	c.mu.Lock()
 	client := c.mu.client
 	c.mu.Unlock()
-
 	if client == nil {
 		return nil, ConnectionError{fmt.Errorf("ssh is disconnected")}
 	}
 
 	type result struct {
-		session *Session
+		session *ssh.Session
 		err     error
 	}
 
@@ -201,17 +210,10 @@ func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writ
 	ch := make(chan result, 1)
 	go func() {
 		session, err := client.NewSession()
-		if err != nil {
-			ch <- result{session: nil, err: err}
-			return
+		ch <- result{
+			session: session,
+			err:     err,
 		}
-
-		session.Stdout = stdout
-		session.Stderr = stderr
-
-		s := Session{session: session}
-
-		ch <- result{session: &s, err: nil}
 	}()
 
 	select {
@@ -219,7 +221,14 @@ func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writ
 		if r.err != nil {
 			return nil, ConnectionError{fmt.Errorf("failed to start ssh session: %w", r.err)}
 		}
-		return r.session, nil
+		if stdout != nil {
+			r.session.Stdout = stdout
+		}
+		if stderr != nil {
+			r.session.Stderr = stderr
+		}
+
+		return &Session{session: r.session}, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -228,7 +237,7 @@ func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writ
 // Start a command on the remote device and write STDOUT and STDERR to the
 // passed in io.Writers.
 func (c *Conn) Start(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) (*Session, error) {
-	session, err := c.makeSession(ctx, stdout, stderr)
+	session, err := c.newSession(ctx, stdout, stderr)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +256,7 @@ func (c *Conn) Start(ctx context.Context, command []string, stdout io.Writer, st
 // Run a command to completion on the remote device and write STDOUT and STDERR
 // to the passed in io.Writers.
 func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
-	session, err := c.makeSession(ctx, stdout, stderr)
+	session, err := c.newSession(ctx, stdout, stderr)
 	if err != nil {
 		return err
 	}
@@ -332,7 +341,7 @@ func (c *Conn) NewSFTPClient() (*sftp.Client, error) {
 // After sending a ping, we call the `timeout` function and wait until either we
 // receive a response or we receive something on the channel returned by
 // `timeout`.
-func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout func() <-chan time.Time) {
+func (c *Conn) keepalive(ctx context.Context, session *ssh.Session, ticks <-chan time.Time, timeout func() <-chan time.Time) {
 	if timeout == nil {
 		timeout = func() <-chan time.Time {
 			return nil
@@ -346,23 +355,14 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 			return
 		}
 
-		c.mu.Lock()
-		client := c.mu.client
-		c.mu.Unlock()
-
-		// Exit early if the client's already been shut down.
-		if client == nil {
-			return
-		}
-
-		// SendRequest can actually hang if the server stops responding
-		// in between receiving a keepalive and sending a response (see
-		// fxbug.dev/47698). To protect against this, we'll emit events in a
-		// separate goroutine so if we don't get one in the expected
-		// time we'll disconnect.
+		// SendRequest can actually hang if the server stops responding in between
+		// receiving a keepalive and sending a response (see
+		// https://fxbug.dev/47698). To protect against this, we'll emit events in
+		// a separate goroutine so if we don't get one in the expected time we'll
+		// disconnect.
 		ch := make(chan error, 1)
 		go func() {
-			_, _, err := client.SendRequest(keepaliveFuchsia, true, nil)
+			_, err := session.SendRequest(keepaliveFuchsia, true, nil)
 			ch <- err
 		}()
 

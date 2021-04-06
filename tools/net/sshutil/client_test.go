@@ -148,8 +148,15 @@ func TestCloseDuringConnection(t *testing.T) {
 			return
 		}
 
-		sshConn, _, _, err := ssh.NewServerConn(tcpConn, serverConfig)
+		sshConn, incomingChannels, _, err := ssh.NewServerConn(tcpConn, serverConfig)
 		if err != nil {
+			serverErrs <- err
+			return
+		}
+
+		// Accept the keepalive channel.
+		newChannel := <-incomingChannels
+		if _, _, err := newChannel.Accept(); err != nil {
 			serverErrs <- err
 			return
 		}

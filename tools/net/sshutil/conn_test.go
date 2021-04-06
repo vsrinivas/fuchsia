@@ -70,7 +70,11 @@ func TestKeepalive(t *testing.T) {
 
 		// Sending on this channel triggers a keepalive ping.
 		keepaliveTicks := make(chan time.Time)
-		go conn.keepalive(ctx, keepaliveTicks, nil)
+		session, err := conn.mu.client.NewSession()
+		if err != nil {
+			t.Fatal(err)
+		}
+		go conn.keepalive(ctx, session, keepaliveTicks, nil)
 
 		keepaliveTicks <- time.Now()
 
@@ -90,7 +94,11 @@ func TestKeepalive(t *testing.T) {
 		keepaliveTimeouts <- time.Now()
 
 		keepaliveTicks := make(chan time.Time)
-		go conn.keepalive(ctx, keepaliveTicks, func() <-chan time.Time {
+		session, err := conn.mu.client.NewSession()
+		if err != nil {
+			t.Fatal(err)
+		}
+		go conn.keepalive(ctx, session, keepaliveTicks, func() <-chan time.Time {
 			return keepaliveTimeouts
 		})
 
@@ -106,6 +114,11 @@ func TestKeepalive(t *testing.T) {
 			}
 		})
 
+		session, err := conn.mu.client.NewSession()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		// The first keepalive request should fail immediately if the server is
 		// stopped.
 		if err := server.stop(); err != nil {
@@ -115,7 +128,7 @@ func TestKeepalive(t *testing.T) {
 		keepaliveTicks := make(chan time.Time)
 		keepaliveComplete := make(chan struct{})
 		go func() {
-			conn.keepalive(ctx, keepaliveTicks, nil)
+			conn.keepalive(ctx, session, keepaliveTicks, nil)
 			close(keepaliveComplete)
 		}()
 
@@ -133,8 +146,12 @@ func TestKeepalive(t *testing.T) {
 		})
 
 		keepaliveComplete := make(chan struct{})
+		session, err := conn.mu.client.NewSession()
+		if err != nil {
+			t.Fatal(err)
+		}
 		go func() {
-			conn.keepalive(ctx, nil, nil)
+			conn.keepalive(ctx, session, nil, nil)
 			close(keepaliveComplete)
 		}()
 
