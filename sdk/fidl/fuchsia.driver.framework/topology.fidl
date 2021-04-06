@@ -61,6 +61,25 @@ protocol NodeController {
     Remove();
 };
 
+/// Error codes for the Node protocol.
+enum NodeError {
+    // The Node's name is missing.
+    NAME_MISSING = 1;
+    /// The Node's name is invalid. Specifically, it must not contain a period
+    /// in its name.
+    NAME_INVALID = 2;
+    /// A sibling Node exists with the same name.
+    NAME_ALREADY_EXISTS = 3;
+    /// There is another offer for this Node with the same name.
+    OFFER_ALREADY_EXISTS = 4;
+    /// A symbol for this Node is missing a name.
+    SYMBOL_NAME_MISSING = 5;
+    /// A symbol for this Node is missing an address.
+    SYMBOL_ADDRESS_MISSING = 6;
+    /// There is another symbol for this Node with the same name.
+    SYMBOL_ALREADY_EXISTS = 7;
+};
+
 /// Protocol through which a driver manages a node that it is bound to.
 protocol Node {
     /// Adds a child node to this node.
@@ -70,5 +89,5 @@ protocol Node {
     /// appropriate driver to bind the child to.
     AddChild(NodeAddArgs args,
              request<NodeController> controller,
-             request<Node>? node);
+             request<Node>? node) -> () error NodeError;
 };
