@@ -11,17 +11,12 @@
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
-namespace scheduling {
-namespace test {
+namespace scheduling::test {
 
 class MockFrameScheduler : public FrameScheduler {
  public:
   MockFrameScheduler() = default;
 
-  // |FrameScheduler|
-  void SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) override {}
-  // |FrameScheduler|
-  void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) override {}
   // |FrameScheduler|
   void SetRenderContinuously(bool render_continuously) override;
 
@@ -183,7 +178,6 @@ class MockFrameRenderer : public FrameRenderer {
   uint64_t last_frame_number_ = 0;
 };
 
-}  // namespace test
-}  // namespace scheduling
+}  // namespace scheduling::test
 
 #endif  // SRC_UI_SCENIC_LIB_SCHEDULING_TESTS_MOCKS_FRAME_SCHEDULER_MOCKS_H_

@@ -16,12 +16,10 @@
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 class SessionTest : public ErrorReportingTest {
  protected:
@@ -59,13 +57,11 @@ class SessionTest : public ErrorReportingTest {
  private:
   SessionContext session_context_;
 
-  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
   std::unique_ptr<Session> session_;
 };
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx::test
 
 #endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_SESSION_TEST_H_

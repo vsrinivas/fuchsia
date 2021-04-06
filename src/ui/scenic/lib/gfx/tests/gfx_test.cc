@@ -7,9 +7,7 @@
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 void GfxSystemTest::TearDown() {
   ScenicTest::TearDown();
@@ -26,18 +24,15 @@ void GfxSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ = std::make_shared<Engine>(context_provider_.context(), escher::EscherWeakPtr());
-  frame_scheduler_->SetFrameRenderer(engine_);
   auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler_);
-  frame_scheduler_->AddSessionUpdater(image_pipe_updater);
   gfx_system_ =
       scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                         /* sysmem */ nullptr,
                                         /* display_manager */ nullptr, image_pipe_updater);
-  frame_scheduler_->AddSessionUpdater(scenic);
   scenic->SetViewFocuserRegistry(engine_->scene_graph());
   scenic->SetFrameScheduler(frame_scheduler_);
+  frame_scheduler_->Initialize(/*frame_renderer*/ engine_,
+                               /*session_updaters*/ {image_pipe_updater, scenic});
 }
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx::test

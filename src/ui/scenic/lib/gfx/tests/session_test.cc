@@ -9,9 +9,7 @@
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 void SessionTest::SetUp() {
   ErrorReportingTest::SetUp();
@@ -21,7 +19,7 @@ void SessionTest::SetUp() {
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   image_pipe_updater_ = std::make_shared<ImagePipeUpdater>(frame_scheduler_);
-  frame_scheduler_->AddSessionUpdater(image_pipe_updater_);
+  frame_scheduler_->Initialize(std::weak_ptr<scheduling::FrameRenderer>(), {image_pipe_updater_});
 
   session_context_ = CreateSessionContext();
   session_ = CreateSession();
@@ -65,6 +63,4 @@ bool SessionTest::Apply(::fuchsia::ui::gfx::Command command) {
   return retval;
 }
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx::test

@@ -11,7 +11,6 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
-#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
@@ -19,9 +18,7 @@
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_handler_test.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 class ImagePipeRenderTest : public VkSessionHandlerTest {
  public:
@@ -29,8 +26,8 @@ class ImagePipeRenderTest : public VkSessionHandlerTest {
   // scene node to upload ImagePipe images.
   template <typename T>
   void Visit(T* t) {
-    auto gpu_uploader = escher::BatchGpuUploader(escher()->GetWeakPtr(), 0);
-    auto image_layout_updater = escher::ImageLayoutUpdater(escher()->GetWeakPtr());
+    auto gpu_uploader = escher::BatchGpuUploader(escher_->GetWeakPtr(), 0);
+    auto image_layout_updater = escher::ImageLayoutUpdater(escher_->GetWeakPtr());
     EngineRendererVisitor visitor(/* paper_renderer */ nullptr, &gpu_uploader,
                                   &image_layout_updater,
                                   /* hide_protected_memory */ false,
@@ -44,10 +41,8 @@ class ImagePipeRenderTest : public VkSessionHandlerTest {
 // Check that ImagePipe attached Material is transparent until the first frame is presented.
 VK_TEST_F(ImagePipeRenderTest, TransparentUntilFirstUpdate) {
   ResourceId next_id = 1;
-  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
-  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
+      session(), next_id++, image_pipe_updater(), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
@@ -76,10 +71,8 @@ VK_TEST_F(ImagePipeRenderTest, TransparentUntilFirstUpdate) {
 // updated only after Visit().
 VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
   ResourceId next_id = 1;
-  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
-  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
+      session(), next_id++, image_pipe_updater(), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
@@ -149,10 +142,8 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
 // release fences are signalled.
 VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   ResourceId next_id = 1;
-  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
-  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
+      session(), next_id++, image_pipe_updater(), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
@@ -241,10 +232,8 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
 // the second.
 VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFramesWithSignalling) {
   ResourceId next_id = 1;
-  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
-  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
+      session(), next_id++, image_pipe_updater(), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
@@ -293,6 +282,4 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFramesWithSignalling) {
   ASSERT_NE(image1, image2);
 }
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx::test

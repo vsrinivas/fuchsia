@@ -10,7 +10,6 @@
 #include <lib/trace/event.h>
 #include <lib/zx/time.h>
 
-#include <list>
 #include <queue>
 
 #include "lib/inspect/cpp/inspect.h"
@@ -20,7 +19,6 @@
 #include "src/ui/scenic/lib/scheduling/frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/frame_stats.h"
-#include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
 namespace scheduling {
@@ -35,11 +33,10 @@ class DefaultFrameScheduler final : public FrameScheduler {
                                  std::shared_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
   ~DefaultFrameScheduler();
 
-  // |FrameScheduler|
-  void SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) override;
-
-  // |FrameScheduler|
-  void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) override;
+  // Set the renderer and session updaters to be used. Can only be called once.
+  // |session_updaters| will be called in this order for every event.
+  void Initialize(std::weak_ptr<FrameRenderer> frame_renderer,
+                  std::vector<std::weak_ptr<SessionUpdater>> session_updaters);
 
   // |FrameScheduler|
   void SetRenderContinuously(bool render_continuously) override;
@@ -88,9 +85,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // times are guaranteed to be in the future.
   std::pair<zx::time, zx::time> ComputePresentationAndWakeupTimesForTargetTime(
       zx::time requested_presentation_time) const;
-
-  // Adds pending SessionUpdaters to the active list and clears out stale ones.
-  void RefreshSessionUpdaters();
 
   // Executes updates that are scheduled up to and including a given presentation time.
   bool ApplyUpdates(zx::time target_presentation_time, zx::time latched_time,
@@ -153,21 +147,13 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // rendered.
   std::map<SchedulingIdPair, std::vector<zx::event>> release_fences_;
 
-  // Set of SessionUpdaters to update. Stored as a weak_ptr. When the updaters become
-  // invalid, the weak_ptr is removed from this list.
-  std::vector<std::weak_ptr<SessionUpdater>> session_updaters_;
-
-  // Stores SessionUpdaters we added to the DefaultFrameScheduler. Upon
-  // ApplyUpdates() is called, these SessionUpdaters will be moved to
-  // the |session_updaters_| vector.
-  // Exists to protect against when new session updaters are added mid-update.
-  std::list<std::weak_ptr<SessionUpdater>> new_session_updaters_;
-
   // References.
   async_dispatcher_t* const dispatcher_;
   const std::shared_ptr<const VsyncTiming> vsync_timing_;
 
+  bool initialized_ = false;
   std::weak_ptr<FrameRenderer> frame_renderer_;
+  std::vector<std::weak_ptr<SessionUpdater>> session_updaters_;
 
   // State.
   // Frame number is 1-based so that |last_presented_frame_number_| can remain unsigned.
@@ -178,7 +164,7 @@ class DefaultFrameScheduler final : public FrameScheduler {
   bool render_continuously_ = false;
   zx::time wakeup_time_;
   zx::time next_target_presentation_time_;
-  std::unique_ptr<FramePredictor> frame_predictor_;
+  const std::unique_ptr<FramePredictor> frame_predictor_;
 
   // The async task that wakes up to start rendering.
   async::TaskMethod<DefaultFrameScheduler, &DefaultFrameScheduler::MaybeRenderFrame>

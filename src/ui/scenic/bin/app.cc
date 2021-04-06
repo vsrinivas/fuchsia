@@ -292,18 +292,15 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
                                             gfx_buffer_collection_importer,
                                             scenic_->inspect_node()->CreateChild("Engine"));
   }
-  frame_scheduler_->SetFrameRenderer(engine_);
   scenic_->SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto image_pipe_updater = std::make_shared<gfx::ImagePipeUpdater>(frame_scheduler_);
-  frame_scheduler_->AddSessionUpdater(image_pipe_updater);
+  image_pipe_updater_ = std::make_shared<gfx::ImagePipeUpdater>(frame_scheduler_);
   auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_,
-                                                     display_manager_.get(), image_pipe_updater);
+                                                     display_manager_.get(), image_pipe_updater_);
   FX_DCHECK(gfx);
 
-  frame_scheduler_->AddSessionUpdater(scenic_);
   scenic_->SetScreenshotDelegate(gfx.get());
   display_info_delegate_ = std::make_unique<DisplayInfoDelegate>(display);
   scenic_->SetDisplayInfoDelegate(display_info_delegate_.get());
@@ -316,7 +313,6 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 #endif
 
   flatland_presenter_->SetFrameScheduler(frame_scheduler_);
-  frame_scheduler_->AddSessionUpdater(flatland_manager_);
 
   // Create the snapshotter and pass it to scenic.
   auto snapshotter =
@@ -335,6 +331,12 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
           fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
   zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(flatland_handler));
   FX_DCHECK(status == ZX_OK);
+
+  // |session_updaters| will be updated in submission order.
+  // TODO(fxbug.dev/73451): Add ViewTreeSnapshotter to the end of |session_updaters|.
+  frame_scheduler_->Initialize(
+      /*frame_renderer*/ engine_,
+      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_});
 }
 
 }  // namespace scenic_impl

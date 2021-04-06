@@ -9,36 +9,52 @@
 #include <gmock/gmock.h>
 
 #include "src/ui/scenic/lib/scenic/scenic.h"
+#include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/tests/frame_scheduler_test.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
-namespace scheduling {
-namespace test {
+namespace scheduling::test {
 
 namespace {
 
 zx::time Now() { return async::Now(async_get_default_dispatcher()); }
 
-// A MockSessionUpdater class which executes the provided function on every
-// UpdateSessions call.
-//
-class MockSessionUpdaterWithFunctionOnUpdate : public MockSessionUpdater {
+// A MockSessionUpdater class which executes the provided functions on every
+// UpdateSessions(), OnCpuWorkDone() and OnFramePresented() call respectively.
+class MockSessionUpdaterWithFunctions : public MockSessionUpdater {
  public:
-  MockSessionUpdaterWithFunctionOnUpdate(fit::function<void()> function)
-      : function_(std::move(function)) {}
+  MockSessionUpdaterWithFunctions(fit::function<void()> update_sessions,
+                                  fit::function<void()> on_cpu_work_done,
+                                  fit::function<void()> on_frame_presented)
+      : update_sessions_(std::move(update_sessions)),
+        on_cpu_work_done_(std::move(on_cpu_work_done)),
+        on_frame_presented_(std::move(on_frame_presented)) {}
 
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(
       const std::unordered_map<SessionId, PresentId>& sessions_to_update,
       uint64_t trace_id) override {
-    if (function_) {
-      function_();
-    }
+    update_sessions_();
     return MockSessionUpdater::UpdateSessions(std::move(sessions_to_update), trace_id);
+  }
+  // |SessionUpdater|
+  void OnCpuWorkDone() override {
+    on_cpu_work_done_();
+    MockSessionUpdater::OnCpuWorkDone();
+  }
+  // |SessionUpdater|
+  void OnFramePresented(
+      const std::unordered_map<SessionId, std::map<PresentId, /*latched_time*/ zx::time>>&
+          latched_times,
+      PresentTimestamps present_times) override {
+    on_frame_presented_();
+    MockSessionUpdater::OnFramePresented(std::move(latched_times), std::move(present_times));
   }
 
  private:
-  fit::function<void()> function_;
+  const fit::function<void()> update_sessions_;
+  const fit::function<void()> on_cpu_work_done_;
+  const fit::function<void()> on_frame_presented_;
 };
 
 }  // namespace
@@ -587,20 +603,62 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
   }
 }
 
+TEST_F(FrameSchedulerTest, SessionUpdaters_ShouldBeCalledInOrder) {
+  auto scheduler = std::make_unique<DefaultFrameScheduler>(
+      vsync_timing_,
+      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
+
+  int updater1_counter = 1;
+  int updater2_counter = 4;
+  std::vector<int32_t> update_call_order;
+  std::vector<int32_t> cpu_work_done_order;
+  std::vector<int32_t> presented_call_order;
+  auto updater1 = std::make_shared<MockSessionUpdaterWithFunctions>(
+      [&update_call_order, &updater1_counter] { update_call_order.push_back(updater1_counter++); },
+      [&cpu_work_done_order, &updater1_counter] {
+        cpu_work_done_order.push_back(updater1_counter++);
+      },
+      [&presented_call_order, &updater1_counter] {
+        presented_call_order.push_back(updater1_counter++);
+      });
+  auto updater2 = std::make_shared<MockSessionUpdaterWithFunctions>(
+      [&update_call_order, &updater2_counter] { update_call_order.push_back(updater2_counter++); },
+      [&cpu_work_done_order, &updater2_counter] {
+        cpu_work_done_order.push_back(updater2_counter++);
+      },
+      [&presented_call_order, &updater2_counter] {
+        presented_call_order.push_back(updater2_counter++);
+      });
+
+  // Initialization order is call order, so |updater1| should always be called before |updater2|.
+  scheduler->Initialize(mock_renderer_, {updater1, updater2});
+
+  ScheduleUpdate(scheduler, /*session_id*/ 1, zx::time(0));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  mock_renderer_->EndFrame();
+  RunLoopUntilIdle();
+
+  // The updaters should have been called in initialization order, and the functions should have
+  // been called in this order.
+  EXPECT_THAT(update_call_order, testing::ElementsAre(1, 4));
+  EXPECT_THAT(cpu_work_done_order, testing::ElementsAre(2, 5));
+  EXPECT_THAT(presented_call_order, testing::ElementsAre(3, 6));
+}
+
 // Verify that we properly observe 4 updates for all session updaters.
 TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
-  auto scheduler = CreateDefaultFrameScheduler();
+  auto scheduler = std::make_unique<DefaultFrameScheduler>(
+      vsync_timing_,
+      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   // Pre-declare the Session IDs used in this test.
   constexpr SessionId kSession1 = 1;
   constexpr SessionId kSession2 = 2;
   constexpr SessionId kSession3 = 3;
   constexpr SessionId kSession4 = 4;
-
   auto updater1 = std::make_shared<MockSessionUpdater>();
   auto updater2 = std::make_shared<MockSessionUpdater>();
-  scheduler->AddSessionUpdater(updater1);
-  scheduler->AddSessionUpdater(updater2);
+  scheduler->Initialize(mock_renderer_, {updater1, updater2});
 
   ScheduleUpdate(scheduler, kSession1, zx::time(2));
   ScheduleUpdate(scheduler, kSession2, zx::time(3));
@@ -629,108 +687,6 @@ TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
               updater2->last_sessions_to_update().end());
   EXPECT_TRUE(updater2->last_sessions_to_update().find(kSession4) !=
               updater2->last_sessions_to_update().end());
-}
-
-TEST_F(FrameSchedulerTest, AddSessionUpdatersInSessionUpdater) {
-  auto scheduler = CreateDefaultFrameScheduler();
-
-  // Pre-declare the Session IDs used in this test.
-  constexpr SessionId kSession1 = 1;
-  // Updates are not expected to fail.
-
-  // Creates a mock SessionUpdater that creates 10 SessionUpdaters on every
-  // UpdateSessions call.
-  constexpr size_t kUpdatersToAddOnEveryUpdate = 10U;
-  std::vector<std::shared_ptr<MockSessionUpdater>> session_updaters_created;
-  auto updater1 = std::make_shared<MockSessionUpdaterWithFunctionOnUpdate>(
-      [scheduler = scheduler.get(), &session_updaters_created]() {
-        for (size_t i = 0; i < kUpdatersToAddOnEveryUpdate; i++) {
-          auto updater = std::make_shared<MockSessionUpdater>();
-          scheduler->AddSessionUpdater(updater);
-          session_updaters_created.push_back(std::move(updater));
-        }
-      });
-  scheduler->AddSessionUpdater(updater1);
-
-  // Frame 1: Updater1 creates 10 new SessionUpdaters this frame, but only
-  // updater1 will be called to update sessions.
-  {
-    ScheduleUpdate(scheduler, kSession1, zx::time(0));
-    EXPECT_EQ(updater1->update_sessions_call_count(), 0U);
-    RunLoopFor(zx::sec(2));
-    // TODO(adamgousetis): Why was this the one place with Now + 1?
-    mock_renderer_->EndFrame();
-    RunLoopFor(zx::sec(2));
-
-    EXPECT_EQ(updater1->update_sessions_call_count(), 1U);
-    EXPECT_EQ(updater1->on_frame_presented_call_count(), 1u);
-    EXPECT_EQ(session_updaters_created.size(), kUpdatersToAddOnEveryUpdate);
-    EXPECT_TRUE(std::all_of(session_updaters_created.begin(), session_updaters_created.end(),
-                            [](const auto& session_updater) {
-                              return session_updater->update_sessions_call_count() == 0;
-                            }));
-    EXPECT_TRUE(std::all_of(session_updaters_created.begin(), session_updaters_created.end(),
-                            [](const auto& session_updater) {
-                              return session_updater->on_frame_presented_call_count() == 0u;
-                            }));
-  }
-
-  // Frame 2: updater1 will create another 10 SessionUpdaters this frame, which
-  //          will not be updated, while the SessionUpdaters created on previous
-  //          frame will be updated now.
-  {
-    ScheduleUpdate(scheduler, kSession1, zx::time(0));
-    EXPECT_EQ(updater1->update_sessions_call_count(), 1U);
-    RunLoopFor(zx::sec(2));
-    mock_renderer_->EndFrame();
-    RunLoopFor(zx::sec(2));
-    RunLoopUntilIdle();
-
-    EXPECT_EQ(updater1->update_sessions_call_count(), 2U);
-    EXPECT_EQ(updater1->on_frame_presented_call_count(), 2u);
-    EXPECT_EQ(session_updaters_created.size(), 2 * kUpdatersToAddOnEveryUpdate);
-    EXPECT_TRUE(std::count_if(session_updaters_created.begin(), session_updaters_created.end(),
-                              [](const auto& session_updater) {
-                                return session_updater->update_sessions_call_count() == 1;
-                              }) == kUpdatersToAddOnEveryUpdate);
-    EXPECT_TRUE(std::count_if(session_updaters_created.begin(), session_updaters_created.end(),
-                              [](const auto& session_updater) {
-                                return session_updater->on_frame_presented_call_count() == 1u;
-                              }) == kUpdatersToAddOnEveryUpdate);
-  }
-}
-
-// Checks that SessionUpdater being deleted by another SessionUpdater doesn't crash the frame
-// scheduler.
-// NOTE: This test relies on the frame scheduler at least initially maintaining insertion order of
-// SessionUpdaters. If this changes the test needs to be reworked.
-TEST_F(FrameSchedulerTest, KillingFollowingSessionUpdaterInPreviousSessionUpdater_ShouldNotCrash) {
-  auto scheduler = CreateDefaultFrameScheduler();
-
-  constexpr SessionId kSession1 = 1;
-
-  auto updater1 = std::make_shared<MockSessionUpdaterWithFunctionOnUpdate>(
-      []() { EXPECT_FALSE(true) << "Should never be called."; });
-  auto updater2 = std::make_shared<MockSessionUpdaterWithFunctionOnUpdate>([&updater1]() {
-    // No call should have been made to UpdateSessions of |updater1|. If this ever fails then the
-    // SessionUpdaters are probably out of expected order in the frame scheduler and the test
-    // needs to be reworked.
-    EXPECT_EQ(updater1->update_sessions_call_count(), 0U);
-    updater1.reset();
-  });
-
-  // Add updaters in opposite order to ensure updater1 will be called after updater2.
-  scheduler->AddSessionUpdater(updater2);
-  scheduler->AddSessionUpdater(updater1);
-
-  // Schedule an update.
-  ScheduleUpdate(scheduler, kSession1, zx::time(0));
-
-  // We should now only be calling the update on |updater2|. If the deletion wasn't handled
-  // properly, we should see a crash in RunLoop.
-  EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::sec(2)));
-  EXPECT_FALSE(updater1);
-  EXPECT_EQ(updater2->update_sessions_call_count(), 1U);
 }
 
 // Tests whether the SessionUpdater::OnPresented is called at the correct times with the correct
@@ -794,35 +750,6 @@ TEST_F(FrameSchedulerTest, SessionUpdater_OnPresented_Test) {
       }
     }
   }
-}
-
-// Verify that updaters can be removed after updates have been queued without crashing.
-TEST_F(FrameSchedulerTest, CanRemoveUpdaterWithQueuedUpdates) {
-  auto scheduler = CreateDefaultFrameScheduler();
-
-  constexpr SessionId kSession1 = 1;
-
-  auto updater = std::make_shared<MockSessionUpdater>();
-  scheduler->AddSessionUpdater(updater);
-
-  ScheduleUpdate(scheduler, kSession1, zx::time(0));
-  updater.reset();
-
-  EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::duration(vsync_timing_->vsync_interval())));
-}
-
-// Verify that updaters added after updates have been queued still get all updates.
-TEST_F(FrameSchedulerTest, CanAddUpdaterWithQueuedUpdates) {
-  auto scheduler = CreateDefaultFrameScheduler();
-
-  constexpr SessionId kSession1 = 1;
-  ScheduleUpdate(scheduler, kSession1, zx::time(0));
-
-  auto updater = std::make_shared<MockSessionUpdater>();
-  scheduler->AddSessionUpdater(updater);
-
-  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  EXPECT_EQ(updater->update_sessions_call_count(), 1u);
 }
 
 // Tests creating a session and calling Present several times with release fences. Fences should
@@ -1082,5 +1009,4 @@ TEST_F(FrameSchedulerTest, RenderContinuously_ShouldCauseRenders_WithoutSchedule
   EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 0u);
 }
 
-}  // namespace test
-}  // namespace scheduling
+}  // namespace scheduling::test

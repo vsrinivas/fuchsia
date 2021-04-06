@@ -13,9 +13,7 @@
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 constexpr scheduling::SessionId kSchedulingId = 1;
 constexpr scheduling::SessionId kSchedulingId2 = 2;
@@ -51,7 +49,6 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
     scheduler_->set_schedule_update_for_session_callback(
         [this](auto...) { ++schedule_call_count_; });
     image_pipe_updater_ = std::make_shared<ImagePipeUpdater>(scheduler_);
-    scheduler_->AddSessionUpdater(image_pipe_updater_);
     SessionContext context{};
     session_ = std::make_unique<gfx::Session>(1, context);
     image_pipe_ = fxl::MakeRefCounted<MockImagePipe>(session_.get());
@@ -298,6 +295,4 @@ TEST_F(ImagePipeUpdaterTest, DifferentSchedulingIds_ShouldBeHandledSeparately) {
   EXPECT_TRUE(callback2_fired);
 }
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx::test

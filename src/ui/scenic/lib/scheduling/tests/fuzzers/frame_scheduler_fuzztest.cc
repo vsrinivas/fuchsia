@@ -12,8 +12,7 @@
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
-namespace scheduling {
-namespace test {
+namespace scheduling::test {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // Fuzz FrameScheduler against fuzz timing input. The expectation is that all
@@ -46,8 +45,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   auto frame_scheduler = std::make_unique<DefaultFrameScheduler>(
       vsync_timing, std::make_unique<ConstantFramePredictor>(constant_prediction_offset));
-  frame_scheduler->SetFrameRenderer(renderer);
-  frame_scheduler->AddSessionUpdater(updater);
+  frame_scheduler->Initialize(renderer, {updater});
 
   const bool squashable = fuzzed_data.ConsumeIntegral<bool>();
 
@@ -61,5 +59,4 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }
 
-}  // namespace test
-}  // namespace scheduling
+}  // namespace scheduling::test

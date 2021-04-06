@@ -31,8 +31,7 @@ std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameSch
       std::make_unique<WindowedFramePredictor>(DefaultFrameScheduler::kMinPredictedFrameDuration,
                                                DefaultFrameScheduler::kInitialRenderDuration,
                                                DefaultFrameScheduler::kInitialUpdateDuration));
-  scheduler->SetFrameRenderer(mock_renderer_);
-  scheduler->AddSessionUpdater(mock_updater_);
+  scheduler->Initialize(mock_renderer_, {mock_updater_});
 
   return scheduler;
 }

@@ -14,8 +14,7 @@
 
 #include "src/ui/scenic/lib/scenic/scenic.h"
 
-namespace scenic_impl {
-namespace test {
+namespace scenic_impl::test {
 
 // Base class that can be specialized to configure a Scenic with the systems
 // required for a set of tests.
@@ -42,7 +41,6 @@ class ScenicTest : public ::gtest::TestLoopFixture {
   std::shared_ptr<Scenic> scenic_;
 };
 
-}  // namespace test
-}  // namespace scenic_impl
+}  // namespace scenic_impl::test
 
 #endif  // SRC_UI_SCENIC_LIB_SCENIC_TESTS_SCENIC_TEST_H_

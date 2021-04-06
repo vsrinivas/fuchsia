@@ -15,8 +15,7 @@
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
-namespace scenic_impl {
-namespace test {
+namespace scenic_impl::test {
 
 class MockGfxSession : public gfx::Session {
  public:
@@ -33,10 +32,6 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
  public:
   MockFrameScheduler() = default;
 
-  // |FrameScheduler|
-  void SetFrameRenderer(std::weak_ptr<scheduling::FrameRenderer> frame_renderer) override {}
-  // |FrameScheduler|
-  void AddSessionUpdater(std::weak_ptr<scheduling::SessionUpdater> session_updater) override {}
   // |FrameScheduler|
   void SetRenderContinuously(bool render_continuously) override {}
 
@@ -567,5 +562,4 @@ TEST_F(ScenicSessionTest, CommandForDifferentPresents_MustBeEnqueuedSeparately) 
   EXPECT_EQ(dispatcher_->num_commands_dispatched_, 2);
 }
 
-}  // namespace test
-}  // namespace scenic_impl
+}  // namespace scenic_impl::test

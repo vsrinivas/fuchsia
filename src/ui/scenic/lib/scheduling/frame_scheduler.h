@@ -34,6 +34,13 @@ class SessionUpdater {
   struct UpdateResults {
     // SessionIds whose updates failed.
     std::unordered_set<SessionId> sessions_with_failed_updates;
+
+    void merge(UpdateResults& other) {
+      sessions_with_failed_updates.merge(other.sessions_with_failed_updates);
+    }
+    void merge(UpdateResults&& other) {
+      sessions_with_failed_updates.merge(other.sessions_with_failed_updates);
+    }
   };
 
   virtual ~SessionUpdater() = default;
@@ -94,14 +101,6 @@ class FrameRenderer {
 class FrameScheduler {
  public:
   virtual ~FrameScheduler() = default;
-
-  // Set the renderer that will be used to render frames.  Can be set exactly once.  Must be set
-  // before any frames are rendered.
-  virtual void SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) = 0;
-
-  // Add a session updater to the FrameScheduler.  This is safe to do between frames (i.e. not while
-  // sessions are being updated before a frame is rendered).
-  virtual void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) = 0;
 
   // If |render_continuously|, we keep scheduling new frames immediately after each presented frame,
   // regardless of whether they're explicitly requested using RequestFrame().

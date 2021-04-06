@@ -4,11 +4,9 @@
 
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 
-#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/syscalls.h>
 
 #include <functional>
 
@@ -51,13 +49,13 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}
 
-void DefaultFrameScheduler::SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) {
-  FX_DCHECK(frame_renderer_.expired() && !frame_renderer.expired());
-  frame_renderer_ = frame_renderer;
-}
-
-void DefaultFrameScheduler::AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) {
-  new_session_updaters_.push_back(std::move(session_updater));
+void DefaultFrameScheduler::Initialize(
+    std::weak_ptr<FrameRenderer> frame_renderer,
+    std::vector<std::weak_ptr<SessionUpdater>> session_updaters) {
+  FX_CHECK(!initialized_);
+  initialized_ = true;
+  frame_renderer_ = std::move(frame_renderer);
+  session_updaters_ = std::move(session_updaters);
 }
 
 void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
@@ -457,40 +455,21 @@ void DefaultFrameScheduler::PrepareUpdates(const std::unordered_map<SessionId, P
   }
 }
 
-void DefaultFrameScheduler::RefreshSessionUpdaters() {
-  // Add pending SessionUpdaters.
-  std::move(new_session_updaters_.begin(), new_session_updaters_.end(),
-            std::back_inserter(session_updaters_));
-  new_session_updaters_.clear();
-
-  // Clear any stale SessionUpdaters.
-  session_updaters_.erase(
-      std::remove_if(session_updaters_.begin(), session_updaters_.end(),
-                     [](std::weak_ptr<SessionUpdater> updater) { return updater.expired(); }),
-      session_updaters_.end());
-}
-
 SessionUpdater::UpdateResults DefaultFrameScheduler::ApplyUpdatesToEachUpdater(
     const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t frame_number) {
   // Apply updates to each SessionUpdater.
   SessionUpdater::UpdateResults update_results;
   std::for_each(
       session_updaters_.begin(), session_updaters_.end(),
-      [&sessions_to_update, &update_results, frame_number](std::weak_ptr<SessionUpdater> updater) {
-        // We still need to check for dead updaters since more could die inside UpdateSessions.
-        auto updater_locked = updater.lock();
-        if (!updater_locked) {
-          return;
+      [&sessions_to_update, &update_results,
+       frame_number](const std::weak_ptr<SessionUpdater>& updater) {
+        if (auto locked_updater = updater.lock()) {
+          // Aggregate results from each updater.
+          // Note: Currently, only one SessionUpdater handles each SessionId. If this
+          // changes, then a SessionId corresponding to a failed update should not be
+          // passed to subsequent SessionUpdaters.
+          update_results.merge(locked_updater->UpdateSessions(sessions_to_update, frame_number));
         }
-        auto session_results = updater_locked->UpdateSessions(sessions_to_update, frame_number);
-        // Aggregate results from each updater.
-        // Note: Currently, only one SessionUpdater handles each SessionId. If this
-        // changes, then a SessionId corresponding to a failed update should not be passed
-        // to subsequent SessionUpdaters.
-        update_results.sessions_with_failed_updates.insert(
-            session_results.sessions_with_failed_updates.begin(),
-            session_results.sessions_with_failed_updates.end());
-        session_results.sessions_with_failed_updates.clear();
       });
 
   return update_results;
@@ -525,7 +504,6 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
 
   TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
 
-  RefreshSessionUpdaters();
   const auto update_map = CollectUpdatesForThisFrame(target_presentation_time);
   const bool have_updates = !update_map.empty();
   PrepareUpdates(update_map, latched_time, frame_number);

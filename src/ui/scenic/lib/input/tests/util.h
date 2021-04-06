@@ -144,7 +144,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void InitializeScenic(std::shared_ptr<scenic_impl::Scenic> scenic) override;
 
   sys::testing::ComponentContextProvider context_provider_;
-  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<scenic_impl::gfx::Engine> engine_;
   std::shared_ptr<scenic_impl::display::Display> display_;
 

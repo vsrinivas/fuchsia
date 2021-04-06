@@ -12,11 +12,9 @@
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 class GfxSystemTest : public scenic_impl::test::ScenicTest {
  public:
@@ -34,14 +32,12 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
   void InitializeScenic(std::shared_ptr<Scenic> scenic) override;
 
   sys::testing::ComponentContextProvider context_provider_;
-  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<Engine> engine_;
 
   std::weak_ptr<GfxSystem> gfx_system_;
 };
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx::test
 
 #endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_GFX_TEST_H_

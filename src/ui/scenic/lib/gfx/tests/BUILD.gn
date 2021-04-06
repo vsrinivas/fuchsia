@@ -32,8 +32,6 @@ source_set("testing_deps") {
     "error_reporting_test.h",
     "gfx_test.cc",
     "gfx_test.h",
-    "session_handler_test.cc",
-    "session_handler_test.h",
     "session_test.cc",
     "session_test.h",
     "view_tree_session_test.cc",

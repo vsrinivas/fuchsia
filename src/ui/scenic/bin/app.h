@@ -23,7 +23,7 @@
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
 #include "src/ui/scenic/lib/watchdog/watchdog.h"
@@ -63,8 +63,9 @@ class App {
   std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   escher::EscherUniquePtr escher_;
-  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
 
+  std::shared_ptr<gfx::ImagePipeUpdater> image_pipe_updater_;
   std::shared_ptr<gfx::Engine> engine_;
   std::shared_ptr<Scenic> scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
