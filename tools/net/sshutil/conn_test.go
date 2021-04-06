@@ -43,7 +43,11 @@ func setUpConn(
 	if err != nil {
 		t.Fatalf("failed to create conn: %v", err)
 	}
-	t.Cleanup(conn.Close)
+	t.Cleanup(func() {
+		if err := conn.Close(); err != nil {
+			t.Log(err)
+		}
+	})
 
 	return conn, server
 }

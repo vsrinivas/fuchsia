@@ -236,7 +236,9 @@ func (c *Conn) Start(ctx context.Context, command []string, stdout io.Writer, st
 	logger.Debugf(ctx, "starting over ssh: %s", command)
 
 	if err := session.Start(ctx, command); err != nil {
-		session.Close()
+		if err := session.Close(); err != nil {
+			logger.Debugf(ctx, "closing ssh session: %s", err)
+		}
 		return nil, err
 	}
 	return session, nil
@@ -249,7 +251,11 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 	if err != nil {
 		return err
 	}
-	defer session.Close()
+	defer func() {
+		if err := session.Close(); err != nil {
+			logger.Debugf(ctx, "closing ssh session: %s", err)
+		}
+	}()
 
 	logger.Debugf(ctx, "running over ssh: %v", command)
 
@@ -282,7 +288,7 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 }
 
 // Close the ssh client connections.
-func (c *Conn) Close() {
+func (c *Conn) Close() error {
 	select {
 	// Only signal we are shutting down if it hasn't already been closed.
 	case <-c.shuttingDown:
@@ -296,8 +302,9 @@ func (c *Conn) Close() {
 	c.mu.Unlock()
 
 	if client != nil {
-		client.Close()
+		return client.Close()
 	}
+	return nil
 }
 
 // DisconnectionListener returns a channel that is closed when the client is
@@ -364,7 +371,9 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 		select {
 		case <-c.shuttingDown:
 			// Ignore the keepalive result if we are shutting down.
-			c.Close()
+			if err := c.Close(); err != nil {
+				logger.Debugf(ctx, "error disconnecting: %s", err)
+			}
 
 		case err := <-ch:
 			// disconnect if we hit an error sending a keepalive.
@@ -382,14 +391,18 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 						err,
 					)
 				}
-				c.Close()
+				if err := c.Close(); err != nil {
+					logger.Debugf(ctx, "error disconnecting: %s", err)
+				}
 				return
 			}
 
 		case <-timeout():
 			timeoutDuration := time.Since(sendTime)
 			logger.Debugf(ctx, "ssh keepalive timed out after %.3fs, disconnecting", timeoutDuration.Seconds())
-			c.Close()
+			if err := c.Close(); err != nil {
+				logger.Debugf(ctx, "error disconnecting: %s", err)
+			}
 			return
 		}
 	}
@@ -400,8 +413,8 @@ type Session struct {
 	session *ssh.Session
 }
 
-func (s *Session) Close() {
-	s.session.Close()
+func (s *Session) Close() error {
+	return s.session.Close()
 }
 
 func (s *Session) Start(ctx context.Context, command []string) error {
