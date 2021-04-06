@@ -13,12 +13,18 @@ import sys
 import tarfile
 import tempfile
 
+from functools import total_ordering
 
+
+@total_ordering
 class Part(object):
 
     def __init__(self, json):
         self.meta = json['meta']
         self.type = json['type']
+
+    def __lt__(self, other):
+        return self.meta < other.meta and self.type < other.type
 
     def __eq__(self, other):
         return (
