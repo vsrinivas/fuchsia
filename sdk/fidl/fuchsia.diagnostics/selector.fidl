@@ -33,6 +33,10 @@ flexible union StringSelector {
     ///   eg: a*b will match any string that starts with a and ends with b.
     ///   eg: a*b*c will match any string that starts with a and ends with c, with `b`
     ///       in the middle.
+    ///
+    ///   In addition, the "**" literal is treated as a special sequence that may match
+    ///   multiple levels in a component selector only. See |ComponentSelector| for
+    ///   details.
     1: string:MAX_STRING_SELECTOR_LENGTH string_pattern;
 
     ///  This is a provided string that defines an exact string to match against. No
@@ -45,9 +49,19 @@ flexible union StringSelector {
 ///
 /// Component selectors support wildcarding, which will glob a single "level" of a
 /// component moniker. eg:
-///    hub/*/echo.cmx
-/// will match all echo.cmx instances running only in realms directly under hub, but none
+///    core/*/echo
+/// will match all echo instances running only in realms directly under core, but none
 /// nested further.
+///
+/// Component selectors also support a recursive wildcard, which will glob multiple
+/// "levels" of a component moniker. eg:
+///    core/**
+/// will match all component instances running under core/ and all descendants of it.
+/// Note that the wildcard does not select core itself. Clients that wish to choose a
+/// subtree including the root should pass two selectors, eg:
+///    core
+///    core/**
+/// The recursive wildcard is only allowed as the final segment of the selector.
 table ComponentSelector {
     /// Vector encoding the a pattern for monikers of components being selected for.
     /// These monikers are child-monikers relative to a "root" hierarchy that the archivist
@@ -78,7 +92,7 @@ struct SubtreeSelector {
 };
 
 /// A selector defining a set of nodes to match, and on those matched nodes a set of named
-/// propperties to match.
+/// properties to match.
 struct PropertySelector {
     /// A vector of StringSelectors which serve as a pattern matcher
     ///   for paths through a hierarchy of named nodes. Each entry in the vector
