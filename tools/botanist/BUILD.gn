@@ -75,7 +75,6 @@ go_library("main") {
     "//tools/lib/command",
     "//tools/lib/environment",
     "//tools/lib/flagmisc",
-    "//tools/lib/tarutil",
     "//tools/testing/runtests",
   ]
 }
