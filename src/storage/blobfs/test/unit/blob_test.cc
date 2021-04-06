@@ -237,6 +237,8 @@ TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
       EXPECT_TRUE(SupportsPaging(blob->GetNode()));
       EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
     } else {
+      // Don't hold onto the file past the lifetime of the blobfs that it came from.
+      file.reset();
       // Remount
       auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)));
       ASSERT_TRUE(blobfs_or.is_ok());
@@ -526,18 +528,20 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
   fs_ = std::move(blobfs_or.value());
   root = OpenRoot();
 
-  // Read back the blob
-  fbl::RefPtr<fs::Vnode> file;
-  ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-  size_t actual;
-  auto data = std::make_unique<uint8_t[]>(info->size_data);
-  EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);
-  EXPECT_EQ(info->size_data, actual);
-  EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
+  {
+    // Read back the blob
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    size_t actual;
+    auto data = std::make_unique<uint8_t[]>(info->size_data);
+    EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);
+    EXPECT_EQ(info->size_data, actual);
+    EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
 
-  auto blob = fbl::RefPtr<Blob>::Downcast(file);
-  EXPECT_TRUE(SupportsPaging(blob->GetNode()));
-  EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
+    auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
+    EXPECT_TRUE(SupportsPaging(blob->GetNode()));
+    EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
+  }
 
   EXPECT_EQ(Fsck(Blobfs::Destroy(std::move(fs_)), MountOptions()), ZX_OK);
 }
@@ -563,14 +567,16 @@ TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
   fs_ = std::move(blobfs_or.value());
   root = OpenRoot();
 
-  // Read back the blob
-  fbl::RefPtr<fs::Vnode> file;
-  ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-  size_t actual;
-  auto data = std::make_unique<uint8_t[]>(info->size_data);
-  EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);
-  EXPECT_EQ(info->size_data, actual);
-  EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
+  {
+    // Read back the blob
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    size_t actual;
+    auto data = std::make_unique<uint8_t[]>(info->size_data);
+    EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);
+    EXPECT_EQ(info->size_data, actual);
+    EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
+  }
 
   // The blob shouldn't have been migrated and the filesystem oldest minor version shouldn't have
   // changed.

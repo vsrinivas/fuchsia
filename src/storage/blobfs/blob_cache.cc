@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/blob_cache.h"
 
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <utility>
@@ -19,7 +20,17 @@ using digest::Digest;
 namespace blobfs {
 
 BlobCache::BlobCache() = default;
-BlobCache::~BlobCache() { Reset(); }
+
+BlobCache::~BlobCache() {
+  if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+    // There shouldn't be any outstanding strong references to |CacheNode|s when the |BlobCache| is
+    // destroyed. |CacheNode|s call into |BlobCache| when they lose their last strong reference but
+    // aren't notified when the |BlobCache| is destroyed and can cause a use after free bug.
+    fbl::AutoLock lock(&hash_lock_);
+    ZX_DEBUG_ASSERT(open_hash_.is_empty());
+  }
+  Reset();
+}
 
 void BlobCache::Reset() {
   ForAllOpenNodes([this](fbl::RefPtr<CacheNode> node) {

@@ -7,6 +7,7 @@
 #include <zircon/compiler.h>
 
 #include <iterator>
+#include <memory>
 
 #include <gtest/gtest.h>
 
@@ -235,28 +236,24 @@ TEST(BlobCacheTest, ResetOpen) {
   // Create a node which exists in the open cache.
   Digest digest = GenerateDigest(0);
   auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+  node->SetHighMemory();
   ASSERT_EQ(cache.Add(node), ZX_OK);
 
   // After resetting, the node should no longer exist.
   cache.Reset();
   ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
+  ASSERT_TRUE(node->UsingMemory());
 }
 
 TEST(BlobCacheTest, Destructor) {
-  fbl::RefPtr<TestNode> open_node;
-
-  {
-    BlobCache cache;
-    Digest open_digest = GenerateDigest(0);
-    open_node = fbl::MakeRefCounted<TestNode>(open_digest, &cache);
-    open_node->SetHighMemory();
-
-    Digest closed_digest = GenerateDigest(1);
-    auto closed_node = fbl::MakeRefCounted<TestNode>(closed_digest, &cache);
-    ASSERT_EQ(cache.Add(open_node), ZX_OK);
-    ASSERT_EQ(cache.Add(closed_node), ZX_OK);
+  auto cache = std::make_unique<BlobCache>();
+  Digest open_digest = GenerateDigest(0);
+  fbl::RefPtr<TestNode> open_node = fbl::MakeRefCounted<TestNode>(open_digest, cache.get());
+  ASSERT_EQ(cache->Add(open_node), ZX_OK);
+  if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+    // Destroying the cache with a node that's still open will trip a debug assert.
+    ASSERT_DEATH({ cache.reset(); }, "");
   }
-  ASSERT_TRUE(open_node->UsingMemory());
 }
 
 TEST(BlobCacheTest, ForAllOpenNodes) {
