@@ -41,17 +41,16 @@ using FenceQueue = std::deque<zx::event>;
 
 // This macro works like a function that checks a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a helper function.
-#define RENDER_SKIPPED_FRAME()                                         \
-  {                                                                    \
-    bool presented = false;                                            \
-    engine()->RenderFrame(                                             \
-        [&](const scheduling::FrameRenderer::Timestamps& timestamps) { \
-          EXPECT_EQ(timestamps.render_done_time, Now());               \
-          EXPECT_EQ(timestamps.actual_presentation_time, Now());       \
-          presented = true;                                            \
-        },                                                             \
-        /*frame_number=*/1, /*presentation_time=*/zx::time(0));        \
-    EXPECT_TRUE(presented);                                            \
+#define RENDER_SKIPPED_FRAME()                                                                    \
+  {                                                                                               \
+    bool presented = false;                                                                       \
+    engine()->RenderScheduledFrame(/*frame_number=*/1, /*presentation_time=*/zx::time(0),         \
+                                   [&](const scheduling::FrameRenderer::Timestamps& timestamps) { \
+                                     EXPECT_EQ(timestamps.render_done_time, Now());               \
+                                     EXPECT_EQ(timestamps.actual_presentation_time, Now());       \
+                                     presented = true;                                            \
+                                   });                                                            \
+    EXPECT_TRUE(presented);                                                                       \
   }
 
 zx::time Now() { return async::Now(async_get_default_dispatcher()); }
@@ -156,9 +155,9 @@ class EngineTest : public escher::test::TestWithVkValidationLayer {
   }
 
   // Create a compositor with real render target, and a fake swapchain. The array of acquire fences
-  // to be used by the swapchain is returned. Each successful call to RenderFrame requires at least
-  // one fence to be remaining in the deque. Each successful render job will remove a fence from the
-  // front of the queue.
+  // to be used by the swapchain is returned. Each successful call to RenderScheduledFrame()
+  // requires at least one fence to be remaining in the deque. Each successful render job will
+  // remove a fence from the front of the queue.
   std::shared_ptr<FenceQueue> AddCompositor() {
     auto target = escher::image_utils::NewColorAttachmentImage(escher_->image_cache(), kWidth,
                                                                kHeight, vk::ImageUsageFlags());
@@ -263,9 +262,9 @@ VK_TEST_F(EngineTest, ImmediateRender) {
   fence_queue->emplace_back(std::move(acquire_fence));
 
   bool presented = false;
-  engine()->RenderFrame(
-      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented = true; },
-      /*frame_number=*/1, /*presentation_time=*/zx::time(0));
+  engine()->RenderScheduledFrame(
+      /*frame_number=*/1, /*presentation_time=*/zx::time(0),
+      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented = true; });
 
   // Wait for all rendering to complete.
   VkWaitUntilIdle();
@@ -294,9 +293,9 @@ VK_TEST_F(EngineTest, RenderWithDelay) {
   }
 
   bool presented[2] = {false, false};
-  engine()->RenderFrame(
-      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[0] = true; },
-      /*frame_number=*/1, /*presentation_time=*/zx::time(0));
+  engine()->RenderScheduledFrame(
+      /*frame_number=*/1, /*presentation_time=*/zx::time(0),
+      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[0] = true; });
 
   // There shouldn't be any rendering, as the fence has not been signaled yet.
   loop.RunUntilIdle();
@@ -306,9 +305,9 @@ VK_TEST_F(EngineTest, RenderWithDelay) {
   auto fences0 = CreateAndInsertFences(false);
 
   // Queue another frame.
-  engine()->RenderFrame(
-      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[1] = true; },
-      /*frame_number=*/1, /*presentation_time=*/zx::time(0));
+  engine()->RenderScheduledFrame(
+      /*frame_number=*/1, /*presentation_time=*/zx::time(0),
+      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[1] = true; });
 
   // Queue some more signal fences.
   auto fences1 = CreateAndInsertFences(false);
@@ -355,9 +354,9 @@ VK_TEST_F(EngineTest, RenderWithDelayOutOfOrder) {
   }
 
   bool presented[2] = {false, false};
-  engine()->RenderFrame(
-      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[0] = true; },
-      /*frame_number=*/1, /*presentation_time=*/zx::time(0));
+  engine()->RenderScheduledFrame(
+      /*frame_number=*/1, /*presentation_time=*/zx::time(0),
+      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[0] = true; });
 
   // There shouldn't be any rendering, as the fence has not been signaled yet.
   loop.RunUntilIdle();
@@ -367,9 +366,9 @@ VK_TEST_F(EngineTest, RenderWithDelayOutOfOrder) {
   auto fences0 = CreateAndInsertFences(false);
 
   // Queue another frame.
-  engine()->RenderFrame(
-      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[1] = true; },
-      /*frame_number=*/1, /*presentation_time=*/zx::time(0));
+  engine()->RenderScheduledFrame(
+      /*frame_number=*/1, /*presentation_time=*/zx::time(0),
+      [&](const scheduling::FrameRenderer::Timestamps& timestamps) { presented[1] = true; });
 
   // Queue some more signal fences.
   auto fences1 = CreateAndInsertFences(false);

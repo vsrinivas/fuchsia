@@ -152,8 +152,8 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() {}
 
   // |FrameRenderer|
-  void RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
-                   zx::time presentation_time) override;
+  void RenderScheduledFrame(uint64_t frame_number, zx::time presentation_time,
+                            FramePresentedCallback callback) override;
 
   // |FrameRenderer|
   void SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> events) override;

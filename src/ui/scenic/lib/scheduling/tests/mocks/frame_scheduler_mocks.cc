@@ -60,8 +60,8 @@ void MockFrameScheduler::RemoveSession(SessionId session_id) {
   }
 }
 
-void MockFrameRenderer::RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
-                                    zx::time presentation_time) {
+void MockFrameRenderer::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_time,
+                                             FramePresentedCallback callback) {
   FX_CHECK(frame_number);
   FX_CHECK(callback);
 

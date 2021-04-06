@@ -78,8 +78,8 @@ class FrameRenderer {
   // Frames must be rendered in the order they are requested, and callbacks must be triggered in the
   // same order.
   using FramePresentedCallback = std::function<void(const Timestamps&)>;
-  virtual void RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
-                           zx::time presentation_time) = 0;
+  virtual void RenderScheduledFrame(uint64_t frame_number, zx::time presentation_time,
+                                    FramePresentedCallback callback) = 0;
 
   // The FrameRenderer should signal these events when all pending rendering is complete.
   virtual void SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> events) = 0;

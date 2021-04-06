@@ -233,7 +233,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   // Render the frame.
   if (auto renderer = frame_renderer_.lock()) {
-    renderer->RenderFrame(std::move(on_presented_callback), frame_number, target_presentation_time);
+    renderer->RenderScheduledFrame(frame_number, target_presentation_time,
+                                   std::move(on_presented_callback));
   }
 
   ++frame_number_;
