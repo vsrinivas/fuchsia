@@ -1053,9 +1053,24 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
 
   raw::TypeConstructor maybe_type_ctor;
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
-    if (!Ok())
-      return Fail();
-    maybe_type_ctor = ParseTypeConstructor();
+    // TODO(fxbug.dev/70247): remove branching
+    if (syntax_ == utils::Syntax::kNew) {
+      auto resource_type_identifier = ParseCompoundIdentifier();
+      if (!Ok())
+        return Fail();
+
+      maybe_type_ctor = std::make_unique<raw::TypeConstructorNew>(
+          scope.GetSourceElement(),
+          std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+                                                      std::move(resource_type_identifier)),
+          /*parameters=*/nullptr,
+          /*constraints=*/nullptr);
+    } else {
+      if (!Ok()) {
+        return Fail();
+      }
+      maybe_type_ctor = ParseTypeConstructor();
+    }
     if (!Ok())
       return Fail();
   }
