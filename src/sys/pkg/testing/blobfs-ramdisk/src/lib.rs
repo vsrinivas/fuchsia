@@ -405,14 +405,15 @@ fn mkblobfs_block(block_device: zx::Handle) -> Result<(), Error> {
     .map_err(|(status, _)| status)
     .context("spawning 'blobfs mkfs'")?;
 
-    wait_for_process(p).context("'blobfs mkfs'")?;
+    // Frequently takes more than 30 seconds on profile builds.
+    wait_for_process(p, zx::Duration::from_seconds(90)).context("waiting for 'blobfs mkfs'")?;
     Ok(())
 }
 
-fn wait_for_process(proc: fuchsia_zircon::Process) -> Result<(), Error> {
+fn wait_for_process(proc: fuchsia_zircon::Process, duration: zx::Duration) -> Result<(), Error> {
     proc.wait_handle(
         zx::Signals::PROCESS_TERMINATED,
-        zx::Time::after(zx::Duration::from_seconds(30)),
+        zx::Time::after(duration),
     )
     .context("waiting for tool to terminate")?;
     let ret = proc.info().context("getting tool process info")?.return_code;
