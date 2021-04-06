@@ -17,7 +17,7 @@ library fuchsia.sysmem;
 ///
 /// A secondary current reason tracked by fxbug.dev/32924 is that the current devhost
 /// dispatching code doesn't permit async processing of requests, which we want
-/// for proper functionining of at least the BufferCollection interface since
+/// for proper functioning of at least the BufferCollection interface since
 /// that interface has requests that don't complete until the devhost has
 /// constraints from other participants.
 //

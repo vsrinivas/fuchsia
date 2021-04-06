@@ -100,7 +100,7 @@ protocol BufferCollectionToken {
     ///
     /// Calling BufferCollectionToken.Sync() on a token that isn't/wasn't a
     /// valid sysmem token risks the Sync() hanging forever.  See
-    /// ValidateBufferCollectionToken() for one way to mitigate the possiblity
+    /// ValidateBufferCollectionToken() for one way to mitigate the possibility
     /// of a hostile/fake BufferCollectionToken at the cost of one round trip.
     ///
     /// Another way to mitigate is to avoid calling Sync() on the token, and
@@ -180,7 +180,7 @@ protocol BufferCollectionToken {
     ///
     /// If a client uses this message, the client should not rely on the
     /// client's own BufferCollectionToken or BufferCollection channel to close
-    /// from the server end due to abrubt failure of any BufferCollectionToken
+    /// from the server end due to abrupt failure of any BufferCollectionToken
     /// or BufferCollection that the client has SetDispensable() and given out
     /// to another process.  For this reason, the client should take extra care
     /// to notice failure of that other process via other means.
@@ -565,7 +565,7 @@ protocol BufferCollectionEvents {
     /// used to create this BufferCollection.
     OnDuplicatedTokensKnownByServer();
 
-    /// This event inidicates that buffer allocation is over, whether succesful
+    /// This event indicates that buffer allocation is over, whether successful
     /// or failed.
     ///
     /// This event will eventually be sent by the server (unless the
