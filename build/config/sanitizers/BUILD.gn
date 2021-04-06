@@ -125,7 +125,6 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//third_party/openssh-portable/*",
     "//third_party/rapidjson/*",
     "//third_party/rust_crates/*",
-    "//tools/symbolizer/*",
     "//tools/vboot_reference/*",
     "//vendor/*",
     "//zircon/system/ulib/elf-search/test/*",
