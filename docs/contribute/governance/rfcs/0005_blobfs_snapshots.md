@@ -479,8 +479,6 @@ substantial source of unexpected complexity), and evaluating the possibility of 
 on particular FVM/Zedboot versions to reduce impact to developers when either of these need to be
 changed.
 
----
-
 [^1]: Note that these additional slice types do not necessarily need
     to be added to the FVM format; there are a number of ways of expressing this
     metadata and the precise format is left as an implementation

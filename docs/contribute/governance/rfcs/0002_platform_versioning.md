@@ -462,8 +462,6 @@ semantics from the platform.
 Apple has used these mechanisms successfully to migrate applications for these
 operating systems from older APIs to newer APIs.
 
----
-
 [^1]: [RFC-0083: FIDL Versioning][rfc-0083] amends this, restricting
     API levels to 63 bits in order to reserve the high bit for other uses.
 

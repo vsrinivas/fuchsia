@@ -152,7 +152,7 @@ Fuchsia Platform. In this case, all libraries are versioned with respect to the
 
 ### Syntax
 
-An _availability attribute_ has the following form, inspired by[^1] [Swift's
+An _availability attribute_ has the following form,[^1] inspired by [Swift's
 `available` attribute][swift-attr]:
 
     @available(added=<V>, deprecated=<V>, removed=<V>)
@@ -714,8 +714,6 @@ APIs encode their major version number at the end of the protobuf package, and
 include it in URI paths. In this way services can support multiple major
 versions at once, and clients receive backwards-compatible updates in place,
 i.e. without taking action to migrate.
-
----
 
 <!-- TODO(fxbug.dev/68792): Change "RFC:" to "RFC-NNNN:" once accepted. -->
 [^1]: This document uses the syntax introduced by [RFC: New
