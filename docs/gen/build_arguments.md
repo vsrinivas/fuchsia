@@ -1481,7 +1481,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/12825ed8aae58df594373d335427f1dd3cae9fd3/config.gni#12)
+From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1490,7 +1490,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"68"`
 
-From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/12825ed8aae58df594373d335427f1dd3cae9fd3/version.gni#9)
+From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1498,7 +1498,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/12825ed8aae58df594373d335427f1dd3cae9fd3/config.gni#8)
+From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -3655,7 +3655,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:38
+From //src/media/lib/ffmpeg/BUILD.gn:36
 
 ### use_swiftshader_vulkan_icd_on_host
 
