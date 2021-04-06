@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Parses ELF files. For documentation on the format, see the ELF specification or
+//! /usr/include/elf.h
+
+#![allow(missing_docs)]
+
 use {
     bitflags::bitflags,
     fuchsia_zircon as zx,
@@ -50,43 +55,62 @@ trait Validate {
     fn validate(&self) -> Result<(), ElfParseError>;
 }
 
+/// ELF identity header.
 #[derive(FromBytes, Debug, Eq, PartialEq)]
 #[repr(C)]
 pub struct ElfIdent {
-    pub magic: [u8; 4], // e_ident[EI_MAG0:EI_MAG3]
-    pub class: u8,      // e_ident[EI_CLASS]
-    pub data: u8,       // e_ident[EI_DATA]
-    pub version: u8,    // e_ident[EI_VERSION]
-    pub osabi: u8,      // e_ident[EI_OSABI]
-    pub abiversion: u8, // e_ident[EI_ABIVERSION]
-    pub pad: [u8; 7],   // e_ident[EI_PAD]
+    /// e_ident[EI_MAG0:EI_MAG3]
+    pub magic: [u8; 4],
+    /// e_ident[EI_CLASS]
+    pub class: u8,
+    /// e_ident[EI_DATA]
+    pub data: u8,
+    /// e_ident[EI_VERSION]
+    pub version: u8,
+    /// e_ident[EI_OSABI]
+    pub osabi: u8,
+    /// e_ident[EI_ABIVERSION]
+    pub abiversion: u8,
+    /// e_ident[EI_PAD]
+    pub pad: [u8; 7],
 }
 
 #[allow(unused)]
 const EI_NIDENT: usize = 16;
 assert_eq_size!(ElfIdent, [u8; EI_NIDENT]);
 
+/// ELF class, from EI_CLASS.
 #[derive(FromPrimitive, Eq, PartialEq)]
 #[repr(u8)]
 pub enum ElfClass {
-    Unknown = 0, // ELFCLASSNONE
-    Elf32 = 1,   // ELFCLASS32
-    Elf64 = 2,   // ELFCLASS64
+    /// ELFCLASSNONE
+    Unknown = 0,
+    /// ELFCLASS32
+    Elf32 = 1,
+    /// ELFCLASS64
+    Elf64 = 2,
 }
 
+/// ELF data encoding, from EI_DATA.
 #[derive(FromPrimitive, Eq, PartialEq)]
 #[repr(u8)]
 pub enum ElfDataEncoding {
-    Unknown = 0,      // ELFDATANONE
-    LittleEndian = 1, // ELFDATA2LSB
-    BigEndian = 2,    // ELFDATA2MSB
+    /// ELFDATANONE
+    Unknown = 0,
+    /// ELFDATA2LSB
+    LittleEndian = 1,
+    /// ELFDATA2MSB
+    BigEndian = 2,
 }
 
+/// ELF version, from EI_VERSION.
 #[derive(FromPrimitive, Eq, PartialEq)]
 #[repr(u8)]
 pub enum ElfVersion {
-    Unknown = 0, // EV_NONE
-    Current = 1, // EV_CURRENT
+    /// EV_NONE
+    Unknown = 0,
+    /// EV_CURRENT
+    Current = 1,
 }
 
 impl ElfIdent {
@@ -125,21 +149,31 @@ pub struct Elf64FileHeader {
 #[derive(FromPrimitive, Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u16)]
 pub enum ElfType {
-    Unknown = 0,      // ET_NONE
-    Relocatable = 1,  // ET_REL
-    Executable = 2,   // ET_EXEC
-    SharedObject = 3, // ET_DYN
-    Core = 4,         // ET_CORE
+    /// ET_NONE
+    Unknown = 0,
+    /// ET_REL
+    Relocatable = 1,
+    /// ET_EXEC
+    Executable = 2,
+    /// ET_DYN
+    SharedObject = 3,
+    /// ET_CORE
+    Core = 4,
 }
 
 #[derive(FromPrimitive, Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum ElfArchitecture {
-    Unknown = 0,   // EM_NONE
-    I386 = 3,      // EM_386
-    ARM = 40,      // EM_ARM
-    X86_64 = 62,   // EM_X86_64
-    AARCH64 = 183, // EM_AARCH64
+    /// EM_NONE
+    Unknown = 0,
+    /// EM_386
+    I386 = 3,
+    /// EM_ARM
+    ARM = 40,
+    /// EM_X86_64
+    X86_64 = 62,
+    /// EM_AARCH64
+    AARCH64 = 183,
 }
 
 const ELF_MAGIC: [u8; 4] = *b"\x7fELF";
@@ -219,11 +253,16 @@ pub struct Elf64ProgramHeader {
 #[derive(FromPrimitive, Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum SegmentType {
-    Unused = 0,            // PT_NULL
-    Load = 1,              // PT_LOAD
-    Dynamic = 2,           // PT_DYNAMIC
-    Interp = 3,            // PT_INTERP
-    GnuStack = 0x6474e551, // PT_GNU_STACK
+    /// PT_NULL
+    Unused = 0,
+    /// PT_LOAD
+    Load = 1,
+    /// PT_DYNAMIC
+    Dynamic = 2,
+    /// PT_INTERP
+    Interp = 3,
+    /// PT_GNU_STACK
+    GnuStack = 0x6474e551,
 }
 
 bitflags! {

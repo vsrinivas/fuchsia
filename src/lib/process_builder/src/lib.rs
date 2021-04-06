@@ -67,8 +67,8 @@ pub use self::elf_load::ElfLoadError;
 pub use self::elf_parse::ElfParseError;
 pub use self::processargs::{ProcessargsError, StartupHandle};
 
-mod elf_load;
-mod elf_parse;
+pub mod elf_load;
+pub mod elf_parse;
 mod processargs;
 mod util;
 
@@ -471,7 +471,7 @@ impl ProcessBuilder {
             // Get the dynamic linker and map it into the process's address space.
             let ld_vmo = get_dynamic_linker(&ldsvc, &self.executable, interp_hdr).await?;
             let ld_headers = elf_parse::Elf64Headers::from_vmo(&ld_vmo)?;
-            loaded_elf = elf_load::load_elf(&ld_vmo, &self.common.root_vmar, &ld_headers)?;
+            loaded_elf = elf_load::load_elf(&ld_vmo, &ld_headers, &self.common.root_vmar)?;
 
             // Build the dynamic linker bootstrap message and write it to the bootstrap channel.
             // This message is written before the primary bootstrap message since it is consumed
@@ -484,7 +484,7 @@ impl ProcessBuilder {
             dynamic = false;
 
             loaded_elf =
-                elf_load::load_elf(&self.executable, &self.common.root_vmar, &elf_headers)?;
+                elf_load::load_elf(&self.executable, &elf_headers, &self.common.root_vmar)?;
             self.msg_contents.handles.push(StartupHandle {
                 handle: loaded_elf.vmar.into_handle(),
                 info: HandleInfo::new(HandleType::LoadedVmar, 0),
@@ -617,7 +617,7 @@ impl ProcessBuilder {
             None => get_system_vdso_vmo(),
         }?;
         let vdso_headers = elf_parse::Elf64Headers::from_vmo(&vdso)?;
-        let loaded_vdso = elf_load::load_elf(&vdso, &self.common.root_vmar, &vdso_headers)?;
+        let loaded_vdso = elf_load::load_elf(&vdso, &vdso_headers, &self.common.root_vmar)?;
 
         self.msg_contents.handles.push(StartupHandle {
             handle: vdso.into_handle(),
