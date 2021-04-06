@@ -997,29 +997,27 @@ impl RemoteClient {
         {
             let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
             match llc_frame.hdr.protocol_id.to_native() {
+                // Handle EAPOL LLC frames.
                 mac::ETHER_TYPE_EAPOL => {
-                    self.handle_eapol_llc_frame(ctx, *dst_addr, *src_addr, &llc_frame.body)?;
+                    self.handle_eapol_llc_frame(ctx, *dst_addr, *src_addr, &llc_frame.body)?
                 }
-                // Disallow handling LLC frames if the controlled port is closed. If there is no
-                // controlled port, sending frames is OK.
-                _ if match self.state.as_ref() {
+                // Non-EAPOL frames...
+                _ => match self.state.as_ref() {
+                    // Drop all non-EAPoL MSDUs if the controlled port is closed.
                     State::Associated {
                         eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
                         ..
-                    } => false,
-                    _ => true,
-                } =>
-                {
-                    self.handle_llc_frame(
+                    } => (),
+                    // Handle LLC frames only if the controlled port is not closed and the frame type
+                    // is not EAPOL. If there is no controlled port, sending frames is OK.
+                    _ => self.handle_llc_frame(
                         ctx,
                         *dst_addr,
                         *src_addr,
                         llc_frame.hdr.protocol_id.to_native(),
                         &llc_frame.body,
-                    )?
-                }
-                // Drop all non-EAPoL MSDUs if the controlled port is closed.
-                _ => (),
+                    )?,
+                },
             }
         }
         Ok(())
