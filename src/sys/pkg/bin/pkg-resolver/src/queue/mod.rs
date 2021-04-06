@@ -300,12 +300,17 @@ type RunningTask<K, WF> = futures::future::Join<futures::future::Ready<K>, WF>;
 
 /// A clonable handle to the work queue.  When all clones of [WorkSender] are dropped, the queue
 /// will process all remaining requests and terminate its output stream.
-#[derive(Clone)]
 pub struct WorkSender<K, C, O> {
     sender: mpsc::UnboundedSender<K>,
     // Weak reference to ensure that if the queue is dropped, the now unused sender end of the
     // completion callback will be dropped too, canceling the request.
     tasks: Weak<Mutex<HashMap<K, TaskVariants<C, O>>>>,
+}
+
+impl<K, C, O> Clone for WorkSender<K, C, O> {
+    fn clone(&self) -> Self {
+        Self { sender: self.sender.clone(), tasks: self.tasks.clone() }
+    }
 }
 
 impl<K, C, O> WorkSender<K, C, O>

@@ -88,7 +88,7 @@ mod tests {
     fn http_errors_aborts_on_io_error() {
         assert_eq!(
             HttpErrors::default().next_backoff(&FetchError::CreateBlob(
-                pkgfs::install::BlobCreateError::AlreadyExists
+                fidl_fuchsia_pkg_ext::cache::OpenBlobError::UnspecifiedIo
             )),
             None
         );

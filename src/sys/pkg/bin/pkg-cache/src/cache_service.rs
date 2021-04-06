@@ -738,7 +738,11 @@ async fn serve_write_blob(
                     );
 
                     let blob = res?;
-                    State::ExpectData(blob)
+                    // The empty blob needs no data and is complete after it is truncated.
+                    match length {
+                        0 => State::ExpectClose,
+                        _ => State::ExpectData(blob),
+                    }
                 }
 
                 (FileRequest::Write { data, responder }, State::ExpectData(blob)) => {
@@ -1287,7 +1291,7 @@ mod serve_needed_blobs_tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expects_open_meta_blob_once() {
-        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 4 };
         let (task, proxy, mut pkgfs_install, pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
@@ -1297,7 +1301,7 @@ mod serve_needed_blobs_tests {
                 pkgfs_install
                     .expect_create_blob([0; 32].into(), BlobKind::Package.into())
                     .await
-                    .expect_payload(&[])
+                    .expect_payload(b"test")
                     .await;
 
                 add_meta_far_to_blobfs(&blobfs, [0; 32], "fake-package", vec![]);
@@ -1308,8 +1312,8 @@ mod serve_needed_blobs_tests {
 
                 assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
 
-                let _ = blob.truncate(0).await;
-                let _ = blob.write(&mut []).await;
+                let _ = blob.truncate(4).await;
+                let _ = blob.write(b"test").await;
                 let _ = blob.close().await;
             },
         )

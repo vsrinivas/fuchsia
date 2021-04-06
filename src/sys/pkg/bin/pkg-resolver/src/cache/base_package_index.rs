@@ -18,7 +18,7 @@ pub struct BasePackageIndex {
 
 impl BasePackageIndex {
     /// Creates a `BasePackageIndex` from a PackageCache proxy.
-    pub async fn from_proxy(cache: PackageCacheProxy) -> Result<Self, Error> {
+    pub async fn from_proxy(cache: &PackageCacheProxy) -> Result<Self, Error> {
         let (pkg_iterator, server_end) =
             fidl::endpoints::create_proxy::<PackageIndexIteratorMarker>()?;
         cache.base_package_index(server_end)?;
@@ -146,7 +146,7 @@ mod tests {
     async fn empty_base_packages() {
         let expected_packages = HashMap::new();
         let client = spawn_pkg_cache(expected_packages.clone()).await;
-        let base = BasePackageIndex::from_proxy(client).await.unwrap();
+        let base = BasePackageIndex::from_proxy(&client).await.unwrap();
         assert_eq!(base.index, expected_packages);
     }
 
@@ -172,7 +172,7 @@ mod tests {
         for count in package_counts.iter() {
             let expected_packages = index_with_n_entries(*count);
             let client = spawn_pkg_cache(expected_packages.clone()).await;
-            let base = BasePackageIndex::from_proxy(client).await.unwrap();
+            let base = BasePackageIndex::from_proxy(&client).await.unwrap();
             assert_eq!(base.index, expected_packages);
         }
     }

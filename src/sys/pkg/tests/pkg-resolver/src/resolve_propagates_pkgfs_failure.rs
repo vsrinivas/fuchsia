@@ -34,27 +34,50 @@ use {
 };
 
 struct MockPkgFs {
-    root_dir_proxy: DirectoryProxy,
+    blobfs_root_dir_proxy: DirectoryProxy,
+    _blobfs_tempdir: tempfile::TempDir,
+    pkgfs_root_dir_proxy: DirectoryProxy,
 }
 
 impl MockPkgFs {
-    fn new(mut directory_entry: impl DirectoryEntry + 'static) -> Self {
-        let (client, server) =
+    fn new(
+        blobfs: tempfile::TempDir,
+        mut pkgfs_directory_entry: impl DirectoryEntry + 'static,
+    ) -> Self {
+        let (blobfs_client, blobfs_server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().expect("create_proxy");
-        directory_entry.open(
+        fdio::open(
+            blobfs.path().to_str().unwrap(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+                | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY,
+            blobfs_server.into_channel(),
+        )
+        .unwrap();
+
+        let (pkgfs_client, pkgfs_server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().expect("create_proxy");
+        pkgfs_directory_entry.open(
             fidl_fuchsia_io::OPEN_RIGHT_READABLE
                 | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
                 | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY,
             fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
             &mut std::iter::empty(),
-            server,
+            pkgfs_server,
         );
         fasync::Task::spawn(async move {
-            directory_entry.await;
+            pkgfs_directory_entry.await;
         })
         .detach();
+
         Self {
-            root_dir_proxy: DirectoryProxy::new(client.into_channel().expect("proxy to channel")),
+            blobfs_root_dir_proxy: DirectoryProxy::new(
+                blobfs_client.into_channel().expect("proxy to channel"),
+            ),
+            _blobfs_tempdir: blobfs,
+            pkgfs_root_dir_proxy: DirectoryProxy::new(
+                pkgfs_client.into_channel().expect("proxy to channel"),
+            ),
         }
     }
 }
@@ -62,25 +85,14 @@ impl MockPkgFs {
 impl PkgFs for MockPkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         let (client, server) = fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
-        self.root_dir_proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server)?;
+        self.pkgfs_root_dir_proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server)?;
         Ok(client.into_channel().into())
     }
 
     fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
-        let mut directory_entry = pseudo_directory! {};
-        let (client, server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().expect("create_proxy");
-        directory_entry.open(
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY,
-            fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
-            &mut std::iter::empty(),
-            server,
-        );
-        fasync::Task::spawn(async move {
-            directory_entry.await;
-        })
-        .detach();
-        Ok(client.into_channel().unwrap().into_zx_channel().into())
+        let (client, server) = fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
+        self.blobfs_root_dir_proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server)?;
+        Ok(client.into_channel().into())
     }
 }
 
@@ -253,6 +265,27 @@ async fn handle_file_req_success(req: FileRequest) {
         req => panic!("should only receive write and truncate requests: {:?}", req),
     }
 }
+struct BlobFsDirectoryBuilder {
+    readable_blob: Option<(String, Vec<u8>)>,
+}
+
+impl BlobFsDirectoryBuilder {
+    fn new() -> Self {
+        Self { readable_blob: None }
+    }
+    fn readable_blob(mut self, blob: String, contents: Vec<u8>) -> Self {
+        assert_eq!(self.readable_blob, None);
+        self.readable_blob = Some((blob, contents));
+        self
+    }
+    fn build(self) -> tempfile::TempDir {
+        let root = tempfile::tempdir().unwrap();
+        if let Some((merkle, entry)) = self.readable_blob {
+            std::fs::write(root.path().join(merkle.as_str()), entry).unwrap();
+        }
+        root
+    }
+}
 
 struct PkgFsDirectoryBuilder {
     install_pkg: Option<(String, Box<dyn DirectoryEntry + 'static>)>,
@@ -369,8 +402,9 @@ where
 {
     let (pkg, pkg_merkle, _) = make_pkg_for_mock_pkgfs_tests(package_name).await?;
     let (failing_file, call_count) = FakeFile::new_and_call_count(file_request_stream_handler);
-    let d = PkgFsDirectoryBuilder::new().install_pkg(pkg_merkle, failing_file).build();
-    Ok((MockPkgFs::new(d), pkg, call_count))
+    let blobfs = BlobFsDirectoryBuilder::new().build();
+    let pkgfs = PkgFsDirectoryBuilder::new().install_pkg(pkg_merkle, failing_file).build();
+    Ok((MockPkgFs::new(blobfs, pkgfs), pkg, call_count))
 }
 
 async fn make_mock_pkgfs_with_failing_install_blob<StreamHandler, F>(
@@ -388,12 +422,25 @@ where
     let (pkg, pkg_merkle, blob_merkle) = make_pkg_for_mock_pkgfs_tests(package_name).await?;
     let (success_file, _) = FakeFile::new_and_call_count(handle_file_stream_success);
     let (failing_file, call_count) = FakeFile::new_and_call_count(file_request_stream_handler);
-    let d = PkgFsDirectoryBuilder::new()
+    // Expose a blobfs that contains just the meta far blob.  pkg-cache needs to read the meta FAR before
+    // it knows which blobs are needed.  Long term, these tests should be moved/adapted to the pkg-cache
+    // integration tests, and similar resolve_propagates_pkgcache_failure.rs tests should be added for
+    // pkg-resolver.
+    let pkg_meta_bytes = {
+        use std::io::Read;
+
+        let mut res = vec![];
+        let _: usize = pkg.meta_far().unwrap().read_to_end(&mut res).unwrap();
+        res
+    };
+    let blobfs =
+        BlobFsDirectoryBuilder::new().readable_blob(pkg_merkle.clone(), pkg_meta_bytes).build();
+    let pkgfs = PkgFsDirectoryBuilder::new()
         .install_pkg(pkg_merkle.clone(), success_file)
         .install_blob(blob_merkle.clone(), failing_file)
         .needs_packages(pkg_merkle, blob_merkle)
         .build();
-    Ok((MockPkgFs::new(d), pkg, call_count))
+    Ok((MockPkgFs::new(blobfs, pkgfs), pkg, call_count))
 }
 
 async fn assert_resolve_package_with_failing_pkgfs_fails(

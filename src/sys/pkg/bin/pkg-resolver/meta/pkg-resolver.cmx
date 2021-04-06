@@ -17,8 +17,6 @@
             "root-ssl-certificates"
         ],
         "pkgfs": [
-            "install",
-            "needs",
             "system"
         ],
         "services": [

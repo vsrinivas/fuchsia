@@ -5,7 +5,7 @@ use {
     anyhow::{anyhow, Context as _, Error},
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
+    fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
@@ -46,7 +46,7 @@ mod test_util;
 
 use crate::{
     args::Args,
-    cache::PackageCache,
+    cache::BasePackageIndex,
     config::Config,
     experiment::Experiments,
     font_package_manager::{FontPackageManager, FontPackageManagerBuilder},
@@ -118,8 +118,8 @@ pub fn main() -> Result<(), Error> {
 async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
 
-    let pkg_cache =
-        connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
+    let pkg_cache = fidl_fuchsia_pkg_ext::cache::Client::connect_in_namespace()
+        .context("error connecting to package cache")?;
     let local_mirror = if args.allow_local_mirror {
         Some(
             connect_to_service::<LocalMirrorMarker>()
@@ -129,14 +129,11 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         None
     };
 
-    let pkgfs_install = pkgfs::install::Client::open_from_namespace()
-        .context("error connecting to pkgfs/install")?;
-    let pkgfs_needs =
-        pkgfs::needs::Client::open_from_namespace().context("error connecting to pkgfs/needs")?;
-    let cache = PackageCache::new(pkg_cache, pkgfs_install, pkgfs_needs);
-
-    let base_package_index =
-        Arc::new(cache.base_package_index().await.context("failed to load base package index")?);
+    let base_package_index = Arc::new(
+        BasePackageIndex::from_proxy(pkg_cache.proxy())
+            .await
+            .context("failed to load base package index")?,
+    );
 
     // The list of cache packages from the system image, not to be confused with the PackageCache.
     let system_cache_list = Arc::new(load_system_cache_list().await);
@@ -178,7 +175,6 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
 
     let (blob_fetch_queue, blob_fetcher) = crate::cache::make_blob_fetch_queue(
         inspector.root().create_child("blob_fetcher"),
-        cache.clone(),
         MAX_CONCURRENT_BLOB_FETCHES,
         repo_manager.read().stats(),
         cobalt_sender.clone(),
@@ -194,7 +190,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         inspector.root().create_child("resolver_service"),
     ));
     let (package_fetch_queue, package_fetcher) = resolver_service::make_package_fetch_queue(
-        cache.clone(),
+        pkg_cache,
         Arc::clone(&base_package_index),
         Arc::clone(&system_cache_list),
         Arc::clone(&repo_manager),

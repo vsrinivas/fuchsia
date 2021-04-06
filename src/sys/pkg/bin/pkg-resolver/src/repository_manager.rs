@@ -4,10 +4,7 @@
 
 use {
     crate::{
-        cache::{
-            BlobFetcher, CacheError, MerkleForError, PackageCache, PackageOpenError,
-            ToResolveStatus,
-        },
+        cache::{BlobFetcher, CacheError, MerkleForError, ToResolveStatus},
         experiment::Experiments,
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
@@ -16,7 +13,7 @@ use {
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::LocalMirrorProxy,
-    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
+    fidl_fuchsia_pkg_ext::{cache, BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_pkg::PackageDirectory,
@@ -244,7 +241,7 @@ impl RepositoryManager {
     pub fn get_package<'a>(
         &self,
         url: &'a PkgUrl,
-        cache: &'a PackageCache,
+        cache: &'a cache::Client,
         blob_fetcher: &'a BlobFetcher,
     ) -> LocalBoxFuture<'a, Result<(BlobId, PackageDirectory), GetPackageError>> {
         let config = if let Some(config) = self.get(url.repo()) {
@@ -796,7 +793,7 @@ pub enum GetPackageError {
     Cache(#[from] CacheError),
 
     #[error("while opening the package")]
-    OpenPackage(#[from] PackageOpenError),
+    OpenPackage(#[from] cache::OpenError),
 }
 
 #[derive(Debug, Error)]
@@ -819,7 +816,7 @@ impl ToResolveStatus for GetPackageError {
             GetPackageError::RepoNotFound(_) => Status::BAD_STATE,
             GetPackageError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageError::Cache(err) => err.to_resolve_status(),
-            GetPackageError::OpenPackage(err) => err.into(),
+            GetPackageError::OpenPackage(err) => err.to_resolve_status(),
         }
     }
 }

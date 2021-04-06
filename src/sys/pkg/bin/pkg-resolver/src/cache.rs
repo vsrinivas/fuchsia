@@ -4,15 +4,12 @@
 
 use {
     crate::{queue, repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
-    anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_pkg::{LocalMirrorProxy, PackageCacheProxy},
-    fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
+    fidl_fuchsia_pkg::LocalMirrorProxy,
+    fidl_fuchsia_pkg_ext::{self as pkg, BlobId, BlobInfo, MirrorConfig, RepositoryConfig},
     fuchsia_cobalt::CobaltSender,
     fuchsia_pkg::PackageDirectory,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::fx_log_info,
     fuchsia_trace as trace,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
@@ -20,10 +17,7 @@ use {
     http_uri_ext::HttpUriExt as _,
     hyper::StatusCode,
     parking_lot::Mutex,
-    pkgfs::install::BlobKind,
     std::{
-        collections::HashSet,
-        hash::Hash,
         sync::{
             atomic::{AtomicBool, AtomicU64, Ordering},
             Arc,
@@ -39,8 +33,6 @@ pub use base_package_index::BasePackageIndex;
 mod inspect;
 mod resume;
 mod retry;
-
-pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
 
 /// Root of typesafe builder for BlobFetchParams.
 #[derive(Clone, Copy, Debug)]
@@ -116,119 +108,11 @@ impl BlobFetchParams {
     }
 }
 
-/// Provides access to the package cache components.
-#[derive(Clone)]
-pub struct PackageCache {
-    cache: PackageCacheProxy,
-    pkgfs_install: pkgfs::install::Client,
-    pkgfs_needs: pkgfs::needs::Client,
-}
-
-impl PackageCache {
-    /// Constructs a new [`PackageCache`].
-    pub fn new(
-        cache: PackageCacheProxy,
-        pkgfs_install: pkgfs::install::Client,
-        pkgfs_needs: pkgfs::needs::Client,
-    ) -> Self {
-        Self { cache, pkgfs_install, pkgfs_needs }
-    }
-
-    /// Open the requested package by merkle root using the given selectors, serving the package
-    /// directory on the given directory request on success.
-    pub async fn open_onto(
-        &self,
-        merkle: BlobId,
-        selectors: &[String],
-        dir_request: ServerEnd<DirectoryMarker>,
-    ) -> Result<(), PackageOpenError> {
-        let fut = self.cache.open(
-            &mut merkle.into(),
-            &mut selectors.iter().map(|s| s.as_str()),
-            dir_request,
-        );
-        match fut.await?.map_err(Status::from_raw) {
-            Ok(()) => Ok(()),
-            Err(Status::NOT_FOUND) => Err(PackageOpenError::NotFound),
-            Err(status) => Err(PackageOpenError::UnexpectedStatus(status)),
-        }
-    }
-
-    /// Open the requested package by merkle root using the given selectors, returning the package
-    /// directory client on success.
-    pub async fn open(
-        &self,
-        merkle: BlobId,
-        selectors: &[String],
-    ) -> Result<PackageDirectory, PackageOpenError> {
-        let (dir, dir_request) = PackageDirectory::create_request()?;
-        let () = self.open_onto(merkle, selectors, dir_request).await?;
-        Ok(dir)
-    }
-
-    /// Loads the base package index from pkg-cache.
-    pub async fn base_package_index(&self) -> Result<BasePackageIndex, anyhow::Error> {
-        BasePackageIndex::from_proxy(self.cache.clone()).await
-    }
-
-    /// Create a new blob with the given install intent.
-    ///
-    /// Returns None if the blob already exists and is readable.
-    async fn create_blob(
-        &self,
-        merkle: BlobId,
-        blob_kind: BlobKind,
-    ) -> Result<
-        Option<(pkgfs::install::Blob<pkgfs::install::NeedsTruncate>, pkgfs::install::BlobCloser)>,
-        pkgfs::install::BlobCreateError,
-    > {
-        match self.pkgfs_install.create_blob(merkle.into(), blob_kind).await {
-            Ok((file, closer)) => Ok(Some((file, closer))),
-            Err(pkgfs::install::BlobCreateError::AlreadyExists) => Ok(None),
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Returns a stream of chunks of blobs that are needed to resolve the package specified by
-    /// `pkg_merkle` provided that the `pkg_merkle` blob has previously been written to
-    /// /pkgfs/install/pkg/. The package should be available in /pkgfs/versions when this stream
-    /// terminates without error.
-    fn list_needs(
-        &self,
-        pkg_merkle: BlobId,
-    ) -> impl Stream<Item = Result<HashSet<BlobId>, pkgfs::needs::ListNeedsError>> + '_ {
-        self.pkgfs_needs
-            .list_needs(pkg_merkle.into())
-            .map(|item| item.map(|needs| needs.into_iter().map(Into::into).collect()))
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum PackageOpenError {
-    #[error("fidl error")]
-    Fidl(#[from] fidl::Error),
-
-    #[error("package not found")]
-    NotFound,
-
-    #[error("package cache returned unexpected status: {0}")]
-    UnexpectedStatus(Status),
-}
-
-impl From<&PackageOpenError> for Status {
-    fn from(x: &PackageOpenError) -> Self {
-        match x {
-            PackageOpenError::NotFound => Status::NOT_FOUND,
-            _ => Status::INTERNAL,
-        }
-    }
-}
-
 pub async fn cache_package<'a>(
     repo: Arc<AsyncMutex<Repository>>,
     config: &'a RepositoryConfig,
     url: &'a PkgUrl,
-    cache: &'a PackageCache,
+    cache: &'a pkg::cache::Client,
     blob_fetcher: &'a BlobFetcher,
     cobalt_sender: CobaltSender,
 ) -> Result<(BlobId, PackageDirectory), CacheError> {
@@ -244,19 +128,9 @@ pub async fn cache_package<'a>(
         (merkle, Some(size))
     };
 
-    // If the package already exists, we are done.
-    match cache.open(merkle, &[]).await {
-        Ok(dir) => return Ok((merkle, dir)),
-        Err(PackageOpenError::NotFound) => {}
-        Err(e) => {
-            fx_log_err!(
-                "unable to check if {} is already cached, assuming it isn't: {:#}",
-                url,
-                anyhow!(e)
-            );
-        }
-    }
+    let meta_far_blob = BlobInfo { blob_id: merkle, length: 0 };
 
+    let mut get = cache.get(meta_far_blob)?;
     let mirrors = config.mirrors().to_vec().into();
 
     // Fetch the meta.far.
@@ -264,7 +138,7 @@ pub async fn cache_package<'a>(
         .push(
             merkle,
             FetchBlobContext {
-                blob_kind: BlobKind::Package,
+                opener: get.make_open_meta_blob(),
                 mirrors: Arc::clone(&mirrors),
                 expected_len: size,
                 use_local_mirror: config.use_local_mirror(),
@@ -274,33 +148,49 @@ pub async fn cache_package<'a>(
         .expect("processor exists")
         .map_err(|e| CacheError::FetchMetaFar(e, merkle))?;
 
-    cache
-        .list_needs(merkle)
-        .err_into::<CacheError>()
-        .try_for_each(|needs| {
-            // Fetch the blobs with some amount of concurrency.
-            fx_log_info!("Fetching blobs for {}: {:#?}", url, needs);
-            blob_fetcher
-                .push_all(needs.into_iter().map(|need| {
-                    (
-                        need,
-                        FetchBlobContext {
-                            blob_kind: BlobKind::Data,
-                            mirrors: Arc::clone(&mirrors),
-                            expected_len: None,
-                            use_local_mirror: config.use_local_mirror(),
-                        },
-                    )
-                }))
-                .collect::<FuturesUnordered<_>>()
-                .map(|res| res.expect("processor exists"))
-                .try_collect::<()>()
-                .map_err(|e| CacheError::FetchContentBlob(e, merkle))
-        })
+    let missing_blobs = get.get_missing_blobs().await?;
+
+    // Fetch the missing content blobs with some amount of concurrency.
+    fx_log_info!(
+        "Fetching blobs for {}: {:#?}",
+        url,
+        DebugIter(missing_blobs.iter().map(|need| need.blob_id))
+    );
+    let () = blob_fetcher
+        .push_all(missing_blobs.into_iter().map(|need| {
+            (
+                need.blob_id,
+                FetchBlobContext {
+                    opener: get.make_open_blob(need.blob_id),
+                    mirrors: Arc::clone(&mirrors),
+                    expected_len: None,
+                    use_local_mirror: config.use_local_mirror(),
+                },
+            )
+        }))
+        .collect::<FuturesUnordered<_>>()
+        .map(|res| res.expect("processor exists"))
+        .try_collect::<()>()
+        .map_err(|e| CacheError::FetchContentBlob(e, merkle))
         .await?;
 
-    let dir = cache.open(merkle, &[]).await.map_err(CacheError::OpenPackage)?;
+    // Wait for the get request to return success/failure.
+    let dir = get.finish().await?;
+
     Ok((merkle, dir))
+}
+
+/// Provides a Debug impl for an Iterator that produces a list of all elements in the iterator.
+struct DebugIter<I>(I);
+
+impl<I> std::fmt::Debug for DebugIter<I>
+where
+    I: Iterator + Clone,
+    I::Item: std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.debug_list().entries(self.0.clone()).finish()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -312,7 +202,7 @@ pub enum CacheError {
     MerkleFor(#[source] MerkleForError),
 
     #[error("while listing needed blobs for package")]
-    ListNeeds(#[from] pkgfs::needs::ListNeedsError),
+    ListNeeds(#[from] pkg::cache::ListMissingBlobsError),
 
     #[error("while fetching the meta.far: {1}")]
     FetchMetaFar(#[source] Arc<FetchError>, BlobId),
@@ -320,8 +210,8 @@ pub enum CacheError {
     #[error("while fetching content blob for meta.far {1}")]
     FetchContentBlob(#[source] Arc<FetchError>, BlobId),
 
-    #[error("while opening the package after caching it")]
-    OpenPackage(#[source] PackageOpenError),
+    #[error("Get() request failed")]
+    Get(#[from] pkg::cache::GetError),
 }
 
 pub(crate) trait ToResolveStatus {
@@ -342,7 +232,7 @@ impl ToResolveStatus for CacheError {
             CacheError::ListNeeds(err) => err.to_resolve_status(),
             CacheError::FetchMetaFar(err, ..) => err.to_resolve_status(),
             CacheError::FetchContentBlob(err, _) => err.to_resolve_status(),
-            CacheError::OpenPackage(err) => err.into(),
+            CacheError::Get(err) => err.to_resolve_status(),
         }
     }
 }
@@ -358,32 +248,57 @@ impl ToResolveStatus for MerkleForError {
         }
     }
 }
-impl ToResolveStatus for pkgfs::needs::ListNeedsError {
+impl ToResolveStatus for pkg::cache::OpenError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            pkgfs::needs::ListNeedsError::OpenDir(_) => Status::IO,
-            pkgfs::needs::ListNeedsError::ReadDir(_) => Status::IO,
-            pkgfs::needs::ListNeedsError::ParseError(_) => Status::INTERNAL,
+            pkg::cache::OpenError::NotFound => Status::NOT_FOUND,
+            pkg::cache::OpenError::UnexpectedResponse(_) => Status::INTERNAL,
+            pkg::cache::OpenError::Fidl(_) => Status::INTERNAL,
         }
     }
 }
-impl ToResolveStatus for pkgfs::install::BlobTruncateError {
+impl ToResolveStatus for pkg::cache::GetError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            pkgfs::install::BlobTruncateError::Fidl(_) => Status::IO,
-            pkgfs::install::BlobTruncateError::NoSpace => Status::NO_SPACE,
-            pkgfs::install::BlobTruncateError::UnexpectedResponse(_) => Status::IO,
+            pkg::cache::GetError::UnexpectedResponse(_) => Status::INTERNAL,
+            pkg::cache::GetError::Fidl(_) => Status::INTERNAL,
         }
     }
 }
-impl ToResolveStatus for pkgfs::install::BlobWriteError {
+impl ToResolveStatus for pkg::cache::OpenBlobError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            pkgfs::install::BlobWriteError::Fidl(_) => Status::IO,
-            pkgfs::install::BlobWriteError::Overwrite => Status::IO,
-            pkgfs::install::BlobWriteError::Corrupt => Status::IO,
-            pkgfs::install::BlobWriteError::NoSpace => Status::NO_SPACE,
-            pkgfs::install::BlobWriteError::UnexpectedResponse(_) => Status::IO,
+            pkg::cache::OpenBlobError::OutOfSpace => Status::NO_SPACE,
+            pkg::cache::OpenBlobError::ConcurrentWrite => Status::INTERNAL,
+            pkg::cache::OpenBlobError::UnspecifiedIo => Status::IO,
+            pkg::cache::OpenBlobError::Internal => Status::INTERNAL,
+            pkg::cache::OpenBlobError::Fidl(_) => Status::INTERNAL,
+        }
+    }
+}
+impl ToResolveStatus for pkg::cache::ListMissingBlobsError {
+    fn to_resolve_status(&self) -> Status {
+        let pkg::cache::ListMissingBlobsError(_) = self;
+        Status::INTERNAL
+    }
+}
+impl ToResolveStatus for pkg::cache::TruncateBlobError {
+    fn to_resolve_status(&self) -> Status {
+        match self {
+            pkg::cache::TruncateBlobError::NoSpace => Status::NO_SPACE,
+            pkg::cache::TruncateBlobError::UnexpectedResponse(_) => Status::IO,
+            pkg::cache::TruncateBlobError::Fidl(_) => Status::IO,
+        }
+    }
+}
+impl ToResolveStatus for pkg::cache::WriteBlobError {
+    fn to_resolve_status(&self) -> Status {
+        match self {
+            pkg::cache::WriteBlobError::Overwrite => Status::IO,
+            pkg::cache::WriteBlobError::Corrupt => Status::IO,
+            pkg::cache::WriteBlobError::NoSpace => Status::NO_SPACE,
+            pkg::cache::WriteBlobError::UnexpectedResponse(_) => Status::IO,
+            pkg::cache::WriteBlobError::Fidl(_) => Status::IO,
         }
     }
 }
@@ -391,7 +306,7 @@ impl ToResolveStatus for FetchError {
     fn to_resolve_status(&self) -> Status {
         use FetchError::*;
         match self {
-            CreateBlob(_) => Status::IO,
+            CreateBlob(e) => e.to_resolve_status(),
             BadHttpStatus { code: hyper::StatusCode::UNAUTHORIZED, .. } => Status::ACCESS_DENIED,
             BadHttpStatus { code: hyper::StatusCode::FORBIDDEN, .. } => Status::ACCESS_DENIED,
             BadHttpStatus { .. } => Status::UNAVAILABLE,
@@ -479,9 +394,11 @@ pub enum MerkleForError {
     SerdeError(#[source] serde_json::Error),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct FetchBlobContext {
-    blob_kind: BlobKind,
+    opener: pkg::cache::DeferredOpenBlob,
     mirrors: Arc<[MirrorConfig]>,
     expected_len: Option<u64>,
     use_local_mirror: bool,
@@ -489,6 +406,18 @@ pub struct FetchBlobContext {
 
 impl queue::TryMerge for FetchBlobContext {
     fn try_merge(&mut self, other: Self) -> Result<(), Self> {
+        // The NeededBlobs protocol requires pkg-resolver to attempt to open each blob associated
+        // with a Get() request, and attempting to open a blob being written by another Get()
+        // operation would fail. So, this queue is needed to enforce a concurrency limit and ensure
+        // a blob is not written by more than one fetch at a time.
+
+        // Only requests that are the same request on the same channel can be merged, and the
+        // packageresolver should never enqueue such duplicate requests, so, realistically,
+        // try_merge always returns Err(other).
+        if self.opener != other.opener {
+            return Err(other);
+        }
+
         // Unmergeable if both contain different expected lengths. One of these instances will
         // fail, but we can't know which one here.
         let expected_len = match (self.expected_len, other.expected_len) {
@@ -498,31 +427,20 @@ impl queue::TryMerge for FetchBlobContext {
             _ => return Err(other),
         };
 
-        // Installing a blob as a package will fulfill any pending needs of that blob as a data
-        // blob as well, so upgrade Data to Package.
-        let blob_kind =
-            if self.blob_kind == BlobKind::Package || other.blob_kind == BlobKind::Package {
-                BlobKind::Package
-            } else {
-                BlobKind::Data
-            };
-
-        // For now, don't attempt to merge mirrors, but do merge these contexts if the mirrors are
+        // Don't attempt to merge mirrors, but do merge these contexts if the mirrors are
         // equivalent.
-        if self.mirrors != other.mirrors {
+        if self.mirrors != other.mirrors || self.use_local_mirror != other.use_local_mirror {
             return Err(other);
         }
 
         // Contexts are mergeable, apply the merged state.
         self.expected_len = expected_len;
-        self.blob_kind = blob_kind;
         Ok(())
     }
 }
 
 pub fn make_blob_fetch_queue(
     node: fuchsia_inspect::Node,
-    cache: PackageCache,
     max_concurrency: usize,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
@@ -538,7 +456,6 @@ pub fn make_blob_fetch_queue(
         queue::work_queue(max_concurrency, move |merkle: BlobId, context: FetchBlobContext| {
             let inspect = inspect.fetch(&merkle);
             let http_client = Arc::clone(&http_client);
-            let cache = cache.clone();
             let stats = Arc::clone(&stats);
             let cobalt_sender = cobalt_sender.clone();
             let local_mirror_proxy = local_mirror_proxy.clone();
@@ -547,7 +464,6 @@ pub fn make_blob_fetch_queue(
                 let res = fetch_blob(
                     inspect,
                     &http_client,
-                    cache,
                     stats,
                     cobalt_sender,
                     merkle,
@@ -567,7 +483,6 @@ pub fn make_blob_fetch_queue(
 async fn fetch_blob(
     inspect: inspect::NeedsRemoteType,
     http_client: &fuchsia_hyper::HttpsClient,
-    cache: PackageCache,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
     merkle: BlobId,
@@ -586,9 +501,8 @@ async fn fetch_blob(
                 inspect.local_mirror(),
                 local_mirror,
                 merkle,
-                context.blob_kind,
+                context.opener,
                 context.expected_len,
-                &cache,
             )
             .await;
             trace::duration_end!("app", "fetch_blob_local", "result" => format!("{:?}", res).as_str());
@@ -601,10 +515,9 @@ async fn fetch_blob(
                 http_client,
                 &context.mirrors,
                 merkle,
-                context.blob_kind,
+                context.opener,
                 context.expected_len,
                 blob_fetch_params,
-                &cache,
                 stats,
                 cobalt_sender,
             )
@@ -641,10 +554,9 @@ async fn fetch_blob_http(
     client: &fuchsia_hyper::HttpsClient,
     mirrors: &[MirrorConfig],
     merkle: BlobId,
-    blob_kind: BlobKind,
+    opener: pkg::cache::DeferredOpenBlob,
     expected_len: Option<u64>,
     blob_fetch_params: BlobFetchParams,
-    cache: &PackageCache,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), FetchError> {
@@ -663,6 +575,7 @@ async fn fetch_blob_http(
         let flaked = Arc::clone(&flaked);
         let mirror_stats = &mirror_stats;
         let mut cobalt_sender = cobalt_sender.clone();
+        let opener = &opener;
         let inspect = &inspect;
         let blob_url = &blob_url;
 
@@ -671,8 +584,8 @@ async fn fetch_blob_http(
             let res = async {
                 let inspect = inspect.attempt();
                 inspect.state(inspect::Http::CreateBlob);
-                if let Some((blob, blob_closer)) =
-                    cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
+                if let Some(pkg::cache::NeededBlob { blob, closer: blob_closer }) =
+                    opener.open().await.map_err(FetchError::CreateBlob)?
                 {
                     inspect.state(inspect::Http::DownloadBlob);
                     let res = download_blob(
@@ -735,14 +648,13 @@ async fn fetch_blob_local(
     inspect: inspect::TriggerAttempt<inspect::LocalMirror>,
     local_mirror: &LocalMirrorProxy,
     merkle: BlobId,
-    blob_kind: BlobKind,
+    opener: pkg::cache::DeferredOpenBlob,
     expected_len: Option<u64>,
-    cache: &PackageCache,
 ) -> Result<(), FetchError> {
     let inspect = inspect.attempt();
     inspect.state(inspect::LocalMirror::CreateBlob);
-    if let Some((blob, blob_closer)) =
-        cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
+    if let Some(pkg::cache::NeededBlob { blob, closer: blob_closer }) =
+        opener.open().await.map_err(FetchError::CreateBlob)?
     {
         let res = read_local_blob(&inspect, local_mirror, merkle, expected_len, blob).await;
         inspect.state(inspect::LocalMirror::CloseBlob);
@@ -757,7 +669,7 @@ async fn read_local_blob(
     proxy: &LocalMirrorProxy,
     merkle: BlobId,
     expected_len: Option<u64>,
-    dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
+    dest: pkg::cache::Blob<pkg::cache::NeedsTruncate>,
 ) -> Result<(), FetchError> {
     let (local_file, remote) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::FileMarker>()
         .map_err(FetchError::FidlError)?;
@@ -793,8 +705,8 @@ async fn read_local_blob(
         }
         inspect.state(inspect::LocalMirror::WriteBlob);
         dest = match dest.write(&data).await.map_err(FetchError::Write)? {
-            pkgfs::install::BlobWriteSuccess::MoreToWrite(blob) => blob,
-            pkgfs::install::BlobWriteSuccess::Done => break,
+            pkg::cache::BlobWriteSuccess::MoreToWrite(blob) => blob,
+            pkg::cache::BlobWriteSuccess::Done => break,
         };
         inspect.write_bytes(data.len());
     }
@@ -813,7 +725,7 @@ async fn download_blob(
     client: &fuchsia_hyper::HttpsClient,
     uri: &http::Uri,
     expected_len: Option<u64>,
-    dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
+    dest: pkg::cache::Blob<pkg::cache::NeedsTruncate>,
     blob_fetch_params: BlobFetchParams,
     fetch_stats: &FetchStats,
 ) -> Result<(), FetchError> {
@@ -836,11 +748,11 @@ async fn download_blob(
 
         inspect.state(inspect::Http::WriteBlob);
         dest = match dest.write(&chunk).await.map_err(FetchError::Write)? {
-            pkgfs::install::BlobWriteSuccess::MoreToWrite(blob) => {
+            pkg::cache::BlobWriteSuccess::MoreToWrite(blob) => {
                 written += chunk.len() as u64;
                 blob
             }
-            pkgfs::install::BlobWriteSuccess::Done => {
+            pkg::cache::BlobWriteSuccess::Done => {
                 written += chunk.len() as u64;
                 break;
             }
@@ -860,7 +772,7 @@ async fn download_blob(
 #[derive(Debug, thiserror::Error)]
 pub enum FetchError {
     #[error("could not create blob")]
-    CreateBlob(#[source] pkgfs::install::BlobCreateError),
+    CreateBlob(#[source] pkg::cache::OpenBlobError),
 
     #[error("Blob fetch of {uri}: http request expected 200, got {code}")]
     BadHttpStatus { code: hyper::StatusCode, uri: String },
@@ -881,10 +793,10 @@ pub enum FetchError {
     BlobTooLarge { uri: String },
 
     #[error("failed to truncate blob")]
-    Truncate(#[source] pkgfs::install::BlobTruncateError),
+    Truncate(#[source] pkg::cache::TruncateBlobError),
 
     #[error("failed to write blob data")]
-    Write(#[source] pkgfs::install::BlobWriteError),
+    Write(#[source] pkg::cache::WriteBlobError),
 
     #[error("hyper error while fetching {uri}")]
     Hyper {

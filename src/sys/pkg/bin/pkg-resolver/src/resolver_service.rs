@@ -5,8 +5,8 @@
 use {
     crate::{
         cache::{
-            BasePackageIndex, BlobFetcher, CacheError, CacheError::*, MerkleForError,
-            MerkleForError::*, PackageCache, ToResolveStatus as _,
+            BasePackageIndex, BlobFetcher, CacheError::*, MerkleForError, MerkleForError::*,
+            ToResolveStatus as _,
         },
         font_package_manager::FontPackageManager,
         queue,
@@ -22,7 +22,7 @@ use {
         FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
         PackageResolverRequestStream,
     },
-    fidl_fuchsia_pkg_ext::BlobId,
+    fidl_fuchsia_pkg_ext::{self as pkg, BlobId},
     fuchsia_cobalt::CobaltSender,
     fuchsia_pkg::{PackageDirectory, PackagePath},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
@@ -42,7 +42,7 @@ pub use inspect::ResolverService as ResolverServiceInspectState;
 pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<PackageDirectory, Status>>;
 
 pub fn make_package_fetch_queue(
-    cache: PackageCache,
+    cache: pkg::cache::Client,
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     repo_manager: Arc<RwLock<RepositoryManager>>,
@@ -291,16 +291,16 @@ async fn package_from_base_or_repo_or_cache(
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
-    cache: PackageCache,
+    cache: pkg::cache::Client,
     blob_fetcher: BlobFetcher,
     inspect: &ResolverServiceInspectState,
 ) -> Result<PackageDirectory, Status> {
     let package_inspect = inspect.resolve(pkg_url);
     if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
         fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
-        let dir = cache.open(blob, &[]).await.map_err(|e| {
-            let status = Status::from(&e);
-            fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(e));
+        let dir = cache.open(blob).await.map_err(|e| {
+            let status = e.to_resolve_status();
+            fx_log_err!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
             status
         })?;
         return Ok(dir);
@@ -346,7 +346,7 @@ async fn package_from_repo_or_cache(
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
     rewritten_url: &PkgUrl,
-    cache: PackageCache,
+    cache: pkg::cache::Client,
     blob_fetcher: BlobFetcher,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<PackageSource<GetPackageError>, GetPackageError> {
@@ -367,7 +367,7 @@ async fn package_from_repo_or_cache(
                 inspect_state,
             ) {
                 Some(blob) => {
-                    let dir = cache.open(blob, &[]).await?;
+                    let dir = cache.open(blob).await?;
                     Ok(PackageSource::SystemImageCachePackages(blob, dir, e))
                 }
                 None => Err(e),
@@ -386,16 +386,16 @@ async fn package_from_repo_or_cache(
             // manifest pkg URLs are for fuchsia.com, so do not use the rewritten URL.
             match hash_from_cache_packages_manifest(&pkg_url, system_cache_list) {
                 Some(blob) => {
-                    let dir = cache.open(blob, &[]).await?;
+                    let dir = cache.open(blob).await?;
                     Ok(PackageSource::SystemImageCachePackages(blob, dir, e))
                 }
                 None => Err(e),
             }
         }
-        Err(e @ GetPackageError::OpenPackage(..))
+        Err(e @ OpenPackage(..))
         | Err(e @ Cache(FetchContentBlob(..)))
         | Err(e @ Cache(FetchMetaFar(..)))
-        | Err(e @ Cache(CacheError::OpenPackage(..))) => {
+        | Err(e @ Cache(Get(_))) => {
             // We could talk to TUF and we know there's a new version of this package,
             // but we coldn't retrieve its blobs for some reason. Refuse to fall back to
             // cache_packages and instead return an error for the resolve, which is consistent with

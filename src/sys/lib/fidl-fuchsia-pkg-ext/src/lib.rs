@@ -20,3 +20,5 @@ pub use crate::errors::{BlobIdParseError, RepositoryParseError};
 
 mod measure;
 pub use crate::measure::Measurable;
+
+pub mod cache;
