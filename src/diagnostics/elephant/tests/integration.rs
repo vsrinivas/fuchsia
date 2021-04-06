@@ -35,6 +35,7 @@ const INSPECT_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.FeedbackArchiveAcce
 enum Published {
     Nothing,
     Int(i32),
+    SizeError,
 }
 
 #[derive(PartialEq)]
@@ -42,12 +43,14 @@ enum FileState {
     None,
     NoInt,
     Int(i32),
+    TooBig,
 }
 
-struct FileChange {
+struct FileChange<'a> {
     old: FileState,
     after: Option<Time>,
     new: FileState,
+    file_name: &'a str,
 }
 
 /// Runs the elephant persistor and a test component that can have its inspect properties
@@ -55,6 +58,9 @@ struct FileChange {
 #[fuchsia::test]
 async fn elephant_integration() {
     setup();
+    let persisted_data_path = "/tmp/injected_storage/current/test-service/test-component-metric";
+    let persisted_too_big_path =
+        "/tmp/injected_storage/current/test-service/test-component-too-big";
 
     let mut elephant_app = elephant().await;
 
@@ -69,12 +75,22 @@ async fn elephant_integration() {
         elephant_service.persist("wrong-component-metric").await.unwrap(),
         PersistResult::BadName
     );
-    expect_file_change(FileChange { old: FileState::None, new: FileState::None, after: None });
+    expect_file_change(FileChange {
+        old: FileState::None,
+        new: FileState::None,
+        file_name: persisted_data_path,
+        after: None,
+    });
     // Verify that the backoff mechanism works by observing the time between first and second
     // persistence. The duration should be the same as "repeat_seconds" in test_config.persist.
     let backoff_time = Time::get_monotonic() + Duration::from_seconds(1);
     elephant_service.persist("test-component-metric").await.unwrap();
-    expect_file_change(FileChange { old: FileState::None, new: FileState::Int(19), after: None });
+    expect_file_change(FileChange {
+        old: FileState::None,
+        new: FileState::Int(19),
+        file_name: persisted_data_path,
+        after: None,
+    });
 
     // Valid data can be replaced by missing data.
     example_app.kill().unwrap();
@@ -83,6 +99,7 @@ async fn elephant_integration() {
     expect_file_change(FileChange {
         old: FileState::Int(19),
         new: FileState::NoInt,
+        file_name: persisted_data_path,
         after: Some(backoff_time),
     });
     example_app.kill().unwrap();
@@ -90,19 +107,45 @@ async fn elephant_integration() {
     // Missing data can be replaced by new data.
     let _example_app = inspect_source(Some(42i32)).await;
     elephant_service.persist("test-component-metric").await.unwrap();
-    expect_file_change(FileChange { old: FileState::NoInt, new: FileState::Int(42), after: None });
+    expect_file_change(FileChange {
+        old: FileState::NoInt,
+        new: FileState::Int(42),
+        file_name: persisted_data_path,
+        after: None,
+    });
 
     // The persisted data shouldn't be published until Elephant is killed and restarted.
     verify_elephant_publication(Published::Nothing).await;
     elephant_app.kill().unwrap();
     let mut elephant_app = elephant().await;
     verify_elephant_publication(Published::Int(42)).await;
-    expect_file_change(FileChange { old: FileState::None, new: FileState::None, after: None });
+    expect_file_change(FileChange {
+        old: FileState::None,
+        new: FileState::None,
+        file_name: persisted_data_path,
+        after: None,
+    });
 
     // After another restart, no data should be published.
     elephant_app.kill().unwrap();
-    let _elephant_app = elephant().await;
+    let mut elephant_app = elephant().await;
     verify_elephant_publication(Published::Nothing).await;
+    // The "too-big" tag should save a short error string instead of the data.
+    let elephant_service = elephant_app
+        .connect_to_named_service::<DataPersistenceMarker>(TEST_ELEPHANT_SERVICE_NAME)
+        .unwrap();
+    elephant_service.persist("test-component-too-big").await.unwrap();
+    expect_file_change(FileChange {
+        old: FileState::None,
+        new: FileState::TooBig,
+        file_name: persisted_too_big_path,
+        after: None,
+    });
+
+    elephant_app.kill().unwrap();
+    let mut elephant_app = elephant().await;
+    verify_elephant_publication(Published::SizeError).await;
+    elephant_app.kill().unwrap();
 }
 
 // Starts and returns an Elephant app. Assumes:
@@ -182,12 +225,10 @@ async fn wait_for_inspect_ready() {
 
 // Verifies that the file changes from the old state to the new state within the specified time
 // window. This involves polling; the granularity for retries is 100 msec.
-fn expect_file_change(rules: FileChange) {
+fn expect_file_change(rules: FileChange<'_>) {
     // Returns None if the file isn't there. If the file is there but contains "[]" then it tries
     // again (this avoids a file-writing race condition). Any other string will be returned.
-    fn file_contents() -> Option<String> {
-        let persisted_data_path =
-            "/tmp/injected_storage/current/test-service/test-component-metric";
+    fn file_contents(persisted_data_path: &str) -> Option<String> {
         loop {
             let file = File::open(persisted_data_path);
             if file.is_err() {
@@ -217,6 +258,7 @@ fn expect_file_change(rules: FileChange) {
             FileState::None => None,
             FileState::NoInt => Some(expected_stored_data(None)),
             FileState::Int(i) => Some(expected_stored_data(Some(*i))),
+            FileState::TooBig => Some("\"Data too big: 61 > max length 10\"".to_string()),
         }
     }
 
@@ -234,8 +276,8 @@ fn expect_file_change(rules: FileChange) {
 
     loop {
         assert!(start_time + Duration::from_seconds(GIVE_UP_POLLING_SECS) > Time::get_monotonic());
-        let contents = file_contents();
-        if rules.old != rules.new && strings_match(&contents, &old_string, "old file check") {
+        let contents = file_contents(rules.file_name);
+        if rules.old != rules.new && strings_match(&contents, &old_string, "old file (likely OK)") {
             thread::sleep(time::Duration::from_millis(100));
             continue;
         }
@@ -245,6 +287,10 @@ fn expect_file_change(rules: FileChange) {
             }
             return;
         }
+        error!("File contents don't match old or new target.");
+        error!("Old : {:?}", old_string);
+        error!("New : {:?}", new_string);
+        error!("File: {:?}", contents);
         assert!(false);
         break;
     }
@@ -325,23 +371,31 @@ fn expected_stored_data(number: Option<i32>) -> String {
 }
 
 fn expected_elephant_inspect(published: Published) -> String {
-    let number_text = match published {
-        Published::Int(number) => format!("\"extra_number\": {},", number),
-        _ => "".to_string(),
-    };
     let variant = match published {
         Published::Nothing => "".to_string(),
-        Published::Int(_) => r#"
+        Published::SizeError => r#"
             "test-service": {
-                "test-component-metric": {
-                    "test_component.cmx": {
-                        %NUMBER_TEXT%
-                        "lazy-double": 3.14
-                    }
-                }
+                "test-component-too-big": "Data too big: 61 > max length 10"
             }
             "#
-        .replace("%NUMBER_TEXT%", &number_text),
+        .to_string(),
+        Published::Int(_) => {
+            let number_text = match published {
+                Published::Int(number) => format!("\"extra_number\": {},", number),
+                _ => "".to_string(),
+            };
+            r#"
+                "test-service": {
+                    "test-component-metric": {
+                        "test_component.cmx": {
+                            %NUMBER_TEXT%
+                            "lazy-double": 3.14
+                        }
+                    }
+                }
+                "#
+            .replace("%NUMBER_TEXT%", &number_text)
+        }
     };
     r#"[
   {

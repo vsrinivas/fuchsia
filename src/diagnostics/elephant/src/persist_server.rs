@@ -39,8 +39,13 @@ impl PersistServer {
         for (tag, entry) in tags.into_iter() {
             let inspect_fetcher = InspectFetcher::create(INSPECT_SERVICE_PATH, entry.selectors)?;
             let backoff = zx::Duration::from_seconds(entry.repeat_seconds);
-            let fetcher =
-                Fetcher::create(inspect_fetcher, backoff, service_name.clone(), tag.clone());
+            let fetcher = Fetcher::new(FetcherArgs {
+                source: inspect_fetcher,
+                backoff,
+                max_save_length: entry.max_bytes,
+                service_name: service_name.clone(),
+                tag: tag.clone(),
+            });
             persisters.insert(tag, fetcher);
         }
         Ok(PersistServer { service_name, fetchers: persisters })
@@ -138,15 +143,19 @@ fn string_to_save(inspect_data: &str) -> String {
     .to_string()
 }
 
+struct FetcherArgs {
+    source: InspectFetcher,
+    backoff: zx::Duration,
+    max_save_length: usize,
+    service_name: String,
+    tag: String,
+}
+
 impl Fetcher {
-    fn create(
-        mut source: InspectFetcher,
-        backoff: zx::Duration,
-        service_name: String,
-        tag: String,
-    ) -> Fetcher {
+    fn new(args: FetcherArgs) -> Self {
         // To ensure we only do one fetch-and-write at a time, put it in a task
         // triggered by a stream.
+        let FetcherArgs { tag, service_name, max_save_length, backoff, mut source } = args;
         let (invoke_fetch, mut receiver) = mpsc::channel::<()>(0);
         let tag_copy = tag.to_string();
         let service_name_copy = service_name.to_string();
@@ -154,7 +163,15 @@ impl Fetcher {
             loop {
                 if let Some(_) = receiver.next().await {
                     source.fetch().await.ok().map(|data| {
-                        file_handler::write(&service_name_copy, &tag_copy, &string_to_save(&data));
+                        let mut save_string = string_to_save(&data);
+                        if save_string.len() > max_save_length {
+                            save_string = format!(
+                                "\"Data too big: {} > max length {}\"",
+                                save_string.len(),
+                                max_save_length
+                            );
+                        }
+                        file_handler::write(&service_name_copy, &tag_copy, &save_string);
                     });
                 } else {
                     break;
