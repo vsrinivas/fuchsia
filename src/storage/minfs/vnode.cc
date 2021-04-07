@@ -154,7 +154,7 @@ zx_status_t VnodeMinfs::InitVmo() {
 
   zx_object_set_property(vmo_.get(), ZX_PROP_NAME, "minfs-inode", 11);
 
-  if ((status = fs_->bc_->device()->BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
+  if ((status = fs_->bc_->BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
     vmo_.reset();
     return status;
   }
