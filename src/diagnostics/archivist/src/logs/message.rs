@@ -123,7 +123,7 @@ impl Message {
 
     /// Returns a new Message which encodes a count of dropped messages in its metadata.
     pub fn for_dropped(count: u64, source: &ComponentIdentity, timestamp: i64) -> Self {
-        let message = format!("Dropped {} logs", count);
+        let message = format!("Rolled {} logs out of buffer", count);
         Self {
             id: MessageId::next(),
             stats: Default::default(),
