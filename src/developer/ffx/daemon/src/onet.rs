@@ -150,7 +150,7 @@ impl Drop for HostPipeChild {
             }
         };
 
-        self.task.take().map(|t| fuchsia_async::futures::executor::block_on(t));
+        self.task.take().map(|t| t.detach());
     }
 }
 
