@@ -25,7 +25,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
-	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 var (
@@ -203,7 +203,7 @@ func findBuildIDDir(ctx context.Context, startDir string) (string, error) {
 // been created, dump_syms will not run. This allows many instances of this tool to
 // run at the same time without duplicating work. Note that creating a file with
 // O_EXCL is atomic.
-func runDumpSyms(ctx context.Context, br *runner.BatchRunner, in, out string) error {
+func runDumpSyms(ctx context.Context, br *BatchRunner, in, out string) error {
 	file, err := osmisc.CreateFile(out, os.O_WRONLY|os.O_EXCL)
 	// If the file already exists, don't bother recreating it. This saves a massive
 	// amount of computation and is atomic.
@@ -222,7 +222,7 @@ func runDumpSyms(ctx context.Context, br *runner.BatchRunner, in, out string) er
 
 // produceSymbols takes an input .build-id directory and produces breakpad symbols
 // for each binary in the output .build-id directory.
-func produceSymbols(ctx context.Context, inputBuildIDDir string, br *runner.BatchRunner) ([]binaryRef, error) {
+func produceSymbols(ctx context.Context, inputBuildIDDir string, br *BatchRunner) ([]binaryRef, error) {
 	logger.Tracef(ctx, "about to walk build-id-dir")
 	refs, err := elflib.WalkBuildIDDir(inputBuildIDDir)
 	if err != nil {
@@ -244,7 +244,7 @@ func produceSymbols(ctx context.Context, inputBuildIDDir string, br *runner.Batc
 
 // unpack takes debugArchive and unpacks each debug binary. On seeing a debug binary
 // dump_syms is invoked for it using `br` as well.
-func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
+func unpack(ctx context.Context, br *BatchRunner) ([]binaryRef, error) {
 	// unpack each debug binary into buildIDDirOut
 	file, err := os.Open(debugArchive)
 	if err != nil {
@@ -404,7 +404,7 @@ func main() {
 		}
 	}
 
-	br := runner.NewBatchRunner(ctx, &runner.SubprocessRunner{}, tasks)
+	br := newBatchRunner(ctx, &subprocess.Runner{}, tasks)
 
 	exists, err := osmisc.FileExists(debugArchive)
 	if err != nil {

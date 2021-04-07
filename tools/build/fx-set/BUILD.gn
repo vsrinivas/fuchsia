@@ -24,7 +24,7 @@ go_library("main") {
     "//tools/lib/command",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
-    "//tools/lib/runner",
+    "//tools/lib/subprocess",
   ]
 }
 

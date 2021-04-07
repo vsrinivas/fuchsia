@@ -23,7 +23,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
-	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 const (
@@ -100,7 +100,7 @@ func mainImpl(ctx context.Context) error {
 	}
 
 	fx := fxRunner{
-		sr:          &runner.SubprocessRunner{},
+		sr:          &subprocess.Runner{},
 		checkoutDir: args.checkoutDir,
 	}
 

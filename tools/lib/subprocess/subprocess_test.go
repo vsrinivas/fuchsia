@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package runner
+package subprocess
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 func TestRun(t *testing.T) {
 	t.Run("Run", func(t *testing.T) {
 		t.Run("should execute a command", func(t *testing.T) {
-			r := SubprocessRunner{
+			r := Runner{
 				Env: []string{"FOO=bar"}, // Cover env var handling.
 			}
 			message := "Hello, World!"
@@ -43,7 +43,7 @@ func TestRun(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 
-			r := SubprocessRunner{}
+			r := Runner{}
 			command := []string{"sleep", "5"}
 			err := r.Run(ctx, command, nil, nil)
 			if err == nil {
@@ -54,7 +54,7 @@ func TestRun(t *testing.T) {
 		})
 
 		t.Run("should return an error if the command fails", func(t *testing.T) {
-			r := SubprocessRunner{}
+			r := Runner{}
 			command := []string{"not_a_command_12345"}
 			err := r.Run(context.Background(), command, nil, nil)
 			if err == nil {

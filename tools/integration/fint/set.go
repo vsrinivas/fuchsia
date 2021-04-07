@@ -19,7 +19,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/isatty"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
-	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 // Set runs `gn gen` given a static and context spec. It's intended to be
@@ -30,8 +30,7 @@ func Set(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Con
 		return nil, err
 	}
 
-	runner := &runner.SubprocessRunner{}
-	return runSteps(ctx, runner, staticSpec, contextSpec, platform)
+	return runSteps(ctx, &subprocess.Runner{}, staticSpec, contextSpec, platform)
 }
 
 // runSteps runs `gn gen` along with any post-processing steps, and returns a

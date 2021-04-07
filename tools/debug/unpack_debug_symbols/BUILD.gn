@@ -4,16 +4,21 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 
 go_library("main") {
   source_dir = "cmd"
-  sources = [ "main.go" ]
+  sources = [
+    "batch_runner.go",
+    "batch_runner_test.go",
+    "main.go",
+  ]
   deps = [
     "//tools/debug/elflib",
     "//tools/lib/color",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
-    "//tools/lib/runner",
+    "//tools/lib/subprocess",
   ]
 }
 
@@ -21,4 +26,14 @@ go_binary("unpack_debug_symbols") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/unpack_debug_symbols/cmd"
 
   deps = [ ":main" ]
+}
+
+go_test("unpack_debug_symbols_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/unpack_debug_symbols/cmd" ]
+  deps = [ ":main" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":unpack_debug_symbols_tests" ]
 }

@@ -23,7 +23,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
-	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/serial"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -71,7 +71,7 @@ type cmdRunner interface {
 
 // For testability
 var newRunner = func(dir string, env []string) cmdRunner {
-	return &runner.SubprocessRunner{Dir: dir, Env: env}
+	return &subprocess.Runner{Dir: dir, Env: env}
 }
 
 // For testability

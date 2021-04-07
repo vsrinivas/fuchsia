@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package runner
+package main
 
 import (
 	"context"
@@ -10,40 +10,40 @@ import (
 	"sync"
 )
 
-// Runner defines the interface for running commands by many means such as via SSH
-// or via Shell or serial or some other such means.
-type Runner interface {
+// runner defines the interface for running commands by many means such as via
+// SSH or via Shell or serial or some other such means.
+type runner interface {
 	Run(context.Context, []string, io.Writer, io.Writer) error
 }
 
-// BatchRunner allows many tasks to be run in paralell using a Runner.
-// BatchRunner will give every process the same stderr of your choice
-// but will save the contents of every stdout for later debugging.
+// BatchRunner allows many tasks to be run in parallel using a Runner.
+// BatchRunner will give every process the same stderr of your choice but will
+// save the contents of every stdout for later debugging.
 type BatchRunner struct {
 	ctx        context.Context
 	cancel     func()
 	wg         sync.WaitGroup
 	canEnqueue chan struct{}
-	runner     Runner
+	r          runner
 	errs       chan error
 }
 
-// NewBatchRunner creates a BatchRunner that can use runner to run many jobs
-// in paralell. At most maxBatchSize jobs will be active at once. Enqueue will
-// block when maxBatchSize is exceeded. When ctx is Done, all jobs will terminate
-// without error.
-func NewBatchRunner(ctx context.Context, runner Runner, maxBatchSize int) *BatchRunner {
+// newBatchRunner creates a BatchRunner that can use a runner to run many jobs
+// in parallel. At most maxBatchSize jobs will be active at once. Enqueue will
+// block when maxBatchSize is exceeded. When ctx is Done, all jobs will
+// terminate without error.
+func newBatchRunner(ctx context.Context, r runner, maxBatchSize int) *BatchRunner {
 	ctxCancel, cancel := context.WithCancel(ctx)
 	return &BatchRunner{
 		ctx:        ctxCancel,
 		cancel:     cancel,
 		canEnqueue: make(chan struct{}, maxBatchSize),
-		runner:     runner,
+		r:          r,
 		errs:       make(chan error, 1),
 	}
 }
 
-// Enqueue is similair to Run in Runner except that it's async. The call returns
+// Enqueue is similar to Run in runner except that it's async. The call returns
 // immediately and the enqueued command starts running. If however the maximum
 // batch size has been reached Enqueue will block until a new job opens up.
 func (b *BatchRunner) Enqueue(command []string, stdout, stderr io.Writer, closers ...func()) {
@@ -68,7 +68,7 @@ func (b *BatchRunner) Enqueue(command []string, stdout, stderr io.Writer, closer
 			}
 		}()
 		// Now this goroutine blocks until Run finishes.
-		if err := b.runner.Run(b.ctx, command, stdout, stderr); err != nil {
+		if err := b.r.Run(b.ctx, command, stdout, stderr); err != nil {
 			// If an error has already been sent out don't bother sending another.
 			select {
 			case b.errs <- err:
@@ -82,7 +82,7 @@ func (b *BatchRunner) Enqueue(command []string, stdout, stderr io.Writer, closer
 	}()
 }
 
-// Wait blocks on all previouslly Enqueued tasks to finish. It is invalid for
+// Wait blocks on all previously Enqueued tasks to finish. It is invalid for
 // Enqueue to be called after Wait is called.
 func (b *BatchRunner) Wait() error {
 	close(b.canEnqueue)

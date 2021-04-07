@@ -27,7 +27,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/serial"
@@ -407,7 +407,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 	for k, v := range subprocessEnv {
 		environ = append(environ, fmt.Sprintf("%s=%s", k, v))
 	}
-	runner := runner.SubprocessRunner{
+	runner := subprocess.Runner{
 		Env: environ,
 	}
 

@@ -23,5 +23,6 @@ group("tests") {
     "//tools/debug/covargs:tests",
     "//tools/debug/elflib:elflib_tests($host_toolchain)",
     "//tools/debug/symbolize:symbolize_tests($host_toolchain)",
+    "//tools/debug/unpack_debug_symbols:tests($host_toolchain)",
   ]
 }

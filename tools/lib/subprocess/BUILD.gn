@@ -5,10 +5,8 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("runner") {
+go_library("subprocess") {
   sources = [
-    "batch.go",
-    "batch_test.go",
     "doc.go",
     "subprocess.go",
     "subprocess_test.go",
@@ -16,7 +14,7 @@ go_library("runner") {
   deps = [ "//tools/lib/logger" ]
 }
 
-go_test("runner_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/runner" ]
-  deps = [ ":runner" ]
+go_test("subprocess_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/subprocess" ]
+  deps = [ ":subprocess" ]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package runner
+package subprocess
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
-// SubprocessRunner is a Runner that runs commands as local subprocesses.
-type SubprocessRunner struct {
+// Runner is a Runner that runs commands as local subprocesses.
+type Runner struct {
 	// Dir is the working directory of the subprocesses; if unspecified, that
 	// of the current process will be used.
 	Dir string
@@ -28,13 +28,13 @@ type SubprocessRunner struct {
 // Run runs a command until completion or until a context is canceled, in
 // which case the subprocess is killed so that no subprocesses it spun up are
 // orphaned.
-func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
+func (r *Runner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
 	return r.RunWithStdin(ctx, command, stdout, stderr, os.Stdin)
 }
 
 // RunWithStdin operates identically to Run, but additionally pipes input to the
 // process via stdin.
-func (r *SubprocessRunner) RunWithStdin(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+func (r *Runner) RunWithStdin(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

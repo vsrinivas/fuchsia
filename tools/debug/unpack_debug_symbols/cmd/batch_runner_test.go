@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package runner
+package main
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ type failRunner struct {
 	err    string
 }
 
-func (f *failRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
+func (f *failRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
 	io.WriteString(stdout, f.stdout)
 	io.WriteString(stderr, f.stderr)
 	return fmt.Errorf("%s", f.err)
@@ -30,7 +30,7 @@ func TestExpectedStdout(t *testing.T) {
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
 	ctx := context.Background()
-	br := NewBatchRunner(ctx, &failRunner{"foo", "bar", "baz"}, 1)
+	br := newBatchRunner(ctx, &failRunner{"foo", "bar", "baz"}, 1)
 	br.Enqueue([]string{}, &stdout, &stderr)
 	batchErr := br.Wait()
 	if batchErr == nil {
@@ -64,7 +64,7 @@ func (t *ThreadSafeBuffer) String() string {
 
 type mockRunner struct{}
 
-func (m mockRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
+func (m mockRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
 	for _, str := range command {
 		io.WriteString(stderr, str)
 	}
@@ -77,7 +77,7 @@ func TestEnqueueWait(t *testing.T) {
 	var stdout bytes.Buffer
 	ctx := context.Background()
 	// Set max batch size of 3
-	br := NewBatchRunner(ctx, mockRunner{}, 3)
+	br := newBatchRunner(ctx, mockRunner{}, 3)
 	// Enqueue more than 3 tasks.
 	for i := 0; i < 10; i++ {
 		br.Enqueue([]string{"a"}, &stdout, &stderr)
@@ -106,7 +106,7 @@ func TestEnqueuePanic(t *testing.T) {
 		}
 	}()
 	ctx := context.Background()
-	br := NewBatchRunner(ctx, mockRunner{}, 1)
+	br := newBatchRunner(ctx, mockRunner{}, 1)
 	if err := br.Wait(); err != nil {
 		t.Error(err)
 	}
@@ -115,7 +115,7 @@ func TestEnqueuePanic(t *testing.T) {
 
 type loopRunner struct{}
 
-func (m loopRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
+func (m loopRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
 	<-ctx.Done()
 	return nil
 }
@@ -125,7 +125,7 @@ func TestCancelJob(t *testing.T) {
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
 	ctx, cancel := context.WithCancel(context.Background())
-	br := NewBatchRunner(ctx, loopRunner{}, 2)
+	br := newBatchRunner(ctx, loopRunner{}, 2)
 	br.Enqueue([]string{}, &stdout, &stderr)
 	cancel()
 	if err := br.Wait(); err != nil {
