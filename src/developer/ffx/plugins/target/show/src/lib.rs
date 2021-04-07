@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_buildinfo::ProviderProxy,
     fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-    fidl_fuchsia_feedback::DeviceIdProviderProxy,
+    fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
     fidl_fuchsia_hwinfo::{BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
@@ -29,6 +29,7 @@ mod show;
     ProductProxy = "core/appmgr:out:fuchsia.hwinfo.Product",
     ProviderProxy = "core/appmgr:out:fuchsia.buildinfo.Provider",
     DeviceIdProviderProxy = "core/appmgr:out:fuchsia.feedback.DeviceIdProvider"
+    LastRebootInfoProviderProxy = "core/appmgr:out:fuchsia.feedback.LastRebootInfoProvider"
 )]
 pub async fn show_cmd(
     channel_control_proxy: ChannelControlProxy,
@@ -37,6 +38,7 @@ pub async fn show_cmd(
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
     device_id_proxy: DeviceIdProviderProxy,
+    last_reboot_info_proxy: LastRebootInfoProviderProxy,
     remote_proxy: RemoteControlProxy,
     daemon_proxy: DaemonProxy,
     target_show_args: args::TargetShow,
@@ -48,6 +50,7 @@ pub async fn show_cmd(
         product_proxy,
         build_info_proxy,
         device_id_proxy,
+        last_reboot_info_proxy,
         remote_proxy,
         daemon_proxy,
         target_show_args,
@@ -64,6 +67,7 @@ async fn show_cmd_impl<W: Write>(
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
     device_id_proxy: DeviceIdProviderProxy,
+    last_reboot_info_proxy: LastRebootInfoProviderProxy,
     remote_proxy: RemoteControlProxy,
     daemon_proxy: DaemonProxy,
     target_show_args: args::TargetShow,
@@ -83,9 +87,10 @@ async fn show_cmd_impl<W: Write>(
         gather_update_show(channel_control_proxy),
         gather_build_info_show(build_info_proxy),
         gather_device_id_show(device_id_proxy),
+        gather_last_reboot_info_show(last_reboot_info_proxy),
     ) {
-        Ok((target, board, build, device, device_id, product, update)) => {
-            vec![target, board, build, device, device_id, product, update]
+        Ok((target, board, build, device, device_id, product, update, reboot_info)) => {
+            vec![target, board, build, device, device_id, product, update, reboot_info]
         }
         Err(e) => bail!(e),
     };
@@ -307,13 +312,52 @@ async fn gather_update_show(channel_control: ChannelControlProxy) -> Result<Show
     ))
 }
 
+/// Show information about the last device_reboot.
+async fn gather_last_reboot_info_show(
+    last_reboot_info_proxy: LastRebootInfoProviderProxy,
+) -> Result<ShowEntry> {
+    let info = last_reboot_info_proxy.get().await?;
+    let graceful = info.graceful.map(|x| {
+        ShowEntry::str_value(
+            "Graceful",
+            "graceful",
+            "Whether the last reboot happened in a controlled manner.",
+            &Some(if x { "true" } else { "false" }.to_owned()),
+        )
+    });
+    let reason = info.reason.map(|x| {
+        ShowEntry::str_value(
+            "Reason",
+            "reason",
+            "Reason for the last reboot.",
+            &Some(format!("{:?}", x)),
+        )
+    });
+    let uptime = info.uptime.map(|x| {
+        ShowEntry::str_value(
+            "Uptime (ns)",
+            "uptime",
+            "How long the device was running prior to the last reboot.",
+            &Some(x.to_string()),
+        )
+    });
+    Ok(ShowEntry::group(
+        "Last Reboot",
+        "last_reboot",
+        "",
+        vec![graceful, reason, uptime].into_iter().filter_map(|x| x).collect(),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl_fuchsia_buildinfo::{BuildInfo, ProviderRequest};
     use fidl_fuchsia_developer_bridge::{DaemonRequest, TargetAddrInfo, TargetIp};
     use fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlRequest};
-    use fidl_fuchsia_feedback::DeviceIdProviderRequest;
+    use fidl_fuchsia_feedback::{
+        DeviceIdProviderRequest, LastReboot, LastRebootInfoProviderRequest, RebootReason,
+    };
     use fidl_fuchsia_hwinfo::{
         BoardInfo, BoardRequest, DeviceInfo, DeviceRequest, ProductInfo, ProductRequest,
     };
@@ -361,6 +405,10 @@ mod tests {
         \n    Commit: \"fake_commit\"\
         \nFeedback: \
         \n    Device ID: \"fake_device_id\"\
+        \nLast Reboot: \
+        \n    Graceful: \"true\"\
+        \n    Reason: \"ZbiSwap\"\
+        \n    Uptime (ns): \"65000\"\
         \n";
 
     fn setup_fake_daemon_server() -> DaemonProxy {
@@ -433,6 +481,21 @@ mod tests {
         })
     }
 
+    fn setup_fake_last_reboot_info_server() -> LastRebootInfoProviderProxy {
+        setup_fake_last_reboot_info_proxy(move |req| match req {
+            LastRebootInfoProviderRequest::Get { responder } => {
+                responder
+                    .send(LastReboot {
+                        graceful: Some(true),
+                        uptime: Some(65000),
+                        reason: Some(RebootReason::ZbiSwap),
+                        ..LastReboot::EMPTY
+                    })
+                    .unwrap();
+            }
+        })
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_show_cmd_impl() {
         let mut output = Vec::new();
@@ -443,6 +506,7 @@ mod tests {
             setup_fake_product_server(),
             setup_fake_build_info_server(),
             setup_fake_device_id_server(),
+            setup_fake_last_reboot_info_server(),
             setup_fake_remote_control_server(),
             setup_fake_daemon_server(),
             args::TargetShow::default(),
@@ -466,6 +530,7 @@ mod tests {
             setup_fake_product_server(),
             setup_fake_build_info_server(),
             setup_fake_device_id_server(),
+            setup_fake_last_reboot_info_server(),
             setup_fake_remote_control_server(),
             setup_fake_daemon_server(),
             args::TargetShow { json: true, ..Default::default() },
@@ -476,7 +541,7 @@ mod tests {
         let v: Value =
             serde_json::from_str(std::str::from_utf8(&output).unwrap()).expect("Valid JSON");
         assert!(v.is_array());
-        assert_eq!(v.as_array().unwrap().len(), 7);
+        assert_eq!(v.as_array().unwrap().len(), 8);
 
         assert_eq!(v[0]["label"], Value::String("target".to_string()));
         assert_eq!(v[1]["label"], Value::String("board".to_string()));
@@ -485,6 +550,7 @@ mod tests {
         assert_eq!(v[4]["label"], Value::String("update".to_string()));
         assert_eq!(v[5]["label"], Value::String("build".to_string()));
         assert_eq!(v[6]["label"], Value::String("feedback".to_string()));
+        assert_eq!(v[7]["label"], Value::String("last_reboot".to_string()));
 
         assert_eq!(v[0]["child"].as_array().unwrap().len(), 2);
         assert_eq!(v[1]["child"].as_array().unwrap().len(), 2);
@@ -493,6 +559,7 @@ mod tests {
         assert_eq!(v[4]["child"].as_array().unwrap().len(), 2);
         assert_eq!(v[5]["child"].as_array().unwrap().len(), 4);
         assert_eq!(v[6]["child"].as_array().unwrap().len(), 1);
+        assert_eq!(v[7]["child"].as_array().unwrap().len(), 3);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -571,7 +638,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_gather_product_show() {
         let test_proxy = setup_fake_product_server();
-        let result = gather_product_show(test_proxy).await.expect("gather device show");
+        let result = gather_product_show(test_proxy).await.expect("gather product show");
         assert_eq!(result.title, "Product");
         assert_eq!(result.child[0].title, "Audio amplifier");
         assert_eq!(
@@ -593,6 +660,20 @@ mod tests {
             result.child[3].value,
             Some(ShowValue::StringValue("fake_colorway".to_string()))
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_gather_last_reboot_info_show() {
+        let test_proxy = setup_fake_last_reboot_info_server();
+        let result =
+            gather_last_reboot_info_show(test_proxy).await.expect("gather last reboot info show");
+        assert_eq!(result.title, "Last Reboot");
+        assert_eq!(result.child[0].title, "Graceful");
+        assert_eq!(result.child[0].value, Some(ShowValue::StringValue("true".to_string())));
+        assert_eq!(result.child[1].title, "Reason");
+        assert_eq!(result.child[1].value, Some(ShowValue::StringValue("ZbiSwap".to_string())));
+        assert_eq!(result.child[2].title, "Uptime (ns)");
+        assert_eq!(result.child[2].value, Some(ShowValue::StringValue("65000".to_string())));
     }
 
     fn setup_fake_channel_control_server() -> ChannelControlProxy {
