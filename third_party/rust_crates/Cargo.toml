@@ -305,7 +305,7 @@ add_cfgs = []
 # Keep this sorted alphabetically, please.
 
 [gn.package.anyhow."1.0.38"]
-# TODO(bwb) turn on when backtrace stabilizes
+# TODO(https://github.com/rust-lang/rust/pull/72981): uncomment when backtrace is stabilized.
 # rustflags = ["--cfg=backtrace"]
 
 [gn.package.bitflags."1.2.1"]
