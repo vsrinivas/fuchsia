@@ -14,7 +14,7 @@
 
 namespace {
 
-TEST(UnionTests, KeywordsAsFieldNames) {
+TEST(UnionTests, GoodKeywordsAsFieldNames) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -32,7 +32,7 @@ union Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(UnionTests, RecursiveUnion) {
+TEST(UnionTests, GoodRecursiveUnion) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -44,7 +44,7 @@ union Value {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(UnionTests, MutuallyRecursive) {
+TEST(UnionTests, GoodMutuallyRecursive) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -59,7 +59,7 @@ struct Bar {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(UnionTests, FlexibleUnion) {
+TEST(UnionTests, GoodFlexibleUnion) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -70,7 +70,7 @@ flexible union Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(UnionTests, StrictUnion) {
+TEST(UnionTests, GoodStrictUnion) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -81,7 +81,7 @@ strict union Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(UnionTests, MustHaveExplicitOrdinalsOld) {
+TEST(UnionTests, BadMustHaveExplicitOrdinalsOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -97,7 +97,7 @@ union Foo {
   ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
 }
 
-TEST(UnionTests, MustHaveExplicitOrdinals) {
+TEST(UnionTests, BadMustHaveExplicitOrdinals) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -116,7 +116,7 @@ type Foo = strict union {
   ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
 }
 
-TEST(UnionTests, ExplicitOrdinals) {
+TEST(UnionTests, GoodExplicitOrdinals) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -139,7 +139,7 @@ union Foo {
   EXPECT_EQ(member1.ordinal->value, 2);
 }
 
-TEST(UnionTests, OrdinalsWithReserved) {
+TEST(UnionTests, GoodOrdinalsWithReserved) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -174,7 +174,7 @@ union Foo {
   EXPECT_EQ(member4.ordinal->value, 5);
 }
 
-TEST(UnionTests, OrdinalsOutOfOrder) {
+TEST(UnionTests, GoodOrdinalsOutOfOrder) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -209,7 +209,7 @@ union Foo {
   EXPECT_EQ(member4.ordinal->value, 4);
 }
 
-TEST(UnionTests, OrdinalOutOfBoundsOld) {
+TEST(UnionTests, BadOrdinalOutOfBoundsOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -220,7 +220,7 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrOrdinalOutOfBound);
 }
 
-TEST(UnionTests, OrdinalOutOfBounds) {
+TEST(UnionTests, BadOrdinalOutOfBounds) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -234,7 +234,7 @@ type Foo = strict union {
   ASSERT_ERRORED(library, fidl::ErrOrdinalOutOfBound);
 }
 
-TEST(UnionTests, OrdinalsMustBeUniqueOld) {
+TEST(UnionTests, BadOrdinalsMustBeUniqueOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -246,7 +246,7 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
-TEST(UnionTests, OrdinalsMustBeUnique) {
+TEST(UnionTests, BadOrdinalsMustBeUnique) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -261,7 +261,7 @@ type Foo = strict union {
   ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
-TEST(UnionTests, MemberNamesMustBeUniqueOld) {
+TEST(UnionTests, BadMemberNamesMustBeUniqueOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -273,7 +273,7 @@ union Duplicates {
   ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberName);
 }
 
-TEST(UnionTests, MemberNamesMustBeUnique) {
+TEST(UnionTests, BadMemberNamesMustBeUnique) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -288,7 +288,7 @@ type Duplicates = strict union {
   ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberName);
 }
 
-TEST(UnionTests, CannotStartAtZeroOld) {
+TEST(UnionTests, BadCannotStartAtZeroOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -300,7 +300,7 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
-TEST(UnionTests, CannotStartAtZero) {
+TEST(UnionTests, BadCannotStartAtZero) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -315,7 +315,7 @@ type Foo = strict union {
   ASSERT_ERRORED(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
-TEST(UnionTests, DefaultNotAllowedOld) {
+TEST(UnionTests, BadDefaultNotAllowedOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -328,7 +328,7 @@ union Foo {
 }
 
 // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
-TEST(UnionTests, DefaultNotAllowed) {
+TEST(UnionTests, BadDefaultNotAllowed) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -345,7 +345,7 @@ type Foo = strict union {
   ASSERT_ERR(library.errors()[0], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(UnionTests, MustBeDenseOld) {
+TEST(UnionTests, BadMustBeDenseOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -359,7 +359,7 @@ union Example {
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
-TEST(UnionTests, MustBeDense) {
+TEST(UnionTests, BadMustBeDense) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -376,7 +376,7 @@ type Example = strict union {
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
-TEST(UnionTests, MustHaveNonReservedMemberOld) {
+TEST(UnionTests, BadMustHaveNonReservedMemberOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -389,7 +389,7 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, MustHaveNonReservedMember) {
+TEST(UnionTests, BadMustHaveNonReservedMember) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -405,7 +405,7 @@ type Foo = strict union {
   ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, NoNullableMembersOld) {
+TEST(UnionTests, BadNoNullableMembersOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -417,7 +417,7 @@ union Foo {
   ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
 }
 
-TEST(UnionTests, NoNullableMembers) {
+TEST(UnionTests, BadNoNullableMembers) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -433,7 +433,7 @@ type Foo = strict union {
   ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
 }
 
-TEST(UnionTests, NoDirectlyRecursiveUnionsOld) {
+TEST(UnionTests, BadNoDirectlyRecursiveUnionsOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -445,7 +445,7 @@ union Value {
   ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
 }
 
-TEST(UnionTests, NoDirectlyRecursiveUnions) {
+TEST(UnionTests, BadNoDirectlyRecursiveUnions) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -460,7 +460,7 @@ type Value = strict union {
   ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
 }
 
-TEST(UnionTests, InvalidEmptyUnionOld) {
+TEST(UnionTests, BadInvalidEmptyUnionOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -470,7 +470,7 @@ union Foo {};
   ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, InvalidEmptyUnion) {
+TEST(UnionTests, BadInvalidEmptyUnion) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -483,7 +483,7 @@ type Foo = strict union {};
   ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, ErrorSyntaxExplicitOrdinalsOld) {
+TEST(UnionTests, GoodErrorSyntaxExplicitOrdinalsOld) {
   TestLibrary error_library(R"FIDL(
 library example;
 protocol Example {
@@ -497,7 +497,7 @@ protocol Example {
   ASSERT_EQ(error_union->members.back().ordinal->value, 2);
 }
 
-TEST(UnionTests, ErrorSyntaxExplicitOrdinals) {
+TEST(UnionTests, GoodErrorSyntaxExplicitOrdinals) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary error_library(R"FIDL(
@@ -514,7 +514,7 @@ protocol Example {
   ASSERT_EQ(error_union->members.back().ordinal->value, 2);
 }
 
-TEST(UnionTests, NoSelectorOld) {
+TEST(UnionTests, BadNoSelectorOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -527,7 +527,7 @@ union Foo {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Selector");
 }
 
-TEST(UnionTests, NoSelector) {
+TEST(UnionTests, BadNoSelector) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -547,7 +547,7 @@ type Foo = strict union {
 // TODO(fxbug.dev/70247): as we clean up the migration, it will probably have
 // been long enough that we can remove this error and the special handling for
 // "xunion"
-TEST(UnionTests, DeprecatedXUnionError) {
+TEST(UnionTests, BadDeprecatedXUnionError) {
   {
     TestLibrary library(R"FIDL(
   library test;

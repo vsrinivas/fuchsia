@@ -10,7 +10,7 @@
 
 namespace {
 
-TEST(FlexibleEnum, MultipleUnknown) {
+TEST(FlexibleEnum, BadMultipleUnknown) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -29,7 +29,7 @@ flexible enum Foo : uint8 {
   ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
-TEST(FlexibleEnum, MaxValueWithoutUnknownUnsigned) {
+TEST(FlexibleEnum, BadMaxValueWithoutUnknownUnsigned) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -49,7 +49,7 @@ flexible enum Foo : uint8 {
   ASSERT_ERR(errors[0], fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
-TEST(FlexibleEnum, MaxValueWithoutUnknownSigned) {
+TEST(FlexibleEnum, BadMaxValueWithoutUnknownSigned) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -69,7 +69,7 @@ flexible enum Foo : int8 {
   ASSERT_ERR(errors[0], fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
-TEST(FlexibleEnum, CanUseMaxValueIfOtherIsUnknownUnsigned) {
+TEST(FlexibleEnum, GoodCanUseMaxValueIfOtherIsUnknownUnsigned) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -90,7 +90,7 @@ flexible enum Foo : uint8 {
   EXPECT_EQ(foo_enum->unknown_value_unsigned.value(), 1);
 }
 
-TEST(FlexibleEnum, CanUseMaxValueIfOtherIsUnknownSigned) {
+TEST(FlexibleEnum, GoodCanUseMaxValueIfOtherIsUnknownSigned) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -111,7 +111,7 @@ flexible enum Foo : int8 {
   EXPECT_FALSE(foo_enum->unknown_value_unsigned.has_value());
 }
 
-TEST(FlexibleEnum, CanUseZeroAsUnknownValue) {
+TEST(FlexibleEnum, GoodCanUseZeroAsUnknownValue) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -132,7 +132,7 @@ flexible enum Foo : int8 {
   EXPECT_FALSE(foo_enum->unknown_value_unsigned.has_value());
 }
 
-TEST(FlexibleUnion, MultipleUnknown) {
+TEST(FlexibleUnion, BadMultipleUnknown) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -151,7 +151,7 @@ flexible union Foo {
   ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
-TEST(FlexibleUnion, MaxValueWithoutUnknown) {
+TEST(FlexibleUnion, BadMaxValueWithoutUnknown) {
   // Ideally, we'd want to be able to define a union with an ordinal that's the
   // maximum possible value for a uint64:
   //

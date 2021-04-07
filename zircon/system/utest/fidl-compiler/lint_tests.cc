@@ -30,7 +30,7 @@ namespace {
     }                                                            \
   } while (0)
 
-TEST(LintTest, const_names_bad) {
+TEST(LintTest, BadConstNames) {
   TestLibrary library(R"FIDL(
 library fuchsia.a;
 
@@ -41,7 +41,7 @@ const uint64 bad_CONST = 1234;
   ASSERT_WARNINGS(1, library, "bad_CONST");
 }
 
-TEST(LintTest, const_names_kconst) {
+TEST(LintTest, BadConstNamesKconst) {
   TestLibrary library(R"FIDL(
 library fuchsia.a;
 
@@ -54,7 +54,7 @@ const uint64 kAllIsCalm = 1234;
   ASSERT_SUBSTR(warnings[0].c_str(), "ALL_IS_CALM");
 }
 
-TEST(LintTest, const_names_good) {
+TEST(LintTest, GoodConstNames) {
   TestLibrary library_yes(R"FIDL(
 library fuchsia.a;
 
@@ -65,7 +65,7 @@ const uint64 GOOD_CONST = 1234;
   ASSERT_WARNINGS(0, library_yes, "");
 }
 
-TEST(LintTest, protocol_names_bad) {
+TEST(LintTest, BadProtocolNames) {
   TestLibrary library(R"FIDL(
 library fuchsia.a;
 
@@ -77,7 +77,7 @@ protocol URLLoader {};
   ASSERT_SUBSTR(warnings[0].c_str(), "UrlLoader");
 }
 
-TEST(LintTest, protocol_names_good) {
+TEST(LintTest, GoodProtocolNames) {
   TestLibrary functioning(R"FIDL(
 library fuchsia.a;
 
@@ -87,7 +87,7 @@ protocol UrlLoader {};
   ASSERT_WARNINGS(0, functioning, "");
 }
 
-TEST(LintTest, library_names_banned_name) {
+TEST(LintTest, BadLibraryNamesBannedName) {
   TestLibrary banned(R"FIDL(
 library fuchsia.zxsocket;
 )FIDL");
@@ -95,7 +95,7 @@ library fuchsia.zxsocket;
   ASSERT_WARNINGS(1, banned, "zxsocket");
 }
 
-TEST(LintTest, using_names_bad) {
+TEST(LintTest, BadUsingNames) {
   TestLibrary library(R"FIDL(
 library fuchsia.a;
 
@@ -106,7 +106,7 @@ using foo as bad_USING;
   ASSERT_WARNINGS(1, library, "bad_USING");
 }
 
-TEST(LintTest, using_names_good) {
+TEST(LintTest, GoodUsingNames) {
   TestLibrary library_yes(R"FIDL(
 library fuchsia.a;
 

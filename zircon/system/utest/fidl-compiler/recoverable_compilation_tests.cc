@@ -10,7 +10,7 @@
 
 namespace {
 
-TEST(RecoverableCompilationTests, recover_in_library_consume) {
+TEST(RecoverableCompilationTests, BadRecoverInLibraryConsume) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -33,7 +33,7 @@ union Union {
   ASSERT_ERR(errors[2], fidl::ErrNullableUnionMember);
 }
 
-TEST(RecoverableCompilationTests, recover_in_library_compile) {
+TEST(RecoverableCompilationTests, BadRecoverInLibraryCompile) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -69,7 +69,7 @@ table NonDenseTable {
   ASSERT_ERR(errors[3], fidl::ErrDuplicateMemberValue);
 }
 
-TEST(RecoverableCompilationTests, recover_in_library_verify_attributes) {
+TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributes) {
   TestLibrary library(R"FIDL(
 library example;
 

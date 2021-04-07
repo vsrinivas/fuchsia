@@ -20,7 +20,7 @@ const fidl::coded::StructPadding& padding(const fidl::coded::StructElement& elem
   return std::get<const fidl::coded::StructPadding>(element);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfArrays) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfArrays) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -68,7 +68,7 @@ struct Arrays {
   EXPECT_EQ(type2, type3_array->element_type);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfVectors) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfVectors) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -119,7 +119,7 @@ struct Vectors {
   EXPECT_EQ(fidl::types::Nullability::kNonnullable, type1_vector->nullability);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfProtocol) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocol) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -159,7 +159,7 @@ protocol UseOfProtocol {
   EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfRequestOfProtocol) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfRequestOfProtocol) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -201,7 +201,7 @@ protocol UseOfRequestOfProtocol {
 // The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar
 // because the compiler emits both the non-nullable and nullable union types regardless of whether
 // it is used in the library in which it was defined.
-TEST(CodedTypesGeneratorTests, CodedTypesOfUnions) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfUnions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -261,7 +261,7 @@ union MyXUnion {
 // The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar
 // because the compiler emits both the non-nullable and nullable union types regardless of whether
 // it is used in the library in which it was defined.
-TEST(CodedTypesGeneratorTests, CodedTypesOfNullableUnions) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfNullableUnions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -312,7 +312,7 @@ struct Wrapper2 {
 
 // This mostly exists to make sure that the same nullable objects aren't
 // represented more than once in the coding tables.
-TEST(CodedTypesGeneratorTests, CodedTypesOfNullablePointers) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfNullablePointers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -354,7 +354,7 @@ struct Wrapper2 {
   ASSERT_EQ(5, gen.coded_types().size());
 }
 
-TEST(CodedTypesGeneratorTests, CodedHandle) {
+TEST(CodedTypesGeneratorTests, GoodCodedHandle) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -398,7 +398,7 @@ resource struct MyStruct {
   ASSERT_EQ(fidl::types::Nullability::kNonnullable, handle_type->nullability);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfStructsWithPaddings) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfStructsWithPaddings) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -466,7 +466,7 @@ struct Complex {
             0xffffffffffff0000ull);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfMultilevelNestedStructs) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfMultilevelNestedStructs) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -531,7 +531,7 @@ struct Level2 {
   EXPECT_EQ(std::get<uint64_t>(padding(struct_level2->elements[2]).mask), 0xffffffffffffff00);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfRecursiveOptionalStructs) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfRecursiveOptionalStructs) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -590,7 +590,7 @@ struct TwoLevelRecursiveOptionalStructB {
   EXPECT_EQ(field(struct_two_level_a->elements[0]).offset, 0);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfReusedStructs) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfReusedStructs) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -633,7 +633,7 @@ struct OuterStruct {
   EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[1]).mask), 0xff00);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfOptionals) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfOptionals) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -683,7 +683,7 @@ resource struct OuterStruct {
 // When calculating coding tables, we must therefore ensure to follow exactly
 // the object graph provided by earlier stages of the compiler rather than
 // implementing a lookup which may not be the same as the lookup done earlier.
-TEST(CodedTypesGeneratorTests, ScopingBugShouldNotAffectCodingTables) {
+TEST(CodedTypesGeneratorTests, GoodScopingBugShouldNotAffectCodingTables) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -713,7 +713,7 @@ struct badlookup {
   EXPECT_EQ(fidl::coded::Type::Kind::kVector, field(the_struct_coded_type->elements[1]).type->kind);
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfTables) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfTables) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -776,7 +776,7 @@ table MyTable {
   EXPECT_STR_EQ("example/MyTable", type_table_table->qname.c_str());
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfBits) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfBits) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -822,7 +822,7 @@ flexible bits FlexibleBits : uint8 {
   }
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfStrictEnum) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfStrictEnum) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -871,7 +871,7 @@ flexible enum FlexibleEnum : uint16 {
   }
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfUnionsWithReverseOrdinals) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfUnionsWithReverseOrdinals) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -921,7 +921,7 @@ void check_duplicate_coded_type_names(const fidl::CodedTypesGenerator& gen) {
   }
 }
 
-TEST(CodedTypesGeneratorTests, duplicate_coded_types_two_unions) {
+TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesTwoUnions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -939,7 +939,7 @@ union U2 {
   check_duplicate_coded_type_names(gen);
 }
 
-TEST(CodedTypesGeneratorTests, duplicate_coded_types_union_array_array) {
+TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesUnionArrayArray) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -954,7 +954,7 @@ union Union {
   check_duplicate_coded_type_names(gen);
 }
 
-TEST(CodedTypesGeneratorTests, duplicate_coded_types_union_vector_array) {
+TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesUnionVectorArray) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -969,7 +969,7 @@ union Union {
   check_duplicate_coded_type_names(gen);
 }
 
-TEST(CodedTypesGeneratorTests, duplicate_coded_types_table_array_array) {
+TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesTableArrayArray) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -984,7 +984,7 @@ table Table {
   check_duplicate_coded_type_names(gen);
 }
 
-TEST(CodedTypesGeneratorTests, UnionResourceness) {
+TEST(CodedTypesGeneratorTests, GoodUnionResourceness) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1022,7 +1022,7 @@ union NonResourceUnion {
   }
 }
 
-TEST(CodedTypesGeneratorTests, TableResourceness) {
+TEST(CodedTypesGeneratorTests, GoodTableResourceness) {
   TestLibrary library(R"FIDL(
 library example;
 

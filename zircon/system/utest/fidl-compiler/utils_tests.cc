@@ -26,7 +26,7 @@ void compare_id_to_words(std::string id, std::string expected_lowercase_words) {
                    std::string("Failed for " + id).c_str());
 }
 
-TEST(UtilsTests, id_to_words) {
+TEST(UtilsTests, IdToWords) {
   compare_id_to_words("agent_request_count", "agent request count");
   compare_id_to_words("common", "common");
   compare_id_to_words("Service", "service");
@@ -87,7 +87,7 @@ void case_test(bool valid_conversion, std::string case_name,
 #define ASSERT_BAD_CASE(CASE, FROM, TO) \
   case_test(/*valid_conversion=*/false, #CASE, is_##CASE##_case, to_##CASE##_case, FROM, TO)
 
-TEST(UtilsTests, upper_camel_case) {
+TEST(UtilsTests, UpperCamelCase) {
   ASSERT_CASE(upper_camel, "x", "X");
   ASSERT_CASE(upper_camel, "xy", "Xy");
   ASSERT_BAD_CASE(upper_camel, "x_y", "XY");
@@ -118,7 +118,7 @@ TEST(UtilsTests, upper_camel_case) {
   ASSERT_CASE(upper_camel, "kURLLoader", "UrlLoader");
 }
 
-TEST(UtilsTests, lower_camel_case) {
+TEST(UtilsTests, LowerCamelCase) {
   ASSERT_CASE(lower_camel, "X", "x");
   ASSERT_CASE(lower_camel, "XY", "xy");
   ASSERT_CASE(lower_camel, "X_Y", "xY");
@@ -149,7 +149,7 @@ TEST(UtilsTests, lower_camel_case) {
   ASSERT_CASE(lower_camel, "kURLLoader", "urlLoader");
 }
 
-TEST(UtilsTests, upper_snake_case) {
+TEST(UtilsTests, UpperSnakeCase) {
   ASSERT_CASE(upper_snake, "x", "X");
   ASSERT_CASE(upper_snake, "xy", "XY");
   ASSERT_CASE(upper_snake, "xY", "X_Y");
@@ -179,7 +179,7 @@ TEST(UtilsTests, upper_snake_case) {
   ASSERT_CASE(upper_snake, "kURLLoader", "URL_LOADER");
 }
 
-TEST(UtilsTests, lower_snake_case) {
+TEST(UtilsTests, LowerSnakeCase) {
   ASSERT_CASE(lower_snake, "X", "x");
   ASSERT_CASE(lower_snake, "Xy", "xy");
   ASSERT_CASE(lower_snake, "XY", "xy");
@@ -209,7 +209,7 @@ TEST(UtilsTests, lower_snake_case) {
   ASSERT_CASE(lower_snake, "kURLLoader", "url_loader");
 }
 
-TEST(UtilsTests, konstant_case) {
+TEST(UtilsTests, KonstantCase) {
   ASSERT_CASE(konstant, "URLLoader", "kUrlLoader");
   ASSERT_CASE(konstant, "is_21Jump_street", "kIs21JumpStreet");
   ASSERT_CASE(konstant, "URLloader", "kUrLloader");
@@ -221,7 +221,7 @@ TEST(UtilsTests, konstant_case) {
   ASSERT_CASE(konstant, "kURLLoader", "kUrlLoader");
 }
 
-TEST(UtilsTests, lower_no_separator_case) {
+TEST(UtilsTests, LowerNoSeparatorCase) {
   ASSERT_CASE(lower_no_separator, "URLLoader", "urlloader");
   ASSERT_CASE(lower_no_separator, "is_21Jump_street", "is21jumpstreet");
   ASSERT_CASE(lower_no_separator, "URLloader", "urlloader");
@@ -234,7 +234,7 @@ TEST(UtilsTests, lower_no_separator_case) {
   ASSERT_CASE(lower_no_separator, "kURLLoader", "urlloader");
 }
 
-TEST(UtilsTests, whitespace_and_comments) {
+TEST(UtilsTests, WhitespaceAndComments) {
   ASSERT_TRUE(IsWhitespace(' '));
   ASSERT_TRUE(IsWhitespace('\t'));
   ASSERT_TRUE(IsWhitespace('\v'));
@@ -467,7 +467,7 @@ TEST(UtilsTests, IsValidFullyQualifiedMethodIdentifier) {
   ASSERT_FALSE(IsValidFullyQualifiedMethodIdentifier("long.liB/Protocol.Method"));
 }
 
-TEST(UtilsTests, is_only_whitespace) {
+TEST(UtilsTests, IsOnlyWhitespace) {
   std::string good_output;
   std::string bad_output;
 
@@ -485,7 +485,7 @@ TEST(UtilsTests, is_only_whitespace) {
   ASSERT_TRUE(OnlyWhitespaceChanged(bad_output, good_output));
 }
 
-TEST(UtilsTests, canonical_form) {
+TEST(UtilsTests, CanonicalForm) {
   EXPECT_STRING_EQ(canonicalize(""), "");
 
   // Basic letter combinations.

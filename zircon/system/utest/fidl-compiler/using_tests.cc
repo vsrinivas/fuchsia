@@ -14,7 +14,7 @@
 
 namespace {
 
-TEST(UsingTests, valid_using) {
+TEST(UsingTests, GoodUsing) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -42,7 +42,7 @@ struct Foo {
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(UsingTests, valid_using_with_as_refs_through_both) {
+TEST(UsingTests, GoodUsingWithAsRefsThroughBoth) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -71,7 +71,7 @@ struct Foo {
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(UsingTests, valid_using_with_as_ref_only_through_fqn) {
+TEST(UsingTests, GoodUsingWithAsRefOnlyThroughFqn) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -99,7 +99,7 @@ struct Foo {
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(UsingTests, valid_using_with_as_ref_only_through_alias) {
+TEST(UsingTests, GoodUsingWithAsRefOnlyThroughAlias) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -127,7 +127,7 @@ struct Foo {
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(UsingTests, invalid_missing_using) {
+TEST(UsingTests, BadMissingUsing) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -145,7 +145,7 @@ struct Foo {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent.Bar");
 }
 
-TEST(UsingTests, invalid_unknown_using) {
+TEST(UsingTests, BadUnknownUsing) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -163,7 +163,7 @@ struct Foo {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
 }
 
-TEST(UsingTests, invalid_duplicate_using) {
+TEST(UsingTests, BadDuplicateUsing) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -188,7 +188,7 @@ using dependent; // duplicated
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
 }
 
-TEST(UsingTests, invalid_unused_using) {
+TEST(UsingTests, BadUnusedUsing) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -218,7 +218,7 @@ struct Foo {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
 }
 
-TEST(UsingTests, invalid_unknown_dependent_library) {
+TEST(UsingTests, BadUnknownDependentLibrary) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -230,7 +230,7 @@ const foo.bar.baz QUX = 0;
   ASSERT_ERR(errors[0], fidl::ErrUnknownDependentLibrary);
 }
 
-TEST(UsingTests, invalid_too_many_provided_libraries) {
+TEST(UsingTests, WarnTooManyProvidedLibraries) {
   SharedAmongstLibraries shared;
 
   TestLibrary dependency("notused.fidl", "library not.used;", &shared);
@@ -245,7 +245,7 @@ TEST(UsingTests, invalid_too_many_provided_libraries) {
   ASSERT_STR_EQ("not.used", fidl::NameLibrary(*unused.begin()).c_str());
 }
 
-TEST(UsingTests, files_disagree_on_library_name) {
+TEST(UsingTests, BadFilesDisagreeOnLibraryName) {
   TestLibrary library("lib_file1.fidl",
                       R"FIDL(
 library lib;
@@ -261,7 +261,7 @@ library dib;
   ASSERT_ERR(errors[0], fidl::ErrFilesDisagreeOnLibraryName);
 }
 
-TEST(UsingTests, library_declaration_name_collision) {
+TEST(UsingTests, BadLibraryDeclarationNameCollision) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dep.fidl", R"FIDL(
 library dep;
@@ -292,7 +292,7 @@ struct B{dep.A a;}; // So the import is used.
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "dep");
 }
 
-TEST(UsingTests, aliased_library_declaration_name_collision) {
+TEST(UsingTests, BadAliasedLibraryDeclarationNameCollision) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dep.fidl", R"FIDL(
 library dep;
@@ -323,7 +323,7 @@ struct B{dep.A a;}; // So the import is used.
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "x");
 }
 
-TEST(UsingTests, aliased_library_nonaliased_declaration_name_collision) {
+TEST(UsingTests, BadAliasedLibraryNonaliasedDeclarationNameCollision) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dep.fidl", R"FIDL(
 library dep;

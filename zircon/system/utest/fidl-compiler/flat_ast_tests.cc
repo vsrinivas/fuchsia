@@ -22,13 +22,13 @@ using fidl::types::HandleSubtype;
 using fidl::types::Nullability;
 using fidl::types::Rights;
 
-TEST(FlatAstTests, implicit_assumptions) {
+TEST(FlatAstTests, GoodImplicitAssumptions) {
   // Preconditions to unit test cases: if these change, we need to rewrite the tests themselves.
   EXPECT_TRUE(HandleSubtype::kChannel < HandleSubtype::kEvent);
   EXPECT_TRUE(Nullability::kNullable < Nullability::kNonnullable);
 }
 
-TEST(FlatAstTests, compare_handles) {
+TEST(FlatAstTests, GoodCompareHandles) {
   auto name_not_important = Name::CreateIntrinsic("ignore");
   auto rights1Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
   rights1Constant->ResolveTo(std::make_unique<NumericConstantValue<Rights>>(1));

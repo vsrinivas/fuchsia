@@ -14,7 +14,7 @@
 
 namespace {
 
-TEST(Resource, Valid) {
+TEST(Resource, GoodValid) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -42,7 +42,7 @@ resource_definition SomeResource : uint32 {
   EXPECT_EQ(resource->subtype_ctor->name.span()->data(), "uint32");
 }
 
-TEST(Resource, InvalidEmpty) {
+TEST(Resource, BadEmpty) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -57,7 +57,7 @@ resource_definition SomeResource : uint32 {
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedIdentifier);
 }
 
-TEST(Resource, InvalidNoProperties) {
+TEST(Resource, BadNoProperties) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -74,7 +74,7 @@ resource_definition SomeResource : uint32 {
   ASSERT_ERR(errors[0], fidl::ErrMustHaveOneProperty);
 }
 
-TEST(Resource, InvalidDuplicateProperty) {
+TEST(Resource, BadDuplicateProperty) {
   TestLibrary library(R"FIDL(
 library example;
 

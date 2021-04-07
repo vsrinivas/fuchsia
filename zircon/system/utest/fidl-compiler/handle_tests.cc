@@ -17,7 +17,7 @@
 
 namespace {
 
-TEST(HandleTests, HandleRightsTest) {
+TEST(HandleTests, GoodHandleRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
   auto library = WithLibraryZx(R"FIDL(
@@ -44,7 +44,7 @@ resource struct MyStruct {
             3);
 }
 
-TEST(HandleTests, NoHandleRightsTest) {
+TEST(HandleTests, GoodNoHandleRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -69,7 +69,7 @@ resource struct MyStruct {
   ASSERT_NULL(h_type_ctor->handle_rights);
 }
 
-TEST(HandleTests, InvalidHandleRightsTest) {
+TEST(HandleTests, BadInvalidHandleRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -91,7 +91,7 @@ protocol P {
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveHandleRights);
 }
 
-TEST(HandleTests, PlainHandleTest) {
+TEST(HandleTests, GoodPlainHandleTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -113,7 +113,7 @@ resource struct MyStruct {
   ASSERT_NULL(h_type_ctor->handle_rights);
 }
 
-TEST(HandleTests, HandleFidlDefinedTest) {
+TEST(HandleTests, GoodHandleFidlDefinedTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -164,7 +164,7 @@ resource struct MyStruct {
       2);
 }
 
-TEST(HandleTests, InvalidFidlDefinedHandleSubtype) {
+TEST(HandleTests, BadInvalidFidlDefinedHandleSubtype) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -186,7 +186,7 @@ struct MyStruct {
   EXPECT_TRUE(errors[0]->msg.find("ZIPPY") != std::string::npos);
 }
 
-TEST(HandleTests, DisallowOldHandles) {
+TEST(HandleTests, BadDisallowOldHandles) {
   fidl::ExperimentalFlags experimental_flags;
 
   auto library = WithLibraryZx(R"FIDL(
@@ -207,7 +207,7 @@ struct MyStruct {
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
-TEST(HandleTests, ResourceDefinitionOnlySubtypeNoRightsTest) {
+TEST(HandleTests, GoodResourceDefinitionOnlySubtypeNoRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -241,7 +241,7 @@ resource struct MyStruct {
   ASSERT_NULL(h_type_ctor->handle_rights);
 }
 
-TEST(HandleTests, ResourceDefinitionMissingRightsPropertyTest) {
+TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -273,7 +273,7 @@ resource struct MyStruct {
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
-TEST(HandleTests, ResourceDefinitionMissingSubtypePropertyTest) {
+TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 

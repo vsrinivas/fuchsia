@@ -13,7 +13,7 @@
 
 namespace {
 
-TEST(TableTests, PopulatedFields) {
+TEST(TableTests, GoodPopulatedFields) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -24,7 +24,7 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, ReservedFields) {
+TEST(TableTests, GoodReservedFields) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -35,7 +35,7 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, ReservedAndPopulatedFields) {
+TEST(TableTests, GoodReservedAndPopulatedFields) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -47,7 +47,7 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, ManyReservedFields) {
+TEST(TableTests, GoodManyReservedFields) {
   TestLibrary library("test.fidl", R"FIDL(
 library fidl.test.tables;
 
@@ -60,7 +60,7 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, OutOfOrderFields) {
+TEST(TableTests, GoodOutOfOrderFields) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -73,7 +73,7 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, AllowEmptyTables) {
+TEST(TableTests, GoodAllowEmptyTables) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -83,7 +83,7 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, MissingOrdinalsOld) {
+TEST(TableTests, BadMissingOrdinalsOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -94,7 +94,7 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrExpectedOrdinalOrCloseBrace);
 }
 
-TEST(TableTests, MissingOrdinals) {
+TEST(TableTests, BadMissingOrdinals) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -108,7 +108,7 @@ type Foo = table {
   ASSERT_ERRORED(library, fidl::ErrMissingOrdinalBeforeType)
 }
 
-TEST(TableTests, DuplicateFieldNamesOld) {
+TEST(TableTests, BadDuplicateFieldNamesOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -120,7 +120,7 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldName);
 }
 
-TEST(TableTests, DuplicateFieldNames) {
+TEST(TableTests, BadDuplicateFieldNames) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -135,7 +135,7 @@ type Foo = table {
   ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldName);
 }
 
-TEST(TableTests, DuplicateOrdinalsOld) {
+TEST(TableTests, BadDuplicateOrdinalsOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -147,7 +147,7 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldOrdinal);
 }
 
-TEST(TableTests, DuplicateOrdinals) {
+TEST(TableTests, BadDuplicateOrdinals) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -163,7 +163,7 @@ type Foo = table {
 }
 
 // TODO(fxbug.dev/72924): implement attributes
-TEST(TableTests, AttributesOnFields) {
+TEST(TableTests, GoodAttributesOnFields) {
   TestLibrary library("test.fidl", R"FIDL(
 library fidl.test.tables;
 
@@ -178,7 +178,7 @@ table Foo {
 }
 
 // TODO(fxbug.dev/72924): implement attributes
-TEST(TableTests, AttributesOnTables) {
+TEST(TableTests, GoodAttributesOnTables) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -192,7 +192,7 @@ table Foo {
 }
 
 // TODO(fxbug.dev/72924): implement attributes
-TEST(TableTests, AttributesOnReserved) {
+TEST(TableTests, BadAttributesOnReserved) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -204,7 +204,7 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
 }
 
-TEST(TableTests, KeywordsAsFieldNames) {
+TEST(TableTests, GoodKeywordsAsFieldNames) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -222,7 +222,7 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, OptionalInStructOld) {
+TEST(TableTests, BadOptionalInStructOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -237,7 +237,7 @@ struct OptionalTableContainer {
   ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
 }
 
-TEST(TableTests, OptionalInStruct) {
+TEST(TableTests, BadOptionalInStruct) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -255,7 +255,7 @@ type OptionalTableContainer = struct {
   ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
 }
 
-TEST(TableTests, OptionalInUnionOld) {
+TEST(TableTests, BadOptionalInUnionOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -270,7 +270,7 @@ union OptionalTableContainer {
   ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
 }
 
-TEST(TableTests, OptionalInUnion) {
+TEST(TableTests, BadOptionalInUnion) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -289,7 +289,7 @@ type OptionalTableContainer = union {
   ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
 }
 
-TEST(TableTests, TableInTable) {
+TEST(TableTests, GoodTableInTable) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -305,7 +305,7 @@ table Bar {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, TablesInUnions) {
+TEST(TableTests, GoodTablesInUnions) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -321,7 +321,7 @@ flexible union OptionalTableContainer {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, OptionalTableMemberOld) {
+TEST(TableTests, BadOptionalTableMemberOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -332,7 +332,7 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrNullableTableMember);
 }
 
-TEST(TableTests, OptionalTableMember) {
+TEST(TableTests, BadOptionalTableMember) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -347,7 +347,7 @@ type Foo = table {
   ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
 }
 
-TEST(TableTests, DefaultNotAllowedOld) {
+TEST(TableTests, BadDefaultNotAllowedOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -359,7 +359,7 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrDefaultsOnTablesNotSupported);
 }
 
-TEST(TableTests, DefaultNotAllowed) {
+TEST(TableTests, BadDefaultNotAllowed) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -379,7 +379,7 @@ type Foo = table {
   ASSERT_ERR(library.errors()[1], fidl::ErrMissingOrdinalBeforeType);
 }
 
-TEST(TableTests, MustBeDenseOld) {
+TEST(TableTests, BadMustBeDenseOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -393,7 +393,7 @@ table Example {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");
 }
 
-TEST(TableTests, MustBeDense) {
+TEST(TableTests, BadMustBeDense) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(

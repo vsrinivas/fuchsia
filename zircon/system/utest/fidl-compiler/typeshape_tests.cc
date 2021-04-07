@@ -92,7 +92,7 @@ void CheckFieldShape(const T& field, ExpectedField expected_old) {
   CheckFieldShape(field, expected_old, expected_old);
 }
 
-TEST(TypeshapeTests, empty_struct) {
+TEST(TypeshapeTests, GoodEmptyStruct) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -110,7 +110,7 @@ struct Empty {};
   ASSERT_EQ(empty->members.size(), 0);
 }
 
-TEST(TypeshapeTests, empty_struct_within_another_struct) {
+TEST(TypeshapeTests, GoodEmptyStructWithinAnotherStruct) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -189,7 +189,7 @@ struct EmptyWithOtherThings {
                                                                           }));
 }
 
-TEST(TypeshapeTests, simple_structs) {
+TEST(TypeshapeTests, GoodSimpleStructs) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -262,7 +262,7 @@ struct BoolAndU64 {
                                                                }));
 }
 
-TEST(TypeshapeTests, simple_structs_with_handles) {
+TEST(TypeshapeTests, GoodSimpleStructsWithHandles) {
   TestLibrary test_library(kPrologWithHandleDefinition + R"FIDL(
 resource struct OneHandle {
   handle h;
@@ -322,7 +322,7 @@ resource struct ThreeHandlesOneOptional {
                                                                              }));
 }
 
-TEST(TypeshapeTests, bits) {
+TEST(TypeshapeTests, GoodBits) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -351,7 +351,7 @@ bits BitsImplicit {
                                                    }));
 }
 
-TEST(TypeshapeTests, simple_tables) {
+TEST(TypeshapeTests, GoodSimpleTables) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -435,7 +435,7 @@ table TableWithBoolAndU64 {
                                                   }));
 }
 
-TEST(TypeshapeTests, tables_with_reserved_fields) {
+TEST(TypeshapeTests, GoodTablesWithReservedFields) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -527,7 +527,7 @@ table OneReserved {
                                                   }));
 }
 
-TEST(TypeshapeTests, simple_tables_with_handles) {
+TEST(TypeshapeTests, GoodSimpleTablesWithHandles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -551,7 +551,7 @@ resource table TableWithOneHandle {
                                                 }));
 }
 
-TEST(TypeshapeTests, optional_structs) {
+TEST(TypeshapeTests, GoodOptionalStructs) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -636,7 +636,7 @@ struct OptionalBoolAndU64 {
                                    }));
 }
 
-TEST(TypeshapeTests, optional_tables) {
+TEST(TypeshapeTests, GoodOptionalTables) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -802,7 +802,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                              }));
 }
 
-TEST(TypeshapeTests, unions) {
+TEST(TypeshapeTests, GoodUnions) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -931,7 +931,7 @@ table TableWithOptionalUnion {
                                     }));
 }
 
-TEST(TypeshapeTests, unions_with_handles) {
+TEST(TypeshapeTests, GoodUnionsWithHandles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1047,7 +1047,7 @@ resource union ManyHandleUnion {
       ExpectedField{}));
 }
 
-TEST(TypeshapeTests, vectors) {
+TEST(TypeshapeTests, GoodVectors) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1162,7 +1162,7 @@ table TableWithUnboundedVectors {
                                     }));
 }
 
-TEST(TypeshapeTests, vectors_with_handles) {
+TEST(TypeshapeTests, GoodVectorsWithHandles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1294,7 +1294,7 @@ resource table TableWithHandleStructVector {
                                                       }));
 }
 
-TEST(TypeshapeTests, strings) {
+TEST(TypeshapeTests, GoodStrings) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1362,7 +1362,7 @@ table TableWithUnboundedString {
                                     }));
 }
 
-TEST(TypeshapeTests, arrays) {
+TEST(TypeshapeTests, GoodArrays) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1432,7 +1432,7 @@ table TableWithAnInt32ArrayNoPadding {
                      }));
 }
 
-TEST(TypeshapeTests, arrays_with_handles) {
+TEST(TypeshapeTests, GoodArraysWithHandles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1499,7 +1499,7 @@ resource table TableWithNullableHandleArray {
 
 // TODO(pascallouis): write an "xunions_with_handles" test case.
 
-TEST(TypeshapeTests, flexible_unions) {
+TEST(TypeshapeTests, GoodFlexibleUnions) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1676,7 +1676,7 @@ flexible union PaddingCheck {
                                      ExpectedField{.padding = 3}));
 }
 
-TEST(TypeshapeTests, envelope_strictness) {
+TEST(TypeshapeTests, GoodEnvelopeStrictness) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1858,7 +1858,7 @@ strict union StrictXUnionOfFlexibleTable {
                                     }));
 }
 
-TEST(TypeshapeTests, protocols_and_request_of_protocols) {
+TEST(TypeshapeTests, GoodProtocolsAndRequestOfProtocols) {
   TestLibrary test_library(R"FIDL(
 library example;
 
@@ -1916,7 +1916,7 @@ resource struct UsingOptRequestSomeProtocol {
                                                                      }));
 }
 
-TEST(TypeshapeTests, external_definitions) {
+TEST(TypeshapeTests, GoodExternalDefinitions) {
   auto test_library = TestLibrary();
   test_library.AddSource("main.fidl", R"FIDL(
 library example;
@@ -1983,7 +1983,7 @@ struct ExternalSimpleStruct {
                                                     }));
 }
 
-TEST(TypeshapeTests, recursive_request) {
+TEST(TypeshapeTests, GoodRecursiveRequest) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2037,7 +2037,7 @@ protocol MessagePort {
       CheckFieldShape(post_message_request->members[0], ExpectedField{.offset = 16, .padding = 4}));
 }
 
-TEST(TypeshapeTests, recursive_opt_request) {
+TEST(TypeshapeTests, GoodRecursiveOptRequest) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2086,7 +2086,7 @@ protocol MessagePort {
                                     }));
 }
 
-TEST(TypeshapeTests, recursive_protocol) {
+TEST(TypeshapeTests, GoodRecursiveProtocol) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2135,7 +2135,7 @@ protocol MessagePort {
                                     }));
 }
 
-TEST(TypeshapeTests, recursive_opt_protocol) {
+TEST(TypeshapeTests, GoodRecursiveOptProtocol) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2184,7 +2184,7 @@ protocol MessagePort {
                                     }));
 }
 
-TEST(TypeshapeTests, recursive_struct) {
+TEST(TypeshapeTests, GoodRecursiveStruct) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2208,7 +2208,7 @@ struct TheStruct {
   ASSERT_NO_FAILURES(CheckFieldShape(the_struct->members[0], ExpectedField{}));
 }
 
-TEST(TypeshapeTests, recursive_struct_with_handles) {
+TEST(TypeshapeTests, GoodRecursiveStructWithHandles) {
   TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
 resource struct TheStruct {
   handle:VMO some_handle;
@@ -2237,7 +2237,7 @@ resource struct TheStruct {
                                                              }));
 }
 
-TEST(TypeshapeTests, co_recursive_struct) {
+TEST(TypeshapeTests, GoodCoRecursiveStruct) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2274,7 +2274,7 @@ struct B {
                                }));
 }
 
-TEST(TypeshapeTests, co_recursive_struct_with_handles) {
+TEST(TypeshapeTests, GoodCoRecursiveStructWithHandles) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2315,7 +2315,7 @@ resource struct B {
                                }));
 }
 
-TEST(TypeshapeTests, co_recursive_struct2) {
+TEST(TypeshapeTests, GoodCoRecursiveStruct2) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2352,7 +2352,7 @@ struct Bar {
                                  }));
 }
 
-TEST(TypeshapeTests, struct_two_deep) {
+TEST(TypeshapeTests, GoodStructTwoDeep) {
   TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
 resource struct DiffEntry {
     vector<uint8>:256 key;
@@ -2413,7 +2413,7 @@ enum Priority {
                                  }));
 }
 
-TEST(TypeshapeTests, protocol_child_and_parent) {
+TEST(TypeshapeTests, GoodProtocolChildAndParent) {
   SharedAmongstLibraries shared;
   TestLibrary parent_library("parent.fidl", R"FIDL(
 library parent;
@@ -2462,7 +2462,7 @@ protocol Child {
                                     }));
 }
 
-TEST(TypeshapeTests, union_size8alignment4_sandwich) {
+TEST(TypeshapeTests, GoodUnionSize8Alignment4Sandwich) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2525,7 +2525,7 @@ struct Sandwich {
                                      }));
 }
 
-TEST(TypeshapeTests, union_size12alignment4_sandwich) {
+TEST(TypeshapeTests, GoodUnionSize12Alignment4Sandwich) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2588,7 +2588,7 @@ struct Sandwich {
                                      }));
 }
 
-TEST(TypeshapeTests, union_size24alignment8_sandwich) {
+TEST(TypeshapeTests, GoodUnionSize24Alignment8Sandwich) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2656,7 +2656,7 @@ struct Sandwich {
                                      }));
 }
 
-TEST(TypeshapeTests, union_size36alignment4_sandwich) {
+TEST(TypeshapeTests, GoodUnionSize36Alignment4Sandwich) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -2719,7 +2719,7 @@ struct Sandwich {
                                      }));
 }
 
-TEST(TypeshapeTests, zero_size_vector) {
+TEST(TypeshapeTests, GoodZeroSizeVector) {
   TestLibrary library(R"FIDL(
 library example;
 

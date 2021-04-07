@@ -79,7 +79,7 @@ std::string targeted_diff(const char* expected, const char* actual, size_t size)
 
 // Test that the AST visitor works: ensure that if you visit a file, you can
 // reconstruct its original contents.
-TEST(VisitorTests, read_and_write_direct_test) {
+TEST(VisitorTests, ReadAndWriteDirectTest) {
   for (auto element : Examples::map()) {
     TestLibrary library(element.first, element.second, FLAGS);
     std::unique_ptr<fidl::raw::File> ast;

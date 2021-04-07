@@ -10,7 +10,7 @@
 
 namespace {
 
-TEST(AliasTests, duplicate_alias_and_using) {
+TEST(AliasTests, BadDuplicateAliasAndUsing) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -27,7 +27,7 @@ using alias_of_int16 = int16;
   ASSERT_ERR(errors[0], fidl::ErrNameCollision);
 }
 
-TEST(AliasTests, primitive) {
+TEST(AliasTests, GoodPrimitive) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -57,7 +57,7 @@ alias alias_of_int16 = int16;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, primitive_type_alias_before_use) {
+TEST(AliasTests, GoodPrimitiveTypeAliasBeforeUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -86,7 +86,7 @@ struct Message {
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, invalid_primitive_type_shadowing) {
+TEST(AliasTests, BadPrimitiveTypeShadowing) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -102,7 +102,7 @@ struct Message {
   ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
 }
 
-TEST(AliasTests, invalid_no_optional_on_primitive) {
+TEST(AliasTests, BadNoOptionalOnPrimitive) {
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -118,7 +118,7 @@ struct Bad {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
-TEST(AliasTests, invalid_no_optional_on_aliased_primitive) {
+TEST(AliasTests, BadNoOptionalOnAliasedPrimitive) {
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -136,7 +136,7 @@ struct Bad {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
-TEST(AliasTests, vector_parametrized_on_decl) {
+TEST(AliasTests, GoodVectorParametrizedOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -168,7 +168,7 @@ alias alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, vector_parametrized_on_use) {
+TEST(AliasTests, BadVectorParametrizedOnUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -184,7 +184,7 @@ alias alias_of_vector = vector;
   ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
 }
 
-TEST(AliasTests, vector_bounded_on_decl) {
+TEST(AliasTests, BadVectorBoundedOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -200,7 +200,7 @@ alias alias_of_vector_max_8 = vector:8;
   ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
 }
 
-TEST(AliasTests, vector_bounded_on_use) {
+TEST(AliasTests, GoodVectorBoundedOnUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -232,7 +232,7 @@ alias alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, vector_nullable_on_decl) {
+TEST(AliasTests, GoodVectorNullableOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -264,7 +264,7 @@ alias alias_of_vector_of_string_nullable = vector<string>?;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, vector_nullable_on_use) {
+TEST(AliasTests, GoodVectorNullableOnUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -296,7 +296,7 @@ alias alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNullable);
 }
 
-TEST(AliasTests, invalid_cannot_parametrize_twice) {
+TEST(AliasTests, BadCannotParametrizeTwice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -312,7 +312,7 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_ERR(errors[0], fidl::ErrCannotParametrizeTwice);
 }
 
-TEST(AliasTests, invalid_cannot_bound_twice) {
+TEST(AliasTests, BadCannotBoundTwice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -328,7 +328,7 @@ alias alias_of_vector_of_string_max_5 = vector<string>:5;
   ASSERT_ERR(errors[0], fidl::ErrCannotBoundTwice);
 }
 
-TEST(AliasTests, invalid_cannot_null_twice) {
+TEST(AliasTests, BadCannotNullTwice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -345,7 +345,7 @@ alias alias_of_vector_nullable = vector?;
   ASSERT_ERR(errors[1], fidl::ErrCannotIndicateNullabilityTwice);
 }
 
-TEST(AliasTests, multi_file_alias_reference) {
+TEST(AliasTests, GoodMultiFileAliasReference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -363,7 +363,7 @@ alias AminoAcids = vector<uint64>:32;
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(AliasTests, multi_file_nullable_alias_reference) {
+TEST(AliasTests, GoodMultiFileNullableAliasReference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -381,7 +381,7 @@ alias AminoAcids = vector<uint64>:32;
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(AliasTests, invalid_recursive_alias) {
+TEST(AliasTests, BadRecursiveAlias) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -400,7 +400,7 @@ struct TheStruct {
   // more granular and should be asserted here.
 }
 
-TEST(AliasTests, invalid_compound_identifier) {
+TEST(AliasTests, BadCompoundIdentifier) {
   TestLibrary library("test.fidl", R"FIDL(
 library example;
 
@@ -412,7 +412,7 @@ alias foo.bar.baz = uint8;
   ASSERT_EQ(1, errors.size());
 }
 
-TEST(AliasTests, using_library) {
+TEST(AliasTests, GoodUsingLibrary) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -438,7 +438,7 @@ alias Bar2 = dependent.Bar;
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(AliasTests, disallow_old_using_syntax) {
+TEST(AliasTests, BadDisallowOldUsingSyntax) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kDisallowOldUsingSyntax);
   TestLibrary library(R"FIDL(

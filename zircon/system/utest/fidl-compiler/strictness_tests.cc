@@ -107,7 +107,7 @@ type FS = flexible strict union { 1: b bool; }; // line 5
   ASSERT_SUBSTR(errors[1]->msg.c_str(), "flexible");
 }
 
-TEST(StrictnessTests, BitsStrictness) {
+TEST(StrictnessTests, GoodBitsStrictness) {
   TestLibrary library(
       R"FIDL(
 library example;
@@ -131,7 +131,7 @@ flexible bits FlexibleFoo {
   EXPECT_EQ(library.LookupBits("DefaultStrictFoo")->strictness, fidl::types::Strictness::kStrict);
 }
 
-TEST(StrictnessTests, EnumStrictness) {
+TEST(StrictnessTests, GoodEnumStrictness) {
   TestLibrary library(
       R"FIDL(
 library example;
@@ -157,7 +157,7 @@ flexible enum FlexibleFoo {
 
 // TODO(fxbug.dev/73392): disallow flexible in the new syntax, and add a
 // FlexibleEnumReudundant test
-TEST(StrictnessTests, FlexibleEnumRedundantOld) {
+TEST(StrictnessTests, GoodFlexibleEnumRedundantOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -170,7 +170,7 @@ flexible enum Foo {
 
 // TODO(fxbug.dev/73392): disallow flexible in the new syntax, and add a
 // FlexibleBitsRedundant test
-TEST(StrictnessTests, FlexibleBitsRedundantOld) {
+TEST(StrictnessTests, GoodFlexibleBitsRedundantOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -181,7 +181,7 @@ flexible bits Foo {
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(StrictnessTests, InvalidStrictnessStruct) {
+TEST(StrictnessTests, BadStrictnessStruct) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -192,7 +192,7 @@ strict struct Foo {
   ASSERT_ERRORED(library, fidl::ErrCannotSpecifyModifier);
 }
 
-TEST(StrictnessTests, InvalidStrictnessTable) {
+TEST(StrictnessTests, BadStrictnessTable) {
   TestLibrary library("table", R"FIDL(
 library example;
 
@@ -202,7 +202,7 @@ strict table StrictFoo {
   ASSERT_ERRORED(library, fidl::ErrCannotSpecifyModifier);
 }
 
-TEST(StrictnessTests, UnionStrictness) {
+TEST(StrictnessTests, GoodUnionStrictness) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -225,7 +225,7 @@ strict union StrictFoo {
   EXPECT_EQ(library.LookupUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
 }
 
-TEST(StrictnessTests, StrictUnionRedundant) {
+TEST(StrictnessTests, GoodStrictUnionRedundant) {
   TestLibrary library(R"FIDL(
 library example;
 

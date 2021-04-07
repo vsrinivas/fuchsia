@@ -27,7 +27,7 @@ void invalid_resource_modifier(const std::string& type, const std::string& defin
   ASSERT_SUBSTR(errors[0]->msg.c_str(), type);
 }
 
-TEST(ResourcenessTests, bad_bits_resourceness) {
+TEST(ResourcenessTests, BadBitsResourceness) {
   invalid_resource_modifier("bits", R"FIDL(
 resource bits Foo {
     BAR = 0x1;
@@ -35,7 +35,7 @@ resource bits Foo {
 )FIDL");
 }
 
-TEST(ResourcenessTests, bad_enum_resourceness) {
+TEST(ResourcenessTests, BadEnumResourceness) {
   invalid_resource_modifier("enum", R"FIDL(
 resource enum Foo {
     BAR = 1;
@@ -43,25 +43,25 @@ resource enum Foo {
 )FIDL");
 }
 
-TEST(ResourcenessTests, bad_const_resourceness) {
+TEST(ResourcenessTests, BadConstResourceness) {
   invalid_resource_modifier("const", R"FIDL(
 resource const uint32 BAR = 1;
 )FIDL");
 }
 
-TEST(ResourcenessTests, bad_protocol_resourceness) {
+TEST(ResourcenessTests, BadProtocolResourceness) {
   invalid_resource_modifier("protocol", R"FIDL(
 resource protocol Foo {};
 )FIDL");
 }
 
-TEST(ResourcenessTests, bad_using_resourceness) {
+TEST(ResourcenessTests, BadUsingResourceness) {
   invalid_resource_modifier("using", R"FIDL(
 resource using B = bool;
 )FIDL");
 }
 
-TEST(ResourcenessTests, bad_duplicate_modifier) {
+TEST(ResourcenessTests, BadDuplicateModifier) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -84,7 +84,7 @@ resource resource resource struct Three {}; // line 6
   ASSERT_SUBSTR(errors[2]->msg.c_str(), "resource");
 }
 
-TEST(ResourcenessTests, good_resource_struct) {
+TEST(ResourcenessTests, GoodResourceStruct) {
   for (const std::string& definition : {
            "resource struct Foo {};",
            "resource struct Foo { bool b; };",
@@ -100,7 +100,7 @@ TEST(ResourcenessTests, good_resource_struct) {
   }
 }
 
-TEST(ResourcenessTests, good_resource_table) {
+TEST(ResourcenessTests, GoodResourceTable) {
   for (const std::string& definition : {
            "resource table Foo {};",
            "resource table Foo { 1: bool b; };",
@@ -116,7 +116,7 @@ TEST(ResourcenessTests, good_resource_table) {
   }
 }
 
-TEST(ResourcenessTests, good_resource_union) {
+TEST(ResourcenessTests, GoodResourceUnion) {
   for (const std::string& definition : {
            "resource union Foo { 1: bool b; };",
            "resource union Foo { 1: handle h; };",
@@ -131,7 +131,7 @@ TEST(ResourcenessTests, good_resource_union) {
   }
 }
 
-TEST(ResourcenessTests, bad_handles_in_value_struct) {
+TEST(ResourcenessTests, BadHandlesInValueStruct) {
   for (const std::string& definition : {
            "struct Foo { handle bad_member; };",
            "struct Foo { handle? bad_member; };",
@@ -151,7 +151,7 @@ TEST(ResourcenessTests, bad_handles_in_value_struct) {
   }
 }
 
-TEST(ResourcenessTests, bad_handles_in_value_table) {
+TEST(ResourcenessTests, BadHandlesInValueTable) {
   for (const std::string& definition : {
            "table Foo { 1: handle bad_member; };",
            "table Foo { 1: array<handle>:1 bad_member; };",
@@ -170,7 +170,7 @@ TEST(ResourcenessTests, bad_handles_in_value_table) {
   }
 }
 
-TEST(ResourcenessTests, bad_handles_in_value_union) {
+TEST(ResourcenessTests, BadHandlesInValueUnion) {
   for (const std::string& definition : {
            "union Foo { 1: handle bad_member; };",
            "union Foo { 1: array<handle>:1 bad_member; };",
@@ -189,7 +189,7 @@ TEST(ResourcenessTests, bad_handles_in_value_union) {
   }
 }
 
-TEST(ResourcenessTests, bad_protocols_in_value_type) {
+TEST(ResourcenessTests, BadProtocolsInValueType) {
   for (const std::string& definition : {
            "struct Foo { Protocol bad_member; };",
            "struct Foo { Protocol? bad_member; };",
@@ -213,7 +213,7 @@ protocol Protocol {};
   }
 }
 
-TEST(ResourcenessTests, bad_resource_types_in_value_type) {
+TEST(ResourcenessTests, BadResourceTypesInValueType) {
   for (const std::string& definition : {
            "struct Foo { ResourceStruct bad_member; };",
            "struct Foo { ResourceStruct? bad_member; };",
@@ -240,7 +240,7 @@ resource union ResourceUnion { 1: bool b; };
   }
 }
 
-TEST(ResourcenessTests, bad_resource_aliases_in_value_type) {
+TEST(ResourcenessTests, BadResourceAliasesInValueType) {
   for (const std::string& definition : {
            "struct Foo { HandleAlias bad_member; };",
            "struct Foo { ProtocolAlias bad_member; };",
@@ -274,7 +274,7 @@ resource union ResourceUnion { 1: bool b; };
   }
 }
 
-TEST(ResourcenessTests, bad_resources_in_nested_containers) {
+TEST(ResourcenessTests, BadResourcesInNestedContainers) {
   for (const std::string& definition : {
            "struct Foo { vector<vector<handle>> bad_member; };",
            "struct Foo { vector<vector<handle?>> bad_member; };",
@@ -304,7 +304,7 @@ resource union ResourceUnion { 1: bool b; };
   }
 }
 
-TEST(ResourcenessTests, bad_multiple_resource_types_in_value_type) {
+TEST(ResourcenessTests, BadMultipleResourceTypesInValueType) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -336,7 +336,7 @@ resource struct ResourceStruct {};
   ASSERT_SUBSTR(errors[2]->msg.c_str(), "third");
 }
 
-TEST(ResourcenessTests, good_transitive_resource_member) {
+TEST(ResourcenessTests, GoodTransitiveResourceMember) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -354,7 +354,7 @@ resource struct Bottom {};
   EXPECT_EQ(library.LookupStruct("Top")->resourceness, fidl::types::Resourceness::kResource);
 }
 
-TEST(ResourcenessTests, bad_transitive_resource_member) {
+TEST(ResourcenessTests, BadTransitiveResourceMember) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -384,7 +384,7 @@ resource struct Bottom {};
   ASSERT_SUBSTR(errors[1]->msg.c_str(), "middle");
 }
 
-TEST(ResourcenessTests, good_recursive_value_types) {
+TEST(ResourcenessTests, GoodRecursiveValueTypes) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -401,7 +401,7 @@ struct Boros {
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(ResourcenessTests, good_recursive_resource_types) {
+TEST(ResourcenessTests, GoodRecursiveResourceTypes) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -418,7 +418,7 @@ resource struct Boros {
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(ResourcenessTests, bad_recursive_resource_types) {
+TEST(ResourcenessTests, BadRecursiveResourceTypes) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -441,7 +441,7 @@ struct Boros {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "bad_member");
 }
 
-TEST(ResourcenessTests, strict_resource_order_independent) {
+TEST(ResourcenessTests, GoodStrictResourceOrderIndependent) {
   std::string fidl_library = R"FIDL(
 library example;
 

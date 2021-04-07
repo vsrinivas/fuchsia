@@ -365,6 +365,22 @@ fx_build_dir=$(cat .fx-build-dir) \
     fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
     fx ninja -C $fx_build_dir $fidlc_tests_target && gdb --args ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'AliasTests.invalid_recursive_alias'
 ```
+  
+#### `fidlc` test style guide
+
+All `fidlc` compiler tests written in C++ must conform to the following rules:
+
+*   Tests written using the `TEST` macro must have an UpperCamelCased group name
+    of the format `<CATEGORY>Tests`. and an UpperCamelCased test case name.
+    For example: `TEST(BitsTests, GoodValidBits) {...`.
+*   Test case names that test parsing and/or compilation must be prefixed with
+    one of the following:
+    *    `Good`: when the test case is expected to pass. Ex: `GoodValidMethod`.
+    *    `Bad`: when the test case is expected to pass. Ex: `BadMustBeDense`.
+    *    `Warn`: when the test case is expected to pass, but with reporter
+         warnings. Warnings are intended for temporary use when introducing a
+         new check, so tests prefixed with `Warn` should be changed to `Good`
+         or `Bad` when the check is removed. Ex: `WarnTooManyProvidedLibraries`.
 
 #### `fidlc` goldens
 

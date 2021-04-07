@@ -28,7 +28,7 @@ void CheckPrimitiveType(const Library* library, Typespace* typespace, const char
 
 // Tests that we can look up root types with global names, i.e. those absent
 // of any libraries.
-TEST(TypesTests, root_types_with_no_library_in_lookup) {
+TEST(TypesTests, RootTypesWithNoLibraryInLookup) {
   Typespace typespace = Typespace::RootTypes(nullptr);
   Library* library = nullptr;
 
@@ -47,7 +47,7 @@ TEST(TypesTests, root_types_with_no_library_in_lookup) {
 
 // Tests that we can look up root types with local names, i.e. those within
 // the context of a library.
-TEST(TypesTests, root_types_with_some_library_in_lookup) {
+TEST(TypesTests, RootTypesWithSomeLibraryInLookup) {
   Typespace typespace = Typespace::RootTypes(nullptr);
 
   TestLibrary library("library fidl.test;");
@@ -69,7 +69,7 @@ TEST(TypesTests, root_types_with_some_library_in_lookup) {
 
 // Check that fidl's types.h and zircon/types.h's handle subtype
 // values stay in sync, until the latter is generated.
-TEST(TypesTests, handle_subtype) {
+TEST(TypesTests, HandleSubtype) {
   static_assert(sizeof(types::HandleSubtype) == sizeof(zx_obj_type_t));
 
   static_assert(types::HandleSubtype::kHandle ==
@@ -124,7 +124,7 @@ TEST(TypesTests, handle_subtype) {
 
 // Check that fidl's types.h and zircon/types.h's rights types stay in
 // sync, until the latter is generated.
-TEST(TypesTests, rights) { static_assert(sizeof(types::Rights) == sizeof(zx_rights_t)); }
+TEST(TypesTests, Rights) { static_assert(sizeof(types::Rights) == sizeof(zx_rights_t)); }
 
 }  // namespace flat
 }  // namespace fidl

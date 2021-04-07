@@ -98,7 +98,7 @@ class JsonFindingsTest {
   Findings findings_;
 };
 
-TEST(JsonFindingsTests, simple_finding) {
+TEST(JsonFindingsTests, SimpleFinding) {
   auto test = JsonFindingsTest("simple_finding_test_file", R"ANYLANG(Findings are
 language
 agnostic.
@@ -121,7 +121,7 @@ agnostic.
 ])JSON");
 }
 
-TEST(JsonFindingsTests, simple_fidl) {
+TEST(JsonFindingsTests, SimpleFidl) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -148,7 +148,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, zero_length_string) {
+TEST(JsonFindingsTests, ZeroLengthString) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -175,7 +175,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, starts_on_newline) {
+TEST(JsonFindingsTests, StartsOnNewline) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -200,7 +200,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, ends_on_newline) {
+TEST(JsonFindingsTests, EndsOnNewline) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -226,7 +226,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, ends_on_eof) {
+TEST(JsonFindingsTests, EndsOnEof) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -251,7 +251,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, finding_with_suggestion_no_replacement) {
+TEST(JsonFindingsTests, FindingWithSuggestionNoReplacement) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -282,7 +282,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, finding_with_replacement) {
+TEST(JsonFindingsTests, FindingWithReplacement) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -322,7 +322,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, finding_spans_2_lines) {
+TEST(JsonFindingsTests, FindingSpans2Lines) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -349,7 +349,7 @@ protocol
 ])JSON");
 }
 
-TEST(JsonFindingsTests, two_findings) {
+TEST(JsonFindingsTests, TwoFindings) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -387,7 +387,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, three_findings) {
+TEST(JsonFindingsTests, ThreeFindings) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -458,7 +458,7 @@ protocol TestProtocol {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, multiple_files) {
+TEST(JsonFindingsTests, MultipleFiles) {
   auto test = JsonFindingsTest("simple_1.fidl", R"FIDL(
 library fidl.a;
 
@@ -507,7 +507,7 @@ struct TestStruct {
 ])JSON");
 }
 
-TEST(JsonFindingsTests, fidl_json_end_to_end) {
+TEST(JsonFindingsTests, FidlJsonEndToEnd) {
   auto library = std::make_unique<TestLibrary>("example.fidl", R"FIDL(
 library fidl.a;
 

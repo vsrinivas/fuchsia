@@ -35,7 +35,7 @@ void ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json)
       "To compare results, run:\n\n diff ./json_diagnostics_tests_{expected,actual}.txt\n");
 }
 
-TEST(JsonDiagnosticsTests, error) {
+TEST(JsonDiagnosticsTests, BadError) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -59,7 +59,7 @@ table Table {
 ])JSON");
 }
 
-TEST(JsonDiagnosticsTests, warning) {
+TEST(JsonDiagnosticsTests, WarnPassed) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -84,7 +84,7 @@ protocol Protocol {
 ])JSON");
 }
 
-TEST(JsonDiagnosticsTests, multiple_errors) {
+TEST(JsonDiagnosticsTests, BadMultipleErrors) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -120,7 +120,7 @@ table Table {
 ])JSON");
 }
 
-TEST(JsonDiagnosticsTests, span_is_eof) {
+TEST(JsonDiagnosticsTests, BadSpanIsEOF) {
   TestLibrary library(R"FIDL(
 library example;
 

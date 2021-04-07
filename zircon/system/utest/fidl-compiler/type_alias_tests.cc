@@ -11,7 +11,7 @@
 
 namespace {
 
-TEST(TypeAliasTests, primitive) {
+TEST(TypeAliasTests, GoodPrimitive) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -41,7 +41,7 @@ using alias_of_int16 = int16;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, primitive_type_alias_before_use) {
+TEST(TypeAliasTests, GoodPrimitiveTypeAliasBeforeUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -70,7 +70,7 @@ struct Message {
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, invalid_primitive_type_shadowing) {
+TEST(TypeAliasTests, BadPrimitiveTypeShadowing) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -86,7 +86,7 @@ struct Message {
   ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
 }
 
-TEST(TypeAliasTests, invalid_no_optional_on_primitive) {
+TEST(TypeAliasTests, BadNoOptionalOnPrimitive) {
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -102,7 +102,7 @@ struct Bad {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
-TEST(TypeAliasTests, invalid_no_optional_on_aliased_primitive) {
+TEST(TypeAliasTests, BadNoOptionalOnAliasedPrimitive) {
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -120,7 +120,7 @@ struct Bad {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
-TEST(TypeAliasTests, vector_parametrized_on_decl) {
+TEST(TypeAliasTests, GoodVectorParametrizedOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -152,7 +152,7 @@ using alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_parametrized_on_use) {
+TEST(TypeAliasTests, GoodVectorParametrizedOnUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -192,7 +192,7 @@ using alias_of_vector = vector;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_bounded_on_decl) {
+TEST(TypeAliasTests, GoodVectorBoundedOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -225,7 +225,7 @@ using alias_of_vector_max_8 = vector:8;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_bounded_on_use) {
+TEST(TypeAliasTests, GoodVectorBoundedOnUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -257,7 +257,7 @@ using alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_nullable_on_decl) {
+TEST(TypeAliasTests, GoodVectorNullableOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -289,7 +289,7 @@ using alias_of_vector_of_string_nullable = vector<string>?;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_nullable_on_use) {
+TEST(TypeAliasTests, GoodVectorNullableOnUse) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -321,7 +321,7 @@ using alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNullable);
 }
 
-TEST(TypeAliasTests, handle_parametrized_on_decl) {
+TEST(TypeAliasTests, GoodHandleParametrizedOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -366,7 +366,7 @@ using alias_of_handle_of_vmo = handle:VMO;
 // towards implementing FTP-052, and therefore are not putting in special
 // work to support this with the `using` keyword since that will soon be
 // deprecated.
-TEST(TypeAliasTests, invalid_handle_parametrized_on_use_is_not_supported) {
+TEST(TypeAliasTests, BadHandleParametrizedOnUseIsNotSupported) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -392,7 +392,7 @@ resource struct MyStruct {
   ASSERT_ERR(errors[0], fidl::ErrCouldNotParseSizeBound);
 }
 
-TEST(TypeAliasTests, invalid_cannot_parametrize_twice) {
+TEST(TypeAliasTests, BadCannotParametrizeTwice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -408,7 +408,7 @@ using alias_of_vector_of_string = vector<string>;
   ASSERT_ERR(errors[0], fidl::ErrCannotParametrizeTwice);
 }
 
-TEST(TypeAliasTests, invalid_cannot_bound_twice) {
+TEST(TypeAliasTests, BadCannotBoundTwice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -424,7 +424,7 @@ using alias_of_vector_of_string_max_5 = vector<string>:5;
   ASSERT_ERR(errors[0], fidl::ErrCannotBoundTwice);
 }
 
-TEST(TypeAliasTests, invalid_cannot_null_twice) {
+TEST(TypeAliasTests, BadCannotNullTwice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -440,7 +440,7 @@ using alias_of_vector_nullable = vector?;
   ASSERT_ERR(errors[0], fidl::ErrCannotIndicateNullabilityTwice);
 }
 
-TEST(TypeAliasTests, multi_file_alias_reference) {
+TEST(TypeAliasTests, GoodMultiFileAliasReference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -458,7 +458,7 @@ using AminoAcids = vector<uint64>:32;
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(TypeAliasTests, multi_file_nullable_alias_reference) {
+TEST(TypeAliasTests, GoodMultiFileNullableAliasReference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -476,7 +476,7 @@ using AminoAcids = vector<uint64>:32;
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(TypeAliasTests, invalid_recursive_alias) {
+TEST(TypeAliasTests, BadRecursiveAlias) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -495,7 +495,7 @@ struct TheStruct {
   // more granular and should be asserted here.
 }
 
-TEST(TypeAliasTests, invalid_compound_identifier) {
+TEST(TypeAliasTests, BadCompoundIdentifier) {
   TestLibrary library("test.fidl", R"FIDL(
 library example;
 

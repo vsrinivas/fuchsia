@@ -34,7 +34,7 @@ void InitializeContents() {
 }
 
 // Tests that repeatedly applying the formatter results in no change.
-TEST(FormatterTests, idempotence_test) {
+TEST(FormatterTests, GoodIdempotenceTest) {
   InitializeContents();
 
   for (auto element : formatted_output_) {
@@ -50,7 +50,7 @@ TEST(FormatterTests, idempotence_test) {
   }
 }
 
-TEST(FormatterTests, basic_formatting_rules_test) {
+TEST(FormatterTests, GoodBasicFormattingRulesTest) {
   InitializeContents();
 
   std::regex trailing_ws(".*\\s+$");
@@ -105,7 +105,7 @@ TEST(FormatterTests, basic_formatting_rules_test) {
   }
 }
 
-TEST(FormatterTests, golden_file_test) {
+TEST(FormatterTests, GoodGoldenFileTest) {
   InitializeContents();
 
   std::string good_output;

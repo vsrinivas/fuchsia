@@ -78,7 +78,7 @@ class Namer {
 
 constexpr int kRepeatTestCount = 100;
 
-TEST(DeclarationOrderTest, nonnullable_ref) {
+TEST(DeclarationOrderTest, GoodNonnullableRef) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -106,7 +106,7 @@ protocol #Protocol# {
   }
 }
 
-TEST(DeclarationOrderTest, nullable_ref_breaks_dependency) {
+TEST(DeclarationOrderTest, GoodNullableRefBreaksDependency) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -153,7 +153,7 @@ protocol #Protocol# {
   }
 }
 
-TEST(DeclarationOrderTest, request_type_breaks_dependency_graph) {
+TEST(DeclarationOrderTest, GoodRequestTypeBreaksDependencyGraph) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -178,7 +178,7 @@ protocol #Protocol# {
   }
 }
 
-TEST(DeclarationOrderTest, nonnullable_union) {
+TEST(DeclarationOrderTest, GoodNonnullableUnion) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -209,7 +209,7 @@ struct #Payload# {
   }
 }
 
-TEST(DeclarationOrderTest, nullable_union) {
+TEST(DeclarationOrderTest, GoodNullableUnion) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -256,7 +256,7 @@ struct #Payload# {
   }
 }
 
-TEST(DeclarationOrderTest, nonnullable_union_in_struct) {
+TEST(DeclarationOrderTest, GoodNonnullableUnionInStruct) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -291,7 +291,7 @@ union #Xunion# {
   }
 }
 
-TEST(DeclarationOrderTest, nullable_union_in_struct) {
+TEST(DeclarationOrderTest, GoodNullableUnionInStruct) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -343,7 +343,7 @@ union #Xunion# {
   }
 }
 
-TEST(DeclarationOrderTest, decls_across_libraries) {
+TEST(DeclarationOrderTest, GoodDeclsAcrossLibraries) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     SharedAmongstLibraries shared;
     TestLibrary dependency("dependency.fidl", R"FIDL(
@@ -382,7 +382,7 @@ protocol ExampleDecl1 {
   }
 }
 
-TEST(DeclarationOrderTest, const_type_comes_first) {
+TEST(DeclarationOrderTest, GoodConstTypeComesFirst) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -402,7 +402,7 @@ using #Alias# = uint32;
   }
 }
 
-TEST(DeclarationOrderTest, enum_ordinal_type_comes_first) {
+TEST(DeclarationOrderTest, GoodEnumOrdinalTypeComesFirst) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -422,7 +422,7 @@ using #Alias# = uint32;
   }
 }
 
-TEST(DeclarationOrderTest, bits_ordinal_type_comes_first) {
+TEST(DeclarationOrderTest, BitsOrdinalTypeComesFirst) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(

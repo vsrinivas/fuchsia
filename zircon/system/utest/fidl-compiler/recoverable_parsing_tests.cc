@@ -10,7 +10,7 @@
 
 namespace {
 
-TEST(RecoverableParsingTests, recover_at_end_of_file) {
+TEST(RecoverableParsingTests, BadRecoverAtEndOfFile) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -29,7 +29,7 @@ bits Bits {
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedToken);
 }
 
-TEST(RecoverableParsingTests, recover_at_end_of_decl) {
+TEST(RecoverableParsingTests, BadRecoverAtEndOfDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -54,7 +54,7 @@ struct Struct {
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_at_end_of_member) {
+TEST(RecoverableParsingTests, BadRecoverAtEndOfMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -103,7 +103,7 @@ struct TimeZone {
   ASSERT_ERR(errors[6], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, do_not_compile_after_parsing_fails) {
+TEST(RecoverableParsingTests, BadDoNotCompileAfterParsingFails) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -120,7 +120,7 @@ struct NameCollision {};              // This name collision error will not be
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_bits_member) {
+TEST(RecoverableParsingTests, BadRecoverToNextBitsMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -138,7 +138,7 @@ bits Bits {
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_enum_member) {
+TEST(RecoverableParsingTests, BadRecoverToNextEnumMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -156,7 +156,7 @@ enum Enum {
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_protocol_member) {
+TEST(RecoverableParsingTests, BadRecoverToNextProtocolMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -184,7 +184,7 @@ protocol P {
   ASSERT_ERR(errors[7], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_service_member) {
+TEST(RecoverableParsingTests, BadRecoverToNextServiceMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -205,7 +205,7 @@ service Service {
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_struct_member) {
+TEST(RecoverableParsingTests, BadRecoverToNextStructMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -224,7 +224,7 @@ struct Struct {
   ASSERT_ERR(errors[2], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_table_member) {
+TEST(RecoverableParsingTests, BadRecoverToNextTableMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -243,7 +243,7 @@ table Table {
   ASSERT_ERR(errors[2], fidl::ErrExpectedOrdinalOrCloseBrace);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_union_member) {
+TEST(RecoverableParsingTests, BadRecoverToNextUnionMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -261,7 +261,7 @@ union Union {
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(RecoverableParsingTests, recover_to_next_parameter_in_list) {
+TEST(RecoverableParsingTests, BadRecoverToNextParameterInList) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -286,7 +286,7 @@ protocol Protocol {
   ASSERT_ERR(errors[7], fidl::ErrExpectedProtocolMember);
 }
 
-TEST(RecoverableParsingTests, recover_final_member_missing_semicolon) {
+TEST(RecoverableParsingTests, BadRecoverFinalMemberMissingSemicolon) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -307,7 +307,7 @@ extra_token // Second error
   ASSERT_ERR(errors[1], fidl::ErrExpectedDeclaration);
 }
 
-TEST(RecoverableParsingTests, recover_final_member_missing_name_and_semicolon) {
+TEST(RecoverableParsingTests, BadRecoverFinalMemberMissingNameAndSemicolon) {
   TestLibrary library(R"FIDL(
 library example;
 

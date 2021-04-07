@@ -14,7 +14,7 @@
 
 namespace {
 
-TEST(ServiceTests, valid_empty_service) {
+TEST(ServiceTests, GoodEmptyService) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -29,7 +29,7 @@ service SomeService {};
   EXPECT_EQ(service->members.size(), 0);
 }
 
-TEST(ServiceTests, valid_service) {
+TEST(ServiceTests, GoodService) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -60,7 +60,7 @@ service SomeService {
   EXPECT_STR_EQ(fidl::NameFlatName(member2.type_ctor->name).c_str(), "example/SomeProtocol2");
 }
 
-TEST(ServiceTests, invalid_cannot_have_conflicting_members) {
+TEST(ServiceTests, BadCannotHaveConflictingMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -79,7 +79,7 @@ service SomeService {
   ASSERT_ERR(errors[0], fidl::ErrDuplicateServiceMemberName);
 }
 
-TEST(ServiceTests, invalid_no_nullable_protocol_members) {
+TEST(ServiceTests, BadNoNullableProtocolMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -96,7 +96,7 @@ service SomeService {
   ASSERT_ERR(errors[0], fidl::ErrNullableServiceMember);
 }
 
-TEST(ServiceTests, invalid_only_protocol_members) {
+TEST(ServiceTests, BadOnlyProtocolMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -113,7 +113,7 @@ service SomeService {
   ASSERT_ERR(errors[0], fidl::ErrCannotUseType);
 }
 
-TEST(ServiceTests, invalid_cannot_use_services_in_decls) {
+TEST(ServiceTests, BadCannotUseServicesInDecls) {
   TestLibrary library(R"FIDL(
 library example;
 

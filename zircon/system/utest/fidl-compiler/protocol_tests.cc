@@ -13,7 +13,7 @@
 
 namespace {
 
-TEST(ProtocolTests, ValidEmptyProtocol) {
+TEST(ProtocolTests, GoodValidEmptyProtocol) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -29,7 +29,7 @@ protocol Empty {};
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 
-TEST(ProtocolTests, ValidComposeMethod) {
+TEST(ProtocolTests, GoodValidComposeMethod) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -55,7 +55,7 @@ protocol HasComposeMethod2 {
   EXPECT_EQ(protocol2->all_methods.size(), 1);
 }
 
-TEST(ProtocolTests, ValidProtocolComposition) {
+TEST(ProtocolTests, GoodValidProtocolComposition) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -103,7 +103,7 @@ protocol D {
   EXPECT_EQ(protocol_d->all_methods.size(), 4);
 }
 
-TEST(ProtocolTests, InvalidColonNotSupportedOld) {
+TEST(ProtocolTests, BadColonNotSupportedOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -117,7 +117,7 @@ protocol Child : Parent {};
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ProtocolTests, InvalidColonNotSupported) {
+TEST(ProtocolTests, BadColonNotSupported) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -134,7 +134,7 @@ protocol Child : Parent {};
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ProtocolTests, InvalidDocCommentOutsideAttributelistOld) {
+TEST(ProtocolTests, BadDocCommentOutsideAttributelistOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -144,13 +144,10 @@ protocol WellDocumented {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
 }
 
-TEST(ProtocolTests, InvalidDocCommentOutsideAttributelist) {
+TEST(ProtocolTests, BadDocCommentOutsideAttributelist) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -163,13 +160,10 @@ protocol WellDocumented {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
 }
 
-TEST(ProtocolTests, invalid_cannot_attach_attributes_to_compose) {
+TEST(ProtocolTests, BadCannotAttachAttributesToCompose) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -178,13 +172,10 @@ protocol Child {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotAttachAttributesToCompose);
+  ASSERT_ERRORED(library, fidl::ErrCannotAttachAttributesToCompose);
 }
 
-TEST(ProtocolTests, InvalidCannotComposeYourselfOld) {
+TEST(ProtocolTests, BadCannotComposeYourselfOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -193,13 +184,10 @@ protocol Narcisse {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
+  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
 }
 
-TEST(ProtocolTests, InvalidCannotComposeYourself) {
+TEST(ProtocolTests, BadCannotComposeYourself) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -211,13 +199,10 @@ protocol Narcisse {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
+  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
 }
 
-TEST(ProtocolTests, InvalidCannotComposeSameProtocolTwiceOld) {
+TEST(ProtocolTests, BadCannotComposeSameProtocolTwiceOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -231,13 +216,10 @@ protocol Child {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrProtocolComposedMultipleTimes);
+  ASSERT_ERRORED(library, fidl::ErrProtocolComposedMultipleTimes);
 }
 
-TEST(ProtocolTests, InvalidCannotComposeSameProtocolTwice) {
+TEST(ProtocolTests, BadCannotComposeSameProtocolTwice) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -254,13 +236,10 @@ protocol Child {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrProtocolComposedMultipleTimes);
+  ASSERT_ERRORED(library, fidl::ErrProtocolComposedMultipleTimes);
 }
 
-TEST(ProtocolTests, InvalidCannotComposeMissingProtocolOld) {
+TEST(ProtocolTests, BadCannotComposeMissingProtocolOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -269,14 +248,11 @@ protocol Child {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MissingParent");
+  ASSERT_ERRORED(library, fidl::ErrUnknownType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MissingParent");
 }
 
-TEST(ProtocolTests, InvalidCannotComposeMissingProtocol) {
+TEST(ProtocolTests, BadCannotComposeMissingProtocol) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -288,14 +264,11 @@ protocol Child {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MissingParent");
+  ASSERT_ERRORED(library, fidl::ErrUnknownType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MissingParent");
 }
 
-TEST(ProtocolTests, InvalidCannotComposeNonProtocolOld) {
+TEST(ProtocolTests, BadCannotComposeNonProtocolOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -304,13 +277,10 @@ protocol P {
     compose S;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrComposingNonProtocol);
+  ASSERT_ERRORED(library, fidl::ErrComposingNonProtocol);
 }
 
-TEST(ProtocolTests, InvalidCannotComposeNonProtocol) {
+TEST(ProtocolTests, BadCannotComposeNonProtocol) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -322,13 +292,10 @@ protocol P {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrComposingNonProtocol);
+  ASSERT_ERRORED(library, fidl::ErrComposingNonProtocol);
 }
 
-TEST(ProtocolTests, InvalidCannotUseOrdinalsInProtocolDeclarationOld) {
+TEST(ProtocolTests, BadCannotUseOrdinalsInProtocolDeclarationOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -337,13 +304,10 @@ protocol NoMoreOrdinals {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
 }
 
-TEST(ProtocolTests, InvalidCannotUseOrdinalsInProtocolDeclaration) {
+TEST(ProtocolTests, BadCannotUseOrdinalsInProtocolDeclaration) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -355,13 +319,10 @@ protocol NoMoreOrdinals {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
 }
 
-TEST(ProtocolTests, InvalidNoOtherPragmaThanComposeOld) {
+TEST(ProtocolTests, BadNoOtherPragmaThanComposeOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -370,13 +331,10 @@ protocol Wrong {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
-TEST(ProtocolTests, InvalidNoOtherPragmaThanCompose) {
+TEST(ProtocolTests, BadNoOtherPragmaThanCompose) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -388,13 +346,10 @@ protocol Wrong {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
-TEST(ProtocolTests, InvalidComposedProtocolsHaveClashingNamesOld) {
+TEST(ProtocolTests, BadComposedProtocolsHaveClashingNamesOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -419,13 +374,10 @@ protocol D {
     MethodA();
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodName);
+  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodName);
 }
 
-TEST(ProtocolTests, InvalidComposedProtocolsHaveClashingNames) {
+TEST(ProtocolTests, BadComposedProtocolsHaveClashingNames) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -453,14 +405,11 @@ protocol D {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodName);
+  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodName);
 }
 
 // See GetGeneratedOrdinal64ForTesting in test_library.h
-TEST(ProtocolTests, InvalidComposedProtocolsHaveClashingOrdinalsOld) {
+TEST(ProtocolTests, BadComposedProtocolsHaveClashingOrdinalsOld) {
   TestLibrary library(R"FIDL(
 library methodhasher;
 
@@ -473,15 +422,12 @@ protocol Special {
     ClashTwo();
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ClashTwo_");
+  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodOrdinal);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ClashTwo_");
 }
 
 // See GetGeneratedOrdinal64ForTesting in test_library.h
-TEST(ProtocolTests, InvalidComposedProtocolsHaveClashingOrdinals) {
+TEST(ProtocolTests, BadComposedProtocolsHaveClashingOrdinals) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -497,15 +443,12 @@ protocol Special {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ClashTwo_");
+  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodOrdinal);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ClashTwo_");
 }
 
 // TODO(fxbug.dev/68792), TODO(fxbug.dev/72924): support attributes in the new syntax
-TEST(ProtocolTests, InvalidSimpleConstraintAppliesToComposedMethodsTooOld) {
+TEST(ProtocolTests, BadSimpleConstraintAppliesToComposedMethodsTooOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -519,15 +462,12 @@ protocol YearningForSimplicity {
     Simple();
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMemberMustBeSimple);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "arg");
+  ASSERT_ERRORED(library, fidl::ErrMemberMustBeSimple);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "arg");
 }
 
 // TODO(fxbug.dev/71536): implement client/server end in the new syntax
-TEST(ProtocolTests, InvalidRequestMustBeProtocolOld) {
+TEST(ProtocolTests, BadRequestMustBeProtocolOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -536,14 +476,11 @@ protocol P {
     Method(request<S> r);
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMustBeAProtocol);
+  ASSERT_ERRORED(library, fidl::ErrMustBeAProtocol);
 }
 
 // TODO(fxbug.dev/71536): implement client/server end in the new syntax
-TEST(ProtocolTests, InvalidRequestMustBeParameterized) {
+TEST(ProtocolTests, BadRequestMustBeParameterized) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -551,14 +488,11 @@ protocol P {
     Method(request r);
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED(library, fidl::ErrMustBeParameterized);
 }
 
 // TODO(fxbug.dev/71536): implement client/server end in the new syntax
-TEST(ProtocolTests, InvalidRequestCannotHaveSize) {
+TEST(ProtocolTests, BadRequestCannotHaveSize) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -567,13 +501,10 @@ struct S {
     request<P>:0 p;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotHaveSize);
+  ASSERT_ERRORED(library, fidl::ErrCannotHaveSize);
 }
 
-TEST(ProtocolTests, InvalidDuplicateParameterNameOld) {
+TEST(ProtocolTests, BadDuplicateParameterNameOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -581,13 +512,10 @@ protocol P {
   MethodWithDuplicateParams(uint8 foo, uint8 foo);
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodParameterName);
+  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodParameterName);
 }
 
-TEST(ProtocolTests, InvalidDuplicateParameterName) {
+TEST(ProtocolTests, BadDuplicateParameterName) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -598,10 +526,7 @@ protocol P {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodParameterName);
+  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodParameterName);
 }
 
 }  // namespace
