@@ -6,6 +6,7 @@
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister": "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/mock_reboot_register_component.cmx",
+                "fuchsia.metrics.MetricEventLoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.mockrebootcontroller.MockRebootController": "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/mock_reboot_register_component.cmx"
             }
         }

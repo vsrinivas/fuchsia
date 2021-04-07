@@ -11,8 +11,12 @@ use {
     diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
     diagnostics_reader::{ArchiveReader, Inspect},
     fidl_fuchsia_cobalt::{
-        CobaltEvent, CountEvent, EventPayload, HistogramBucket, LoggerFactoryMarker,
-        LoggerFactoryProxy, LoggerProxy,
+        CobaltEvent, CountEvent, EventPayload, HistogramBucket as CobaltHistogramBucket,
+        LoggerFactoryMarker, LoggerFactoryProxy, LoggerProxy,
+    },
+    fidl_fuchsia_metrics::{
+        HistogramBucket, MetricEvent, MetricEventLoggerFactoryMarker,
+        MetricEventLoggerFactoryProxy, MetricEventLoggerProxy, MetricEventPayload, ProjectSpec,
     },
     fuchsia_async::{self as fasync, futures::StreamExt},
     fuchsia_component::client::connect_to_service,
@@ -185,6 +189,11 @@ impl SamplerExecutor {
                 .context("Failed to connect to the Cobalt LoggerFactory")?,
         );
 
+        let metric_logger_factory: Arc<MetricEventLoggerFactoryProxy> = Arc::new(
+            connect_to_service::<MetricEventLoggerFactoryMarker>()
+                .context("Failed to connect to the Metric LoggerFactory")?,
+        );
+
         let minimum_sample_rate_sec = sampler_config.minimum_sample_rate_sec;
 
         let sampler_executor_stats = Arc::new(
@@ -230,6 +239,7 @@ impl SamplerExecutor {
                 ProjectSampler::new(
                     project_config,
                     logger_factory.clone(),
+                    metric_logger_factory.clone(),
                     minimum_sample_rate_sec,
                     project_sampler_stats.clone(),
                 )
@@ -307,7 +317,9 @@ pub struct ProjectSampler {
     // Cache from Inspect selector to last sampled property.
     metric_cache: HashMap<String, Property>,
     // Cobalt logger proxy using this ProjectSampler's project id.
-    cobalt_logger: LoggerProxy,
+    cobalt_logger: Option<LoggerProxy>,
+    // fuchsia.metrics logger proxy using this ProjectSampler's project id.
+    metrics_logger: Option<MetricEventLoggerProxy>,
     // The frequency with which we snapshot Inspect properties
     // for this project.
     poll_rate_sec: i64,
@@ -337,7 +349,8 @@ pub enum ProjectSamplerEvent {
 impl ProjectSampler {
     pub async fn new(
         config: ProjectConfig,
-        logger_factory: Arc<LoggerFactoryProxy>,
+        cobalt_logger_factory: Arc<LoggerFactoryProxy>,
+        metric_logger_factory: Arc<MetricEventLoggerFactoryProxy>,
         minimum_sample_rate_sec: i64,
         project_sampler_stats: Arc<ProjectSamplerStats>,
     ) -> Result<ProjectSampler, Error> {
@@ -355,19 +368,47 @@ impl ProjectSampler {
             ));
         }
 
+        let mut cobalt_logged: i64 = 0;
+        let mut metrics_logged: i64 = 0;
         let metric_transformation_map = config
             .metrics
             .into_iter()
-            .map(|metric_config| (metric_config.selector.clone(), metric_config))
+            .map(|metric_config| {
+                if metric_config.use_legacy_cobalt.unwrap_or(false) {
+                    cobalt_logged += 1;
+                } else {
+                    metrics_logged += 1;
+                };
+                (metric_config.selector.clone(), metric_config)
+            })
             .collect::<HashMap<String, MetricConfig>>();
 
         project_sampler_stats.project_sampler_count.add(1);
         project_sampler_stats.metrics_configured.add(metric_transformation_map.len() as u64);
 
-        let (logger_proxy, server_end) =
-            fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
+        let cobalt_logger = if cobalt_logged > 0 {
+            let (cobalt_logger_proxy, cobalt_server_end) =
+                fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
+            cobalt_logger_factory
+                .create_logger_from_project_id(project_id, cobalt_server_end)
+                .await?;
+            Some(cobalt_logger_proxy)
+        } else {
+            None
+        };
 
-        logger_factory.create_logger_from_project_id(project_id, server_end).await?;
+        let metrics_logger = if metrics_logged > 0 {
+            let (metrics_logger_proxy, metrics_server_end) =
+                fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
+            let mut project_spec = ProjectSpec::EMPTY;
+            project_spec.project_id = Some(project_id);
+            metric_logger_factory
+                .create_metric_event_logger(project_spec, metrics_server_end)
+                .await?;
+            Some(metrics_logger_proxy)
+        } else {
+            None
+        };
 
         Ok(ProjectSampler {
             archive_reader: ArchiveReader::new()
@@ -375,7 +416,8 @@ impl ProjectSampler {
                 .add_selectors(metric_transformation_map.keys().cloned()),
             metric_transformation_map,
             metric_cache: HashMap::new(),
-            cobalt_logger: logger_proxy,
+            cobalt_logger,
+            metrics_logger,
             poll_rate_sec,
             project_sampler_stats,
         })
@@ -508,6 +550,8 @@ impl ProjectSampler {
                 let metric_id = metric_transformation.metric_id.clone();
                 let event_codes = metric_transformation.event_codes.clone();
                 let upload_once = metric_transformation.upload_once.clone();
+                let use_legacy_logger =
+                    metric_transformation.use_legacy_cobalt.clone() == Some(true);
 
                 self.process_metric_transformation(
                     metric_type,
@@ -515,6 +559,7 @@ impl ProjectSampler {
                     event_codes,
                     selector.clone(),
                     new_sample,
+                    use_legacy_logger,
                 )
                 .await?;
 
@@ -543,6 +588,7 @@ impl ProjectSampler {
         event_codes: Vec<u32>,
         selector: String,
         new_sample: &Property,
+        use_legacy_logger: bool,
     ) -> Result<(), Error> {
         let previous_sample_opt: Option<&Property> = self.metric_cache.get(&selector);
 
@@ -551,15 +597,32 @@ impl ProjectSampler {
         {
             self.maybe_update_cache(new_sample, &metric_type, selector);
 
-            let mut cobalt_event = CobaltEvent {
-                metric_id: metric_id,
-                event_codes: event_codes,
-                payload,
-                component: None,
-            };
+            if use_legacy_logger {
+                let transformed_payload: EventPayload =
+                    transform_metrics_payload_to_cobalt(payload);
+                let mut cobalt_event = CobaltEvent {
+                    metric_id,
+                    event_codes,
+                    payload: transformed_payload,
+                    component: None,
+                };
+                self.cobalt_logger.as_ref().unwrap().log_cobalt_event(&mut cobalt_event).await?;
+            } else {
+                let mut metric_events = vec![MetricEvent { metric_id, event_codes, payload }];
+                // Note: The MetricEvent vector can't be marked send because it
+                // is a dyn object stream and rust can't confirm that it doesn't have handles. This
+                // is fine because we don't actually need to "send" to make the API call. But if we chain
+                // the creation of the future with the await on the future, rust interperets all variables
+                // including the reference to the event vector as potentially being needed across the await.
+                // So we have to split the creation of the future out from the await on the future. :(
+                let log_future = self
+                    .metrics_logger
+                    .as_ref()
+                    .unwrap()
+                    .log_metric_events(&mut metric_events.iter_mut());
 
-            self.cobalt_logger.log_cobalt_event(&mut cobalt_event).await?;
-
+                log_future.await?;
+            }
             self.project_sampler_stats.cobalt_logs_sent.add(1);
         }
 
@@ -581,12 +644,38 @@ impl ProjectSampler {
     }
 }
 
+fn transform_metrics_payload_to_cobalt(payload: MetricEventPayload) -> EventPayload {
+    match payload {
+        MetricEventPayload::Count(count) => {
+            // Safe to unwrap because we use cobalt v1.0 sanitization when constructing the Count metric event payload.
+            EventPayload::EventCount(CountEvent {
+                count: count.try_into().unwrap(),
+                period_duration_micros: 0,
+            })
+        }
+        MetricEventPayload::IntegerValue(value) => {
+            EventPayload::EventCount(CountEvent { count: value, period_duration_micros: 0 })
+        }
+        MetricEventPayload::Histogram(hist) => {
+            let legacy_histogram = hist
+                .into_iter()
+                .map(|metric_bucket| CobaltHistogramBucket {
+                    index: metric_bucket.index,
+                    count: metric_bucket.count,
+                })
+                .collect();
+            EventPayload::IntHistogram(legacy_histogram)
+        }
+        _ => unreachable!("We only support count, int, and histogram"),
+    }
+}
+
 fn process_sample_for_data_type(
     new_sample: &Property,
     previous_sample_opt: Option<&Property>,
     selector: &String,
     data_type: &DataType,
-) -> Option<EventPayload> {
+) -> Option<MetricEventPayload> {
     let event_payload_res = match data_type {
         DataType::Occurrence => process_occurence(new_sample, previous_sample_opt, selector),
         DataType::IntHistogram => process_int_histogram(new_sample, previous_sample_opt, selector),
@@ -637,7 +726,7 @@ fn process_int_histogram(
     new_sample: &Property,
     prev_sample_opt: Option<&Property>,
     selector: &String,
-) -> Result<Option<EventPayload>, Error> {
+) -> Result<Option<MetricEventPayload>, Error> {
     let diff = match prev_sample_opt {
         None => convert_inspect_histogram_to_cobalt_histogram(new_sample, selector)?,
         Some(prev_sample) => {
@@ -651,7 +740,7 @@ fn process_int_histogram(
     };
 
     if diff.iter().any(|v| v.count != 0) {
-        Ok(Some(EventPayload::IntHistogram(diff)))
+        Ok(Some(MetricEventPayload::Histogram(diff)))
     } else {
         Ok(None)
     }
@@ -778,7 +867,10 @@ fn convert_inspect_histogram_to_cobalt_histogram(
     }
 }
 
-fn process_int(new_sample: &Property, selector: &String) -> Result<Option<EventPayload>, Error> {
+fn process_int(
+    new_sample: &Property,
+    selector: &String,
+) -> Result<Option<MetricEventPayload>, Error> {
     let sampled_int = match new_sample {
         Property::Uint(_, val) => sanitize_unsigned_numerical(val.clone(), selector)?,
         Property::Int(_, val) => val.clone(),
@@ -796,16 +888,14 @@ fn process_int(new_sample: &Property, selector: &String) -> Result<Option<EventP
         }
     };
 
-    // TODO(42067): With Cobalt 1.1, we can encode ints in a proper int type rather
-    // than conflating event counts.
-    Ok(Some(EventPayload::EventCount(CountEvent { count: sampled_int, period_duration_micros: 0 })))
+    Ok(Some(MetricEventPayload::IntegerValue(sampled_int)))
 }
 
 fn process_occurence(
     new_sample: &Property,
     prev_sample_opt: Option<&Property>,
     selector: &String,
-) -> Result<Option<EventPayload>, Error> {
+) -> Result<Option<MetricEventPayload>, Error> {
     let diff = match prev_sample_opt {
         None => compute_initial_event_count(new_sample, selector)?,
         Some(prev_sample) => compute_event_count_diff(new_sample, prev_sample, selector)?,
@@ -825,9 +915,9 @@ fn process_occurence(
         return Ok(None);
     }
 
-    // TODO(42067): If we decide to encode period duration,
-    // use system uptime here.
-    Ok(Some(EventPayload::EventCount(CountEvent { count: diff, period_duration_micros: 0 })))
+    // TODO(42067): Once fuchsia.cobalt is gone, we don't need to preserve
+    // occurence counts "fitting" into i64s.
+    Ok(Some(MetricEventPayload::Count(diff as u64)))
 }
 
 fn compute_initial_event_count(new_sample: &Property, selector: &String) -> Result<i64, Error> {
@@ -911,7 +1001,6 @@ mod tests {
         process_ok: bool,
         event_made: bool,
         diff: i64,
-        timespan: i64,
     }
 
     fn process_occurence_tester(params: EventCountTesterParams) {
@@ -933,13 +1022,20 @@ mod tests {
         }
 
         assert!(event_opt.is_some());
-
-        match event_opt.unwrap() {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, params.diff);
-                assert_eq!(count_event.period_duration_micros, params.timespan);
+        let event = event_opt.unwrap();
+        match event {
+            MetricEventPayload::Count(count) => {
+                assert_eq!(count, params.diff as u64);
             }
             _ => panic!("Expecting event counts."),
+        }
+
+        let transformed_event = transform_metrics_payload_to_cobalt(event);
+        match transformed_event {
+            EventPayload::EventCount(count_event) => {
+                assert_eq!(count_event.count, params.diff);
+            }
+            _ => panic!("Expecting count events."),
         }
     }
 
@@ -951,7 +1047,6 @@ mod tests {
             process_ok: true,
             event_made: true,
             diff: 1,
-            timespan: 0,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -960,7 +1055,6 @@ mod tests {
             process_ok: true,
             event_made: false,
             diff: -1,
-            timespan: -1,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -969,7 +1063,6 @@ mod tests {
             process_ok: true,
             event_made: true,
             diff: 2,
-            timespan: 0,
         });
     }
 
@@ -981,7 +1074,6 @@ mod tests {
             process_ok: true,
             event_made: true,
             diff: 1,
-            timespan: 0,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -990,7 +1082,6 @@ mod tests {
             process_ok: true,
             event_made: true,
             diff: 1,
-            timespan: 0,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -999,7 +1090,6 @@ mod tests {
             process_ok: true,
             event_made: true,
             diff: 3,
-            timespan: 0,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -1008,7 +1098,6 @@ mod tests {
             process_ok: false,
             event_made: false,
             diff: -1,
-            timespan: -1,
         });
     }
 
@@ -1020,7 +1109,6 @@ mod tests {
             process_ok: false,
             event_made: false,
             diff: -1,
-            timespan: -1,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -1029,7 +1117,6 @@ mod tests {
             process_ok: false,
             event_made: false,
             diff: -1,
-            timespan: -1,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -1038,7 +1125,6 @@ mod tests {
             process_ok: false,
             event_made: false,
             diff: -1,
-            timespan: -1,
         });
 
         let i64_max_in_u64: u64 = std::i64::MAX.try_into().unwrap();
@@ -1049,7 +1135,6 @@ mod tests {
             process_ok: true,
             event_made: true,
             diff: std::i64::MAX,
-            timespan: 0,
         });
 
         process_occurence_tester(EventCountTesterParams {
@@ -1058,7 +1143,6 @@ mod tests {
             process_ok: false,
             event_made: false,
             diff: -1,
-            timespan: -1,
         });
     }
 
@@ -1066,7 +1150,6 @@ mod tests {
         new_val: Property,
         process_ok: bool,
         sample: i64,
-        timespan: i64,
     }
 
     fn process_int_tester(params: IntTesterParams) {
@@ -1082,13 +1165,20 @@ mod tests {
 
         let event_opt = event_res.unwrap();
         assert!(event_opt.is_some());
-
-        match event_opt.unwrap() {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, params.sample);
-                assert_eq!(count_event.period_duration_micros, params.timespan);
+        let event = event_opt.unwrap();
+        match event {
+            MetricEventPayload::IntegerValue(val) => {
+                assert_eq!(val, params.sample);
             }
             _ => panic!("Expecting event counts."),
+        }
+
+        let transformed_event = transform_metrics_payload_to_cobalt(event);
+        match transformed_event {
+            EventPayload::EventCount(count_event) => {
+                assert_eq!(count_event.count, params.sample);
+            }
+            _ => panic!("Expecting count events."),
         }
     }
     #[test]
@@ -1097,35 +1187,30 @@ mod tests {
             new_val: Property::Int("count".to_string(), 13),
             process_ok: true,
             sample: 13,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), -13),
             process_ok: true,
             sample: -13,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), 0),
             process_ok: true,
             sample: 0,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Uint("count".to_string(), 13),
             process_ok: true,
             sample: 13,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::String("count".to_string(), "big_oof".to_string()),
             process_ok: false,
             sample: -1,
-            timespan: -1,
         });
     }
 
@@ -1135,14 +1220,12 @@ mod tests {
             new_val: Property::Int("count".to_string(), std::i64::MAX),
             process_ok: true,
             sample: std::i64::MAX,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), std::i64::MIN),
             process_ok: true,
             sample: std::i64::MIN,
-            timespan: 0,
         });
 
         let i64_max_in_u64: u64 = std::i64::MAX.try_into().unwrap();
@@ -1151,14 +1234,12 @@ mod tests {
             new_val: Property::Uint("count".to_string(), i64_max_in_u64),
             process_ok: true,
             sample: std::i64::MAX,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 1),
             process_ok: false,
             sample: -1,
-            timespan: -1,
         });
     }
 
@@ -1212,8 +1293,9 @@ mod tests {
 
         assert!(event_opt.is_some());
 
-        match event_opt.unwrap() {
-            EventPayload::IntHistogram(histogram_buckets) => {
+        let event = event_opt.unwrap();
+        match event.clone() {
+            MetricEventPayload::Histogram(histogram_buckets) => {
                 assert_eq!(histogram_buckets.len(), params.diff.len());
 
                 let expected_histogram_buckets = params
@@ -1225,6 +1307,27 @@ mod tests {
                         count: *count,
                     })
                     .collect::<Vec<HistogramBucket>>();
+
+                assert_eq!(histogram_buckets, expected_histogram_buckets);
+            }
+            _ => panic!("Expecting int histogram."),
+        }
+
+        let transformed_event = transform_metrics_payload_to_cobalt(event);
+
+        match transformed_event {
+            EventPayload::IntHistogram(histogram_buckets) => {
+                assert_eq!(histogram_buckets.len(), params.diff.len());
+
+                let expected_histogram_buckets = params
+                    .diff
+                    .iter()
+                    .enumerate()
+                    .map(|(index, count)| CobaltHistogramBucket {
+                        index: u32::try_from(index).unwrap(),
+                        count: *count,
+                    })
+                    .collect::<Vec<CobaltHistogramBucket>>();
 
                 assert_eq!(histogram_buckets, expected_histogram_buckets);
             }

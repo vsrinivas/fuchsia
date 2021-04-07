@@ -6,97 +6,113 @@
       "selector": "bootstrap/driver_manager:root/ftl:block.read.count",
       "metric_id": 2001,
       "metric_type": "Occurrence",
-      "event_codes": [1]
+      "event_codes": [1],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.write.count",
       "metric_id": 2001,
       "metric_type": "Occurrence",
-      "event_codes": [2]
+      "event_codes": [2],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.flush.count",
       "metric_id": 2001,
       "metric_type": "Occurrence",
-      "event_codes": [3]
+      "event_codes": [3],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.trim.count",
       "metric_id": 2001,
       "metric_type": "Occurrence",
-      "event_codes": [4]
+      "event_codes": [4],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.read.issued_page_read.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [1, 1]
+      "event_codes": [1, 1],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.read.issued_page_write.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [2, 1]
+      "event_codes": [2, 1],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.read.issued_block_erase.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [3, 1]
+      "event_codes": [3, 1],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.write.issued_page_read.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [1, 2]
+      "event_codes": [1, 2],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.write.issued_page_write.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [2, 2]
+      "event_codes": [2, 2],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.write.issued_block_erase.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [3, 2]
+      "event_codes": [3, 2],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.flush.issued_page_read.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [1, 3]
+      "event_codes": [1, 3],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.flush.issued_page_write.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [2, 3]
+      "event_codes": [2, 3],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.flush.issued_block_erase.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [3, 3]
+      "event_codes": [3, 3],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.trim.issued_page_read.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [1, 4]
+      "event_codes": [1, 4],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.trim.issued_page_write.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [2, 4]
+      "event_codes": [2, 4],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/ftl:block.trim.issued_block_erase.count",
       "metric_id": 2002,
       "metric_type": "Occurrence",
-      "event_codes": [3, 4]
+      "event_codes": [3, 4],
+      "use_legacy_cobalt": true
     }
   ]
 }

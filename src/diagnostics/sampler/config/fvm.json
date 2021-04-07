@@ -6,13 +6,15 @@
       "selector": "bootstrap/driver_manager:root/fvm/partitions/blobfs:total_slices_reserved",
       "metric_id": 3000,
       "metric_type": "Integer",
-      "event_codes": [0]
+      "event_codes": [0],
+      "use_legacy_cobalt": true
     },
     {
       "selector": "bootstrap/driver_manager:root/fvm/partitions/minfs:total_slices_reserved",
       "metric_id": 3000,
       "metric_type": "Integer",
-      "event_codes": [1]
+      "event_codes": [1],
+      "use_legacy_cobalt": true
     }
   ]
 }

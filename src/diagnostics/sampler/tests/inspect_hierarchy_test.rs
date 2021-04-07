@@ -85,7 +85,7 @@ async fn sampler_inspect_test() {
                 "total_project_samplers_configured": 2 as u64,
                 "project_5": {
                     "project_sampler_count": 2 as u64,
-                    "metrics_configured": 4 as u64,
+                    "metrics_configured": 5 as u64,
                     "cobalt_logs_sent": AnyProperty,
                 }
             },

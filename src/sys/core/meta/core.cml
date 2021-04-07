@@ -337,7 +337,10 @@
         {
             protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#appmgr",
-            to: [ "#log-stats" ],
+            to: [
+                "#log-stats",
+                "#sampler",
+            ],
         },
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],

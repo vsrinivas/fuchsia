@@ -18,7 +18,8 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-            "fuchsia.logger.Log"
+            "fuchsia.logger.Log",
+            "fuchsia.metrics.MetricEventLoggerFactory"
         ]
     }
 }

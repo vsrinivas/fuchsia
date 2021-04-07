@@ -42,6 +42,9 @@ pub struct MetricConfig {
     /// the specified metric only once, the first time
     /// it becomes available to the sampler.
     pub upload_once: Option<bool>,
+    /// Optional boolean specifying whether to use Cobalt v1.0
+    /// protocol. This value may either be absent or true.
+    pub use_legacy_cobalt: Option<bool>,
 }
 
 /// The supported V1.0 Cobalt Metrics
