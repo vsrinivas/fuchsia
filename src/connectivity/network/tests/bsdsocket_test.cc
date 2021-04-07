@@ -329,8 +329,8 @@ TEST_P(SocketOptsTest, TtlDefault) {
   socklen_t get_sz = sizeof(get);
   constexpr int kDefaultTTL = 64;
   EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get, &get_sz), 0) << strerror(errno);
-  EXPECT_EQ(get, kDefaultTTL);
   EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, kDefaultTTL);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
@@ -1336,8 +1336,8 @@ TEST(LocalhostTest, AcceptAfterReset) {
   int err;
   socklen_t optlen = sizeof(err);
   ASSERT_EQ(getsockopt(conn.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-  ASSERT_EQ(err, ECONNRESET) << strerror(errno);
   ASSERT_EQ(optlen, sizeof(err));
+  ASSERT_EQ(err, ECONNRESET) << strerror(err);
 }
 
 TEST(LocalhostTest, ConnectAFMismatchINET) {
@@ -2138,8 +2138,8 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
     int err;
     socklen_t optlen = sizeof(err);
     ASSERT_EQ(getsockopt(connfd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    ASSERT_EQ(err, 0);
     ASSERT_EQ(optlen, sizeof(err));
+    ASSERT_EQ(err, 0) << strerror(err);
   }
 
   fbl::unique_fd clientfd;
@@ -2205,8 +2205,8 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
     int err;
     socklen_t optlen = sizeof(err);
     ASSERT_EQ(getsockopt(connfd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    ASSERT_EQ(err, 0);
     ASSERT_EQ(optlen, sizeof(err));
+    ASSERT_EQ(err, 0) << strerror(err);
 
     char buf[sizeof(msg) + 1] = {};
     ASSERT_EQ(read(connfd.get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
@@ -2216,91 +2216,225 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   }
 }
 
-enum class AnyAddr {
+enum class AddrKind {
   V4,
   V6,
   V4MAPPEDV6,
 };
 
-template <int type>
-class SocketAnyAddr : public ::testing::TestWithParam<AnyAddr> {
+template <int socktype>
+class SocketTest: public ::testing::TestWithParam<AddrKind> {
  protected:
   void SetUp() override {
-    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(AddressFamily(), type, 0))) << strerror(errno);
+    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(Domain(), socktype, 0))) << strerror(errno);
   }
 
   void TearDown() override { ASSERT_EQ(close(sock_.release()), 0) << strerror(errno); }
 
   const fbl::unique_fd& sock() { return sock_; }
 
-  sa_family_t AddressFamily() const {
+  sa_family_t Domain() const {
     switch (GetParam()) {
-      case AnyAddr::V4:
+      case AddrKind::V4:
         return AF_INET;
-      case AnyAddr::V6:
-      case AnyAddr::V4MAPPEDV6:
+      case AddrKind::V6:
+      case AddrKind::V4MAPPEDV6:
         return AF_INET6;
     }
   }
 
-  struct sockaddr_storage AnyAddress() const {
-    struct sockaddr_storage addr {
-      .ss_family = AddressFamily(),
-    };
-
-    switch (GetParam()) {
-      case AnyAddr::V4: {
-        auto sin = reinterpret_cast<struct sockaddr_in*>(&addr);
-        sin->sin_addr.s_addr = htonl(INADDR_ANY);
-        return addr;
-      }
-      case AnyAddr::V6: {
-        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
-        sin6->sin6_addr = IN6ADDR_ANY_INIT;
-        return addr;
-      }
-      case AnyAddr::V4MAPPEDV6: {
-        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
-        sin6->sin6_addr = IN6ADDR_ANY_INIT;
-        sin6->sin6_addr.s6_addr[10] = 0xff;
-        sin6->sin6_addr.s6_addr[11] = 0xff;
-        return addr;
-      }
-    }
-  }
-
   socklen_t AddrLen() const {
-    if (AddressFamily() == AF_INET) {
+    if (Domain() == AF_INET) {
       return sizeof(sockaddr_in);
     }
     return sizeof(sockaddr_in6);
   }
 
+  virtual struct sockaddr_storage Address(uint16_t port) const = 0;
+
  private:
   fbl::unique_fd sock_;
 };
 
-using StreamSocketAnyAddr = SocketAnyAddr<SOCK_STREAM>;
-using DatagramSocketAnyAddr = SocketAnyAddr<SOCK_DGRAM>;
+template <int socktype>
+class AnyAddrSocketTest : public SocketTest<socktype> {
+ protected:
+  struct sockaddr_storage Address(uint16_t port) const {
+    struct sockaddr_storage addr {
+      .ss_family = this->Domain(),
+    };
 
-TEST_P(StreamSocketAnyAddr, Connect) {
-  struct sockaddr_storage any = AnyAddress();
+    switch (this->GetParam()) {
+      case AddrKind::V4: {
+        auto sin = reinterpret_cast<struct sockaddr_in*>(&addr);
+        sin->sin_addr.s_addr = htonl(INADDR_ANY);
+        sin->sin_port = port;
+        return addr;
+      }
+      case AddrKind::V6: {
+        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
+        sin6->sin6_addr = IN6ADDR_ANY_INIT;
+        sin6->sin6_port = port;
+        return addr;
+      }
+      case AddrKind::V4MAPPEDV6: {
+        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
+        sin6->sin6_addr = IN6ADDR_ANY_INIT;
+        sin6->sin6_addr.s6_addr[10] = 0xff;
+        sin6->sin6_addr.s6_addr[11] = 0xff;
+        sin6->sin6_port = port;
+        return addr;
+      }
+    }
+  }
+};
+
+using AnyAddrStreamSocketTest = AnyAddrSocketTest<SOCK_STREAM>;
+using AnyAddrDatagramSocketTest = AnyAddrSocketTest<SOCK_DGRAM>;
+
+TEST_P(AnyAddrStreamSocketTest, Connect) {
+  struct sockaddr_storage any = Address(0);
   socklen_t addrlen = AddrLen();
   ASSERT_EQ(connect(sock().get(), reinterpret_cast<const struct sockaddr*>(&any), addrlen), -1);
   ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
 }
 
-TEST_P(DatagramSocketAnyAddr, Connect) {
-  struct sockaddr_storage any = AnyAddress();
+TEST_P(AnyAddrDatagramSocketTest, Connect) {
+  struct sockaddr_storage any = Address(0);
   socklen_t addrlen = AddrLen();
   EXPECT_EQ(connect(sock().get(), reinterpret_cast<const struct sockaddr*>(&any), addrlen), 0)
       << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(NetStreamTest, StreamSocketAnyAddr,
-                         ::testing::Values(AnyAddr::V4, AnyAddr::V6, AnyAddr::V4MAPPEDV6));
-INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketAnyAddr,
-                         ::testing::Values(AnyAddr::V4, AnyAddr::V6, AnyAddr::V4MAPPEDV6));
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, AnyAddrStreamSocketTest,
+                         ::testing::Values(AddrKind::V4, AddrKind::V6, AddrKind::V4MAPPEDV6));
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, AnyAddrDatagramSocketTest,
+                         ::testing::Values(AddrKind::V4, AddrKind::V6, AddrKind::V4MAPPEDV6));
+
+template <int socktype>
+class LoopbackAddrSocketTest : public SocketTest<socktype> {
+ protected:
+  struct sockaddr_storage Address(uint16_t port) const {
+    struct sockaddr_storage addr {
+      .ss_family = this->Domain(),
+    };
+
+    switch (this->GetParam()) {
+      case AddrKind::V4: {
+        auto sin = reinterpret_cast<struct sockaddr_in*>(&addr);
+        sin->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        sin->sin_port = htons(port);
+        return addr;
+      }
+      case AddrKind::V6: {
+        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
+        sin6->sin6_addr = IN6ADDR_LOOPBACK_INIT;
+        sin6->sin6_port = htons(port);
+        return addr;
+      }
+      case AddrKind::V4MAPPEDV6: {
+        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
+        sin6->sin6_addr = IN6ADDR_LOOPBACK_INIT;
+        sin6->sin6_addr.s6_addr[10] = 0xff;
+        sin6->sin6_addr.s6_addr[11] = 0xff;
+        sin6->sin6_port = htons(port);
+        return addr;
+      }
+    }
+  }
+};
+
+using LoopbackDatagramSocketTest = LoopbackAddrSocketTest<SOCK_DGRAM>;
+
+template <typename F>
+void AssertClearError(const fbl::unique_fd& sock, F fn) {
+  char bytes[1];
+  struct pollfd pfd = {
+    .fd = sock.get(),
+  };
+  // Send a UDP packet to trigger a port unreachable response. Expect a POLLERR to be signaled on
+  // the socket.
+  ASSERT_EQ(send(sock.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
+  ASSERT_EQ(pfd.revents & POLLERR, POLLERR);
+  fn();
+  n = poll(&pfd, 1, 0);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 0);
+}
+
+TEST_P(LoopbackDatagramSocketTest, POLLERR) {
+  char bytes[1];
+  struct iovec iov[] = {{
+      .iov_base = bytes,
+      .iov_len = sizeof(bytes),
+  }};
+  struct msghdr msg = {
+      .msg_iov = iov,
+      .msg_iovlen = std::size(iov),
+  };
+
+  {
+    // Connect to an existing remote but on a port that is not being used.
+    struct sockaddr_storage loopback = Address(htons(1337));
+    socklen_t addrlen = AddrLen();
+    ASSERT_EQ(
+        connect(sock().get(), reinterpret_cast<const struct sockaddr*>(&loopback), addrlen), 0)
+        << strerror(errno);
+  }
+
+  // Precondition sanity check: no pending events on the socket.
+  struct pollfd pfd = {
+    .fd = sock().get(),
+  };
+  int n = poll(&pfd, 1, 0);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 0);
+
+  {
+    SCOPED_TRACE("send");
+    AssertClearError(sock(), [&]() {
+      EXPECT_EQ(send(sock().get(), bytes, sizeof(bytes), 0), -1);
+      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
+    });
+  }
+  {
+    SCOPED_TRACE("recv");
+    AssertClearError(sock(), [&]() {
+      EXPECT_EQ(recv(sock().get(), bytes, sizeof(bytes), 0), -1);
+      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
+    });
+  }
+  {
+    SCOPED_TRACE("sendmsg");
+    AssertClearError(sock(), [&]() {
+      EXPECT_EQ(sendmsg(sock().get(), &msg, 0), -1);
+      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
+    });
+  }
+  {
+    SCOPED_TRACE("recvmsg");
+    AssertClearError(sock(), [&]() {
+      EXPECT_EQ(recvmsg(sock().get(), &msg, 0), -1);
+      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
+    });
+  }
+  {
+    SCOPED_TRACE("getsockopt with SO_ERROR");
+    AssertClearError(sock(), [&]() {
+      int err;
+      socklen_t optlen = sizeof(err);
+      EXPECT_EQ(getsockopt(sock().get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+      EXPECT_EQ(optlen, sizeof(err));
+      EXPECT_EQ(err, ECONNREFUSED) << strerror(err);
+    });
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, LoopbackDatagramSocketTest,
+                         ::testing::Values(AddrKind::V4, AddrKind::V6));
 
 class IOMethod {
  public:
@@ -3051,8 +3185,8 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
     int err;
     socklen_t optlen = sizeof(err);
     ASSERT_EQ(getsockopt(connfd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    ASSERT_EQ(err, ECONNREFUSED);
     ASSERT_EQ(optlen, sizeof(err));
+    ASSERT_EQ(err, ECONNREFUSED) << strerror(err);
   }
 
   EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
@@ -3771,7 +3905,7 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
 }
 
-TEST(NetDatagramTest, DatagramPOLLOUT) {
+TEST(NetDatagramTest, POLLOUT) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
@@ -4322,6 +4456,7 @@ TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
   int opt;
   socklen_t optlen = sizeof(opt);
   EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_PROTOCOL, &opt, &optlen), 0) << strerror(errno);
+  EXPECT_EQ(optlen, sizeof(opt));
   EXPECT_EQ(opt, protocol);
 }
 
