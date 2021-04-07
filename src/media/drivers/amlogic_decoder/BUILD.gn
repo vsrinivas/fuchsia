@@ -5,7 +5,6 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//src/sys/build/components.gni")
 
 declare_args() {
@@ -241,7 +240,7 @@ if (target_cpu == "arm64") {
     ]
   }
 
-  copy("test_files") {
+  resource("test_files") {
     sources = [
       "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
       "//garnet/test_data/media/third_party/chromium_media_test_data/red-green.h264",
@@ -250,79 +249,50 @@ if (target_cpu == "arm64") {
       "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9_2",
       "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/bear.mpeg2",
     ]
-    outputs = [ "$root_out_dir/firmware/video_test_data/{{source_file_part}}" ]
+    outputs = [ "lib/firmware/video_test_data/{{source_file_part}}" ]
   }
 
-  driver_package("amlogic_decoder_firmware") {
-    # internal access is needed to get the firmware from the default path
-    if (target_cpu == "arm64" &&
-        (internal_access || amlogic_decoder_firmware_path != "")) {
-      if (amlogic_decoder_firmware_path == "") {
-        amlogic_decoder_firmware_path =
-            "//prebuilt/media/firmware/amlogic-decoder/video_ucode.bin"
+  # internal access is needed to get the firmware from the default path.
+  _has_decoder_firmware =
+      target_cpu == "arm64" &&
+      (internal_access || amlogic_decoder_firmware_path != "")
+
+  if (_has_decoder_firmware) {
+    resource("decoder_firmware") {
+      if (amlogic_decoder_firmware_path != "") {
+        sources = [ amlogic_decoder_firmware_path ]
+      } else {
+        sources =
+            [ "//prebuilt/media/firmware/amlogic-decoder/video_ucode.bin" ]
       }
-      libraries = [
-        {
-          source = rebase_path(amlogic_decoder_firmware_path)
-          name = "firmware/amlogic_video_ucode.bin"
-        },
-      ]
+      outputs = [ "lib/firmware/amlogic_video_ucode.bin" ]
     }
   }
 
-  driver_package("amlogic_decoder_package") {
-    # internal access is needed to get the firmware from the default path
-    if (target_cpu == "arm64" &&
-        (internal_access || amlogic_decoder_firmware_path != "")) {
+  fuchsia_system_package("amlogic_decoder_firmware") {
+    if (_has_decoder_firmware) {
+      deps = [ ":decoder_firmware" ]
+    }
+    allowed_in_extra_deps = true
+  }
+
+  fuchsia_system_package("amlogic_decoder_package") {
+    if (_has_decoder_firmware) {
       deps = [ ":amlogic_video_decoder" ]
-      drivers = [
-        {
-          name = "amlogic_video_decoder.so"
-        },
-      ]
     }
+    allowed_in_extra_deps = true
   }
 
-  driver_package("amlogic_decoder_test_package") {
-    # internal access is needed to get the firmware from the default path
-    if (target_cpu == "arm64" &&
-        (internal_access || amlogic_decoder_firmware_path != "")) {
+  fuchsia_system_package("amlogic_decoder_test_package") {
+    if (_has_decoder_firmware) {
       testonly = true
 
-      deps = []
-      deps += [
+      deps = [
         ":amlogic_decoder_test",
-        ":test_files($shlib_toolchain)",
-      ]
-      drivers = [
-        {
-          name = "amlogic_video_decoder_test.so"
-        },
-      ]
-
-      # The test data is stored as a firmware file, because that's the only way
-      # that a file can be read from a driver.
-      libraries = [
-        {
-          name = "firmware/video_test_data/bear.mpeg2"
-        },
-        {
-          name = "firmware/video_test_data/bear.h264"
-        },
-        {
-          name = "firmware/video_test_data/red-green.h264"
-        },
-        {
-          name = "firmware/video_test_data/test-25fps.h264"
-        },
-        {
-          name = "firmware/video_test_data/test-25fps.vp9"
-        },
-        {
-          name = "firmware/video_test_data/test-25fps.vp9_2"
-        },
+        ":test_files",
       ]
     }
+    allowed_in_extra_deps = true
   }
 
   #

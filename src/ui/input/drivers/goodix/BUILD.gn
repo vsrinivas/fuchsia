@@ -5,7 +5,6 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
@@ -18,9 +17,6 @@ bind_rules("gt92xx_bind") {
 
 astro_firmware_path =
     "gt9293-astro/GT9293_6105(6E43)_Official_Release_20180917.bin"
-if (internal_access) {
-  astro_firmware_name = "gt9293-astro/GT9293_6105_Official_Release_20180917.bin"
-}
 
 driver_module("goodix-module") {
   output_name = "goodix"
@@ -54,34 +50,19 @@ driver_module("goodix-module") {
 }
 
 if (internal_access) {
-  copy("astro-firmware-copy") {
+  resource("astro-firmware") {
     sources = [ "//prebuilt/touch/$astro_firmware_path" ]
-    outputs = [ "$root_out_dir/firmware/$astro_firmware_path" ]
+    outputs = [ "lib/firmware/$astro_firmware_path" ]
   }
 }
 
-driver_package("goodix") {
+fuchsia_system_package("goodix") {
   deps = [ ":goodix-module" ]
 
-  drivers = [
-    {
-      name = "goodix.so"
-    },
-  ]
-
-  libraries = []
-
   if (internal_access) {
-    deps += [ ":astro-firmware-copy" ]
-
-    libraries += [
-      {
-        name = "firmware/$astro_firmware_name"
-        source = "firmware/$astro_firmware_path"
-        dest = "firmware/$astro_firmware_path"
-      },
-    ]
+    deps += [ ":astro-firmware" ]
   }
+  allowed_in_extra_deps = true
 }
 
 group("test") {
