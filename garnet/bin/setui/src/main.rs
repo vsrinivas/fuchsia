@@ -40,6 +40,8 @@ fn main() -> Result<(), Error> {
     let enabled_service_configuration = DefaultSetting::new(
         Some(default_enabled_service_configuration),
         "/config/data/service_configuration.json",
+        None,
+        false,
     )
     .get_default_value()
     .expect("no default enabled service configuration");
@@ -47,18 +49,26 @@ fn main() -> Result<(), Error> {
     let enabled_policy_configuration = DefaultSetting::new(
         Some(default_enabled_policy_configuration),
         "/config/data/policy_configuration.json",
+        None,
+        false,
     )
     .get_default_value()
     .expect("no default enabled policy configuration");
 
-    let flags =
-        DefaultSetting::new(Some(ServiceFlags::default()), "/config/data/service_flags.json")
-            .get_default_value()
-            .expect("no default service flags");
+    let flags = DefaultSetting::new(
+        Some(ServiceFlags::default()),
+        "/config/data/service_flags.json",
+        None,
+        false,
+    )
+    .get_default_value()
+    .expect("no default service flags");
 
     let agent_types = DefaultSetting::new(
         Some(AgentConfiguration { agent_types: get_default_agent_types() }),
         "/config/data/agent_configuration.json",
+        None,
+        false,
     )
     .get_default_value()
     .expect("no default agent types");

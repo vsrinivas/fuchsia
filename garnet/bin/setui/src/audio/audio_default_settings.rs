@@ -45,6 +45,8 @@ lazy_static! {
         Mutex::new(DefaultSetting::new(
             Some(DEFAULT_AUDIO_INFO),
             "/config/data/audio_config_data.json",
+            None,
+            false,
         ));
 }
 

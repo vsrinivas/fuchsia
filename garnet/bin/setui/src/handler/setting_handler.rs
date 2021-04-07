@@ -374,6 +374,10 @@ pub mod persist {
             self.base.get_service_context().await
         }
 
+        pub async fn get_messenger(&self) -> Messenger {
+            self.base.messenger.clone()
+        }
+
         pub async fn notify(&self, event: Event) {
             self.base.notify(event).await;
         }

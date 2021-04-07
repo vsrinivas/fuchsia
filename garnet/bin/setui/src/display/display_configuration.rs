@@ -47,9 +47,11 @@ mod test {
         let default_value = DefaultSetting::<DisplayConfiguration, &str>::new(
             None,
             "/config/data/display_configuration.json",
+            None,
+            false,
         )
         .get_default_value()
-        .expect("Unable to parse configuation");
+        .expect("Unable to parse configuration");
 
         assert_eq!(default_value.theme.theme_mode, vec![ConfigurationThemeMode::Auto]);
         assert_eq!(default_value.theme.theme_type, ConfigurationThemeType::Light);

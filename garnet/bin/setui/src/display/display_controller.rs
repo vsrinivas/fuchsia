@@ -37,9 +37,9 @@ lazy_static! {
 }
 
 lazy_static! {
-    /// Reference to a display configuation.
+    /// Reference to a display configuration.
     pub static ref DISPLAY_CONFIGURATION: Mutex<DefaultSetting<DisplayConfiguration, &'static str>> =
-        Mutex::new(DefaultSetting::new(None, "/config/data/display_configuration.json",));
+        Mutex::new(DefaultSetting::new(None, "/config/data/display_configuration.json", None, false));
 }
 
 /// Returns a default display [`DisplayInfo`] that is derived from
