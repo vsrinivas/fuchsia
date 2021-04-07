@@ -2,11 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/flatbuffers/flatbuffer.gni")
 import("//build/unification/zx_library.gni")
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.amlogic.cpu.metadata") {
   sources = [ "metadata.fidl" ]
+}
+
+flatbuffer("metadata_fbs") {
+  sources = [ "flatbuffers/metadata.fbs" ]
+  # flatc_out_dir = "flatbuffer"
 }
 
 zx_library("amlogic") {

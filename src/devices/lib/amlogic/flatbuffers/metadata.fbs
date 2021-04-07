@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+namespace Amlogic.Metadata;
+
+table OperatingPoint {
+    frequency: uint;
+    voltage: uint;
+}
+
+table AmlogicCpuPerformanceDomain {
+    id: uint;
+    core_count: uint;
+    relative_performance: ubyte;
+    name: string;
+    operating_points: [OperatingPoint];
+}
+
+table AmlogicCpuMetadata {
+    domains: [AmlogicCpuPerformanceDomain];
+}
+
+root_type AmlogicCpuMetadata;
