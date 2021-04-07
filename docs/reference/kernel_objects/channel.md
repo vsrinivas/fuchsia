@@ -50,11 +50,11 @@ is only ever one handle associated with a channel endpoint, and the process hold
 that handle is considered the owner. Only the owner can read or write messages or send
 the channel endpoint to another process.
 
-Furthermore, when ownership of a channel endpoint goes from one process to
-another, even if a write was in progress, the ordering of messages is guaranteed
-to be parsimonious; messages before the transfer event originate from the
-previous owner and messages after the transfer belong to the new owner. The same
-applies if a read was in progress when the endpoint was transferred.
+When ownership of a channel endpoint moves from one process to another,
+messages will not be reordered or truncated, even if a write is in progress.
+Messages before the transfer event belong to the previous owner and messages
+after the transfer belong to the new owner.
+The same applies if a read is in progress when the endpoint is transferred.
 
 The above sequential guarantee is not provided for other kernel objects, even if
 the last remaining handle is stripped of the **ZX_RIGHT_DUPLICATE** right.
