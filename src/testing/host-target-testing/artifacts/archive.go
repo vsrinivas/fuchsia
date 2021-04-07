@@ -129,7 +129,11 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 		for _, src := range srcs {
 			path := filepath.Join(dst, src)
 
-			if _, err := os.Stat(path); err != nil {
+			// We only need to download the file if it doesn't
+			// exist locally, or the local path is a directory
+			// (since we don't know what files exist in a directory
+			// ahead of time).
+			if st, err := os.Stat(path); err != nil || st.IsDir() {
 				filesToDownload = append(filesToDownload, src)
 			} else {
 				filesToSkip = append(filesToSkip, src)
@@ -139,6 +143,7 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 		logger.Infof(ctx, "skipping %d files to download", len(filesToSkip))
 		if len(filesToDownload) == 0 {
 			// Skip downloading if the files are already present in the build dir.
+			logger.Infof(ctx, "no files to download")
 			return nil
 		}
 
@@ -152,14 +157,14 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 			return fmt.Errorf("failed to write srcs-file: %w", err)
 		}
 	} else {
-		if _, err := os.Stat(dst); err == nil {
+		if st, err := os.Stat(dst); err == nil && !st.IsDir() {
 			// Skip downloading if the file is already present in the build dir.
 			return nil
 		}
 		src = srcs[0]
 	}
 
-	logger.Infof(ctx, "downloading to %s", dst)
+	logger.Infof(ctx, "downloading %d artifacts to %s", len(srcs), dst)
 
 	// The `artifacts` utility can occasionally run into transient issues. This implements a retry policy
 	// that attempts to avoid such issues causing flakes.

@@ -164,6 +164,8 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 // is no longer produced, but might be encountered when testing if an old build
 // can OTA to the latest build.
 func (b *ArtifactsBuild) getExpandedPackageRepository(ctx context.Context) (*packages.Repository, error) {
+	logger.Infof(ctx, "downloading package repository")
+
 	// Make sure the blob contains the `packages/all_blobs.json`. If not,
 	// we need to fall back to the old `packages.tar.gz` file.
 	if _, ok := b.srcs["packages/all_blobs.json"]; !ok {
@@ -171,8 +173,15 @@ func (b *ArtifactsBuild) getExpandedPackageRepository(ctx context.Context) (*pac
 		return nil, nil
 	}
 
+	packageSrcs := []string{}
+	for src := range b.srcs {
+		if strings.HasPrefix(src, "packages/") {
+			packageSrcs = append(packageSrcs, src)
+		}
+	}
+
 	packagesDir := filepath.Join(b.dir, b.id, "packages")
-	if err := b.archive.download(ctx, b.id, false, packagesDir, []string{"packages/"}); err != nil {
+	if err := b.archive.download(ctx, b.id, false, filepath.Dir(packagesDir), packageSrcs); err != nil {
 		logger.Errorf(ctx, "failed to download packages for build %s to %s: %v", packagesDir, b.id, err)
 		return nil, fmt.Errorf("failed to download packages for build %s to %s: %w", packagesDir, b.id, err)
 	}
@@ -230,23 +239,26 @@ func (b *ArtifactsBuild) GetBuildImages(ctx context.Context) (string, error) {
 }
 
 func (b *ArtifactsBuild) getExpandedBuildImages(ctx context.Context) (bool, string, error) {
+	logger.Infof(ctx, "downloading build images")
+
 	// Check if the build produced any images/ files. If not, we need to
 	// fall back on the old build-archive.tgz file.
-	hasImages := false
+	imageSrcs := []string{}
 	for src := range b.srcs {
 		if strings.HasPrefix(src, "images/") {
-			hasImages = true
-			break
+			imageSrcs = append(imageSrcs, src)
 		}
 	}
 
-	if !hasImages {
+	if len(imageSrcs) == 0 {
+		logger.Infof(ctx, "build %s has no images/ directory. Trying archive", b.id)
 		return false, "", nil
 	}
 
 	imageDir := filepath.Join(b.dir, b.id, "images")
 
-	if err := b.archive.download(ctx, b.id, false, imageDir, []string{"images/"}); err != nil {
+	if err := b.archive.download(ctx, b.id, false, filepath.Dir(imageDir), imageSrcs); err != nil {
+		logger.Errorf(ctx, "failed to download images to %s: %v", imageDir, err)
 		return false, "", err
 	}
 
