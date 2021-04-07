@@ -11,6 +11,7 @@ pub async fn command(
     proxy: DisplayProxy,
     brightness: Option<f32>,
     auto_brightness: Option<bool>,
+    auto_brightness_value: Option<f32>,
     light_sensor: bool,
     low_light_mode: Option<LowLightMode>,
     theme: Option<Theme>,
@@ -24,6 +25,7 @@ pub async fn command(
     // Set call.
     let mut settings = DisplaySettings::EMPTY;
     settings.auto_brightness = auto_brightness;
+    settings.adjusted_auto_brightness = auto_brightness_value;
     settings.brightness_value = brightness;
     settings.low_light_mode = low_light_mode;
     settings.screen_enabled = screen_enabled;

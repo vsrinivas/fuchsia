@@ -52,6 +52,9 @@ pub enum SettingClient {
         #[structopt(short = "b", long = "brightness")]
         brightness: Option<f32>,
 
+        #[structopt(short = "o", long = "auto_brightness_level")]
+        auto_brightness_level: Option<f32>,
+
         #[structopt(short = "a", long = "auto_brightness")]
         auto_brightness: Option<bool>,
 
@@ -377,6 +380,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         }
         SettingClient::Display {
             brightness,
+            auto_brightness_level,
             auto_brightness,
             light_sensor,
             low_light_mode,
@@ -391,6 +395,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                     display_service,
                     brightness,
                     auto_brightness,
+                    auto_brightness_level,
                     light_sensor,
                     low_light_mode,
                     theme,

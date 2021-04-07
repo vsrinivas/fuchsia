@@ -210,25 +210,29 @@ async fn main() -> Result<(), Error> {
 
     println!("display service tests");
     println!("  client calls display watch");
-    validate_display(None, None, None, None, None).await?;
+    validate_display(None, None, None, None, None, None).await?;
 
     println!("  client calls set brightness");
-    validate_display(Some(0.5), None, None, None, None).await?;
+    validate_display(Some(0.5), None, None, None, None, None).await?;
 
     println!("  client calls set auto brightness");
-    validate_display(None, Some(true), None, None, None).await?;
+    validate_display(None, Some(true), None, None, None, None).await?;
+
+    println!("  client calls set auto brightness value");
+    validate_display(None, None, Some(0.5), None, None, None).await?;
 
     println!("  client calls set low light mode");
-    validate_display(None, None, Some(LowLightMode::Enable), None, None).await?;
+    validate_display(None, None, None, Some(LowLightMode::Enable), None, None).await?;
 
     println!("  client calls set theme");
-    validate_display(None, None, None, Some(ThemeType::Dark), None).await?;
+    validate_display(None, None, None, None, Some(ThemeType::Dark), None).await?;
 
     println!("  client calls set screen enabled");
-    validate_display(None, None, None, Some(ThemeType::Dark), Some(false)).await?;
+    validate_display(None, None, None, None, Some(ThemeType::Dark), Some(false)).await?;
 
     println!("  client can modify multiple settings");
-    validate_display(Some(0.3), Some(false), None, Some(ThemeType::Light), Some(true)).await?;
+    validate_display(Some(0.3), Some(false), Some(0.8), None, Some(ThemeType::Light), Some(true))
+        .await?;
 
     println!("factory reset tests");
     println!("  client calls set local reset allowed");
@@ -482,10 +486,11 @@ async fn validate_device() -> Result<(), Error> {
     Ok(())
 }
 
-// Can only check one mutate option at once
+// Can only check one mutate option at once.
 async fn validate_display(
     expected_brightness: Option<f32>,
     expected_auto_brightness: Option<bool>,
+    expected_auto_brightness_value: Option<f32>,
     expected_low_light_mode: Option<LowLightMode>,
     expected_theme_type: Option<ThemeType>,
     expected_screen_enabled: Option<bool>,
@@ -499,6 +504,10 @@ async fn validate_display(
             } else if let (Some(auto_brightness), Some(expected_auto_brightness_value)) =
               (settings.auto_brightness, expected_auto_brightness) {
                 assert_eq!(auto_brightness, expected_auto_brightness_value);
+                responder.send(&mut Ok(()))?;
+            } else if let (Some(auto_brightness_value), Some(expected_auto_brightness_value)) =
+              (settings.adjusted_auto_brightness, expected_auto_brightness_value) {
+                assert_eq!(auto_brightness_value, expected_auto_brightness_value);
                 responder.send(&mut Ok(()))?;
             } else if let (Some(low_light_mode), Some(expected_low_light_mode_value)) =
               (settings.low_light_mode, expected_low_light_mode) {
@@ -519,6 +528,7 @@ async fn validate_display(
         DisplayRequest::Watch { responder } => {
             responder.send(DisplaySettings {
                 auto_brightness: Some(false),
+                adjusted_auto_brightness: Some(0.5),
                 brightness_value: Some(0.5),
                 low_light_mode: Some(LowLightMode::Disable),
                 theme: Some(Theme{theme_type: Some(ThemeType::Default), ..Theme::EMPTY}),
@@ -536,6 +546,7 @@ async fn validate_display(
         display_service,
         expected_brightness,
         expected_auto_brightness,
+        expected_auto_brightness_value,
         false,
         expected_low_light_mode,
         Some(Theme { theme_type: expected_theme_type, ..Theme::EMPTY }),
@@ -610,7 +621,7 @@ async fn validate_light_sensor() -> Result<(), Error> {
     })
     .detach();
 
-    assert_watch!(display::command(display_service, None, None, true, None, None, None));
+    assert_watch!(display::command(display_service, None, None, None, true, None, None, None));
     assert_eq!(*watch_called.read(), true);
     Ok(())
 }
