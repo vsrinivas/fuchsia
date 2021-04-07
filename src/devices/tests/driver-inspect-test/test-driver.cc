@@ -24,7 +24,7 @@ class TestInspectDriver;
 using DeviceType = ddk::Device<TestInspectDriver, ddk::Messageable>;
 class TestInspectDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_TEST>,
-                          public TestInspect::Interface {
+                          public fidl::WireInterface<TestInspect> {
  public:
   TestInspectDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

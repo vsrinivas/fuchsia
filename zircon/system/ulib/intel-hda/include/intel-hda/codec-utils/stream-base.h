@@ -51,22 +51,22 @@ class IntelHDACodecDriverBase;
 
 class IntelHDAStreamBase;
 
-// IntelHdaStreamStream implements Device::Interface.
+// IntelHdaStreamStream implements fidl::WireInterface<Device>.
 // All this is serialized in the single threaded IntelHdaStreamStream's dispatcher() in loop_.
 class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                            public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>>,
-                           public fuchsia_hardware_audio::Device::Interface {
+                           public fidl::WireInterface<fuchsia_hardware_audio::Device> {
  public:
-  // StreamChannel (thread compatible) implements StreamConfig::Interface so the server for a
-  // StreamConfig channel is a StreamChannel instead of a IntelHDAStreamBase (as is the case for
-  // Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
+  // StreamChannel (thread compatible) implements fidl::WireInterface<StreamConfig> so the server
+  // for a StreamConfig channel is a StreamChannel instead of a IntelHDAStreamBase (as is the case
+  // for Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
   // changes notifications.
   // In some methods, we pass "this" (StreamChannel*) to IntelHDAStreamBase that
   // gets managed in IntelHDAStreamBase.
   // All this is serialized in the single threaded IntelHDAStreamBase's dispatcher() in loop_.
-  // All the StreamConfig::Interface methods are forwarded to IntelHDAStreamBase.
+  // All the fidl::WireInterface<StreamConfig> methods are forwarded to IntelHDAStreamBase.
   class StreamChannel : public RingBufferChannel,
-                        public fuchsia_hardware_audio::StreamConfig::Interface,
+                        public fidl::WireInterface<fuchsia_hardware_audio::StreamConfig>,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     template <typename... ConstructorSignature>

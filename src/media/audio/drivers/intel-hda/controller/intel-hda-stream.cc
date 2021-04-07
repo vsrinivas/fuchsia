@@ -4,8 +4,8 @@
 
 #include "intel-hda-stream.h"
 
-#include <lib/fidl/llcpp/server.h>
 #include <lib/ddk/hw/arch_ops.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zx/clock.h>
 #include <string.h>
 #include <zircon/syscalls.h>
@@ -179,15 +179,15 @@ zx_status_t IntelHDAStream::SetStreamFormat(async_dispatcher_t* dispatcher, uint
     return ZX_ERR_NO_MEMORY;
   }
 
-  fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
-      [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::RingBuffer>> on_unbound =
+      [this](fidl::WireInterface<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
              fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
         this->ProcessClientDeactivate();
       };
 
   fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> server(std::move(server_endpoint));
-  fidl::BindServer<audio_fidl::RingBuffer::Interface>(dispatcher, std::move(server), this,
-                                                      std::move(on_unbound));
+  fidl::BindServer<fidl::WireInterface<audio_fidl::RingBuffer>>(dispatcher, std::move(server), this,
+                                                                std::move(on_unbound));
 
   // Record and program the stream format, then record the fifo depth we get
   // based on this format selection.

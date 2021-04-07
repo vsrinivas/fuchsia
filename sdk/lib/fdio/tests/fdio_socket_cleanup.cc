@@ -26,7 +26,7 @@ class Server final : public fuchsia_io::testing::Node_TestBase {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  using Interface = fuchsia_io::Node::Interface;
+  using Interface = fidl::WireInterface<fuchsia_io::Node>;
 
   void Close(Interface::CloseCompleter::Sync& completer) override {
     EXPECT_OK(completer.Reply(ZX_OK).status());

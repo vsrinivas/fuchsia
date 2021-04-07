@@ -14,7 +14,7 @@
 
 namespace factoryfs {
 
-class QueryService final : public fuchsia_fs::Query::Interface, public fs::Service {
+class QueryService final : public fidl::WireInterface<fuchsia_fs::Query>, public fs::Service {
  public:
   QueryService(async_dispatcher_t* dispatcher, Factoryfs* factoryfs, Runner* runner);
 

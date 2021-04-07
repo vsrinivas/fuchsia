@@ -19,7 +19,7 @@ class GpioLight;
 using GpioLightType = ddk::Device<GpioLight, ddk::Messageable>;
 
 class GpioLight : public GpioLightType,
-                  public fuchsia_hardware_light::Light::Interface,
+                  public fidl::WireInterface<fuchsia_hardware_light::Light>,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_LIGHT> {
  public:
   explicit GpioLight(zx_device_t* parent) : GpioLightType(parent) {}

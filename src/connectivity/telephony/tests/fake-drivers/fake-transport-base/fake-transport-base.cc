@@ -23,8 +23,9 @@ namespace tel_fake {
 
 Device::Device(zx_device_t* device) : parent_(device) {}
 
-void Device::SetChannel(::zx::channel transport,
-                        fidl_tel_transport::Qmi::Interface::SetChannelCompleter::Sync& completer) {
+void Device::SetChannel(
+    ::zx::channel transport,
+    fidl::WireInterface<fidl_tel_transport::Qmi>::SetChannelCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
   zx_status_t set_channel_res = SetChannelToDevice(std::move(transport));
   if (set_channel_res == ZX_OK) {
@@ -45,15 +46,16 @@ done:
   return;
 }
 
-void Device::SetNetwork(bool connected,
-                        fidl_tel_transport::Qmi::Interface::SetNetworkCompleter::Sync& completer) {
+void Device::SetNetwork(
+    bool connected,
+    fidl::WireInterface<fidl_tel_transport::Qmi>::SetNetworkCompleter::Sync& completer) {
   SetNetworkStatusToDevice(connected);
   completer.Reply();
 }
 
 void Device::SetSnoopChannel(
     ::fidl::ClientEnd<::fidl_tel_snoop::Publisher> interface,
-    fidl_tel_transport::Qmi::Interface::SetSnoopChannelCompleter::Sync& completer) {
+    fidl::WireInterface<fidl_tel_transport::Qmi>::SetSnoopChannelCompleter::Sync& completer) {
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(interface));
   fidl_tel_transport::wire::Qmi_SetSnoopChannel_Result result;
   if (set_snoop_res == ZX_OK) {

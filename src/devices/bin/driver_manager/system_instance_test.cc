@@ -46,13 +46,13 @@ zx_status_t get_root_job(zx::job* root_job) {
   return ZX_OK;
 }
 
-class FakeBootArgsServer final : public fboot::Arguments::Interface {
+class FakeBootArgsServer final : public fidl::WireInterface<fboot::Arguments> {
  public:
   FakeBootArgsServer() : values_() {}
 
   void SetBool(std::string key, bool value) { values_.insert_or_assign(key, value); }
 
-  // fuchsia_boot::Arguments::Interface methods:
+  // fidl::WireInterface<fuchsia_boot::Arguments> methods:
   void GetString(::fidl::StringView key, GetStringCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

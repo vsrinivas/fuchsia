@@ -69,8 +69,8 @@ void SerialDevice::GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice
   loop_->StartThread("serial-thread");
 
   // Invoked when the channel is closed or on any binding-related error.
-  fidl::OnUnboundFn<fuchsia_hardware_serial::NewDevice::Interface> unbound_fn(
-      [](fuchsia_hardware_serial::NewDevice::Interface* dev, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireInterface<fuchsia_hardware_serial::NewDevice>> unbound_fn(
+      [](fidl::WireInterface<fuchsia_hardware_serial::NewDevice>* dev, fidl::UnbindInfo,
          fidl::ServerEnd<fuchsia_hardware_serial::NewDevice>) {
         auto* device = static_cast<SerialDevice*>(dev);
         device->loop_->Quit();
@@ -78,9 +78,10 @@ void SerialDevice::GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice
         sync_completion_signal(&device->on_unbind_);
       });
 
-  auto binding = fidl::BindServer(loop_->dispatcher(), std::move(req),
-                                  static_cast<fuchsia_hardware_serial::NewDevice::Interface*>(this),
-                                  std::move(unbound_fn));
+  auto binding =
+      fidl::BindServer(loop_->dispatcher(), std::move(req),
+                       static_cast<fidl::WireInterface<fuchsia_hardware_serial::NewDevice>*>(this),
+                       std::move(unbound_fn));
   if (binding.is_error()) {
     loop_.reset();
     return;

@@ -41,24 +41,27 @@ const zx::duration SERVICE_CONNECTION_TIMEOUT = zx::sec(2);
 // system shutdown to finish before forcefully restarting the system.
 const std::chrono::duration MANUAL_SYSTEM_SHUTDOWN_TIMEOUT = std::chrono::minutes(60);
 
-class LifecycleServer final : public fuchsia_process_lifecycle::Lifecycle::Interface {
+class LifecycleServer final : public fidl::WireInterface<fuchsia_process_lifecycle::Lifecycle> {
  public:
-  LifecycleServer(statecontrol_fidl::Admin::Interface::MexecCompleter::Async mexec_completer)
+  LifecycleServer(
+      fidl::WireInterface<statecontrol_fidl::Admin>::MexecCompleter::Async mexec_completer)
       : mexec_completer_(std::move(mexec_completer)) {}
 
-  static zx_status_t Create(async_dispatcher_t* dispatcher,
-                            statecontrol_fidl::Admin::Interface::MexecCompleter::Async completer,
-                            zx::channel chan);
+  static zx_status_t Create(
+      async_dispatcher_t* dispatcher,
+      fidl::WireInterface<statecontrol_fidl::Admin>::MexecCompleter::Async completer,
+      zx::channel chan);
 
   void Stop(StopCompleter::Sync& completer) override;
 
  private:
-  statecontrol_fidl::Admin::Interface::MexecCompleter::Async mexec_completer_;
+  fidl::WireInterface<statecontrol_fidl::Admin>::MexecCompleter::Async mexec_completer_;
 };
 
 zx_status_t LifecycleServer::Create(
     async_dispatcher_t* dispatcher,
-    statecontrol_fidl::Admin::Interface::MexecCompleter::Async completer, zx::channel chan) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::MexecCompleter::Async completer,
+    zx::channel chan) {
   zx_status_t status = fidl::BindSingleInFlightOnly(
       dispatcher, std::move(chan), std::make_unique<LifecycleServer>(std::move(completer)));
   if (status != ZX_OK) {
@@ -76,7 +79,7 @@ void LifecycleServer::Stop(StopCompleter::Sync& completer) {
   mexec_completer_.ReplySuccess();
 }
 
-class StateControlAdminServer final : public statecontrol_fidl::Admin::Interface {
+class StateControlAdminServer final : public fidl::WireInterface<statecontrol_fidl::Admin> {
  public:
   StateControlAdminServer() : lifecycle_loop_((&kAsyncLoopConfigNoAttachToCurrentThread)) {}
 
@@ -84,24 +87,29 @@ class StateControlAdminServer final : public statecontrol_fidl::Admin::Interface
   // inserted into a pseudo fs.
   static fbl::RefPtr<fs::Service> Create(async_dispatcher* dispatcher);
 
-  void PowerFullyOn(
-      statecontrol_fidl::Admin::Interface::PowerFullyOnCompleter::Sync& completer) override;
+  void PowerFullyOn(fidl::WireInterface<statecontrol_fidl::Admin>::PowerFullyOnCompleter::Sync&
+                        completer) override;
 
-  void Reboot(statecontrol_fidl::wire::RebootReason reboot_reason,
-              statecontrol_fidl::Admin::Interface::RebootCompleter::Sync& completer) override;
+  void Reboot(
+      statecontrol_fidl::wire::RebootReason reboot_reason,
+      fidl::WireInterface<statecontrol_fidl::Admin>::RebootCompleter::Sync& completer) override;
 
   void RebootToBootloader(
-      statecontrol_fidl::Admin::Interface::RebootToBootloaderCompleter::Sync& completer) override;
+      fidl::WireInterface<statecontrol_fidl::Admin>::RebootToBootloaderCompleter::Sync& completer)
+      override;
 
   void RebootToRecovery(
-      statecontrol_fidl::Admin::Interface::RebootToRecoveryCompleter::Sync& completer) override;
+      fidl::WireInterface<statecontrol_fidl::Admin>::RebootToRecoveryCompleter::Sync& completer)
+      override;
 
-  void Poweroff(statecontrol_fidl::Admin::Interface::PoweroffCompleter::Sync& completer) override;
+  void Poweroff(
+      fidl::WireInterface<statecontrol_fidl::Admin>::PoweroffCompleter::Sync& completer) override;
 
-  void Mexec(statecontrol_fidl::Admin::Interface::MexecCompleter::Sync& completer) override;
+  void Mexec(
+      fidl::WireInterface<statecontrol_fidl::Admin>::MexecCompleter::Sync& completer) override;
 
-  void SuspendToRam(
-      statecontrol_fidl::Admin::Interface::SuspendToRamCompleter::Sync& completer) override;
+  void SuspendToRam(fidl::WireInterface<statecontrol_fidl::Admin>::SuspendToRamCompleter::Sync&
+                        completer) override;
 
  private:
   async::Loop lifecycle_loop_;
@@ -378,13 +386,13 @@ zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_s
 }
 
 void StateControlAdminServer::PowerFullyOn(
-    statecontrol_fidl::Admin::Interface::PowerFullyOnCompleter::Sync& completer) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::PowerFullyOnCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void StateControlAdminServer::Reboot(
     statecontrol_fidl::wire::RebootReason reboot_reason,
-    statecontrol_fidl::Admin::Interface::RebootCompleter::Sync& completer) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::RebootCompleter::Sync& completer) {
   zx_status_t status =
       forward_command(statecontrol_fidl::wire::SystemPowerState::REBOOT, &reboot_reason);
   if (status == ZX_OK) {
@@ -395,7 +403,7 @@ void StateControlAdminServer::Reboot(
 }
 
 void StateControlAdminServer::RebootToBootloader(
-    statecontrol_fidl::Admin::Interface::RebootToBootloaderCompleter::Sync& completer) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::RebootToBootloaderCompleter::Sync& completer) {
   zx_status_t status =
       forward_command(statecontrol_fidl::wire::SystemPowerState::REBOOT_BOOTLOADER);
   if (status == ZX_OK) {
@@ -406,7 +414,7 @@ void StateControlAdminServer::RebootToBootloader(
 }
 
 void StateControlAdminServer::RebootToRecovery(
-    statecontrol_fidl::Admin::Interface::RebootToRecoveryCompleter::Sync& completer) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::RebootToRecoveryCompleter::Sync& completer) {
   zx_status_t status = forward_command(statecontrol_fidl::wire::SystemPowerState::REBOOT_RECOVERY);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -416,7 +424,7 @@ void StateControlAdminServer::RebootToRecovery(
 }
 
 void StateControlAdminServer::Poweroff(
-    statecontrol_fidl::Admin::Interface::PoweroffCompleter::Sync& completer) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::PoweroffCompleter::Sync& completer) {
   zx_status_t status = forward_command(statecontrol_fidl::wire::SystemPowerState::POWEROFF);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -426,7 +434,7 @@ void StateControlAdminServer::Poweroff(
 }
 
 void StateControlAdminServer::Mexec(
-    statecontrol_fidl::Admin::Interface::MexecCompleter::Sync& completer) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::MexecCompleter::Sync& completer) {
   zx::channel local;
   zx_status_t status = connect_to_protocol_with_timeout(&statecontrol_fidl::Admin::Name[0], &local);
   if (status == ZX_OK) {
@@ -478,7 +486,7 @@ void StateControlAdminServer::Mexec(
 }
 
 void StateControlAdminServer::SuspendToRam(
-    statecontrol_fidl::Admin::Interface::SuspendToRamCompleter::Sync& completer) {
+    fidl::WireInterface<statecontrol_fidl::Admin>::SuspendToRamCompleter::Sync& completer) {
   zx_status_t status = forward_command(statecontrol_fidl::wire::SystemPowerState::SUSPEND_RAM);
   if (status == ZX_OK) {
     completer.ReplySuccess();

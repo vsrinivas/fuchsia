@@ -25,7 +25,7 @@ namespace {
 using Echo = ::fidl_service_test::Echo;
 using EchoService = ::fidl_service_test::EchoService;
 
-class EchoCommon : public Echo::Interface {
+class EchoCommon : public fidl::WireInterface<Echo> {
  public:
   explicit EchoCommon(const char* prefix) : prefix_(prefix) {}
 
@@ -69,7 +69,8 @@ class ServerTest : public zxtest::Test {
  protected:
   ServerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), outgoing_(loop_.dispatcher()) {}
 
-  llcpp::sys::ServiceHandler SetUpInstance(Echo::Interface* foo_impl, Echo::Interface* bar_impl) {
+  llcpp::sys::ServiceHandler SetUpInstance(fidl::WireInterface<Echo>* foo_impl,
+                                           Echo::Interface* bar_impl) {
     llcpp::sys::ServiceHandler handler;
     EchoService::Handler my_service(&handler);
 

@@ -61,10 +61,11 @@ class OpteeControllerBase {
 class OpteeController;
 using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::Suspendable,
                                ddk::Unbindable>;
-class OpteeController : public OpteeControllerBase,
-                        public DeviceType,
-                        public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
-                        public fuchsia_hardware_tee::DeviceConnector::RawChannelInterface {
+class OpteeController
+    : public OpteeControllerBase,
+      public DeviceType,
+      public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
+      public fidl::WireRawChannelInterface<fuchsia_hardware_tee::DeviceConnector> {
  public:
   explicit OpteeController(zx_device_t* parent) : DeviceType(parent) {}
 

@@ -16,7 +16,7 @@ namespace devmgr {
 
 class FsManager;
 
-class LifecycleServer final : public fuchsia_process_lifecycle::Lifecycle::Interface {
+class LifecycleServer final : public fidl::WireInterface<fuchsia_process_lifecycle::Lifecycle> {
  public:
   explicit LifecycleServer(FsManager* fs_manager) : fs_manager_(fs_manager) {}
 

@@ -241,14 +241,14 @@ void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
     return;
   }
   stream_channels_.push_back(stream_channel);
-  fidl::OnUnboundFn<audio_fidl::StreamConfig::Interface> on_unbound =
-      [this, stream_channel](audio_fidl::StreamConfig::Interface*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::StreamConfig>> on_unbound =
+      [this, stream_channel](fidl::WireInterface<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
         fbl::AutoLock channel_lock(&lock_);
         this->DeactivateStreamChannelLocked(stream_channel.get());
       };
 
-  fidl::BindServer<audio_fidl::StreamConfig::Interface>(
+  fidl::BindServer<fidl::WireInterface<audio_fidl::StreamConfig>>(
       loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
       std::move(on_unbound));
 
@@ -510,15 +510,15 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   // bind it to us.
   rb_channel_ = Channel::Create<Channel>();
 
-  fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
-      [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::RingBuffer>> on_unbound =
+      [this](fidl::WireInterface<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
              fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
         fbl::AutoLock lock(&lock_);
         this->DeactivateRingBufferChannelLocked(rb_channel_.get());
       };
 
-  fidl::BindServer<audio_fidl::RingBuffer::Interface>(loop_.dispatcher(), std::move(ring_buffer),
-                                                      this, std::move(on_unbound));
+  fidl::BindServer<fidl::WireInterface<audio_fidl::RingBuffer>>(
+      loop_.dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
 }
 
 void UsbAudioStream::WatchGainState(StreamChannel* channel,

@@ -6,14 +6,15 @@
 namespace fidl_test_requestflexibleenvelope {
 namespace testing {
 
-class Protocol_TestBase
-    : public ::fidl_test_requestflexibleenvelope::Protocol::Interface {
+class Protocol_TestBase : public ::fidl::WireInterface<
+                              ::fidl_test_requestflexibleenvelope::Protocol> {
  public:
   virtual ~Protocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_requestflexibleenvelope::Protocol::Interface;
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>;
   virtual void RequestStrictResponseFlexible(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
       ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::

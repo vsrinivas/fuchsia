@@ -94,7 +94,7 @@ struct DeviceAllDevicesListTag {};
 
 class Device
     : public fbl::RefCounted<Device>,
-      public fuchsia_device_manager::Coordinator::RawChannelInterface,
+      public fidl::WireRawChannelInterface<fuchsia_device_manager::Coordinator>,
       public AsyncLoopRefCountedRpcHandler<Device>,
       public fbl::ContainableBaseClasses<
           fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceChildListTag>,

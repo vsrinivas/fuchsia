@@ -23,7 +23,7 @@
 
 namespace debugdata {
 
-class DebugData : public fuchsia_debugdata::DebugData::Interface {
+class DebugData : public fidl::WireInterface<fuchsia_debugdata::DebugData> {
  public:
   explicit DebugData(fbl::unique_fd root_dir_fd);
   ~DebugData() = default;

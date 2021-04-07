@@ -111,7 +111,7 @@ void Pipe::Init() {
 
 void Pipe::Bind(zx::channel server_request) {
   using PipeProtocol = fuchsia_hardware_goldfish::Pipe;
-  using PipeInterface = PipeProtocol::Interface;
+  using PipeInterface = fidl::WireInterface<PipeProtocol>;
   auto on_unbound = [this](PipeInterface*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {
     switch (info.reason) {
       case fidl::UnbindInfo::kUnbind:

@@ -342,7 +342,7 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
     }
   }
 
-  auto bind_controller = fidl::BindServer<fdf::NodeController::Interface>(
+  auto bind_controller = fidl::BindServer<fidl::WireInterface<fdf::NodeController>>(
       dispatcher_, std::move(controller), child.get());
   if (bind_controller.is_error()) {
     LOGF(ERROR, "Failed to bind channel to NodeController '%.*s': %s", name.size(), name.data(),
@@ -353,9 +353,11 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
   child->set_controller_ref(bind_controller.take_value());
 
   if (node.is_valid()) {
-    auto bind_node = fidl::BindServer<fdf::Node::Interface>(
+    auto bind_node = fidl::BindServer<fidl::WireInterface<fdf::Node>>(
         dispatcher_, std::move(node), child.get(),
-        [](fdf::Node::Interface* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
+        [](fidl::WireInterface<fdf::Node>* node, auto, auto) {
+          static_cast<Node*>(node)->Remove();
+        });
     if (bind_node.is_error()) {
       LOGF(ERROR, "Failed to bind channel to Node '%.*s': %s", name.size(), name.data(),
            zx_status_get_string(bind_node.error()));
@@ -532,9 +534,9 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
   }
 
   // Bind the Node associated with the driver.
-  auto bind_node = fidl::BindServer<fdf::Node::Interface>(
+  auto bind_node = fidl::BindServer<fidl::WireInterface<fdf::Node>>(
       dispatcher_, std::move(endpoints->server), driver_args.node,
-      [](fdf::Node::Interface* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
+      [](fidl::WireInterface<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
   if (bind_node.is_error()) {
     LOGF(ERROR, "Failed to bind channel to Node for driver '%.*s': %s", url.size(), url.data(),
          zx_status_get_string(bind_node.error()));

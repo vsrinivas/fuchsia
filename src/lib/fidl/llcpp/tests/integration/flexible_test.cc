@@ -190,7 +190,7 @@ class RewriteTransaction : public fidl::Transaction {
   zx::unowned_channel channel_;
 };
 
-class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
+class Server : fidl::WireInterface<test::ReceiveFlexibleEnvelope>, private async_wait_t {
  public:
   void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;

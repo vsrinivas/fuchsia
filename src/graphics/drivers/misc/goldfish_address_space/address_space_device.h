@@ -61,7 +61,7 @@ class AddressSpaceDevice
         std::move(request));
   }
 
-  // |fuchsia_hardware_goldfish::AddressSpaceDevice::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceDevice>|
   void OpenChildDriver(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type,
                        zx::channel request, OpenChildDriverCompleter::Sync& completer) override {
     zx_status_t result = OpenChildDriver(type, std::move(request));
@@ -91,7 +91,7 @@ class AddressSpaceDevice
 
 class AddressSpaceChildDriver
     : public ChildDriverType,
-      public fuchsia_hardware_goldfish::AddressSpaceChildDriver::Interface {
+      public fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceChildDriver> {
  public:
   explicit AddressSpaceChildDriver(
       fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type, AddressSpaceDevice* device,
@@ -109,7 +109,7 @@ class AddressSpaceChildDriver
 
   zx_status_t Bind();
 
-  // |fuchsia_hardware_goldfish::AddressSpaceChildDriver::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceChildDriver>|
   void AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync& completer) override;
   void DeallocateBlock(uint64_t paddr, DeallocateBlockCompleter::Sync& completer) override;
   void ClaimSharedBlock(uint64_t offset, uint64_t size,

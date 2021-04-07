@@ -179,7 +179,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
             .export_partition_map = true,
 };
 
-class FakeBootArgs : public fuchsia_boot::Arguments::Interface {
+class FakeBootArgs : public fidl::WireInterface<fuchsia_boot::Arguments> {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);

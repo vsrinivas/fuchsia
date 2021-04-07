@@ -38,7 +38,7 @@ using Status = fuchsia_cobalt::wire::Status;
 using EventData = fuchsia_cobalt::wire::EventPayload;
 
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.
-class FakeLoggerFactoryService : public fuchsia_cobalt::LoggerFactory::Interface {
+class FakeLoggerFactoryService : public fidl::WireInterface<fuchsia_cobalt::LoggerFactory> {
  public:
   void CreateLoggerFromProjectId(uint32_t project_id,
                                  ::fidl::ServerEnd<fuchsia_cobalt::Logger> logger,
@@ -68,7 +68,7 @@ class FakeLoggerFactoryService : public fuchsia_cobalt::LoggerFactory::Interface
 };
 
 // Fake Implementation for fuchsia::cobalt::Logger.
-class FakeLoggerService : public fuchsia_cobalt::Logger::Interface {
+class FakeLoggerService : public fidl::WireInterface<fuchsia_cobalt::Logger> {
  public:
   void LogEvent(uint32_t metric_id, uint32_t event_code, LogEventCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");

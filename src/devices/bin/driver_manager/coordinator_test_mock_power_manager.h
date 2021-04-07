@@ -9,7 +9,7 @@
 #include <lib/zx/channel.h>
 
 class MockPowerManager
-    : public fuchsia_power_manager::DriverManagerRegistration::RawChannelInterface {
+    : public fidl::WireRawChannelInterface<fuchsia_power_manager::DriverManagerRegistration> {
  public:
   void Register(zx::channel system_state_transition, zx::channel dir,
                 RegisterCompleter::Sync& completer) override {

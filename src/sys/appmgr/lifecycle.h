@@ -19,7 +19,7 @@ namespace component {
 
 class Appmgr;
 
-class LifecycleServer final : public fuchsia_process_lifecycle::Lifecycle::Interface {
+class LifecycleServer final : public fidl::WireInterface<fuchsia_process_lifecycle::Lifecycle> {
  public:
   LifecycleServer(Appmgr* appmgr, fit::function<void(zx_status_t)> stop_callback)
       : appmgr_(appmgr) {

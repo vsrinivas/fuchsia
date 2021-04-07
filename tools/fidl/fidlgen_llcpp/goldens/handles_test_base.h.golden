@@ -7,13 +7,13 @@ namespace fidl_test_handles {
 namespace testing {
 
 class SomeProtocol_TestBase
-    : public ::fidl_test_handles::SomeProtocol::Interface {
+    : public ::fidl::WireInterface<::fidl_test_handles::SomeProtocol> {
  public:
   virtual ~SomeProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_handles::SomeProtocol::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>;
 };
 }  // namespace testing
 }  // namespace fidl_test_handles

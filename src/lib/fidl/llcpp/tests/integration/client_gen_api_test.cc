@@ -18,7 +18,7 @@ namespace {
 
 using ::fidl_test_coding_fuchsia::Example;
 
-class Server : public Example::Interface {
+class Server : public fidl::WireInterface<Example> {
  public:
   explicit Server(const char* data, size_t size) : data_(data), size_(size) {}
 
@@ -182,7 +182,7 @@ TEST(GenAPITestCase, Epitaph) {
 }
 
 TEST(GenAPITestCase, UnbindInfoEncodeError) {
-  class ErrorServer : public Example::Interface {
+  class ErrorServer : public fidl::WireInterface<Example> {
    public:
     explicit ErrorServer() {}
 
@@ -271,7 +271,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 // After a client is unbound, no more calls can be made on that client.
 TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   // Use a server to count the number of |OneWay| calls.
-  class Server : public Example::Interface {
+  class Server : public fidl::WireInterface<Example> {
    public:
     Server() = default;
 

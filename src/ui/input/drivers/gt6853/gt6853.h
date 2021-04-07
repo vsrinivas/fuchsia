@@ -46,7 +46,7 @@ class Gt6853Device;
 using DeviceType = ddk::Device<Gt6853Device, ddk::Messageable, ddk::Unbindable>;
 
 class Gt6853Device : public DeviceType,
-                     fuchsia_input_report::InputDevice::RawChannelInterface,
+                     fidl::WireRawChannelInterface<fuchsia_input_report::InputDevice>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   enum class Register : uint16_t {

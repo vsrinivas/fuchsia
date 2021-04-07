@@ -26,7 +26,7 @@ using DdkDeviceType = ddk::Device<DeviceCtx, ddk::Messageable>;
 // TODO(dustingreen): If this device's release() can get called, we'll want to
 // sequence the shutdown more carefully/explicitly.  Just destructing an
 // instance of this class isn't tested to actually shut down cleanly (yet).
-class DeviceCtx : public fuchsia_hardware_mediacodec::Device::Interface,
+class DeviceCtx : public fidl::WireInterface<fuchsia_hardware_mediacodec::Device>,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA_CODEC> {
  public:

@@ -19,7 +19,7 @@
 
 namespace sysmem_driver {
 
-class BufferCollection : public Node, public fuchsia_sysmem::BufferCollection::Interface {
+class BufferCollection : public Node, public fidl::WireInterface<fuchsia_sysmem::BufferCollection> {
  public:
   // Use EmplaceInTree() instead of Create() (until we switch to llcpp when we can have a new
   // Create() that does what EmplaceInTree() currently does).  The returned reference is valid while

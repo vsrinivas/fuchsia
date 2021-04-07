@@ -26,7 +26,7 @@ using DeviceType = ddk::Device<NoHardwareGpu, ddk::Messageable>;
 
 class NoHardwareGpu : public DeviceType,
                       public ImgSysDevice,
-                      public fuchsia_gpu_magma::Device::Interface {
+                      public fidl::WireInterface<fuchsia_gpu_magma::Device> {
  public:
   NoHardwareGpu(zx_device_t* parent) : DeviceType(parent) {}
 

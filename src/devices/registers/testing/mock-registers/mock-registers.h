@@ -11,7 +11,7 @@
 namespace mock_registers {
 
 // Mock Registers. FIDL implementation.
-class MockRegisters : public fuchsia_hardware_registers::Device::Interface {
+class MockRegisters : public fidl::WireInterface<fuchsia_hardware_registers::Device> {
  public:
   explicit MockRegisters(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
   ~MockRegisters() {}

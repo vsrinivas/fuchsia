@@ -16,7 +16,7 @@ namespace ram_info {
 // fake register value used in test.
 constexpr uint32_t TEST_REGISTER_VALUE = 42;
 
-class FakeRamDevice : public fuchsia_hardware_ram_metrics::Device::Interface {
+class FakeRamDevice : public fidl::WireInterface<fuchsia_hardware_ram_metrics::Device> {
  public:
   FakeRamDevice() = default;
 

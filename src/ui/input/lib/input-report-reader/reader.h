@@ -109,7 +109,7 @@ class InputReportReaderManager {
 //  This class shouldn't be touched directly. An InputReport driver should only manipulate
 //  the InputReportReaderManager.
 template <class Report>
-class InputReportReader : public fuchsia_input_report::InputReportsReader::Interface {
+class InputReportReader : public fidl::WireInterface<fuchsia_input_report::InputReportsReader> {
  public:
   // Create the InputReportReader. `manager` and `dispatcher` must outlive this InputReportReader.
   static std::unique_ptr<InputReportReader<Report>> Create(

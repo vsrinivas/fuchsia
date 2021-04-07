@@ -20,7 +20,7 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fio::Node::RawChannelInterface {
+class TestServerBase : public fidl::WireRawChannelInterface<fio::Node> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;

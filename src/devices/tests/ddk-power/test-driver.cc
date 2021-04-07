@@ -25,7 +25,7 @@ using DeviceType =
     ddk::Device<TestPowerDriver, ddk::Unbindable, ddk::Suspendable, ddk::Messageable>;
 class TestPowerDriver : public DeviceType,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD>,
-                        public TestDevice::Interface {
+                        public fidl::WireInterface<TestDevice> {
  public:
   TestPowerDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

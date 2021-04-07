@@ -151,9 +151,9 @@ struct CoordinatorConfig {
   std::vector<fbl::String> eager_fallback_drivers;
 };
 
-class Coordinator : public device_manager_fidl::BindDebugger::Interface,
-                    public device_manager_fidl::DriverHostDevelopment::Interface,
-                    public fuchsia_driver_registrar::DriverRegistrar::Interface {
+class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger>,
+                    public fidl::WireInterface<device_manager_fidl::DriverHostDevelopment>,
+                    public fidl::WireInterface<fuchsia_driver_registrar::DriverRegistrar> {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;

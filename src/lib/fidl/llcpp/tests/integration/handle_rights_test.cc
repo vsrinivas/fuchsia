@@ -13,7 +13,7 @@
 
 namespace test = ::llcpptest_handlerights_test;
 
-class HandleRightsServer : public test::HandleRights::Interface {
+class HandleRightsServer : public fidl::WireInterface<test::HandleRights> {
  public:
   void SyncGetHandleWithTooFewRights(
       SyncGetHandleWithTooFewRightsCompleter::Sync& completer) override {

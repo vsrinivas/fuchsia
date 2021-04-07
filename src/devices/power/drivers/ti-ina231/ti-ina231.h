@@ -21,7 +21,7 @@ using DeviceType = ddk::Device<Ina231Device, ddk::Messageable>;
 
 class Ina231Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_POWER_SENSOR>,
-                     public power_sensor_fidl::Device::Interface {
+                     public fidl::WireInterface<power_sensor_fidl::Device> {
  public:
   Ina231Device(zx_device_t* parent, uint32_t shunt_resistor_uohms, ddk::I2cChannel i2c)
       : DeviceType(parent), shunt_resistor_uohms_(shunt_resistor_uohms), i2c_(i2c) {}

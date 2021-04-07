@@ -52,7 +52,7 @@ TEST(WatcherTest, Smoke) {
   ASSERT_OK(endpoints.status_value());
 
   Server server([](uint32_t mask, uint32_t options, zx::channel watcher,
-                   fuchsia_io::Directory::Interface::WatchCompleter::Sync& completer) {
+                   fidl::WireInterface<fuchsia_io::Directory>::WatchCompleter::Sync& completer) {
     uint8_t bytes[fuchsia_io::wire::MAX_BUF];
     auto it = std::begin(bytes);
 

@@ -100,7 +100,7 @@ class DataSinkImpl {
   std::unique_ptr<DevicePartitioner> partitioner_;
 };
 
-class DataSink : public fuchsia_paver::DataSink::RawChannelInterface {
+class DataSink : public fidl::WireRawChannelInterface<fuchsia_paver::DataSink> {
  public:
   DataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
@@ -147,7 +147,7 @@ class DataSink : public fuchsia_paver::DataSink::RawChannelInterface {
   DataSinkImpl sink_;
 };
 
-class DynamicDataSink : public fuchsia_paver::DynamicDataSink::RawChannelInterface {
+class DynamicDataSink : public fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink> {
  public:
   DynamicDataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
@@ -197,7 +197,7 @@ class DynamicDataSink : public fuchsia_paver::DynamicDataSink::RawChannelInterfa
   DataSinkImpl sink_;
 };
 
-class BootManager : public fuchsia_paver::BootManager::Interface {
+class BootManager : public fidl::WireInterface<fuchsia_paver::BootManager> {
  public:
   BootManager(std::unique_ptr<abr::Client> abr_client,
               fidl::ClientEnd<fuchsia_io::Directory> svc_root)

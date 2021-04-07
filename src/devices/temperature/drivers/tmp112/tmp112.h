@@ -41,7 +41,7 @@ using DdkDeviceType = ddk::Device<Tmp112Device, ddk::Unbindable, ddk::Messageabl
 namespace temperature_fidl = fuchsia_hardware_temperature;
 
 class Tmp112Device : public DdkDeviceType,
-                     public temperature_fidl::Device::Interface,
+                     public fidl::WireInterface<temperature_fidl::Device>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
   Tmp112Device(zx_device_t* parent, ddk::I2cChannel i2c)

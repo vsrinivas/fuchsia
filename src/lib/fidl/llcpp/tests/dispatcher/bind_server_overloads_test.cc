@@ -15,7 +15,7 @@ namespace {
 
 using ::fidl_test_coding_fuchsia::Simple;
 
-class Server : public Simple::Interface {
+class Server : public fidl::WireInterface<Simple> {
  public:
   explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;

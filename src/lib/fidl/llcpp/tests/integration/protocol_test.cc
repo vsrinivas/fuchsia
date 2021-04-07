@@ -34,7 +34,7 @@ uint32_t GetHandleCount(zx::unowned<T> h) {
 
 }  // namespace
 
-class ErrorServer : public test::ErrorMethods::Interface {
+class ErrorServer : public fidl::WireInterface<test::ErrorMethods> {
  public:
   void NoArgsPrimitiveError(bool should_error,
                             NoArgsPrimitiveErrorCompleter::Sync& completer) override {
@@ -119,7 +119,7 @@ TEST_F(ResultTest, OwnedSuccessManyArgs) {
   ASSERT_EQ(success.c, 3);
 }
 
-class FrobinatorImpl : public test::Frobinator::Interface {
+class FrobinatorImpl : public fidl::WireInterface<test::Frobinator> {
  public:
   virtual void Frob(::fidl::StringView value, FrobCompleter::Sync& completer) override {}
 
@@ -269,7 +269,7 @@ TEST(EventSenderTest, SendEvent) {
   ASSERT_TRUE(event_handler->received());
 }
 
-class HandleProviderServer : public test::HandleProvider::Interface {
+class HandleProviderServer : public fidl::WireInterface<test::HandleProvider> {
  public:
   void GetHandle(GetHandleCompleter::Sync& completer) override {
     test::wire::HandleStruct s;
@@ -367,7 +367,7 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
   }
 }
 
-class EmptyImpl : public test::Empty::Interface {
+class EmptyImpl : public fidl::WireInterface<test::Empty> {
  public:
 };
 

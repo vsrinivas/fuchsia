@@ -17,7 +17,7 @@
 
 // [START echo-impl]
 // Implementation of the Echo protocol that prepends a prefix to every response.
-class EchoImpl final : public fuchsia_examples::Echo::Interface {
+class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
  public:
   explicit EchoImpl(std::string prefix) : prefix_(prefix) {}
   // This method is not used in the request pipelining example, so requests are ignored.
@@ -36,7 +36,7 @@ class EchoImpl final : public fuchsia_examples::Echo::Interface {
 // [START launcher-impl]
 // Implementation of EchoLauncher. Each method creates an instance of EchoImpl
 // with the specified prefix.
-class EchoLauncherImpl final : public fuchsia_examples::EchoLauncher::Interface {
+class EchoLauncherImpl final : public fidl::WireInterface<fuchsia_examples::EchoLauncher> {
  public:
   explicit EchoLauncherImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 

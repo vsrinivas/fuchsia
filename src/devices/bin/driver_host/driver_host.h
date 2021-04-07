@@ -48,7 +48,7 @@ void RegisterContextForApi(DriverHostContext* context);
 
 class DevhostControllerConnection
     : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
-      public fuchsia_device_manager::DevhostController::RawChannelInterface {
+      public fidl::WireRawChannelInterface<fuchsia_device_manager::DevhostController> {
  public:
   // |ctx| must outlive this connection
   explicit DevhostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}

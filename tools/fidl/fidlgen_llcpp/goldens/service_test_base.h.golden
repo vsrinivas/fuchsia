@@ -7,13 +7,13 @@ namespace fidl_test_service {
 namespace testing {
 
 class SecondProtocol_TestBase
-    : public ::fidl_test_service::SecondProtocol::Interface {
+    : public ::fidl::WireInterface<::fidl_test_service::SecondProtocol> {
  public:
   virtual ~SecondProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_service::SecondProtocol::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_service::SecondProtocol>;
   virtual void MethodOnSecond(
       ::fidl::WireInterface<::fidl_test_service::SecondProtocol>::
           MethodOnSecondCompleter::Sync& completer) override {
@@ -22,13 +22,13 @@ class SecondProtocol_TestBase
 };
 
 class FirstProtocol_TestBase
-    : public ::fidl_test_service::FirstProtocol::Interface {
+    : public ::fidl::WireInterface<::fidl_test_service::FirstProtocol> {
  public:
   virtual ~FirstProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_service::FirstProtocol::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_service::FirstProtocol>;
   virtual void MethodOnFirst(
       ::fidl::WireInterface<::fidl_test_service::FirstProtocol>::
           MethodOnFirstCompleter::Sync& completer) override {

@@ -21,7 +21,7 @@ namespace fidl {
 class DdkFidlDevice;
 using DeviceType = ddk::Device<DdkFidlDevice, ddk::Messageable>;
 
-class DdkFidlDevice : public DeviceType, public fuchsia_hardware_test::Device::Interface {
+class DdkFidlDevice : public DeviceType, public fidl::WireInterface<fuchsia_hardware_test::Device> {
  public:
   explicit DdkFidlDevice(zx_device_t* parent) : DeviceType(parent) {}
 

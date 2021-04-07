@@ -512,7 +512,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           [](void* interface, void* bytes, ::fidl::Transaction* txn) {
             ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
                 GetChildCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
                 interface)
                 ->GetChild(completer);
           },
@@ -524,7 +525,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           [](void* interface, void* bytes, ::fidl::Transaction* txn) {
             ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
                 GetChildRequestCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
                 interface)
                 ->GetChildRequest(completer);
           },
@@ -538,7 +540,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ::fidl_test_protocolrequest::Parent::TakeChild>*>(bytes);
             ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
                 TakeChildCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
                 interface)
                 ->TakeChild(std::move(message->c), completer);
           },
@@ -552,7 +555,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ::fidl_test_protocolrequest::Parent::TakeChildRequest>*>(bytes);
             ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
                 TakeChildRequestCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
                 interface)
                 ->TakeChildRequest(std::move(message->r), completer);
           },

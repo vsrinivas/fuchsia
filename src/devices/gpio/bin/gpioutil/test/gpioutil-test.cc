@@ -16,7 +16,7 @@ namespace {
 
 using fuchsia_hardware_gpio::Gpio;
 
-class FakeGpio : public Gpio::Interface {
+class FakeGpio : public fidl::WireInterface<Gpio> {
  public:
   explicit FakeGpio() {}
 

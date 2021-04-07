@@ -20,7 +20,7 @@ namespace fs {
 
 namespace internal {
 
-class NodeConnection final : public Connection, public fuchsia_io::Node::Interface {
+class NodeConnection final : public Connection, public fidl::WireInterface<fuchsia_io::Node> {
  public:
   // Refer to documentation for |Connection::Connection|.
   NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,

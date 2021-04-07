@@ -65,8 +65,8 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     ASSERT_OK(zx::channel::create(0, &client, &server));
     optee_client_.reset(
         new OpteeClient(this, std::move(service_provider), optee::Uuid{kOpteeOsUuid}));
-    fidl::BindServer<fuchsia_tee::Application::Interface>(loop_.dispatcher(), std::move(server),
-                                                          optee_client_.get());
+    fidl::BindServer<fidl::WireInterface<fuchsia_tee::Application>>(
+        loop_.dispatcher(), std::move(server), optee_client_.get());
     optee_client_fidl_ = fidl::WireSyncClient<fuchsia_tee::Application>(std::move(client));
   }
 
@@ -103,7 +103,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   async::Loop loop_;
 };
 
-class FakeRpmb : public frpmb::Rpmb::Interface {
+class FakeRpmb : public fidl::WireInterface<frpmb::Rpmb> {
  public:
   using RpmbRequestCallback = fbl::Function<void(fuchsia_hardware_rpmb::wire::Request &request,
                                                  RequestCompleter::Sync &completer)>;

@@ -23,7 +23,7 @@ namespace x86 {
 
 // This is the main class for the X86 platform bus driver.
 class X86 : public ddk::Device<X86, ddk::Messageable>,
-            public fuchsia_hardware_acpi::Acpi::Interface {
+            public fidl::WireInterface<fuchsia_hardware_acpi::Acpi> {
  public:
   explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, zx_device_t* sys_root)
       : ddk::Device<X86, ddk::Messageable>(parent), pbus_(pbus), sys_root_(sys_root) {}

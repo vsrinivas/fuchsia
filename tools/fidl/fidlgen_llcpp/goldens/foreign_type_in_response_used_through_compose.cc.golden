@@ -222,9 +222,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
                 GetFooCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                    Interface*>(interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>*>(
+                interface)
                 ->GetFoo(completer);
           },
       },

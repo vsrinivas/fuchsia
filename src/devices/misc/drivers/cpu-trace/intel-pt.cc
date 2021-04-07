@@ -88,7 +88,7 @@ typedef struct ipt_per_trace_state {
 class InsntraceDevice;
 using DeviceType = ddk::Device<InsntraceDevice, ddk::Openable, ddk::Closable, ddk::Messageable>;
 
-class InsntraceDevice : public DeviceType, fuchsia_insntrace::Controller::Interface {
+class InsntraceDevice : public DeviceType, fidl::WireInterface<fuchsia_insntrace::Controller> {
  public:
   explicit InsntraceDevice(zx_device_t* parent, zx::bti bti)
       : DeviceType(parent), bti_(std::move(bti)) {}

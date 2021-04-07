@@ -17,9 +17,10 @@
 class DriverHostContext;
 struct zx_device;
 
-class DeviceControllerConnection : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
-                                   public fuchsia_device_manager::DeviceController::Interface,
-                                   public fuchsia_io::Directory::RawChannelInterface {
+class DeviceControllerConnection
+    : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
+      public fidl::WireInterface<fuchsia_device_manager::DeviceController>,
+      public fidl::WireRawChannelInterface<fuchsia_io::Directory> {
  public:
   // |ctx| must outlive this connection
   DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,

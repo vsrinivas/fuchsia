@@ -7,13 +7,13 @@ namespace fidl_test_protocols {
 namespace testing {
 
 class Transitional_TestBase
-    : public ::fidl_test_protocols::Transitional::Interface {
+    : public ::fidl::WireInterface<::fidl_test_protocols::Transitional> {
  public:
   virtual ~Transitional_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_protocols::Transitional::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_protocols::Transitional>;
   virtual void Request(
       int64_t x, ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
                      RequestCompleter::Sync& completer) override {
@@ -27,13 +27,14 @@ class Transitional_TestBase
 };
 
 class ChannelProtocol_TestBase
-    : public ::fidl_test_protocols::ChannelProtocol::Interface {
+    : public ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol> {
  public:
   virtual ~ChannelProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_protocols::ChannelProtocol::Interface;
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>;
   virtual void MethodA(
       int64_t a, int64_t b,
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
@@ -61,14 +62,15 @@ class ChannelProtocol_TestBase
 };
 
 class WithAndWithoutRequestResponse_TestBase
-    : public ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface {
+    : public ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse> {
  public:
   virtual ~WithAndWithoutRequestResponse_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface =
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface;
+  using Interface = ::fidl::WireInterface<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
   virtual void NoRequestNoResponse(
       ::fidl::WireInterface<
           ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -111,13 +113,14 @@ class WithAndWithoutRequestResponse_TestBase
 };
 
 class WithErrorSyntax_TestBase
-    : public ::fidl_test_protocols::WithErrorSyntax::Interface {
+    : public ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax> {
  public:
   virtual ~WithErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_protocols::WithErrorSyntax::Interface;
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>;
   virtual void ResponseAsStruct(
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
           ResponseAsStructCompleter::Sync& completer) override {

@@ -67,7 +67,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           [](void* interface, void* bytes, ::fidl::Transaction* txn) {
             ::fidl::WireInterface<::fidl_test_service::SecondProtocol>::
                 MethodOnSecondCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_service::SecondProtocol::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_service::SecondProtocol>*>(
                 interface)
                 ->MethodOnSecond(completer);
           },
@@ -180,7 +181,8 @@ fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>::TryDispatch(
           [](void* interface, void* bytes, ::fidl::Transaction* txn) {
             ::fidl::WireInterface<::fidl_test_service::FirstProtocol>::
                 MethodOnFirstCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_service::FirstProtocol::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_service::FirstProtocol>*>(
                 interface)
                 ->MethodOnFirst(completer);
           },

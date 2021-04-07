@@ -87,7 +87,7 @@ void USBVirtualBusBase::InitPeripheral() {
 
 int USBVirtualBusBase::GetRootFd() { return devfs_root().get(); }
 
-class EventWatcher : public fuchsia_hardware_usb_peripheral::Events::Interface {
+class EventWatcher : public fidl::WireInterface<fuchsia_hardware_usb_peripheral::Events> {
  public:
   explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
       : loop_(loop), functions_(functions) {

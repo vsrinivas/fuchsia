@@ -22,7 +22,7 @@
 namespace goldfish {
 
 // An instance of this class serves a Pipe connection.
-class Pipe : public fuchsia_hardware_goldfish::Pipe::Interface {
+class Pipe : public fidl::WireInterface<fuchsia_hardware_goldfish::Pipe> {
  public:
   using OnBindFn = fit::function<void(Pipe*)>;
   using OnCloseFn = fit::function<void(Pipe*)>;
@@ -45,22 +45,22 @@ class Pipe : public fuchsia_hardware_goldfish::Pipe::Interface {
     zx_paddr_t phys;
   };
 
-  // |fuchsia_hardware_goldfish::Pipe::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
   void SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::Pipe::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
   void SetEvent(::zx::event event, SetEventCompleter::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::Pipe::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
   void GetBuffer(GetBufferCompleter::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::Pipe::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
   void Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::Pipe::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
   void Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::Pipe::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
   void DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
               DoCallCompleter::Sync& completer) override;
 

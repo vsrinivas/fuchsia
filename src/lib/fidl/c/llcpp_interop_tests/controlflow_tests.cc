@@ -34,7 +34,7 @@ namespace {
 
 namespace gen = ::fidl_test_llcpp_controlflow;
 
-class Server : public gen::ControlFlow::Interface {
+class Server : public fidl::WireInterface<gen::ControlFlow> {
  public:
   void Shutdown(ShutdownCompleter::Sync& txn) final { txn.Close(ZX_OK); }
 

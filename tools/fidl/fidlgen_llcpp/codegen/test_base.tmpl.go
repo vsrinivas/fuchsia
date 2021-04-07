@@ -18,12 +18,12 @@ const testBaseTmpl = `
 {{ EnsureNamespace .TestBase }}
 
 
-class {{ .TestBase.Name }} : public {{ . }}::Interface {
+class {{ .TestBase.Name }} : public {{ .WireInterface }} {
   public:
   virtual ~{{ .TestBase.Name }}() { }
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = {{ . }}::Interface;
+  using Interface = {{ .WireInterface }};
 
   {{- range .Methods }}
     {{- if .HasRequest }}

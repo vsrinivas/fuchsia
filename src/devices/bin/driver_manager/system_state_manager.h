@@ -13,7 +13,7 @@
 namespace device_manager_fidl = fuchsia_device_manager;
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
-class SystemStateManager : public device_manager_fidl::SystemStateTransition::Interface {
+class SystemStateManager : public fidl::WireInterface<device_manager_fidl::SystemStateTransition> {
  public:
   explicit SystemStateManager(Coordinator* dev_coord) : dev_coord_(dev_coord) {}
 
@@ -23,7 +23,7 @@ class SystemStateManager : public device_manager_fidl::SystemStateTransition::In
 
   // SystemStateTransition interface
   void SetTerminationSystemState(statecontrol_fidl::wire::SystemPowerState state,
-                                 device_manager_fidl::SystemStateTransition::Interface::
+                                 fidl::WireInterface<device_manager_fidl::SystemStateTransition>::
                                      SetTerminationSystemStateCompleter::Sync& completer) override;
 
  private:

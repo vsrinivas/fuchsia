@@ -7,13 +7,13 @@ namespace fidl_test_doccomments {
 namespace testing {
 
 class Interface_TestBase
-    : public ::fidl_test_doccomments::Interface::Interface {
+    : public ::fidl::WireInterface<::fidl_test_doccomments::Interface> {
  public:
   virtual ~Interface_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_doccomments::Interface::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_doccomments::Interface>;
   virtual void Method(
       ::fidl::WireInterface<::fidl_test_doccomments::Interface>::
           MethodCompleter::Sync& completer) override {

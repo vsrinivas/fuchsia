@@ -18,7 +18,7 @@
 namespace {
 
 class TestBti : public ddk::Device<TestBti, ddk::Messageable>,
-                public fuchsia_hardware_btitest::BtiDevice::Interface {
+                public fidl::WireInterface<fuchsia_hardware_btitest::BtiDevice> {
  public:
   explicit TestBti(zx_device_t* parent) : ddk::Device<TestBti, ddk::Messageable>(parent) {}
 

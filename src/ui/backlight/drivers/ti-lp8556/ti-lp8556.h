@@ -78,8 +78,8 @@ class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint
 
 class Lp8556Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
-                     public FidlBacklight::Device::Interface,
-                     public FidlPowerSensor::Device::Interface {
+                     public fidl::WireInterface<FidlBacklight::Device>,
+                     public fidl::WireInterface<FidlPowerSensor::Device> {
  public:
   Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::MmioBuffer mmio)
       : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {}

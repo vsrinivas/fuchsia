@@ -489,7 +489,8 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Nod
     fit::result<VnodeRepresentation, zx_status_t> result =
         internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      fidl::WireEventSender<fio::Node>(std::move(server_end)).OnOpen(result.error(), fio::wire::NodeInfo());
+      fidl::WireEventSender<fio::Node>(std::move(server_end))
+          .OnOpen(result.error(), fio::wire::NodeInfo());
       return result.error();
     }
     ConvertToIoV1NodeInfo(result.take_value(), [&](fio::wire::NodeInfo&& info) {

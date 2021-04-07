@@ -201,9 +201,8 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
             ::fidl::WireInterface<
                 ::fidl_test_transitivedependenciescompose::Top>::
                 GetFooCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_transitivedependenciescompose::Top::Interface*>(
-                interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_transitivedependenciescompose::Top>*>(interface)
                 ->GetFoo(completer);
           },
       },

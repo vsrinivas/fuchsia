@@ -34,7 +34,7 @@ typedef struct display_ref {
   DisplayDevice* display_device __TA_GUARDED(mtx);
 } display_ref_t;
 
-class DisplayDevice : public FidlBacklight::Device::Interface {
+class DisplayDevice : public fidl::WireInterface<FidlBacklight::Device> {
  public:
   DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
   virtual ~DisplayDevice();

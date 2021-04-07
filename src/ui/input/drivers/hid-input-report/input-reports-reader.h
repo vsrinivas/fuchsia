@@ -25,7 +25,7 @@ class InputReportBase {
   virtual void RemoveReaderFromList(InputReportsReader* reader) = 0;
 };
 
-class InputReportsReader : public fuchsia_input_report::InputReportsReader::Interface {
+class InputReportsReader : public fidl::WireInterface<fuchsia_input_report::InputReportsReader> {
  public:
   // The InputReportBase has to exist for the lifetime of the InputReportsReader.
   // The pointer to InputReportBase is unowned.

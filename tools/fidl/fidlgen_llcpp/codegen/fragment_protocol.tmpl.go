@@ -84,9 +84,6 @@ class {{ .Name }} final {
   using SyncClient = fidl::WireSyncClient<{{ . }}>;
 
   using Interface = {{ .WireInterface }};
-  {{- if .ShouldEmitTypedChannelCascadingInheritance }}
-  using RawChannelInterface = {{ .WireRawChannelInterface }};
-  {{- end }}
 
   // TODO(ianloic): Remove this when all users have migrated.
   static ::fidl::DispatchResult Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);

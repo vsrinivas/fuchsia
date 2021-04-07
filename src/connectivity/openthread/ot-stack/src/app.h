@@ -84,7 +84,7 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   void DisconnectDevice();
   void Shutdown();
 
-  class LowpanSpinelDeviceFidlImpl : public fidl_spinel::Device::Interface {
+  class LowpanSpinelDeviceFidlImpl : public fidl::WireInterface<fidl_spinel::Device> {
    public:
     explicit LowpanSpinelDeviceFidlImpl(OtStackApp& ot_stack_app);
 

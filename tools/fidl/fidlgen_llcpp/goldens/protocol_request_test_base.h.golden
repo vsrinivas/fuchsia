@@ -6,13 +6,14 @@
 namespace fidl_test_protocolrequest {
 namespace testing {
 
-class Parent_TestBase : public ::fidl_test_protocolrequest::Parent::Interface {
+class Parent_TestBase
+    : public ::fidl::WireInterface<::fidl_test_protocolrequest::Parent> {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_protocolrequest::Parent::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>;
   virtual void GetChild(
       ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
           GetChildCompleter::Sync& completer) override {
@@ -37,13 +38,14 @@ class Parent_TestBase : public ::fidl_test_protocolrequest::Parent::Interface {
   }
 };
 
-class Child_TestBase : public ::fidl_test_protocolrequest::Child::Interface {
+class Child_TestBase
+    : public ::fidl::WireInterface<::fidl_test_protocolrequest::Child> {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_protocolrequest::Child::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Child>;
 };
 }  // namespace testing
 }  // namespace fidl_test_protocolrequest

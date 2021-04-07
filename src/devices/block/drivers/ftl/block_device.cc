@@ -32,7 +32,7 @@ namespace block_fidl = fuchsia_hardware_block;
 
 constexpr char kDeviceName[] = "ftl";
 
-class FidlService final : public block_fidl::Ftl::Interface {
+class FidlService final : public fidl::WireInterface<block_fidl::Ftl> {
  public:
   FidlService() = delete;
   constexpr explicit FidlService(ftl::BlockDevice* device) : device_(device) {}

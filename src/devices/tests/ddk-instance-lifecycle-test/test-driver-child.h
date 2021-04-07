@@ -49,7 +49,7 @@ using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Un
 using fuchsia_device_instancelifecycle_test::InstanceDevice;
 
 class TestLifecycleDriverChildInstance : public InstanceDeviceType,
-                                         public InstanceDevice::Interface {
+                                         public fidl::WireInterface<InstanceDevice> {
  public:
   TestLifecycleDriverChildInstance(zx_device_t* parent, TestLifecycleDriverChild* parent_ctx)
       : InstanceDeviceType(parent), parent_ctx_(parent_ctx) {}

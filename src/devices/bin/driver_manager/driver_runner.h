@@ -23,7 +23,7 @@
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.
 
-class DriverComponent : public fuchsia_component_runner::ComponentController::Interface,
+class DriverComponent : public fidl::WireInterface<fuchsia_component_runner::ComponentController>,
                         public fbl::DoublyLinkedListable<std::unique_ptr<DriverComponent>> {
  public:
   DriverComponent(fidl::ClientEnd<fuchsia_io::Directory> exposed_dir,
@@ -37,7 +37,7 @@ class DriverComponent : public fuchsia_component_runner::ComponentController::In
   zx::status<> WatchDriver(async_dispatcher_t* dispatcher);
 
  private:
-  // fuchsia_component_runner::ComponentController::Interface
+  // fidl::WireInterface<fuchsia_component_runner::ComponentController>
   void Stop(StopCompleter::Sync& completer) override;
   void Kill(KillCompleter::Sync& completer) override;
 
@@ -81,8 +81,8 @@ class DriverBinder {
                     fit::callback<void(zx::status<>)> callback) = 0;
 };
 
-class Node : public fuchsia_driver_framework::NodeController::Interface,
-             public fuchsia_driver_framework::Node::Interface,
+class Node : public fidl::WireInterface<fuchsia_driver_framework::NodeController>,
+             public fidl::WireInterface<fuchsia_driver_framework::Node>,
              public fbl::DoublyLinkedListable<std::unique_ptr<Node>> {
  public:
   using Offers = std::vector<fidl::StringView>;
@@ -109,9 +109,9 @@ class Node : public fuchsia_driver_framework::NodeController::Interface,
 
  private:
   void Unbind();
-  // fuchsia_driver_framework::NodeController::Interface
+  // fidl::WireInterface<fuchsia_driver_framework::NodeController>
   void Remove(RemoveCompleter::Sync& completer) override;
-  // fuchsia_driver_framework::Node::Interface
+  // fidl::WireInterface<fuchsia_driver_framework::Node>
   void AddChild(fuchsia_driver_framework::wire::NodeAddArgs args,
                 fidl::ServerEnd<fuchsia_driver_framework::NodeController> controller,
                 fidl::ServerEnd<fuchsia_driver_framework::Node> node,
@@ -138,7 +138,7 @@ struct DriverArgs {
   Node* node;
 };
 
-class DriverRunner : public fuchsia_component_runner::ComponentRunner::Interface,
+class DriverRunner : public fidl::WireInterface<fuchsia_component_runner::ComponentRunner>,
                      public DriverBinder {
  public:
   DriverRunner(fidl::ClientEnd<fuchsia_sys2::Realm> realm,
@@ -150,7 +150,7 @@ class DriverRunner : public fuchsia_component_runner::ComponentRunner::Interface
   zx::status<> StartRootDriver(std::string_view name);
 
  private:
-  // fuchsia_component_runner::ComponentRunner::Interface
+  // fidl::WireInterface<fuchsia_component_runner::ComponentRunner>
   void Start(fuchsia_component_runner::wire::ComponentStartInfo start_info,
              fidl::ServerEnd<fuchsia_component_runner::ComponentController> controller,
              StartCompleter::Sync& completer) override;

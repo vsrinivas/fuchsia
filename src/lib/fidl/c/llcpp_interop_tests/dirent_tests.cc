@@ -202,7 +202,7 @@ class Server {
 // Server implemented with low-level C++ FIDL bindings
 namespace llcpp_server {
 
-class ServerBase : public gen::DirEntTestInterface::Interface {
+class ServerBase : public fidl::WireInterface<gen::DirEntTestInterface> {
  public:
   ServerBase(zx::channel chan)
       : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}

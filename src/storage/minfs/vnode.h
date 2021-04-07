@@ -57,7 +57,7 @@ class Minfs;
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,
                    public fbl::Recyclable<VnodeMinfs>,
-                   fuchsia_minfs::Minfs::Interface {
+                   fidl::WireInterface<fuchsia_minfs::Minfs> {
 #else
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,

@@ -21,7 +21,7 @@ namespace {
 namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
 
-class TestServer final : public fio::Directory::RawChannelInterface {
+class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
  public:
   TestServer() = default;
 

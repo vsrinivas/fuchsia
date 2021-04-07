@@ -27,14 +27,13 @@ using DeviceType =
 
 class AmlCpu : public DeviceType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL>,
-               fuchsia_cpuctrl::Device::Interface {
+               fidl::WireInterface<fuchsia_cpuctrl::Device> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpu);
   explicit AmlCpu(zx_device_t* parent, const ddk::ClockProtocolClient& plldiv16,
                   const ddk::ClockProtocolClient& cpudiv16,
                   const ddk::ClockProtocolClient& cpuscaler, const ddk::PowerProtocolClient& pwr,
-                  const std::vector<operating_point_t>& operating_points,
-                  const uint32_t core_count)
+                  const std::vector<operating_point_t>& operating_points, const uint32_t core_count)
       : DeviceType(parent),
         plldiv16_(plldiv16),
         cpudiv16_(cpudiv16),

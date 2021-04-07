@@ -320,7 +320,7 @@ zx_status_t OpteeClient::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 
 void OpteeClient::OpenSession2(
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) {
+    fidl::WireInterface<fuchsia_tee::Application>::OpenSession2Completer::Sync& completer) {
   constexpr uint32_t kInvalidSession = 0;
 
   fidl::FidlAllocator allocator;
@@ -384,7 +384,7 @@ void OpteeClient::OpenSession2(
 void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) {
+    fidl::WireInterface<fuchsia_tee::Application>::InvokeCommandCompleter::Sync& completer) {
   fidl::FidlAllocator allocator;
   fuchsia_tee::wire::OpResult result(allocator);
 
@@ -478,7 +478,7 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
 
 void OpteeClient::CloseSession(
     uint32_t session_id,
-    fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync& completer) {
+    fidl::WireInterface<fuchsia_tee::Application>::CloseSessionCompleter::Sync& completer) {
   CloseSession(session_id);
   completer.Reply();
 }

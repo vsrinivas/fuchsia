@@ -192,7 +192,8 @@ fidl::internal::WireDispatcher<::fidl_test_error::Example>::TryDispatch(
                 ::fidl::WireRequest<::fidl_test_error::Example::foo>*>(bytes);
             ::fidl::WireInterface<
                 ::fidl_test_error::Example>::fooCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_error::Example::Interface*>(interface)
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_error::Example>*>(interface)
                 ->foo(std::move(message->s), completer);
           },
       },

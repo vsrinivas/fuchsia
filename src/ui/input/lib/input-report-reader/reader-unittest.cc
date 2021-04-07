@@ -22,7 +22,7 @@ struct MouseReport {
   }
 };
 
-class MouseDevice : public fuchsia_input_report::InputDevice::RawChannelInterface {
+class MouseDevice : public fidl::WireRawChannelInterface<fuchsia_input_report::InputDevice> {
  public:
   zx_status_t Start();
 

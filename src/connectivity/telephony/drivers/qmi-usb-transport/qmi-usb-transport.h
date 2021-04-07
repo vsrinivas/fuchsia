@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_TELEPHONY_DRIVERS_QMI_USB_TRANSPORT_QMI_USB_TRANSPORT_H_
 #define SRC_CONNECTIVITY_TELEPHONY_DRIVERS_QMI_USB_TRANSPORT_QMI_USB_TRANSPORT_H_
 
-#include <fbl/mutex.h>
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
@@ -26,6 +25,7 @@
 #include <array>
 
 #include <ddktl/device.h>
+#include <fbl/mutex.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 
@@ -117,7 +117,7 @@ struct IpPktHdr {
 constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
 
 class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
-               fuchsia_hardware_telephony_transport::Qmi::Interface {
+               fidl::WireInterface<fuchsia_hardware_telephony_transport::Qmi> {
  public:
   explicit Device(zx_device_t* parent);
 

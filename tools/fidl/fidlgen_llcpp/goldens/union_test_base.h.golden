@@ -7,13 +7,13 @@ namespace fidl_test_union {
 namespace testing {
 
 class TestProtocol_TestBase
-    : public ::fidl_test_union::TestProtocol::Interface {
+    : public ::fidl::WireInterface<::fidl_test_union::TestProtocol> {
  public:
   virtual ~TestProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_union::TestProtocol::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_union::TestProtocol>;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::WireInterface<::fidl_test_union::TestProtocol>::
           StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&

@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
-#include "mock-device.h"
 #include "mock-device-thread.h"
+#include "mock-device.h"
 
 namespace libdriver_integration_test {
 
@@ -63,8 +63,7 @@ void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher, const std::
 void ActionList::AppendUnbindReply(fit::promise<void, std::string>* unbind_reply_done_out) {
   fit::bridge<void, std::string> bridge;
   AppendUnbindReply(std::move(bridge.completer));
-  *unbind_reply_done_out =
-      bridge.consumer.promise_or(::fit::error("unbind reply abandoned")).box();
+  *unbind_reply_done_out = bridge.consumer.promise_or(::fit::error("unbind reply abandoned")).box();
 }
 
 void ActionList::AppendUnbindReply(fit::completer<void, std::string> unbind_reply_done) {

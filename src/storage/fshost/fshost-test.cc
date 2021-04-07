@@ -112,7 +112,8 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }
 
-class FakeDriverManagerAdmin final : public fuchsia_device_manager::Administrator::Interface {
+class FakeDriverManagerAdmin final
+    : public fidl::WireInterface<fuchsia_device_manager::Administrator> {
  public:
   void Suspend(uint32_t flags, SuspendCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
@@ -211,7 +212,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
-class MockDirectoryAdminOpener : public fio::DirectoryAdmin::Interface {
+class MockDirectoryAdminOpener : public fidl::WireInterface<fio::DirectoryAdmin> {
  public:
   void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
             OpenCompleter::Sync& completer) override {

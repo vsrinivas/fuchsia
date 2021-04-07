@@ -68,7 +68,7 @@ class Bus;
 using PciBusType = ddk::Device<Bus, ddk::Messageable>;
 class Bus : public PciBusType,
             public ddk::EmptyProtocol<ZX_PROTOCOL_PCI>,
-            public PciFidl::Bus::Interface,
+            public fidl::WireInterface<PciFidl::Bus>,
             public BusDeviceInterface {
  public:
   static zx_status_t Create(zx_device_t* parent);

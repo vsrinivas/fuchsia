@@ -136,7 +136,7 @@ class EchoClientApp {
   fidl::WireSyncClient<Echo> client_;
 };
 
-class EchoConnection final : public Echo::Interface {
+class EchoConnection final : public fidl::WireInterface<Echo> {
  public:
   EchoConnection() = default;
 

@@ -98,7 +98,7 @@ void SysmemSecureMemServer::StopAsync() {
 }
 
 void SysmemSecureMemServer::GetPhysicalSecureHeaps(
-    fuchsia_sysmem::SecureMem::Interface::GetPhysicalSecureHeapsCompleter::Sync& completer) {
+    GetPhysicalSecureHeapsCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
   fuchsia_sysmem::wire::PhysicalSecureHeaps heaps;
   zx_status_t status = GetPhysicalSecureHeapsInternal(&heaps);
@@ -112,7 +112,7 @@ void SysmemSecureMemServer::GetPhysicalSecureHeaps(
 
 void SysmemSecureMemServer::SetPhysicalSecureHeaps(
     fuchsia_sysmem::wire::PhysicalSecureHeaps heaps,
-    fuchsia_sysmem::SecureMem::Interface::SetPhysicalSecureHeapsCompleter::Sync& completer) {
+    SetPhysicalSecureHeapsCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
   // must out-live |complete|
   fuchsia_sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Result result;

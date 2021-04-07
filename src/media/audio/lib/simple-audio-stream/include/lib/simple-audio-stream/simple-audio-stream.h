@@ -60,14 +60,14 @@ class SimpleAudioStream;
 using SimpleAudioStreamBase =
     ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::Unbindable>;
 
-// The SimpleAudioStream server (thread compatible) implements Device::Interface and
-// RingBuffer::Interface.
+// The SimpleAudioStream server (thread compatible) implements fidl::WireInterface<Device> and
+// fidl::WireInterface<RingBuffer>.
 // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
 class SimpleAudioStream : public SimpleAudioStreamBase,
                           public SimpleAudioStreamProtocol,
                           public fbl::RefCounted<SimpleAudioStream>,
-                          public audio_fidl::Device::Interface,
-                          public audio_fidl::RingBuffer::Interface {
+                          public fidl::WireInterface<audio_fidl::Device>,
+                          public fidl::WireInterface<audio_fidl::RingBuffer> {
  public:
   // Create
   //
@@ -318,16 +318,16 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     friend class fbl::RefPtr<Channel>;
   };
 
-  // StreamChannel (thread compatible) implements StreamConfig::Interface so the server for a
-  // StreamConfig channel is a StreamChannel instead of a SimpleAudioStream (as is the case for
-  // Device and RingBuffer channels), this way we can track which StreamConfig channel for plug
+  // StreamChannel (thread compatible) implements fidl::WireInterface<StreamConfig> so the server
+  // for a StreamConfig channel is a StreamChannel instead of a SimpleAudioStream (as is the case
+  // for Device and RingBuffer channels), this way we can track which StreamConfig channel for plug
   // detect and gain changes notifications.
   // In some methods, we pass "this" (StreamChannel*) to SimpleAudioStream that
   // gets managed in SimpleAudioStream.
   // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
-  // All the StreamConfig::Interface methods are forwarded to SimpleAudioStream.
+  // All the fidl::WireInterface<StreamConfig> methods are forwarded to SimpleAudioStream.
   class StreamChannel : public Channel,
-                        public audio_fidl::StreamConfig::Interface,
+                        public fidl::WireInterface<audio_fidl::StreamConfig>,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     // Does not take ownership of stream, which must refer to a valid SimpleAudioStream that
@@ -389,8 +389,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   // fuchsia hardware audio RingBuffer Interface
   virtual void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  virtual void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-                      audio_fidl::RingBuffer::Interface::GetVmoCompleter::Sync& completer) override;
+  virtual void GetVmo(
+      uint32_t min_frames, uint32_t notifications_per_ring,
+      fidl::WireInterface<audio_fidl::RingBuffer>::GetVmoCompleter::Sync& completer) override;
   virtual void Start(StartCompleter::Sync& completer) override;
   virtual void Stop(StopCompleter::Sync& completer) override;
   virtual void WatchClockRecoveryPositionInfo(

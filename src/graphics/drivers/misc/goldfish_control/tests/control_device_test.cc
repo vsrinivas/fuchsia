@@ -293,7 +293,7 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
 
 class FakeAddressSpace
     : public ddk::GoldfishAddressSpaceProtocol<FakeAddressSpace, ddk::base_protocol>,
-      public fuchsia_hardware_goldfish::AddressSpaceChildDriver::Interface {
+      public fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceChildDriver> {
  public:
   FakeAddressSpace() : proto_({&goldfish_address_space_protocol_ops_, this}) {}
 
@@ -304,7 +304,7 @@ class FakeAddressSpace
     return ZX_OK;
   }
 
-  // |fuchsia_hardware_goldfish::AddressSpaceChildDriver::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceChildDriver>|
   void AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync& completer) override {}
   void DeallocateBlock(uint64_t paddr, DeallocateBlockCompleter::Sync& completer) override {}
   void ClaimSharedBlock(uint64_t offset, uint64_t size,

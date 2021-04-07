@@ -33,7 +33,7 @@ using ControlType = ddk::Device<Control, ddk::Unbindable, ddk::Messageable, ddk:
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,
-                public fuchsia_hardware_goldfish::ControlDevice::Interface {
+                public fidl::WireInterface<fuchsia_hardware_goldfish::ControlDevice> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -52,7 +52,7 @@ class Control : public ControlType,
   CreateColorBuffer2Result CreateColorBuffer2(
       zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params);
 
-  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::ControlDevice>|
   void CreateColorBuffer2(zx::vmo vmo,
                           fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params,
                           CreateColorBuffer2Completer::Sync& completer) override;
@@ -64,18 +64,18 @@ class Control : public ControlType,
       fidl::AnyAllocator& allocator, zx::vmo vmo,
       fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params);
 
-  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::ControlDevice>|
   void CreateBuffer2(zx::vmo vmo,
                      fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params,
                      CreateBuffer2Completer::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::ControlDevice>|
   void CreateSyncFence(zx::eventpair event, CreateSyncFenceCompleter::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::ControlDevice>|
   void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) override;
 
-  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
+  // |fidl::WireInterface<fuchsia_hardware_goldfish::ControlDevice>|
   void GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) override;
 
   // Device protocol implementation.

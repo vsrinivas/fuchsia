@@ -159,7 +159,7 @@ class TxnForwarder : public fidl::Transaction {
   zx_status_t status_ = ZX_OK;
 };
 
-class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
+class DevfsFidlServer : public fidl::WireInterface<fio::DirectoryAdmin> {
  public:
   explicit DevfsFidlServer(DcIostate* iostate) : owner_(iostate) {}
 

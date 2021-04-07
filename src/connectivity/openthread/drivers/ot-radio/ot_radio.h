@@ -63,7 +63,7 @@ std::string GetNewFirmwareVersion();
 #endif
 
 class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Messageable>,
-                      public fuchsia_lowpan_spinel::DeviceSetup::Interface {
+                      public fidl::WireInterface<fuchsia_lowpan_spinel::DeviceSetup> {
  public:
   explicit OtRadioDevice(zx_device_t* device);
 
@@ -131,7 +131,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   uint16_t spi_tx_buffer_len_ = 0;
   uint8_t spi_tx_buffer_[kMaxFrameSize];
 
-  class LowpanSpinelDeviceFidlImpl : public fuchsia_lowpan_spinel::Device::Interface {
+  class LowpanSpinelDeviceFidlImpl : public fidl::WireInterface<fuchsia_lowpan_spinel::Device> {
    public:
     LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio);
     zx_status_t Bind(async_dispatcher_t* dispatcher,

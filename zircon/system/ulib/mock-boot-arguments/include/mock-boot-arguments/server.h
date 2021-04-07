@@ -12,7 +12,7 @@
 
 namespace mock_boot_arguments {
 
-class Server final : public fuchsia_boot::Arguments::Interface {
+class Server final : public fidl::WireInterface<fuchsia_boot::Arguments> {
  public:
   explicit Server(std::map<std::string, std::string>&& args) : arguments{args} {}
   explicit Server() : arguments{} {}

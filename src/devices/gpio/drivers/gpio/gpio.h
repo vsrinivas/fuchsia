@@ -32,7 +32,7 @@ static_assert(GPIO_PULL_MASK == static_cast<uint32_t>(GpioFlags::PULL_MASK),
               "ConfigIn PULL_MASK flag doesn't match.");
 
 class GpioDevice : public GpioDeviceType,
-                   public Gpio::Interface,
+                   public fidl::WireInterface<Gpio>,
                    public ddk::GpioProtocol<GpioDevice, ddk::base_protocol> {
  public:
   GpioDevice(zx_device_t* parent, gpio_impl_protocol_t* gpio, uint32_t pin)

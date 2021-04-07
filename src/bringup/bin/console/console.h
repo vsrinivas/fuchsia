@@ -20,7 +20,8 @@
 
 #include "fifo.h"
 
-class Console : public fuchsia_logger::LogListenerSafe::Interface, public fbl::RefCounted<Console> {
+class Console : public fidl::WireInterface<fuchsia_logger::LogListenerSafe>,
+                public fbl::RefCounted<Console> {
  public:
   // Maximum amount of data that will be written to tx_sink_() per call.
   static constexpr size_t kMaxWriteSize = 256;

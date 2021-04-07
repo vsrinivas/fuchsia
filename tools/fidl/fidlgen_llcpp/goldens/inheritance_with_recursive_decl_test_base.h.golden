@@ -6,14 +6,15 @@
 namespace fidl_test_inheritancewithrecursivedecl {
 namespace testing {
 
-class Parent_TestBase
-    : public ::fidl_test_inheritancewithrecursivedecl::Parent::Interface {
+class Parent_TestBase : public ::fidl::WireInterface<
+                            ::fidl_test_inheritancewithrecursivedecl::Parent> {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_inheritancewithrecursivedecl::Parent::Interface;
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>;
   virtual void First(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,
@@ -23,14 +24,15 @@ class Parent_TestBase
   }
 };
 
-class Child_TestBase
-    : public ::fidl_test_inheritancewithrecursivedecl::Child::Interface {
+class Child_TestBase : public ::fidl::WireInterface<
+                           ::fidl_test_inheritancewithrecursivedecl::Child> {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_inheritancewithrecursivedecl::Child::Interface;
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>;
   virtual void First(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,

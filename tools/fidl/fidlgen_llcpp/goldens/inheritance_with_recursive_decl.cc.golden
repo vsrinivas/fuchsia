@@ -120,9 +120,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Parent>::
                 FirstCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_inheritancewithrecursivedecl::Parent::Interface*>(
-                interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_inheritancewithrecursivedecl::Parent>*>(interface)
                 ->First(std::move(message->request), completer);
           },
       },
@@ -382,9 +381,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>::
                 FirstCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_inheritancewithrecursivedecl::Child::Interface*>(
-                interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->First(std::move(message->request), completer);
           },
       },
@@ -399,9 +397,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>::
                 SecondCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_inheritancewithrecursivedecl::Child::Interface*>(
-                interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->Second(std::move(message->request), completer);
           },
       },

@@ -78,7 +78,7 @@ class FtdiDevice;
 using DeviceType =
     ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Messageable, ddk::Writable, ddk::Readable>;
 class FtdiDevice : public DeviceType,
-                   public fuchsia_hardware_ftdi::Device::Interface,
+                   public fidl::WireInterface<fuchsia_hardware_ftdi::Device>,
                    public ddk::SerialImplProtocol<FtdiDevice, ddk::base_protocol> {
  public:
   explicit FtdiDevice(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}

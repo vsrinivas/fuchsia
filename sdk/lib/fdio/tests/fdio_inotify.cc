@@ -28,7 +28,7 @@ namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
 constexpr char kTmpfsPath[] = "/tmp-inotify";
 
-class TestServer final : public fio::Directory::Interface {
+class TestServer final : public fidl::WireInterface<fio::Directory> {
  public:
   TestServer() = default;
 

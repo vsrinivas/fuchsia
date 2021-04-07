@@ -20,7 +20,7 @@
 // [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by
 // creating a subclass of the ::Interface class for the protocol.
-class EchoImpl final : public fuchsia_examples::Echo::Interface {
+class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
  public:
   // Bind this implementation to a channel.
   zx_status_t Bind(async_dispatcher_t* dispatcher,

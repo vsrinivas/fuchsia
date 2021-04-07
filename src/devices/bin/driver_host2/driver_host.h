@@ -15,7 +15,7 @@
 #include "src/devices/lib/driver2/record.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
-class Driver : public fuchsia_driver_framework::Driver::Interface,
+class Driver : public fidl::WireInterface<fuchsia_driver_framework::Driver>,
                public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
  public:
   static zx::status<std::unique_ptr<Driver>> Load(std::string url, std::string binary, zx::vmo vmo);
@@ -41,7 +41,7 @@ class Driver : public fuchsia_driver_framework::Driver::Interface,
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Driver>> binding_;
 };
 
-class DriverHost : public fuchsia_driver_framework::DriverHost::Interface {
+class DriverHost : public fidl::WireInterface<fuchsia_driver_framework::DriverHost> {
  public:
   // DriverHost does not take ownership of |loop|.
   DriverHost(inspect::Inspector* inspector, async::Loop* loop);
@@ -50,7 +50,7 @@ class DriverHost : public fuchsia_driver_framework::DriverHost::Interface {
   fit::promise<inspect::Inspector> Inspect();
 
  private:
-  // fuchsia_driver_framework::DriverHost::Interface
+  // fidl::WireInterface<fuchsia_driver_framework::DriverHost>
   void Start(fuchsia_driver_framework::wire::DriverStartArgs start_args,
              fidl::ServerEnd<fuchsia_driver_framework::Driver> request,
              StartCompleter::Sync& completer) override;

@@ -121,7 +121,8 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
   zx::channel server_endpoint_;
 };
 
-class PrimaryWrapper::AsyncHandler : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Primary> {
+class PrimaryWrapper::AsyncHandler
+    : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Primary> {
  public:
   // Parent outlives the object instance.
   AsyncHandler(PrimaryWrapper* parent) : parent_(parent) {}

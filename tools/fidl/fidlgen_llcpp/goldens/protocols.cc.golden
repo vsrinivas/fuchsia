@@ -390,7 +390,8 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
                 ::fidl_test_protocols::Transitional::Request>*>(bytes);
             ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
                 RequestCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::Transitional::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_protocols::Transitional>*>(
                 interface)
                 ->Request(std::move(message->x), completer);
           },
@@ -404,7 +405,8 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
                 ::fidl_test_protocols::Transitional::OneWay>*>(bytes);
             ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
                 OneWayCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::Transitional::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_protocols::Transitional>*>(
                 interface)
                 ->OneWay(std::move(message->x), completer);
           },
@@ -1243,7 +1245,8 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
             ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
                 MethodACompleter::Sync completer(txn);
             reinterpret_cast<
-                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>*>(
+                interface)
                 ->MethodA(std::move(message->a), std::move(message->b),
                           completer);
           },
@@ -1258,7 +1261,8 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
             ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
                 MethodBCompleter::Sync completer(txn);
             reinterpret_cast<
-                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>*>(
+                interface)
                 ->MethodB(std::move(message->a), std::move(message->b),
                           completer);
           },
@@ -1273,7 +1277,8 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
             ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
                 TakeHandleCompleter::Sync completer(txn);
             reinterpret_cast<
-                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>*>(
+                interface)
                 ->TakeHandle(std::move(message->h), completer);
           },
       },
@@ -1287,7 +1292,8 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
             ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
                 MutateSocketCompleter::Sync completer(txn);
             reinterpret_cast<
-                ::fidl_test_protocols::ChannelProtocol::Interface*>(interface)
+                ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>*>(
+                interface)
                 ->MutateSocket(std::move(message->a), completer);
           },
       },
@@ -2563,8 +2569,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestNoResponseCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::
-                                 WithAndWithoutRequestResponse::Interface*>(
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->NoRequestNoResponse(completer);
           },
@@ -2579,8 +2585,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestEmptyResponseCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::
-                                 WithAndWithoutRequestResponse::Interface*>(
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->NoRequestEmptyResponse(completer);
           },
@@ -2595,8 +2601,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestWithResponseCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::
-                                 WithAndWithoutRequestResponse::Interface*>(
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->NoRequestWithResponse(completer);
           },
@@ -2614,8 +2620,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestNoResponseCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::
-                                 WithAndWithoutRequestResponse::Interface*>(
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->WithRequestNoResponse(std::move(message->arg), completer);
           },
@@ -2633,8 +2639,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestEmptyResponseCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::
-                                 WithAndWithoutRequestResponse::Interface*>(
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->WithRequestEmptyResponse(std::move(message->arg), completer);
           },
@@ -2652,8 +2658,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestWithResponseCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_protocols::
-                                 WithAndWithoutRequestResponse::Interface*>(
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->WithRequestWithResponse(std::move(message->arg), completer);
           },
@@ -3466,7 +3472,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
                 ResponseAsStructCompleter::Sync completer(txn);
             reinterpret_cast<
-                ::fidl_test_protocols::WithErrorSyntax::Interface*>(interface)
+                ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>*>(
+                interface)
                 ->ResponseAsStruct(completer);
           },
       },
@@ -3478,7 +3485,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsPrimitiveCompleter::Sync completer(txn);
             reinterpret_cast<
-                ::fidl_test_protocols::WithErrorSyntax::Interface*>(interface)
+                ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>*>(
+                interface)
                 ->ErrorAsPrimitive(completer);
           },
       },
@@ -3490,7 +3498,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsEnumCompleter::Sync completer(txn);
             reinterpret_cast<
-                ::fidl_test_protocols::WithErrorSyntax::Interface*>(interface)
+                ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>*>(
+                interface)
                 ->ErrorAsEnum(completer);
           },
       },

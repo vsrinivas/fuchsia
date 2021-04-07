@@ -6,13 +6,14 @@
 namespace fidl_test_inheritance {
 namespace testing {
 
-class super_TestBase : public ::fidl_test_inheritance::super::Interface {
+class super_TestBase
+    : public ::fidl::WireInterface<::fidl_test_inheritance::super> {
  public:
   virtual ~super_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_inheritance::super::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_inheritance::super>;
   virtual void foo(
       ::fidl::StringView s,
       ::fidl::WireInterface<::fidl_test_inheritance::super>::fooCompleter::Sync&
@@ -21,13 +22,14 @@ class super_TestBase : public ::fidl_test_inheritance::super::Interface {
   }
 };
 
-class sub_TestBase : public ::fidl_test_inheritance::sub::Interface {
+class sub_TestBase
+    : public ::fidl::WireInterface<::fidl_test_inheritance::sub> {
  public:
   virtual ~sub_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_inheritance::sub::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_inheritance::sub>;
   virtual void foo(
       ::fidl::StringView s,
       ::fidl::WireInterface<::fidl_test_inheritance::sub>::fooCompleter::Sync&

@@ -79,18 +79,18 @@ constexpr AbrData kInitAbrData = {
         },
 };
 
-class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
-                  public fuchsia_paver::BootManager::Interface,
-                  public fuchsia_paver::DynamicDataSink::RawChannelInterface {
+class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
+                  public fidl::WireInterface<fuchsia_paver::BootManager>,
+                  public fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink> {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     dispatcher_ = dispatcher;
-    return fidl::BindSingleInFlightOnly<fuchsia_paver::Paver::RawChannelInterface>(
+    return fidl::BindSingleInFlightOnly<fidl::WireRawChannelInterface<fuchsia_paver::Paver>>(
         dispatcher, std::move(request), this);
   }
 
   void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& _completer) override {
-    fidl::BindSingleInFlightOnly<fuchsia_paver::DynamicDataSink::RawChannelInterface>(
+    fidl::BindSingleInFlightOnly<fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink>>(
         dispatcher_, std::move(data_sink), this);
   }
 
@@ -107,7 +107,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
         return;
       }
     }
-    fidl::BindSingleInFlightOnly<fuchsia_paver::DynamicDataSink::RawChannelInterface>(
+    fidl::BindSingleInFlightOnly<fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink>>(
         dispatcher_, std::move(dynamic_data_sink), this);
   }
 
@@ -116,7 +116,7 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kInitializeAbr);
     if (abr_supported_) {
-      fidl::BindSingleInFlightOnly<fuchsia_paver::BootManager::Interface>(
+      fidl::BindSingleInFlightOnly<fidl::WireInterface<fuchsia_paver::BootManager>>(
           dispatcher_, std::move(boot_manager), this);
     }
   }
@@ -197,14 +197,15 @@ class FakePaver : public fuchsia_paver::Paver::RawChannelInterface,
     completer.Reply(ZX_OK);
   }
 
-  void Flush(fuchsia_paver::DynamicDataSink::RawChannelInterface::FlushCompleter::Sync& completer)
-      override {
+  void Flush(fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink>::FlushCompleter::Sync&
+                 completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kDataSinkFlush);
     completer.Reply(ZX_OK);
   }
 
-  void Flush(fuchsia_paver::BootManager::Interface::FlushCompleter::Sync& completer) override {
+  void Flush(
+      fidl::WireInterface<fuchsia_paver::BootManager>::FlushCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kBootManagerFlush);
     completer.Reply(ZX_OK);

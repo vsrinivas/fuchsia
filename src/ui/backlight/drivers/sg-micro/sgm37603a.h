@@ -42,7 +42,7 @@ namespace FidlBacklight = fuchsia_hardware_backlight;
 
 class Sgm37603a : public DeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
-                  public FidlBacklight::Device::Interface {
+                  public fidl::WireInterface<FidlBacklight::Device> {
  public:
   virtual ~Sgm37603a() = default;
 

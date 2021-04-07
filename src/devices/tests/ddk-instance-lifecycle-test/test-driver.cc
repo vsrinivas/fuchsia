@@ -24,7 +24,7 @@ using fuchsia_device_instancelifecycle_test::TestDevice;
 class TestLifecycleDriver;
 using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
+class TestLifecycleDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
  public:
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}

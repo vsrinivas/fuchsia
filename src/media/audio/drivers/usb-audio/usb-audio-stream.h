@@ -44,14 +44,14 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 class UsbAudioStream;
 using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::Messageable, ddk::Unbindable>;
 
-// UsbAudioStream implements Device::Interface and RingBuffer::Interface.
+// UsbAudioStream implements fidl::WireInterface<Device> and RingBuffer::Interface.
 // All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.
 class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
                        public fbl::RefCounted<UsbAudioStream>,
                        public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>>,
-                       public fuchsia_hardware_audio::Device::Interface,
-                       public fuchsia_hardware_audio::RingBuffer::Interface {
+                       public fidl::WireInterface<fuchsia_hardware_audio::Device>,
+                       public fidl::WireInterface<fuchsia_hardware_audio::RingBuffer> {
  public:
   class Channel : public fbl::RefCounted<Channel> {
    public:
@@ -70,16 +70,16 @@ class UsbAudioStream : public UsbAudioStreamBase,
    private:
     friend class fbl::RefPtr<Channel>;
   };
-  // StreamChannel (thread compatible) implements StreamConfig::Interface so the server for a
-  // StreamConfig channel is a StreamChannel instead of a UsbAudioStream (as is the case for
+  // StreamChannel (thread compatible) implements fidl::WireInterface<StreamConfig> so the server
+  // for a StreamConfig channel is a StreamChannel instead of a UsbAudioStream (as is the case for
   // Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
   // changes notifications.
   // In some methods, we pass "this" (StreamChannel*) to UsbAudioStream that
   // gets managed in UsbAudioStream.
   // All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.
-  // All the StreamConfig::Interface methods are forwarded to UsbAudioStream.
+  // All the fidl::WireInterface<StreamConfig> methods are forwarded to UsbAudioStream.
   class StreamChannel : public Channel,
-                        public fuchsia_hardware_audio::StreamConfig::Interface,
+                        public fidl::WireInterface<fuchsia_hardware_audio::StreamConfig>,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     // Does not take ownership of stream, which must refer to a valid UsbAudioStream that outlives

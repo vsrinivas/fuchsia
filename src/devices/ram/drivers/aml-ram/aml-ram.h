@@ -70,7 +70,7 @@ constexpr uint64_t kMaximumCycleCount = 0xffffffff;
 class AmlRam;
 using DeviceType = ddk::Device<AmlRam, ddk::Suspendable, ddk::Messageable>;
 
-class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
+class AmlRam : public DeviceType, private fidl::WireInterface<ram_metrics::Device> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlRam);
 
@@ -96,7 +96,7 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
         : config(std::move(config)), completer(std::move(completer)) {}
   };
 
-  // Implementation of ram_metrics::Device::Interface FIDL service.
+  // Implementation of fidl::WireInterface<ram_metrics::Device> FIDL service.
   void MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig config,
                         MeasureBandwidthCompleter::Sync& completer) override;
   void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) override;

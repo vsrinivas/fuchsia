@@ -20,7 +20,7 @@ using DeviceType = ddk::Device<Shtv3Device, ddk::Messageable>;
 namespace temperature_fidl = fuchsia_hardware_temperature;
 
 class Shtv3Device : public DeviceType,
-                    public temperature_fidl::Device::Interface,
+                    public fidl::WireInterface<temperature_fidl::Device>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
   Shtv3Device(zx_device_t* parent, ddk::I2cChannel i2c) : DeviceType(parent), i2c_(i2c) {}

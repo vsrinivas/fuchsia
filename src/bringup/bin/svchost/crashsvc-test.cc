@@ -164,7 +164,7 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
 
 // Crashsvc will attemp to connect to a |fuchsia.exception.Handler| when it catches an exception.
 // We use this fake in order to verify that behaviour.
-class StubExceptionHandler final : public fuchsia_exception::Handler::Interface {
+class StubExceptionHandler final : public fidl::WireInterface<fuchsia_exception::Handler> {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     auto binding = fidl::BindServer(dispatcher, std::move(request), this);

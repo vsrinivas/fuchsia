@@ -15,7 +15,7 @@
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "zx_device.h"
 
-class DevfsVnode : public fs::Vnode, public fuchsia_device::Controller::Interface {
+class DevfsVnode : public fs::Vnode, public fidl::WireInterface<fuchsia_device::Controller> {
  public:
   explicit DevfsVnode(fbl::RefPtr<zx_device> dev) : dev_(std::move(dev)) {}
 
@@ -29,7 +29,7 @@ class DevfsVnode : public fs::Vnode, public fuchsia_device::Controller::Interfac
                                      fs::VnodeRepresentation* info) override;
   void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) override;
 
-  // fuchsia_device::Controller::Interface methods
+  // fidl::WireInterface<fuchsia_device::Controller> methods
   void Bind(::fidl::StringView driver, BindCompleter::Sync& _completer) override;
   void Rebind(::fidl::StringView driver, RebindCompleter::Sync& _completer) override;
   void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override;

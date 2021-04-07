@@ -12,7 +12,7 @@ namespace fs_pty::internal {
 // We would like to construct a |NullPtyDevice| with some arbitrary arguments.
 // This class exists so that we don't need to templatize all of the implementation,
 // just the ctor.  The extra argument to the ctor in |NullPtyDevice| is discarded.
-class NullPtyDeviceImpl : public fuchsia_hardware_pty::Device::Interface {
+class NullPtyDeviceImpl : public fidl::WireInterface<fuchsia_hardware_pty::Device> {
  public:
   NullPtyDeviceImpl() = default;
   ~NullPtyDeviceImpl() override = default;

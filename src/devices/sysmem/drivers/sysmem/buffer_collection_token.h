@@ -19,7 +19,7 @@ namespace sysmem_driver {
 class BufferCollectionToken;
 
 class BufferCollectionToken : public Node,
-                              public fuchsia_sysmem::BufferCollectionToken::Interface,
+                              public fidl::WireInterface<fuchsia_sysmem::BufferCollectionToken>,
                               public LoggingMixin {
  public:
   ~BufferCollectionToken() override;

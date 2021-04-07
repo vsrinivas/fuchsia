@@ -29,7 +29,7 @@ namespace intel_hda {
 
 class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
                        public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStream>>,
-                       public fuchsia_hardware_audio::RingBuffer::Interface {
+                       public fidl::WireInterface<fuchsia_hardware_audio::RingBuffer> {
  public:
   using RefPtr = fbl::RefPtr<IntelHDAStream>;
   using Tree = fbl::WAVLTree<uint16_t, RefPtr>;
@@ -81,9 +81,9 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
 
   // fuchsia hardware audio RingBuffer Interface
   void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  void GetVmo(
-      uint32_t min_frames, uint32_t notifications_per_ring,
-      fuchsia_hardware_audio::RingBuffer::Interface::GetVmoCompleter::Sync& completer) override;
+  void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
+              fidl::WireInterface<fuchsia_hardware_audio::RingBuffer>::GetVmoCompleter::Sync&
+                  completer) override;
   void Start(StartCompleter::Sync& completer) override;
   void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(

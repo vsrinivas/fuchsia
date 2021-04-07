@@ -17,7 +17,7 @@
 // If it ever gets out of sync, that would be surfaced by a linker error.
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
-class TestServerBase : public fuchsia_io::Node::RawChannelInterface {
+class TestServerBase : public fidl::WireRawChannelInterface<fuchsia_io::Node> {
  public:
   virtual ~TestServerBase() = default;
 

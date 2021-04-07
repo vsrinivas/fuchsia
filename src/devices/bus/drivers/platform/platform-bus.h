@@ -46,7 +46,7 @@ using PlatformBusType =
 class PlatformBus : public PlatformBusType,
                     public ddk::PBusProtocol<PlatformBus, ddk::base_protocol>,
                     public ddk::IommuProtocol<PlatformBus>,
-                    public fuchsia_sysinfo::SysInfo::Interface {
+                    public fidl::WireInterface<fuchsia_sysinfo::SysInfo> {
  public:
   static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
 

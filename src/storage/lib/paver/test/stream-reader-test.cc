@@ -20,7 +20,7 @@ TEST(StreamReaderTest, InvalidChannel) {
   ASSERT_NOT_OK(paver::StreamReader::Create(zx::channel()));
 }
 
-class FakePayloadStream : public fuchsia_paver::PayloadStream::Interface {
+class FakePayloadStream : public fidl::WireInterface<fuchsia_paver::PayloadStream> {
  public:
   FakePayloadStream() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;

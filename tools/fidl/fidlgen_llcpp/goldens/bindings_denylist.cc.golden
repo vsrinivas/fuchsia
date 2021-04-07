@@ -186,9 +186,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireInterface<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
                 LibfuzzerNeedsNonemptyProtocolCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Interface*>(
-                interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*>(interface)
                 ->LibfuzzerNeedsNonemptyProtocol(completer);
           },
       },

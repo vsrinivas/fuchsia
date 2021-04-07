@@ -110,7 +110,7 @@ class ClientState {
 //
 // `MacClientInstance` keeps the state associated with the client and is responsible for fulfilling
 // FIDL requests.
-class MacClientInstance : public netdev::MacAddressing::Interface,
+class MacClientInstance : public fidl::WireInterface<netdev::MacAddressing>,
                           public fbl::DoublyLinkedListable<std::unique_ptr<MacClientInstance>> {
  public:
   explicit MacClientInstance(MacInterface* parent, mode_t default_mode);

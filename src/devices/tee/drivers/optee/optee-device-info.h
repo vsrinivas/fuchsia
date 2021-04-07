@@ -26,7 +26,7 @@ using OpteeDeviceInfoProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 class OpteeDeviceInfo : public OpteeDeviceInfoBase,
                         public OpteeDeviceInfoProtocol,
-                        public fuchsia_tee::DeviceInfo::Interface {
+                        public fidl::WireInterface<fuchsia_tee::DeviceInfo> {
  public:
   explicit OpteeDeviceInfo(const OpteeController* controller)
       : OpteeDeviceInfoBase(controller->zxdev()), controller_(controller) {}

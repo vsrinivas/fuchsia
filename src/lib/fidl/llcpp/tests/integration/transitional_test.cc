@@ -16,7 +16,7 @@ namespace test = ::llcpptest_transitional_test;
 
 namespace {
 
-class Server : public test::TransitionMethods::Interface {
+class Server : public fidl::WireInterface<test::TransitionMethods> {
  public:
   void ImplementedMethod(ImplementedMethodCompleter::Sync& txn) override {
     // Reply call to maintain an open connection.

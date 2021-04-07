@@ -6,13 +6,13 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -28,7 +28,7 @@ using DeviceType =
     ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
 class TestDevhostDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
-                          public TestDevice::Interface {
+                          public fidl::WireInterface<TestDevice> {
  public:
   TestDevhostDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

@@ -15,7 +15,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-class PtyClientDevice : public fuchsia_hardware_pty::Device::Interface {
+class PtyClientDevice : public fidl::WireInterface<fuchsia_hardware_pty::Device> {
  public:
   explicit PtyClientDevice(fbl::RefPtr<PtyClient> client) : client_(std::move(client)) {}
 

@@ -40,7 +40,7 @@ struct RefCountedFifo : public fbl::RefCounted<RefCountedFifo> {
 // It is invalid to destroy a Session that has outstanding buffers, that is, buffers that are
 // currently owned by the interface's Rx or Tx queues.
 class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
-                public netdev::Session::Interface {
+                public fidl::WireInterface<netdev::Session> {
  public:
   ~Session() override;
   // Creates a new session with the provided parameters.

@@ -31,8 +31,8 @@ class FakeCpuDevice;
 using TestDeviceType = ddk::Device<FakeCpuDevice, ddk::Messageable, ddk::PerformanceTunable>;
 
 class FakeCpuDevice : TestDeviceType,
-                      cpuctrl::Device::Interface,
-                      fuchsia_device::Controller::Interface {
+                      fidl::WireInterface<cpuctrl::Device>,
+                      fidl::WireInterface<fuchsia_device::Controller> {
  public:
   FakeCpuDevice() : TestDeviceType(nullptr) {}
   ~FakeCpuDevice() {}
@@ -52,7 +52,7 @@ class FakeCpuDevice : TestDeviceType,
     return ZX_OK;
   }
 
-  // fuchsia_device::Controller::Interface methods
+  // fidl::WireInterface<fuchsia_device::Controller> methods
   // We only implement the following methods for now
   void SetPerformanceState(uint32_t requested_state,
                            SetPerformanceStateCompleter::Sync& _completer) override;

@@ -25,7 +25,7 @@ using fuchsia_device_environment_test::TestDevice;
 class TestEnvironmentDriver;
 using DeviceType = ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestEnvironmentDriver : public DeviceType, public TestDevice::Interface {
+class TestEnvironmentDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
  public:
   explicit TestEnvironmentDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestEnvironmentDriver() {}

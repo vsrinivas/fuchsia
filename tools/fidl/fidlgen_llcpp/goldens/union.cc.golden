@@ -537,7 +537,8 @@ fidl::internal::WireDispatcher<::fidl_test_union::TestProtocol>::TryDispatch(
             ::fidl::WireInterface<::fidl_test_union::TestProtocol>::
                 StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync
                     completer(txn);
-            reinterpret_cast<::fidl_test_union::TestProtocol::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_union::TestProtocol>*>(
                 interface)
                 ->StrictXUnionHenceResponseMayBeStackAllocated(completer);
           },
@@ -552,7 +553,8 @@ fidl::internal::WireDispatcher<::fidl_test_union::TestProtocol>::TryDispatch(
             ::fidl::WireInterface<::fidl_test_union::TestProtocol>::
                 FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync
                     completer(txn);
-            reinterpret_cast<::fidl_test_union::TestProtocol::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_union::TestProtocol>*>(
                 interface)
                 ->FlexibleXUnionHenceResponseMustBeHeapAllocated(completer);
           },

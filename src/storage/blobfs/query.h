@@ -19,7 +19,7 @@ namespace blobfs {
 class Blobfs;
 class Runner;
 
-class QueryService final : public fuchsia_fs::Query::Interface, public fs::Service {
+class QueryService final : public fidl::WireInterface<fuchsia_fs::Query>, public fs::Service {
  public:
   QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner);
 

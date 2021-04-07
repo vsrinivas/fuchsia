@@ -7,15 +7,15 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 namespace testing {
 
 class Top_TestBase
-    : public ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-          Interface {
+    : public ::fidl::WireInterface<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface =
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::Interface;
+  using Interface = ::fidl::WireInterface<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
   virtual void GetFoo(
       ::fidl::WireInterface<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::

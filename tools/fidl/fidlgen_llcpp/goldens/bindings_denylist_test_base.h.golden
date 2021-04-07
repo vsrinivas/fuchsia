@@ -7,14 +7,15 @@ namespace fidl_test_bindingsdenylist {
 namespace testing {
 
 class OnlyLibfuzzerAndDeps_TestBase
-    : public ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Interface {
+    : public ::fidl::WireInterface<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
   virtual ~OnlyLibfuzzerAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface =
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Interface;
+      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
   virtual void LibfuzzerNeedsNonemptyProtocol(
       ::fidl::WireInterface<
           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
@@ -24,13 +25,15 @@ class OnlyLibfuzzerAndDeps_TestBase
 };
 
 class OnlyCppAndDeps_TestBase
-    : public ::fidl_test_bindingsdenylist::OnlyCppAndDeps::Interface {
+    : public ::fidl::WireInterface<
+          ::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
  public:
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_bindingsdenylist::OnlyCppAndDeps::Interface;
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
 };
 }  // namespace testing
 }  // namespace fidl_test_bindingsdenylist

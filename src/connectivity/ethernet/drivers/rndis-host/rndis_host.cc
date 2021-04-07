@@ -642,7 +642,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
       return status;
     }
-    for (const usb::Interface& interface : *interfaces) {
+    for (const fidl::WireInterface<usb>& interface : *interfaces) {
       const usb_interface_descriptor_t* intf = interface.descriptor();
       if (intf->b_interface_class == USB_CLASS_WIRELESS) {
         control_intf = intf->b_interface_number;

@@ -86,7 +86,7 @@ class MockBlockDevice {
 
   // This implementation of Node is decidedly non-standard and incomplete, but it is
   // sufficient to test the cloning behavior used below.
-  class MockNode : public fio::Node::Interface {
+  class MockNode : public fidl::WireInterface<fio::Node> {
    public:
     explicit MockNode(MockBlockDevice* self) : self_(self) {}
 

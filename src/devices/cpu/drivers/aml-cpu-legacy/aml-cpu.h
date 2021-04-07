@@ -26,7 +26,7 @@ using DeviceType =
 
 class AmlCpu : public DeviceType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL>,
-               fuchsia_cpuctrl::Device::Interface {
+               fidl::WireInterface<fuchsia_cpuctrl::Device> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpu);
   AmlCpu(zx_device_t* device, fidl::WireSyncClient<fuchsia_thermal::Device> thermal_client,

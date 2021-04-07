@@ -26,7 +26,7 @@ using fuchsia_device_firmware_test::TestDevice;
 class TestFirmwareDriver;
 using DeviceType = ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestFirmwareDriver : public DeviceType, public TestDevice::Interface {
+class TestFirmwareDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
  public:
   explicit TestFirmwareDriver(zx_device_t* parent) : DeviceType(parent) {}
 

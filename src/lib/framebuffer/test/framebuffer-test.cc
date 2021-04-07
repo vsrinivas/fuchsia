@@ -85,7 +85,7 @@ namespace {
 
 constexpr uint32_t kBytesPerRowDivisor = 128;
 
-class StubDisplayController : public fhd::Controller::RawChannelInterface {
+class StubDisplayController : public fidl::WireRawChannelInterface<fhd::Controller> {
  public:
   StubDisplayController(bool use_ram_domain) : use_ram_domain_(use_ram_domain) {
     zx::channel sysmem_server, sysmem_client;
@@ -293,8 +293,8 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
 
 }  // namespace
 
-void SendInitialDisplay(const fidl::WireEventSender<fhd::Controller>& event_sender, fhd::wire::Mode* mode,
-                        uint32_t pixel_format) {
+void SendInitialDisplay(const fidl::WireEventSender<fhd::Controller>& event_sender,
+                        fhd::wire::Mode* mode, uint32_t pixel_format) {
   fhd::wire::Info info;
   info.pixel_format = fidl::VectorView<uint32_t>::FromExternal(&pixel_format, 1);
   info.modes = fidl::VectorView<fhd::wire::Mode>::FromExternal(mode, 1);

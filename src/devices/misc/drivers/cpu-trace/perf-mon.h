@@ -120,7 +120,7 @@ struct PmuPerTraceState {
 class PerfmonDevice;
 using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable, ddk::Messageable>;
 
-class PerfmonDevice : public DeviceType, public fidl_perfmon::Controller::Interface {
+class PerfmonDevice : public DeviceType, public fidl::WireInterface<fidl_perfmon::Controller> {
  public:
   // The page size we use.
   static constexpr uint32_t kLog2PageSize = 12;

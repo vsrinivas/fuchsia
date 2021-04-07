@@ -142,7 +142,7 @@ const fuchsia_thermal::wire::ThermalDeviceInfo kDefaultDeviceInfo = []() {
   return result;
 }();
 
-class FakeAmlThermal : fuchsia_thermal::Device::Interface {
+class FakeAmlThermal : fidl::WireInterface<fuchsia_thermal::Device> {
  public:
   FakeAmlThermal() : active_operating_point_(0), device_info_(kDefaultDeviceInfo) {}
   ~FakeAmlThermal() {}

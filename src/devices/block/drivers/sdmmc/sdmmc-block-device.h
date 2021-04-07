@@ -48,7 +48,7 @@ struct PartitionInfo {
 struct RpmbRequestInfo {
   fuchsia_mem::wire::Range tx_frames = {};
   fuchsia_mem::wire::Range rx_frames = {};
-  fuchsia_hardware_rpmb::Rpmb::Interface::RequestCompleter::Async completer;
+  fidl::WireInterface<fuchsia_hardware_rpmb::Rpmb>::RequestCompleter::Async completer;
 };
 
 using BlockOperation = block::BorrowedOperation<PartitionInfo>;
@@ -93,7 +93,7 @@ using RpmbDeviceType = ddk::Device<RpmbDevice, ddk::Messageable>;
 
 class RpmbDevice : public RpmbDeviceType,
                    public ddk::RpmbProtocol<RpmbDevice, ddk::base_protocol>,
-                   public fuchsia_hardware_rpmb::Rpmb::Interface {
+                   public fidl::WireInterface<fuchsia_hardware_rpmb::Rpmb> {
  public:
   // sdmmc_parent is owned by the SDMMC root device when the RpmbDevice object is created. Ownership
   // is transferred to devmgr shortly after, meaning it will outlive this object due to the

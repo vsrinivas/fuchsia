@@ -32,7 +32,7 @@ struct {{ .WireDispatcher }} final {
             auto message = reinterpret_cast<{{ .WireRequest }}*>(bytes);
           {{- end }}
           {{ .WireCompleter }}::Sync completer(txn);
-          reinterpret_cast<{{ .Protocol }}::Interface*>(interface)->{{ .Name }}(
+          reinterpret_cast<{{ .Protocol.WireInterface }}*>(interface)->{{ .Name }}(
                 {{- range $index, $param := .RequestArgs }}
                   std::move(message->{{ $param.Name }}),
                 {{- end }}

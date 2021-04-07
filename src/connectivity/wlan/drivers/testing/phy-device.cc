@@ -40,7 +40,7 @@ static wlanphy_protocol_ops_t wlanphy_test_ops = {
     .dummy = nullptr,
 };
 
-class DeviceConnector : public fuchsia_wlan_device::Connector::RawChannelInterface {
+class DeviceConnector : public fidl::WireRawChannelInterface<fuchsia_wlan_device::Connector> {
  public:
   DeviceConnector(PhyDevice* device) : device_(device) {}
   void Connect(::zx::channel request, ConnectCompleter::Sync& _completer) override {

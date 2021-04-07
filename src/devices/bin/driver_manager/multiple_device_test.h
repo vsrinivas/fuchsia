@@ -16,7 +16,7 @@
 #include "coordinator_test_utils.h"
 #include "src/devices/lib/log/log.h"
 
-class MockFshostAdminServer final : public fuchsia_fshost::Admin::Interface {
+class MockFshostAdminServer final : public fidl::WireInterface<fuchsia_fshost::Admin> {
  public:
   MockFshostAdminServer() : has_been_shutdown_(false) {}
 

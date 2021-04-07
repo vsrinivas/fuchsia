@@ -157,7 +157,7 @@ class ServerInterpreter : public Interpreter {
 };
 
 // Defines a connection from a client to the interpreter.
-class Service final : public fuchsia_shell::Shell::Interface {
+class Service final : public fidl::WireInterface<fuchsia_shell::Shell> {
  public:
   explicit Service(Server* server)
       : server_(server), interpreter_(std::make_unique<ServerInterpreter>(this)) {}

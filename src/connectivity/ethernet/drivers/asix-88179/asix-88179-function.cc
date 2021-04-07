@@ -49,7 +49,7 @@ using DeviceType = ddk::Device<FakeUsbAx88179Function, ddk::Unbindable, ddk::Mes
 class FakeUsbAx88179Function : public DeviceType,
                                public ddk::UsbFunctionInterfaceProtocol<FakeUsbAx88179Function>,
                                public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_ASIX_FUNCTION>,
-                               public fuchsia_hardware_ax88179::Hooks::Interface {
+                               public fidl::WireInterface<fuchsia_hardware_ax88179::Hooks> {
  public:
   explicit FakeUsbAx88179Function(zx_device_t* parent) : DeviceType(parent), function_(parent) {}
 

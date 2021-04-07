@@ -40,7 +40,7 @@ namespace {
 
 const char kTestHelper[] = "/bin/debugdata-test-helper";
 
-struct DebugData : public fuchsia_debugdata::DebugData::Interface {
+struct DebugData : public fidl::WireInterface<fuchsia_debugdata::DebugData> {
   std::unordered_map<std::string, zx::vmo> data;
   std::unordered_map<std::string, zx::vmo> configs;
 

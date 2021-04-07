@@ -37,7 +37,7 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ddk::DaiProtocol<AmlG12TdmDai, ddk::base_protocol>,
                      public ::fuchsia::hardware::audio::RingBuffer,
                      public ::fuchsia::hardware::audio::Dai,
-                     public fuchsia_hardware_audio::DaiConnect::Interface {
+                     public fidl::WireInterface<fuchsia_hardware_audio::DaiConnect> {
  public:
   explicit AmlG12TdmDai(zx_device_t* parent);
 

@@ -17,7 +17,7 @@ namespace audio {
 namespace intel_hda {
 
 class IntelDspStream : public codecs::IntelHDAStreamBase,
-                       public fuchsia_hardware_audio::RingBuffer::Interface {
+                       public fidl::WireInterface<fuchsia_hardware_audio::RingBuffer> {
  public:
   IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline, fbl::String name,
                  const audio_stream_unique_id_t* unique_id = nullptr);
@@ -51,9 +51,9 @@ class IntelDspStream : public codecs::IntelHDAStreamBase,
 
   // fuchsia hardware audio RingBuffer Interface
   void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  void GetVmo(
-      uint32_t min_frames, uint32_t notifications_per_ring,
-      fuchsia_hardware_audio::RingBuffer::Interface::GetVmoCompleter::Sync& completer) override;
+  void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
+              fidl::WireInterface<fuchsia_hardware_audio::RingBuffer>::GetVmoCompleter::Sync&
+                  completer) override;
   void Start(StartCompleter::Sync& completer) override;
   void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(

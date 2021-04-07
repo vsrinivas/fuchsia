@@ -22,7 +22,7 @@ using UsbMidiSourceBase = ddk::Device<UsbMidiSource, ddk::Unbindable, ddk::Opena
                                       ddk::Readable, ddk::Messageable>;
 
 class UsbMidiSource : public UsbMidiSourceBase,
-                      public fuchsia_hardware_midi::Device::Interface,
+                      public fidl::WireInterface<fuchsia_hardware_midi::Device>,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_MIDI> {
  public:
   using UsbDevice = ::usb::UsbDevice;

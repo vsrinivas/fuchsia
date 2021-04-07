@@ -41,7 +41,7 @@ using HidInstanceDeviceType = ddk::Device<HidInstance, ddk::Closable, ddk::Messa
 
 class HidInstance : public HidInstanceDeviceType,
                     public fbl::DoublyLinkedListable<HidInstance*>,
-                    public fuchsia_hardware_input::Device::RawChannelInterface,
+                    public fidl::WireRawChannelInterface<fuchsia_hardware_input::Device>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_HID_DEVICE> {
  public:
   explicit HidInstance(zx_device_t* parent)

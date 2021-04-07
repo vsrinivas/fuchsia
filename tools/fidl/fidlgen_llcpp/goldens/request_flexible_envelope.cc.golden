@@ -470,9 +470,8 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
             ::fidl::WireInterface<
                 ::fidl_test_requestflexibleenvelope::Protocol>::
                 RequestStrictResponseFlexibleCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_requestflexibleenvelope::Protocol::Interface*>(
-                interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
                 ->RequestStrictResponseFlexible(std::move(message->s),
                                                 completer);
           },
@@ -489,9 +488,8 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
             ::fidl::WireInterface<
                 ::fidl_test_requestflexibleenvelope::Protocol>::
                 RequestFlexibleResponseStrictCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl_test_requestflexibleenvelope::Protocol::Interface*>(
-                interface)
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
                 ->RequestFlexibleResponseStrict(std::move(message->s),
                                                 completer);
           },

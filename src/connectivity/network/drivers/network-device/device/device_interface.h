@@ -24,7 +24,7 @@ enum class DeviceStatus { STARTING, STARTED, STOPPING, STOPPED };
 
 enum class PendingDeviceOperation { NONE, START, STOP };
 
-class DeviceInterface : public netdev::Device::Interface,
+class DeviceInterface : public fidl::WireInterface<netdev::Device>,
                         public ddk::NetworkDeviceIfcProtocol<DeviceInterface>,
                         public ::network::NetworkDeviceInterface {
  public:

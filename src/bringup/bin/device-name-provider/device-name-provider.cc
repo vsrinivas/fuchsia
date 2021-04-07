@@ -91,7 +91,7 @@ void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX], uint32_t gener
   }
 }
 
-class DeviceNameProviderServer final : public fuchsia_device::NameProvider::Interface {
+class DeviceNameProviderServer final : public fidl::WireInterface<fuchsia_device::NameProvider> {
   const char* name;
   const size_t size;
 

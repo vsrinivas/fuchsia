@@ -44,7 +44,7 @@ using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 class OpteeClient : public OpteeClientBase,
                     public OpteeClientProtocol,
                     public fbl::DoublyLinkedListable<OpteeClient*>,
-                    public fuchsia_tee::Application::Interface {
+                    public fidl::WireInterface<fuchsia_tee::Application> {
  public:
   explicit OpteeClient(OpteeControllerBase* controller, zx::channel provider_channel,
                        Uuid application_uuid)
@@ -65,16 +65,16 @@ class OpteeClient : public OpteeClientBase,
   void Shutdown();
 
   // `fuchsia.tee.Application` FIDL Handlers
-  void OpenSession2(
-      fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) override;
-  void InvokeCommand(
-      uint32_t session_id, uint32_t command_id,
-      fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) override;
-  void CloseSession(
-      uint32_t session_id,
-      fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync& completer) override;
+  void OpenSession2(fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
+                    fidl::WireInterface<fuchsia_tee::Application>::OpenSession2Completer::Sync&
+                        completer) override;
+  void InvokeCommand(uint32_t session_id, uint32_t command_id,
+                     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
+                     fidl::WireInterface<fuchsia_tee::Application>::InvokeCommandCompleter::Sync&
+                         completer) override;
+  void CloseSession(uint32_t session_id,
+                    fidl::WireInterface<fuchsia_tee::Application>::CloseSessionCompleter::Sync&
+                        completer) override;
 
  private:
   using SharedMemoryList = fbl::DoublyLinkedList<std::unique_ptr<SharedMemory>>;

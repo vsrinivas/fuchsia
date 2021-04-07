@@ -14,7 +14,7 @@
 
 namespace disk_pave {
 
-class PayloadStreamer : public fuchsia_paver::PayloadStream::Interface {
+class PayloadStreamer : public fidl::WireInterface<fuchsia_paver::PayloadStream> {
  public:
   PayloadStreamer(fidl::ServerEnd<fuchsia_paver::PayloadStream> server_end, fbl::unique_fd payload);
   ~PayloadStreamer();

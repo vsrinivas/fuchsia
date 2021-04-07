@@ -26,7 +26,7 @@ using fuchsia_device_restarttest::TestDevice;
 class TestHostRestartDriver;
 using DeviceType = ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestHostRestartDriver : public DeviceType, public TestDevice::Interface {
+class TestHostRestartDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
  public:
   explicit TestHostRestartDriver(zx_device_t* parent) : DeviceType(parent) {}
 

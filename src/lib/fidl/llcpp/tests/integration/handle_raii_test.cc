@@ -26,7 +26,7 @@ namespace test = ::llcpptest_handleraii_test;
 // All the tests in this file check that when a result is freed, all the handles inside the result
 // are closed.
 
-class HandleCloseProviderServer : public test::HandleProvider::Interface {
+class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvider> {
  public:
   void GetHandle(GetHandleCompleter::Sync& completer) override {
     zx::event e;

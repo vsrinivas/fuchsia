@@ -20,7 +20,7 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fio2::Directory::RawChannelInterface {
+class TestServerBase : public fidl::WireRawChannelInterface<fio2::Directory> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
@@ -141,7 +141,7 @@ TEST_F(DirV2, Enumerate) {
    public:
     void Enumerate(fio2::wire::DirectoryEnumerateOptions options, zx::channel iterator,
                    EnumerateCompleter::Sync& completer) override {
-      class IteratorServer : public fio2::DirectoryIterator::Interface {
+      class IteratorServer : public fidl::WireInterface<fio2::DirectoryIterator> {
        public:
         explicit IteratorServer(sync_completion_t* completion) : completion_(completion) {}
 

@@ -40,7 +40,7 @@ using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 using DdkDeviceType = ddk::Device<GpuDevice, ddk::Messageable, ddk::Unbindable, ddk::Initializable>;
 
-class GpuDevice : public fuchsia_gpu_magma::Device::Interface,
+class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
  public:

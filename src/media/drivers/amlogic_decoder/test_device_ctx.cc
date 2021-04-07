@@ -18,7 +18,7 @@
 class AmlogicTestDevice;
 using DdkDeviceType = ddk::Device<AmlogicTestDevice, ddk::Messageable>;
 
-class AmlogicTestDevice : public fuchsia_hardware_mediacodec::Tester::Interface,
+class AmlogicTestDevice : public fidl::WireInterface<fuchsia_hardware_mediacodec::Tester>,
                           public DdkDeviceType {
  public:
   AmlogicTestDevice(zx_device_t* parent) : DdkDeviceType(parent) {}

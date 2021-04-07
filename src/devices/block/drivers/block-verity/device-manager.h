@@ -33,8 +33,9 @@ using DeviceManagerType =
 // `fuchsia.hardware.block.verified`.  It manages the lifecycle of a child block
 // device which represents either a mutable or verified view of another block
 // device.
-class DeviceManager final : public DeviceManagerType,
-                            public fuchsia_hardware_block_verified::DeviceManager::Interface {
+class DeviceManager final
+    : public DeviceManagerType,
+      public fidl::WireInterface<fuchsia_hardware_block_verified::DeviceManager> {
  public:
   explicit DeviceManager(zx_device_t* parent)
       : DeviceManagerType(parent),
@@ -64,7 +65,7 @@ class DeviceManager final : public DeviceManagerType,
   // ddk::ChildPreRelease methods
   void DdkChildPreRelease(void* child_ctx);
 
-  // implement `DeviceManager::Interface`
+  // implement `fidl::WireInterface<DeviceManager>`
   void OpenForWrite(fuchsia_hardware_block_verified::wire::Config config,
                     OpenForWriteCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
   void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) override

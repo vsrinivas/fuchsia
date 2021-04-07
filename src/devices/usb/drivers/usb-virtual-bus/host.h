@@ -24,7 +24,7 @@ namespace virtualbus {
 class Device;
 using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Messageable>;
 class Device : public DeviceType,
-               public fuchsia_hardware_usb_virtualbustest::BusTest::Interface,
+               public fidl::WireInterface<fuchsia_hardware_usb_virtualbustest::BusTest>,
                public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {
  public:
   explicit Device(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}

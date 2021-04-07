@@ -92,7 +92,7 @@ class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER>,
-                   private fuchsia_hardware_display::Provider::RawChannelInterface {
+                   private fidl::WireRawChannelInterface<fuchsia_hardware_display::Provider> {
  public:
   Controller(zx_device_t* parent);
   ~Controller();

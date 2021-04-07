@@ -6,13 +6,14 @@
 namespace fidl_test_error {
 namespace testing {
 
-class Example_TestBase : public ::fidl_test_error::Example::Interface {
+class Example_TestBase
+    : public ::fidl::WireInterface<::fidl_test_error::Example> {
  public:
   virtual ~Example_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_error::Example::Interface;
+  using Interface = ::fidl::WireInterface<::fidl_test_error::Example>;
   virtual void foo(
       ::fidl::StringView s,
       ::fidl::WireInterface<::fidl_test_error::Example>::fooCompleter::Sync&

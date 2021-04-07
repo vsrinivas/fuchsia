@@ -48,7 +48,7 @@ namespace {
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 
 // TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
-class FakeRealm : public fuchsia_sys2::Realm::Interface {
+class FakeRealm : public fidl::WireInterface<fuchsia_sys2::Realm> {
  public:
   void BindChild(fuchsia_sys2::wire::ChildRef child,
                  fidl::ServerEnd<fuchsia_io::Directory> exposed_dir,
@@ -73,7 +73,8 @@ class FakeRealm : public fuchsia_sys2::Realm::Interface {
   fidl::ServerEnd<fuchsia_io::Directory> exposed_dir_;
 };
 
-class FakePowerRegistration : public fuchsia_power_manager::DriverManagerRegistration::Interface {
+class FakePowerRegistration
+    : public fidl::WireInterface<fuchsia_power_manager::DriverManagerRegistration> {
  public:
   void Register(fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> transition,
                 fidl::ClientEnd<fuchsia_io::Directory> dir,
@@ -122,7 +123,7 @@ constexpr fuchsia_kernel_RootJob_ops kRootJobOps = {
 
 template <class Protocol>
 void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<typename Protocol::Interface> server) {
+                          std::unique_ptr<typename fidl::WireInterface<Protocol>> server) {
   auto node = fbl::MakeRefCounted<fs::Service>(
       [dispatcher, server{std::move(server)}](fidl::ServerEnd<Protocol> channel) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), server.get());

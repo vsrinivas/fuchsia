@@ -16,9 +16,9 @@
 namespace llcpp_benchmarks {
 
 template <typename ProtocolType, typename FidlType>
-class EchoServerImpl : public ProtocolType::Interface {
+class EchoServerImpl : public fidl::WireInterface<ProtocolType> {
   void Echo(FidlType val,
-            typename ProtocolType::Interface::EchoCompleter::Sync& completer) override {
+            typename fidl::WireInterface<ProtocolType>::EchoCompleter::Sync& completer) override {
     completer.Reply(std::move(val));
   }
 };

@@ -14,13 +14,13 @@
 
 namespace sdio {
 
-class SdioTest : public zxtest::Test, public fuchsia_hardware_sdio::Device::Interface {
+class SdioTest : public zxtest::Test, public fidl::WireInterface<fuchsia_hardware_sdio::Device> {
  public:
   SdioTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &client_, &server));
-    ASSERT_OK(fidl::BindSingleInFlightOnly<Device::Interface>(loop_.dispatcher(), std::move(server),
-                                                              this));
+    ASSERT_OK(fidl::BindSingleInFlightOnly<fidl::WireInterface<Device>>(loop_.dispatcher(),
+                                                                        std::move(server), this));
     loop_.StartThread("sdio-test-loop");
   }
 

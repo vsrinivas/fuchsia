@@ -54,7 +54,7 @@ namespace fidl_dsi = fuchsia_hardware_dsi;
 using DeviceTypeBase = ddk::Device<DsiDwBase, ddk::Unbindable, ddk::Messageable>;
 class DsiDwBase : public DeviceTypeBase,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_DSI_BASE>,
-                  public fuchsia_hardware_dsi::DsiBase::Interface {
+                  public fidl::WireInterface<fuchsia_hardware_dsi::DsiBase> {
  public:
   DsiDwBase(zx_device_t* parent, DsiDw* dsidw) : DeviceTypeBase(parent), dsidw_(dsidw) {}
   zx_status_t Bind();

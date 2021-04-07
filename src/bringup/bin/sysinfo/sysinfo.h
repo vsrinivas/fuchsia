@@ -11,7 +11,7 @@
 #include <zircon/status.h>
 
 namespace sysinfo {
-class SysInfo : public fuchsia_sysinfo::SysInfo::Interface {
+class SysInfo : public fidl::WireInterface<fuchsia_sysinfo::SysInfo> {
  public:
   SysInfo() {}
   // fuchsia.sysinfo.SysInfo methods

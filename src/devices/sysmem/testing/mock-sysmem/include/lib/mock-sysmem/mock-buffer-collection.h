@@ -11,7 +11,7 @@
 
 namespace mock_sysmem {
 
-class MockBufferCollection : public fuchsia_sysmem::BufferCollection::Interface {
+class MockBufferCollection : public fidl::WireInterface<fuchsia_sysmem::BufferCollection> {
  public:
   void SetEventSink(fidl::ClientEnd<fuchsia_sysmem::BufferCollectionEvents> events,
                     SetEventSinkCompleter::Sync& _completer) override {

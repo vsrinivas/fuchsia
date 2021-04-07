@@ -298,7 +298,7 @@ namespace {
 
 namespace gen = fidl_test_llcpp_basictypes;
 
-class Server : public gen::TestInterface::Interface {
+class Server : public fidl::WireInterface<gen::TestInterface> {
  public:
   void ConsumeSimpleStruct(gen::wire::SimpleStruct arg,
                            ConsumeSimpleStructCompleter::Sync& txn) override {

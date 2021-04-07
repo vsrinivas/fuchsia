@@ -27,7 +27,7 @@ namespace FidlTemperature = fuchsia_hardware_temperature;
 
 class ThermistorChannel : public DeviceType2,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE>,
-                          public FidlTemperature::Device::Interface {
+                          public fidl::WireInterface<FidlTemperature::Device> {
  public:
   ThermistorChannel(zx_device_t* device, fbl::RefPtr<AmlSaradcDevice> adc, uint32_t ch,
                     NtcInfo ntc_info, uint32_t pullup_ohms)
@@ -51,7 +51,7 @@ namespace FidlAdc = fuchsia_hardware_adc;
 
 class RawChannel : public DeviceType3,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_ADC>,
-                   public FidlAdc::Device::Interface {
+                   public fidl::WireInterface<FidlAdc::Device> {
  public:
   RawChannel(zx_device_t* device, fbl::RefPtr<AmlSaradcDevice> adc, uint32_t ch)
       : DeviceType3(device), adc_(adc), adc_channel_(ch) {}

@@ -19,7 +19,7 @@ using LogTesterType = ddk::Device<LogTester, ddk::Initializable, ddk::Unbindable
 
 // This is the main class for the log test driver.
 class LogTester : public LogTesterType,
-                  public fuchsia_validate_logs::LogSinkPuppet::Interface,
+                  public fidl::WireInterface<fuchsia_validate_logs::LogSinkPuppet>,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {
  public:
   explicit LogTester(zx_device_t* parent) : LogTesterType(parent) {}

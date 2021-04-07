@@ -1750,9 +1750,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto system_state_manager_register = [this](zx::channel request) {
-    auto status =
-        fidl::BindSingleInFlightOnly<fuchsia_device_manager::SystemStateTransition::Interface>(
-            dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
+    auto status = fidl::BindSingleInFlightOnly<
+        fidl::WireInterface<fuchsia_device_manager::SystemStateTransition>>(
+        dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            fuchsia_device_manager::SystemStateTransition::Name, zx_status_get_string(status));
@@ -1768,8 +1768,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto bind_debugger = [this](zx::channel request) {
-    auto status = fidl::BindSingleInFlightOnly<fuchsia_device_manager::BindDebugger::Interface>(
-        dispatcher_, std::move(request), this);
+    auto status =
+        fidl::BindSingleInFlightOnly<fidl::WireInterface<fuchsia_device_manager::BindDebugger>>(
+            dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            fuchsia_device_manager::BindDebugger::Name, zx_status_get_string(status));
@@ -1783,9 +1784,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto driver_host_dev = [this](zx::channel request) {
-    auto status =
-        fidl::BindSingleInFlightOnly<fuchsia_device_manager::DriverHostDevelopment::Interface>(
-            dispatcher_, std::move(request), this);
+    auto status = fidl::BindSingleInFlightOnly<
+        fidl::WireInterface<fuchsia_device_manager::DriverHostDevelopment>>(
+        dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            fuchsia_device_manager::DriverHostDevelopment::Name, zx_status_get_string(status));
@@ -1800,8 +1801,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   if (config_.enable_ephemeral) {
     const auto driver_registrar = [this](zx::channel request) {
-      auto result = fidl::BindServer<fuchsia_driver_registrar::DriverRegistrar::Interface>(
-          dispatcher_, std::move(request), this);
+      auto result =
+          fidl::BindServer<fidl::WireInterface<fuchsia_driver_registrar::DriverRegistrar>>(
+              dispatcher_, std::move(request), this);
       if (!result.is_ok()) {
         LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
              fuchsia_driver_registrar::DriverRegistrar::Name, zx_status_get_string(result.error()));

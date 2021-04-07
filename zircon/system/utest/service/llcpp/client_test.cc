@@ -22,7 +22,7 @@ namespace {
 using Echo = ::fidl_service_test::Echo;
 using EchoService = ::fidl_service_test::EchoService;
 
-class EchoCommon : public Echo::Interface {
+class EchoCommon : public fidl::WireInterface<Echo> {
  public:
   explicit EchoCommon(const char* prefix) : prefix_(prefix) {}
 

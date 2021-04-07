@@ -36,7 +36,7 @@ constexpr uint32_t kBitMaskHigherFourBits = 0xF0;
 constexpr uint32_t kBitMaskLowerFourBits = 0x0F;
 
 class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>,
-                          public fuchsia_lowpan_spinel::DeviceSetup::Interface {
+                          public fidl::WireInterface<fuchsia_lowpan_spinel::DeviceSetup> {
  public:
   explicit FakeOtRadioDevice(zx_device_t* device);
 
@@ -68,7 +68,7 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   static uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
 
   // Nested class for FIDL implementation
-  class LowpanSpinelDeviceFidlImpl : public fuchsia_lowpan_spinel::Device::Interface {
+  class LowpanSpinelDeviceFidlImpl : public fidl::WireInterface<fuchsia_lowpan_spinel::Device> {
    public:
     explicit LowpanSpinelDeviceFidlImpl(FakeOtRadioDevice& ot_radio);
     zx_status_t Bind(async_dispatcher_t* dispatcher,

@@ -3822,7 +3822,7 @@ TEST(Sysmem, TooManyBuffers) {
   VerifyServerAlive(allocator_client);
 }
 
-class EventSinkServer : public fuchsia_sysmem::BufferCollectionEvents::Interface {
+class EventSinkServer : public fidl::WireInterface<fuchsia_sysmem::BufferCollectionEvents> {
  public:
   explicit EventSinkServer(async::Loop& loop) : loop_(loop) {}
 

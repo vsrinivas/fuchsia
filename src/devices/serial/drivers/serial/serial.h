@@ -25,7 +25,7 @@ using DeviceType = ddk::Device<SerialDevice, ddk::Openable, ddk::Closable, ddk::
                                ddk::Writable, ddk::Messageable>;
 
 class SerialDevice : public DeviceType,
-                     public fuchsia_hardware_serial::Device::Interface,
+                     public fidl::WireInterface<fuchsia_hardware_serial::Device>,
                      public ddk::SerialProtocol<SerialDevice, ddk::base_protocol> {
  public:
   explicit SerialDevice(zx_device_t* parent) : DeviceType(parent), serial_(parent), open_(false) {}

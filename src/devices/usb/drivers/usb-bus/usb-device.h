@@ -42,7 +42,7 @@ using UsbDeviceType =
 class UsbDevice : public UsbDeviceType,
                   public ddk::UsbProtocol<UsbDevice, ddk::base_protocol>,
                   public fbl::RefCounted<UsbDevice>,
-                  public fuchsia_hardware_usb_device::Device::Interface {
+                  public fidl::WireInterface<fuchsia_hardware_usb_device::Device> {
  public:
   UsbDevice(zx_device_t* parent, const ddk::UsbHciProtocolClient& hci, uint32_t device_id,
             uint32_t hub_id, usb_speed_t speed, fbl::RefPtr<UsbWaiterInterface> waiter)

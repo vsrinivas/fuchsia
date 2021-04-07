@@ -214,7 +214,7 @@ class HidButtonsButtonsFunction
   thrd_t loop_thread_;
 };
 
-class ButtonsNotifyInterface : public Buttons::Interface {
+class ButtonsNotifyInterface : public fidl::WireInterface<Buttons> {
  public:
   explicit ButtonsNotifyInterface(HidButtonsDevice* peripheral) : device_(peripheral) {}
   ~ButtonsNotifyInterface() = default;

@@ -40,7 +40,7 @@ class FidlStatus {
 };
 
 class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWatcher>>,
-                      public netdev::StatusWatcher::Interface {
+                      public fidl::WireInterface<netdev::StatusWatcher> {
  public:
   explicit StatusWatcher(uint32_t max_queue);
   ~StatusWatcher() override;

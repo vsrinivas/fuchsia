@@ -12,7 +12,7 @@
 
 namespace paver {
 
-class Sysconfig : public fuchsia_paver::Sysconfig::Interface {
+class Sysconfig : public fidl::WireInterface<fuchsia_paver::Sysconfig> {
  public:
   explicit Sysconfig(std::unique_ptr<PartitionClient> client) : partitioner_(std::move(client)) {}
 

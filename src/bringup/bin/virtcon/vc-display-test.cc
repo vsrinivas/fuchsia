@@ -40,7 +40,7 @@ namespace {
 // Arbitrary
 constexpr uint32_t kSingleBufferStride = 4;
 
-class StubDisplayController : public fhd::Controller::Interface {
+class StubDisplayController : public fidl::WireInterface<fhd::Controller> {
  public:
   StubDisplayController() {}
 

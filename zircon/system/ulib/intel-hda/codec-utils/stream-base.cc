@@ -348,14 +348,14 @@ void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync& completer) {
   }
   stream_channels_.push_back(stream_channel);
 
-  fidl::OnUnboundFn<audio_fidl::StreamConfig::Interface> on_unbound =
-      [this, stream_channel](audio_fidl::StreamConfig::Interface*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::StreamConfig>> on_unbound =
+      [this, stream_channel](fidl::WireInterface<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
         fbl::AutoLock channel_lock(&this->obj_lock_);
         this->ProcessClientDeactivateLocked(stream_channel.get());
       };
 
-  fidl::BindServer<audio_fidl::StreamConfig::Interface>(
+  fidl::BindServer<fidl::WireInterface<audio_fidl::StreamConfig>>(
       loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
       std::move(on_unbound));
 
@@ -678,7 +678,7 @@ void IntelHDAStreamBase::NotifyPlugStateLocked(bool plugged, int64_t plug_time) 
 
 void IntelHDAStreamBase::GetProperties(
     StreamChannel* channel,
-    audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync& completer) {
+    fidl::WireInterface<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
   fidl::FidlAllocator allocator;
   audio_fidl::wire::StreamProperties response(allocator);

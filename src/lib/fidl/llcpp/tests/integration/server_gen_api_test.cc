@@ -23,7 +23,7 @@ using ::fidl_test_coding_fuchsia::Simple;
 constexpr uint32_t kNumberOfAsyncs = 10;
 constexpr int32_t kExpectedReply = 7;
 
-class Server : public Simple::Interface {
+class Server : public fidl::WireInterface<Simple> {
  public:
   explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;
@@ -41,7 +41,7 @@ class Server : public Simple::Interface {
 };
 
 TEST(BindServerTestCase, SyncReply) {
-  struct SyncServer : Simple::Interface {
+  struct SyncServer : fidl::WireInterface<Simple> {
     void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
       completer.Reply(request);
@@ -77,7 +77,7 @@ TEST(BindServerTestCase, SyncReply) {
 }
 
 TEST(BindServerTestCase, AsyncReply) {
-  struct AsyncServer : Simple::Interface {
+  struct AsyncServer : fidl::WireInterface<Simple> {
     void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -118,7 +118,7 @@ TEST(BindServerTestCase, AsyncReply) {
 }
 
 TEST(BindServerTestCase, MultipleAsyncReplies) {
-  struct AsyncDelayedServer : Simple::Interface {
+  struct AsyncDelayedServer : fidl::WireInterface<Simple> {
     void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -183,7 +183,7 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
 }
 
 TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
-  struct AsyncDelayedServer : Simple::Interface {
+  struct AsyncDelayedServer : fidl::WireInterface<Simple> {
     AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops) : loops_(loops) {}
     void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
@@ -284,7 +284,7 @@ TEST(BindServerTestCase, CallbackDestroyOnClientClose) {
 }
 
 TEST(BindServerTestCase, CallbackErrorClientTriggered) {
-  struct ErrorServer : Simple::Interface {
+  struct ErrorServer : fidl::WireInterface<Simple> {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
@@ -354,7 +354,7 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
 }
 
 TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
-  struct WorkingServer : Simple::Interface {
+  struct WorkingServer : fidl::WireInterface<Simple> {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
@@ -418,7 +418,7 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
 }
 
 TEST(BindServerTestCase, CallbackErrorServerTriggered) {
-  struct ErrorServer : Simple::Interface {
+  struct ErrorServer : fidl::WireInterface<Simple> {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
@@ -561,7 +561,7 @@ TEST(BindServerTestCase, ExplicitUnbind) {
 }
 
 TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
-  struct WorkingServer : Simple::Interface {
+  struct WorkingServer : fidl::WireInterface<Simple> {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
@@ -623,7 +623,7 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
 // return |ZX_ERR_CANCELED| after the server has been unbound.
 TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
   using ::fidl_test_coding_fuchsia::Example;
-  class Server : public Example::Interface {
+  class Server : public fidl::WireInterface<Example> {
    public:
     void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
       ADD_FAILURE("Not used in this test");
@@ -708,7 +708,7 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
 }
 
 TEST(BindServerTestCase, ConcurrentSyncReply) {
-  struct ConcurrentSyncServer : Simple::Interface {
+  struct ConcurrentSyncServer : fidl::WireInterface<Simple> {
     ConcurrentSyncServer(int max_reqs) : max_reqs_(max_reqs) {}
     void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
@@ -769,7 +769,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
 }
 
 TEST(BindServerTestCase, ConcurrentIdempotentClose) {
-  struct ConcurrentSyncServer : Simple::Interface {
+  struct ConcurrentSyncServer : fidl::WireInterface<Simple> {
     void Close(CloseCompleter::Sync& completer) override {
       // Add the wait back to the dispatcher. Sleep to allow another thread in.
       completer.EnableNextDispatch();
@@ -902,7 +902,7 @@ TEST(BindServerTestCase, ServerClose) {
 }
 
 TEST(BindServerTestCase, UnbindInfoChannelError) {
-  struct WorkingServer : Simple::Interface {
+  struct WorkingServer : fidl::WireInterface<Simple> {
     WorkingServer() = default;
     void Echo(int32_t request, EchoCompleter::Sync& completer) override {
       EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request).status());
@@ -975,7 +975,7 @@ TEST(BindServerTestCase, UnbindInfoDispatcherError) {
 }
 
 TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
-  struct WorkingServer : Simple::Interface {
+  struct WorkingServer : fidl::WireInterface<Simple> {
     explicit WorkingServer(std::optional<EchoCompleter::Async>* async_completer,
                            sync_completion_t* ready)
         : async_completer_(async_completer), ready_(ready) {}
@@ -1042,7 +1042,7 @@ class PlaceholderBase2 {
 };
 
 class MultiInheritanceServer : public PlaceholderBase1,
-                               public Simple::Interface,
+                               public fidl::WireInterface<Simple>,
                                public PlaceholderBase2 {
  public:
   explicit MultiInheritanceServer(sync_completion_t* destroyed) : destroyed_(destroyed) {}

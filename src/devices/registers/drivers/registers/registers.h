@@ -44,7 +44,7 @@ using fuchsia_hardware_registers::wire::Metadata;
 using fuchsia_hardware_registers::wire::RegistersMetadataEntry;
 
 template <typename T>
-class Register : public fuchsia_hardware_registers::Device::Interface,
+class Register : public fidl::WireInterface<fuchsia_hardware_registers::Device>,
                  public RegisterType<T>,
                  public ddk::RegistersProtocol<Register<T>, ddk::base_protocol>,
                  public fbl::RefCounted<Register<T>> {

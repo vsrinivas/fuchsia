@@ -17,7 +17,7 @@
 #include <iostream>
 
 // [START impl]
-class EchoImpl final : public fuchsia_examples::Echo::Interface {
+class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
  public:
   explicit EchoImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
   // SendString is not used in this example, so requests are just ignored.

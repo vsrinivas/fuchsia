@@ -44,7 +44,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  using Interface = fuchsia_posix_socket::StreamSocket::Interface;
+  using Interface = fidl::WireInterface<fuchsia_posix_socket::StreamSocket>;
 
   void Close(Interface::CloseCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);

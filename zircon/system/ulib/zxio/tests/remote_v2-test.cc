@@ -19,7 +19,7 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fio2::Node::Interface {
+class TestServerBase : public fidl::WireInterface<fio2::Node> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;

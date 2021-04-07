@@ -32,7 +32,7 @@ namespace {
 // No userspace drivers are actually running at the time that this program
 // runs as we were launched instead of component_manager; accordingly, fake out
 // device suspension, as mexec::Boot expects a service to do so.
-struct FakeDeviceAdmin : public devmgr::Administrator::Interface {
+struct FakeDeviceAdmin : public fidl::WireInterface<devmgr::Administrator> {
   void Suspend(uint32_t flags, SuspendCompleter::Sync& completer) override {
     completer.Reply(flags == devmgr::wire::SUSPEND_FLAG_MEXEC ? ZX_OK : ZX_ERR_INVALID_ARGS);
   }

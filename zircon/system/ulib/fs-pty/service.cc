@@ -21,7 +21,7 @@
 
 namespace fs_pty::internal {
 
-void DispatchPtyDeviceMessage(fuchsia_hardware_pty::Device::Interface* interface,
+void DispatchPtyDeviceMessage(fidl::WireInterface<fuchsia_hardware_pty::Device>* interface,
                               fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   fidl::WireDispatch<fuchsia_hardware_pty::Device>(interface, msg, txn);
 }

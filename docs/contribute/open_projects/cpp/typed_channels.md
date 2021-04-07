@@ -97,7 +97,7 @@ protocol Foo {
 * {Before}
 
   ```c++
-  class MyServer : public Foo::RawChannelInterface {
+  class MyServer : public fidl::WireRawChannelInterface<Foo> {
     void TakeBar(zx::channel bar, TakeBarCompleter::Sync& completer) override;
     void HandleBar(zx::channel bar, HandleBarCompleter::Sync& completer) override;
   };

@@ -22,7 +22,7 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fio2::File::Interface {
+class TestServerBase : public fidl::WireInterface<fio2::File> {
  public:
   TestServerBase() = default;
 

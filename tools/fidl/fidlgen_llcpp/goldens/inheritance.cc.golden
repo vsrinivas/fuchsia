@@ -186,7 +186,8 @@ fidl::internal::WireDispatcher<::fidl_test_inheritance::super>::TryDispatch(
                 bytes);
             ::fidl::WireInterface<::fidl_test_inheritance::super>::
                 fooCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl_test_inheritance::super::Interface*>(
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_inheritance::super>*>(
                 interface)
                 ->foo(std::move(message->s), completer);
           },
@@ -439,8 +440,8 @@ fidl::internal::WireDispatcher<::fidl_test_inheritance::sub>::TryDispatch(
                 ::fidl::WireRequest<::fidl_test_inheritance::sub::foo>*>(bytes);
             ::fidl::WireInterface<::fidl_test_inheritance::sub>::fooCompleter::
                 Sync completer(txn);
-            reinterpret_cast<::fidl_test_inheritance::sub::Interface*>(
-                interface)
+            reinterpret_cast<
+                ::fidl::WireInterface<::fidl_test_inheritance::sub>*>(interface)
                 ->foo(std::move(message->s), completer);
           },
       },

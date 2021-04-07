@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/status.h>
 
-class FakeDriverIndex final : public fuchsia_driver_framework::DriverIndex::Interface {
+class FakeDriverIndex final : public fidl::WireInterface<fuchsia_driver_framework::DriverIndex> {
  public:
   struct MatchResult {
     std::string url;

@@ -7,13 +7,14 @@ namespace fidl_test_emptystruct {
 namespace testing {
 
 class EmptyProtocol_TestBase
-    : public ::fidl_test_emptystruct::EmptyProtocol::Interface {
+    : public ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol> {
  public:
   virtual ~EmptyProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::fidl_test_emptystruct::EmptyProtocol::Interface;
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>;
   virtual void Send(
       ::fidl_test_emptystruct::wire::Empty e,
       ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::

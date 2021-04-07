@@ -19,7 +19,8 @@ namespace sysmem_driver {
 //
 // Because Allocator is essentially self-contained and handling the server end
 // of a channel, most of Allocator is private.
-class Allocator : public fuchsia_sysmem::Allocator::RawChannelInterface, public LoggingMixin {
+class Allocator : public fidl::WireRawChannelInterface<fuchsia_sysmem::Allocator>,
+                  public LoggingMixin {
  public:
   // Public for std::unique_ptr<Allocator>:
   ~Allocator();
