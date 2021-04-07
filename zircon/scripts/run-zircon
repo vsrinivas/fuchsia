@@ -16,7 +16,8 @@ function HELP {
     echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
     echo "-g                   : use graphical console"
     echo "-I <interface name>  : network interface name, default is qemu."
-    echo "-k                   : use KVM (Linux host only)"
+    echo "-k, --kvm            : use KVM (Linux host only). defaults to true if supported."
+    echo "    --no-kvm         : don't use KVM, even if supported."
     echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
     echo "-n                   : run with emulated nic"
     echo "-N                   : run with emulated nic via tun/tap"
@@ -46,6 +47,24 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 readonly MEMSIZE_DEFAULT=8192
 readonly SMP_DEFAULT=4
 
+# Host operating system. Will either be "Linux" or "Darwin" (macOS) on
+# supported platforms.
+readonly HOST_OS=$(uname -s)
+
+# Determine host architecture.
+case "$(uname -m)" in
+  aarch64*|arm64)
+    readonly HOST_ARCH="arm64"
+    ;;
+  x86_64)
+    readonly HOST_ARCH="x64"
+    ;;
+  *)
+    echo "unknown host architecture: $(uname -m)"
+    exit 1
+    ;;
+esac
+
 AHCI=()
 ARCH=
 AUDIO=
@@ -57,7 +76,7 @@ DISKTYPE=
 DISKFMT="raw"
 GIC=max
 GRAPHICS=0
-DO_KVM=0
+DO_KVM=
 LTO=0
 THINLTO=0
 PROFILE=0
@@ -75,7 +94,7 @@ OPT_CMDLINE=""
 QEMU_KERNEL=
 QEMU_INITRD=
 
-if [[ "$(uname -s)" == "Darwin" ]]; then
+if [[ $HOST_OS == "Darwin" ]]; then
   IFNAME="tap0"
 else
   IFNAME="qemu"
@@ -151,6 +170,8 @@ while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
             gic=*) GIC=${OPTARG#*=};;
             no-serial) SERIAL=0;;
             vnc=*) VNC=${OPTARG#*=};;
+            no-kvm) DO_KVM=0;;
+            kvm) DO_KVM=1;;
             *)
                 echo unrecognized long option
                 HELP
@@ -170,15 +191,6 @@ fi
 # by default use the qemu binary located in the fuchsia //prebuilt
 # repo if we can find it, but allow -q to override it for people
 # who want to use their own.
-case "$(uname -s)" in
-  Darwin)
-    readonly HOST_PLATFORM="mac-x64"
-    ;;
-  Linux)
-    readonly HOST_PLATFORM="linux-x64"
-    ;;
-esac
-
 if [[ -z $QEMUDIR && -d "$DIR/../prebuilt/downloads/qemu/bin" ]]; then
     QEMUDIR="$DIR/../prebuilt/downloads/qemu/bin/"
 fi
@@ -330,6 +342,23 @@ fi
 
 if (( $DEBUGGER )); then
     ARGS+=" -s -S"
+fi
+
+# Auto-detect if KVM support exists if not explicitly specified.
+if [[ -z $DO_KVM ]]; then
+  if [[
+      # We only support linux for KVM at the moment.
+      $HOST_OS == "Linux" &&
+      # Ensure the host and target arch match.
+      $HOST_ARCH == "${ARCH}" &&
+      # Ensure we have "/dev/kvm" and it is writable.
+      -w /dev/kvm
+  ]]; then
+    echo "Enabling KVM acceleration: use '--no-kvm' to disable." >&2
+    DO_KVM=1
+  else
+    DO_KVM=0
+  fi
 fi
 
 case $ARCH in
