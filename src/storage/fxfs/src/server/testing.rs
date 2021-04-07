@@ -22,6 +22,19 @@ pub fn open_file(
 }
 
 // Utility function to open a new node connection under |dir|.
+// Validates the node connection after opening by calling |describe|.
+pub async fn open_file_validating(
+    dir: &DirectoryProxy,
+    flags: u32,
+    mode: u32,
+    path: &str,
+) -> Result<FileProxy, Error> {
+    let client_end = open_file(dir, flags, mode, path)?;
+    client_end.describe().await?;
+    Ok(client_end)
+}
+
+// Utility function to open a new node connection under |dir|.
 // Does not validate the node connection after opening.
 pub fn open_dir(
     dir: &DirectoryProxy,

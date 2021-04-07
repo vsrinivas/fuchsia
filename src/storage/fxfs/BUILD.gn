@@ -74,6 +74,7 @@ if (is_fuchsia) {
     "src/server.rs",
     "src/server/directory.rs",
     "src/server/errors.rs",
+    "src/server/file.rs",
     "src/server/node.rs",
     "src/server/testing.rs",
     "src/server/volume.rs",

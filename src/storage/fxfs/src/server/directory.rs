@@ -5,8 +5,9 @@
 use {
     crate::{
         errors::FxfsError,
+        object_handle::ObjectHandle,
         object_store::{self, transaction::Transaction},
-        server::{errors::map_to_status, node::FxNode, volume::FxVolume},
+        server::{errors::map_to_status, file::FxFile, node::FxNode, volume::FxVolume},
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
@@ -54,6 +55,7 @@ impl FxDirectory {
             let last_segment = path.is_single_component();
             let current_dir = match current_node {
                 FxNode::Dir(dir) => dir.clone(),
+                FxNode::File(_file) => bail!(FxfsError::NotDir),
             };
             let name = path.next().unwrap();
             match current_dir.directory.lookup(name).await {
@@ -94,7 +96,10 @@ impl FxDirectory {
                 FxNode::Dir(Arc::new(FxDirectory { volume: self.volume.clone(), directory: dir }));
             (object_id, node)
         } else {
-            bail!("Files not implemented yet");
+            let handle = dir.directory.create_child_file(&mut transaction, name).await?;
+            let object_id = handle.object_id();
+            let node = FxNode::File(Arc::new(FxFile::new(handle)));
+            (object_id, node)
         };
         self.volume.store().filesystem().commit_transaction(transaction).await;
         self.volume.add_node(object_id, node.downgrade()).await;
@@ -155,6 +160,9 @@ impl DirectoryEntry for FxDirectory {
                         server_end,
                     );
                 }
+                Ok(FxNode::File(file)) => {
+                    file.clone().open(cloned_scope, flags, mode, Path::empty(), server_end);
+                }
             };
         });
     }
@@ -214,7 +222,7 @@ mod tests {
         crate::{
             object_store::{filesystem::SyncOptions, FxFilesystem},
             server::{
-                testing::{open_dir_validating, open_file},
+                testing::{open_dir_validating, open_file, open_file_validating},
                 volume::FxVolumeAndRoot,
             },
             testing::fake_device::FakeDevice,
@@ -224,7 +232,8 @@ mod tests {
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
             DirectoryMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
-            OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
@@ -240,7 +249,6 @@ mod tests {
         let volume_directory = volume_directory(&filesystem).await?;
         let vol = FxVolumeAndRoot::new(volume_directory.new_volume("vol").await?);
         {
-            // TODO(jfsulliv): Also create a file here.
             let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
                 .expect("Create proxy to succeed");
 
@@ -260,6 +268,15 @@ mod tests {
             )
             .await
             .expect("Create dir failed");
+
+            open_file_validating(
+                &dir_proxy,
+                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
+                MODE_TYPE_FILE,
+                "bar",
+            )
+            .await
+            .expect("Create file failed");
 
             dir_proxy.close().await?;
         }
@@ -369,6 +386,41 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_create_file() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let volume_directory = volume_directory(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(volume_directory.new_volume("vol").await?);
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        open_file_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
+            MODE_TYPE_FILE,
+            "foo",
+        )
+        .await
+        .expect("Create file failed");
+
+        open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            .await
+            .expect("Open file failed");
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_create_dir_nested() -> Result<(), Error> {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
@@ -409,6 +461,53 @@ mod tests {
         open_dir_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, "foo/bar")
             .await
             .expect("Open nested dir failed");
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_strict_create_file_fails_if_present() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let volume_directory = volume_directory(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(volume_directory.new_volume("vol").await?);
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        open_file_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
+            MODE_TYPE_FILE,
+            "foo",
+        )
+        .await
+        .expect("Create file failed");
+
+        let file_proxy = open_file(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
+            MODE_TYPE_FILE,
+            "foo",
+        )
+        .expect("Open proxy failed");
+
+        assert_matches!(
+            file_proxy.describe().await,
+            Err(fidl::Error::ClientChannelClosed {
+                status: Status::ALREADY_EXISTS,
+                service_name: "(anonymous) File",
+            })
+        );
 
         Ok(())
     }

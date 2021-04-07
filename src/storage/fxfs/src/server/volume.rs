@@ -5,9 +5,10 @@
 use {
     crate::{
         errors::FxfsError,
-        object_store::{directory::ObjectDescriptor, ObjectStore},
+        object_store::{directory::ObjectDescriptor, HandleOptions, ObjectStore},
         server::{
             directory::FxDirectory,
+            file::FxFile,
             node::{FxNode, WeakFxNode},
         },
         volume::Volume,
@@ -79,7 +80,11 @@ impl FxVolume {
             Ok(node) => Ok(node),
             Err(e) if FxfsError::NotFound.matches(&e) => {
                 let node = match object_descriptor {
-                    ObjectDescriptor::File => bail!("Files not implemented yet"),
+                    ObjectDescriptor::File => {
+                        let file =
+                            self.store.open_object(object_id, HandleOptions::default()).await?;
+                        FxNode::File(Arc::new(FxFile::new(file)))
+                    }
                     ObjectDescriptor::Directory => {
                         let directory = self.store.open_directory(object_id).await?;
                         FxNode::Dir(Arc::new(FxDirectory::new(self.clone(), directory)))
@@ -129,8 +134,11 @@ impl FxVolumeAndRoot {
     }
 
     pub fn root(&self) -> &Arc<FxDirectory> {
-        let FxNode::Dir(dir) = &self.root;
-        dir
+        if let FxNode::Dir(dir) = &self.root {
+            dir
+        } else {
+            panic!("Invalid type for root");
+        }
     }
 
     pub(super) fn into_volume(self) -> Arc<FxVolume> {
