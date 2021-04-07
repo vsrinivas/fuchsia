@@ -640,7 +640,7 @@ For example:
 You can then use the constant `MAX_BATCH_SIZE` in your code to assemble
 batches.
 
-#### enum
+#### enum {#enum}
 
 Use an enum if the set of enumerated values is bounded and controlled by the
 Fuchsia project.  For example, the Fuchsia project defines the pointer event

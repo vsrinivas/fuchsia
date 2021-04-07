@@ -26,3 +26,5 @@ toc:
   path: /docs/concepts/api/system.md
 - title: "Developer tool guidelines"
   path: /docs/concepts/api/tools.md
+- title: "Go rubric"
+  path: /docs/concepts/api/go.md
