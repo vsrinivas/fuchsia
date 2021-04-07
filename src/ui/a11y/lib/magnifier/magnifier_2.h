@@ -14,6 +14,7 @@
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
+#include "src/ui/a11y/lib/magnifier/magnifier_util.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 namespace a11y {
@@ -120,8 +121,22 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
   // Sends the updated transform to the handler.
   void UpdateTransform();
 
-  // Toggles magnification on/off.
-  void ToggleMagnification();
+  // Toggles persistent magnification on/off.
+  void TogglePersistentMagnification();
+
+  // Updates magnification transform to reflect the state of an in-progress
+  // drag during temporary magnification.
+  void HandleTemporaryDrag(const Delta& delta);
+
+  // Updates magnification transform to reflect the state of an in-progress
+  // drag during persistent magnification.
+  // NOTE: Do NOT update state_.gesture_context prior to calling this method, as
+  // it requires the "old" gesture context.
+  void HandlePersistentDrag(const Delta& delta);
+
+  // Ensures that the translation falls within the allowable range (as dictated
+  // by the min/max scale).
+  void ClampTranslation();
 
   // Magnifier state.
   State state_;

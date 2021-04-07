@@ -78,14 +78,33 @@ bool MockGestureHandler::BindSwipeAction(OnGestureCallback callback, GestureType
 
 void MockGestureHandler::TriggerGesture(GestureType gesture_type,
                                         a11y::GestureContext gesture_context) {
+  TriggerGestureRecognize(gesture_type, gesture_context);
+  TriggerGestureUpdate(gesture_type, gesture_context);
+  TriggerGestureComplete(gesture_type, gesture_context);
+}
+
+void MockGestureHandler::TriggerGestureRecognize(GestureType gesture_type,
+                                                 a11y::GestureContext gesture_context) {
   auto it = gesture_handlers_.find(gesture_type);
   FX_DCHECK(it != gesture_handlers_.end());
   if (it->second.on_recognize) {
     it->second.on_recognize(gesture_context);
   }
+}
+
+void MockGestureHandler::TriggerGestureUpdate(GestureType gesture_type,
+                                              a11y::GestureContext gesture_context) {
+  auto it = gesture_handlers_.find(gesture_type);
+  FX_DCHECK(it != gesture_handlers_.end());
   if (it->second.on_update) {
     it->second.on_update(gesture_context);
   }
+}
+
+void MockGestureHandler::TriggerGestureComplete(GestureType gesture_type,
+                                                a11y::GestureContext gesture_context) {
+  auto it = gesture_handlers_.find(gesture_type);
+  FX_DCHECK(it != gesture_handlers_.end());
   if (it->second.on_complete) {
     it->second.on_complete(gesture_context);
   }

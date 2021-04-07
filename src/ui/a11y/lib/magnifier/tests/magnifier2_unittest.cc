@@ -52,8 +52,8 @@ class Magnifier2Test : public gtest::RealLoopFixture {
     // values, accounting for potential float rounding error.
     RunLoopUntil([this, x, y, scale]() {
       const auto& transform = mock_magnification_handler()->transform();
-      return std::abs(transform.x - x) < std::numeric_limits<float>::epsilon() &&
-             std::abs(transform.y - y) < std::numeric_limits<float>::epsilon() &&
+      return std::abs(transform.x - x) < scale * std::numeric_limits<float>::epsilon() &&
+             std::abs(transform.y - y) < scale * std::numeric_limits<float>::epsilon() &&
              std::abs(transform.scale - scale) < std::numeric_limits<float>::epsilon();
     });
   }
@@ -104,6 +104,132 @@ TEST_F(Magnifier2Test, ThreeFingerDoubleTapTogglesMagnification) {
 
   mock_gesture_handler()->TriggerGesture(GestureType::kThreeFingerDoubleTap);
   RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+}
+
+TEST_F(Magnifier2Test, ThreeFingerDoubleTapDragTogglesTemporaryMagnification) {
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.3f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.4f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = 0.4f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
+    gesture_context.current_pointer_locations[3].ndc_point.x = 0.5f;
+    gesture_context.current_pointer_locations[3].ndc_point.y = 0.6f;
+    mock_gesture_handler()->TriggerGestureRecognize(GestureType::kThreeFingerDoubleTapDrag,
+                                                    gesture_context);
+
+    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.1f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.2f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = 0.2f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = 0.3f;
+    gesture_context.current_pointer_locations[3].ndc_point.x = 0.3f;
+    gesture_context.current_pointer_locations[3].ndc_point.y = 0.4f;
+    mock_gesture_handler()->TriggerGestureUpdate(GestureType::kThreeFingerDoubleTapDrag,
+                                                 gesture_context);
+
+    RunLoopUntilTransformIs(-.2f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -.3f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  mock_gesture_handler()->TriggerGestureComplete(GestureType::kThreeFingerDoubleTapDrag);
+
+  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+}
+
+TEST_F(Magnifier2Test, OneFingerTripleTapDragTogglesTemporaryMagnification) {
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.3f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.4f;
+    mock_gesture_handler()->TriggerGestureRecognize(GestureType::kOneFingerTripleTapDrag,
+                                                    gesture_context);
+
+    RunLoopUntilTransformIs(-.3f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -.4f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.1f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.2f;
+    mock_gesture_handler()->TriggerGestureUpdate(GestureType::kOneFingerTripleTapDrag,
+                                                 gesture_context);
+
+    RunLoopUntilTransformIs(-.1f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -.2f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  mock_gesture_handler()->TriggerGestureComplete(GestureType::kOneFingerTripleTapDrag);
+
+  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+}
+
+TEST_F(Magnifier2Test, TwoFingerDrag) {
+  // One-finger-triple-tap to enter persistent magnification mode.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
+    mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
+
+    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  // Begin two-finger drag at a point different from the current magnification
+  // focus to ensure that the transform does not change.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.2f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.3f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = 0.4f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
+    mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
+
+    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  // Scale and pan.
+  {
+    a11y::GestureContext gesture_context;
+    // Double average distance between the fingers and the centroid, and
+    // translate the centroid from (.3, .4) to (.2, .3).
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.0f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.1f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = 0.4f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
+    mock_gesture_handler()->TriggerGestureUpdate(GestureType::kTwoFingerDrag, gesture_context);
+
+    // The average distance between the fingers and the centroid doubled, so the
+    // scale should double.
+    auto new_scale = a11y::Magnifier2::kDefaultScale * 2;
+    // The new transform should ensure that the point under the centroid of the
+    // user's fingers moves with the centroid of the two-finger drag. Since the
+    // drag started with a centroid of (.3, .4) and now has a centroid of (.2,
+    // 3.), applying the transform to the point in unscaled NDC space that
+    // corresponds to (.3, .4) in the default zoom space shoud yield (.2, .3).
+    // We can find the NDC point that corresponds to (.3, .4) by simply applying
+    // the inverse of the transform for that space, which we verified previously
+    // had a scale of kDefaultScale 4, and a translation of (-1.2, -1.5). So,
+    // applying the inverse of this transform to (.3, .4) gives us (.375, .475)
+    // in the NDC space. Since the new scale is kDefaultScale * 2 = 8, we can
+    // solve for the new translation solving this equation for new_translation:
+    // (.2, .3) = 8 * (.375, .475) + new_translation
+    RunLoopUntilTransformIs(-2.8f /* x */, -3.5f /* y */, new_scale);
+  }
 }
 
 }  // namespace

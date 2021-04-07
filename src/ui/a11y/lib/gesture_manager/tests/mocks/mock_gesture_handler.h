@@ -37,6 +37,12 @@ class MockGestureHandler : public a11y::GestureHandler {
 
   void TriggerGesture(GestureType gesture_type,
                       a11y::GestureContext gesture_context = a11y::GestureContext());
+  void TriggerGestureRecognize(GestureType gesture_type,
+                               a11y::GestureContext gesture_context = a11y::GestureContext());
+  void TriggerGestureUpdate(GestureType gesture_type,
+                            a11y::GestureContext gesture_context = a11y::GestureContext());
+  void TriggerGestureComplete(GestureType gesture_type,
+                              a11y::GestureContext gesture_context = a11y::GestureContext());
 
  private:
   // Holds the gestures bound to the handler, in order of registration.
