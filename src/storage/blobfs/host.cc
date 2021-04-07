@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/status.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -196,7 +197,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   std::unique_ptr<InodeBlock> inode_block;
   zx_status_t status;
   if ((status = bs->NewBlob(info.digest, &inode_block)) != ZX_OK) {
-    FX_LOGS(ERROR) << "error: Failed to allocate a new blob";
+    FX_LOGS(ERROR) << "error: Failed to allocate a new blob " << status;
     return status;
   }
   if (inode_block == nullptr) {
@@ -210,7 +211,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   inode->header.flags |=
       kBlobFlagAllocated | (info.compressed ? HostCompressor::InodeHeaderCompressionFlags() : 0);
 
-  // TODO(smklein): Currently, host-side tools can only generate single-extent
+  // TODO(fxbug.rev/74008) Currently, host-side tools can only generate single-extent
   // blobs. This should be fixed.
   if (inode->block_count > kBlockCountMax) {
     FX_LOGS(ERROR) << "error: Blobs larger than " << kBlockCountMax
@@ -220,11 +221,11 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
 
   size_t start_block = 0;
   if ((status = bs->AllocateBlocks(inode->block_count, &start_block)) != ZX_OK) {
-    FX_LOGS(ERROR) << "error: No blocks available";
+    FX_LOGS(ERROR) << "error: No blocks available " << inode->block_count;
     return status;
   }
 
-  // TODO(smklein): This is hardcoded alongside the check against "kBlockCountMax" above.
+  // TODO(fxbug.rev/74008): This is hardcoded alongside the check against "kBlockCountMax" above.
   if (inode->block_count > 0) {
     inode->extents[0].SetStart(start_block);
     inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
@@ -239,16 +240,20 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   }
 
   if ((status = bs->WriteData(inode, info.merkle.get(), data, *blob_layout.value())) != ZX_OK) {
+    FX_LOGS(ERROR) << "Blobfs WriteData failed " << status;
     return status;
   }
 
   if ((status = bs->WriteBitmap(inode->block_count, inode->extents[0].Start())) != ZX_OK) {
+    FX_LOGS(ERROR) << "Blobfs WriteBitmap failed " << status;
     return status;
   }
   if ((status = bs->WriteNode(std::move(inode_block))) != ZX_OK) {
+    FX_LOGS(ERROR) << "Blobfs WriteNode failed " << status;
     return status;
   }
   if ((status = bs->WriteInfo()) != ZX_OK) {
+    FX_LOGS(ERROR) << "Blobfs WriteInfo failed " << status;
     return status;
   }
 
@@ -273,11 +278,11 @@ zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_i
 
   if (end &&
       ((blocks * kBlobfsBlockSize) < safemath::checked_cast<uint64_t>(end.value() - start))) {
-    FX_LOGS(ERROR) << "Invalid file size";
+    FX_LOGS(ERROR) << "Invalid file size " << safemath::checked_cast<uint64_t>(end.value() - start);
     return ZX_ERR_BAD_STATE;
   }
   if ((status = CheckSuperblock(&info_block.info, blocks)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Info check failed";
+    FX_LOGS(ERROR) << "Info check failed " << status;
     return status;
   }
 
@@ -292,6 +297,7 @@ zx_status_t get_superblock(const fbl::unique_fd& fd, off_t start, std::optional<
   zx_status_t status;
 
   if ((status = blobfs_load_info_block(fd, &info_block, start, end)) != ZX_OK) {
+    FX_LOGS(ERROR) << "Load of info block failed " << status;
     return status;
   }
 
@@ -642,6 +648,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
     zx_status_t status;
     if ((i % kBlobfsInodesPerBlock) == 0) {
       if ((status = ReadBlock(bno)) != ZX_OK) {
+        FX_LOGS(ERROR) << "error: Failed to read block " << status;
         return status;
       }
     }
@@ -650,6 +657,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
     auto observed_inode = &iblk[i % kBlobfsInodesPerBlock];
     if (observed_inode->header.IsAllocated() && !observed_inode->header.IsExtentContainer()) {
       if (digest == observed_inode->merkle_root_hash) {
+        FX_LOGS(ERROR) << "Blob already exists " << digest.ToString();
         return ZX_ERR_ALREADY_EXISTS;
       }
     } else if (ino >= info_.inode_count) {
@@ -661,12 +669,15 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
   }
 
   if (ino >= info_.inode_count) {
+    FX_LOGS(ERROR) << "No inode resources left. requested inode number: " << ino
+                   << " more than allowed inode count: " << info_.inode_count;
     return ZX_ERR_NO_RESOURCES;
   }
 
   size_t bno = (ino / kBlobfsInodesPerBlock) + NodeMapStartBlock(info_);
   zx_status_t status;
   if ((status = ReadBlock(bno)) != ZX_OK) {
+    FX_LOGS(ERROR) << "ReadBlock failed " << status;
     return status;
   }
 
@@ -762,6 +773,7 @@ zx_status_t Blobfs::ReadBlock(size_t bno) {
   zx_status_t status;
   if ((cache_.bno != bno) &&
       ((status = ReadBlockOffset(blockfd_.get(), bno, offset_, &cache_.blk)) != ZX_OK)) {
+    FX_LOGS(ERROR) << "Failed to read a blob: " << status;
     return status;
   }
 
@@ -795,6 +807,7 @@ zx::status<InodePtr> Blobfs::GetNode(uint32_t index) {
   }
   size_t bno = node_map_start_block_ + index / kBlobfsInodesPerBlock;
   if (zx_status_t status = ReadBlock(bno); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to read block: " << status;
     return zx::error(status);
   }
 
