@@ -19,6 +19,7 @@ For instance,
 - fancy open quotes like «“so»
 - fancy close quotes like «so”»
 - or fancy single quotes like «d’Auzac» de Lamartinie
+- or fancy open single quotes like «‘»
 - or all together «“d’Et-bugge”»`,
 		},
 	}.runOverTokens(t, newSimpleUtf8Chars)

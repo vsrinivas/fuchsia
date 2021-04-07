@@ -28,6 +28,7 @@ func newSimpleUtf8Chars(reporter core.Reporter) core.LintRuleOverTokens {
 var dontButPrefer = map[rune]string{
 	'“': `"`,
 	'”': `"`,
+	'‘': `'`,
 	'’': `'`,
 	'…': `...`,
 }
