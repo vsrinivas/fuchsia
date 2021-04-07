@@ -23,7 +23,10 @@ use {
         future::Future,
         ops::DerefMut,
         pin::Pin,
-        sync::{Arc, Mutex},
+        sync::{
+            atomic::{AtomicU16, Ordering},
+            Arc, Mutex,
+        },
         task::{Context, Poll, Waker},
     },
 };
@@ -190,30 +193,47 @@ impl Drop for ResponseFuture {
 }
 
 /// Wraps a vmo-id. Will panic if you forget to detach.
-#[derive(Debug, Eq, PartialEq)]
-pub struct VmoId(u16);
+#[derive(Debug)]
+pub struct VmoId(AtomicU16);
 
 impl VmoId {
-    fn take(&mut self) -> VmoId {
-        let vmo_id = VmoId(self.0);
-        self.0 = BLOCK_VMOID_INVALID;
-        vmo_id
+    fn new(id: u16) -> Self {
+        Self(AtomicU16::new(id))
     }
 
-    fn into_id(mut self) -> u16 {
-        let id = self.0;
-        self.0 = BLOCK_VMOID_INVALID;
-        id
+    /// Invalidates self and returns a new VmoId with the same underlying ID.
+    pub fn take(&self) -> Self {
+        Self(AtomicU16::new(self.0.swap(BLOCK_VMOID_INVALID, Ordering::Relaxed)))
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.0.load(Ordering::Relaxed) != BLOCK_VMOID_INVALID
+    }
+
+    fn into_id(self) -> u16 {
+        self.0.swap(BLOCK_VMOID_INVALID, Ordering::Relaxed)
     }
 
     fn id(&self) -> u16 {
-        self.0
+        self.0.load(Ordering::Relaxed)
     }
 }
 
+impl PartialEq for VmoId {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.load(Ordering::Relaxed) == other.0.load(Ordering::Relaxed)
+    }
+}
+
+impl Eq for VmoId {}
+
 impl Drop for VmoId {
     fn drop(&mut self) {
-        assert_eq!(self.0, BLOCK_VMOID_INVALID, "Did you forget to detach?");
+        assert_eq!(
+            self.0.load(Ordering::Relaxed),
+            BLOCK_VMOID_INVALID,
+            "Did you forget to detach?"
+        );
     }
 }
 
@@ -302,7 +322,7 @@ impl RemoteBlockClient {
         let temp_vmo = zx::Vmo::create(TEMP_VMO_SIZE as u64)?;
         let (status, maybe_vmo_id) = block_device
             .attach_vmo(temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
-        let temp_vmo_id = VmoId(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
+        let temp_vmo_id = VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
         let device = Self {
             device: Mutex::new(block_device),
             block_size: info.block_size,
@@ -357,7 +377,7 @@ impl BlockClient for RemoteBlockClient {
         let mut device = self.device.lock().unwrap();
         let (status, maybe_vmo_id) = device
             .attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
-        Ok(VmoId(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
+        Ok(VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
     }
 
     /// Detaches the given vmo-id from the device.
