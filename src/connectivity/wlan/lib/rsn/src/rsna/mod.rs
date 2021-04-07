@@ -496,7 +496,12 @@ pub enum AuthStatus {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum SecAssocUpdate {
-    TxEapolKeyFrame(eapol::KeyFrameBuf),
+    TxEapolKeyFrame {
+        frame: eapol::KeyFrameBuf,
+        // Indicates whether we expect that our peer in the EAPOL exchange will send us a
+        // response to this frame. If so, we must also schedule a timeout for the response.
+        expect_response: bool,
+    },
     Key(Key),
     Status(SecAssocStatus),
     // These values are used to handle SAE exchanges.

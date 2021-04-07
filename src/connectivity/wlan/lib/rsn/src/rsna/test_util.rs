@@ -493,7 +493,7 @@ pub fn get_eapol_resp(updates: &[SecAssocUpdate]) -> Option<eapol::KeyFrameBuf> 
     updates
         .iter()
         .filter_map(|u| match u {
-            SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
+            SecAssocUpdate::TxEapolKeyFrame { frame, .. } => Some(frame),
             _ => None,
         })
         .next()

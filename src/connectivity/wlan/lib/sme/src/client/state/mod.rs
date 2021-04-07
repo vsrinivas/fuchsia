@@ -1547,7 +1547,10 @@ mod tests {
         assert!(suppl_mock.is_supplicant_started());
 
         // (mlme->sme) Send an EapolInd, mock supplicant with key frame
-        let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+        let update = SecAssocUpdate::TxEapolKeyFrame {
+            frame: test_utils::eapol_key_frame(),
+            expect_response: false,
+        };
         let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_eapol_req(&mut h.mlme_stream, bssid);
@@ -1606,7 +1609,10 @@ mod tests {
         assert!(suppl_mock.is_supplicant_started());
 
         // (mlme->sme) Send an EapolInd, mock supplicant with key frame
-        let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+        let update = SecAssocUpdate::TxEapolKeyFrame {
+            frame: test_utils::eapol_key_frame(),
+            expect_response: true,
+        };
         let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_eapol_req(&mut h.mlme_stream, bssid);
@@ -1994,7 +2000,10 @@ mod tests {
         let state = establishing_rsna_state(command);
 
         // (mlme->sme) Send an EapolInd, mock supplication with key frame
-        let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+        let update = SecAssocUpdate::TxEapolKeyFrame {
+            frame: test_utils::eapol_key_frame(),
+            expect_response: true,
+        };
         let mut state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         for i in 1..=3 {
@@ -2028,7 +2037,10 @@ mod tests {
         let state = link_up_state_protected(supplicant, bssid);
 
         // (mlme->sme) Send an EapolInd, mock supplication with key frame and GTK
-        let key_frame = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+        let key_frame = SecAssocUpdate::TxEapolKeyFrame {
+            frame: test_utils::eapol_key_frame(),
+            expect_response: true,
+        };
         let gtk = SecAssocUpdate::Key(Key::Gtk(test_utils::gtk()));
         let mut state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![key_frame, gtk]);
 

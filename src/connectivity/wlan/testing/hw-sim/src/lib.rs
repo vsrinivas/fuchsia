@@ -471,13 +471,13 @@ pub fn process_tx_auth_updates(
                     .expect("Error sending fake SAE authentication frame.");
                 update_sink.remove(i);
             }
-            SecAssocUpdate::TxEapolKeyFrame(eapol_frame) if ready_for_eapol_frames => {
+            SecAssocUpdate::TxEapolKeyFrame { frame, .. } if ready_for_eapol_frames => {
                 rx_wlan_data_frame(
                     channel,
                     &CLIENT_MAC_ADDR,
                     &bssid.0,
                     &bssid.0,
-                    &eapol_frame[..],
+                    &frame[..],
                     mac::ETHER_TYPE_EAPOL,
                     phy,
                 )?;

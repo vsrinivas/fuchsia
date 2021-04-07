@@ -165,7 +165,7 @@ fn initiate_internal(
     let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let krc = krc + 1;
     let msg1 = create_message_1(anonce, &protection, krc)?;
-    update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg1));
+    update_sink.push(SecAssocUpdate::TxEapolKeyFrame { frame: msg1, expect_response: true });
     Ok(())
 }
 
@@ -223,7 +223,7 @@ fn process_message_2<B: ByteSlice>(
         next_krc,
     )?;
 
-    update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg3));
+    update_sink.push(SecAssocUpdate::TxEapolKeyFrame { frame: msg3, expect_response: true });
     Ok((ptk, gtk, igtk))
 }
 

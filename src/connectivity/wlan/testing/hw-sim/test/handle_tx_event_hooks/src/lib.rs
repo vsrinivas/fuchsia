@@ -68,8 +68,7 @@ fn handle_phy_event(
                 // the update_sink avoids adding entries to all_auth_updates twice.
                 for update in update_sink.drain(..) {
                     if let SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished) = update {
-                        if let Some(esssa_established_sender) =
-                            esssa_established_sender_ptr.take()
+                        if let Some(esssa_established_sender) = esssa_established_sender_ptr.take()
                         {
                             esssa_established_sender.send(()).map_err(|e| {
                                 format_err!(
@@ -144,8 +143,8 @@ async fn handle_tx_event_hooks() {
     // The process_auth_update hook for this test collects all of the updates that appear
     // in an update_sink while connecting to a WPA2 AP.
     assert_variant!(&all_auth_updates[0], SecAssocUpdate::Status(SecAssocStatus::PmkSaEstablished));
-    assert_variant!(&all_auth_updates[1], SecAssocUpdate::TxEapolKeyFrame(..));
-    assert_variant!(&all_auth_updates[2], SecAssocUpdate::TxEapolKeyFrame(..));
+    assert_variant!(&all_auth_updates[1], SecAssocUpdate::TxEapolKeyFrame { .. });
+    assert_variant!(&all_auth_updates[2], SecAssocUpdate::TxEapolKeyFrame { .. });
     assert_variant!(&all_auth_updates[3], SecAssocUpdate::Key(Key::Ptk(..)));
     assert_variant!(&all_auth_updates[4], SecAssocUpdate::Key(Key::Gtk(..)));
     assert_variant!(&all_auth_updates[5], SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));

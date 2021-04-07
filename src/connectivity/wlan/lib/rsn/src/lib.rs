@@ -624,7 +624,7 @@ mod tests {
         );
 
         // ESSSA should also transmit an EAPOL frame since this is the Authenticator.
-        assert_variant!(&dummy_update_sink[3], &SecAssocUpdate::TxEapolKeyFrame(_));
+        assert_variant!(&dummy_update_sink[3], &SecAssocUpdate::TxEapolKeyFrame { .. });
     }
 
     #[test]

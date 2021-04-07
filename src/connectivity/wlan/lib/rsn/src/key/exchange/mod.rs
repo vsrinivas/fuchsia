@@ -62,6 +62,7 @@ impl Method {
             }
         }
     }
+
     pub fn initiate(
         &mut self,
         update_sink: &mut UpdateSink,

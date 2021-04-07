@@ -371,7 +371,7 @@ impl RsnaLinkState {
     ) {
         for update in update_sink {
             match update {
-                SecAssocUpdate::TxEapolKeyFrame(frame) => {
+                SecAssocUpdate::TxEapolKeyFrame { frame, .. } => {
                     r_sta.send_eapol_req(ctx, frame.clone());
                     self.last_key_frame = Some(frame.clone());
                 }
@@ -1849,9 +1849,10 @@ mod tests {
                     negotiation_timeout_event_id: Some(2),
                     authenticator: Box::new(MockAuthenticator::new(
                         Arc::new(Mutex::new(vec![])),
-                        Arc::new(Mutex::new(vec![SecAssocUpdate::TxEapolKeyFrame(
-                            test_utils::eapol_key_frame(),
-                        )])),
+                        Arc::new(Mutex::new(vec![SecAssocUpdate::TxEapolKeyFrame {
+                            frame: test_utils::eapol_key_frame(),
+                            expect_response: false,
+                        }])),
                     )),
                 }),
             })
@@ -1891,9 +1892,10 @@ mod tests {
                     negotiation_timeout_event_id: Some(2),
                     authenticator: Box::new(MockAuthenticator::new(
                         Arc::new(Mutex::new(vec![])),
-                        Arc::new(Mutex::new(vec![SecAssocUpdate::TxEapolKeyFrame(
-                            test_utils::eapol_key_frame(),
-                        )])),
+                        Arc::new(Mutex::new(vec![SecAssocUpdate::TxEapolKeyFrame {
+                            frame: test_utils::eapol_key_frame(),
+                            expect_response: false,
+                        }])),
                     )),
                 }),
             })

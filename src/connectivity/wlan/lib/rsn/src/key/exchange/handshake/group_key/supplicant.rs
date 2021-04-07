@@ -81,7 +81,7 @@ impl Supplicant {
 
         // Construct second message of handshake.
         let msg2 = self.create_message_2(&frame)?;
-        update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
+        update_sink.push(SecAssocUpdate::TxEapolKeyFrame { frame: msg2, expect_response: false });
         update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
         if let Some(igtk) = igtk {
             update_sink.push(SecAssocUpdate::Key(Key::Igtk(igtk)));

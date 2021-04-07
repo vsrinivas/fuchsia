@@ -246,7 +246,10 @@ impl State {
                             return State::AwaitingMsg1 { pmk, cfg, snonce };
                         }
                         Ok((msg2, ptk, anonce)) => {
-                            update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
+                            update_sink.push(SecAssocUpdate::TxEapolKeyFrame {
+                                frame: msg2,
+                                expect_response: true,
+                            });
                             State::AwaitingMsg3 { pmk, ptk, cfg, snonce, anonce }
                         }
                     }
@@ -302,7 +305,10 @@ impl State {
                                 State::AwaitingMsg1 { pmk, cfg, snonce }
                             }
                             Ok((msg4, gtk, igtk)) => {
-                                update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
+                                update_sink.push(SecAssocUpdate::TxEapolKeyFrame {
+                                    frame: msg4,
+                                    expect_response: false,
+                                });
                                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                                 if let Some(gtk) = gtk.as_ref() {
                                     update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())))
@@ -361,7 +367,10 @@ impl State {
                                 };
 
                                 if gtk_unchanged && igtk_unchanged {
-                                    update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
+                                    update_sink.push(SecAssocUpdate::TxEapolKeyFrame {
+                                        frame: msg4,
+                                        expect_response: false,
+                                    });
                                 } else {
                                     error!("error: GTK or IGTK differs in replayed 3rd message");
                                     // TODO(hahnr): Cancel RSNA and deauthenticate from network.

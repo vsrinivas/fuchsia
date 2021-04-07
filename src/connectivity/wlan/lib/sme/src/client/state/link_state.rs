@@ -109,14 +109,14 @@ impl EstablishingRsna {
         if triggered(&self.resp_timeout, event_id) {
             if timeout.attempt < event::KEY_FRAME_EXCHANGE_MAX_ATTEMPTS {
                 warn!("timeout waiting for key frame for attempt {}; retrying", timeout.attempt);
-                let id = send_eapol_frame(
+                send_eapol_frame(
                     context,
                     timeout.bssid,
                     timeout.sta_addr,
                     timeout.frame,
-                    timeout.attempt + 1,
-                );
-                self.resp_timeout.replace(id);
+                    Some(timeout.attempt + 1),
+                )
+                .map(|id| self.resp_timeout.replace(id));
                 Ok(self)
             } else {
                 error!("timeout waiting for key frame for last attempt; deauth");
@@ -391,20 +391,27 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
     };
 }
 
+/// Sends an eapol frame, and optionally schedules a timeout for the response.
+/// If schedule_timeout_attempt.is_some(), we should expect our peer to send us
+/// an eapol frame in response to this one. In this case we schedule a new
+/// timeout with the given attempt number and return the corresponding event id.
 fn send_eapol_frame(
     context: &mut Context,
     bssid: [u8; 6],
     sta_addr: [u8; 6],
     frame: eapol::KeyFrameBuf,
-    attempt: u32,
-) -> EventId {
-    let resp_timeout_id = context.timer.schedule(event::KeyFrameExchangeTimeout {
-        bssid,
-        sta_addr,
-        frame: frame.clone(),
-        attempt,
-    });
-
+    schedule_timeout_attempt: Option<u32>,
+) -> Option<EventId> {
+    let resp_timeout_id = if let Some(attempt) = schedule_timeout_attempt {
+        Some(context.timer.schedule(event::KeyFrameExchangeTimeout {
+            bssid,
+            sta_addr,
+            frame: frame.clone(),
+            attempt,
+        }))
+    } else {
+        None
+    };
     inspect_log!(context.inspect.rsn_events.lock(), tx_eapol_frame: InspectBytes(&frame[..]));
     context.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
         src_addr: sta_addr,
@@ -491,8 +498,13 @@ fn process_eapol_updates(
         match update {
             // ESS Security Association requests to send an EAPOL frame.
             // Forward EAPOL frame to MLME.
-            SecAssocUpdate::TxEapolKeyFrame(frame) => {
-                new_resp_timeout.replace(send_eapol_frame(context, bssid, sta_addr, frame, 1));
+            SecAssocUpdate::TxEapolKeyFrame { frame, expect_response } => {
+                let schedule_timeout_attempt = if expect_response { Some(1) } else { None };
+                if let Some(timeout) =
+                    send_eapol_frame(context, bssid, sta_addr, frame, schedule_timeout_attempt)
+                {
+                    new_resp_timeout.replace(timeout);
+                }
             }
             // ESS Security Association derived a new key.
             // Configure key in MLME.
