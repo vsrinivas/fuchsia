@@ -268,6 +268,11 @@ impl FxFilesystem {
     pub fn set_volume_info_object_id(&self, object_id: u64) {
         self.journal.set_volume_info_object_id(object_id);
     }
+
+    pub async fn close(&self) -> Result<(), Error> {
+        self.journal.sync(SyncOptions::default()).await?;
+        self.device.close().await
+    }
 }
 
 #[async_trait]

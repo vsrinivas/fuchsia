@@ -8,7 +8,7 @@ use {
         buffer_allocator::{BufferAllocator, BufferSource},
         Device,
     },
-    anyhow::Error,
+    anyhow::{ensure, Error},
     async_trait::async_trait,
     fuchsia_runtime::vmar_root_self,
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -51,8 +51,8 @@ impl VmoBufferSource {
         &self.vmoid
     }
 
-    fn take_vmoid(self) -> VmoId {
-        self.vmoid
+    fn take_vmoid(&self) -> VmoId {
+        self.vmoid.take()
     }
 }
 
@@ -118,13 +118,15 @@ impl Device for BlockDevice {
     }
 
     async fn read(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<(), Error> {
+        let vmoid = self.buffer_source().vmoid();
+        ensure!(vmoid.is_valid(), "Device is closed");
         assert_eq!(offset % self.block_size() as u64, 0);
         assert_eq!(buffer.range().start % self.block_size() as usize, 0);
         assert_eq!((offset + buffer.len() as u64) % self.block_size() as u64, 0);
         self.remote
             .read_at(
                 MutableBufferSlice::new_with_vmo_id(
-                    self.buffer_source().vmoid(),
+                    vmoid,
                     buffer.range().start as u64,
                     buffer.len() as u64,
                 ),
@@ -134,13 +136,15 @@ impl Device for BlockDevice {
     }
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
+        let vmoid = self.buffer_source().vmoid();
+        ensure!(vmoid.is_valid(), "Device is closed");
         assert_eq!(offset % self.block_size() as u64, 0);
         assert_eq!(buffer.range().start % self.block_size() as usize, 0);
         assert_eq!((offset + buffer.len() as u64) % self.block_size() as u64, 0);
         self.remote
             .write_at(
                 BufferSlice::new_with_vmo_id(
-                    self.buffer_source().vmoid(),
+                    vmoid,
                     buffer.range().start as u64,
                     buffer.len() as u64,
                 ),
@@ -149,10 +153,8 @@ impl Device for BlockDevice {
             .await
     }
 
-    async fn close(self) -> Result<(), Error> {
-        let source =
-            self.allocator.take_buffer_source().into_any().downcast::<VmoBufferSource>().unwrap();
-        self.remote.detach_vmo(source.take_vmoid()).await
+    async fn close(&self) -> Result<(), Error> {
+        self.remote.detach_vmo(self.buffer_source().take_vmoid()).await
     }
 }
 

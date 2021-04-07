@@ -78,7 +78,7 @@ impl Device for FileBackedDevice {
         Ok(())
     }
 
-    async fn close(self) -> Result<(), Error> {
+    async fn close(&self) -> Result<(), Error> {
         // This isn't actually async, but that probably doesn't matter for host usage.
         self.file.sync_all()?;
         Ok(())
