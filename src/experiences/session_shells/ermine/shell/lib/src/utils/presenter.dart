@@ -70,8 +70,6 @@ class PresenterService extends fidl.GraphicalPresenter {
         usePlatformView: true,
         onAvailable: (childViewConnection) =>
             viewController.viewConnectionAvailable.value = true,
-        onUnavailable: (childViewConnection) =>
-            viewController.viewConnectionAvailable.value = false,
         onStateChanged: (_, state) => viewController.stateChanged.value = state,
       );
       onPresent(

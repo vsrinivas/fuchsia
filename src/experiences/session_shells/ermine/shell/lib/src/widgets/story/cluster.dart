@@ -16,7 +16,7 @@ import 'tile_chrome.dart';
 import 'tile_sizer.dart';
 import 'tile_tab.dart';
 
-const _kDelay = 250;
+const _kDelay = 500;
 
 /// Defines a widget to cluster [Story] widgets built by the [Tiler] widget.
 class Cluster extends StatelessWidget {
