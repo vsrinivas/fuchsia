@@ -12,7 +12,7 @@
 #include <zircon/pixelformat.h>
 
 #include "aml-dsi-host.h"
-#include "aml-hdmitx.h"
+#include "aml-hdmi-host.h"
 #include "amlogic-clock.h"
 
 namespace amlogic_display {
@@ -39,7 +39,7 @@ class Vout {
       case kDsi:
         return dsi_.disp_setting.h_active;
       case kHdmi:
-        return hdmi_.hdmitx->GetCurDisplayMode()->h_addressable;
+        return hdmi_.cur_display_mode_.h_addressable;
       default:
         return 0;
     }
@@ -49,7 +49,7 @@ class Vout {
       case kDsi:
         return dsi_.disp_setting.v_active;
       case kHdmi:
-        return hdmi_.hdmitx->GetCurDisplayMode()->v_addressable;
+        return hdmi_.cur_display_mode_.v_addressable;
       default:
         return 0;
     }
@@ -59,7 +59,7 @@ class Vout {
       case kDsi:
         return dsi_.width;
       case kHdmi:
-        return hdmi_.hdmitx->GetCurDisplayMode()->h_addressable;
+        return hdmi_.cur_display_mode_.h_addressable;
       default:
         return 0;
     }
@@ -69,7 +69,7 @@ class Vout {
       case kDsi:
         return dsi_.height;
       case kHdmi:
-        return hdmi_.hdmitx->GetCurDisplayMode()->v_addressable;
+        return hdmi_.cur_display_mode_.v_addressable;
       default:
         return 0;
     }
@@ -105,7 +105,9 @@ class Vout {
   } dsi_;
 
   struct hdmi_t {
-    std::unique_ptr<amlogic_display::AmlHdmitx> hdmitx;
+    std::unique_ptr<amlogic_display::AmlHdmiHost> hdmi_host;
+
+    display_mode_t cur_display_mode_;
   } hdmi_;
 };
 

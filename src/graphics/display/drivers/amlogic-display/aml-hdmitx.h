@@ -110,44 +110,33 @@ struct hdmi_param {
   bool is4K;
 };
 
+struct hdmi_color_param {
+  uint8_t input_color_format;
+  uint8_t output_color_format;
+  uint8_t color_depth;
+};
+
 // TODO(fxb/69026): move HDMI to its own device
 class AmlHdmitx {
  public:
-  AmlHdmitx(zx_device_t* parent) : pdev_(ddk::PDev::FromFragment(parent)) {}
+  explicit AmlHdmitx(ddk::PDev pdev) : pdev_(pdev) {}
 
   zx_status_t Init();
   zx_status_t InitHw();
-  zx_status_t InitInterface();
+  zx_status_t InitInterface(const hdmi_param* p, const hdmi_color_param* c);
+
+  void WriteReg(uint32_t addr, uint32_t data);
+  uint32_t ReadReg(uint32_t addr);
 
   void ShutDown();
-
-  void UpdateOutputColorFormat(uint8_t output_color_format) {
-    output_color_format_ = output_color_format;
-  }
-
-  zx_status_t GetVic(const display_mode_t* disp_timing);
-  const display_mode_t* GetCurDisplayMode() { return &cur_display_mode_; }
-  void SaveCurDisplayMode(const display_mode_t* mode) {
-    memcpy(&cur_display_mode_, mode, sizeof(display_mode_t));
-  }
 
   zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
 
  private:
-  friend class AmlogicDisplay;
-
-  zx_status_t ConfigurePll(const struct hdmi_param* p, const struct pll_param* pll);
-  void ConfigureHpllClkOut(uint32_t hpll);
-  void ConfigureOd3Div(uint32_t div_sel);
-  void WaitForPllLocked();
-
-  void ConfigEncoder(const struct hdmi_param* p);
-  void ConfigHdmitx(const struct hdmi_param* p);
-  void ConfigPhy(const struct hdmi_param* p);
-  void ConfigCsc(const struct hdmi_param* p);
-
-  void WriteReg(uint32_t addr, uint32_t data);
-  uint32_t ReadReg(uint32_t addr);
+  void ConfigEncoder(const hdmi_param* p);
+  void ConfigHdmitx(const hdmi_param* p, const hdmi_color_param* c);
+  void ConfigPhy(const hdmi_param* p);
+  void ConfigCsc(const hdmi_color_param* c);
 
   void ScdcWrite(uint8_t addr, uint8_t val);
   void ScdcRead(uint8_t addr, uint8_t* val);
@@ -159,13 +148,6 @@ class AmlHdmitx {
   std::optional<ddk::MmioBuffer> hdmitx_mmio_ TA_GUARDED(register_lock_);
   std::optional<ddk::MmioBuffer> hhi_mmio_;
   std::optional<ddk::MmioBuffer> cbus_mmio_;
-
-  uint8_t input_color_format_ = HDMI_COLOR_FORMAT_444;
-  uint8_t output_color_format_ = HDMI_COLOR_FORMAT_444;
-  uint8_t color_depth_ = HDMI_COLOR_DEPTH_24B;
-
-  hdmi_param p_;
-  display_mode_t cur_display_mode_;
 
   fbl::Mutex i2c_lock_;
 };

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-hdmitx.h"
+#include "aml-hdmi-host.h"
 #include "amlogic-display.h"
 #include "hhi-regs.h"
 #include "vpu-regs.h"
@@ -17,7 +17,7 @@ const uint32_t kFracMax = 131072;
 
 }  // namespace
 
-void AmlHdmitx::WaitForPllLocked() {
+void AmlHdmiHost::WaitForPllLocked() {
   bool err = false;
   do {
     unsigned int st = 0;
@@ -46,7 +46,9 @@ void AmlHdmitx::WaitForPllLocked() {
   } while (err);
 }
 
-zx_status_t AmlHdmitx::ConfigurePll(const struct hdmi_param* p, const struct pll_param* pll) {
+zx_status_t AmlHdmiHost::ConfigurePll() {
+  const struct pll_param* pll = &p_.pll_p_24b;
+
   // Set VIU Mux Ctrl
   if (pll->viu_channel == 1) {
     VpuVpuViuVencMuxCtrlReg::Get()
@@ -116,7 +118,7 @@ zx_status_t AmlHdmitx::ConfigurePll(const struct hdmi_param* p, const struct pll
   return ZX_OK;
 }
 
-void AmlHdmitx::ConfigureHpllClkOut(uint32_t hpll) {
+void AmlHdmiHost::ConfigureHpllClkOut(uint32_t hpll) {
   float desired_pll = (float)hpll / (float)24000;
   uint8_t whole;
   uint16_t frac;
@@ -161,7 +163,7 @@ void AmlHdmitx::ConfigureHpllClkOut(uint32_t hpll) {
   WaitForPllLocked();
 }
 
-void AmlHdmitx::ConfigureOd3Div(uint32_t div_sel) {
+void AmlHdmiHost::ConfigureOd3Div(uint32_t div_sel) {
   int shift_val = 0;
   int shift_sel = 0;
 

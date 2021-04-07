@@ -2,13 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ddk/debug.h>
+#include "aml-hdmi-host.h"
 
-#include "aml-hdmitx.h"
+#include <fbl/alloc_checker.h>
 
 namespace amlogic_display {
 
-zx_status_t AmlHdmitx::GetVic(const display_mode_t* disp_timing) {
+zx_status_t AmlHdmiHost::Init() {
+  // Map registers
+  auto status = pdev_.MapMmio(MMIO_VPU, &vpu_mmio_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not map VPU mmio\n");
+    return status;
+  }
+
+  status = pdev_.MapMmio(MMIO_HHI, &hhi_mmio_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not map HHI mmio\n");
+    return status;
+  }
+
+  fbl::AllocChecker ac;
+  hdmitx_ = fbl::make_unique_checked<amlogic_display::AmlHdmitx>(&ac, pdev_);
+  if (!ac.check()) {
+    DISP_ERROR("Could not create AmlHdmitx object\n");
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  status = hdmitx_->Init();
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not initialize HDMITX\n");
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t AmlHdmiHost::GetVic(const display_mode_t* disp_timing) {
   // Monitor has its own preferred timings. Use that
   p_.timings.interlace_mode = disp_timing->flags & MODE_FLAG_INTERLACED;
   p_.timings.pfreq = (disp_timing->pixel_clock_10khz * 10);  // KHz
