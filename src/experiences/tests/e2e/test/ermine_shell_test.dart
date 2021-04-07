@@ -4,10 +4,9 @@
 
 import 'dart:math';
 
+import 'package:ermine_driver/ermine_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
-
-import 'ermine_driver.dart';
 
 void main() {
   Sl4f sl4f;

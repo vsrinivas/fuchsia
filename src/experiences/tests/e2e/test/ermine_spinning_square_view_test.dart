@@ -4,12 +4,11 @@
 
 import 'dart:math';
 
-import 'package:image/image.dart';
+import 'package:ermine_driver/ermine_driver.dart';
 import 'package:flutter_driver/flutter_driver.dart';
+import 'package:image/image.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
-
-import 'ermine_driver.dart';
 
 /// Tests that the DUT running ermine can do the following:
 ///  - Launch `spinning_square_view` ephemeral package.

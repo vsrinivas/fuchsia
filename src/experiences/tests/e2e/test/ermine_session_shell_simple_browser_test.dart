@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:math';
+
+import 'package:ermine_driver/ermine_driver.dart';
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 import 'package:webdriver/sync_io.dart';
-
-import 'ermine_driver.dart';
 
 const _timeoutSeconds = 10;
 const _timeout = Duration(seconds: _timeoutSeconds);

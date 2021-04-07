@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:ermine_driver/ermine_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
-
-import 'ermine_driver.dart';
 
 /// Tests that the DUT running ermine can do the following:
 ///  - Connect to ermine using Flutter Driver.
