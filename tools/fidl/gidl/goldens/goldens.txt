@@ -1,0 +1,3 @@
+go_golden.go.golden
+hlcpp_golden.cc.golden
+llcpp_golden.cc.golden

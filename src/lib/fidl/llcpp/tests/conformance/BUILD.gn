@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/testing/golden_test.gni")
 import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
@@ -14,7 +13,6 @@ group("conformance") {
     ":fidl_llcpp_conformance_tests",
     ":fidl_llcpp_conformance_tests_bin($host_toolchain)",
     ":fidl_llcpp_manual_conformance_tests",
-    ":gidl_llcpp_golden_tests($host_toolchain)",
   ]
 }
 
@@ -33,23 +31,6 @@ foreach(gidl_file, conformance_suite_gidl_files) {
     if (is_fuchsia) {
       deps += [ "//sdk/cts/tests/pkg/fidl/cpp:handle_util" ]
     }
-  }
-}
-
-golden_test("gidl_llcpp_golden_tests") {
-  goldens_dir = "gidl_goldens"
-  deps = []
-  entries = []
-  foreach(gidl_file, conformance_suite_golden_gidl_files) {
-    gidl_name = get_path_info(gidl_file, "name")
-    target = "${gidl_output_prefix}${gidl_name}"
-    deps = [ ":${target}" ]
-    entries += [
-      {
-        golden = "${gidl_name}.cc.golden"
-        generated = "${target_gen_dir}/gidl_generated_${target}.cc"
-      },
-    ]
   }
 }
 

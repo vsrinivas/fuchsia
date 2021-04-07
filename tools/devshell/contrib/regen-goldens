@@ -61,8 +61,7 @@ readonly all_tools=(
     "fidlgen_llcpp tools/fidl/fidlgen_llcpp/goldens"
     "fidlgen_rust tools/fidl/fidlgen_rust/goldens"
     "fidlgen_syzkaller tools/fidl/fidlgen_syzkaller/goldens"
-    "gidl_hlcpp sdk/cts/tests/pkg/fidl/cpp/gidl_goldens"
-    "gidl_llcpp src/lib/fidl/llcpp/tests/conformance/gidl_goldens"
+    "gidl tools/fidl/gidl/goldens"
 )
 
 # This environment variable is only set during tests.

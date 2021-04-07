@@ -1,1 +1,0 @@
-gidl_goldens.cc.golden

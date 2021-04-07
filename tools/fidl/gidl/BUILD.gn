@@ -7,7 +7,10 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
+import("//build/testing/golden_test.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/..."
@@ -74,6 +77,7 @@ group("tests") {
 
   deps = [
     ":gidl_golang_test($host_toolchain)",
+    ":gidl_golden_tests($host_toolchain)",
     ":gidl_mixer_test($host_toolchain)",
     ":gidl_parser_test($host_toolchain)",
   ]
@@ -108,5 +112,65 @@ if (is_host) {
     ]
     deps = [ ":gopkg" ]
     non_go_deps = [ ":gidl_mixer_test_json" ]
+  }
+}
+
+llcpp_gidl_output_prefix = "conformance_suite__"
+foreach(gidl_file, conformance_suite_golden_gidl_files) {
+  gidl_name = get_path_info(gidl_file, "name")
+  target = "${llcpp_gidl_output_prefix}${gidl_name}"
+  gidl_llcpp_conformance(target) {
+    testonly = true
+    inputs = [ gidl_file ]
+    fidl = conformance_suite_fidl_target
+    deps = [ "//third_party/googletest:gtest" ]
+    if (is_fuchsia) {
+      deps += [ "//sdk/cts/tests/pkg/fidl/cpp:handle_util" ]
+    }
+  }
+}
+
+gidl_hlcpp_conformance("gidl_hlcpp_goldens") {
+  testonly = true
+  inputs = conformance_suite_golden_gidl_files
+  fidl = conformance_suite_fidl_target
+}
+
+go_golden_generated_source = "$target_gen_dir/gidl_conformance_goldens.go"
+gidl("gidl_go_goldens") {
+  testonly = true
+  type = "conformance"
+  language = "go"
+  inputs = conformance_suite_golden_gidl_files
+  fidl = conformance_suite_fidl_target
+  output = go_golden_generated_source
+}
+
+golden_test("gidl_golden_tests") {
+  goldens_dir = "goldens"
+  deps = [
+    ":gidl_go_goldens",
+    ":gidl_hlcpp_goldens_gidl",
+  ]
+  entries = [
+    {
+      golden = "go_golden.go.golden"
+      generated = go_golden_generated_source
+    },
+    {
+      golden = "hlcpp_golden.cc.golden"
+      generated = "${target_gen_dir}/gidl_generated_gidl_hlcpp_goldens.cc"
+    },
+  ]
+  foreach(gidl_file, conformance_suite_golden_gidl_files) {
+    gidl_name = get_path_info(gidl_file, "name")
+    target = "${llcpp_gidl_output_prefix}${gidl_name}"
+    deps += [ ":${target}" ]
+    entries += [
+      {
+        golden = "llcpp_${gidl_name}.cc.golden"
+        generated = "${target_gen_dir}/gidl_generated_${target}.cc"
+      },
+    ]
   }
 }

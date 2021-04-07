@@ -1,0 +1,921 @@
+package fidl_test
+
+import (
+	"math"
+	"reflect"
+	"testing"
+
+	"fidl/conformance"
+
+	"syscall/zx"
+	"syscall/zx/fidl"
+)
+
+// Avoid unused import warnings if certain tests are disabled.
+var _ = math.Float32frombits
+var _ = reflect.Copy
+
+func TestAllEncodeSuccessCases(t *testing.T) {
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenBoolStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenBoolStruct{
+				V: true,
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenIntStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenIntStruct{
+				V: 0x1,
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenUintStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenUintStruct{
+				V: 0x1,
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenFloatStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenFloatStruct{
+				V: 0,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenDoubleStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenDoubleStruct{
+				V: 0,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenStringStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenStringStruct{
+				V: "abcd",
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableStringStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStringStruct{
+				V: &[]string{"abcd"}[0],
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableStringStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStringStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenEnumStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenEnumStruct{
+				V: conformance.GoldenEnum(1),
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenBitsStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenBitsStruct{
+				V: conformance.GoldenBits(1),
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenTableStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenTableStruct{
+				V: conformance.GoldenTable{
+					V:        0x1,
+					VPresent: true,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenUnionStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenUnionStruct{
+				V: conformance.GoldenUnion{
+					I_goldenUnionTag: conformance.GoldenUnionV,
+					V:                0x1,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableUnionStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableUnionStruct{
+				V: &conformance.GoldenUnion{
+					I_goldenUnionTag: conformance.GoldenUnionV,
+					V:                0x1,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableUnionStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableUnionStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenByteArrayStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenByteArrayStruct{
+				V: [4]uint8{
+					0x1,
+					0x2,
+					0x3,
+					0x4,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenStructArrayStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenStructArrayStruct{
+				V: [2]conformance.GoldenIntStruct{
+					conformance.GoldenIntStruct{
+						V: 0x1,
+					},
+					conformance.GoldenIntStruct{
+						V: 0x2,
+					},
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenByteVectorStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenByteVectorStruct{
+				V: []uint8{
+					0x1,
+					0x2,
+					0x3,
+					0x4,
+				},
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenByteNullableVectorStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableByteVectorStruct{
+				V: &[]uint8{
+					0x1,
+					0x2,
+					0x3,
+					0x4,
+				},
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableByteVectorStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableByteVectorStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenStructVectorStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenStructVectorStruct{
+				V: []conformance.GoldenIntStruct{
+					conformance.GoldenIntStruct{
+						V: 0x1,
+					},
+					conformance.GoldenIntStruct{
+						V: 0x2,
+					},
+				},
+			},
+			bytes: []byte{
+				0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStruct{
+				V: &conformance.GoldenBoolStruct{
+					V: true,
+				},
+			},
+			bytes: []byte{
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		handleDefs := []handleDef{
+
+			// #0:
+			{
+				subtype: zx.ObjectTypeChannel,
+				rights:  61454,
+			},
+		}
+		handles := createHandlesFromHandleDef(handleDefs)
+		encodeSuccessCase{
+			name:    "GoldenHandleBasicRightsStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenHandleBasicRightsStruct{
+				V: zx.Event(handles[0]),
+			},
+			bytes: []byte{
+				0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+			},
+			handleDispositions: []zx.HandleDisposition{
+				{
+					Operation: zx.HandleOpMove,
+					Handle:    handles[0],
+					Type:      5,
+					Rights:    49155,
+					Result:    zx.ErrOk,
+				},
+			},
+			checkRights: true,
+		}.check(t)
+	}
+
+	{
+		handleDefs := []handleDef{
+
+			// #0:
+			{
+				subtype: zx.ObjectTypeEvent,
+				rights:  2147483648,
+			},
+		}
+		handles := createHandlesFromHandleDef(handleDefs)
+		encodeSuccessCase{
+			name:    "GoldenNullableHandleStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableHandleStruct{
+				V: handles[0],
+			},
+			bytes: []byte{
+				0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+			},
+			handleDispositions: []zx.HandleDisposition{
+				{
+					Operation: zx.HandleOpMove,
+					Handle:    handles[0],
+					Type:      0,
+					Rights:    2147483648,
+					Result:    zx.ErrOk,
+				},
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+	{
+		encodeSuccessCase{
+			name:    "GoldenNullableHandleStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableHandleStruct{
+				V: zx.HandleInvalid,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			checkRights: false,
+		}.check(t)
+	}
+
+}
+
+func TestAllDecodeSuccessCases(t *testing.T) {
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenBoolStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenBoolStruct{
+				V: true,
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenIntStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenIntStruct{
+				V: 0x1,
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenUintStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenUintStruct{
+				V: 0x1,
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenFloatStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenFloatStruct{
+				V: 0,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenDoubleStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenDoubleStruct{
+				V: 0,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenStringStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenStringStruct{
+				V: "abcd",
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableStringStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStringStruct{
+				V: &[]string{"abcd"}[0],
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableStringStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStringStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenEnumStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenEnumStruct{
+				V: conformance.GoldenEnum(1),
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenBitsStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenBitsStruct{
+				V: conformance.GoldenBits(1),
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenTableStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenTableStruct{
+				V: conformance.GoldenTable{
+					V:        0x1,
+					VPresent: true,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenUnionStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenUnionStruct{
+				V: conformance.GoldenUnion{
+					I_goldenUnionTag: conformance.GoldenUnionV,
+					V:                0x1,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableUnionStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableUnionStruct{
+				V: &conformance.GoldenUnion{
+					I_goldenUnionTag: conformance.GoldenUnionV,
+					V:                0x1,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableUnionStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableUnionStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenByteArrayStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenByteArrayStruct{
+				V: [4]uint8{
+					0x1,
+					0x2,
+					0x3,
+					0x4,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenStructArrayStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenStructArrayStruct{
+				V: [2]conformance.GoldenIntStruct{
+					conformance.GoldenIntStruct{
+						V: 0x1,
+					},
+					conformance.GoldenIntStruct{
+						V: 0x2,
+					},
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenByteVectorStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenByteVectorStruct{
+				V: []uint8{
+					0x1,
+					0x2,
+					0x3,
+					0x4,
+				},
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenByteNullableVectorStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableByteVectorStruct{
+				V: &[]uint8{
+					0x1,
+					0x2,
+					0x3,
+					0x4,
+				},
+			},
+			bytes: []byte{
+				0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableByteVectorStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableByteVectorStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenStructVectorStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenStructVectorStruct{
+				V: []conformance.GoldenIntStruct{
+					conformance.GoldenIntStruct{
+						V: 0x1,
+					},
+					conformance.GoldenIntStruct{
+						V: 0x2,
+					},
+				},
+			},
+			bytes: []byte{
+				0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStruct{
+				V: &conformance.GoldenBoolStruct{
+					V: true,
+				},
+			},
+			bytes: []byte{
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableStruct{
+				V: nil,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+	{
+		handleDefs := []handleDef{
+
+			// #0:
+			{
+				subtype: zx.ObjectTypeEvent,
+				rights:  53251,
+			},
+		}
+		handles := createHandlesFromHandleDef(handleDefs)
+		decodeSuccessCase{
+			name:    "GoldenHandleBasicRightsStruct_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenHandleBasicRightsStruct{
+				V: zx.Event(handles[0]),
+			},
+			bytes: []byte{
+				0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+			},
+			handleInfos: []zx.HandleInfo{
+				{Handle: handles[0], Type: handleDefs[0].subtype, Rights: handleDefs[0].rights},
+			},
+		}.check(t)
+	}
+
+	{
+		handleDefs := []handleDef{
+
+			// #0:
+			{
+				subtype: zx.ObjectTypeEvent,
+				rights:  2147483648,
+			},
+		}
+		handles := createHandlesFromHandleDef(handleDefs)
+		decodeSuccessCase{
+			name:    "GoldenNullableHandleStructNonNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableHandleStruct{
+				V: handles[0],
+			},
+			bytes: []byte{
+				0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+			},
+			handleInfos: []zx.HandleInfo{
+				{Handle: handles[0], Type: handleDefs[0].subtype, Rights: handleDefs[0].rights},
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableHandleStructNull_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenNullableHandleStruct{
+				V: zx.HandleInvalid,
+			},
+			bytes: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		}.check(t)
+	}
+
+}
+
+func TestAllEncodeFailureCases(t *testing.T) {
+
+	{
+		encodeFailureCase{
+			name:    "GoldenStringWithMaxSize2_v1",
+			context: fidl.MarshalerContext{},
+			input: &conformance.GoldenStringWithMaxSize2{
+				S: "abc",
+			},
+			code: fidl.ErrStringTooLong,
+		}.check(t)
+	}
+
+}
+
+func TestAllDecodeFailureCases(t *testing.T) {
+
+	{
+		decodeFailureCase{
+			name:    "GoldenStringStructNullBody_v1",
+			context: fidl.MarshalerContext{},
+			valTyp:  reflect.TypeOf((*conformance.GoldenStringStruct)(nil)),
+			bytes: []byte{
+				0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			code: fidl.ErrUnexpectedNullRef,
+		}.check(t)
+	}
+
+}

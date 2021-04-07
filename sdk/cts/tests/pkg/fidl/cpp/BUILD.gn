@@ -5,7 +5,6 @@
 import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/testing/golden_test.gni")
 import("//sdk/cts/build/cts.gni")
 import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
@@ -22,23 +21,6 @@ gidl_hlcpp_conformance("conformance_test_sources") {
   if (is_fuchsia) {
     deps += [ ":handle_util" ]
   }
-}
-
-gidl_hlcpp_conformance("gidl_goldens") {
-  testonly = true
-  inputs = conformance_suite_golden_gidl_files
-  fidl = conformance_suite_fidl_target
-}
-
-golden_test("gidl_hlcpp_golden_tests") {
-  goldens_dir = "gidl_goldens"
-  deps = [ ":gidl_goldens_gidl" ]
-  entries = [
-    {
-      golden = "gidl_goldens.cc.golden"
-      generated = "${target_gen_dir}/gidl_generated_gidl_goldens.cc"
-    },
-  ]
 }
 
 cts_source_set("host_test_sources") {
@@ -219,6 +201,5 @@ group("tests") {
     ":fidl_hlcpp_conformance_tests_host($host_toolchain)",
     ":fidl_hlcpp_tests",
     ":fidl_hlcpp_unit_tests_host($host_toolchain)",
-    ":gidl_hlcpp_golden_tests($host_toolchain)",
   ]
 }
