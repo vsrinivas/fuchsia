@@ -168,6 +168,7 @@ void main() {
 
     // Clicks the text link that opens popup.html (popup page navigation)
     popupLink.click();
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
     await browser.waitFor(popupTabFinder, timeout: _timeout);
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
@@ -176,6 +177,7 @@ void main() {
 
     await browser.close();
     await ermine.driver.requestData('close');
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeout);
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');

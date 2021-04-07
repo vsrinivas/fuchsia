@@ -85,7 +85,7 @@ void main() {
   // terminal instance is running.
   Future<bool> waitForPrompt() {
     return ermine.waitFor(() async {
-      return (await waitForBuffer()) == '\$';
+      return (await waitForBuffer()).endsWith('\$');
     });
   }
 
@@ -125,7 +125,6 @@ void main() {
     await ermine.driver.waitFor(close);
     await ermine.driver.tap(close);
     await _waitForViews(componentUrl, 2, testForFocus: true);
-    expect(await _waitForInstances(componentUrl, 2), isTrue);
 
     print('Closed first instance');
 
@@ -133,7 +132,6 @@ void main() {
     // TODO(http://fxb/66076): Replace action with shortcut when implemented.
     await ermine.driver.requestData('close');
     await _waitForViews(componentUrl, 1, testForFocus: true);
-    expect(await _waitForInstances(componentUrl, 1), isTrue);
 
     print('Closed second instance');
 
@@ -143,10 +141,9 @@ void main() {
     await input.keyPress(kEnterKey);
     await Future.delayed(Duration(seconds: 1));
     await _waitForViews(componentUrl, 0);
-    expect(await _waitForInstances(componentUrl, 0), isTrue);
 
     print('Closed third instance');
-  });
+  }, timeout: Timeout(Duration(minutes: 1)));
 
   test('Ping localhost', () async {
     // Launch three instances of component.
