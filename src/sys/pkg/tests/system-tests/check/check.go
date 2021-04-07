@@ -67,14 +67,6 @@ func DetermineCurrentABRConfig(
 	if err == sl4f.ErrNotSupported {
 		logger.Infof(ctx, "device does not support querying the current configuration")
 		return nil, nil
-	} else if err == sl4f.ErrInvalidPaverMethod {
-		// The currently running version of Fuchsia doesn't support QueryCurrentConfiguration.
-		// Log a warning and fall back to using the active config.
-		// For the purposes of these OTA tests, current should always equal active.
-		// TODO(60425): once the minimum supported version of Fuchsia supports QueryCurrentConfiguration,
-		// remove this fallback.
-		logger.Warningf(ctx, "current version on target does not support QueryCurrentConfiguration, falling back to QueryActiveConfiguration")
-		return determineActiveABRConfig(ctx, rpcClient)
 	} else if err != nil {
 		return nil, err
 	}
