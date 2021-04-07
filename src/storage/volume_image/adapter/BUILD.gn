@@ -164,7 +164,10 @@ resource("adapter-test-images") {
     "$target_out_dir/test_minfs.blk",
   ]
   outputs = [ "data/test_images/{{source_file_part}}" ]
-  deps = [ ":test-blobfs-image-gen" ]
+  deps = [
+    ":test-blobfs-image-gen",
+    ":test-minfs-image-gen",
+  ]
 }
 
 source_set("adapter-tests") {
