@@ -12,7 +12,7 @@ Tree.
 
 Note: The format presented in this RFC at this time aligns to the current
 syntax of FIDL. There is active and ongoing work to
-[update the syntax][ftp-050], and the tool output will be similarly updated
+[update the syntax][rfc-0050], and the tool output will be similarly updated
 (before it is used to automatically detect backwards-incompatible changes
 via API hashing). See: [fxbug.dev/72411][bug72411].
 
@@ -151,7 +151,7 @@ A few points are of note:
 
 The API summary format contains the information about the library which has API
 impact. This information is defined in the section [Definitions: Source
-Compatibility and Transitionability of FTP-024][ftp24c], and captured in the
+Compatibility and Transitionability of RFC-0024][rfc24c], and captured in the
 [FIDL bindings spec][fbs]. It is really just a subset of the information that
 is already present in the [FIDL IR][fidlir], but presented in a manner that is
 easier for humans to read and text utilities to process.  Refer to the [summary
@@ -325,9 +325,9 @@ The go language API regularly produces [API surface summaries][gapi].
 [fbs]: /docs/reference/fidl/language/bindings-spec.md
 [fidl]: /docs/development/languages/fidl
 [fidlir]: /docs/reference/fidl/language/json-ir.md
-[fqn]: /docs/contribute/governance/fidl/ftp/ftp-043.md#fully-qualified-names
-[ftp24c]: /docs/contribute/governance/fidl/ftp/ftp-024.md#compat
-[ftp-050]: /docs/contribute/governance/fidl/ftp/ftp-050.md
+[rfc-0050]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md
+[fqn]: /docs/contribute/governance/rfcs/0043_documentation_comment_format.md#fully-qualified-names
+[rfc24c]: /docs/contribute/governance/rfcs/0024_mandatory_source_compatibility.md#compat
 [gapi]: https://golang.org/api
 [gesture]: /sdk/fidl/fuchsia.accessibility.gesture/gesture_listener.fidl
 [rfc15]: /docs/contribute/governance/rfcs/0015_cts.md

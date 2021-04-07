@@ -522,7 +522,7 @@ unknown data for flexible types are described in detail in the [bindings
 reference][bindings-reference].
 
 More details are discussed in
-[FTP-033: Handling of Unknown Fields and Strictness][ftp-033].
+[RFC-0033: Handling of Unknown Fields and Strictness][rfc-033].
 
 Note: A type that is both flexible and a [value type](#value-vs-resource) will
 not allow deserializing unknown data that contains handles.
@@ -566,7 +566,7 @@ resource struct Foo {
 };
 ```
 
-More details are discussed in [FTP-057: Default No Handles][ftp-057].
+More details are discussed in [RFC-0057: Default No Handles][rfc-0057].
 
 ### Protocols {#protocols}
 
@@ -718,7 +718,7 @@ Here, we've extended the `Writer` protocol with the `FontController` protocol's 
 without disturbing the `Drawer` protocol (which doesn't need to know anything about fonts).
 
 Protocol composition is similar to [mixin].
-More details are discussed in [FTP-023: Compositional Model][ftp-023].
+More details are discussed in [RFC-0023: Compositional Model][rfc-0023].
 
 #### Layering
 
@@ -807,9 +807,9 @@ for you that contains commonly used Zircon definitions.
 
 <!-- xref -->
 [mixin]: https://en.wikipedia.org/wiki/Mixin
-[ftp-023]: /docs/contribute/governance/fidl/ftp/ftp-023.md
-[ftp-033]: /docs/contribute/governance/fidl/ftp/ftp-033.md
-[ftp-057]: /docs/contribute/governance/fidl/ftp/ftp-057.md
+[rfc-0023]: /docs/contribute/governance/rfcs/0023_compositional_model_protocols.md
+[rfc-0033]: /docs/contribute/governance/rfcs/0033_handling_unknown_fields_strictness.md
+[rfc-0057]: /docs/contribute/governance/rfcs/0057_default_no_handles.md
 [fidl-overview]: /docs/concepts/fidl/overview.md
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
 [doc-attribute]: /docs/reference/fidl/language/attributes.md#Doc

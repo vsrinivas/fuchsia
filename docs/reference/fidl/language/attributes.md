@@ -48,7 +48,7 @@ Illustrates both aspects:
 **USAGE**: `[Deprecated]`
 
 **MEANING**:
-See [FTP-013].
+See [RFC-0058].
 
 Note: Not implemented.
 
@@ -145,7 +145,7 @@ libraries, such as by the [driver bind compiler](/docs/concepts/drivers/device_d
 **USAGE**: `[Selector = "`_selector_`"]`
 
 **MEANING**:
-Allows you to change the hashing basis for the method ordinal, see [FTP-020].
+Allows you to change the hashing basis for the method ordinal, see [RFC-0020].
 The *_selector_* can be either the original method's name (e.g. `SomeMethod`),
 or the fully qualified name (e.g. `some.library/SomeProtocol.SomeMethod`).
 
@@ -174,7 +174,7 @@ which was originally named `Discover` on the `Area120` protocol, in the
 **MEANING**:
 Instructs bindings to generate code that will successfully build, regardless of
 whether the method is implemented or not.
-[FTP-021] contains more details.
+[RFC-0021] contains more details.
 
 ## `[Transport]` {#transport}
 
@@ -209,6 +209,6 @@ no longer necessary.
 
 <!-- xrefs -->
 [channel]: /docs/reference/kernel_objects/channel.md
-[FTP-013]: /docs/contribute/governance/fidl/ftp/ftp-013.md
-[FTP-020]: /docs/contribute/governance/fidl/ftp/ftp-020.md
-[FTP-021]: /docs/contribute/governance/fidl/ftp/ftp-021.md
+[RFC-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md
+[RFC-0020]: /docs/contribute/governance/rfcs/0020_interface_ordinal_hashing.md
+[RFC-0021]: /docs/contribute/governance/rfcs/0021_soft_transitions_methods_add_remove.md

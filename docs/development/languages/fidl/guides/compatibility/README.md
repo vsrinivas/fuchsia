@@ -423,7 +423,7 @@ does not apply to LLCPP because LLCPP never stores unknown handles.
 Adding or removing the `resource` modifier is not source-compatible.
 Furthermore, bindings are encouraged to diverge APIs if they can leverage the
 value type versus resource type distinction for specific benefits in the target
-language (see [FTP-057][ftp-057-motivation] for context).
+language (see [RFC-0057][rfc-0057-motivation] for context).
 
 ## General advice
 
@@ -541,7 +541,7 @@ languages that do not support ADTs like C++.
 [example-union-member-add]: /docs/development/languages/fidl/guides/compatibility/union_member_add.md
 [example-union-member-remove]: /docs/development/languages/fidl/guides/compatibility/union_member_remove.md
 [example-union-strict-flexible]: /docs/development/languages/fidl/guides/compatibility/union_strict_flexible.md
-[ftp-057-motivation]: /docs/contribute/governance/fidl/ftp/ftp-057.md#motivation
+[rfc-0057-motivation]: /docs/contribute/governance/rfcs/0057_default_no_handles.md#motivation
 [lexicon-tag]: /docs/reference/fidl/language/lexicon.md#union-terms
 [Platform Versioning]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
 [rust-bindings-tables]: /docs/reference/fidl/bindings/rust-bindings.md#types-tables

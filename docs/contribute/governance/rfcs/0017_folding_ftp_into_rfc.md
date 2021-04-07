@@ -81,7 +81,7 @@ mandate][rfc-process-draft] the use of the [RFC template][rfc-template].
 By nature of being designed specifically for FIDL, the FTP template asks probing
 questions which are specifically catering to this area. The FTP template has
 evolved over time, to address new requirements. For instance, a specific call
-out for source compatibility implications was added in [FTP-024: Mandatory
+out for source compatibility implications was added in [RFC-0024: Mandatory
 Source Compatibility][ftp-024-backwards-compatibility]. This stricter format and
 specific questions has helped FTP authors and their reviewers ensure their
 design was complete.
@@ -270,14 +270,14 @@ Evolution][ftp-049].
 <!-- xrefs -->
 [eng-council-eng-review]: /docs/contribute/governance/eng_council.md#eng-review
 [fec]: /docs/contribute/governance/eng_council.md
-[fidl-team]: /docs/contribute/governance/fidl/ftp/OWNERS
-[ftp-001]: /docs/contribute/governance/fidl/ftp/ftp-001.md
-[ftp-024-backwards-compatibility]: /docs/contribute/governance/fidl/ftp/ftp-024.md#backwards_compatibility
-[ftp-049-criteria]: /docs/contribute/governance/fidl/ftp/ftp-049.md#criteria
-[ftp-049-motivation]: /docs/contribute/governance/fidl/ftp/ftp-049.md#motivation
-[ftp-049-reviewing]: /docs/contribute/governance/fidl/ftp/ftp-049.md#reviewing
-[ftp-049]: /docs/contribute/governance/fidl/ftp/ftp-049.md
-[ftp-template]: /docs/contribute/governance/fidl/ftp/TEMPLATE.md
+[fidl-team]: /src/fidl/OWNERS
+[ftp-001]: /docs/contribute/governance/rfcs/0018_ftp_process.md
+[ftp-024-backwards-compatibility]: /docs/contribute/governance/rfcs/0024_mandatory_source_compatibility.md#backwards_compatibility
+[ftp-049-criteria]: /docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md#criteria
+[ftp-049-motivation]: /docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md#motivation
+[ftp-049-reviewing]: /docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md#reviewing
+[ftp-049]: /docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md
+[ftp-template]: /docs/contribute/governance/deprecated-ftp-template.md
 [google-doc]: https://www.google.com/docs/about/
 [rfc-process-criteria]: /docs/contribute/governance/rfcs/0001_rfc_process.md#criteria
 [rfc-process-draft]: /docs/contribute/governance/rfcs/0001_rfc_process.md#drafts

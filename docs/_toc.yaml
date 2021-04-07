@@ -31,3 +31,9 @@ toc:
 - name: "Community"
   contents:
   - include: /docs/contribute/community/_toc.yaml
+
+# Orphaned files, these files don't display anywhere. Workaround for doc-checker, should be avoided
+- title: "Deprecated: FTP process"
+  path: /docs/contribute/governance/deprecated-ftp-process.md
+- title: "Deprecated: FTP template"
+  path: /docs/contribute/governance/deprecated-ftp-template.md

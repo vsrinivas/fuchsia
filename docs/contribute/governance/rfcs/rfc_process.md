@@ -140,8 +140,8 @@ For instance, changes to the following FIDL areas will likely require an RFC:
 * Wire format
 * Bindings specification
 
-Additional details are provided in [FTP-049: FIDL Tuning Process
-Evolution](/docs/contribute/governance/fidl/ftp/ftp-049.md).
+Additional details are provided in [RFC-0049: FIDL Tuning Process
+Evolution](/docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md).
 
 Other changes that might benefit of the RFC process are ones that require manual or
 automated large scale changes of the codebase. For example how logs are written or how
@@ -469,5 +469,5 @@ existing processes:
 
  * *FIDL Tuning Proposal.* The Fuchsia project has had direct experience using a
    similar process [to make decisions about the FIDL
-   language](/docs/contribute/governance/fidl/README.md#process). This
+   language](/docs/contribute/governance/deprecated-ftp-process.md). This
    proposal exists because of the success of that decision-making process.

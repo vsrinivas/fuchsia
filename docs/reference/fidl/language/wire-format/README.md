@@ -170,7 +170,7 @@ In this section, we illustrate the encodings for all FIDL objects.
 
 ## Primitives
 
-*   Value stored in [little-endian format][FTP-030].
+*   Value stored in [little-endian format][RFC-0030].
 *   Packed with natural alignment.
     *   Each _m_-byte primitive is stored on an _m_-byte boundary.
 *   Not nullable.
@@ -787,7 +787,7 @@ Conformant FIDL bindings must check all of the following integrity constraints:
 | 3       | Unused                                                       |             |
 | 2       | Unused                                                       |             |
 | 1       | Unused                                                       |             |
-| 0       | Unused | Indicates whether static unions should be encoded as xunions ([FTP-015]) |
+| 0       | Unused | Indicates whether static unions should be encoded as xunions ([RFC-0061]) |
 
 *Flags[1]*
 
@@ -827,9 +827,9 @@ Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on th
 
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
-[FTP-015]: /docs/contribute/governance/fidl/ftp/ftp-015.md
-[FTP-030]: /docs/contribute/governance/fidl/ftp/ftp-030.md
-[FTP-059]: /docs/contribute/governance/fidl/ftp/ftp-059.md
+[FTP-0061]: /docs/contribute/governance/rfcs/0061_extensible_unions.md
+[RFC-0030]: /docs/contribute/governance/rfcs/0030_fidl_is_little_endian.md
+[RFC-0059]: /docs/contribute/governance/rfcs/0059_reserved_bits_count_fields.md
 [abi-api-compat]: /docs/development/languages/fidl/guides/compatibility/README.md
 [lostart]: http://www.catb.org/esr/structure-packing/
 [concepts]: /docs/concepts/fidl/overview.md

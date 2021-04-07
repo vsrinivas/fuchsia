@@ -1,9 +1,0 @@
-# Fuchsia FIDL Team
-#
-# See ftp-001.md
-# See ftp-049.md
-# Lead
-pascallouis@google.com
-
-# Members
-include /src/fidl/OWNERS

@@ -174,7 +174,7 @@ Using the `Change-ID` is preferred since:
   change's number will not. There are also rare occurrences where change
   numbers may be lost, e.g. due to re-indexing issues.
 
-For instance, to refer to the change that added [FTP-042] we should use
+For instance, to refer to the change that added [RFC-0042] we should use
 `I32b966810d21a249647887fa45b61720ad01714c`, and not the git SHA
 `5d40ee8c42d1b0e4d8b690786da12a0a947c1aaa` or the link to the
 change, https://fuchsia-review.googlesource.com/c/fuchsia/+/284569.
@@ -759,7 +759,7 @@ fidl fmt --library my_library.fidl -i
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
 [fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidldev
-[FTP-042]: /docs/contribute/governance/fidl/ftp/ftp-042.md
+[RFC-0042]: /docs/contribute/governance/rfcs/0042_non_nullable_types.md
 [pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
 
 [/tools/fidl/fidlc/lib/c_generator.cc]: /tools/fidl/fidlc/lib/c_generator.cc

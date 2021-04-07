@@ -25,7 +25,7 @@ of the system artifacts, from previously built inputs.
 
 This tool is also used as part of the `fuchsia.git` build itself, replacing
 many of the scripts and GN templates that are in
-[build/images/BUILD.gn](/build/images/BUILD.gn).
+`//build/resources/BUILD.gn`.
 
 ## Glossary
 
@@ -79,7 +79,7 @@ The [zbi] is the Zircon Boot Image.  This is the kernel and the ramdisk
 ## Design
 
 This tool is primarily a replication of steps and processes that are currently
-performed by [build/images/BUILD.gn](/build/images/BUILD.gn) and its associated
+performed by `//build/resources/BUILD.gn` and its associated
 scripts.
 
 The tool is an [`ffx`][ffx] plug-in that allows it to be used both as part of the
@@ -215,7 +215,7 @@ packages that are being built.
 See:
 
 - [/build/package.gni][build_package_gni] at line 604.
-- [/build/images/BUILD.gn][build_images_BUILD_gn] at line 221.
+- [/build/resources/BUILD.gn][build_images_BUILD_gn] at line 221.
 
 ## Implementation
 
@@ -297,7 +297,7 @@ The `ffx` interface for this tool will need to be documented.
 [blobfs-docs]: /docs/concepts/filesystems/blobfs.md
 [bootfs]: /docs/glossary.md#bootfs
 [bootstrap]: /docs/concepts/booting/everything_between_power_on_and_your_component.md
-[build_images_BUILD_gn]: https://fuchsia.googlesource.com/fuchsia/+/7461d8882167e7a9d1b494e3b1734d2c063830fc/build/images/BUILD.gn#221
+[build_images_BUILD_gn]: https://fuchsia.googlesource.com/fuchsia/+/7461d8882167e7a9d1b494e3b1734d2c063830fc/build/resources/BUILD.gn#221
 [build_package_gni]: https://fuchsia.googlesource.com/fuchsia/+/7461d8882167e7a9d1b494e3b1734d2c063830fc/build/package.gni#604
 [fuchsia.git]: https://fuchsia.googlesource.com/fuchsia/
 [ffx]: /docs/development/tools/ffx/overview.md

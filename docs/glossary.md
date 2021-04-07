@@ -447,7 +447,7 @@ framework.
 
 ### **FTP** {#ftp}
 
-[FIDL Tuning Proposal](/docs/contribute/governance/fidl#process). An FTP is the
+[FIDL Tuning Proposal](/docs/contribute/governance/deprecated-ftp-process.md). An FTP is the
 way developers can suggest changes to FIDL. After being written, an FTP goes
 through a formal review process where it is either accepted or rejected.
 

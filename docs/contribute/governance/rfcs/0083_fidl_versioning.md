@@ -53,7 +53,7 @@ bindings. This includes:
 
 * FIDL libraries themselves
 * Constant, enum, bits, struct, table, union, protocol, and service declarations
-* Aliases and new types (from [FTP-052: Type Aliasing and New Types][ftp-052])
+* Aliases and new types (from [RFC-0052: Type Aliasing and New Types][rfc-0052])
 * Members of enums, bits, structs, tables, unions, and services (including
   `reserved` members of tables and unions)
 * Methods and `compose` stanzas in protocols
@@ -78,7 +78,7 @@ This leaves only a few things that are neither FIDL elements nor properties:
 
 * Individual `.fidl` files
 * Imports of other FIDL libraries
-* FIDL-only `using` aliases, which [FTP-052] removes from the language
+* FIDL-only `using` aliases, which [RFC-0052] removes from the language
 * Experimental [`resource_definition`] declarations
 * Comments, including documentation comments
 
@@ -179,8 +179,8 @@ inclusion in warning messages. For example:
 
     @available(added=12, deprecated=34, note="Use X instead")
 
-The availability attribute makes the `[Deprecated]` attribute from [FTP-013:
-Introduce a `[Deprecated]` Attribute][ftp-013] obsolete.
+The availability attribute makes the `[Deprecated]` attribute from [RFC-0058:
+Introduce a `[Deprecated]` Attribute][rfc-0058] obsolete.
 
 ### Versioning elements
 
@@ -294,8 +294,8 @@ Given a version selection, fidlc produces an error if:
 
 Given a version selection, if a FIDL element is available, it is emitted as
 usual. If it is deprecated, we [denote this in the JSON IR](#json-ir), and the
-behavior in bindings is as described in [FTP-013: Introduce a `[Deprecated]`
-Attribute][ftp-013]. If it is absent, we omit it from the JSON IR.
+behavior in bindings is as described in [RFC-0058: Introduce a `[Deprecated]`
+Attribute][rfc-0058]. If it is absent, we omit it from the JSON IR.
 
 If a FIDL element is not [used](#use-validation) by any other, annotating it
 with `@available(removed=<N>)` is equivalent to deleting it from the `.fidl`
@@ -450,8 +450,8 @@ take versioning into account. For example, if an element is deprecated, the
 documentation should indicate this prominently. It could also provide an API
 level dropdown for viewing historical documentation. Second, fidlgen backends
 needs to use the `"deprecated"` field in the JSON IR. For example, fidlgen_rust
-could translate it to the `#[deprecated]` Rust attribute. See [FTP-013:
-Introduce a `[Deprecated]` Attribute][ftp-013] for examples in other languages.
+could translate it to the `#[deprecated]` Rust attribute. See [RFC-0058:
+Introduce a `[Deprecated]` Attribute][rfc-0058] for examples in other languages.
 
 Before libraries in the SDK start using the annotations, we will need to add
 `--available fuchsia:HEAD` to the GN templates for building FIDL bindings. This
@@ -730,8 +730,8 @@ i.e. without taking action to migrate.
 <!-- TODO(fxbug.dev/68792): Change to RFC link once accepted. -->
 [rfc-NNNN]: https://fuchsia-review.googlesource.com/c/fuchsia/+/499278
 <!-- [rfc-NNNN]: /docs/contribute/governance/rfcs/NNNN_new_fidl_attributes_syntax.md -->
-[ftp-013]: /docs/contribute/governance/fidl/ftp/ftp-013.md
-[ftp-052]: /docs/contribute/governance/fidl/ftp/ftp-052.md
+[rfc-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md
+[rfc-0052]: /docs/contribute/governance/rfcs/0052_type_aliasing_named_types.md
 [language]: /docs/reference/fidl/language/language.md
 [attrs]: /docs/reference/fidl/language/attributes.md
 [swift-attr]: https://docs.swift.org/swift-book/ReferenceManual/Attributes.html#ID583
@@ -746,7 +746,7 @@ i.e. without taking action to migrate.
 [gcp-versioning]: https://cloud.google.com/apis/design/versioning
 [gcp-compatibility]: https://cloud.google.com/apis/design/compatibility
 [nfa-dfa]: https://en.wikipedia.org/wiki/Powerset_construction
-[compositional model]: /docs/contribute/governance/fidl/ftp/ftp-023.md#compositional_model
+[compositional model]: /docs/contribute/governance/rfcs/0023_compositional_model_protocols.md#compositional_model
 [strict-vs-flexible]: /docs/reference/fidl/language/language.md#strict-vs-flexible
 [value-vs-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [max-bound]: https://fuchsia-review.googlesource.com/c/fuchsia/+/325737

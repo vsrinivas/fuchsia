@@ -261,7 +261,7 @@ migrating a `zx::unowned_channel`:
 
 ### Note: resolving type mismatch due to protocol composition
 
-There is [no "is-a" (inheritance, subsumption) relationship][ftp-023] between
+There is [no "is-a" (inheritance, subsumption) relationship][rfc-0023] between
 FIDL protocols when one composes another. This implies that when protocol `More`
 composes protocol `Less`, one may want to call a function `void
 foo(fidl::ClientEnd<Less>)` with a `fidl::ClientEnd<More>`, but we would not
@@ -351,7 +351,7 @@ https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/ulib/service
 [open-service-root]:
 https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/ulib/service/include/lib/service/llcpp/service.h;l=23?q=service::Connect&ss=fuchsia%2Ffuchsia
 [ulib-service]: https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/ulib/service/
-[ftp-023]: /docs/contribute/governance/fidl/ftp/ftp-023.md#is_a_relationship_considered_harmful
+[rfc-0023]: /docs/contribute/governance/rfcs/0023_compositional_model_protocols.md#is_a_relationship_considered_harmful
 [target-allowlist]:
 https://cs.opensource.google/fuchsia/fuchsia/+/master:build/cpp/BUILD.gn?q=%22could%20be%20migrated%20to%20use%20typed%20channels%22&ss=fuchsia%2Ffuchsia:build%2Fcpp%2F
 [protocol-allowlist]:

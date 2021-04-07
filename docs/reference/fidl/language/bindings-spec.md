@@ -42,7 +42,7 @@ the FIDL definition. Possible exceptions are listed in the following sections.
 
 Casing changes SHOULD be made to fit the idiomatic style of the language (e.g.
 using snake_case or CamelCase). `fidlc` will ensure that identifier uniqueness
-is enforced taking into account potential casing differences (see [FTP 40][ftp040]).
+is enforced taking into account potential casing differences (see [RFC-0040][rfc0040]).
 
 ### Reserved keywords and name clashes
 
@@ -414,7 +414,7 @@ approach.
 
 For aggregate types such as structs, tables, and unions, bindings MAY provide
 equality operators that perform a deep comparison on two instances of the same
-type. These operators SHOULD NOT be provided for resource types (see FTP-057) as
+type. These operators SHOULD NOT be provided for resource types (see RFC-0057) as
 comparison of handles is not possible. Avoiding exposing equality operators for
 resource types prevents source breakages caused by an equality operation
 'disappearing' when a handle is added to the type.
@@ -423,7 +423,7 @@ resource types prevents source breakages caused by an equality operation
 
 For aggregate types such as structs, tables, and unions, bindings MAY provide
 functionality for copying instances of these types. Copying SHOULD NOT be
-provided for resource types (see [FTP-057][ftp057]) as making copies of handles
+provided for resource types (see [RFC-0057][rfc0057]) as making copies of handles
 is not guaranteed to succeed. Avoiding exposing copy operators for resource
 types prevents source breakages caused by a copy operation 'disappearing' or
 having its signature change when a handle is added to the type.
@@ -518,13 +518,13 @@ interface Hasher {
 
 ## Related Documents
 
-* [FTP-024: Mandatory Source Compatibility][ftp024]
+* [RFC-0024: Mandatory Source Compatibility][rfc0024]
 
 <!-- xrefs -->
 [jsonir]: /docs/reference/fidl/language/json-ir.md
-[ftp024]: /docs/contribute/governance/fidl/ftp/ftp-024.md
-[ftp040]: /docs/contribute/governance/fidl/ftp/ftp-040.md
-[ftp057]: /docs/contribute/governance/fidl/ftp/ftp-057.md
+[rfc0024]: /docs/contribute/governance/rfcs/0024_mandatory_source_compatibility.md
+[rfc0040]: /docs/contribute/governance/rfcs/0040_identifier_uniqueness.md
+[rfc0057]: /docs/contribute/governance/rfcs/0057_default_no_handles.md
 [RFC2119]: https://tools.ietf.org/html/rfc2119
 [go-generated-code-comment]: https://github.com/golang/go/issues/13560#issuecomment-288457920
 [attributes]: /docs/reference/fidl/language/attributes.md

@@ -686,7 +686,7 @@ There are two cases where using the value `0` is appropriate:
 #### bits
 
 If your protocol has a bitfield, represent its values using `bits` values
-(for details, see [`FTP-025`: "Bit Flags."][ftp-025])
+(for details, see [`RFC-0025`: "Bit Flags."][rfc-0025])
 
 For example:
 
@@ -1414,7 +1414,7 @@ protocol.
 <!-- xrefs -->
 [api-council]: /docs/contribute/governance/api_council.md
 [api-council-membership]: /docs/contribute/governance/api_council.md#membership
-[ftp-025]: /docs/contribute/governance/fidl/ftp/ftp-025.md
+[rfc-0025]: /docs/contribute/governance/rfcs/0025_bit_flags.md
 [locale-passing-example]: /garnet/examples/intl/wisdom/
 [rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md
 [resource-lang]: /docs/reference/fidl/language/language.md#value-vs-resource

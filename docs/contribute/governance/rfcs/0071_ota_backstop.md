@@ -142,7 +142,7 @@ In order to land the change, we need to:
 * Add `epoch_history` to //src/sys/pkg/bin/system-updater.
   * Also, make a script that converts `epoch_history` to `epoch.json`.
   * Have the build system use this script to add `epoch.json` to the system-updater's out directory.
-* Modify the [BUILD](https://cs.opensource.google/fuchsia/fuchsia/+/master:build/images/BUILD.gn;l=2
+* Modify the [BUILD](https://cs.opensource.google/fuchsia/fuchsia/+/master:build/resources/BUILD.gn;l=2
   074;drc=2f584c4a62374f37361ac04875e60b5459fcc3b5) so that `epoch.json` also gets put into
   the update package.
 * The system-updater should examine `epoch.json` at the end of the [Prepare](https://cs.opensource.g

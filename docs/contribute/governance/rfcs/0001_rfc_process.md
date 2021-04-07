@@ -301,6 +301,6 @@ existing processes:
 
  * *FIDL Tuning Proposal.* The Fuchsia project has had direct experience using a
    similar process [to make decisions about the FIDL
-   language](/docs/contribute/governance/fidl/README.md#process). This
+   language](/docs/contribute/governance/deprecated-ftp-process.md). This
    proposal exists because of the success of that decision-making process.
 

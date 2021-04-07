@@ -200,5 +200,5 @@ fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx access
 [manifestv1]: /docs/concepts/components/v1/component_manifests.md
 [hanging-get]: /docs/concepts/api/fidl.md#hanging-get
 [fidl_table]: /docs/reference/fidl/language/language.md#tables
-[epitaph]: /docs/contribute/governance/fidl/ftp/ftp-008.md
+[epitaph]: /docs/contribute/governance/rfcs/0053_epitaphs.md
 [pkg]: /docs/development/build/fx.md#serve-a-build

@@ -30,7 +30,7 @@ The [bindings reference][bindings-ref] includes references of generated code in 
 utility libraries available to each language.
 
 The [language reference][language-ref] is for everything else, like the
-[wire format][wire-format] and [FTPs][ftps].
+[wire format][wire-format] and [RFCs][rfc].
 
 ## Contributing
 Please read the [contributing doc][contributing] for more information.
@@ -49,4 +49,4 @@ Please read the [contributing doc][contributing] for more information.
 [bindings-ref]: /docs/reference/fidl/bindings/overview.md
 [language-ref]: /docs/reference/fidl/language/language.md
 [wire-format]: /docs/reference/fidl/language/wire-format
-[ftps]: /docs/contribute/governance/fidl/README.md
+[rfc]: /docs/contribute/governance/rfcs/README.md
