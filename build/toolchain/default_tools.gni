@@ -11,7 +11,7 @@ stamp_description = "STAMP {{output}}"
 # popular file systems, modifying a file in a directory does not affect mtime of
 # the directory. Because of this, disable directory copy for incremental
 # correctness. See https://fxbug.dev/73250.
-copy_command = "if [[ -d {{source}} ]]; then echo 'Tool \"copy\" does not support directory copies'; exit 1; fi; "
+copy_command = "if [ -d {{source}} ]; then echo 'Tool \"copy\" does not support directory copies'; exit 1; fi; "
 
 # We use link instead of copy; the way "copy" tool is being used is
 # compatible with links since Ninja is tracking changes to the source.
