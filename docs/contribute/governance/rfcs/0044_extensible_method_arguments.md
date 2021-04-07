@@ -11,8 +11,6 @@ Replaced by [RFC-0050](/docs/contribute/governance/rfcs/0050_syntax_revamp.md).
 
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-044.
 
-## Summary
-
 We encourage FIDL library authors to use tables rather than structs when
 extensibility is required however method arguments are encoded as structs.
 This proposes a way to have extensible method arguments built on top of tables.
