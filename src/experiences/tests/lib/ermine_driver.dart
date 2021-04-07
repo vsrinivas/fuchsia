@@ -17,6 +17,10 @@ const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
 
+// USB HID code for ENTER key.
+// See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>
+const kEnterKey = 40;
+
 const waitForTimeout = Duration(seconds: 30);
 
 /// Defines a completion function that can be waited on with a timout.
@@ -126,9 +130,12 @@ class ErmineDriver {
   /// Opens another new tab as soon as the browser is launched, unless you set
   /// [openNewTab] to false. Contrarily, set [fullscreen] to true if you want
   /// the browser to expand its size to full-screen upon its launch.
+  /// Also, you can set the text entry emulation of the browser's flutter driver
+  /// using [enableTextEntryEmulation], which has false by default.
   Future<FlutterDriver> launchAndWaitForSimpleBrowser({
     bool openNewTab = true,
     bool fullscreen = false,
+    bool enableTextEntryEmulation = false,
   }) async {
     expect(await launch(simpleBrowserUrl), isTrue);
 
@@ -153,6 +160,9 @@ class ErmineDriver {
       fail('unable to connect to simple browser.');
     }
 
+    // Set the flutter driver's text entry emulation.
+    await browserDriver.setTextEntryEmulation(
+        enabled: enableTextEntryEmulation);
     await browserDriver.waitUntilNoTransientCallbacks();
 
     // Expands the simple browser to be a full-sized screen, if required.

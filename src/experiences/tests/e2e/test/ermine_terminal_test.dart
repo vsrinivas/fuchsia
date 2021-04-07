@@ -16,10 +16,6 @@ void main() {
   ErmineDriver ermine;
   Input input;
 
-  // USB HID code for ENTER key.
-  // See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>
-  const kEnterKey = 40;
-
   const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
 
   setUpAll(() async {

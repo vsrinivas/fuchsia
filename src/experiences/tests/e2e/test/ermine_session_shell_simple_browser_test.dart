@@ -10,8 +10,7 @@ import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 import 'package:webdriver/sync_io.dart';
 
-const _timeoutSeconds = 10;
-const _timeout = Duration(seconds: _timeoutSeconds);
+const _timeout = Duration(seconds: 2);
 const _sampleViewRect = Rectangle(100, 200, 100, 100);
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
@@ -20,6 +19,7 @@ void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
   WebDriverConnector webDriverConnector;
+  Input input;
 
   final newTabFinder = find.text('NEW TAB');
   final indexTabFinder = find.text('Localhost');
@@ -36,6 +36,8 @@ void main() {
 
     ermine = ErmineDriver(sl4f);
     await ermine.setUp();
+
+    input = Input(sl4f);
 
     webDriverConnector = WebDriverConnector('runtime_deps/chromedriver', sl4f);
     await webDriverConnector.initialize();
@@ -61,6 +63,7 @@ void main() {
     await browser.waitFor(find.text(stopUrl), timeout: _timeout);
     expect(await ermine.isStopped(testserverUrl), isTrue);
     print('Stopped the test server');
+    await browser.close();
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
@@ -83,16 +86,17 @@ void main() {
     }, timeout: timeout);
   }
 
-  // TODO(fxb/68689): Transition physical interactions to use Sl4f.Input once
-  // fxb/69277 is fixed.
+  // TODO(fxb/68689): Transition pointer interactions to Sl4f.Input once it is
+  // ready.
   test('Should be able to do page and history navigation.', () async {
     FlutterDriver browser;
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
     // Access to the website.
-    await browser.requestData('http://127.0.0.1:8080/index.html');
-
+    await input.text('http://127.0.0.1:8080/index.html');
+    await input.keyPress(kEnterKey);
     await browser.waitFor(indexTabFinder, timeout: _timeout);
+
     final webdriver =
         (await webDriverConnector.webDriversForHost('127.0.0.1')).single;
 
@@ -170,6 +174,7 @@ void main() {
     expect(await browser.getText(popupTabFinder), isNotNull);
     print('Clicked the popup.html link');
 
+    await browser.close();
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
@@ -184,8 +189,10 @@ void main() {
     // experiences/bin/ermine_testserver/public/simple_browser_test/sample_video.mp4
     // It shows the violet-colored background for the first 3 seconds then shows
     // the fuchsia-colored background for another 3 seconds.
-    await browser.requestData('http://127.0.0.1:8080/video.html');
+    await input.text('http://127.0.0.1:8080/video.html');
+    await input.keyPress(kEnterKey);
     await browser.waitFor(videoTabFinder, timeout: _timeout);
+
     expect(await browser.getText(videoTabFinder), isNotNull);
     print('Opened http://127.0.0.1:8080/video.html');
 
@@ -201,6 +208,7 @@ void main() {
     expect(diff, 1, reason: 'The screenshots are more similar than expected.');
     print('The video was played');
 
+    await browser.close();
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
@@ -220,21 +228,26 @@ void main() {
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
 
     // Opens red.html in the second tab leaving the first tab as an empty tab.
-    await browser.requestData(redUrl);
+    await input.text(redUrl);
+    await input.keyPress(kEnterKey);
     await browser.waitFor(redTabFinder, timeout: _timeout);
     print('Opened red.html');
 
     // Opens green.html in the third tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
-    await browser.requestData(greenUrl);
+
+    await input.text(greenUrl);
+    await input.keyPress(kEnterKey);
     await browser.waitFor(greenTabFinder, timeout: _timeout);
     print('Opened green.html');
 
     // Opens blue.html in the forth tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
-    await browser.requestData(blueUrl);
+    await input.text(blueUrl);
+    await input.keyPress(kEnterKey);
+
     await browser.waitFor(blueTabFinder, timeout: _timeout);
     print('Opened blue.html');
 
@@ -303,10 +316,11 @@ void main() {
 
     // TODO(fxb/70265): Test closing an unfocused tab once fxb/68689 is done.
 
+    print('Closed the browser');
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-    print('Closed the browser');
+    await browser.close();
   }, skip: true);
 
   // TODO(fxb/68720): Test web editing
