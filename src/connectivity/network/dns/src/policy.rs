@@ -169,19 +169,21 @@ mod tests {
     fn test_consolidate() {
         let policy = ServerConfigSink::new(futures::sink::drain());
 
-        let test = |servers: Vec<fnet::SocketAddress>, expected: Vec<fnet::SocketAddress>| {
-            policy.state.set_servers(servers);
+        let test = |servers: Vec<fnet::SocketAddress>,
+                    expected: Vec<fnet::SocketAddress>,
+                    expect_changed: bool| {
+            assert_eq!(policy.state.set_servers(servers), expect_changed);
             assert_eq!(policy.state.servers(), expected);
         };
 
         // Empty inputs become empty output.
-        test(vec![], vec![]);
+        test(vec![], vec![], false);
 
         // Empty ordering is respected.
-        test(vec![DHCP_SERVER, NDP_SERVER], vec![DHCP_SERVER, NDP_SERVER]);
+        test(vec![DHCP_SERVER, NDP_SERVER], vec![DHCP_SERVER, NDP_SERVER], true);
 
         // Duplicates are removed.
-        test(vec![DHCP_SERVER, DHCP_SERVER, NDP_SERVER], vec![DHCP_SERVER, NDP_SERVER]);
+        test(vec![DHCP_SERVER, DHCP_SERVER, NDP_SERVER], vec![DHCP_SERVER, NDP_SERVER], false);
     }
 
     #[fasync::run_singlethreaded(test)]

@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_net_ext as net_ext,
     fidl_fuchsia_net_name::{LookupAdminRequest, LookupAdminRequestStream},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_inspect, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
@@ -1068,10 +1068,12 @@ async fn main() -> Result<(), Error> {
         fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
             .context("failed to connect to fuchsia.net.routes/State")?;
 
-    fs.dir("svc")
+    let _: &mut ServiceFsDir<'_, _> = fs
+        .dir("svc")
         .add_fidl_service(IncomingRequest::NameLookup)
         .add_fidl_service(IncomingRequest::LookupAdmin);
-    fs.take_and_serve_directory_handle()?;
+    let _: &mut ServiceFs<_> =
+        fs.take_and_serve_directory_handle().context("failed to serve directory")?;
 
     // Create a channel with buffer size `MAX_PARALLEL_REQUESTS`, which allows
     // request processing to always be fully saturated.
