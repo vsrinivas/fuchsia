@@ -29,6 +29,13 @@ SimpleAudioStream::SimpleAudioStream(zx_device_t* parent, bool is_input)
   position_reply_time_ = simple_audio_.CreateInt("position_reply_time", 0);
   ring_buffer_size_ = simple_audio_.CreateUint("ring_buffer_size", 0);
   frames_requested_ = simple_audio_.CreateUint("frames_requested", 0);
+
+  number_of_channels_ = simple_audio_.CreateUint("number_of_channels", 0);
+  channels_to_use_bitmask_ = simple_audio_.CreateUint("channels_to_use_bitmask", 0);
+  frame_rate_ = simple_audio_.CreateUint("frame_rate", 0);
+  bits_per_slot_ = simple_audio_.CreateUint("bits_per_slot", 0);
+  bits_per_sample_ = simple_audio_.CreateUint("bits_per_sample", 0);
+  sample_format_ = simple_audio_.CreateString("sample_format", "not_set");
 }
 
 void SimpleAudioStream::Shutdown() {
@@ -291,34 +298,34 @@ void SimpleAudioStream::CreateRingBuffer(
     }
   }
 
-  auto format_v1 = format.pcm_format();
+  auto pcm_format = format.pcm_format();
   audio_sample_format_t sample_format = audio::utils::GetSampleFormat(
-      format_v1.valid_bits_per_sample, 8 * format_v1.bytes_per_sample);
+      pcm_format.valid_bits_per_sample, 8 * pcm_format.bytes_per_sample);
 
   if (sample_format == 0) {
     zxlogf(ERROR, "Unsupported format: Invalid bits per sample (%u/%u)\n",
-           format_v1.valid_bits_per_sample, 8 * format_v1.bytes_per_sample);
+           pcm_format.valid_bits_per_sample, 8 * pcm_format.bytes_per_sample);
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  if (format_v1.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
+  if (pcm_format.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
-    if (format_v1.valid_bits_per_sample != 32 || format_v1.bytes_per_sample != 4) {
+    if (pcm_format.valid_bits_per_sample != 32 || pcm_format.bytes_per_sample != 4) {
       zxlogf(ERROR, "Unsupported format: Not 32 per sample/channel for float\n");
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
   }
 
-  if (format_v1.sample_format == audio_fidl::wire::SampleFormat::PCM_UNSIGNED) {
+  if (pcm_format.sample_format == audio_fidl::wire::SampleFormat::PCM_UNSIGNED) {
     sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   }
 
   // Check the format for compatibility
   for (const auto& fmt : supported_formats_) {
-    if (audio::utils::FormatIsCompatible(format_v1.frame_rate,
-                                         static_cast<uint16_t>(format_v1.number_of_channels),
+    if (audio::utils::FormatIsCompatible(pcm_format.frame_rate,
+                                         static_cast<uint16_t>(pcm_format.number_of_channels),
                                          sample_format, fmt)) {
       found_one = true;
       break;
@@ -332,10 +339,10 @@ void SimpleAudioStream::CreateRingBuffer(
   }
 
   // Determine the frame size.
-  frame_size_ = audio::utils::ComputeFrameSize(static_cast<uint16_t>(format_v1.number_of_channels),
+  frame_size_ = audio::utils::ComputeFrameSize(static_cast<uint16_t>(pcm_format.number_of_channels),
                                                sample_format);
   if (!frame_size_) {
-    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)", format_v1.number_of_channels,
+    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)", pcm_format.number_of_channels,
            sample_format);
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
@@ -352,10 +359,10 @@ void SimpleAudioStream::CreateRingBuffer(
   }
 
   audio_stream_cmd_set_format_req_t req = {};
-  req.frames_per_second = format_v1.frame_rate;
+  req.frames_per_second = pcm_format.frame_rate;
   req.sample_format = sample_format;
-  req.channels = static_cast<uint16_t>(format_v1.number_of_channels);
-  req.channels_to_use_bitmask = format_v1.channels_to_use_bitmask;
+  req.channels = static_cast<uint16_t>(pcm_format.number_of_channels);
+  req.channels_to_use_bitmask = pcm_format.channels_to_use_bitmask;
 
   // Actually attempt to change the format.
   auto result = ChangeFormat(req);
@@ -364,6 +371,19 @@ void SimpleAudioStream::CreateRingBuffer(
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
+  number_of_channels_.Set(pcm_format.number_of_channels);
+  channels_to_use_bitmask_.Set(pcm_format.channels_to_use_bitmask);
+  frame_rate_.Set(pcm_format.frame_rate);
+  bits_per_slot_.Set(pcm_format.bytes_per_sample * 8);
+  bits_per_sample_.Set(pcm_format.valid_bits_per_sample);
+  using FidlSampleFormat = audio_fidl::wire::SampleFormat;
+  // clang-format off
+  switch (pcm_format.sample_format) {
+    case FidlSampleFormat::PCM_SIGNED:   sample_format_.Set("PCM_signed");   break;
+    case FidlSampleFormat::PCM_UNSIGNED: sample_format_.Set("PCM_unsigned"); break;
+    case FidlSampleFormat::PCM_FLOAT:    sample_format_.Set("PCM_float");    break;
+  }
+  // clang-format on
 
   {
     fbl::AutoLock channel_lock(&channel_lock_);

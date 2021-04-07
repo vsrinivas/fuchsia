@@ -449,6 +449,13 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   inspect::IntProperty position_reply_time_;
   inspect::UintProperty frames_requested_;
   inspect::UintProperty ring_buffer_size_;
+
+  inspect::UintProperty number_of_channels_;
+  inspect::UintProperty channels_to_use_bitmask_;
+  inspect::UintProperty frame_rate_;
+  inspect::UintProperty bits_per_slot_;
+  inspect::UintProperty bits_per_sample_;
+  inspect::StringProperty sample_format_;
 };
 
 }  // namespace audio
