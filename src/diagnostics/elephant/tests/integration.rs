@@ -307,8 +307,20 @@ fn json_strings_match(observed: &str, expected: &str, context: &str) -> bool {
             }
         }
     }
-    let observed_json = parse_json(observed, "observed", context);
+    let mut observed_json = parse_json(observed, "observed", context);
     let expected_json = parse_json(expected, "expected", context);
+
+    // Remove health nodes if they exist.
+    if let Some(v) = observed_json.as_array_mut() {
+        for hierarchy in v.iter_mut() {
+            if let Some(Some(root)) =
+                hierarchy.pointer_mut("/payload/root").map(|r| r.as_object_mut())
+            {
+                root.remove("fuchsia.inspect.Health");
+            }
+        }
+    }
+
     if observed_json != expected_json {
         warn!("Observed != expected in {}", context);
         warn!("Observed: {:?}", observed_json);

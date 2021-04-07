@@ -16,16 +16,24 @@ const PREVIOUS_PATH: &str = "/cache/previous";
 // directory to the "previous" directory.
 pub fn shuffle_at_boot() {
     // These may fail if /cache was wiped. This is WAI and should not signal an error.
-    fs::remove_dir_all(PREVIOUS_PATH).ok();
-    fs::rename(CURRENT_PATH, PREVIOUS_PATH).ok();
+    fs::remove_dir_all(PREVIOUS_PATH)
+        .map_err(|e| info!("Could not delete {}: {:?}", PREVIOUS_PATH, e))
+        .ok();
+    fs::rename(CURRENT_PATH, PREVIOUS_PATH)
+        .map_err(|e| info!("Could not move {} to {}: {:?}", CURRENT_PATH, PREVIOUS_PATH, e))
+        .ok();
 }
 
 // Write a VMO's contents to the appropriate file.
 pub fn write(service_name: &str, tag: &str, data: &str) {
     // /cache/ may be deleted any time. It's OK to try to create CURRENT_PATH if it alreay exists.
     let path = format!("{}/{}", CURRENT_PATH, service_name);
-    fs::create_dir_all(&path).ok();
-    fs::write(&format!("{}/{}", path, tag), data).ok();
+    fs::create_dir_all(&path)
+        .map_err(|e| warn!("Could not create directory {}: {:?}", path, e))
+        .ok();
+    fs::write(&format!("{}/{}", path, tag), data)
+        .map_err(|e| warn!("Could not write file {}/{}: {:?}", path, tag, e))
+        .ok();
 }
 
 // All the names in the previous-boot directory.
