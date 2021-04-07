@@ -225,6 +225,7 @@
                     "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
+                    "/core/vulkan_loader",
                 ],
             },
             {

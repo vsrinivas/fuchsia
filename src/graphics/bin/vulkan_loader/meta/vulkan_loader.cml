@@ -1,0 +1,25 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/vulkan_loader",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.vulkan.loader.Loader" ],
+        },
+    ],
+    use: [
+        {
+            directory: "system-lib",
+            rights: [ "rx*" ],
+            path: "/system/lib",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "self",
+        },
+    ],
+}
