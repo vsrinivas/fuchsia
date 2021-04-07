@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("virtio_gpu_bind") {
   rules = "virtio_gpu.bind"
@@ -88,13 +88,7 @@ test("virtio-gpu-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-unittest_package("virtio-gpu-test-package") {
+fuchsia_unittest_package("virtio-gpu-test-package") {
   package_name = "virtio-gpu-test"
   deps = [ ":virtio-gpu-test" ]
-
-  tests = [
-    {
-      name = "virtio-gpu-test-test"
-    },
-  ]
 }
