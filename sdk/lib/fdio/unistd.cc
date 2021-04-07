@@ -1960,6 +1960,9 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
             } else {
               status = ZX_ERR_CONNECTION_RESET;
             }
+            // Reset error state so that subsequent read/write calls do not fail with the same
+            // error.
+            ioflag &= ~IOFLAG_SOCKET_HAS_ERROR;
             break;
           }
           __FALLTHROUGH;
@@ -2004,6 +2007,9 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
             } else {
               status = ZX_ERR_CONNECTION_RESET;
             }
+            // Reset error state so that subsequent read/write calls do not fail with the same
+            // error.
+            ioflag &= ~IOFLAG_SOCKET_HAS_ERROR;
             break;
           }
           __FALLTHROUGH;

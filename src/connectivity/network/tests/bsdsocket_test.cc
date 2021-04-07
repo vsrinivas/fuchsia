@@ -2896,70 +2896,81 @@ namespace {
 void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::unique_fd&)) {
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
-  constexpr int kBacklog = 2;
-  // Linux completes one more connection than the listen backlog argument.
-  // To ensure that there is at least one client connection that stays in
-  // connecting state, keep 2 more client connections than the listen backlog.
-  constexpr int kClients = kBacklog + 2;
-
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
       .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
   };
-
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
-  ASSERT_EQ(listen(listener.get(), kBacklog), 0) << strerror(errno);
+  // This test is only interested in deterministically getting a socket in
+  // connecting state. For that, we use a listen backlog of zero which would
+  // mean there is exactly one connection that gets established and is enqueued
+  // to the accept queue. We poll on the listener to ensure that is enqueued.
+  // After that the subsequent client connect will stay in connecting state as
+  // the accept queue is full.
+  ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
-  std::array<fbl::unique_fd, kClients> clients;
-  for (fbl::unique_fd& client : clients) {
-    ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
-        << strerror(errno);
-    int ret = connect(client.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
-    // Linux manpage for connect, for EINPROGRESS error:
-    // "The socket is nonblocking and the connection cannot be completed immediately."
-    // Which means that the non-blocking connect may succeed (ie. ret == 0) in the unlikely case
-    // where the connection does complete immediately before the system call returns.
-    //
-    // On Fuchsia, a non-blocking connect would always fail with EINPROGRESS.
+  fbl::unique_fd established_client;
+  ASSERT_TRUE(established_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0)))
+      << strerror(errno);
+  ASSERT_EQ(connect(established_client.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  // Ensure that the accept queue has the completed connection.
+  constexpr int kTimeout = 10000;
+  pollfd pfd = {
+      .fd = listener.get(),
+      .events = POLLIN,
+  };
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
+  ASSERT_EQ(pfd.revents, POLLIN);
+
+  fbl::unique_fd connecting_client;
+  ASSERT_TRUE(connecting_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
+  int ret = connect(connecting_client.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+  // Linux manpage for connect, for EINPROGRESS error:
+  // "The socket is nonblocking and the connection cannot be completed immediately."
+  // Which means that the non-blocking connect may succeed (ie. ret == 0) in the unlikely case
+  // where the connection does complete immediately before the system call returns.
+  //
+  // On Fuchsia, a non-blocking connect would always fail with EINPROGRESS.
 #if !defined(__Fuchsia__)
-    if (ret != 0)
+  if (ret != 0)
 #endif
-    {
-      EXPECT_EQ(ret, -1);
-      EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
-    }
+  {
+    EXPECT_EQ(ret, -1);
+    EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
   }
 
   ASSERT_NO_FATAL_FAILURE(stopListen(listener));
 
-  for (auto& client : clients) {
-    struct pollfd pfd = {
-        .fd = client.get(),
+  std::array<std::pair<int, int>, 2> sockets = {
+      std::make_pair(established_client.get(), ECONNRESET),
+      std::make_pair(connecting_client.get(), ECONNREFUSED),
+  };
+  for (size_t i = 0; i < sockets.size(); i++) {
+    SCOPED_TRACE("i=" + std::to_string(i));
+    auto [fd, expected_errno] = sockets[i];
+    pollfd pfd = {
+        .fd = fd,
         .events = POLLIN,
     };
-    // When the listening socket is stopped, then we expect the remote to reset
-    // the connection.
+    // When the listening socket is closed, the peer would reset the connection.
     int n = poll(&pfd, 1, kTimeout);
-    ASSERT_GE(n, 0) << strerror(errno);
-    ASSERT_EQ(n, 1);
-    ASSERT_EQ(pfd.revents, POLLIN | POLLHUP | POLLERR);
+    EXPECT_GE(n, 0) << strerror(errno);
+    EXPECT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLIN | POLLHUP | POLLERR);
     char c;
-    ASSERT_EQ(ioMethod.executeIO(client.get(), &c, sizeof(c)), -1);
-    // Subsequent read can fail with:
-    // ECONNRESET: If the client connection was established and was reset by the
-    // remote.
-    // ECONNREFUSED: If the client connection failed to be established.
-    ASSERT_TRUE(errno == ECONNRESET || errno == ECONNREFUSED) << strerror(errno);
-    // The last client connection would be in connecting (SYN_SENT) state.
-    if (client == clients[kClients - 1]) {
-      ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
-    }
+    EXPECT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
+    EXPECT_EQ(errno, expected_errno);
 
     bool isWrite = ioMethod.isWrite();
 #if !defined(__Fuchsia__)
@@ -2967,10 +2978,10 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
 #endif
 
     if (isWrite) {
-      ASSERT_EQ(ioMethod.executeIO(client.get(), &c, sizeof(c)), -1);
+      ASSERT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
       EXPECT_EQ(errno, EPIPE) << strerror(errno);
     } else {
-      ASSERT_EQ(ioMethod.executeIO(client.get(), &c, sizeof(c)), 0) << strerror(errno);
+      ASSERT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), 0) << strerror(errno);
     }
   }
 }

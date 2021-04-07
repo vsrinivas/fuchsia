@@ -960,18 +960,17 @@ struct stream_socket : public pipe {
 
     if (signals & ZXIO_SIGNAL_PEER_CLOSED) {
       // Update flags to hold an error state which can be harvested by read/write calls.
-      // For Linux parity reasons, do this only for non-blocking sockets.
-      // Test: src/connectivity/network/tests/bsdsocket_test.cc:TestListenWhileConnect
       // For other errors like connection timeouts, no error is reported to the
       // subsequent read/write calls, hence we do not update the ioflag state for those.
       //
-      // On a related note, blocking socket behavior is one of the two below:
+      // I/O on non-blocking sockets and blocking sockets with preceding poll, rely on this flag
+      // state to return errors.
+      // I/O on blocking socket without a preceding poll is one of the two below:
       // (1) If the peer resets the connection while the socket is blocked, return error.
       //     The caller of this routine can interpret POLLHUP to return appropriate error.
       // (2) If the read/write is called post connection reset, that is treated as I/O
       //     on a peer-closed socket handle.
-      if (ioflag() & IOFLAG_NONBLOCK &&
-          (zx_signals & (ZXSIO_SIGNAL_CONNECTION_REFUSED | ZXSIO_SIGNAL_CONNECTION_RESET))) {
+      if (zx_signals & (ZXSIO_SIGNAL_CONNECTION_REFUSED | ZXSIO_SIGNAL_CONNECTION_RESET)) {
         ioflag() |= IOFLAG_SOCKET_HAS_ERROR;
       }
       events |= POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP;
