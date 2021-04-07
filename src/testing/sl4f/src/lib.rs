@@ -43,6 +43,7 @@ pub mod scenic;
 pub mod server;
 pub mod setui;
 pub mod sysinfo;
+pub mod system_metrics;
 pub mod temperature;
 pub mod tiles;
 pub mod time;

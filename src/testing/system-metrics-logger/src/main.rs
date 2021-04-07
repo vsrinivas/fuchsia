@@ -98,8 +98,9 @@ impl SystemMetricsLoggerServer {
                 let mut result = self.start_logging(interval_ms, None).await;
                 responder.send(&mut result)?;
             }
-            SystemMetricsLoggerRequest::StopLogging { .. } => {
+            SystemMetricsLoggerRequest::StopLogging { responder } => {
                 *self.cpu_logging_task.borrow_mut() = None;
+                responder.send()?;
             }
         }
 
@@ -336,7 +337,8 @@ mod tests {
             assert_eq!(runner.iterate_logging_task(), true);
         }
 
-        assert!(runner.proxy.stop_logging().is_ok());
+        let mut query = runner.proxy.stop_logging();
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(())));
         let mut query = runner.proxy.start_logging_forever(100);
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
     }
@@ -383,12 +385,15 @@ mod tests {
     fn test_multiple_stops_ok() {
         let mut runner = Runner::new();
 
-        assert!(runner.proxy.stop_logging().is_ok());
+        let mut query = runner.proxy.stop_logging();
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(())));
 
         let mut query = runner.proxy.start_logging(100, 200);
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
 
-        assert!(runner.proxy.stop_logging().is_ok());
-        assert!(runner.proxy.stop_logging().is_ok());
+        let mut query = runner.proxy.stop_logging();
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(())));
+        let mut query = runner.proxy.stop_logging();
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(())));
     }
 }
