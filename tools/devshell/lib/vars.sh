@@ -15,7 +15,8 @@ fi
 # complete. Tracking Bug: fxbug.dev/49230
 export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-false}"
 
-export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
+FUCHSIA_DIR="$(dirname "$(dirname "$(dirname "${devshell_lib_dir}")")")"
+export FUCHSIA_DIR
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
 source "${devshell_lib_dir}/platform.sh"
 source "${devshell_lib_dir}/fx-cmd-locator.sh"
@@ -50,18 +51,18 @@ function fx-info {
 # fx-warn prints a line to stderr with a yellow WARNING: prefix.
 function fx-warn {
   if fx-is-stderr-tty; then
-    echo -e >&2 "\033[1;33mWARNING:\033[0m $@"
+    echo -e >&2 "\033[1;33mWARNING:\033[0m $*"
   else
-    echo -e >&2 "WARNING: $@"
+    echo -e >&2 "WARNING: $*"
   fi
 }
 
 # fx-error prints a line to stderr with a red ERROR: prefix.
 function fx-error {
   if fx-is-stderr-tty; then
-    echo -e >&2 "\033[1;31mERROR:\033[0m $@"
+    echo -e >&2 "\033[1;31mERROR:\033[0m $*"
   else
-    echo -e >&2 "ERROR: $@"
+    echo -e >&2 "ERROR: $*"
   fi
 }
 
@@ -232,10 +233,11 @@ function is-remote-workflow-device {
 # fx-export-device-address is "public API" to commands that wish to
 # have the exported variables set.
 function fx-export-device-address {
-  export FX_DEVICE_NAME="$(get-device-name)"
-  export FX_DEVICE_ADDR="$(get-fuchsia-device-addr)"
-  export FX_SSH_ADDR="$(get-device-addr-resource)"
-  export FX_SSH_PORT="$(get-device-ssh-port)"
+  FX_DEVICE_NAME="$(get-device-name)"
+  FX_DEVICE_ADDR="$(get-fuchsia-device-addr)"
+  FX_SSH_ADDR="$(get-device-addr-resource)"
+  FX_SSH_PORT="$(get-device-ssh-port)"
+  export FX_DEVICE_NAME FX_DEVICE_ADDR FX_SSH_ADDR FX_SSH_PORT
 }
 
 function get-device-ssh-port {
@@ -275,7 +277,7 @@ function _looks_like_ipv6 {
 }
 
 function _print_ssh_warning {
-  fx-warn "Cannot load device SSH credentials. $@"
+  fx-warn "Cannot load device SSH credentials. $*"
   fx-warn "Run 'tools/ssh-keys/gen-ssh-keys.sh' to regenerate."
 }
 
@@ -302,7 +304,9 @@ function _get-ssh-key {
     return 1
   fi
 
-  { read privkey && read authkey; } < "${_SSH_MANIFEST}"
+  # Set -r flag to avoid interpreting backslashes as escape characters, e.g. it
+  # won't convert "\n" to a newline character.
+  { read -r privkey && read -r authkey; } < "${_SSH_MANIFEST}"
 
   if [[ -z $privkey || -z $authkey ]]; then
     _print_ssh_warning "Manifest file ${_SSH_MANIFEST} is malformed."
@@ -340,7 +344,7 @@ function get-ssh-authkeys {
 
 function fx-target-finder-resolve {
   if [[ $# -ne 1 ]]; then
-    fx-error "Invalid arguments to fx-target-finder-resolve: [$@]"
+    fx-error "Invalid arguments to fx-target-finder-resolve: [$*]"
     return 1
   fi
   if is_feature_enabled "ffx_discovery"; then
@@ -433,7 +437,7 @@ function get-device-addr-url {
 
 function fx-command-run {
   local -r command_name="$1"
-  local -r command_path="$(find_executable ${command_name})"
+  local -r command_path="$(find_executable "${command_name}")"
 
   if [[ ! -f "${command_path}" ]]; then
     fx-error "Unknown command ${command_name}"
@@ -446,7 +450,7 @@ function fx-command-run {
 
 function fx-command-exec {
   local -r command_name="$1"
-  local -r command_path="$(find_executable ${command_name})"
+  local -r command_path="$(find_executable "${command_name}")"
 
   if [[ ! -f "${command_path}" ]]; then
     fx-error "Unknown command ${command_name}"
@@ -516,7 +520,8 @@ function fx-standard-switches {
 function fx-choose-build-concurrency {
   if grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"; then
     # The recommendation from the Goma team is to use 10*cpu-count.
-    local cpus="$(fx-cpu-count)"
+    local cpus
+    cpus="$(fx-cpu-count)"
     echo $((cpus * 10))
   else
     fx-cpu-count
@@ -557,7 +562,7 @@ function fx-cmd-locked {
     exit 1
   fi
   # Exit trap to clean up lock file
-  trap "[[ -n \"${_FX_LOCK_FILE}\" ]] && rm -f \"${_FX_LOCK_FILE}\"" EXIT
+  trap '[[ -n "${_FX_LOCK_FILE}" ]] && rm -f "${_FX_LOCK_FILE}"' EXIT
   fx-exit-on-failure "$@"
 }
 
@@ -601,13 +606,15 @@ function fx-run-ninja {
       # unscientific study of build side effects suggests that cpus*20 is a
       # reasonable value to prevent catastrophic load (i.e. user can not kill
       # the build, can not lock the screen, etc).
-      local cpus="$(fx-cpu-count)"
+      local cpus
+      cpus="$(fx-cpu-count)"
       args=("-l" $((cpus * 20)) "${args[@]}")
     fi
   fi
 
   if ! $have_jobs; then
-    local concurrency="$(fx-choose-build-concurrency)"
+    local concurrency
+    concurrency="$(fx-choose-build-concurrency)"
     # macOS in particular has a low default for number of open file descriptors
     # per process, which is prohibitive for higher job counts. Here we raise
     # the number of allowed file descriptors per process if it appears to be
