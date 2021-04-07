@@ -51,11 +51,8 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // the selection and configuration of an earlier item.  But this all happens
   // before anything touches hardware.
   UartKernelDriver uart;
-  zbitl::View<ktl::span<ktl::byte>> zbi_view(
-      // We don't have any outside information on the maximum size of the
-      // ZBI.  We'll just have to trust the length in the ZBI header, so tell
-      // zbitl that the memory storing it is as large as a ZBI could ever be.
-      {reinterpret_cast<ktl::byte*>(zbi), UINT32_MAX});
+  zbitl::View<zbitl::ByteView> zbi_view{
+      zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi))};
   for (auto [header, payload] : zbi_view) {
     uart.Match(*header, payload.data());
   }
