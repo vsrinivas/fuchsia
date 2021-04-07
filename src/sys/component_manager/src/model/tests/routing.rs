@@ -16,7 +16,6 @@ use {
             error::ModelError,
             events::registry::EventSubscription,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            resolver::ResolverError,
             rights,
             routing::{self, RoutingError},
             testing::{routing_test_helpers::*, test_helpers::*},
@@ -3781,10 +3780,19 @@ async fn resolver_is_not_available() {
     join!(
         // Bind "c:0". We expect to see a failure that the scheme is not registered.
         async move {
-            assert_matches!(
-                universe.bind_instance(&vec!["c:0"].into()).await,
-                Err(ModelError::ResolverError { err: ResolverError::SchemeNotRegistered, .. })
-            );
+            match universe.bind_instance(&vec!["c:0"].into()).await {
+                Err(ModelError::ComponentInstanceError {
+                    err: ComponentInstanceError::ResolveFailed { err: resolve_error, .. },
+                }) => {
+                    assert_eq!(
+                        resolve_error.to_string(),
+                        "failed to resolve \"base://c\": scheme not registered"
+                    );
+                }
+                _ => {
+                    panic!("expected ModelError wrapping ComponentInstanceError::ResolveFailed");
+                }
+            };
         },
         // Wait for a request, and resolve it.
         async {
@@ -3855,10 +3863,18 @@ async fn resolver_component_decl_is_validated() {
     join!(
         // Bind "b:0". We expect to see a ResolverError.
         async move {
-            assert_matches!(
-                universe.bind_instance(&vec!["b:0"].into()).await,
-                Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. }, .. })
-            );
+            match universe.bind_instance(&vec!["b:0"].into()).await {
+                Err(ModelError::ComponentInstanceError {
+                    err: ComponentInstanceError::ResolveFailed { err: resolve_error, .. },
+                }) => {
+                    assert!(resolve_error
+                        .to_string()
+                        .starts_with("failed to resolve \"base://b\": component manifest invalid"));
+                }
+                _ => {
+                    panic!("expected ModelError wrapping ComponentInstanceError::ResolveFailed");
+                }
+            };
         },
         // Wait for a request, and resolve it.
         async {

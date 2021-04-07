@@ -726,13 +726,10 @@ where
                 }
                 ExtendedInstance::Component(parent_component) => {
                     let parent_offer: O = {
-                        let parent_state =
-                            parent_component.lock_resolved_state().await.map_err(|err| {
-                                RoutingError::resolve_failed(&parent_component.abs_moniker, err)
-                            })?;
+                        let parent_decl = parent_component.decl().await?;
                         let child_moniker =
                             target.child_moniker().cloned().expect("ChildMoniker should exist");
-                        find_matching_offer(use_.source_name(), &child_moniker, parent_state.decl())
+                        find_matching_offer(use_.source_name(), &child_moniker, &parent_decl)
                             .cloned()
                             .ok_or_else(|| {
                                 <U as ErrorNotFoundFromParent>::error_not_found_from_parent(
@@ -787,14 +784,11 @@ where
     {
         match registration.source() {
             RegistrationSource::Self_ => {
-                let state = target
-                    .lock_resolved_state()
-                    .await
-                    .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
+                let decl = target.decl().await?;
                 Ok(RegistrationResult::Source(CapabilitySource::Component {
                     capability: sources.find_component_source(
                         registration.source_name(),
-                        &state.decl().capabilities,
+                        &decl.capabilities,
                         visitor,
                     )?,
                     component: target.as_weak(),
@@ -821,16 +815,13 @@ where
                 }
                 ExtendedInstance::Component(parent_component) => {
                     let parent_offer: O = {
-                        let parent_state =
-                            parent_component.lock_resolved_state().await.map_err(|err| {
-                                RoutingError::resolve_failed(&parent_component.abs_moniker, err)
-                            })?;
+                        let parent_decl = parent_component.decl().await?;
                         let child_moniker =
                             target.child_moniker().cloned().expect("ChildMoniker should exist");
                         find_matching_offer(
                             registration.source_name(),
                             &child_moniker,
-                            parent_state.decl(),
+                            &parent_decl,
                         )
                         .cloned()
                         .ok_or_else(|| {
@@ -845,12 +836,8 @@ where
             },
             RegistrationSource::Child(child) => {
                 let child_component = {
-                    let state = target
-                        .lock_resolved_state()
-                        .await
-                        .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
                     let partial = PartialMoniker::new(child.clone(), None);
-                    state.get_live_child(&partial).ok_or_else(|| {
+                    target.get_live_child(&partial).await?.ok_or_else(|| {
                         RoutingError::EnvironmentFromChildInstanceNotFound {
                             child_moniker: partial,
                             moniker: target.abs_moniker.clone(),
@@ -860,11 +847,8 @@ where
                     })?
                 };
                 let child_expose: E = {
-                    let child_state =
-                        child_component.lock_resolved_state().await.map_err(|err| {
-                            RoutingError::resolve_failed(&child_component.abs_moniker, err)
-                        })?;
-                    find_matching_expose(registration.source_name(), child_state.decl())
+                    let child_decl = child_component.decl().await?;
+                    find_matching_expose(registration.source_name(), &child_decl)
                         .cloned()
                         .ok_or_else(|| {
                             let child_moniker = child_component
@@ -920,14 +904,11 @@ where
 
             match offer.source() {
                 OfferSource::Self_ => {
-                    let state = target
-                        .lock_resolved_state()
-                        .await
-                        .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
+                    let decl = target.decl().await?;
                     return Ok(OfferResult::Source(CapabilitySource::Component {
                         capability: sources.find_component_source(
                             offer.source_name(),
-                            &state.decl().capabilities,
+                            &decl.capabilities,
                             visitor,
                         )?,
                         component: target.as_weak(),
@@ -971,22 +952,15 @@ where
                     let child_moniker =
                         target.child_moniker().cloned().expect("ChildMoniker should exist");
                     let parent_offer = {
-                        let parent_state =
-                            parent_component.lock_resolved_state().await.map_err(|err| {
-                                RoutingError::resolve_failed(&parent_component.abs_moniker, err)
-                            })?;
-                        find_matching_offer(
-                            offer.source_name(),
-                            &child_moniker,
-                            parent_state.decl(),
-                        )
-                        .cloned()
-                        .ok_or_else(|| {
-                            <O as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                target.abs_moniker.clone(),
-                                offer.source_name().clone(),
-                            )
-                        })?
+                        let parent_decl = parent_component.decl().await?;
+                        find_matching_offer(offer.source_name(), &child_moniker, &parent_decl)
+                            .cloned()
+                            .ok_or_else(|| {
+                                <O as ErrorNotFoundFromParent>::error_not_found_from_parent(
+                                    target.abs_moniker.clone(),
+                                    offer.source_name().clone(),
+                                )
+                            })?
                     };
                     offer = parent_offer;
                     target = parent_component;
@@ -997,16 +971,14 @@ where
                 OfferSource::Collection(name) => {
                     sources.collection_source()?;
                     {
-                        let state = target.lock_resolved_state().await.map_err(|err| {
-                            RoutingError::resolve_failed(&target.abs_moniker, err)
-                        })?;
-                        state.decl().collections.iter().find(|c| &c.name == name).ok_or_else(
-                            || RoutingError::OfferFromCollectionNotFound {
+                        let decl = target.decl().await?;
+                        decl.collections.iter().find(|c| &c.name == name).ok_or_else(|| {
+                            RoutingError::OfferFromCollectionNotFound {
                                 collection: name.clone(),
                                 moniker: target.abs_moniker.clone(),
                                 capability: offer.source_name().clone(),
-                            },
-                        )?;
+                            }
+                        })?;
                     }
                     let name = name.clone();
                     return Ok(OfferResult::OfferFromCollection(offer, target, name));
@@ -1029,12 +1001,8 @@ where
     match offer.source() {
         OfferSource::Child(child) => {
             let child_component = {
-                let state = component
-                    .lock_resolved_state()
-                    .await
-                    .map_err(|err| RoutingError::resolve_failed(&component.abs_moniker, err))?;
                 let partial = PartialMoniker::new(child.clone(), None);
-                state.get_live_child(&partial).ok_or_else(|| {
+                component.get_live_child(&partial).await?.ok_or_else(|| {
                     RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker: partial,
                         moniker: component.abs_moniker.clone(),
@@ -1043,10 +1011,8 @@ where
                 })?
             };
             let expose = {
-                let child_state = child_component.lock_resolved_state().await.map_err(|err| {
-                    RoutingError::resolve_failed(&child_component.abs_moniker, err)
-                })?;
-                find_matching_expose(offer.source_name(), child_state.decl()).cloned().ok_or_else(
+                let child_decl = child_component.decl().await?;
+                find_matching_expose(offer.source_name(), &child_decl).cloned().ok_or_else(
                     || {
                         let child_moniker = child_component
                             .child_moniker()
@@ -1099,14 +1065,11 @@ where
 
             match expose.source() {
                 ExposeSource::Self_ => {
-                    let state = target
-                        .lock_resolved_state()
-                        .await
-                        .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
+                    let decl = target.decl().await?;
                     return Ok(ExposeResult::Source(CapabilitySource::Component {
                         capability: sources.find_component_source(
                             expose.source_name(),
-                            &state.decl().capabilities,
+                            &decl.capabilities,
                             visitor,
                         )?,
                         component: target.as_weak(),
@@ -1127,11 +1090,8 @@ where
                 }
                 ExposeSource::Child(child) => {
                     let child_component = {
-                        let state = target.lock_resolved_state().await.map_err(|err| {
-                            RoutingError::resolve_failed(&target.abs_moniker, err)
-                        })?;
                         let child_moniker = PartialMoniker::new(child.clone(), None);
-                        state.get_live_child(&child_moniker).ok_or_else(|| {
+                        target.get_live_child(&child_moniker).await?.ok_or_else(|| {
                             RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,
                                 moniker: target.abs_moniker.clone(),
@@ -1140,11 +1100,8 @@ where
                         })?
                     };
                     let child_expose = {
-                        let child_state =
-                            child_component.lock_resolved_state().await.map_err(|err| {
-                                RoutingError::resolve_failed(&child_component.abs_moniker, err)
-                            })?;
-                        find_matching_expose(expose.source_name(), child_state.decl())
+                        let child_decl = child_component.decl().await?;
+                        find_matching_expose(expose.source_name(), &child_decl)
                             .cloned()
                             .ok_or_else(|| {
                                 let child_moniker = child_component
@@ -1164,16 +1121,14 @@ where
                 ExposeSource::Collection(name) => {
                     sources.collection_source()?;
                     {
-                        let state = target.lock_resolved_state().await.map_err(|err| {
-                            RoutingError::resolve_failed(&target.abs_moniker, err)
-                        })?;
-                        state.decl().collections.iter().find(|c| &c.name == name).ok_or_else(
-                            || RoutingError::ExposeFromCollectionNotFound {
+                        let decl = target.decl().await?;
+                        decl.collections.iter().find(|c| &c.name == name).ok_or_else(|| {
+                            RoutingError::ExposeFromCollectionNotFound {
                                 collection: name.clone(),
                                 moniker: target.abs_moniker.clone(),
                                 capability: expose.source_name().clone(),
-                            },
-                        )?;
+                            }
+                        })?;
                     }
                     let name = name.clone();
                     return Ok(ExposeResult::ExposeFromCollection(expose, target, name));

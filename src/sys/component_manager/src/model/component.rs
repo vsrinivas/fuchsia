@@ -33,6 +33,7 @@ use {
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
     },
+    async_trait::async_trait,
     clonable_error::ClonableError,
     cm_rust::{
         self, CapabilityDecl, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl,
@@ -294,7 +295,8 @@ impl ComponentInstance {
     /// error if the instance is destroyed.
     pub async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
-    ) -> Result<MappedMutexGuard<'a, InstanceState, ResolvedInstanceState>, ModelError> {
+    ) -> Result<MappedMutexGuard<'a, InstanceState, ResolvedInstanceState>, ComponentInstanceError>
+    {
         fn get_resolved(s: &mut InstanceState) -> &mut ResolvedInstanceState {
             match s {
                 InstanceState::Resolved(s) => s,
@@ -308,16 +310,20 @@ impl ComponentInstance {
                     return Ok(MutexGuard::map(state, get_resolved));
                 }
                 InstanceState::Destroyed => {
-                    return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
+                    return Err(ComponentInstanceError::instance_not_found(
+                        self.abs_moniker.clone(),
+                    ));
                 }
                 InstanceState::New | InstanceState::Discovered => {}
             }
             // Drop the lock before doing the work to resolve the state.
         }
-        self.resolve().await?;
+        self.resolve()
+            .await
+            .map_err(|err| ComponentInstanceError::resolve_failed(&self.abs_moniker, err))?;
         let state = self.state.lock().await;
         if let InstanceState::Destroyed = *state {
-            return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
+            return Err(ComponentInstanceError::instance_not_found(self.abs_moniker.clone()));
         }
         Ok(MutexGuard::map(state, get_resolved))
     }
@@ -645,6 +651,7 @@ impl ComponentInstance {
     }
 }
 
+#[async_trait]
 impl ComponentInstanceInterface for ComponentInstance {
     type TopInstance = ComponentManagerInstance;
 
@@ -658,6 +665,27 @@ impl ComponentInstanceInterface for ComponentInstance {
 
     fn try_get_parent(&self) -> Result<ExtendedInstance, ComponentInstanceError> {
         self.parent.upgrade()
+    }
+
+    async fn decl<'a>(self: &'a Arc<Self>) -> Result<ComponentDecl, ComponentInstanceError> {
+        let state = self.lock_resolved_state().await?;
+        Ok(state.decl().clone())
+    }
+
+    async fn get_live_child<'a>(
+        self: &'a Arc<Self>,
+        moniker: &PartialMoniker,
+    ) -> Result<Option<Arc<Self>>, ComponentInstanceError> {
+        let state = self.lock_resolved_state().await?;
+        Ok(state.get_live_child(moniker))
+    }
+
+    async fn live_children_in_collection<'a>(
+        self: &'a Arc<Self>,
+        collection: &'a str,
+    ) -> Result<Vec<(PartialMoniker, Arc<ComponentInstance>)>, ComponentInstanceError> {
+        let state = self.lock_resolved_state().await?;
+        Ok(state.live_children_in_collection(collection))
     }
 }
 
@@ -795,15 +823,18 @@ impl ResolvedInstanceState {
         self.live_children.get(m).map(|(_, v)| v.clone())
     }
 
-    /// Returns an iterator over live children in `collection`.
-    pub fn live_children_in_collection<'a>(
-        &'a self,
-        collection: &'a str,
-    ) -> impl Iterator<Item = (&'a PartialMoniker, &'a Arc<ComponentInstance>)> + 'a {
-        self.live_children().filter(move |(m, _)| match m.collection() {
-            Some(name) if name == collection => true,
-            _ => false,
-        })
+    /// Returns a vector of the live children in `collection`.
+    pub fn live_children_in_collection(
+        &self,
+        collection: &str,
+    ) -> Vec<(PartialMoniker, Arc<ComponentInstance>)> {
+        self.live_children()
+            .filter(move |(m, _)| match m.collection() {
+                Some(name) if name == collection => true,
+                _ => false,
+            })
+            .map(|(m, c)| (m.clone(), Arc::clone(c)))
+            .collect()
     }
 
     /// Return all children that match the `PartialMoniker` regardless of

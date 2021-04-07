@@ -17,7 +17,10 @@ use {
             },
         },
     },
-    ::routing::capability_source::CollectionCapabilityProvider,
+    ::routing::{
+        capability_source::CollectionCapabilityProvider,
+        component_instance::ComponentInstanceInterface,
+    },
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, OfferDecl, OfferDeclCommon},
     from_enum::FromEnum,
@@ -71,15 +74,11 @@ where
     async fn route_instance(&self, instance: &str) -> Result<CapabilitySource, RoutingError> {
         let target = self.collection_component.upgrade()?;
         let (child_moniker, child_component): (PartialMoniker, Arc<ComponentInstance>) = {
-            let state = target
-                .lock_resolved_state()
-                .await
-                .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
-            let x = state
+            target
                 .live_children_in_collection(&self.collection_name)
-                .find_map(
-                    |(m, c)| if m.name() == instance { Some((m.clone(), c.clone())) } else { None },
-                )
+                .await?
+                .into_iter()
+                .find_map(move |(m, c)| if m.name() == instance { Some((m, c)) } else { None })
                 .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
                     child_moniker: PartialMoniker::new(
                         instance.to_string(),
@@ -87,16 +86,12 @@ where
                     ),
                     moniker: target.abs_moniker.clone(),
                     capability_id: self.offer_decl.source_name().clone().into(),
-                })?;
-            x
+                })?
         };
 
         let expose_decl: E = {
-            let state = child_component
-                .lock_resolved_state()
-                .await
-                .map_err(|err| RoutingError::resolve_failed(&child_component.abs_moniker, err))?;
-            find_matching_expose(self.offer_decl.source_name(), state.decl()).cloned().ok_or_else(
+            let child_decl = child_component.decl().await?;
+            find_matching_expose(self.offer_decl.source_name(), &child_decl).cloned().ok_or_else(
                 || {
                     O::error_not_found_in_child(
                         target.abs_moniker.clone(),
@@ -181,15 +176,11 @@ where
     async fn route_instance(&self, instance: &str) -> Result<CapabilitySource, RoutingError> {
         let target = self.collection_component.upgrade()?;
         let (child_moniker, child_component): (PartialMoniker, Arc<ComponentInstance>) = {
-            let state = target
-                .lock_resolved_state()
-                .await
-                .map_err(|err| RoutingError::resolve_failed(&target.abs_moniker, err))?;
-            let x = state
+            target
                 .live_children_in_collection(&self.collection_name)
-                .find_map(
-                    |(m, c)| if m.name() == instance { Some((m.clone(), c.clone())) } else { None },
-                )
+                .await?
+                .into_iter()
+                .find_map(move |(m, c)| if m.name() == instance { Some((m, c)) } else { None })
                 .ok_or_else(|| RoutingError::ExposeFromChildInstanceNotFound {
                     child_moniker: PartialMoniker::new(
                         instance.to_string(),
@@ -197,16 +188,12 @@ where
                     ),
                     moniker: target.abs_moniker.clone(),
                     capability_id: self.expose_decl.source_name().clone().into(),
-                })?;
-            x
+                })?
         };
 
         let expose_decl: E = {
-            let state = child_component
-                .lock_resolved_state()
-                .await
-                .map_err(|err| RoutingError::resolve_failed(&child_component.abs_moniker, err))?;
-            find_matching_expose(self.expose_decl.source_name(), state.decl()).cloned().ok_or_else(
+            let child_decl = child_component.decl().await?;
+            find_matching_expose(self.expose_decl.source_name(), &child_decl).cloned().ok_or_else(
                 || {
                     E::error_not_found_in_child(
                         target.abs_moniker.clone(),
@@ -264,20 +251,12 @@ where
 {
     let mut instances = Vec::new();
     let component = component.upgrade()?;
-    let components: Vec<(PartialMoniker, Arc<ComponentInstance>)> = {
-        let state = component
-            .lock_resolved_state()
-            .await
-            .map_err(|err| RoutingError::resolve_failed(&component.abs_moniker, err))?;
-        state
-            .live_children_in_collection(collection_name)
-            .map(|(p, c)| (p.clone(), c.clone()))
-            .collect()
-    };
+    let components: Vec<(PartialMoniker, Arc<ComponentInstance>)> =
+        component.live_children_in_collection(collection_name).await?;
     for (partial_moniker, component) in components {
-        match component.lock_resolved_state().await {
-            Ok(state) => {
-                if find_matching_expose::<E>(capability_name, state.decl()).is_some() {
+        match component.decl().await {
+            Ok(decl) => {
+                if find_matching_expose::<E>(capability_name, &decl).is_some() {
                     instances.push(partial_moniker.name().to_string())
                 }
             }

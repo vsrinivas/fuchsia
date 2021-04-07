@@ -4,7 +4,9 @@
 
 use {
     crate::{environment::EnvironmentInterface, error::ComponentInstanceError},
-    moniker::{AbsoluteMoniker, ChildMoniker},
+    async_trait::async_trait,
+    cm_rust::ComponentDecl,
+    moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
     std::fmt,
     std::{
         clone::Clone,
@@ -14,6 +16,7 @@ use {
 
 /// A trait providing a representation of a component instance.
 // TODO(https://fxbug.dev/71901): Add methods providing all the data needed for capability routing.
+#[async_trait]
 pub trait ComponentInstanceInterface: Sized {
     type TopInstance: TopInstanceInterface;
 
@@ -35,6 +38,21 @@ pub trait ComponentInstanceInterface: Sized {
 
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
     fn try_get_parent(&self) -> Result<ExtendedInstanceInterface<Self>, ComponentInstanceError>;
+
+    /// Returns a copy of this instance's `ComponentDecl`.
+    async fn decl<'a>(self: &'a Arc<Self>) -> Result<ComponentDecl, ComponentInstanceError>;
+
+    /// Returns a live child of this instance.
+    async fn get_live_child<'a>(
+        self: &'a Arc<Self>,
+        moniker: &PartialMoniker,
+    ) -> Result<Option<Arc<Self>>, ComponentInstanceError>;
+
+    /// Returns a vector of the live children in `collection`.
+    async fn live_children_in_collection<'a>(
+        self: &'a Arc<Self>,
+        collection: &'a str,
+    ) -> Result<Vec<(PartialMoniker, Arc<Self>)>, ComponentInstanceError>;
 }
 
 /// A wrapper for a weak reference to a type implementing `ComponentInstanceInterface`. Provides the

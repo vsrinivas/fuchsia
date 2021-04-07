@@ -17,6 +17,12 @@ pub enum ComponentInstanceError {
     InstanceNotFound { moniker: AbsoluteMoniker },
     #[error("component manager instance unavailable")]
     ComponentManagerInstanceUnavailable {},
+    #[error("Failed to resolve `{}`: {}", moniker, err)]
+    ResolveFailed {
+        moniker: AbsoluteMoniker,
+        #[source]
+        err: ClonableError,
+    },
 }
 
 impl ComponentInstanceError {
@@ -26,6 +32,10 @@ impl ComponentInstanceError {
 
     pub fn cm_instance_unavailable() -> ComponentInstanceError {
         ComponentInstanceError::ComponentManagerInstanceUnavailable {}
+    }
+
+    pub fn resolve_failed(moniker: &AbsoluteMoniker, err: impl Into<anyhow::Error>) -> Self {
+        Self::ResolveFailed { moniker: moniker.clone(), err: err.into().into() }
     }
 }
 
@@ -323,13 +333,6 @@ pub enum RoutingError {
 
     #[error(transparent)]
     RightsRoutingError(#[from] RightsRoutingError),
-
-    #[error("Failed to resolve `{}`: {}", moniker, err)]
-    ResolveFailed {
-        moniker: AbsoluteMoniker,
-        #[source]
-        err: ClonableError,
-    },
 }
 
 impl RoutingError {
@@ -526,10 +529,6 @@ impl RoutingError {
 
     pub fn unsupported_route_source(source: impl Into<String>) -> Self {
         Self::UnsupportedRouteSource { source_type: source.into() }
-    }
-
-    pub fn resolve_failed(moniker: &AbsoluteMoniker, err: impl Into<anyhow::Error>) -> Self {
-        Self::ResolveFailed { moniker: moniker.clone(), err: err.into().into() }
     }
 }
 

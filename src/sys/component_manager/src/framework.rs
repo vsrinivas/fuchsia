@@ -15,6 +15,7 @@ use {
             routing::error::RoutingError,
         },
     },
+    ::routing::error::ComponentInstanceError,
     anyhow::Error,
     async_trait::async_trait,
     cm_fidl_validator,
@@ -182,8 +183,8 @@ impl RealmCapabilityHost {
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
         let child = {
             let state = component.lock_resolved_state().await.map_err(|e| match e {
-                ModelError::ResolverError { err, .. } => {
-                    debug!("failed to resolve: {:?}", err);
+                ComponentInstanceError::ResolveFailed { moniker, err } => {
+                    debug!("failed to resolve instance with moniker {}: {:?}", moniker, err);
                     fcomponent::Error::InstanceCannotResolve
                 }
                 e => {

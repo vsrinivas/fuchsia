@@ -182,6 +182,7 @@ mod tests {
                 },
             },
         },
+        ::routing::error::ComponentInstanceError,
         cm_rust::{CapabilityName, RegistrationSource, RunnerRegistration},
         maplit::hashmap,
         matches::assert_matches,
@@ -646,7 +647,9 @@ mod tests {
         .await?;
         assert_matches!(
             model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await,
-            Err(ModelError::ResolverError { .. })
+            Err(ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::ResolveFailed { .. }
+            })
         );
         Ok(())
     }
