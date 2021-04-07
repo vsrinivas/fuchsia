@@ -432,7 +432,11 @@ class CrashReporterTest : public UnitTestFixture {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -445,7 +449,11 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
 TEST_F(CrashReporterTest, EnforcesQuota) {
   SetUpCrashReporterDefaultConfig(
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -458,7 +466,11 @@ TEST_F(CrashReporterTest, EnforcesQuota) {
 TEST_F(CrashReporterTest, ResetsQuota) {
   SetUpCrashReporterDefaultConfig(
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota * 2, kUploadSuccessful));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -483,7 +495,11 @@ TEST_F(CrashReporterTest, NoQuota) {
              /*houry_snapshot=*/true},
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota + 1 /*first hourly snapshot*/,
                                              kUploadSuccessful));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -535,7 +551,11 @@ TEST_F(CrashReporterTest, Check_RegisteredProduct) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -558,7 +578,11 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -576,7 +600,11 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -596,7 +624,11 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
 
 TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -608,7 +640,11 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -622,7 +658,11 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -639,7 +679,11 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -653,7 +697,11 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -675,7 +723,11 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -690,7 +742,11 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithSignature) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -711,7 +767,11 @@ TEST_F(CrashReporterTest, Fail_OnInvalidInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalTrue) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -725,7 +785,11 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalTrue) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalFalse) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -746,7 +810,11 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*houry_snapshot=*/true},
       std::vector({kUploadSuccessful}));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -766,7 +834,11 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
       },
       /*daily_per_product_quota=*/kDailyPerProductQuota,
       /*houry_snapshot=*/true});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderTracksNumCalls>(0u));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
@@ -785,7 +857,11 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*hourly_snapshot=*/true},
       std::vector({kUploadSuccessful}));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -810,7 +886,11 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*hourly_snapshot=*/true},
       std::vector({kUploadFailed}));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -827,7 +907,11 @@ TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*hourly_snapshot=*/true},
       std::vector({kUploadThrottled}));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -842,7 +926,11 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
                             },
                             /*daily_per_product_quota=*/kDailyPerProductQuota,
                             /*hourly_snapshot=*/true});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -852,7 +940,11 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProviderReturnsNoAttachment>(kDefaultAnnotations));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -864,7 +956,11 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProviderReturnsNoAnnotation>(kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -876,7 +972,11 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
@@ -889,7 +989,11 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
 
 TEST_F(CrashReporterTest, Succeed_OnDataProviderNotServing) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(nullptr);
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
@@ -902,7 +1006,11 @@ TEST_F(CrashReporterTest, Succeed_OnDataProviderNotServing) {
 
 TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful, kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -935,7 +1043,11 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
       kUploadFailed,
       kUploadFailed,
   });
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -959,7 +1071,11 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfNegativeConsent) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*houry_snapshot=*/true},
       std::vector<CrashServer::UploadStatus>({}));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -971,7 +1087,11 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfNegativeConsent) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -994,7 +1114,11 @@ TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
                             },
                             /*daily_per_product_quota=*/0u,
                             /*hourly_snapshot=*/true});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -1007,7 +1131,11 @@ TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpCrashReporterDefaultConfig();
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
@@ -1053,7 +1181,11 @@ class CrashReporterTestWithClock : public CrashReporterTest {
 
 TEST_F(CrashReporterTestWithClock, Check_UtcTimeIsNotReady) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>(kDefaultChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));

@@ -56,6 +56,7 @@ constexpr char kAnnotationSystemBootIdPrevious[] = "system.boot-id.previous";
 constexpr char kAnnotationSystemLastRebootReason[] = "system.last-reboot.reason";
 constexpr char kAnnotationSystemLastRebootUptime[] = "system.last-reboot.uptime";
 constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
+constexpr char kAnnotationSystemUpdateChannelTarget[] = "system.update-channel.target";
 
 // Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
 // when supplying non-platform annotations.

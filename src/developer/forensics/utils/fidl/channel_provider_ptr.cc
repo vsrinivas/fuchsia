@@ -20,7 +20,7 @@ namespace {
 // Wraps around fuchsia::update::channelcontrol::ChannelControlPtr to handle establishing the
 // connection, losing the connection, waiting for the callback, enforcing a timeout, etc.
 //
-// Supports only one call to GetCurrentChannel().
+// Supports only one call to GetCurrentChannel() or GetTargetChannel().
 class ChannelProviderPtr {
  public:
   // fuchsia.update.channelcontrol.ChannleControl is expected to be in |services|.
@@ -30,6 +30,18 @@ class ChannelProviderPtr {
 
   ::fit::promise<std::string, Error> GetCurrentChannel(fit::Timeout timeout) {
     channel_ptr_->GetCurrent([this](std::string channel) {
+      if (channel_ptr_.IsAlreadyDone()) {
+        return;
+      }
+
+      channel_ptr_.CompleteOk(channel);
+    });
+
+    return channel_ptr_.WaitForDone(std::move(timeout));
+  }
+
+  ::fit::promise<std::string, Error> GetTargetChannel(fit::Timeout timeout) {
+    channel_ptr_->GetTarget([this](std::string channel) {
       if (channel_ptr_.IsAlreadyDone()) {
         return;
       }
@@ -54,6 +66,18 @@ class ChannelProviderPtr {
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
   auto channel = ptr->GetCurrentChannel(std::move(timeout));
+  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(channel),
+                                              /*args=*/std::move(ptr));
+}
+
+::fit::promise<std::string, Error> GetTargetChannel(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    fit::Timeout timeout) {
+  auto ptr = std::make_unique<fidl::ChannelProviderPtr>(dispatcher, services);
+
+  // We must store the promise in a variable due to the fact that the order of evaluation of
+  // function parameters is undefined.
+  auto channel = ptr->GetTargetChannel(std::move(timeout));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(channel),
                                               /*args=*/std::move(ptr));
 }

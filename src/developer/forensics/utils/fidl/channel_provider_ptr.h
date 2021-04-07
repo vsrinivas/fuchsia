@@ -25,6 +25,13 @@ namespace fidl {
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     fit::Timeout timeout);
 
+// Fetches the target channel.
+//
+// fuchsia.update.channelcontrol.ChannelControl is expected to be in |services|.
+::fit::promise<std::string, Error> GetTargetChannel(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    fit::Timeout timeout);
+
 }  // namespace fidl
 }  // namespace forensics
 

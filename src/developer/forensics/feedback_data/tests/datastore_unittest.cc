@@ -256,15 +256,25 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }
 
-TEST_F(DatastoreTest, GetAnnotations_Channel) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControl>("my-channel"));
-  SetUpDatastore({kAnnotationSystemUpdateChannelCurrent}, kDefaultAttachmentsToAvoidSpuriousLogs);
+TEST_F(DatastoreTest, GetAnnotations_Channels) {
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params({
+          .current = "current-channel",
+          .target = "target-channel",
+      })));
+  SetUpDatastore(
+      {
+          kAnnotationSystemUpdateChannelCurrent,
+          kAnnotationSystemUpdateChannelTarget,
+      },
+      kDefaultAttachmentsToAvoidSpuriousLogs);
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr("my-channel")),
+                  Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr("current-channel")),
+                  Pair(kAnnotationSystemUpdateChannelTarget, AnnotationOr("target-channel")),
               }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());

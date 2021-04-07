@@ -233,7 +233,11 @@ TEST_F(CrashRegisterTest, Upsert_UpdateIfSameComponentUrl) {
 }
 
 TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
-  SetUpChannelControlServer(std::make_unique<stubs::ChannelControl>("some channel"));
+  SetUpChannelControlServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = "some channel",
+          .target = std::nullopt,
+      }));
 
   const auto expected = Product{
       .name = "Fuchsia",
@@ -279,7 +283,11 @@ TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
 };
 
 TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
-  SetUpChannelControlServer(std::make_unique<stubs::ChannelControl>("some channel"));
+  SetUpChannelControlServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = "some channel",
+          .target = std::nullopt,
+      }));
 
   CrashReportingProduct product;
   product.set_name("some name");

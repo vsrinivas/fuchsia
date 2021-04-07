@@ -16,7 +16,18 @@ namespace {
 
 const AnnotationKeys kSupportedAnnotations = {
     kAnnotationSystemUpdateChannelCurrent,
+    kAnnotationSystemUpdateChannelTarget,
 };
+
+using AnnotationPair = std::pair<std::string, AnnotationOr>;
+
+AnnotationPair MakeAnnotationPair(const std::string& key,
+                                  const ::fit::result<std::string, Error>& result) {
+  AnnotationOr annotation =
+      (result.is_ok()) ? AnnotationOr(result.value()) : AnnotationOr(result.error());
+
+  return std::make_pair(key, std::move(annotation));
+}
 
 }  // namespace
 
@@ -27,23 +38,43 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
 
 ::fit::promise<Annotations> ChannelProvider::GetAnnotations(zx::duration timeout,
                                                             const AnnotationKeys& allowlist) {
-  if (RestrictAllowlist(allowlist, kSupportedAnnotations).empty()) {
-    return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
+  const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
+
+  std::vector<::fit::promise<AnnotationPair>> annotation_promises;
+  if (annotations_to_get.find(kAnnotationSystemUpdateChannelCurrent) != annotations_to_get.end()) {
+    annotation_promises.push_back(
+        fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(timeout))
+            .then([](const ::fit::result<std::string, Error>& result) {
+              return ::fit::ok(MakeAnnotationPair(kAnnotationSystemUpdateChannelCurrent, result));
+            }));
   }
 
-  return fidl::GetCurrentChannel(
-             dispatcher_, services_,
-             fit::Timeout(
-                 timeout,
-                 /*action=*/
-                 [cobalt = cobalt_] { cobalt->LogOccurrence(cobalt::TimedOutData::kChannel); }))
-      .then([](const ::fit::result<std::string, Error>& result) {
-        AnnotationOr annotation =
-            (result.is_ok()) ? AnnotationOr(result.value()) : AnnotationOr(result.error());
+  if (annotations_to_get.find(kAnnotationSystemUpdateChannelTarget) != annotations_to_get.end()) {
+    annotation_promises.push_back(
+        fidl::GetTargetChannel(dispatcher_, services_, fit::Timeout(timeout))
+            .then([](const ::fit::result<std::string, Error>& result) {
+              return ::fit::ok(MakeAnnotationPair(kAnnotationSystemUpdateChannelTarget, result));
+            }));
+  }
 
-        return ::fit::ok(Annotations({
-            {kAnnotationSystemUpdateChannelCurrent, std::move(annotation)},
-        }));
+  return ::fit::join_promise_vector(std::move(annotation_promises))
+      .and_then([cobalt = cobalt_](std::vector<::fit::result<AnnotationPair>>& results)
+                    -> ::fit::result<Annotations> {
+        Annotations annotations;
+        for (auto& result : results) {
+          annotations.insert(std::move(result).value());
+        }
+
+        bool found_timeout{false};
+        for (const auto& [_, v] : annotations) {
+          found_timeout |= (!v.HasValue() && v.Error() == Error::kTimeout);
+        }
+
+        if (found_timeout) {
+          cobalt->LogOccurrence(cobalt::TimedOutData::kChannel);
+        }
+
+        return ::fit::ok(std::move(annotations));
       });
 }
 

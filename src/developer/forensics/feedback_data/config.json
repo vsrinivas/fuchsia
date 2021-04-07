@@ -23,7 +23,8 @@
         "system.boot-id.previous",
         "system.last-reboot.reason",
         "system.last-reboot.uptime",
-        "system.update-channel.current"
+        "system.update-channel.current",
+        "system.update-channel.target"
     ],
     "attachment_allowlist": [
         "build.snapshot.xml",

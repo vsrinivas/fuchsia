@@ -15,61 +15,80 @@
 
 namespace forensics::stubs {
 
-using ChannelControlBase = MULTI_BINDING_STUB_FIDL_SERVER(fuchsia::update::channelcontrol,
-                                                          ChannelControl);
+class ChannelControlBase
+    : public MULTI_BINDING_STUB_FIDL_SERVER(fuchsia::update::channelcontrol, ChannelControl) {
+ public:
+  struct Params {
+    std::optional<std::string> current;
+    std::optional<std::string> target;
+  };
+
+  ChannelControlBase(Params params)
+      : current_(std::move(params.current)), target_(std::move(params.target)) {}
+  ChannelControlBase() : ChannelControlBase(Params{std::nullopt, std::nullopt}) {}
+
+ protected:
+  const std::optional<std::string>& Current() const { return current_; }
+  const std::optional<std::string>& Target() const { return target_; }
+
+ private:
+  std::optional<std::string> current_;
+  std::optional<std::string> target_;
+};
 
 class ChannelControl : public ChannelControlBase {
  public:
-  explicit ChannelControl(std::string channel) : channel_(std::move(channel)) {}
+  explicit ChannelControl(Params params) : ChannelControlBase(std::move(params)) {}
 
   // |fuchsia::update::channelcontrol::ChannelControl|.
   void GetCurrent(GetCurrentCallback callback) override;
-
- private:
-  std::string channel_;
+  void GetTarget(GetCurrentCallback callback) override;
 };
 
 class ChannelControlReturnsEmptyChannel : public ChannelControlBase {
   // |fuchsia::update::channelcontrol::ChannelControl|.
   void GetCurrent(GetCurrentCallback callback) override;
+  void GetTarget(GetTargetCallback callback) override;
 };
 
 class ChannelControlClosesConnection : public ChannelControlBase {
  public:
   // |fuchsia::update::channelcontrol::ChannelControl|.
   STUB_METHOD_CLOSES_ALL_CONNECTIONS(GetCurrent, GetCurrentCallback);
+  STUB_METHOD_CLOSES_ALL_CONNECTIONS(GetTarget, GetTargetCallback);
 };
 
 class ChannelControlNeverReturns : public ChannelControlBase {
  public:
   // |fuchsia::update::channelcontrol::ChannelControl|.
   STUB_METHOD_DOES_NOT_RETURN(GetCurrent, GetCurrentCallback);
+  STUB_METHOD_DOES_NOT_RETURN(GetTarget, GetTargetCallback);
 };
 
 class ChannelControlClosesFirstConnection : public ChannelControlBase {
  public:
-  explicit ChannelControlClosesFirstConnection(std::string channel)
-      : channel_(std::move(channel)) {}
+  explicit ChannelControlClosesFirstConnection(Params params)
+      : ChannelControlBase(std::move(params)) {}
 
   // |fuchsia::update::channelcontrol::ChannelControl|.
   void GetCurrent(GetCurrentCallback callback) override;
+  void GetTarget(GetCurrentCallback callback) override;
 
  private:
   bool first_call_ = true;
-  std::string channel_;
 };
 
 class ChannelControlExpectsOneCall : public ChannelControlBase {
  public:
-  explicit ChannelControlExpectsOneCall(std::string channel) : channel_(std::move(channel)) {}
+  explicit ChannelControlExpectsOneCall(Params params) : ChannelControlBase(std::move(params)) {}
   ~ChannelControlExpectsOneCall() override;
 
   // |fuchsia::update::channelcontrol::ChannelControl|.
   void GetCurrent(GetCurrentCallback callback) override;
+  void GetTarget(GetCurrentCallback callback) override;
 
  private:
   bool first_call_ = true;
-  std::string channel_;
 };
 
 }  // namespace forensics::stubs

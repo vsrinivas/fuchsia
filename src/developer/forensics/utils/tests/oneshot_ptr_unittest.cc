@@ -52,7 +52,10 @@ class OneShotPtrTest : public UnitTestFixture {
 };
 
 TEST_F(OneShotPtrTest, Check_Success) {
-  auto channel_provider = std::make_unique<stubs::ChannelControl>(kChannel);
+  auto channel_provider = std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+      .current = kChannel,
+      .target = std::nullopt,
+  });
 
   SetUpChannelProviderServer(std::move(channel_provider));
 
@@ -108,7 +111,10 @@ TEST_F(OneShotPtrTest, Fail_Timeout) {
 }
 
 TEST_F(OneShotPtrTest, Crash_MultipleUses) {
-  auto channel_provider = std::make_unique<stubs::ChannelControl>(kChannel);
+  auto channel_provider = std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+      .current = kChannel,
+      .target = std::nullopt,
+  });
 
   SetUpChannelProviderServer(std::move(channel_provider));
 

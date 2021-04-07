@@ -38,9 +38,21 @@ class ChannelProviderPtrTest : public UnitTestFixture {
   }
 
   std::optional<std::string> GetCurrentChannel(::fit::closure if_timeout = [] {}) {
+    return GetChannel(/*current=*/true, std::move(if_timeout));
+  }
+
+  std::optional<std::string> GetTargetChannel(::fit::closure if_timeout = [] {}) {
+    return GetChannel(/*current=*/false, std::move(if_timeout));
+  }
+
+ private:
+  std::optional<std::string> GetChannel(
+      const bool current, ::fit::closure if_timeout = [] {}) {
     const zx::duration timeout = zx::sec(1);
-    auto promise = fidl::GetCurrentChannel(dispatcher(), services(),
-                                           fit::Timeout(timeout, std::move(if_timeout)));
+    auto promise = (current) ? fidl::GetCurrentChannel(dispatcher(), services(),
+                                                       fit::Timeout(timeout, std::move(if_timeout)))
+                             : fidl::GetTargetChannel(dispatcher(), services(),
+                                                      fit::Timeout(timeout, std::move(if_timeout)));
 
     bool was_called = false;
     std::optional<std::string> channel;
@@ -60,28 +72,47 @@ class ChannelProviderPtrTest : public UnitTestFixture {
   }
 
   async::Executor executor_;
-
- private:
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
 TEST_F(ChannelProviderPtrTest, Succeed_SomeChannel) {
-  auto channel_provider = std::make_unique<stubs::ChannelControl>("my-channel");
+  auto channel_provider = std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+      .current = "current-channel",
+      .target = "target-channel",
+  });
   SetUpChannelProviderServer(std::move(channel_provider));
 
-  const auto result = GetCurrentChannel();
+  {
+    const auto result = GetCurrentChannel();
 
-  ASSERT_TRUE(result);
-  EXPECT_EQ(result.value(), "my-channel");
+    ASSERT_TRUE(result);
+    EXPECT_EQ(result.value(), "current-channel");
+  }
+
+  {
+    const auto result = GetTargetChannel();
+
+    ASSERT_TRUE(result);
+    EXPECT_EQ(result.value(), "target-channel");
+  }
 }
 
 TEST_F(ChannelProviderPtrTest, Succeed_EmptyChannel) {
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlReturnsEmptyChannel>());
 
-  const auto result = GetCurrentChannel();
+  {
+    const auto result = GetCurrentChannel();
 
-  ASSERT_TRUE(result);
-  EXPECT_EQ(result.value(), "");
+    ASSERT_TRUE(result);
+    EXPECT_EQ(result.value(), "");
+  }
+
+  {
+    const auto result = GetTargetChannel();
+
+    ASSERT_TRUE(result);
+    EXPECT_EQ(result.value(), "");
+  }
 }
 
 }  // namespace

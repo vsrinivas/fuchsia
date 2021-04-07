@@ -75,7 +75,11 @@ class CachingPtrTest : public UnitTestFixture {
 
 TEST_F(CachingPtrTest, Check_CachesValueInConstructor) {
   CachingChannelPtr channel_ptr(dispatcher(), services());
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlExpectsOneCall>(kChannel));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControlExpectsOneCall>(stubs::ChannelControlBase::Params{
+          .current = kChannel,
+          .target = std::nullopt,
+      }));
 
   RunLoopUntilIdle();
 
@@ -89,7 +93,11 @@ TEST_F(CachingPtrTest, Check_CachesValueInConstructor) {
 
 TEST_F(CachingPtrTest, Check_CachesErrorInConstructor) {
   CachingChannelPtr channel_ptr(dispatcher(), services());
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlExpectsOneCall>(""));
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControlExpectsOneCall>(stubs::ChannelControlBase::Params{
+          .current = "",
+          .target = std::nullopt,
+      }));
 
   RunLoopUntilIdle();
 
@@ -114,8 +122,11 @@ TEST_F(CachingPtrTest, Check_ErrorOnTimeout) {
 
 TEST_F(CachingPtrTest, Check_SuccessOnSecondAttempt) {
   CachingChannelPtr channel_ptr(dispatcher(), services());
-  SetUpChannelProviderServer(
-      std::make_unique<stubs::ChannelControlClosesFirstConnection>(kChannel));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelControlClosesFirstConnection>(
+      stubs::ChannelControlBase::Params{
+          .current = kChannel,
+          .target = std::nullopt,
+      }));
 
   RunLoopUntilIdle();
 
