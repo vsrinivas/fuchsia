@@ -764,6 +764,15 @@ features to Components v2.
 
 ### Inspect {#inspect}
 
+{% dynamic if user.is_googler %}
+
+Note: If your component shares Inspect data in product feedback reports, you may
+also need to update the approved selectors to reference the new component moniker.
+For more details on updating feedback selectors, see
+[go/tq-feedback-privacy](http://go/tq-feedback-privacy)
+
+{% dynamic endif %}
+
 If your component is using [Inspect][inspect], you'll need to expose additional
 information to the framework.
 You can quickly determine if your component uses Inspect by looking for one of
