@@ -200,26 +200,21 @@ impl<DS: DataStore> SocketServerDispatcher for Server<DS> {
         bound_device_names
             .iter()
             .map(|name| {
-                // TODO(https://fxbug.dev/73010): Replace with nix::if_nametoindex()
-                let iface_id = {
-                    let name = std::ffi::CString::new(name.clone()).map_err(|e| {
-                        std::io::Error::new(
+                let iface_id =
+                    fuchsia_nix::net::if_::if_nametoindex(name.as_str()).map_err(|e| match e {
+                        // We use an `as` cast because discriminant enum variants do not have From
+                        // or Into implementations, cf. https://github.com/rust-lang/rfcs/pull/3040
+                        fuchsia_nix::Error::Sys(e) => std::io::Error::from_raw_os_error(e as i32),
+                        e @ fuchsia_nix::Error::InvalidUtf8 => std::io::Error::new(
                             std::io::ErrorKind::InvalidInput,
-                            format!("name {} could not convert to cstring: {}", name, e),
-                        )
-                    })?;
-                    unsafe { libc::if_nametoindex(name.as_ptr()) }
-                };
-                if iface_id <= 0 {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::NotFound,
-                        format!(
-                            "interface {} not found: {}",
-                            name,
-                            std::io::Error::last_os_error()
+                            std::string::ToString::to_string(&e),
                         ),
-                    ));
-                }
+                        e @ fuchsia_nix::Error::InvalidPath
+                        | e @ fuchsia_nix::Error::UnsupportedOperation => std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            std::string::ToString::to_string(&e),
+                        ),
+                    })?;
                 let socket = Self::create_socket(name, Ipv4Addr::UNSPECIFIED)?;
                 Ok(SocketWithId { socket, iface_id: iface_id.into() })
             })
@@ -299,7 +294,7 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
                 Some(libc::ENODEV) => {
                     log::warn!("Failed to create server sockets: {}", e)
                 }
-                _ => log::error!("Failed to create server sockets: {}", e),
+                Some(_) | None => log::error!("Failed to create server sockets: {}", e),
             };
             fuchsia_zircon::Status::IO
         })?;
