@@ -34,10 +34,6 @@ if (!is_fuchsia) {
   enable_frame_pointers = false
 }
 
-# TODO(https://fxbug.dev/73468): Remove this once users are transitioned to new path.
-config("rust_2018_idioms") {
-}
-
 config("language") {
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++$experimental_cxx_version" ]
