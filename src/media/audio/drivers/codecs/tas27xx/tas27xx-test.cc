@@ -276,6 +276,23 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
     ASSERT_EQ(formats.value().bits_per_sample[0], 16);
   }
 
+  // Check inspect state.
+  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
+  ASSERT_TRUE(simple_codec);
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(CheckProperty(simple_codec->node(), "manufacturer",
+                                         inspect::StringPropertyValue("Texas Instruments")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "product", inspect::StringPropertyValue("TAS2770")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "codec_status", inspect::UintPropertyValue(0)));
+
   // Check setting DAI formats.
   {
     DaiFormat format = GetDefaultDaiFormat();
@@ -300,27 +317,6 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
     ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
     ASSERT_NOT_OK(client.SetDaiFormat(std::move(format)));
   }
-
-  // Make a 2-wal call to make sure the server (we know single threaded) completed previous calls.
-  auto unused = client.GetInfo();
-  static_cast<void>(unused);
-
-  // Check inspect state.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
-  auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
-  ASSERT_TRUE(simple_codec);
-  ASSERT_NO_FATAL_FAILURES(
-      CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
-  ASSERT_NO_FATAL_FAILURES(
-      CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(simple_codec->node(), "manufacturer",
-                                         inspect::StringPropertyValue("Texas Instruments")));
-  ASSERT_NO_FATAL_FAILURES(
-      CheckProperty(simple_codec->node(), "product", inspect::StringPropertyValue("TAS2770")));
-  ASSERT_NO_FATAL_FAILURES(
-      CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(
-      CheckProperty(hierarchy().node(), "codec_status", inspect::UintPropertyValue(0)));
 
   codec->DdkAsyncRemove();
   ASSERT_TRUE(ddk_.Ok());

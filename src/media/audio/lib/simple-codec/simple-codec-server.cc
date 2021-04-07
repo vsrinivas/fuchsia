@@ -21,6 +21,14 @@ zx_status_t SimpleCodecServer::CreateInternal() {
   state_ = simple_codec_.CreateString("state", "created");
   start_time_ = simple_codec_.CreateInt("start_time", 0);
 
+  number_of_channels_ = simple_codec_.CreateUint("number_of_channels", 0);
+  channels_to_use_bitmask_ = simple_codec_.CreateUint("channels_to_use_bitmask", 0);
+  frame_rate_ = simple_codec_.CreateUint("frame_rate", 0);
+  bits_per_slot_ = simple_codec_.CreateUint("bits_per_slot", 0);
+  bits_per_sample_ = simple_codec_.CreateUint("bits_per_sample", 0);
+  sample_format_ = simple_codec_.CreateString("sample_format", "not_set");
+  frame_format_ = simple_codec_.CreateString("frame_format", "not_set");
+
   auto res = Initialize();
   if (res.is_error()) {
     return res.error_value();
@@ -134,7 +142,36 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
   format2.frame_rate = format.frame_rate;
   format2.bits_per_slot = format.bits_per_slot;
   format2.bits_per_sample = format.bits_per_sample;
-  callback(static_cast<T*>(this)->SetDaiFormat(std::move(format2)));
+  auto* thiz = static_cast<T*>(this);
+  thiz->number_of_channels_.Set(format2.number_of_channels);
+  thiz->channels_to_use_bitmask_.Set(format2.channels_to_use_bitmask);
+  thiz->frame_rate_.Set(format2.frame_rate);
+  thiz->bits_per_slot_.Set(format2.bits_per_slot);
+  thiz->bits_per_sample_.Set(format2.bits_per_sample);
+  using FidlSampleFormat = audio_fidl::DaiSampleFormat;
+  // clang-format off
+  switch (format2.sample_format) {
+    case FidlSampleFormat::PDM:          thiz->sample_format_.Set("PDM");          break;
+    case FidlSampleFormat::PCM_SIGNED:   thiz->sample_format_.Set("PCM_signed");   break;
+    case FidlSampleFormat::PCM_UNSIGNED: thiz->sample_format_.Set("PCM_unsigned"); break;
+    case FidlSampleFormat::PCM_FLOAT:    thiz->sample_format_.Set("PCM_float");    break;
+  }
+  // clang-format on
+  using FidlFrameFormat = audio_fidl::DaiFrameFormatStandard;
+  // clang-format off
+  switch (format2.frame_format) {
+    case FidlFrameFormat::NONE:         thiz->frame_format_.Set("NONE");         break;
+    case FidlFrameFormat::I2S:          thiz->frame_format_.Set("I2S");          break;
+    case FidlFrameFormat::STEREO_LEFT:  thiz->frame_format_.Set("Stereo_left");  break;
+    case FidlFrameFormat::STEREO_RIGHT: thiz->frame_format_.Set("Stereo_right"); break;
+    case FidlFrameFormat::TDM1:         thiz->frame_format_.Set("TDM1");         break;
+  }
+  // clang-format on
+  zx_status_t status = thiz->SetDaiFormat(std::move(format2));
+  if (status != ZX_OK) {
+    thiz->state_.Set(std::string("Set DAI format error: ") + std::to_string(status));
+  }
+  callback(status);
 }
 
 template <class T>

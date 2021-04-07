@@ -123,6 +123,14 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   inspect::Node simple_codec_;
   inspect::StringProperty state_;
   inspect::IntProperty start_time_;
+
+  inspect::UintProperty number_of_channels_;
+  inspect::UintProperty channels_to_use_bitmask_;
+  inspect::UintProperty frame_rate_;
+  inspect::UintProperty bits_per_slot_;
+  inspect::UintProperty bits_per_sample_;
+  inspect::StringProperty sample_format_;
+  inspect::StringProperty frame_format_;
 };
 
 }  // namespace audio
