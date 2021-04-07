@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -45,15 +45,10 @@ driver_module("aml_mipicsi_driver") {
   ]
 }
 
-driver_package("driver_package") {
+fuchsia_system_package("driver_package") {
   package_name = "aml-mipicsi"
   deps = [ ":aml_mipicsi_driver" ]
-
-  drivers = [
-    {
-      name = "aml_mipicsi.so"
-    },
-  ]
+  allowed_in_extra_deps = true
 }
 
 group("aml_mipicsi") {

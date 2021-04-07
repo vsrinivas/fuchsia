@@ -4,7 +4,6 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//src/camera/debug.gni")
 import("//src/sys/build/components.gni")
 
@@ -75,14 +74,9 @@ driver_module("driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-driver_package("gdc") {
+fuchsia_system_package("gdc") {
   deps = [ ":driver" ]
-
-  drivers = [
-    {
-      name = "gdc.so"
-    },
-  ]
+  allowed_in_extra_deps = true
 }
 
 executable("gdc_task_unittest_bin") {

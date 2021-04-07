@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 # Defines a controller driver
 #
@@ -62,37 +62,41 @@ template("camera_controller_driver") {
     configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   }
 
-  driver_package(package_name) {
+  if (defined(invoker.gdc_config_files)) {
+    resource("firmware-configs-$target_name") {
+      sources = []
+      foreach(config_file, invoker.gdc_config_files) {
+        assert(
+            get_path_info(config_file, "dir") == ".",
+            "gdc_config_files entry cannot have sub-directory: " + config_file)
+        sources += [ "//prebuilt/camera/arm/gdc/configs/" + config_file ]
+      }
+      outputs = [ "lib/firmware/{{source_file_part}}" ]
+    }
+  }
+
+  if (defined(invoker.watermark_files)) {
+    resource("firmware-watermarks-$target_name") {
+      sources = []
+      foreach(watermark_file, invoker.watermark_files) {
+        assert(get_path_info(watermark_file, "dir") == ".",
+               "waternark_files entry cannot have sub-directory: " +
+                   watermark_file)
+        sources += [ "//prebuilt/camera/watermark/" + watermark_file ]
+      }
+      outputs = [ "lib/firmware/{{source_file_part}}" ]
+    }
+  }
+
+  fuchsia_system_package(package_name) {
     deps = [ ":${driver_target}" ]
 
-    drivers = [
-      {
-        name = "${target_name}.so"
-      },
-    ]
-
-    libraries = []
     if (defined(invoker.gdc_config_files)) {
-      foreach(config_file, invoker.gdc_config_files) {
-        libraries += [
-          {
-            source =
-                rebase_path("//prebuilt/camera/arm/gdc/configs/" + config_file)
-            name = "firmware/" + config_file
-          },
-        ]
-      }
+      deps += [ ":firmware-configs-$package_name" ]
     }
     if (defined(invoker.watermark_files)) {
-      foreach(watermark_file, invoker.watermark_files) {
-        libraries += [
-          {
-            source =
-                rebase_path("//prebuilt/camera/watermark/" + watermark_file)
-            name = "firmware/" + watermark_file
-          },
-        ]
-      }
+      deps += [ ":firmware-watermarks-$package_name" ]
     }
+    allowed_in_extra_deps = true
   }
 }
