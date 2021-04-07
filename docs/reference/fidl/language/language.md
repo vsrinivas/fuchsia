@@ -785,10 +785,7 @@ The types **`byte`** and **`bytes`** are built-in, and are conceptually
 equivalent to:
 
 ```fidl
-library builtin;
-
-using byte = uint8;
-using bytes = vector<byte>;
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference_builtin.test.fidl" region_tag="builtin" %}
 ```
 
 When you refer to a name without specific scope, e.g.:

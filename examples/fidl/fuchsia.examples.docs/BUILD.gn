@@ -20,3 +20,7 @@ fidl("fuchsia.examples.docs") {
     "//zircon/vdso/zx",
   ]
 }
+
+fidl("builtin") {
+  sources = [ "language_reference_builtin.test.fidl" ]
+}
