@@ -11,8 +11,11 @@
 ## This runs Ninja after performing a few sanity checks for the Fuchsia build.
 ##
 ## optional arguments:
-##   --log LOGFILE     Print debug information to LOGFILE. Please attach the
-##                     resulting file when reporting bugs.
+##   --log LOGFILE            Print debug information to LOGFILE. Please attach
+##                            the resulting file when reporting bugs.
+##   --fint-params-path PATH  Path to a fint params file used by an infra
+##                            builder. This is useful for reproducing the exact
+##                            set of targets built by the infrastructure.
 ##
 ## Other arguments are passed through to Ninja.
 ## Run `fx build -h` to see Ninja argument details.
@@ -22,7 +25,7 @@ fx-config-read
 
 function main {
   local switches=() fuchsia_targets=()
-  local log_file is_logging
+  local log_file is_logging fint_params_path
   is_logging=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -43,6 +46,14 @@ function main {
         is_logging=true
         shift
         ;;
+      --fint-params-path)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        fint_params_path="$2"
+        shift
+        ;;
       --no-zircon)
         echo "WARNING: The --no-zircon argument is now obsolete and ignored!"
         ;;
@@ -60,6 +71,16 @@ function main {
     esac
     shift
   done
+
+  if [ -n "${fint_params_path}" ]; then
+    if [ ${#switches[@]} -gt 0 ]; then
+      fx-error "It's invalid to specify extra Ninja flags along with --fint-params-path."
+      exit 1
+    elif [ ${#fuchsia_targets[@]} -gt 0 ]; then
+      fx-error "It's invalid to specify targets along with --fint-params-path."
+      exit 1
+    fi
+  fi
 
   if [[ "${is_logging}" = true ]]; then
     # log file header with relevant environment information
@@ -116,11 +137,28 @@ function main {
   local status
 
   if [[ "${is_logging}" = true ]]; then
-    echo -e "\\n------ RUNNING ninja ------"
+    local tool="ninja"
+    if [ -n "${fint_params_path}" ]; then
+      tool="fint build"
+    fi
+    echo -e "\\n------ RUNNING ${tool} ------"
   fi
 
-  (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${FUCHSIA_BUILD_DIR}" \
-    "${switches[@]}" "${fuchsia_targets[@]}")
+  if [ -n "${fint_params_path}" ]; then
+    readonly fint="${FX_CACHE_DIR}/fint"
+    "$FUCHSIA_DIR/tools/integration/bootstrap.sh" -o "$fint" || exit $?
+    # It's not ideal that we resort to constructing the textproto file as a
+    # string, but it's easier than writing a Go tool solely for the purpose of
+    # constructing a protobuf with a couple top-level string fields set.
+    "$fint" -log-level=error build -static="${fint_params_path}" -context=<(echo "
+checkout_dir: \"${FUCHSIA_DIR}\"
+build_dir: \"${FUCHSIA_BUILD_DIR}\"
+")
+  else
+    (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${FUCHSIA_BUILD_DIR}" \
+      "${switches[@]}" "${fuchsia_targets[@]}")
+  fi
+
   status=$?
   if [[ "${status}" -ne 0 ]]; then
     goma-check

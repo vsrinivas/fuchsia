@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -78,9 +79,20 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		buildDir:  contextSpec.BuildDir,
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
-	if msg, err := runNinja(ctx, runner, targets); err != nil {
-		artifacts.FailureSummary = msg
-		return artifacts, err
+
+	var ninjaErr error
+	if contextSpec.ArtifactDir == "" {
+		// If we don't care about collecting artifacts, which is generally the
+		// case when running locally, then there's no need to parse the Ninja
+		// stdout to get the failure message. So let Ninja print directly to
+		// stdout, so it will nicely buffer output when running in a terminal
+		// instead of printing each log on a new line.
+		ninjaErr = runner.run(ctx, targets, os.Stdout, os.Stderr)
+	} else {
+		artifacts.FailureSummary, ninjaErr = runNinja(ctx, runner, targets)
+	}
+	if ninjaErr != nil {
+		return artifacts, ninjaErr
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
