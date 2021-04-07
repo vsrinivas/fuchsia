@@ -16,12 +16,9 @@ use glob::glob;
 
 use fuchsia_zircon as zx;
 use std::future::Future;
-use std::sync::Arc;
 
 pub type GenerateService =
     Box<dyn Fn(&str, zx::Channel) -> BoxFuture<'static, Result<(), Error>> + Send + Sync>;
-
-pub type ServiceContextHandle = Arc<ServiceContext>;
 
 /// A wrapper around service operations, allowing redirection to a nested
 /// environment.
@@ -31,13 +28,6 @@ pub struct ServiceContext {
 }
 
 impl ServiceContext {
-    pub fn create(
-        generate_service: Option<GenerateService>,
-        messenger_factory: Option<service::message::Factory>,
-    ) -> ServiceContextHandle {
-        return Arc::new(ServiceContext::new(generate_service, messenger_factory));
-    }
-
     pub fn new(
         generate_service: Option<GenerateService>,
         messenger_factory: Option<service::message::Factory>,

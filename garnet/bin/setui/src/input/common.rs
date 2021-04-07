@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::handler::base::Request,
-    crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
+    crate::service_context::{ExternalServiceProxy, ServiceContext},
     crate::{call, call_async},
     anyhow::{format_err, Error},
     fidl::endpoints::{create_proxy, create_request_stream},
@@ -19,6 +19,7 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::StreamExt,
     serde::{Deserialize, Serialize},
+    std::sync::Arc,
 };
 
 /// Builder to simplify construction of fidl_fuchsia_ui_input::MediaButtonsEvent.
@@ -107,7 +108,7 @@ impl From<VolumeGain> for Request {
 /// Method for listening to media button changes. Changes will be reported back
 /// on the supplied sender.
 pub async fn monitor_media_buttons(
-    service_context_handle: ServiceContextHandle,
+    service_context_handle: Arc<ServiceContext>,
     sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
 ) -> Result<(), Error> {
     let presenter_service =
@@ -138,7 +139,7 @@ pub async fn monitor_media_buttons(
 
 /// Connects to the fuchsia.camera3.DeviceWatcher api.
 async fn connect_to_camera_watcher(
-    service_context_handle: ServiceContextHandle,
+    service_context_handle: Arc<ServiceContext>,
 ) -> Result<ExternalServiceProxy<Camera3DeviceWatcherProxy>, Error> {
     service_context_handle.connect::<DeviceWatcherMarker>().await
 }
@@ -163,11 +164,11 @@ async fn get_camera_id(
 /// Establishes a connection to the fuchsia.camera3.Device api by watching
 /// the camera id and using it to connect to the device.
 pub async fn connect_to_camera(
-    service_context_handle: ServiceContextHandle,
+    service_context_handle: Arc<ServiceContext>,
 ) -> Result<Camera3DeviceProxy, Error> {
     // Connect to the camera device watcher to get camera ids. This will
     // be used to connect to the camera.
-    let camera_watcher_proxy = connect_to_camera_watcher(service_context_handle.clone()).await?;
+    let camera_watcher_proxy = connect_to_camera_watcher(service_context_handle).await?;
     let camera_id = get_camera_id(&camera_watcher_proxy).await?;
 
     // Connect to the camera device with the found id.

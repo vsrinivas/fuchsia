@@ -62,7 +62,6 @@ impl FactoryResetManager {
     async fn from_client(client: ClientProxy) -> Result<FactoryResetHandle, ControllerError> {
         client
             .get_service_context()
-            .await
             .connect::<DeviceMarker>()
             .await
             .map(|factory_reset_policy_service| {

@@ -39,7 +39,7 @@ impl DeviceStorageAccess for LightSensorController {
 #[async_trait]
 impl controller::Create for LightSensorController {
     async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError> {
-        let service_context = client.get_service_context().await;
+        let service_context = client.get_service_context();
         let sensor_proxy_result =
             service_context.connect_named::<InputDeviceMarker>(LIGHT_SENSOR_SERVICE_NAME).await;
 
@@ -266,7 +266,7 @@ mod tests {
         };
 
         testing::spawn_mock_sensor_with_data(stream, sensor_axes, data_fn);
-        let service_context = ServiceContext::create(None, None);
+        let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
         let mut receiver = start_light_sensor_scanner(sensor, 1);
@@ -330,7 +330,7 @@ mod tests {
 
         // likely needs to take fn that allows control of when responder sends
         testing::spawn_mock_sensor_with_handler(stream, axes, data_fn);
-        let service_context = ServiceContext::create(None, None);
+        let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
         *receiver.lock().await = Some(start_light_sensor_scanner(sensor, 1));

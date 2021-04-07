@@ -286,7 +286,7 @@ mod tests {
 
         let mut handler = VolumeChangeHandler {
             common_earcons_params: CommonEarconsParams {
-                service_context: ServiceContext::create(None, None),
+                service_context: Arc::new(ServiceContext::new(None, None)),
                 sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),
                 sound_player_connection: Arc::new(Mutex::new(None)),
             },

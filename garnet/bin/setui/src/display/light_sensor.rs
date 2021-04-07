@@ -7,9 +7,10 @@
 
 use crate::call;
 use crate::display::light_sensor_config::LightSensorConfig;
-use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
+use crate::service_context::{ExternalServiceProxy, ServiceContext};
 
 use std::path::Path;
+use std::sync::Arc;
 use std::{fs, io};
 
 use anyhow::{format_err, Error};
@@ -42,7 +43,7 @@ pub struct Sensor {
 impl Sensor {
     pub async fn new(
         proxy: &ExternalServiceProxy<InputDeviceProxy>,
-        service_context: &ServiceContextHandle,
+        service_context: &ServiceContext,
     ) -> Result<Self, Error> {
         let (reader, server) = fidl::endpoints::create_proxy::<InputReportsReaderMarker>()?;
         call!(proxy => get_input_reports_reader(server))?;
@@ -63,7 +64,7 @@ impl Sensor {
 /// Opens the sensor's device file.
 /// Tries all the input devices until the one with the correct signature is found.
 pub async fn open_sensor(
-    service_context: ServiceContextHandle,
+    service_context: Arc<ServiceContext>,
     config: LightSensorConfig,
 ) -> Result<Sensor, Error> {
     const INPUT_DEVICES_DIRECTORY: &str = "/dev/class/input-report";
@@ -78,7 +79,7 @@ pub async fn open_sensor(
             if let Some(DeviceInfo { vendor_id, product_id, .. }) = device_descriptor.device_info {
                 let LightSensorConfig::VendorAndProduct { vendor_id: v, product_id: p } = config;
                 if vendor_id == v && product_id == p {
-                    return Sensor::new(&proxy, &service_context).await;
+                    return Sensor::new(&proxy, &*service_context).await;
                 }
             }
         }
@@ -275,7 +276,7 @@ mod tests {
         let (axes, data_fn) = testing::get_mock_sensor_response();
         testing::spawn_mock_sensor_with_data(stream, axes, move || future::ready(data_fn()));
         let proxy = ExternalServiceProxy::new(proxy, None);
-        let service_context = ServiceContext::create(None, None);
+        let service_context = ServiceContext::new(None, None);
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
 
         let result = read_sensor(&sensor).await;

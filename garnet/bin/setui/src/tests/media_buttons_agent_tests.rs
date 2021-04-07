@@ -60,7 +60,7 @@ async fn test_media_buttons_proxied() {
     // Setup the fake services.
     let (service_registry, fake_services) = create_services().await;
     let service_context =
-        ServiceContext::create(Some(ServiceRegistry::serve(service_registry)), None);
+        Arc::new(ServiceContext::new(Some(ServiceRegistry::serve(service_registry)), None));
 
     // Create and send the invocation with faked services.
     let invocation = Invocation { lifespan: Lifespan::Service, service_context };

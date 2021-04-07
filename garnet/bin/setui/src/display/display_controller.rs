@@ -138,7 +138,6 @@ impl BrightnessManager for ExternalBrightnessControl {
     async fn from_client(client: &ClientProxy) -> Result<Self, ControllerError> {
         client
             .get_service_context()
-            .await
             .connect::<BrightnessControlMarker>()
             .await
             .map(|brightness_service| Self { brightness_service })

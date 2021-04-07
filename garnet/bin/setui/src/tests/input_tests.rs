@@ -546,10 +546,10 @@ async fn test_media_buttons() {
     service_registry.lock().await.register_service(input_device_registry_service.clone());
 
     let service_context =
-        ServiceContext::create(Some(ServiceRegistry::serve(service_registry.clone())), None);
+        Arc::new(ServiceContext::new(Some(ServiceRegistry::serve(service_registry.clone())), None));
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-    assert!(monitor_media_buttons(service_context.clone(), input_tx).await.is_ok());
+    assert!(monitor_media_buttons(service_context, input_tx).await.is_ok());
 
     if let Some(event) = input_rx.next().await {
         assert_eq!(initial_event, event);
@@ -577,8 +577,8 @@ async fn test_device_listener_failure() {
     service_registry.lock().await.register_service(input_device_registry_service.clone());
 
     let service_context =
-        ServiceContext::create(Some(ServiceRegistry::serve(service_registry.clone())), None);
+        Arc::new(ServiceContext::new(Some(ServiceRegistry::serve(service_registry.clone())), None));
 
     let (input_tx, _input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-    assert!(!monitor_media_buttons(service_context.clone(), input_tx).await.is_ok());
+    assert!(!monitor_media_buttons(service_context, input_tx).await.is_ok());
 }

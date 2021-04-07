@@ -9,14 +9,14 @@ use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
     controller, ClientImpl, ControllerError, SettingHandlerResult,
 };
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::ServiceContext;
 use async_trait::async_trait;
 use std::sync::Arc;
 
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
 
 pub struct AccountController {
-    service_context: ServiceContextHandle,
+    service_context: Arc<ServiceContext>,
 }
 
 impl DeviceStorageAccess for AccountController {
@@ -26,7 +26,7 @@ impl DeviceStorageAccess for AccountController {
 #[async_trait]
 impl controller::Create for AccountController {
     async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError> {
-        let service_context = client.get_service_context().await;
+        let service_context = client.get_service_context();
         Ok(Self { service_context })
     }
 }
@@ -47,12 +47,9 @@ impl controller::Handle for AccountController {
     }
 }
 
-async fn schedule_clear_accounts(
-    service_context_handle: &ServiceContextHandle,
-) -> Result<(), ControllerError> {
-    let connect_result = service_context_handle
-        .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>()
-        .await;
+async fn schedule_clear_accounts(service_context: &ServiceContext) -> Result<(), ControllerError> {
+    let connect_result =
+        service_context.connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>().await;
 
     if connect_result.is_err() {
         return Err(ControllerError::ExternalFailure(

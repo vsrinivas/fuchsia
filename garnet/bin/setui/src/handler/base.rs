@@ -15,17 +15,15 @@ use crate::light::types::LightState;
 use crate::night_mode::types::NightModeInfo;
 use crate::payload_convert;
 use crate::service::message::{Factory, Messenger, Receptor, Signature};
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::ServiceContext;
 use crate::setup::types::ConfigurationInterfaceFlags;
 
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::sync::Arc;
 use thiserror;
-
-#[cfg(test)]
-use crate::service_context::ServiceContext;
 
 pub type ControllerGenerateResult = Result<(), anyhow::Error>;
 
@@ -293,21 +291,21 @@ pub trait SettingHandlerFactory {
 
 pub struct Environment {
     pub settings: HashSet<SettingType>,
-    pub service_context_handle: ServiceContextHandle,
+    pub service_context: Arc<ServiceContext>,
 }
 
 impl Clone for Environment {
     fn clone(&self) -> Environment {
-        Environment::new(self.settings.clone(), self.service_context_handle.clone())
+        Environment::new(self.settings.clone(), self.service_context.clone())
     }
 }
 
 impl Environment {
     pub fn new(
         settings: HashSet<SettingType>,
-        service_context_handle: ServiceContextHandle,
+        service_context: Arc<ServiceContext>,
     ) -> Environment {
-        Environment { settings, service_context_handle }
+        Environment { settings, service_context }
     }
 }
 
@@ -341,7 +339,7 @@ impl Context {
 pub struct ContextBuilder {
     setting_type: SettingType,
     settings: HashSet<SettingType>,
-    service_context: Option<ServiceContextHandle>,
+    service_context: Option<Arc<ServiceContext>>,
     messenger: Messenger,
     receptor: Receptor,
     notifier_signature: Signature,
@@ -369,8 +367,8 @@ impl ContextBuilder {
     }
 
     // Sets the service context to be used.
-    pub fn service_context(mut self, service_context_handle: ServiceContextHandle) -> Self {
-        self.service_context = Some(service_context_handle);
+    pub fn service_context(mut self, service_context: Arc<ServiceContext>) -> Self {
+        self.service_context = Some(service_context);
 
         self
     }
@@ -387,7 +385,7 @@ impl ContextBuilder {
     /// Generates the Context.
     pub fn build(self) -> Context {
         let service_context = if self.service_context.is_none() {
-            ServiceContext::create(None, None)
+            Arc::new(ServiceContext::new(None, None))
         } else {
             self.service_context.unwrap()
         };

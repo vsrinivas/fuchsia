@@ -13,8 +13,7 @@ use crate::event::Publisher;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::MessageEvent;
 use crate::service;
-use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
-
+use crate::service_context::{ExternalServiceProxy, ServiceContext};
 use fidl_fuchsia_media_sounds::PlayerProxy;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -42,7 +41,7 @@ impl DeviceStorageAccess for Agent {
 /// Params that are common to handlers of the earcons agent.
 #[derive(Clone)]
 pub struct CommonEarconsParams {
-    pub service_context: ServiceContextHandle,
+    pub service_context: Arc<ServiceContext>,
     pub sound_player_added_files: Arc<Mutex<HashSet<&'static str>>>,
     pub sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
 }

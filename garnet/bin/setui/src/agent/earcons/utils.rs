@@ -4,7 +4,7 @@
 use {
     crate::call_async,
     crate::event::Publisher,
-    crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
+    crate::service_context::{ExternalServiceProxy, ServiceContext},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
@@ -41,7 +41,7 @@ fn resource_file(
 /// Will not do anything if the sound player connection is already established.
 pub async fn connect_to_sound_player(
     publisher: Publisher,
-    service_context_handle: ServiceContextHandle,
+    service_context_handle: Arc<ServiceContext>,
     sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
 ) {
     let mut sound_player_connection_lock = sound_player_connection.lock().await;

@@ -156,7 +156,7 @@ async fn test_write_notify() {
         .message(
             service::Payload::Agent(crate::agent::Payload::Invocation(crate::agent::Invocation {
                 lifespan: crate::agent::Lifespan::Initialization,
-                service_context: crate::service_context::ServiceContext::create(None, None),
+                service_context: Arc::new(crate::service_context::ServiceContext::new(None, None)),
             })),
             crate::message::base::Audience::Messenger(agent_receptor_signature),
         )

@@ -9,7 +9,7 @@ use crate::monitor;
 use crate::payload_convert;
 use crate::service;
 use crate::service::message::Receptor;
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::ServiceContext;
 
 use futures::future::BoxFuture;
 use std::collections::HashSet;
@@ -69,7 +69,7 @@ pub enum Lifespan {
 #[derive(Clone)]
 pub struct Invocation {
     pub lifespan: Lifespan,
-    pub service_context: ServiceContextHandle,
+    pub service_context: Arc<ServiceContext>,
 }
 
 impl Debug for Invocation {

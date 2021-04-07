@@ -13,14 +13,14 @@ use crate::input::common::ButtonType;
 use crate::input::{monitor_media_buttons, VolumeGain};
 use crate::message::base::Audience;
 use crate::service;
-use crate::service_context::ServiceContextHandle;
-
+use crate::service_context::ServiceContext;
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use std::sync::Arc;
 
 blueprint_definition!("buttons_agent", MediaButtonsAgent::create);
 
@@ -79,7 +79,7 @@ impl MediaButtonsAgent {
 
     async fn handle_service_lifespan(
         &mut self,
-        service_context: ServiceContextHandle,
+        service_context: Arc<ServiceContext>,
     ) -> InvocationResult {
         let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
         if let Err(e) = monitor_media_buttons(service_context, input_tx).await {
@@ -190,7 +190,7 @@ mod tests {
         let result = agent
             .handle(Invocation {
                 lifespan: Lifespan::Initialization,
-                service_context: ServiceContext::create(None, None),
+                service_context: Arc::new(ServiceContext::new(None, None)),
             })
             .await;
 
@@ -215,11 +215,11 @@ mod tests {
             recipient_settings: HashSet::new(),
         };
 
-        let service_context = ServiceContext::create(
+        let service_context = Arc::new(ServiceContext::new(
             // Create a service registry without a media buttons interface.
             Some(ServiceRegistry::serve(ServiceRegistry::create())),
             None,
-        );
+        ));
 
         // Try to initiate the Service lifespan without providing the MediaButtons fidl interface.
         let result =

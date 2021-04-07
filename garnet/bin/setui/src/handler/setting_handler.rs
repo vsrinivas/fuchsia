@@ -7,7 +7,7 @@ use crate::handler::device_storage::DeviceStorageFactory;
 use crate::message::base::Audience;
 use crate::payload_convert;
 use crate::service::message::{MessageClient, Messenger, Signature};
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::ServiceContext;
 use async_trait::async_trait;
 use core::convert::TryFrom;
 use fuchsia_async as fasync;
@@ -162,7 +162,7 @@ pub struct ClientImpl {
     notify: Mutex<bool>,
     messenger: Messenger,
     notifier_signature: Signature,
-    service_context: ServiceContextHandle,
+    service_context: Arc<ServiceContext>,
     setting_type: SettingType,
 }
 
@@ -173,7 +173,7 @@ impl ClientImpl {
             setting_type: context.setting_type,
             notifier_signature: context.notifier_signature.clone(),
             notify: Mutex::new(false),
-            service_context: context.environment.service_context_handle.clone(),
+            service_context: Arc::clone(&context.environment.service_context),
         }
     }
 
@@ -273,8 +273,8 @@ impl ClientImpl {
         Ok(())
     }
 
-    pub(crate) async fn get_service_context(&self) -> ServiceContextHandle {
-        self.service_context.clone()
+    pub(crate) fn get_service_context(&self) -> Arc<ServiceContext> {
+        Arc::clone(&self.service_context)
     }
 
     pub(crate) async fn notify(&self, event: Event) {
@@ -370,8 +370,8 @@ pub mod persist {
             Self { base: base_proxy, setting_type }
         }
 
-        pub async fn get_service_context(&self) -> ServiceContextHandle {
-            self.base.get_service_context().await
+        pub fn get_service_context(&self) -> Arc<ServiceContext> {
+            self.base.get_service_context()
         }
 
         pub async fn get_messenger(&self) -> Messenger {

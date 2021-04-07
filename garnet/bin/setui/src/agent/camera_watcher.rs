@@ -12,12 +12,12 @@ use crate::handler::device_storage::DeviceStorageAccess;
 use crate::input::common::connect_to_camera;
 use crate::message::base::Audience;
 use crate::service;
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::ServiceContext;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
-
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use std::sync::Arc;
 
 blueprint_definition!("camera_watcher_agent", CameraWatcherAgent::create);
 
@@ -80,7 +80,7 @@ impl CameraWatcherAgent {
 
     async fn handle_service_lifespan(
         &mut self,
-        service_context: ServiceContextHandle,
+        service_context: Arc<ServiceContext>,
     ) -> InvocationResult {
         match connect_to_camera(service_context).await {
             Ok(camera_device_client) => {
@@ -176,7 +176,7 @@ mod tests {
         let result = agent
             .handle(Invocation {
                 lifespan: Lifespan::Initialization,
-                service_context: ServiceContext::create(None, None),
+                service_context: Arc::new(ServiceContext::new(None, None)),
             })
             .await;
 
@@ -199,11 +199,11 @@ mod tests {
         let mut agent =
             CameraWatcherAgent { publisher, messenger, recipient_settings: HashSet::new() };
 
-        let service_context = ServiceContext::create(
+        let service_context = Arc::new(ServiceContext::new(
             // Create a service registry without a camera3 service interface.
             Some(ServiceRegistry::serve(ServiceRegistry::create())),
             None,
-        );
+        ));
 
         // Try to initiate the Service lifespan without providing the camera3 fidl interface.
         let result =

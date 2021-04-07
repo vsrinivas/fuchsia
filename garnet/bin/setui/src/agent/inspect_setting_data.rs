@@ -292,7 +292,7 @@ mod tests {
             .message(
                 Payload::Invocation(Invocation {
                     lifespan: Lifespan::Service,
-                    service_context: ServiceContext::create(None, None),
+                    service_context: Arc::new(ServiceContext::new(None, None)),
                 })
                 .into(),
                 Audience::Messenger(agent_signature),

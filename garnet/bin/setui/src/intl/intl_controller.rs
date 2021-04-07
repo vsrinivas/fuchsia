@@ -12,12 +12,11 @@ use crate::handler::setting_handler::{
 };
 use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
-use std::collections::HashSet;
-
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
-
 use rust_icu_uenum as uenum;
+use std::collections::HashSet;
+use std::sync::Arc;
 
 impl DeviceStorageCompatible for IntlInfo {
     const KEY: &'static str = "intl_info";
@@ -126,7 +125,7 @@ impl IntlController {
     /// Errors are only logged as this is an intermediate step in a migration.
     /// TODO(fxbug.dev/41639): remove this
     async fn write_intl_info_to_service(&self, info: IntlInfo) {
-        let service_context = self.client.get_service_context().await.clone();
+        let service_context = Arc::clone(&self.client.get_service_context());
         fasync::Task::spawn(async move {
             let service_result =
                 service_context.connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>().await;

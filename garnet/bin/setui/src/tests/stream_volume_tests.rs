@@ -34,7 +34,7 @@ async fn test_drop_thread() {
     let publisher = event::Publisher::create(&messenger_factory, MessengerType::Unbound).await;
 
     let service_context =
-        ServiceContext::create(Some(ServiceRegistry::serve(create_service().await)), None);
+        ServiceContext::new(Some(ServiceRegistry::serve(create_service().await)), None);
 
     let audio_proxy = service_context
         .connect::<fidl_fuchsia_media::AudioCoreMarker>()
@@ -78,10 +78,9 @@ async fn test_detect_early_exit() {
         audio_core_service::Builder::new().set_suppress_client_errors(true).build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
-    let service_context_handle =
-        ServiceContext::create(Some(ServiceRegistry::serve(service_registry)), None);
+    let service_context = ServiceContext::new(Some(ServiceRegistry::serve(service_registry)), None);
 
-    let audio_proxy = service_context_handle
+    let audio_proxy = service_context
         .connect::<fidl_fuchsia_media::AudioCoreMarker>()
         .await
         .expect("proxy should be present");

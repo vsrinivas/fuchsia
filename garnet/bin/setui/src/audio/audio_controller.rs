@@ -157,7 +157,6 @@ impl VolumeController {
         let service_result = self
             .client
             .get_service_context()
-            .await
             .connect::<fidl_fuchsia_media::AudioCoreMarker>()
             .await;
 

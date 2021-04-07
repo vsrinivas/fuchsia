@@ -12,7 +12,7 @@ use {
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::message::base::{filter, Audience, MessengerType},
     crate::service::Payload,
-    crate::service_context::ServiceContextHandle,
+    crate::service_context::ServiceContext,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::message_utils::verify_payload,
@@ -62,7 +62,7 @@ impl TestAgent {
 
     async fn handle_service_lifespan(
         &mut self,
-        _service_context: ServiceContextHandle,
+        _service_context: Arc<ServiceContext>,
     ) -> InvocationResult {
         let (_, mut receptor) = self
             .messenger_factory

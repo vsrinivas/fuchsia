@@ -38,7 +38,6 @@ use {
     crate::service::message::Factory as MessengerFactory,
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
-    crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::{
@@ -380,13 +379,13 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         };
 
         let service_context =
-            ServiceContext::create(self.generate_service, Some(messenger_factory.clone()));
+            Arc::new(ServiceContext::new(self.generate_service, Some(messenger_factory.clone())));
 
         let context_id_counter = Arc::new(AtomicU64::new(1));
 
         let mut handler_factory = SettingHandlerFactoryImpl::new(
             settings.clone(),
-            service_context.clone(),
+            Arc::clone(&service_context),
             context_id_counter.clone(),
         );
 
@@ -657,7 +656,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     agent_blueprints: Vec<AgentBlueprintHandle>,
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
     event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
-    service_context_handle: ServiceContextHandle,
+    service_context: Arc<ServiceContext>,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
     storage_factory: Arc<T>,
@@ -829,7 +828,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Execute initialization agents sequentially
     if agent_authority
-        .execute_lifespan(Lifespan::Initialization, service_context_handle.clone(), true)
+        .execute_lifespan(Lifespan::Initialization, Arc::clone(&service_context), true)
         .await
         .is_err()
     {
@@ -838,7 +837,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Execute service agents concurrently
     agent_authority
-        .execute_lifespan(Lifespan::Service, service_context_handle.clone(), false)
+        .execute_lifespan(Lifespan::Service, Arc::clone(&service_context), false)
         .await
         .ok();
 

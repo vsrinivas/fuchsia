@@ -339,7 +339,7 @@ impl InputControllerInner {
         // camera proxy using the id that is returned. The connection will drop out
         // of scope after the mute state is sent.
         let camera_proxy =
-            connect_to_camera(self.client.get_service_context().await).await.map_err(|e| {
+            connect_to_camera(self.client.get_service_context()).await.map_err(|e| {
                 ControllerError::UnexpectedError(
                     format!("Could not connect to camera device: {:?}", e).into(),
                 )

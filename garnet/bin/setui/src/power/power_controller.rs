@@ -10,14 +10,14 @@ use {
     crate::handler::setting_handler::{
         controller, ClientImpl, ControllerError, SettingHandlerResult,
     },
-    crate::service_context::ServiceContextHandle,
+    crate::service_context::ServiceContext,
     async_trait::async_trait,
     fidl_fuchsia_hardware_power_statecontrol::RebootReason,
     fuchsia_syslog::fx_log_err,
     std::sync::Arc,
 };
 
-async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), ControllerError> {
+async fn reboot(service_context_handle: &ServiceContext) -> Result<(), ControllerError> {
     let hardware_power_statecontrol_admin = service_context_handle
         .connect::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
         .await
@@ -49,7 +49,7 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Con
 }
 
 pub struct PowerController {
-    service_context: ServiceContextHandle,
+    service_context: Arc<ServiceContext>,
 }
 
 impl DeviceStorageAccess for PowerController {
@@ -59,7 +59,7 @@ impl DeviceStorageAccess for PowerController {
 #[async_trait]
 impl controller::Create for PowerController {
     async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError> {
-        let service_context = client.get_service_context().await;
+        let service_context = client.get_service_context();
         Ok(Self { service_context })
     }
 }

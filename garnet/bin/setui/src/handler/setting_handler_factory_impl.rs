@@ -9,7 +9,7 @@ use crate::handler::setting_handler::{Command, Payload, State};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::message::{Factory, Signature};
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::ServiceContext;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
@@ -106,11 +106,11 @@ impl SettingHandlerFactory for SettingHandlerFactoryImpl {
 impl SettingHandlerFactoryImpl {
     pub fn new(
         settings: HashSet<SettingType>,
-        service_context_handle: ServiceContextHandle,
+        service_context: Arc<ServiceContext>,
         context_id_counter: Arc<AtomicU64>,
     ) -> SettingHandlerFactoryImpl {
         SettingHandlerFactoryImpl {
-            environment: Environment::new(settings, service_context_handle),
+            environment: Environment::new(settings, service_context),
             generators: HashMap::new(),
             context_id_counter,
         }
@@ -172,7 +172,7 @@ mod tests {
                 settings.insert(SettingType::Unknown);
                 settings
             },
-            ServiceContext::create(None, Some(messenger_factory.clone())),
+            Arc::new(ServiceContext::new(None, Some(messenger_factory.clone()))),
             Arc::new(AtomicU64::new(0)),
         );
 

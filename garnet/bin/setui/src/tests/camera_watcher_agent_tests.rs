@@ -58,7 +58,7 @@ async fn test_camera_agent_proxy() {
     CameraWatcherAgent::create(context).await;
 
     let service_context =
-        ServiceContext::create(Some(ServiceRegistry::serve(service_registry)), None);
+        Arc::new(ServiceContext::new(Some(ServiceRegistry::serve(service_registry)), None));
 
     // Create and send the invocation with faked services.
     let invocation = Invocation { lifespan: Lifespan::Service, service_context };

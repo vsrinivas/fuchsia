@@ -8,9 +8,10 @@ use crate::base::SettingType;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
 use crate::service;
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::ServiceContext;
 use anyhow::{format_err, Error};
 use std::collections::HashSet;
+use std::sync::Arc;
 
 /// Authority provides the ability to execute agents sequentially or simultaneously for a given
 /// stage.
@@ -79,7 +80,7 @@ impl Authority {
     pub async fn execute_lifespan(
         &self,
         lifespan: Lifespan,
-        service_context: ServiceContextHandle,
+        service_context: Arc<ServiceContext>,
         sequential: bool,
     ) -> Result<(), Error> {
         let mut pending_receptors = Vec::new();
@@ -90,7 +91,7 @@ impl Authority {
                 .message(
                     Payload::Invocation(Invocation {
                         lifespan: lifespan.clone(),
-                        service_context: service_context.clone(),
+                        service_context: Arc::clone(&service_context),
                     })
                     .into(),
                     Audience::Messenger(signature),
