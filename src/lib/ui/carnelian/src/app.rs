@@ -21,7 +21,9 @@ use futures::{
     future::{Either, Future},
     StreamExt,
 };
-use std::{cell::RefCell, collections::BTreeMap, pin::Pin, rc::Rc};
+use serde::Deserialize;
+use std::{cell::RefCell, collections::BTreeMap, fs, path::PathBuf, pin::Pin, rc::Rc};
+use toml;
 
 mod strategies;
 
@@ -30,6 +32,14 @@ pub type LocalBoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 #[derive(PartialEq, Debug, Default, Copy, Clone)]
 pub struct RenderOptions {
     pub use_spinel: bool,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Config {
+    #[serde(default)]
+    pub use_spinel: bool,
+    #[serde(default)]
+    pub virtcon: bool,
 }
 
 pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
@@ -166,13 +176,15 @@ impl App {
     /// Starts an application based on Carnelian. The `assistant` parameter will
     /// be used to create new views when asked to do so by the Fuchsia view system.
     pub fn run(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
+        let config = Self::load_config().context("loading config failed in run")?;
         let mut executor = fasync::Executor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };
             let assistant_creator = assistant_creator_func(&app_context);
             let assistant = assistant_creator.await?;
-            let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
+            let strat =
+                create_app_strategy(&assistant, &config, FIRST_VIEW_KEY, &internal_sender).await?;
             let mut app = App::new(internal_sender, strat, assistant);
             app.app_init_common().await?;
             while let Some(message) = internal_receiver.next().await {
@@ -271,13 +283,15 @@ impl App {
     /// first update call, or until a five second timeout. The Result returned is the
     /// result of the test, an Ok(()) result means the test passed.
     pub fn test(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
+        let config = Self::load_config().context("loading config failed in test")?;
         let mut executor = fasync::Executor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };
             let assistant_creator = assistant_creator_func(&app_context);
             let assistant = assistant_creator.await?;
-            let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
+            let strat =
+                create_app_strategy(&assistant, &config, FIRST_VIEW_KEY, &internal_sender).await?;
             strat.create_view_for_testing(&internal_sender)?;
             let mut app = App::new(internal_sender, strat, assistant);
             let mut frame_count = 0;
@@ -421,5 +435,16 @@ impl App {
                 view_controller.handle_vsync_cookie(cookie);
             }
         }
+    }
+
+    fn load_config() -> Result<Config, Error> {
+        const CARNELIAN_CONFIG_PATH: &str = "/pkg/data/config/carnelian.toml";
+        let config_path = PathBuf::from(CARNELIAN_CONFIG_PATH);
+        if !config_path.exists() {
+            return Ok(Config::default());
+        }
+        let config_contents = fs::read_to_string(config_path)?;
+        let config = toml::from_str(&config_contents)?;
+        Ok(config)
     }
 }

@@ -7,6 +7,7 @@ use fdio::watch_directory;
 use fidl::endpoints::{self, create_endpoints, ClientEnd, Proxy};
 use fidl_fuchsia_hardware_display::{
     ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ProviderSynchronousProxy,
+    VirtconMode,
 };
 use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
 use fuchsia_component::client::connect_to_service;
@@ -560,6 +561,7 @@ impl FrameBuffer {
 
     pub async fn new(
         usage: FrameUsage,
+        is_virtcon: bool,
         display_index: Option<usize>,
         vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
     ) -> Result<FrameBuffer, Error> {
@@ -583,12 +585,19 @@ impl FrameBuffer {
 
         let (device_client, device_server) = zx::Channel::create()?;
         let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;
-        let status = provider.open_controller(device_server, dc_server, zx::Time::INFINITE)?;
+        let status = if is_virtcon {
+            provider.open_virtcon_controller(device_server, dc_server, zx::Time::INFINITE)
+        } else {
+            provider.open_controller(device_server, dc_server, zx::Time::INFINITE)
+        }?;
         if status != zx::sys::ZX_OK {
             return Err(format_err!("Failed to open display controller"));
         }
 
         let proxy = dc_client.into_proxy()?;
+        if is_virtcon {
+            proxy.set_virtcon_mode(VirtconMode::Fallback as u8)?;
+        }
         FrameBuffer::new_with_proxy(usage, proxy, device_client, vsync_sender).await
     }
 

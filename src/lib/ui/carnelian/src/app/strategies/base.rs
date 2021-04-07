@@ -5,7 +5,7 @@
 use crate::{
     app::{
         strategies::{framebuffer::FrameBufferAppStrategy, scenic::ScenicAppStrategy},
-        AppAssistantPtr, FrameBufferPtr, InternalSender, MessageInternal, RenderOptions,
+        AppAssistantPtr, Config, FrameBufferPtr, InternalSender, MessageInternal, RenderOptions,
     },
     geometry::IntSize,
     input::{self},
@@ -90,6 +90,7 @@ pub(crate) type AppStrategyPtr = Box<dyn AppStrategy>;
 // Tries to create a framebuffer. If that fails, assume Scenic is running.
 pub(crate) async fn create_app_strategy(
     assistant: &AppAssistantPtr,
+    config: &Config,
     next_view_key: ViewKey,
     internal_sender: &InternalSender,
 ) -> Result<AppStrategyPtr, Error> {
@@ -98,7 +99,7 @@ pub(crate) async fn create_app_strategy(
     let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
 
     let (sender, mut receiver) = unbounded::<VSyncMessage>();
-    let fb = FrameBuffer::new(usage, None, Some(sender)).await;
+    let fb = FrameBuffer::new(usage, config.virtcon, None, Some(sender)).await;
     if fb.is_err() {
         let scenic = connect_to_service::<ScenicMarker>()?;
         Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))

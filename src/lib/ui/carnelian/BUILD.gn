@@ -67,7 +67,9 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:lipsum",
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:smallvec",
+    "//third_party/rust_crates:toml",
     "//third_party/rust_crates:ttf-parser",
     "//third_party/rust_crates:vk-sys",
   ]
@@ -410,6 +412,11 @@ resource("static_images") {
 resource("static_sheds") {
   sources = [ "examples/static/fuchsia.shed" ]
   outputs = [ "data/static/{{source_file_part}}" ]
+}
+
+resource("virtcon_config") {
+  sources = [ "config/virtcon_config.toml" ]
+  outputs = [ "data/config/carnelian.toml" ]
 }
 
 resource("shaders") {

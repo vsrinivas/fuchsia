@@ -24,6 +24,12 @@ instructions for more details.
         --args=rust_cap_lints='"warn"' \
         --cargo-toml-gen
 
+To disable virtcon, add
+
+        --args='dev_bootfs_labels=["//products/kernel_cmdline:virtcon.disable--true"]'
+
+To run an example in virtcon mode, add `:virtcon_config` to `additional_deps` for that
+example in `BUILD.gn`
 
 # Tentative Roadmap
 
