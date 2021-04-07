@@ -220,7 +220,7 @@ config("relative_paths") {
 }
 
 config("debug") {
-  # TODO(phosek): remove this config when nothing refers on it.
+  rustflags = [ "-Cdebug-assertions=yes" ]
 }
 
 config("release") {
