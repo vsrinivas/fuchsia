@@ -9,7 +9,7 @@
         args: [
             "elephant",
             "--startup-delay-seconds",
-            120,
+            "120",
         ],
     },
     capabilities: [
@@ -28,8 +28,8 @@
             path: "/config/data",
         },
         {
-            storage: "data",
-            path: "/data",
+            storage: "cache",
+            path: "/cache",
         },
     ],
     expose: [
