@@ -184,14 +184,10 @@ async fn main() -> Result<(), Error> {
     .await;
     let control = Arc::new(Mutex::new(control));
 
-    let run_server: fn(
-        stream: ControlRequestStream,
-        control: Arc<Mutex<dyn ControlTrait>>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), Error>>>> =
-        |stream, control| Box::pin(run_brightness_server(stream, control));
-
-    // TODO(kpt) Writes FIDL client unit test for this.
-    run_brightness_service(fs, control, run_server).await?;
+    run_brightness_service(fs, control, |stream, control| {
+        Box::pin(run_brightness_server(stream, control))
+    })
+    .await?;
     Ok(())
 }
 
