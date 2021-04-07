@@ -8,11 +8,6 @@ import os
 import string
 import sys
 
-# Root dir is 5 levels up from here.
-FUCHSIA_DIR = os.path.abspath(
-    os.path.join(
-        __file__, os.pardir, os.pardir, os.pardir, os.pardir, os.pardir))
-sys.path += [os.path.join(FUCHSIA_DIR, 'third_party')]
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -49,17 +44,22 @@ def main(args_list=None):
     parser.add_argument(
         '--execution_lib', help='name of execution lib', required=True)
 
+    parser.add_argument(
+        '--template',
+        help='The template file to use to generate code',
+        required=True)
+
     if args_list:
         args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
 
-    template_path = os.path.join(os.path.dirname(__file__), 'templates')
+    template_dir, template_name = os.path.split(args.template)
     env = Environment(
-        loader=FileSystemLoader(template_path),
+        loader=FileSystemLoader(template_dir),
         trim_blocks=True,
         lstrip_blocks=True)
-    template = env.get_template('plugins.md')
+    template = env.get_template(template_name)
     if args.deps:
         libraries = args.deps.split(',')
         plugins = map(wrap_deps, libraries)

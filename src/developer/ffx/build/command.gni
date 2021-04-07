@@ -24,22 +24,22 @@ template("command") {
 
   generated_file = "$target_gen_dir/" + output_name
 
-  template = "command.md"
+  template = "//src/developer/ffx/build/templates/command.md"
   lib_str = string_join(",", libraries)
   action(target_name) {
-    script = "//src/developer/ffx/build/gn_generate_cmd.py"
+    script = "${root_out_dir}/obj/src/developer/ffx/build/gn_generate_cmd.pyz"
     args = [
       "--out",
       rebase_path(generated_file),
       "--deps",
       lib_str,
       "--template",
-      template,
+      rebase_path(template, root_build_dir),
     ]
 
     # Rebuild if the template changes
-    inputs = [ "//src/developer/ffx/build/templates/command.md" ] +
-             third_party_jinja2_srcs + third_party_markupsafe_srcs
+    inputs = [ template ]
     outputs = [ generated_file ]
+    deps = [ "//src/developer/ffx/build:gn_generate_cmd" ]
   }
 }

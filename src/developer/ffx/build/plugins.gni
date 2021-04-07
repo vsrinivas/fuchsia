@@ -64,12 +64,17 @@ template("plugins") {
   }
 
   action(target_name) {
-    script = "//src/developer/ffx/build/gn_generate_plugins.py"
-    args = script_args
+    script =
+        "${root_out_dir}/obj/src/developer/ffx/build/gn_generate_plugins.pyz"
+    template = "//src/developer/ffx/build/templates/plugins.md"
+    args = script_args + [
+             "--template",
+             rebase_path(template, root_build_dir),
+           ]
 
     # Rebuild if the template changes
-    inputs = [ "//src/developer/ffx/build/templates/plugins.md" ] +
-             third_party_jinja2_srcs + third_party_markupsafe_srcs
+    inputs = [ template ]
     outputs = [ generated_file ]
+    deps = [ "//src/developer/ffx/build:gn_generate_plugins" ]
   }
 }
