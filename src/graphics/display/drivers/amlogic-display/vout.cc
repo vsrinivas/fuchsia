@@ -276,7 +276,9 @@ zx_status_t Vout::ApplyConfiguration(const display_mode_t* mode) {
         return ZX_OK;
       }
 
-      status = hdmi_.hdmi_host->GetVic(mode);
+      display_mode_t modified_mode;
+      memcpy(&modified_mode, mode, sizeof(display_mode_t));
+      status = hdmi_.hdmi_host->GetVic(&modified_mode);
       if (status != ZX_OK) {
         DISP_ERROR("Apply with bad mode");
         return status;
@@ -285,7 +287,7 @@ zx_status_t Vout::ApplyConfiguration(const display_mode_t* mode) {
       memcpy(&hdmi_.cur_display_mode_, mode, sizeof(display_mode_t));
       // FIXME: Need documentation for HDMI PLL initialization
       hdmi_.hdmi_host->ConfigurePll();
-      hdmi_.hdmi_host->ModeSet();
+      hdmi_.hdmi_host->ModeSet(modified_mode);
       return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;
