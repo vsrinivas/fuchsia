@@ -21,7 +21,9 @@ struct PartitionOptions {
 
   // Maximum number of bytes a partition may use.
   //
-  // E.g. BlobfsAdapter will increase its journal size based on the remaining slices.
+  // E.g.
+  // * Blobfs Partition will increase its journal size based on the remaining slices.
+  // * Empty Partition will allocate this amount of slices starting from target offset 0.
   std::optional<uint64_t> max_bytes;
 };
 

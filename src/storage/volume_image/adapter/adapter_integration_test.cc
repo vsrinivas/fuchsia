@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/block/volume/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <lib/zx/status.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
@@ -18,6 +21,7 @@
 #include <memory>
 #include <string_view>
 
+#include <block-client/cpp/remote-block-device.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
 #include <fs-management/fvm.h>
@@ -25,14 +29,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
+#include <sdk/lib/fdio/include/lib/fdio/fdio.h>
 
-#include "lib/zx/time.h"
+#include "fuchsia/hardware/block/volume/c/fidl.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 #include "src/storage/volume_image/adapter/blobfs_partition.h"
+#include "src/storage/volume_image/adapter/empty_partition.h"
 #include "src/storage/volume_image/adapter/minfs_partition.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
@@ -222,7 +228,7 @@ TEST(AdapterTest, MinfsPartitonInFvmImageFromFvmDescriptorPassesFsck) {
 // The test will write the fvm image into a vmo, and then bring up a fvm driver,
 // on top a ramdisk with the written data. The blobfs partition in the fvm driver,
 // should pass FSCK if everything is correct.
-TEST(AdapterTest, BlobfsAndMinfsPartitonInFvmImageFromFvmDescriptorPassesFsck) {
+TEST(AdapterTest, BlobfsMinfsAndEmptyPartitionPartitonInFvmImageFromFvmDescriptorPassesFsck) {
   constexpr uint64_t kImageSize = 500u * (1u << 20);
   auto fvm_options = MakeFvmOptions(kSliceSize);
   // 500 MB fvm image.
@@ -247,10 +253,22 @@ TEST(AdapterTest, BlobfsAndMinfsPartitonInFvmImageFromFvmDescriptorPassesFsck) {
   ASSERT_TRUE(blobfs_partition_or.is_ok()) << blobfs_partition_or.error();
   auto blobfs_partition = blobfs_partition_or.take_value();
 
+  auto empty_partition_options = partition_options;
+  empty_partition_options.max_bytes = fvm_options.slice_size + 1;
+  auto empty_partition_or = CreateEmptyFvmPartition(empty_partition_options, fvm_options);
+  ASSERT_TRUE(empty_partition_or.is_ok()) << empty_partition_or.error();
+  auto empty_partition = empty_partition_or.take_value();
+  empty_partition.volume().name = "my-empty-partition";
+  // Just some fixed number, since 00000, is taken by the ramdisk.
+  empty_partition.volume().type[0] = 1;
+  empty_partition.volume().type[1] = 1;
+  empty_partition.volume().type[2] = 1;
+
   auto fvm_descriptor_or = FvmDescriptor::Builder()
                                .SetOptions(fvm_options)
                                .AddPartition(std::move(minfs_partition))
                                .AddPartition(std::move(blobfs_partition))
+                               .AddPartition(std::move(empty_partition))
                                .Build();
   ASSERT_TRUE(fvm_descriptor_or.is_ok()) << fvm_descriptor_or.error();
   auto fvm_descriptor = fvm_descriptor_or.take_value();
@@ -286,6 +304,32 @@ TEST(AdapterTest, BlobfsAndMinfsPartitonInFvmImageFromFvmDescriptorPassesFsck) {
     fbl::unique_fd partition_fd(open_partition(nullptr, partition.volume().type.data(),
                                                zx::sec(10).get(), partition_path.data()));
     ASSERT_TRUE(partition_fd.is_valid());
+
+    if (partition.volume().name == "my-empty-partition") {
+      // Check that allocated slices are equal to the slice count for max bytes.
+      std::unique_ptr<block_client::RemoteBlockDevice> block_device;
+      zx::channel channel;
+      ASSERT_EQ(fdio_get_service_handle(partition_fd.release(), channel.reset_and_get_address()),
+                ZX_OK);
+      ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
+      std::array<uint64_t, 2> slice_start = {0, 2};
+      using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
+      std::array<VsliceRange, fuchsia_hardware_block_volume::wire::MAX_SLICE_REQUESTS>
+
+          ranges = {};
+      uint64_t range_count;
+
+      ASSERT_EQ(block_device->VolumeQuerySlices(slice_start.data(), slice_start.size(),
+                                                reinterpret_cast<VsliceRange*>(ranges.data()),
+                                                &range_count),
+                ZX_OK);
+      ASSERT_EQ(range_count, 2u);
+      EXPECT_TRUE(ranges[0].allocated);
+      EXPECT_EQ(ranges[0].count, 2u);
+      EXPECT_FALSE(ranges[1].allocated);
+      EXPECT_EQ(ranges[1].count, fvm::kMaxVSlices - 2);
+      continue;
+    }
 
     auto fsck_options = default_fsck_options;
     fsck_options.always_modify = false;

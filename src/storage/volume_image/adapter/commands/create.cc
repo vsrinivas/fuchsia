@@ -7,8 +7,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <charconv>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 
@@ -17,7 +19,9 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/adapter/blobfs_partition.h"
 #include "src/storage/volume_image/adapter/commands.h"
+#include "src/storage/volume_image/adapter/empty_partition.h"
 #include "src/storage/volume_image/adapter/minfs_partition.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/fvm/options.h"
@@ -28,11 +32,21 @@
 #include "src/storage/volume_image/utils/lz4_compressor.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/utils/writer.h"
+#include "src/storage/volume_image/volume_descriptor.h"
 
 namespace storage::volume_image {
 namespace {
 
 std::string Errno() { return std::string(strerror(errno)); }
+
+class ZeroReader final : public Reader {
+  uint64_t length() const final { return std::numeric_limits<uint64_t>::max(); }
+
+  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+    memset(buffer.data(), '0', buffer.size());
+    return fit::ok();
+  }
+};
 
 class BoundedWriter final : public Writer {
  public:
@@ -85,6 +99,14 @@ fit::result<Partition, std::string> ProcessPartition(const PartitionParams& para
       break;
     }
 
+    case PartitionImageFormat::kEmptyPartition: {
+      auto partition_or = CreateEmptyFvmPartition(params.options, fvm_options);
+      if (partition_or.is_error()) {
+        return partition_or.take_error_result();
+      }
+      partition = partition_or.take_value();
+    } break;
+
     default:
       return fit::error("Unknown Partition format.");
   }
@@ -92,6 +114,10 @@ fit::result<Partition, std::string> ProcessPartition(const PartitionParams& para
   // At this point we have a default Minfs or Blobfs partition, but we need to adjust it.
   if (!params.label.empty()) {
     partition.volume().name = params.label;
+  }
+
+  if (params.type_guid.has_value()) {
+    partition.volume().type = params.type_guid.value();
   }
 
   if (params.encrypted) {
@@ -102,7 +128,6 @@ fit::result<Partition, std::string> ProcessPartition(const PartitionParams& para
 
   return fit::ok(std::move(partition));
 }
-
 }  // namespace
 
 fit::result<void, std::string> Create(const CreateParams& params) {

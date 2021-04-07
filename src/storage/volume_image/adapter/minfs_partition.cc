@@ -82,9 +82,9 @@ class PatchedSuperblockReader final : public Reader {
 
 }  // namespace
 
-fit::result<Partition, std::string> CreateMinfsFvmPartition(std::unique_ptr<Reader> source_image,
-                                                            const PartitionOptions& partition_options,
-                                                            const FvmOptions& fvm_options) {
+fit::result<Partition, std::string> CreateMinfsFvmPartition(
+    std::unique_ptr<Reader> source_image, const PartitionOptions& partition_options,
+    const FvmOptions& fvm_options) {
   if (fvm_options.slice_size % minfs::kMinfsBlockSize != 0) {
     return fit::error(
         "Fvm slice size must be a multiple of minfs block size. Expected minfs_block_size: " +

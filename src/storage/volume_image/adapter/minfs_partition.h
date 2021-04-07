@@ -20,9 +20,9 @@ namespace storage::volume_image {
 //
 // Note: Eventually as minfs host tool gets cleaned up, it should generate the volume and address
 // descriptor for minfs, in the meantime we generate them on the fly.
-fit::result<Partition, std::string> CreateMinfsFvmPartition(std::unique_ptr<Reader> source_image,
-                                                            const PartitionOptions& partition_options,
-                                                            const FvmOptions& fvm_options);
+fit::result<Partition, std::string> CreateMinfsFvmPartition(
+    std::unique_ptr<Reader> source_image, const PartitionOptions& partition_options,
+    const FvmOptions& fvm_options);
 
 }  // namespace storage::volume_image
 

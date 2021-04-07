@@ -5,10 +5,11 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_PARTITION_H_
 #define SRC_STORAGE_VOLUME_IMAGE_PARTITION_H_
 
+#include <lib/fit/result.h>
+
 #include <memory>
 #include <string>
 
-#include "lib/fit/result.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/volume_descriptor.h"

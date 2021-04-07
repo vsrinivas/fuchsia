@@ -45,8 +45,24 @@ source_set("minfs-partition") {
   ]
 }
 
+source_set("empty-partition") {
+  sources = [ "empty_partition.cc" ]
+  public = [ "empty_partition.h" ]
+  public_deps = [
+    ":options",
+    "//src/storage/volume_image:partition",
+    "//src/storage/volume_image/fvm:options",
+    "//src/storage/volume_image/utils:io-interfaces",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [ "//src/storage/fvm" ]
+}
+
 source_set("commands") {
-  sources = [ "commands/create.cc" ]
+  sources = [
+    "commands/arguments.cc",
+    "commands/create.cc",
+  ]
   public = [ "commands.h" ]
 
   public_deps = [
@@ -57,6 +73,7 @@ source_set("commands") {
 
   deps = [
     ":blobfs-partition",
+    ":empty-partition",
     ":minfs-partition",
     "//src/storage/fvm",
     "//src/storage/volume_image/fvm:fvm-descriptor",
@@ -174,12 +191,15 @@ source_set("adapter-tests") {
   testonly = true
   sources = [
     "blobfs_partition_test.cc",
+    "commands/arguments_test.cc",
     "commands/create_test.cc",
+    "empty_partition_test.cc",
     "minfs_partition_test.cc",
   ]
   deps = [
     ":blobfs-partition",
     ":commands",
+    ":empty-partition",
     ":minfs-partition",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
@@ -206,7 +226,9 @@ test("adapter-integration-test") {
   configs += [ ":test-image-path" ]
   deps = [
     ":blobfs-partition",
+    ":empty-partition",
     ":minfs-partition",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
     "//src/storage/fvm",
@@ -216,7 +238,8 @@ test("adapter-integration-test") {
     "//src/storage/volume_image/utils:fd-io",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
   ]
 }

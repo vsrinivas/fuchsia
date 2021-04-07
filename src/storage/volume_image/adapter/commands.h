@@ -9,16 +9,30 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include <fbl/span.h>
+
 #include "src/storage/volume_image/adapter/adapter_options.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"
+#include "src/storage/volume_image/utils/guid.h"
 
 // This header provides an entry point for CLI tools, such that CLI's job is just mapping arguments
 // to parameters.
 // This functions add support for FVM legacy host tool. Eventually all of this should be removed,
 // and rely on the json schema described on serialization, allowing for a full plug in method.
 namespace storage::volume_image {
+
+enum class Command {
+  kCreate,
+  kCreateSparse,
+  kUnsupported,
+};
+
+// For a given string returns the associated |Command|.
+Command CommandFromString(std::string_view command_str);
 
 // Output image format.
 enum class FvmImageFormat {
@@ -34,14 +48,22 @@ enum class FvmImageFormat {
 enum PartitionImageFormat {
   kBlobfs,
   kMinfs,
+  kEmptyPartition,
 };
 
 struct PartitionParams {
+  static fit::result<std::vector<PartitionParams>, std::string> FromArguments(
+      fbl::Span<std::string_view> arguments, const FvmOptions& options);
+
   // The image path for the partition.
   std::string source_image_path;
 
   // Label to be used by the volume. If not the default one.
   std::string label;
+
+  // Sets the type guide of the generated partition.
+  // Only supported for
+  std::optional<std::array<uint8_t, kGuidLength>> type_guid;
 
   // Whether the volume should be flagged as encrypted.
   // Only supported for Format::Sparse.
@@ -50,10 +72,16 @@ struct PartitionParams {
   // Custom partition options.
   PartitionOptions options;
 
+  // For empty partitions, describes the range of slices to allocate.
   PartitionImageFormat format;
 };
 
 struct CreateParams {
+  // Returns arguments from |index| as a |CreateParam| instance. Validation is done by the
+  // |CreateParam| consumers.
+  static fit::result<CreateParams, std::string> FromArguments(
+      fbl::Span<std::string_view> arguments);
+
   // Path to the output file where the FVM image should be written to.
   std::string output_path;
 
