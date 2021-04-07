@@ -228,5 +228,5 @@ void main() {
     // Try to restart SL4F
     await sl4f.startServer();
     expect(await sl4f.isRunning(), isTrue);
-  }, timeout: Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout(Duration(minutes: 2)));
 }

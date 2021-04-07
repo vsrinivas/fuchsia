@@ -33,9 +33,7 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "ermine_shell_test.dart",
     "ermine_smoke_test.dart",
     "ermine_spinning_square_view_test.dart",
-
-    # TODO(https://fxbug.dev/73953): Uncomment once input injection is fixed.
-    # "ermine_terminal_test.dart",
+    "ermine_terminal_test.dart",
   ]
 
   deps = [
