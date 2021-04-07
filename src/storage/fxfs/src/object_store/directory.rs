@@ -7,7 +7,7 @@ use {
         errors::FxfsError,
         object_handle::ObjectHandle,
         object_store::{
-            record::{ObjectDescriptor, ObjectItem, ObjectKey, ObjectValue},
+            record::{ObjectItem, ObjectKey, ObjectValue},
             transaction::{Mutation, Transaction},
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
@@ -15,6 +15,9 @@ use {
     anyhow::{bail, Error},
     std::sync::Arc,
 };
+
+// ObjectDescriptor is exposed in Directory::lookup.
+pub use crate::object_store::record::ObjectDescriptor;
 
 /// A directory stores name to child object mappings.
 pub struct Directory {

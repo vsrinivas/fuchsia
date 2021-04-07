@@ -4,12 +4,37 @@
 
 use thiserror::Error;
 
-#[derive(Eq, Error, Debug, PartialEq)]
+#[derive(Eq, Error, Clone, Debug, PartialEq)]
 pub enum FxfsError {
-    #[error("Not found")]
-    NotFound,
+    #[error("Already exists")]
+    AlreadyExists,
     #[error("Filesystem inconsistency")]
     Inconsistent,
+    #[error("Internal error")]
+    Internal,
     #[error("Expected directory")]
     NotDir,
+    #[error("Not found")]
+    NotFound,
+}
+
+impl FxfsError {
+    /// A helper to match against this FxfsError against the root cause of an anyhow::Error.
+    ///
+    /// The main application of this helper is to allow us to match an anyhow::Error against a
+    /// specific case of FxfsError in a boolean expression, such as:
+    ///
+    /// let result: Result<(), anyhow:Error> = foo();
+    /// match result {
+    ///   Ok(foo) => Ok(foo),
+    ///   Err(e) if &FxfsError::NotFound.matches(e) => { ... }
+    ///   Err(e) => Err(e)
+    /// }
+    pub fn matches(&self, error: &anyhow::Error) -> bool {
+        if let Some(root_cause) = error.root_cause().downcast_ref::<FxfsError>() {
+            self == root_cause
+        } else {
+            false
+        }
+    }
 }

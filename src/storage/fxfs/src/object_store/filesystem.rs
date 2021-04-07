@@ -91,7 +91,7 @@ impl ObjectManager {
 
     pub fn register_store(&self, store: &Arc<ObjectStore>) {
         let mut objects = self.objects.write().unwrap();
-        assert!(store.store_object_id() != objects.allocator_object_id);
+        assert_ne!(store.store_object_id(), objects.allocator_object_id);
         assert!(objects.stores.insert(store.store_object_id(), store.clone()).is_none());
     }
 
