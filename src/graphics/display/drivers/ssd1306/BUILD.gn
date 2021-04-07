@@ -4,7 +4,6 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
@@ -37,13 +36,8 @@ driver_module("ssd1306_driver") {
   ]
 }
 
-driver_package("ssd1306") {
+fuchsia_system_package("ssd1306") {
   deps = [ ":ssd1306_driver" ]
-  drivers = [
-    {
-      name = "ssd1306_driver.so"
-    },
-  ]
 }
 
 test("ssd1306-test") {

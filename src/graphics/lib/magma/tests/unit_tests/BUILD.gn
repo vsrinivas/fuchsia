@@ -2,18 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/driver_package.gni")
+import("//build/dist/resource.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
-driver_package("testing_firmware_file") {
+resource("test_firmware") {
+  sources = [ "test_firmware.txt" ]
+  outputs = [ "lib/firmware/test_firmware.txt" ]
+}
+
+fuchsia_system_package("testing_firmware_file") {
   testonly = true
-  libraries = [
-    {
-      name = "test_firmware"
-      dest = "firmware/test_firmware.txt"
-      source = rebase_path("test_firmware.txt")
-    },
-  ]
+  deps = [ ":test_firmware" ]
 }
 
 executable("unit_tests") {

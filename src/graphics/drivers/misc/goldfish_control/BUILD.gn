@@ -4,7 +4,6 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
@@ -65,14 +64,9 @@ driver_module("control_driver") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-driver_package("goldfish_control") {
+fuchsia_system_package("goldfish_control") {
   deps = [ ":control_driver" ]
-
-  drivers = [
-    {
-      name = "goldfish_control.so"
-    },
-  ]
+  allowed_in_extra_deps = true
 }
 
 test("goldfish-control-device-test") {
