@@ -36,24 +36,24 @@ zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
   auto* device_desc = composite->device_descriptor();
   uint8_t usb_class, usb_subclass, usb_protocol;
 
-  if (interface_desc->bInterfaceClass == 0) {
+  if (interface_desc->b_interface_class == 0) {
     usb_class = device_desc->b_device_class;
     usb_subclass = device_desc->b_device_sub_class;
     usb_protocol = device_desc->b_device_protocol;
   } else {
     // class/subclass/protocol defined per-interface
-    usb_class = interface_desc->bInterfaceClass;
-    usb_subclass = interface_desc->bInterfaceSubClass;
-    usb_protocol = interface_desc->bInterfaceProtocol;
+    usb_class = interface_desc->b_interface_class;
+    usb_subclass = interface_desc->b_interface_sub_class;
+    usb_protocol = interface_desc->b_interface_protocol;
   }
 
-  auto status = interface->Init(interface_desc, desc_length, interface_desc->bInterfaceNumber,
+  auto status = interface->Init(interface_desc, desc_length, interface_desc->b_interface_number,
                                 usb_class, usb_subclass, usb_protocol);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = interface->ConfigureEndpoints(interface_desc->bInterfaceNumber, 0);
+  status = interface->ConfigureEndpoints(interface_desc->b_interface_number, 0);
   if (status != ZX_OK) {
     return status;
   }
@@ -102,8 +102,8 @@ zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
   while (header < end) {
     if (header->bDescriptorType == USB_DT_INTERFACE) {
       auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
-      if (intf_desc->bAlternateSetting == 0) {
-        zx_status_t status = interface->ConfigureEndpoints(intf_desc->bInterfaceNumber, 0);
+      if (intf_desc->b_alternate_setting == 0) {
+        zx_status_t status = interface->ConfigureEndpoints(intf_desc->b_interface_number, 0);
         if (status != ZX_OK) {
           return status;
         }
@@ -161,10 +161,10 @@ void UsbInterface::DdkRelease() {
 }
 
 // for determining index into active_endpoints[]
-// bEndpointAddress has 4 lower order bits, plus high bit to signify direction
+// b_endpoint_address has 4 lower order bits, plus high bit to signify direction
 // shift high bit to bit 4 so index is in range 0 - 31.
 static inline uint8_t GetEndpointIndex(const usb_endpoint_descriptor_t* ep) {
-  return static_cast<uint8_t>(((ep)->bEndpointAddress & 0x0F) | ((ep)->bEndpointAddress >> 3));
+  return static_cast<uint8_t>(((ep)->b_endpoint_address & 0x0F) | ((ep)->b_endpoint_address >> 3));
 }
 
 zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_setting) {
@@ -182,8 +182,8 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
   while (header < end) {
     if (header->bDescriptorType == USB_DT_INTERFACE) {
       auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
-      cur_interface = intf_desc->bInterfaceNumber;
-      enable_endpoints = (intf_desc->bAlternateSetting == alt_setting);
+      cur_interface = intf_desc->b_interface_number;
+      enable_endpoints = (intf_desc->b_alternate_setting == alt_setting);
     } else if (header->bDescriptorType == USB_DT_ENDPOINT && cur_interface == interface_id) {
       usb_endpoint_descriptor_t* ep = (usb_endpoint_descriptor_t*)header;
       auto ep_index = GetEndpointIndex(ep);
@@ -210,7 +210,7 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
         if (new_ep) {
           usb_ss_ep_comp_descriptor_t* ss_comp_desc = nullptr;
           usb_descriptor_header_t* next =
-              (usb_descriptor_header_t*)((uint8_t*)new_ep + new_ep->bLength);
+              (usb_descriptor_header_t*)((uint8_t*)new_ep + new_ep->b_length);
           if (next + sizeof(*ss_comp_desc) <= end &&
               next->bDescriptorType == USB_DT_SS_EP_COMPANION) {
             ss_comp_desc = (usb_ss_ep_comp_descriptor_t*)next;
@@ -315,7 +315,8 @@ size_t UsbInterface::UsbCompositeGetAdditionalDescriptorLength() {
       usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)header;
       // We are only interested in descriptors past the last stored descriptor
       // for the current interface.
-      if (test_intf->bAlternateSetting == 0 && test_intf->bInterfaceNumber > last_interface_id_) {
+      if (test_intf->b_alternate_setting == 0 &&
+          test_intf->b_interface_number > last_interface_id_) {
         interface = test_intf;
         break;
       }
@@ -350,7 +351,7 @@ size_t UsbInterface::UsbGetRequestSize() { return usb_.GetRequestSize(); }
 
 zx_status_t UsbInterface::UsbCompositeClaimInterface(const usb_interface_descriptor_t* desc,
                                                      uint32_t length) {
-  auto status = composite_->ClaimInterface(desc->bInterfaceNumber);
+  auto status = composite_->ClaimInterface(desc->b_interface_number);
   if (status != ZX_OK) {
     return status;
   }
@@ -366,8 +367,8 @@ zx_status_t UsbInterface::UsbCompositeClaimInterface(const usb_interface_descrip
   memcpy(new_descriptors + old_length, desc, length);
   descriptors_.reset(new_descriptors, new_length);
 
-  if (desc->bInterfaceNumber > last_interface_id_) {
-    last_interface_id_ = desc->bInterfaceNumber;
+  if (desc->b_interface_number > last_interface_id_) {
+    last_interface_id_ = desc->b_interface_number;
   }
   return ZX_OK;
 }
@@ -380,7 +381,7 @@ bool UsbInterface::ContainsInterface(uint8_t interface_id) {
   while (header < end) {
     if (header->bDescriptorType == USB_DT_INTERFACE) {
       auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
-      if (intf_desc->bInterfaceNumber == interface_id) {
+      if (intf_desc->b_interface_number == interface_id) {
         return true;
       }
     }

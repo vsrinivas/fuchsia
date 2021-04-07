@@ -20,6 +20,7 @@
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <usb/usb.h>
 
 #include "src/connectivity/telephony/drivers/qmi-usb-transport/qmi_usb_bind.h"
 
@@ -797,14 +798,14 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   // Ignore the others for now.
   // TODO generic way of describing usb interfaces
   usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
-  if (!intf || intf->bInterfaceNumber != QMI_INTERFACE_NUM) {
+  if (!intf || intf->b_interface_number != QMI_INTERFACE_NUM) {
     usb_desc_iter_release(&iter);
     status = ZX_ERR_NOT_SUPPORTED;
     QmiBindFailedNoErr(int_buf);
     return status;
   }
 
-  if (intf->bNumEndpoints != 3) {
+  if (intf->b_num_endpoints != 3) {
     zxlogf(ERROR,
            "qmi-usb-transport: interface does not have the required 3 "
            "endpoints\n");
@@ -830,14 +831,14 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
       }
       if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
         if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-          bulk_out_addr = endp->bEndpointAddress;
+          bulk_out_addr = endp->b_endpoint_address;
           bulk_max_packet = usb_ep_max_packet(endp);
         }
       } else {
         if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-          bulk_in_addr = endp->bEndpointAddress;
+          bulk_in_addr = endp->b_endpoint_address;
         } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
-          intr_addr = endp->bEndpointAddress;
+          intr_addr = endp->b_endpoint_address;
           intr_max_packet = usb_ep_max_packet(endp);
         }
       }

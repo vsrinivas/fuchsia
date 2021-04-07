@@ -225,7 +225,7 @@ zx_status_t Device::LoadFirmware() {
   }
 
   usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
-  if (!intf || intf->bNumEndpoints != 3) {
+  if (!intf || intf->b_num_endpoints != 3) {
     usb_desc_iter_release(&iter);
     return FailInit(ZX_ERR_NOT_SUPPORTED, "Unexpected number of usb endpoints");
   }
@@ -234,7 +234,7 @@ zx_status_t Device::LoadFirmware() {
   while (endp) {
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_out_addr_ = endp->bEndpointAddress;
+        bulk_out_addr_ = endp->b_endpoint_address;
       }
     }
     endp = usb_desc_iter_next_endpoint(&iter);

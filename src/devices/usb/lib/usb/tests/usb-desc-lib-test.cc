@@ -15,24 +15,24 @@ constexpr usb_descriptor_header_t kTestDescriptorHeader = {
 };
 
 constexpr usb_interface_descriptor_t kTestUsbInterfaceDescriptor = {
-    .bLength = sizeof(usb_interface_descriptor_t),
-    .bDescriptorType = USB_DT_INTERFACE,
-    .bInterfaceNumber = 0,
-    .bAlternateSetting = 0,
-    .bNumEndpoints = 2,
-    .bInterfaceClass = 8,
-    .bInterfaceSubClass = 6,
-    .bInterfaceProtocol = 80,
-    .iInterface = 0,
+    .b_length = sizeof(usb_interface_descriptor_t),
+    .b_descriptor_type = USB_DT_INTERFACE,
+    .b_interface_number = 0,
+    .b_alternate_setting = 0,
+    .b_num_endpoints = 2,
+    .b_interface_class = 8,
+    .b_interface_sub_class = 6,
+    .b_interface_protocol = 80,
+    .i_interface = 0,
 };
 
 constexpr usb_endpoint_descriptor_t kTestUsbEndpointDescriptor = {
-    .bLength = sizeof(usb_endpoint_descriptor_t),
-    .bDescriptorType = USB_DT_ENDPOINT,
-    .bEndpointAddress = 0x81,
-    .bmAttributes = 2,
-    .wMaxPacketSize = 1024,
-    .bInterval = 0,
+    .b_length = sizeof(usb_endpoint_descriptor_t),
+    .b_descriptor_type = USB_DT_ENDPOINT,
+    .b_endpoint_address = 0x81,
+    .bm_attributes = 2,
+    .w_max_packet_size = 1024,
+    .b_interval = 0,
 };
 
 constexpr usb_ss_ep_comp_descriptor_t kTestUsbSsEpCompDescriptor = {

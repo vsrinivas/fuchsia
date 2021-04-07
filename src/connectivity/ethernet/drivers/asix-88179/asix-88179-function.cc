@@ -123,65 +123,65 @@ zx_status_t FakeUsbAx88179Function::Bind() {
 
   descriptor_size_ = sizeof(descriptor_);
   descriptor_.interface = {
-      .bLength = sizeof(usb_interface_descriptor_t),
-      .bDescriptorType = USB_DT_INTERFACE,
-      .bInterfaceNumber = 0,
-      .bAlternateSetting = 0,
-      .bNumEndpoints = 3,
-      .bInterfaceClass = USB_CLASS_COMM,
-      .bInterfaceSubClass = USB_CDC_SUBCLASS_ETHERNET,
-      .bInterfaceProtocol = 1,
-      .iInterface = 0,
+      .b_length = sizeof(usb_interface_descriptor_t),
+      .b_descriptor_type = USB_DT_INTERFACE,
+      .b_interface_number = 0,
+      .b_alternate_setting = 0,
+      .b_num_endpoints = 3,
+      .b_interface_class = USB_CLASS_COMM,
+      .b_interface_sub_class = USB_CDC_SUBCLASS_ETHERNET,
+      .b_interface_protocol = 1,
+      .i_interface = 0,
   };
   descriptor_.bulk_in = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_IN,  // set later
-      .bmAttributes = USB_ENDPOINT_BULK,
-      .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-      .bInterval = 0,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_IN,  // set later
+      .bm_attributes = USB_ENDPOINT_BULK,
+      .w_max_packet_size = htole16(BULK_MAX_PACKET),
+      .b_interval = 0,
   };
   descriptor_.bulk_out = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_OUT,  // set later
-      .bmAttributes = USB_ENDPOINT_BULK,
-      .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-      .bInterval = 0,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_OUT,  // set later
+      .bm_attributes = USB_ENDPOINT_BULK,
+      .w_max_packet_size = htole16(BULK_MAX_PACKET),
+      .b_interval = 0,
   };
   descriptor_.intr_ep = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = 0,  // set later
-      .bmAttributes = USB_ENDPOINT_INTERRUPT,
-      .wMaxPacketSize = htole16(INTR_MAX_PACKET),
-      .bInterval = 8,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = 0,  // set later
+      .bm_attributes = USB_ENDPOINT_INTERRUPT,
+      .w_max_packet_size = htole16(INTR_MAX_PACKET),
+      .b_interval = 8,
   };
 
   parent_req_size_ = function_.GetRequestSize();
 
-  zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
+  zx_status_t status = function_.AllocInterface(&descriptor_.interface.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_interface failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_IN, &descriptor_.intr_ep.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_IN, &descriptor_.intr_ep.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed");
     return status;
   }
 
-  intr_addr_ = descriptor_.intr_ep.bEndpointAddress;
+  intr_addr_ = descriptor_.intr_ep.b_endpoint_address;
 
   status = usb::Request<>::Alloc(&intr_req_, INTR_MAX_PACKET, intr_addr_, parent_req_size_);
   if (status != ZX_OK) {

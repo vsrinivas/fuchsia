@@ -288,26 +288,26 @@ zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
     return status;
   }
   hid_desc_ = hid_desc;
-  endptin_address_ = endptin->bEndpointAddress;
+  endptin_address_ = endptin->b_endpoint_address;
 
   if (endptout) {
-    endptout_address_ = endptout->bEndpointAddress;
+    endptout_address_ = endptout->b_endpoint_address;
     has_endptout_ = true;
     endptout_max_size_ = usb_ep_max_packet(endptout);
-    status = usb_request_alloc(&request_out_, endptout_max_size_, endptout->bEndpointAddress,
+    status = usb_request_alloc(&request_out_, endptout_max_size_, endptout->b_endpoint_address,
                                parent_req_size_);
   }
 
-  interface_ = info_.dev_num = interface.descriptor()->bInterfaceNumber;
-  info_.boot_device = interface.descriptor()->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
+  interface_ = info_.dev_num = interface.descriptor()->b_interface_number;
+  info_.boot_device = interface.descriptor()->b_interface_sub_class == USB_HID_SUBCLASS_BOOT;
   info_.device_class = HID_DEVICE_CLASS_OTHER;
-  if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
+  if (interface.descriptor()->b_interface_protocol == USB_HID_PROTOCOL_KBD) {
     info_.device_class = HID_DEVICE_CLASS_KBD;
-  } else if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
+  } else if (interface.descriptor()->b_interface_protocol == USB_HID_PROTOCOL_MOUSE) {
     info_.device_class = HID_DEVICE_CLASS_POINTER;
   }
 
-  status = usb_request_alloc(&req_, usb_ep_max_packet(endptin), endptin->bEndpointAddress,
+  status = usb_request_alloc(&req_, usb_ep_max_packet(endptin), endptin->b_endpoint_address,
                              parent_req_size_);
   if (status != ZX_OK) {
     status = ZX_ERR_NO_MEMORY;

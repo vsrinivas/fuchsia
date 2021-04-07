@@ -77,41 +77,41 @@ zx_status_t TestFunction::UsbFunctionInterfaceSetInterface(uint8_t interface, ui
 zx_status_t TestFunction::Bind() {
   descriptor_size_ = sizeof(descriptor_);
   descriptor_.interface = {
-      .bLength = sizeof(usb_interface_descriptor_t),
-      .bDescriptorType = USB_DT_INTERFACE,
-      .bInterfaceNumber = 0,
-      .bAlternateSetting = 0,
-      .bNumEndpoints = 1,
-      .bInterfaceClass = 0xFF,
-      .bInterfaceSubClass = 0xFF,
-      .bInterfaceProtocol = 0xFF,
-      .iInterface = 0,
+      .b_length = sizeof(usb_interface_descriptor_t),
+      .b_descriptor_type = USB_DT_INTERFACE,
+      .b_interface_number = 0,
+      .b_alternate_setting = 0,
+      .b_num_endpoints = 1,
+      .b_interface_class = 0xFF,
+      .b_interface_sub_class = 0xFF,
+      .b_interface_protocol = 0xFF,
+      .i_interface = 0,
   };
   descriptor_.bulk_out = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_OUT,
-      .bmAttributes = USB_ENDPOINT_BULK,
-      .wMaxPacketSize = 512,
-      .bInterval = 0,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_OUT,
+      .bm_attributes = USB_ENDPOINT_BULK,
+      .w_max_packet_size = 512,
+      .b_interval = 0,
   };
 
   active_ = true;
 
   parent_req_size_ = function_.GetRequestSize();
 
-  zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
+  zx_status_t status = function_.AllocInterface(&descriptor_.interface.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "usb_function_alloc_interface failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "usb_function_alloc_ep failed");
     return status;
   }
 
-  bulk_out_addr_ = descriptor_.bulk_out.bEndpointAddress;
+  bulk_out_addr_ = descriptor_.bulk_out.b_endpoint_address;
 
   status = DdkAdd("virtual-bus-test-peripheral");
   if (status != ZX_OK) {

@@ -5,7 +5,6 @@
 library fuchsia.hardware.usb.function;
 
 using fuchsia.hardware.usb.request;
-using zircon.hw.usb;
 using zx;
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
@@ -20,7 +19,7 @@ protocol UsbFunction {
     AllocEp(uint8 direction) -> (zx.status s, uint8 address);
 
     /// Configures an endpoint based on provided descriptors.
-    ConfigEp(zircon.hw.usb.UsbEndpointDescriptor ep_desc,
+    ConfigEp(fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
                 fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
 
     /// Disables the specified endpoint.

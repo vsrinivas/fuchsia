@@ -65,7 +65,7 @@ zx_status_t UsbComposite::AddInterface(const usb_interface_descriptor_t* interfa
   }
 
   char name[20];
-  snprintf(name, sizeof(name), "ifc-%03d", interface_desc->bInterfaceNumber);
+  snprintf(name, sizeof(name), "ifc-%03d", interface_desc->b_interface_number);
 
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_INTERFACE},
@@ -148,7 +148,7 @@ zx_status_t UsbComposite::AddInterfaces() {
         } else if (next->bDescriptorType == USB_DT_INTERFACE) {
           auto* test_intf = reinterpret_cast<const usb_interface_descriptor_t*>(next);
 
-          if (test_intf->bAlternateSetting == 0) {
+          if (test_intf->b_alternate_setting == 0) {
             if (interface_count == 0) {
               break;
             }
@@ -174,14 +174,14 @@ zx_status_t UsbComposite::AddInterfaces() {
           auto* test_intf = reinterpret_cast<const usb_interface_descriptor_t*>(next);
           // Iterate until we find the next top-level interface
           // Include alternate interfaces in the current interface
-          if (test_intf->bAlternateSetting == 0) {
+          if (test_intf->b_alternate_setting == 0) {
             break;
           }
         }
         next = NextDescriptor(next);
       }
 
-      auto intf_num = intf_desc->bInterfaceNumber;
+      auto intf_num = intf_desc->b_interface_number;
       InterfaceStatus intf_status;
       {
         fbl::AutoLock lock(&lock_);
@@ -277,7 +277,8 @@ zx_status_t UsbComposite::GetAdditionalDescriptorList(uint8_t last_interface_id,
       usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)header;
       // We are only interested in descriptors past the last stored descriptor
       // for the current interface.
-      if (test_intf->bAlternateSetting == 0 && test_intf->bInterfaceNumber > last_interface_id) {
+      if (test_intf->b_alternate_setting == 0 &&
+          test_intf->b_interface_number > last_interface_id) {
         result = test_intf;
         break;
       }

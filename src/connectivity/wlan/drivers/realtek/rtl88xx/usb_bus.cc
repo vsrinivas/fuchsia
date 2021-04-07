@@ -31,8 +31,8 @@ constexpr zx::duration kRegisterIoDeadline = zx::msec(1);
 
 // Returns true iff the given USB interface describes a supported rtl88xx chip's WLAN functionality.
 constexpr bool IsRealtekWlanDevice(const usb_interface_descriptor_t& desc) {
-  if (desc.bInterfaceClass == 0xFF && desc.bInterfaceSubClass == 0xFF &&
-      desc.bInterfaceProtocol == 0xFF) {
+  if (desc.b_interface_class == 0xFF && desc.b_interface_sub_class == 0xFF &&
+      desc.b_interface_protocol == 0xFF) {
     // Prototype board; assume that this is a WLAN interface.
     return true;
   }
@@ -82,13 +82,13 @@ zx_status_t UsbBus::Create(usb_protocol_t* usb_protocol,
   zx_status_t status = ZX_OK;
 
 #if 0   // TODO(sheu): re-enable when Zircon control endpoint stalls are fixed.
-    status = usb_set_interface(usb_protocol, usb_iface_desc.bInterfaceNumber,
-                               usb_iface_desc.bAlternateSetting);
+    status = usb_set_interface(usb_protocol, usb_iface_desc.b_interface_number,
+                               usb_iface_desc.b_alternate_setting);
     if (status != ZX_OK) {
         // usb_set_interface() fails on some Realtek chipsets, with no impact on subsequent
         // functionality.
         zxlogf(DEBUG, "rtl88xx: UsbBus::Create() failed to set interface %d alternate %d: %s",
-               usb_iface_desc.bInterfaceNumber, usb_iface_desc.bAlternateSetting,
+               usb_iface_desc.b_interface_number, usb_iface_desc.b_alternate_setting,
                zx_status_get_string(status));
     }
 #endif  // 0
@@ -280,7 +280,7 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
     uint8_t id_buf[256];
     size_t actual_buflen = 0;
     uint16_t actual_langid = 0;
-    if (usb_get_string_descriptor(&usb_protocol, usb_iface_desc->iInterface, kLangId,
+    if (usb_get_string_descriptor(&usb_protocol, usb_iface_desc->i_interface, kLangId,
                                   &actual_langid, id_buf, sizeof(id_buf),
                                   &actual_buflen) != ZX_OK) {
       actual_buflen = 0;
@@ -289,9 +289,10 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
     zxlogf(INFO,
            "rtl88xx: CreateUsbBus() vid=%04x pid=%04x interface=%d alternate=%d class=%d "
            "subclass=%d protocol=%d id=\"%s\"\n",
-           usb_device_desc.id_vendor, usb_device_desc.id_product, usb_iface_desc->bInterfaceNumber,
-           usb_iface_desc->bAlternateSetting, usb_iface_desc->bInterfaceClass,
-           usb_iface_desc->bInterfaceSubClass, usb_iface_desc->bInterfaceProtocol, id_buf);
+           usb_device_desc.id_vendor, usb_device_desc.id_product,
+           usb_iface_desc->b_interface_number, usb_iface_desc->b_alternate_setting,
+           usb_iface_desc->b_interface_class, usb_iface_desc->b_interface_sub_class,
+           usb_iface_desc->b_interface_protocol, id_buf);
 
     status = UsbBus::Create(&usb_protocol, *usb_iface_desc, bus);
     if (status != ZX_OK) {

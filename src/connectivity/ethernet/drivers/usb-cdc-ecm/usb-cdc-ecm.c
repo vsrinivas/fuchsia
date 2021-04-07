@@ -503,12 +503,12 @@ static int ecm_int_handler_thread(void* cookie) {
 }
 
 static void copy_endpoint_info(ecm_endpoint_t* ep_info, usb_endpoint_descriptor_t* desc) {
-  ep_info->addr = desc->bEndpointAddress;
-  ep_info->max_packet_size = desc->wMaxPacketSize;
+  ep_info->addr = desc->b_endpoint_address;
+  ep_info->max_packet_size = desc->w_max_packet_size;
 }
 
 static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
-  return intf->bInterfaceClass == USB_CLASS_CDC;
+  return intf->b_interface_class == USB_CLASS_CDC;
 }
 
 static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
@@ -579,8 +579,8 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   ecm_ctx->tx_endpoint_delay = ETHERNET_INITIAL_TRANSMIT_DELAY;
   // Reset by selecting default interface followed by data interface. We can't start
   // queueing transactions until this is complete.
-  usb_set_interface(&usb, default_ifc->bInterfaceNumber, default_ifc->bAlternateSetting);
-  usb_set_interface(&usb, data_ifc->bInterfaceNumber, data_ifc->bAlternateSetting);
+  usb_set_interface(&usb, default_ifc->b_interface_number, default_ifc->b_alternate_setting);
+  usb_set_interface(&usb, data_ifc->b_interface_number, data_ifc->b_alternate_setting);
 
   // Allocate interrupt transaction buffer
   usb_request_t* int_buf;

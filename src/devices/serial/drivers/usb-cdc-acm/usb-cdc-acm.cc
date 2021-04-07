@@ -326,13 +326,13 @@ zx_status_t UsbCdcAcmDevice::Bind() {
   uint8_t bulk_out_address = 0;
 
   for (auto interface : *usb_interface_list) {
-    if (interface.descriptor()->bNumEndpoints > 1) {
+    if (interface.descriptor()->b_num_endpoints > 1) {
       for (auto& endpoint : interface.GetEndpointList()) {
         if (usb_ep_type(&endpoint.descriptor) == USB_ENDPOINT_BULK) {
           if (usb_ep_direction(&endpoint.descriptor) == USB_ENDPOINT_IN) {
-            bulk_in_address = endpoint.descriptor.bEndpointAddress;
+            bulk_in_address = endpoint.descriptor.b_endpoint_address;
           } else if (usb_ep_direction(&endpoint.descriptor) == USB_ENDPOINT_OUT) {
-            bulk_out_address = endpoint.descriptor.bEndpointAddress;
+            bulk_out_address = endpoint.descriptor.b_endpoint_address;
           }
         }
       }

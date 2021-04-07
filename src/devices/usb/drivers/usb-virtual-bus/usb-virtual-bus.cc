@@ -16,12 +16,13 @@
 
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
+#include <usb/usb.h>
 
 #include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-bus-bind.h"
 
 namespace usb_virtual_bus {
 
-// For mapping bEndpointAddress value to/from index in range 0 - 31.
+// For mapping b_endpoint_address value to/from index in range 0 - 31.
 // OUT endpoints are in range 1 - 15, IN endpoints are in range 17 - 31.
 static inline uint8_t EpAddressToIndex(uint8_t addr) {
   return static_cast<uint8_t>(((addr)&0xF) | (((addr)&0x80) >> 3));
@@ -373,7 +374,7 @@ zx_status_t UsbVirtualBus::UsbDciSetInterface(const usb_dci_interface_protocol_t
 
 zx_status_t UsbVirtualBus::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
                                           const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
-  uint8_t index = EpAddressToIndex(ep_desc->bEndpointAddress);
+  uint8_t index = EpAddressToIndex(ep_desc->b_endpoint_address);
   if (index >= USB_MAX_EPS) {
     return ZX_ERR_INVALID_ARGS;
   }

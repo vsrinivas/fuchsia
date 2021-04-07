@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/usb/composite/cpp/banjo.h>
 #include <fuchsia/hardware/usb/cpp/banjo.h>
+#include <zircon/hw/usb.h>
 
 #include <ddktl/device.h>
 #include <fbl/array.h>

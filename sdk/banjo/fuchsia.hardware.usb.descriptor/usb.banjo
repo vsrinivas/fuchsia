@@ -49,3 +49,26 @@ struct UsbSsEpCompDescriptor {
     uint16 wBytesPerInterval;
 };
 
+[Packed]
+struct UsbEndpointDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint8 bEndpointAddress;
+    uint8 bmAttributes;
+    uint16 wMaxPacketSize;
+    uint8 bInterval;
+};
+
+[Packed]
+struct UsbInterfaceDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint8 bInterfaceNumber;
+    uint8 bAlternateSetting;
+    uint8 bNumEndpoints;
+    uint8 bInterfaceClass;
+    uint8 bInterfaceSubClass;
+    uint8 bInterfaceProtocol;
+    uint8 iInterface;
+};
+

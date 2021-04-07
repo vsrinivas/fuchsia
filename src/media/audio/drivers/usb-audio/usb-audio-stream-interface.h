@@ -126,13 +126,13 @@ class UsbAudioStreamInterface
 
     // clang-format off
         const char* log_prefix()     const { return parent_->log_prefix(); }
-        uint8_t     iid()            const { return interface_hdr_->bInterfaceNumber; }
-        uint8_t     alt_id()         const { return interface_hdr_->bAlternateSetting; }
+        uint8_t     iid()            const { return interface_hdr_->b_interface_number; }
+        uint8_t     alt_id()         const { return interface_hdr_->b_alternate_setting; }
         uint8_t     term_link()      const { return class_hdr_->bTerminalLink; }
         uint16_t    format_tag()     const { return class_hdr_->wFormatTag; }
-        uint8_t     ep_addr()        const { return ep_desc_->bEndpointAddress; }
-        uint8_t     ep_attr()        const { return ep_desc_->bmAttributes; }
-        uint16_t    max_req_size()   const { return ep_desc_->wMaxPacketSize; }
+        uint8_t     ep_addr()        const { return ep_desc_->b_endpoint_address; }
+        uint8_t     ep_attr()        const { return ep_desc_->bm_attributes; }
+        uint16_t    max_req_size()   const { return ep_desc_->w_max_packet_size; }
         uint8_t     frame_rate_cnt() const { return fmt_desc_->bSamFreqType; }
         uint8_t     ch_count()       const { return fmt_desc_->bNrChannels; }
         uint8_t     bit_resolution() const { return fmt_desc_->bBitResolution; }

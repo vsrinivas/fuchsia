@@ -152,7 +152,7 @@ class UsbPeripheral : public UsbPeripheralType,
   static constexpr uint8_t IN_EP_START = 17;
   static constexpr uint8_t IN_EP_END = 31;
 
-  // For mapping bEndpointAddress value to/from index in range 0 - 31.
+  // For mapping b_endpoint_address value to/from index in range 0 - 31.
   static inline uint8_t EpAddressToIndex(uint8_t addr) {
     return static_cast<uint8_t>(((addr)&0xF) | (((addr)&0x80) >> 3));
   }

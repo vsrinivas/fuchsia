@@ -258,8 +258,8 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
 #define LOG2(i) (31 - __builtin_clz(i))
 
 static int compute_interval(const usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
-  int ep_type = ep->bmAttributes & USB_ENDPOINT_TYPE_MASK;
-  int interval = ep->bInterval;
+  int ep_type = ep->bm_attributes & USB_ENDPOINT_TYPE_MASK;
+  int interval = ep->b_interval;
 
   if (ep_type == USB_ENDPOINT_CONTROL || ep_type == USB_ENDPOINT_BULK) {
     if (speed == USB_SPEED_HIGH) {
@@ -732,7 +732,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
 
   xhci_slot_t* slot = &xhci->slots[slot_id];
   usb_speed_t speed = slot->speed;
-  uint32_t index = xhci_endpoint_index(ep_desc->bEndpointAddress);
+  uint32_t index = xhci_endpoint_index(ep_desc->b_endpoint_address);
   xhci_endpoint_t* ep = &slot->eps[index];
   ep->ep_type = usb_ep_type(ep_desc);
   ep->max_packet_size = usb_ep_max_packet(ep_desc);
@@ -751,9 +751,9 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
 
   memset(sc, 0, xhci->context_size);
 
-  uint32_t ep_type = ep_desc->bmAttributes & USB_ENDPOINT_TYPE_MASK;
+  uint32_t ep_type = ep_desc->bm_attributes & USB_ENDPOINT_TYPE_MASK;
   uint32_t ep_index = ep_type;
-  if ((ep_desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
+  if ((ep_desc->b_endpoint_address & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
     ep_index += 4;
   }
 
@@ -840,7 +840,7 @@ zx_status_t xhci_disable_endpoint(xhci_t* xhci, uint32_t slot_id,
   }
 
   xhci_slot_t* slot = &xhci->slots[slot_id];
-  uint32_t index = xhci_endpoint_index(ep_desc->bEndpointAddress);
+  uint32_t index = xhci_endpoint_index(ep_desc->b_endpoint_address);
   xhci_endpoint_t* ep = &slot->eps[index];
   ep->ep_type = usb_ep_type(ep_desc);
   ep->max_packet_size = usb_ep_max_packet(ep_desc);

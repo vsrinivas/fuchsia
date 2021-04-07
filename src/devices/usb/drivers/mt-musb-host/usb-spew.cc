@@ -7,6 +7,8 @@
 #include <lib/ddk/debug.h>
 #include <stdio.h>
 
+#include <usb/usb.h>
+
 namespace mt_usb_hci {
 
 void SpewUsbDeviceDescriptor(const usb_device_descriptor_t& d) {
@@ -74,12 +76,12 @@ void SpewUsbEndpointDescriptor(const usb_endpoint_descriptor_t& d) {
     }
 
     zxlogf(TRACE, "            ===  usb_endpoint_descriptor_t ===");
-    zxlogf(TRACE, "               .bLength = %d", d.bLength);
-    zxlogf(TRACE, "               .bDescriptorType = <ENDPOINT_DESCRIPTOR>");
-    zxlogf(TRACE, "               .bEndpointAddress = 0x%02x <%s>", d.bEndpointAddress, addr_buf);
-    zxlogf(TRACE, "               .bmAttributes = 0x%02x <%s>", d.bmAttributes, attr_buf);
-    zxlogf(TRACE, "               .wMaxPacketSize = 0x%04x", d.wMaxPacketSize);
-    zxlogf(TRACE, "               .bInterval = %d", d.bInterval);
+    zxlogf(TRACE, "               .b_length = %d", d.b_length);
+    zxlogf(TRACE, "               .b_descriptor_type = <ENDPOINT_DESCRIPTOR>");
+    zxlogf(TRACE, "               .b_endpoint_address = 0x%02x <%s>", d.b_endpoint_address, addr_buf);
+    zxlogf(TRACE, "               .bm_attributes = 0x%02x <%s>", d.bm_attributes, attr_buf);
+    zxlogf(TRACE, "               .w_max_packet_size = 0x%04x", d.w_max_packet_size);
+    zxlogf(TRACE, "               .b_interval = %d", d.b_interval);
   // clang-format on
 }
 

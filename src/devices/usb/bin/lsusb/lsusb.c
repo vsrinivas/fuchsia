@@ -190,7 +190,7 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
         break;
       }
       if (header->bDescriptorType == USB_DT_INTERFACE) {
-        usb_interface_descriptor_t* desc = (usb_interface_descriptor_t*)header;
+        usb_interface_info_descriptor_t* desc = (usb_interface_info_descriptor_t*)header;
         printf("    Interface Descriptor:\n");
         printf("      bLength                     %d\n", desc->bLength);
         printf("      bDescriptorType             %d\n", desc->bDescriptorType);
@@ -203,7 +203,7 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
         get_string_desc(svc, desc->iInterface, string_buf, sizeof(string_buf));
         printf("      iInterface                  %d %s\n", desc->iInterface, string_buf);
       } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
-        usb_endpoint_descriptor_t* desc = (usb_endpoint_descriptor_t*)header;
+        usb_endpoint_info_descriptor_t* desc = (usb_endpoint_info_descriptor_t*)header;
         printf("      Endpoint Descriptor:\n");
         printf("        bLength                   %d\n", desc->bLength);
         printf("        bDescriptorType           %d\n", desc->bDescriptorType);

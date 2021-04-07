@@ -45,7 +45,7 @@ class RequestQueue {
   // Clear and cancel all currently pending requests from the queue.
   virtual zx_status_t CancelAll() = 0;
 
-  // Return this endpoint's maximum packet transfer size (i.e. wMaxPacketSize).
+  // Return this endpoint's maximum packet transfer size (i.e. w_max_packet_size).
   virtual size_t GetMaxTransferSize() = 0;
 
   // Halt endpoint request processing.  All outstanding requests will result in a
@@ -136,12 +136,12 @@ class ControlQueue : public TransactionQueue {
 
   // An endpoint descriptor containing sufficient data to bootstrap a Control transaction.
   static constexpr usb_endpoint_descriptor_t descriptor_ = {
-      0,             // .bLength
-      0,             // .bDescriptorType
-      0,             // .bEndpointAddress
-      0,             // .bmAttributes
-      htole16(0x8),  // .wMaxPacketSize (the only piece of data consumed)
-      0,             // .bInterval
+      0,             // .b_length
+      0,             // .b_descriptor_type
+      0,             // .b_endpoint_address
+      0,             // .bm_attributes
+      htole16(0x8),  // .w_max_packet_size (the only piece of data consumed)
+      0,             // .b_interval
   };
 };
 

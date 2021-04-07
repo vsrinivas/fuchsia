@@ -88,42 +88,42 @@ class UsbTest : public UsbTestType, public ddk::UsbFunctionInterfaceProtocol<Usb
   } descriptors_ = {
       .intf =
           {
-              .bLength = sizeof(usb_interface_descriptor_t),
-              .bDescriptorType = USB_DT_INTERFACE,
-              .bInterfaceNumber = 0,  // set later
-              .bAlternateSetting = 0,
-              .bNumEndpoints = 3,
-              .bInterfaceClass = USB_CLASS_VENDOR,
-              .bInterfaceSubClass = 0,
-              .bInterfaceProtocol = 0,
-              .iInterface = 0,
+              .b_length = sizeof(usb_interface_descriptor_t),
+              .b_descriptor_type = USB_DT_INTERFACE,
+              .b_interface_number = 0,  // set later
+              .b_alternate_setting = 0,
+              .b_num_endpoints = 3,
+              .b_interface_class = USB_CLASS_VENDOR,
+              .b_interface_sub_class = 0,
+              .b_interface_protocol = 0,
+              .i_interface = 0,
           },
       .intr_ep =
           {
-              .bLength = sizeof(usb_endpoint_descriptor_t),
-              .bDescriptorType = USB_DT_ENDPOINT,
-              .bEndpointAddress = 0,  // set later
-              .bmAttributes = USB_ENDPOINT_INTERRUPT,
-              .wMaxPacketSize = htole16(INTR_MAX_PACKET),
-              .bInterval = 8,
+              .b_length = sizeof(usb_endpoint_descriptor_t),
+              .b_descriptor_type = USB_DT_ENDPOINT,
+              .b_endpoint_address = 0,  // set later
+              .bm_attributes = USB_ENDPOINT_INTERRUPT,
+              .w_max_packet_size = htole16(INTR_MAX_PACKET),
+              .b_interval = 8,
           },
       .bulk_out_ep =
           {
-              .bLength = sizeof(usb_endpoint_descriptor_t),
-              .bDescriptorType = USB_DT_ENDPOINT,
-              .bEndpointAddress = 0,  // set later
-              .bmAttributes = USB_ENDPOINT_BULK,
-              .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-              .bInterval = 0,
+              .b_length = sizeof(usb_endpoint_descriptor_t),
+              .b_descriptor_type = USB_DT_ENDPOINT,
+              .b_endpoint_address = 0,  // set later
+              .bm_attributes = USB_ENDPOINT_BULK,
+              .w_max_packet_size = htole16(BULK_MAX_PACKET),
+              .b_interval = 0,
           },
       .bulk_in_ep =
           {
-              .bLength = sizeof(usb_endpoint_descriptor_t),
-              .bDescriptorType = USB_DT_ENDPOINT,
-              .bEndpointAddress = 0,  // set later
-              .bmAttributes = USB_ENDPOINT_BULK,
-              .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-              .bInterval = 0,
+              .b_length = sizeof(usb_endpoint_descriptor_t),
+              .b_descriptor_type = USB_DT_ENDPOINT,
+              .b_endpoint_address = 0,  // set later
+              .bm_attributes = USB_ENDPOINT_BULK,
+              .w_max_packet_size = htole16(BULK_MAX_PACKET),
+              .b_interval = 0,
           },
   };
 };

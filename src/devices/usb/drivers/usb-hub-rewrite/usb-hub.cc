@@ -18,6 +18,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/hard_int.h>
+#include <usb/usb.h>
 
 #include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
 
@@ -158,7 +159,7 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
     // According to USB 2.0 Specification section 11.12.1 a hub should have exactly one
     // interrupt endpoint and no other endpoints.
     for (auto& interface : *interfaces) {
-      if (interface.descriptor()->bNumEndpoints == 1) {
+      if (interface.descriptor()->b_num_endpoints == 1) {
         auto eplist = interface.GetEndpointList();
         auto ep_iter = eplist.begin();
         auto ep = ep_iter.endpoint();
@@ -304,7 +305,7 @@ void UsbHubDevice::InterruptCallback(CallbackRequest request) {
 void UsbHubDevice::StartInterruptLoop() {
   std::optional<CallbackRequest> request;
   CallbackRequest::Alloc(&request, usb_ep_max_packet(&interrupt_endpoint_),
-                         interrupt_endpoint_.bEndpointAddress, usb_.GetRequestSize(),
+                         interrupt_endpoint_.b_endpoint_address, usb_.GetRequestSize(),
                          fit::bind_member(this, &UsbHubDevice::InterruptCallback));
   request_pending_ = true;
   request->Queue(usb_);
@@ -458,7 +459,7 @@ fit::promise<void, zx_status_t> UsbHubDevice::Sleep(zx::time deadline) {
 void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
   async::PostTask(loop_.dispatcher(), [transaction = std::move(txn), this]() mutable {
     shutting_down_ = true;
-    zx_status_t status = usb_.CancelAll(interrupt_endpoint_.bEndpointAddress);
+    zx_status_t status = usb_.CancelAll(interrupt_endpoint_.b_endpoint_address);
     if (status != ZX_OK) {
       // Fatal -- unable to shut down properly
       zxlogf(ERROR, "Error %s during CancelAll for interrupt endpoint\n",

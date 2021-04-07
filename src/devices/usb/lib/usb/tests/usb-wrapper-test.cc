@@ -49,33 +49,33 @@ constexpr uint8_t descriptor_binary_array[] = {9, 4, 1,  0,   1, 3, 0, 0,   0, 9
 constexpr alt_hs_config kTestHSInterface = {
     .interface =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            .bInterfaceNumber = 0,
-            .bAlternateSetting = 0,
-            .bNumEndpoints = 2,
-            .bInterfaceClass = 8,
-            .bInterfaceSubClass = 6,
-            .bInterfaceProtocol = 80,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            .b_interface_number = 0,
+            .b_alternate_setting = 0,
+            .b_num_endpoints = 2,
+            .b_interface_class = 8,
+            .b_interface_sub_class = 6,
+            .b_interface_protocol = 80,
+            .i_interface = 0,
         },
     .ep1 =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            .bEndpointAddress = 0x81,
-            .bmAttributes = 2,
-            .wMaxPacketSize = 1024,
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            .b_endpoint_address = 0x81,
+            .bm_attributes = 2,
+            .w_max_packet_size = 1024,
+            .b_interval = 0,
         },
     .ep2 =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            .bEndpointAddress = 2,
-            .bmAttributes = 2,
-            .wMaxPacketSize = 1024,
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            .b_endpoint_address = 2,
+            .bm_attributes = 2,
+            .w_max_packet_size = 1024,
+            .b_interval = 0,
         },
     .hid_descriptor =
         {
@@ -87,15 +87,15 @@ constexpr alt_hs_config kTestHSInterface = {
         },
     .alt_interface =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            .bInterfaceNumber = 0,
-            .bAlternateSetting = 1,
-            .bNumEndpoints = 2,
-            .bInterfaceClass = 8,
-            .bInterfaceSubClass = 6,
-            .bInterfaceProtocol = 80,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            .b_interface_number = 0,
+            .b_alternate_setting = 1,
+            .b_num_endpoints = 2,
+            .b_interface_class = 8,
+            .b_interface_sub_class = 6,
+            .b_interface_protocol = 80,
+            .i_interface = 0,
         },
 };
 
@@ -103,24 +103,24 @@ constexpr alt_hs_config kTestHSInterface = {
 constexpr alt_ss_config kTestSSInterface = {
     .interface =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            .bInterfaceNumber = 0,
-            .bAlternateSetting = 0,
-            .bNumEndpoints = 2,
-            .bInterfaceClass = 8,
-            .bInterfaceSubClass = 6,
-            .bInterfaceProtocol = 80,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            .b_interface_number = 0,
+            .b_alternate_setting = 0,
+            .b_num_endpoints = 2,
+            .b_interface_class = 8,
+            .b_interface_sub_class = 6,
+            .b_interface_protocol = 80,
+            .i_interface = 0,
         },
     .ep1 =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            .bEndpointAddress = 0x81,
-            .bmAttributes = 2,
-            .wMaxPacketSize = 1024,
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            .b_endpoint_address = 0x81,
+            .bm_attributes = 2,
+            .w_max_packet_size = 1024,
+            .b_interval = 0,
         },
     .ss_companion1 =
         {
@@ -132,12 +132,12 @@ constexpr alt_ss_config kTestSSInterface = {
         },
     .ep2 =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            .bEndpointAddress = 2,
-            .bmAttributes = 2,
-            .wMaxPacketSize = 1024,
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            .b_endpoint_address = 2,
+            .bm_attributes = 2,
+            .w_max_packet_size = 1024,
+            .b_interval = 0,
         },
     .ss_companion2 =
         {
@@ -149,37 +149,37 @@ constexpr alt_ss_config kTestSSInterface = {
         },
     .alt_interface =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            .bInterfaceNumber = 0,
-            .bAlternateSetting = 1,
-            .bNumEndpoints = 2,
-            .bInterfaceClass = 8,
-            .bInterfaceSubClass = 6,
-            .bInterfaceProtocol = 80,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            .b_interface_number = 0,
+            .b_alternate_setting = 1,
+            .b_num_endpoints = 2,
+            .b_interface_class = 8,
+            .b_interface_sub_class = 6,
+            .b_interface_protocol = 80,
+            .i_interface = 0,
         },
 };
 
 static void EXPECT_INTERFACE_EQ(usb_interface_descriptor_t a, usb_interface_descriptor_t b) {
-  EXPECT_EQ(a.bLength, b.bLength);
-  EXPECT_EQ(a.bDescriptorType, b.bDescriptorType);
-  EXPECT_EQ(a.bInterfaceNumber, b.bInterfaceNumber);
-  EXPECT_EQ(a.bAlternateSetting, b.bAlternateSetting);
-  EXPECT_EQ(a.bNumEndpoints, b.bNumEndpoints);
-  EXPECT_EQ(a.bInterfaceClass, b.bInterfaceClass);
-  EXPECT_EQ(a.bInterfaceSubClass, b.bInterfaceSubClass);
-  EXPECT_EQ(a.bInterfaceProtocol, b.bInterfaceProtocol);
-  EXPECT_EQ(a.iInterface, b.iInterface);
+  EXPECT_EQ(a.b_length, b.b_length);
+  EXPECT_EQ(a.b_descriptor_type, b.b_descriptor_type);
+  EXPECT_EQ(a.b_interface_number, b.b_interface_number);
+  EXPECT_EQ(a.b_alternate_setting, b.b_alternate_setting);
+  EXPECT_EQ(a.b_num_endpoints, b.b_num_endpoints);
+  EXPECT_EQ(a.b_interface_class, b.b_interface_class);
+  EXPECT_EQ(a.b_interface_sub_class, b.b_interface_sub_class);
+  EXPECT_EQ(a.b_interface_protocol, b.b_interface_protocol);
+  EXPECT_EQ(a.i_interface, b.i_interface);
 }
 
 static void EXPECT_ENDPOINT_EQ(usb_endpoint_descriptor_t a, usb_endpoint_descriptor_t b) {
-  EXPECT_EQ(a.bLength, b.bLength);
-  EXPECT_EQ(a.bDescriptorType, b.bDescriptorType);
-  EXPECT_EQ(a.bEndpointAddress, b.bEndpointAddress);
-  EXPECT_EQ(a.bmAttributes, b.bmAttributes);
-  EXPECT_EQ(a.wMaxPacketSize, b.wMaxPacketSize);
-  EXPECT_EQ(a.bInterval, b.bInterval);
+  EXPECT_EQ(a.b_length, b.b_length);
+  EXPECT_EQ(a.b_descriptor_type, b.b_descriptor_type);
+  EXPECT_EQ(a.b_endpoint_address, b.b_endpoint_address);
+  EXPECT_EQ(a.bm_attributes, b.bm_attributes);
+  EXPECT_EQ(a.w_max_packet_size, b.w_max_packet_size);
+  EXPECT_EQ(a.b_interval, b.b_interval);
 }
 
 static void EXPECT_SS_EP_COMP_EQ(usb_ss_ep_comp_descriptor_t a, usb_ss_ep_comp_descriptor_t b) {

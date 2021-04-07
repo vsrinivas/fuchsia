@@ -5,7 +5,6 @@
 library fuchsia.hardware.usb;
 
 using fuchsia.hardware.usb.request;
-using zircon.hw.usb;
 using zx;
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
@@ -35,7 +34,7 @@ protocol Usb {
     SetConfiguration(uint8 configuration) -> (zx.status s);
 
     /// Enables a USB endpoint, configuring it as specified by the provided descriptors.
-    EnableEndpoint(zircon.hw.usb.UsbEndpointDescriptor ep_desc,
+    EnableEndpoint(fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
                    fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_com_desc,
                    bool enable) -> (zx.status s);
 

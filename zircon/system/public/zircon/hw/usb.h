@@ -196,7 +196,7 @@ typedef struct {
     uint8_t bInterfaceSubClass;
     uint8_t bInterfaceProtocol;
     uint8_t iInterface;
-} __attribute__ ((packed)) usb_interface_descriptor_t;
+} __attribute__ ((packed)) usb_interface_info_descriptor_t;
 
 typedef struct {
     uint8_t bLength;
@@ -205,18 +205,7 @@ typedef struct {
     uint8_t bmAttributes;
     uint16_t wMaxPacketSize;
     uint8_t bInterval;
-} __attribute__ ((packed)) usb_endpoint_descriptor_t;
-#define usb_ep_num(ep)          ((ep)->bEndpointAddress & USB_ENDPOINT_NUM_MASK)
-// usb_ep_num2() useful with you have bEndpointAddress outside of a descriptor.
-#define usb_ep_num2(addr)       ((addr) & USB_ENDPOINT_NUM_MASK)
-#define usb_ep_direction(ep)    ((ep)->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
-#define usb_ep_type(ep)         ((ep)->bmAttributes & USB_ENDPOINT_TYPE_MASK)
-#define usb_ep_sync_type(ep)    ((ep)->bmAttributes & USB_ENDPOINT_SYNCHRONIZATION_MASK)
-// max packet size is in bits 10..0
-#define usb_ep_max_packet(ep)   (le16toh((ep)->wMaxPacketSize) & 0x07FF)
-// for high speed interrupt and isochronous endpoints, additional transactions per microframe
-// are in bits 12..11
-#define usb_ep_add_mf_transactions(ep) ((le16toh((ep)->wMaxPacketSize) >> 11) & 3)
+} __attribute__ ((packed)) usb_endpoint_info_descriptor_t;
 
 typedef struct {
     uint8_t bLength;

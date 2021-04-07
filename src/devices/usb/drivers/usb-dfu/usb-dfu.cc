@@ -235,7 +235,7 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
     usb_desc_iter_release(&iter);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  uint8_t intf_num = intf->bInterfaceNumber;
+  uint8_t intf_num = intf->b_interface_number;
 
   // Look for the DFU Functional Descriptor.
   usb_dfu_func_desc_t func_desc = {};

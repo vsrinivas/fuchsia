@@ -39,8 +39,8 @@ uint32_t Log2(uint32_t value) { return 31 - __builtin_clz(value); }
 
 // Computes the interval value for a specified endpoint.
 int ComputeInterval(const usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
-  uint8_t ep_type = ep->bmAttributes & USB_ENDPOINT_TYPE_MASK;
-  uint8_t interval = std::clamp(ep->bInterval, static_cast<uint8_t>(1), static_cast<uint8_t>(16));
+  uint8_t ep_type = ep->bm_attributes & USB_ENDPOINT_TYPE_MASK;
+  uint8_t interval = std::clamp(ep->b_interval, static_cast<uint8_t>(1), static_cast<uint8_t>(16));
   if (ep_type == USB_ENDPOINT_CONTROL || ep_type == USB_ENDPOINT_BULK) {
     if (speed == USB_SPEED_HIGH) {
       return Log2(interval);
@@ -1273,7 +1273,7 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
     slot_context =
         reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size);
     context_entries = slot_context->CONTEXT_ENTRIES();
-    index = XhciEndpointIndex(ep_desc->bEndpointAddress);
+    index = XhciEndpointIndex(ep_desc->b_endpoint_address);
     if (index >= context_entries) {
       slot_context->set_CONTEXT_ENTRIES(index + 1);
     }
@@ -1296,16 +1296,16 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
         reinterpret_cast<unsigned char*>(control) + (slot_size * (2 + index)));
 
     // See section 4.3.6
-    uint32_t ep_type = ep_desc->bmAttributes & USB_ENDPOINT_TYPE_MASK;
+    uint32_t ep_type = ep_desc->bm_attributes & USB_ENDPOINT_TYPE_MASK;
     if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
       state->GetTransferRing(index - 1).SetIsochronous();
     }
     uint32_t ep_index = ep_type;
-    if ((ep_desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
+    if ((ep_desc->b_endpoint_address & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
       ep_index += 4;
     }
     endpoint_context->Init(static_cast<EndpointContext::EndpointType>(ep_index), trb_phys,
-                           ep_desc->wMaxPacketSize & 0x07FF);
+                           ep_desc->w_max_packet_size & 0x07FF);
     int interval = ComputeInterval(ep_desc, slot_context->SPEED());
     if (interval == -1) {
       interval = 1;
@@ -1318,12 +1318,12 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
     } else {
       // TODO: Handle special case for interrupt/isochronous endpoints
       if ((slot_context->SPEED() == USB_SPEED_HIGH) && (ep_type == USB_ENDPOINT_ISOCHRONOUS)) {
-        max_burst = (le16toh((ep_desc)->wMaxPacketSize) >> 11) & 3;
+        max_burst = (le16toh((ep_desc)->w_max_packet_size) >> 11) & 3;
       }
     }
     endpoint_context->set_MaxBurstSize(max_burst);
     if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
-      endpoint_context->set_MAX_ESIT_PAYLOAD_LOW((ep_desc->wMaxPacketSize & 0x07FF) * max_burst);
+      endpoint_context->set_MAX_ESIT_PAYLOAD_LOW((ep_desc->w_max_packet_size & 0x07FF) * max_burst);
     }
     trb.ptr = state->GetInputContext()->phys()[0];
     Control::Get()
@@ -1361,7 +1361,7 @@ TRBPromise UsbXhci::UsbHciDisableEndpoint(uint32_t device_id,
   auto context = command_ring_.AllocateContext();
   auto state = &device_state_[device_id];
   size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
-  uint8_t index = XhciEndpointIndex(ep_desc->bEndpointAddress);
+  uint8_t index = XhciEndpointIndex(ep_desc->b_endpoint_address);
   TRB trb;
   uint32_t* control;
   {

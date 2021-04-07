@@ -9,9 +9,9 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -718,7 +718,7 @@ zx_status_t MtUsb::UsbDciSetInterface(const usb_dci_interface_protocol_t* interf
 zx_status_t MtUsb::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
                                   const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
   auto* mmio = usb_mmio();
-  auto ep_address = ep_desc->bEndpointAddress;
+  auto ep_address = ep_desc->b_endpoint_address;
   auto* ep = EndpointFromAddress(ep_address);
   if (ep == nullptr) {
     return ZX_ERR_INVALID_ARGS;

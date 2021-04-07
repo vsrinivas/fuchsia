@@ -5,7 +5,6 @@
 library fuchsia.hardware.usb.request;
 
 using ddk.hw.physiter;
-using zircon.hw.usb;
 using zx;
 
 /// Should be set by the requestor.

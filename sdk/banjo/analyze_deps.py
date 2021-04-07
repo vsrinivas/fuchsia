@@ -14,7 +14,6 @@ _LIBRARY_LABEL = r'^//sdk/banjo/([^:]+):\1(\.\.\.)?$'
 
 _DUMMY_LIBRARIES = set([
     'zircon.hw.pci',
-    'zircon.hw.usb',
 ])
 
 

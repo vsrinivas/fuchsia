@@ -9,6 +9,7 @@
 #include <lib/ddk/device.h>
 
 #include <fbl/alloc_checker.h>
+#include <usb/usb.h>
 
 #include "src/devices/ml/drivers/usb-harriet/usb_harriet_bind.h"
 
@@ -39,7 +40,7 @@ zx_status_t Harriet::Create(zx_device_t* parent) {
   if (intf == intfs->end()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  uint8_t intf_num = intf_desc->bInterfaceNumber;
+  uint8_t intf_num = intf_desc->b_interface_number;
   zxlogf(DEBUG, "found intf %u", intf_num);
 
   for (auto& intf : *intfs) {
@@ -51,11 +52,11 @@ zx_status_t Harriet::Create(zx_device_t* parent) {
         case USB_ENDPOINT_INTERRUPT:
           zxlogf(DEBUG, "%s %s EP 0x%x", ep_type == USB_ENDPOINT_BULK ? "BULK" : "INTERRUPT",
                  usb_ep_direction(&ep_itr->descriptor) == USB_ENDPOINT_OUT ? "OUT" : "IN",
-                 ep_itr->descriptor.bEndpointAddress);
+                 ep_itr->descriptor.b_endpoint_address);
           break;
         default:
           zxlogf(DEBUG, "found additional unexpected EP, type: %u addr 0x%x", ep_type,
-                 ep_itr->descriptor.bEndpointAddress);
+                 ep_itr->descriptor.b_endpoint_address);
       }
     } while (ep_itr++ != intf.GetEndpointList().end());
   }

@@ -12,6 +12,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
+#include <usb/usb.h>
 
 #include "src/media/audio/drivers/usb-audio/usb_audio_bind.h"
 #include "usb-audio-stream-interface.h"
@@ -105,8 +106,8 @@ zx_status_t UsbAudioDevice::Bind() {
   status = usb_claim_additional_interfaces(
       &usb_composite_proto,
       [](usb_interface_descriptor_t* intf, void* arg) -> bool {
-        return (intf->bInterfaceClass == USB_CLASS_AUDIO &&
-                intf->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL);
+        return (intf->b_interface_class == USB_CLASS_AUDIO &&
+                intf->b_interface_sub_class != USB_SUBCLASS_AUDIO_CONTROL);
       },
       NULL);
   if (status != ZX_OK) {
@@ -164,16 +165,16 @@ void UsbAudioDevice::Probe() {
       continue;
     }
 
-    if ((ihdr->bInterfaceClass != USB_CLASS_AUDIO) ||
-        ((ihdr->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL) &&
-         (ihdr->bInterfaceSubClass != USB_SUBCLASS_AUDIO_STREAMING) &&
-         (ihdr->bInterfaceSubClass != USB_SUBCLASS_MIDI_STREAMING))) {
-      LOG(WARNING, "Skipping unknown interface (class %u, subclass %u)", ihdr->bInterfaceClass,
-          ihdr->bInterfaceSubClass);
+    if ((ihdr->b_interface_class != USB_CLASS_AUDIO) ||
+        ((ihdr->b_interface_sub_class != USB_SUBCLASS_AUDIO_CONTROL) &&
+         (ihdr->b_interface_sub_class != USB_SUBCLASS_AUDIO_STREAMING) &&
+         (ihdr->b_interface_sub_class != USB_SUBCLASS_MIDI_STREAMING))) {
+      LOG(WARNING, "Skipping unknown interface (class %u, subclass %u)", ihdr->b_interface_number,
+          ihdr->b_interface_sub_class);
       continue;
     }
 
-    switch (ihdr->bInterfaceSubClass) {
+    switch (ihdr->b_interface_sub_class) {
       case USB_SUBCLASS_AUDIO_CONTROL: {
         if (control_ifc != nullptr) {
           LOG(WARNING, "More than one audio control interface detected, skipping.");
@@ -210,7 +211,7 @@ void UsbAudioDevice::Probe() {
 
         // Check to see if this is a new interface, or an alternate
         // interface description for an existing stream interface.
-        uint8_t iid = ihdr->bInterfaceNumber;
+        uint8_t iid = ihdr->b_interface_number;
         auto ifc_iter = aud_stream_ifcs.find_if(
             [iid](const UsbAudioStreamInterface& ifc) -> bool { return ifc.iid() == iid; });
 
@@ -256,15 +257,15 @@ void UsbAudioDevice::Probe() {
         ParseMidiStreamingIfc(&iter, &info);
 
         if (info.out_ep != nullptr) {
-          LOG(DEBUG, "Adding MIDI sink (iid %u, ep 0x%02x)", info.ifc->bInterfaceNumber,
-              info.out_ep->bEndpointAddress);
+          LOG(DEBUG, "Adding MIDI sink (iid %u, ep 0x%02x)", info.ifc->b_interface_number,
+              info.out_ep->b_endpoint_address);
           UsbMidiSink::Create(zxdev(), &usb_proto_, midi_sink_index_++, info.ifc, info.out_ep,
                               parent_req_size_);
         }
 
         if (info.in_ep != nullptr) {
-          LOG(DEBUG, "Adding MIDI source (iid %u, ep 0x%02x)", info.ifc->bInterfaceNumber,
-              info.in_ep->bEndpointAddress);
+          LOG(DEBUG, "Adding MIDI source (iid %u, ep 0x%02x)", info.ifc->b_interface_number,
+              info.in_ep->b_endpoint_address);
           UsbMidiSource::Create(zxdev(), &usb_proto_, midi_source_index_++, info.ifc, info.in_ep,
                                 parent_req_size_);
         }
@@ -369,8 +370,8 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
         // If this is not a midi streaming interface, or it is a midi
         // streaming interface with a different interface id, than the ones
         // we have been seeing, then we are done.
-        if ((ihdr->bInterfaceSubClass != USB_SUBCLASS_MIDI_STREAMING) ||
-            (ihdr->bInterfaceNumber != info.ifc->bInterfaceNumber)) {
+        if ((ihdr->b_interface_sub_class != USB_SUBCLASS_MIDI_STREAMING) ||
+            (ihdr->b_interface_number != info.ifc->b_interface_number)) {
           return;
         }
 
@@ -383,7 +384,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
           LOG(WARNING,
               "Multiple alternate settings found for MIDI streaming interface "
               "(iid %u, alt %u)",
-              ihdr->bInterfaceNumber, ihdr->bAlternateSetting);
+              ihdr->b_interface_number, ihdr->b_alternate_setting);
           continue;
         }
 
@@ -429,7 +430,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
           LOG(WARNING,
               "Skipping Non-bulk transfer endpoint (%u) found for MIDI streaming interface "
               "(iid %u, alt %u)",
-              usb_ep_type(ep_desc), info.ifc->bInterfaceNumber, info.ifc->bAlternateSetting);
+              usb_ep_type(ep_desc), info.ifc->b_interface_number, info.ifc->b_alternate_setting);
           continue;
         }
 
@@ -442,8 +443,8 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
           LOG(WARNING,
               "Multiple %s endpoints found found for MIDI streaming interface "
               "(iid %u, alt %u, exiting ep_addr 0x%02x, new ep_addr 0x%02x)",
-              log_tag, info.ifc->bInterfaceNumber, info.ifc->bAlternateSetting,
-              ep_tgt->bEndpointAddress, ep_desc->bEndpointAddress);
+              log_tag, info.ifc->b_interface_number, info.ifc->b_alternate_setting,
+              ep_tgt->b_endpoint_address, ep_desc->b_endpoint_address);
           continue;
         }
 
@@ -451,7 +452,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
         // consume the rest of the descriptors associated with this
         // interface that we plan to ignore.
         LOG(TRACE, "Found %s MIDI endpoint descriptor (addr 0x%02x, attr 0x%02x)", log_tag,
-            ep_desc->bEndpointAddress, ep_desc->bmAttributes);
+            ep_desc->b_endpoint_address, ep_desc->bm_attributes);
         ep_tgt = ep_desc;
       } break;
 

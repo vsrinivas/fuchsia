@@ -182,14 +182,14 @@ zx_status_t UsbMidiSink::Create(zx_device_t* parent, const UsbDevice& usb, int i
 zx_status_t UsbMidiSink::Init(int index, const usb_interface_descriptor_t* intf,
                               const usb_endpoint_descriptor_t* ep) {
   int packet_size = usb_ep_max_packet(ep);
-  if (intf->bAlternateSetting != 0) {
-    usb_.SetInterface(intf->bInterfaceNumber, intf->bAlternateSetting);
+  if (intf->b_alternate_setting != 0) {
+    usb_.SetInterface(intf->b_interface_number, intf->b_alternate_setting);
   }
 
   for (size_t i = 0; i < WRITE_REQ_COUNT; i++) {
     std::optional<UsbRequest> req;
     auto status =
-        UsbRequest::Alloc(&req, usb_ep_max_packet(ep), ep->bEndpointAddress, parent_req_size_);
+        UsbRequest::Alloc(&req, usb_ep_max_packet(ep), ep->b_endpoint_address, parent_req_size_);
     if (status != ZX_OK) {
       return status;
     }

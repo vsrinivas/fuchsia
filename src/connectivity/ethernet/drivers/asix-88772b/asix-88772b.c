@@ -632,7 +632,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     return result;
 
   usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
-  if (!intf || intf->bNumEndpoints != 3) {
+  if (!intf || intf->b_num_endpoints != 3) {
     usb_desc_iter_release(&iter);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -645,13 +645,13 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
   while (endp) {
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_out_addr = endp->bEndpointAddress;
+        bulk_out_addr = endp->b_endpoint_address;
       }
     } else {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_in_addr = endp->bEndpointAddress;
+        bulk_in_addr = endp->b_endpoint_address;
       } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
-        intr_addr = endp->bEndpointAddress;
+        intr_addr = endp->b_endpoint_address;
       }
     }
     endp = usb_desc_iter_next_endpoint(&iter);

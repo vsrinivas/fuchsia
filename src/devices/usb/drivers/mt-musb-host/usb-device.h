@@ -46,7 +46,7 @@ class UsbDevice {
   // Disable processing for the as-described endpoint on this device.
   virtual zx_status_t DisableEndpoint(const usb_endpoint_descriptor_t& desc) = 0;
 
-  // Return the maximum packet transfer size (i.e. wMaxPacketSize) for the given endpoint.
+  // Return the maximum packet transfer size (i.e. w_max_packet_size) for the given endpoint.
   virtual size_t GetMaxTransferSize(uint8_t ep) = 0;
 };
 

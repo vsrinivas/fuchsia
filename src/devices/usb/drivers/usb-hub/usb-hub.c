@@ -513,7 +513,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
   }
 
   usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
-  if (!intf || intf->bNumEndpoints != 1) {
+  if (!intf || intf->b_num_endpoints != 1) {
     usb_desc_iter_release(&iter);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -531,7 +531,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
   }
   usb_desc_iter_advance(&iter);
 
-  uint8_t ep_addr = endp->bEndpointAddress;
+  uint8_t ep_addr = endp->b_endpoint_address;
   uint16_t max_packet_size = usb_ep_max_packet(endp);
 
   usb_hub_t* hub = calloc(1, sizeof(usb_hub_t));

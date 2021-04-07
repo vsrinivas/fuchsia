@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +19,6 @@
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <usb/usb-request.h>
 
@@ -156,31 +156,31 @@ zx_status_t FakeUsbHidFunction::Bind() {
   descriptor_size_ = sizeof(fake_usb_hid_descriptor_t) + sizeof(usb_hid_descriptor_entry_t);
   descriptor_.reset(static_cast<fake_usb_hid_descriptor_t*>(calloc(1, descriptor_size_)));
   descriptor_->interface = {
-      .bLength = sizeof(usb_interface_descriptor_t),
-      .bDescriptorType = USB_DT_INTERFACE,
-      .bInterfaceNumber = 0,
-      .bAlternateSetting = 0,
-      .bNumEndpoints = 1,
-      .bInterfaceClass = USB_CLASS_HID,
-      .bInterfaceSubClass = USB_HID_SUBCLASS_BOOT,
-      .bInterfaceProtocol = USB_HID_PROTOCOL_MOUSE,
-      .iInterface = 0,
+      .b_length = sizeof(usb_interface_descriptor_t),
+      .b_descriptor_type = USB_DT_INTERFACE,
+      .b_interface_number = 0,
+      .b_alternate_setting = 0,
+      .b_num_endpoints = 1,
+      .b_interface_class = USB_CLASS_HID,
+      .b_interface_sub_class = USB_HID_SUBCLASS_BOOT,
+      .b_interface_protocol = USB_HID_PROTOCOL_MOUSE,
+      .i_interface = 0,
   };
   descriptor_->interrupt_in = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_IN,  // set later
-      .bmAttributes = USB_ENDPOINT_INTERRUPT,
-      .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-      .bInterval = 8,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_IN,  // set later
+      .bm_attributes = USB_ENDPOINT_INTERRUPT,
+      .w_max_packet_size = htole16(BULK_MAX_PACKET),
+      .b_interval = 8,
   };
   descriptor_->interrupt_out = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_OUT,  // set later
-      .bmAttributes = USB_ENDPOINT_INTERRUPT,
-      .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-      .bInterval = 8,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_OUT,  // set later
+      .bm_attributes = USB_ENDPOINT_INTERRUPT,
+      .w_max_packet_size = htole16(BULK_MAX_PACKET),
+      .b_interval = 8,
   };
   descriptor_->hid_descriptor = {
       .bLength = sizeof(usb_hid_descriptor_t) + sizeof(usb_hid_descriptor_entry_t),
@@ -194,24 +194,24 @@ zx_status_t FakeUsbHidFunction::Bind() {
       .wDescriptorLength = static_cast<uint16_t>(report_desc_.size()),
   };
 
-  zx_status_t status = function_.AllocInterface(&descriptor_->interface.bInterfaceNumber);
+  zx_status_t status = function_.AllocInterface(&descriptor_->interface.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_interface failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_IN, &descriptor_->interrupt_in.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_IN, &descriptor_->interrupt_in.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint in failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_OUT, &descriptor_->interrupt_out.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_OUT, &descriptor_->interrupt_out.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint out failed");
     return status;
   }
 
   status = usb::Request<>::Alloc(&data_out_req_, BULK_MAX_PACKET,
-                                 descriptor_->interrupt_out.bEndpointAddress,
+                                 descriptor_->interrupt_out.b_endpoint_address,
                                  function_.GetRequestSize());
   if (status != ZX_OK) {
     return status;

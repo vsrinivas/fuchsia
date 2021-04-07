@@ -86,9 +86,9 @@ class RndisFunction : public RndisFunctionType,
   void NotifyLocked() __TA_REQUIRES(lock_);
   void IndicateConnectionStatus(bool connected);
 
-  uint8_t NotificationAddress() { return descriptors_.notification_ep.bEndpointAddress; }
-  uint8_t BulkInAddress() { return descriptors_.in_ep.bEndpointAddress; }
-  uint8_t BulkOutAddress() { return descriptors_.out_ep.bEndpointAddress; }
+  uint8_t NotificationAddress() { return descriptors_.notification_ep.b_endpoint_address; }
+  uint8_t BulkInAddress() { return descriptors_.in_ep.b_endpoint_address; }
+  uint8_t BulkOutAddress() { return descriptors_.out_ep.b_endpoint_address; }
 
   bool Online() const __TA_REQUIRES(lock_) { return ifc_.is_valid() && rndis_ready_; }
 

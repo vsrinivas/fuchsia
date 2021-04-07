@@ -9,6 +9,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/sync/completion.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -29,7 +30,6 @@
 #include <optional>
 #include <thread>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -112,15 +112,15 @@ static struct {
 } descriptors = {
     .comm_intf =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            .bInterfaceNumber = 0,  // set later
-            .bAlternateSetting = 0,
-            .bNumEndpoints = 1,
-            .bInterfaceClass = USB_CLASS_COMM,
-            .bInterfaceSubClass = USB_CDC_SUBCLASS_ETHERNET,
-            .bInterfaceProtocol = 0,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            .b_interface_number = 0,  // set later
+            .b_alternate_setting = 0,
+            .b_num_endpoints = 1,
+            .b_interface_class = USB_CLASS_COMM,
+            .b_interface_sub_class = USB_CDC_SUBCLASS_ETHERNET,
+            .b_interface_protocol = 0,
+            .i_interface = 0,
         },
     .cdc_header =
         {
@@ -150,54 +150,54 @@ static struct {
         },
     .intr_ep =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            .bEndpointAddress = 0,  // set later
-            .bmAttributes = USB_ENDPOINT_INTERRUPT,
-            .wMaxPacketSize = htole16(INTR_MAX_PACKET),
-            .bInterval = 8,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            .b_endpoint_address = 0,  // set later
+            .bm_attributes = USB_ENDPOINT_INTERRUPT,
+            .w_max_packet_size = htole16(INTR_MAX_PACKET),
+            .b_interval = 8,
         },
     .cdc_intf_0 =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            .bInterfaceNumber = 0,  // set later
-            .bAlternateSetting = 0,
-            .bNumEndpoints = 0,
-            .bInterfaceClass = USB_CLASS_CDC,
-            .bInterfaceSubClass = 0,
-            .bInterfaceProtocol = 0,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            .b_interface_number = 0,  // set later
+            .b_alternate_setting = 0,
+            .b_num_endpoints = 0,
+            .b_interface_class = USB_CLASS_CDC,
+            .b_interface_sub_class = 0,
+            .b_interface_protocol = 0,
+            .i_interface = 0,
         },
     .cdc_intf_1 =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            .bInterfaceNumber = 0,  // set later
-            .bAlternateSetting = 1,
-            .bNumEndpoints = 2,
-            .bInterfaceClass = USB_CLASS_CDC,
-            .bInterfaceSubClass = 0,
-            .bInterfaceProtocol = 0,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            .b_interface_number = 0,  // set later
+            .b_alternate_setting = 1,
+            .b_num_endpoints = 2,
+            .b_interface_class = USB_CLASS_CDC,
+            .b_interface_sub_class = 0,
+            .b_interface_protocol = 0,
+            .i_interface = 0,
         },
     .bulk_out_ep =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            .bEndpointAddress = 0,  // set later
-            .bmAttributes = USB_ENDPOINT_BULK,
-            .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            .b_endpoint_address = 0,  // set later
+            .bm_attributes = USB_ENDPOINT_BULK,
+            .w_max_packet_size = htole16(BULK_MAX_PACKET),
+            .b_interval = 0,
         },
     .bulk_in_ep =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            .bEndpointAddress = 0,  // set later
-            .bmAttributes = USB_ENDPOINT_BULK,
-            .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            .b_endpoint_address = 0,  // set later
+            .bm_attributes = USB_ENDPOINT_BULK,
+            .w_max_packet_size = htole16(BULK_MAX_PACKET),
+            .b_interval = 0,
         },
 };
 
@@ -449,7 +449,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
       .bmRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
       .bNotification = USB_CDC_NC_NETWORK_CONNECTION,
       .wValue = cdc->online,
-      .wIndex = descriptors.cdc_intf_0.bInterfaceNumber,
+      .wIndex = descriptors.cdc_intf_0.b_interface_number,
       .wLength = 0,
   };
 
@@ -459,7 +459,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
               .bmRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
               .bNotification = USB_CDC_NC_CONNECTION_SPEED_CHANGE,
               .wValue = 0,
-              .wIndex = descriptors.cdc_intf_0.bInterfaceNumber,
+              .wIndex = descriptors.cdc_intf_0.b_interface_number,
               .wLength = 2 * sizeof(uint32_t),
           },
       .downlink_br = 0,
@@ -642,7 +642,7 @@ static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_s
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
 
-  if (interface != descriptors.cdc_intf_0.bInterfaceNumber || alt_setting > 1) {
+  if (interface != descriptors.cdc_intf_0.b_interface_number || alt_setting > 1) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -853,19 +853,19 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
   uint64_t req_size =
       cdc->parent_req_size + sizeof(usb_req_internal_t) + sizeof(usb_request_complete_t);
   cdc->usb_request_offset = cdc->parent_req_size + sizeof(usb_req_internal_t);
-  status = usb_function_alloc_interface(&cdc->function, &descriptors.comm_intf.bInterfaceNumber);
+  status = usb_function_alloc_interface(&cdc->function, &descriptors.comm_intf.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_interface failed", __func__);
     goto fail;
   }
-  status = usb_function_alloc_interface(&cdc->function, &descriptors.cdc_intf_0.bInterfaceNumber);
+  status = usb_function_alloc_interface(&cdc->function, &descriptors.cdc_intf_0.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_interface failed", __func__);
     goto fail;
   }
-  descriptors.cdc_intf_1.bInterfaceNumber = descriptors.cdc_intf_0.bInterfaceNumber;
-  descriptors.cdc_union.bControlInterface = descriptors.comm_intf.bInterfaceNumber;
-  descriptors.cdc_union.bSubordinateInterface = descriptors.cdc_intf_0.bInterfaceNumber;
+  descriptors.cdc_intf_1.b_interface_number = descriptors.cdc_intf_0.b_interface_number;
+  descriptors.cdc_union.bControlInterface = descriptors.comm_intf.b_interface_number;
+  descriptors.cdc_union.bSubordinateInterface = descriptors.cdc_intf_0.b_interface_number;
 
   status = usb_function_alloc_ep(&cdc->function, USB_DIR_OUT, &cdc->bulk_out_addr);
   if (status != ZX_OK) {
@@ -883,9 +883,9 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     goto fail;
   }
 
-  descriptors.bulk_out_ep.bEndpointAddress = cdc->bulk_out_addr;
-  descriptors.bulk_in_ep.bEndpointAddress = cdc->bulk_in_addr;
-  descriptors.intr_ep.bEndpointAddress = cdc->intr_addr;
+  descriptors.bulk_out_ep.b_endpoint_address = cdc->bulk_out_addr;
+  descriptors.bulk_in_ep.b_endpoint_address = cdc->bulk_in_addr;
+  descriptors.intr_ep.b_endpoint_address = cdc->intr_addr;
 
   status = cdc_generate_mac_address(parent, cdc.get());
   if (status != ZX_OK) {

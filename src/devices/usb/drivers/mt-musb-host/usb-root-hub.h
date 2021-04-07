@@ -198,25 +198,25 @@ class UsbRootHub : public UsbDevice {
           },
       .interface =
           {
-              .bLength = sizeof(usb_interface_descriptor_t),
-              .bDescriptorType = USB_DT_INTERFACE,
-              .bInterfaceNumber = 0,
-              .bAlternateSetting = 0,
-              .bNumEndpoints = 1,
-              .bInterfaceClass = USB_CLASS_HUB,
-              .bInterfaceSubClass = 0,
-              .bInterfaceProtocol = 0,
-              .iInterface = 0,
+              .b_length = sizeof(usb_interface_descriptor_t),
+              .b_descriptor_type = USB_DT_INTERFACE,
+              .b_interface_number = 0,
+              .b_alternate_setting = 0,
+              .b_num_endpoints = 1,
+              .b_interface_class = USB_CLASS_HUB,
+              .b_interface_sub_class = 0,
+              .b_interface_protocol = 0,
+              .i_interface = 0,
           },
       .endpoint =
           {
               // USB hub status change endpoint
-              .bLength = sizeof(usb_endpoint_descriptor_t),
-              .bDescriptorType = USB_DT_ENDPOINT,
-              .bEndpointAddress = USB_ENDPOINT_IN | 1,
-              .bmAttributes = USB_ENDPOINT_INTERRUPT,
-              .wMaxPacketSize = htole16(4),
-              .bInterval = 12,
+              .b_length = sizeof(usb_endpoint_descriptor_t),
+              .b_descriptor_type = USB_DT_ENDPOINT,
+              .b_endpoint_address = USB_ENDPOINT_IN | 1,
+              .bm_attributes = USB_ENDPOINT_INTERRUPT,
+              .w_max_packet_size = htole16(4),
+              .b_interval = 12,
           },
   };
 

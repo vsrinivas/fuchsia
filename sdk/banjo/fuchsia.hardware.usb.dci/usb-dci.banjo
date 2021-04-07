@@ -5,7 +5,6 @@
 library fuchsia.hardware.usb.dci;
 
 using fuchsia.hardware.usb.request;
-using zircon.hw.usb;
 using zx;
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
@@ -16,7 +15,7 @@ protocol UsbDci {
     /// Registers callback interface with the DCI driver.
     SetInterface(UsbDciInterface @interface) -> (zx.status s);
     /// Configures an endpoint based on provided descriptors.
-    ConfigEp(zircon.hw.usb.UsbEndpointDescriptor ep_desc,
+    ConfigEp(fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
                 fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
     /// Disables the specified endpoint.
     DisableEp(uint8 ep_address) -> (zx.status s);

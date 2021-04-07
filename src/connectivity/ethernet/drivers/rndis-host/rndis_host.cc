@@ -644,29 +644,29 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
     }
     for (const usb::Interface& interface : *interfaces) {
       const usb_interface_descriptor_t* intf = interface.descriptor();
-      if (intf->bInterfaceClass == USB_CLASS_WIRELESS) {
-        control_intf = intf->bInterfaceNumber;
-        if (intf->bNumEndpoints != 1) {
+      if (intf->b_interface_class == USB_CLASS_WIRELESS) {
+        control_intf = intf->b_interface_number;
+        if (intf->b_num_endpoints != 1) {
           return ZX_ERR_NOT_SUPPORTED;
         }
         for (const auto& endp : interface.GetEndpointList()) {
           if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_IN &&
               usb_ep_type(&endp.descriptor) == USB_ENDPOINT_INTERRUPT) {
-            intr_addr = endp.descriptor.bEndpointAddress;
+            intr_addr = endp.descriptor.b_endpoint_address;
           }
         }
-      } else if (intf->bInterfaceClass == USB_CLASS_CDC) {
-        if (intf->bNumEndpoints != 2) {
+      } else if (intf->b_interface_class == USB_CLASS_CDC) {
+        if (intf->b_num_endpoints != 2) {
           return ZX_ERR_NOT_SUPPORTED;
         }
         for (const auto& endp : interface.GetEndpointList()) {
           if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_OUT) {
             if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
-              bulk_out_addr = endp.descriptor.bEndpointAddress;
+              bulk_out_addr = endp.descriptor.b_endpoint_address;
             }
           } else if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_IN) {
             if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
-              bulk_in_addr = endp.descriptor.bEndpointAddress;
+              bulk_in_addr = endp.descriptor.b_endpoint_address;
             }
           }
         }

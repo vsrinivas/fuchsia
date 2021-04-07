@@ -6,6 +6,7 @@
 #define SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_COMPOSITE_H_
 
 #include <fuchsia/hardware/usb/cpp/banjo.h>
+#include <zircon/hw/usb.h>
 
 #include <ddktl/device.h>
 #include <fbl/array.h>

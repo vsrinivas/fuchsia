@@ -7,7 +7,6 @@ library fuchsia.hardware.usb.bus;
 using zx;
 using fuchsia.hardware.usb.hub;
 using fuchsia.hardware.usb.hubdescriptor;
-using zircon.hw.usb;
 
 enum UsbSpeed : uint32 {
 };

@@ -8,7 +8,6 @@ using zx;
 using fuchsia.hardware.usb.bus;
 using fuchsia.hardware.usb.hubdescriptor;
 using fuchsia.hardware.usb.request;
-using zircon.hw.usb;
 
 [Transport = "Banjo", BanjoLayout="ddk-protocol"]
 protocol UsbHci {
@@ -20,7 +19,7 @@ protocol UsbHci {
     /// Returns the maximum number of USB devices that might be connected to the controller.
     GetMaxDeviceCount() -> (uint64 count);
     /// Enables or disables an endpoint using parameters derived from |ep_desc|.
-    EnableEndpoint(uint32 device_id, zircon.hw.usb.UsbEndpointDescriptor ep_desc,
+    EnableEndpoint(uint32 device_id, fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
                    fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_com_desc, bool enable) -> (zx.status s);
     /// Returns the current frame (in milliseconds), used for isochronous transfers.
     GetCurrentFrame() -> (uint64 frame);

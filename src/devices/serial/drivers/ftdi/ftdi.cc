@@ -393,11 +393,11 @@ zx_status_t FtdiDevice::Bind() {
     for (auto ep_itr : interface.GetEndpointList()) {
       if (usb_ep_direction(&ep_itr.descriptor) == USB_ENDPOINT_OUT) {
         if (usb_ep_type(&ep_itr.descriptor) == USB_ENDPOINT_BULK) {
-          bulk_out_addr = ep_itr.descriptor.bEndpointAddress;
+          bulk_out_addr = ep_itr.descriptor.b_endpoint_address;
         }
       } else {
         if (usb_ep_type(&ep_itr.descriptor) == USB_ENDPOINT_BULK) {
-          bulk_in_addr = ep_itr.descriptor.bEndpointAddress;
+          bulk_in_addr = ep_itr.descriptor.b_endpoint_address;
         }
       }
     }

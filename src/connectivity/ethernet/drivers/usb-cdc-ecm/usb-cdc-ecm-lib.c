@@ -4,6 +4,8 @@
 
 #include "usb-cdc-ecm-lib.h"
 
+#include <usb/usb.h>
+
 const char* module_name = "usb-cdc-ecm";
 
 static bool parse_cdc_header(usb_cs_header_interface_descriptor_t* header_desc) {
@@ -90,14 +92,14 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
       if (ifc_desc == NULL) {
         goto fail;
       }
-      if (ifc_desc->bInterfaceClass == USB_CLASS_CDC) {
-        if (ifc_desc->bNumEndpoints == 0) {
+      if (ifc_desc->b_interface_class == USB_CLASS_CDC) {
+        if (ifc_desc->b_num_endpoints == 0) {
           if (*default_ifc) {
             zxlogf(ERROR, "%s: multiple default interfaces found", module_name);
             goto fail;
           }
           *default_ifc = ifc_desc;
-        } else if (ifc_desc->bNumEndpoints == 2) {
+        } else if (ifc_desc->b_num_endpoints == 2) {
           if (*data_ifc) {
             zxlogf(ERROR, "%s: multiple data interfaces found", module_name);
             goto fail;

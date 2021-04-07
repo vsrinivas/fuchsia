@@ -6,11 +6,11 @@
 
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 
-#include <lib/ddk/metadata.h>
 #include <usb/request-cpp.h>
 
 #include "src/connectivity/ethernet/drivers/rndis-function/rndis_function_bind.h"
@@ -920,15 +920,15 @@ zx_status_t RndisFunction::Bind() {
       .iFunction = 0,  // set later
   };
   descriptors_.communication_interface = usb_interface_descriptor_t{
-      .bLength = sizeof(usb_interface_descriptor_t),
-      .bDescriptorType = USB_DT_INTERFACE,
-      .bInterfaceNumber = 0,  // set later
-      .bAlternateSetting = 0,
-      .bNumEndpoints = 1,
-      .bInterfaceClass = USB_CLASS_WIRELESS,
-      .bInterfaceSubClass = USB_SUBCLASS_WIRELESS_MISC,
-      .bInterfaceProtocol = USB_PROTOCOL_WIRELESS_MISC_RNDIS,
-      .iInterface = 0,
+      .b_length = sizeof(usb_interface_descriptor_t),
+      .b_descriptor_type = USB_DT_INTERFACE,
+      .b_interface_number = 0,  // set later
+      .b_alternate_setting = 0,
+      .b_num_endpoints = 1,
+      .b_interface_class = USB_CLASS_WIRELESS,
+      .b_interface_sub_class = USB_SUBCLASS_WIRELESS_MISC,
+      .b_interface_protocol = USB_PROTOCOL_WIRELESS_MISC_RNDIS,
+      .i_interface = 0,
   };
   descriptors_.cdc_header =
       usb_cs_header_interface_descriptor_t{
@@ -959,51 +959,51 @@ zx_status_t RndisFunction::Bind() {
       .bSubordinateInterface = 0,  // set later
   };
   descriptors_.notification_ep = usb_endpoint_descriptor_t{
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = 0,  // set later
-      .bmAttributes = USB_ENDPOINT_INTERRUPT,
-      .wMaxPacketSize = htole16(kNotificationMaxPacketSize),
-      .bInterval = 1,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = 0,  // set later
+      .bm_attributes = USB_ENDPOINT_INTERRUPT,
+      .w_max_packet_size = htole16(kNotificationMaxPacketSize),
+      .b_interval = 1,
   };
 
   descriptors_.data_interface = usb_interface_descriptor_t{
-      .bLength = sizeof(usb_interface_descriptor_t),
-      .bDescriptorType = USB_DT_INTERFACE,
-      .bInterfaceNumber = 0,  // set later
-      .bAlternateSetting = 0,
-      .bNumEndpoints = 2,
-      .bInterfaceClass = USB_CLASS_CDC,
-      .bInterfaceSubClass = 0,
-      .bInterfaceProtocol = 0,
-      .iInterface = 0,
+      .b_length = sizeof(usb_interface_descriptor_t),
+      .b_descriptor_type = USB_DT_INTERFACE,
+      .b_interface_number = 0,  // set later
+      .b_alternate_setting = 0,
+      .b_num_endpoints = 2,
+      .b_interface_class = USB_CLASS_CDC,
+      .b_interface_sub_class = 0,
+      .b_interface_protocol = 0,
+      .i_interface = 0,
   };
   descriptors_.in_ep = usb_endpoint_descriptor_t{
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = 0,  // set later
-      .bmAttributes = USB_ENDPOINT_BULK,
-      .wMaxPacketSize = htole16(512),
-      .bInterval = 0,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = 0,  // set later
+      .bm_attributes = USB_ENDPOINT_BULK,
+      .w_max_packet_size = htole16(512),
+      .b_interval = 0,
   };
   descriptors_.out_ep = usb_endpoint_descriptor_t{
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = 0,  // set later
-      .bmAttributes = USB_ENDPOINT_BULK,
-      .wMaxPacketSize = htole16(512),
-      .bInterval = 0,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = 0,  // set later
+      .bm_attributes = USB_ENDPOINT_BULK,
+      .w_max_packet_size = htole16(512),
+      .b_interval = 0,
   };
 
   zx_status_t status = function_.AllocStringDesc("RNDIS Communications Control",
-                                                 &descriptors_.communication_interface.iInterface);
+                                                 &descriptors_.communication_interface.i_interface);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate string descriptor: %s", zx_status_get_string(status));
     return status;
   }
 
   status =
-      function_.AllocStringDesc("RNDIS Ethernet Data", &descriptors_.data_interface.iInterface);
+      function_.AllocStringDesc("RNDIS Ethernet Data", &descriptors_.data_interface.i_interface);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate string descriptor: %s", zx_status_get_string(status));
     return status;
@@ -1015,34 +1015,35 @@ zx_status_t RndisFunction::Bind() {
     return status;
   }
 
-  status = function_.AllocInterface(&descriptors_.communication_interface.bInterfaceNumber);
+  status = function_.AllocInterface(&descriptors_.communication_interface.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate communication interface: %s", zx_status_get_string(status));
     return status;
   }
 
-  status = function_.AllocInterface(&descriptors_.data_interface.bInterfaceNumber);
+  status = function_.AllocInterface(&descriptors_.data_interface.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate data interface: %s", zx_status_get_string(status));
     return status;
   }
-  descriptors_.assoc.bFirstInterface = descriptors_.communication_interface.bInterfaceNumber;
-  descriptors_.cdc_union.bControlInterface = descriptors_.communication_interface.bInterfaceNumber;
-  descriptors_.cdc_union.bSubordinateInterface = descriptors_.data_interface.bInterfaceNumber;
+  descriptors_.assoc.bFirstInterface = descriptors_.communication_interface.b_interface_number;
+  descriptors_.cdc_union.bControlInterface =
+      descriptors_.communication_interface.b_interface_number;
+  descriptors_.cdc_union.bSubordinateInterface = descriptors_.data_interface.b_interface_number;
 
-  status = function_.AllocEp(USB_DIR_OUT, &descriptors_.out_ep.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_OUT, &descriptors_.out_ep.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate bulk out interface: %s", zx_status_get_string(status));
     return status;
   }
 
-  status = function_.AllocEp(USB_DIR_IN, &descriptors_.in_ep.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_IN, &descriptors_.in_ep.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate bulk in interface: %s", zx_status_get_string(status));
     return status;
   }
 
-  status = function_.AllocEp(USB_DIR_IN, &descriptors_.notification_ep.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_IN, &descriptors_.notification_ep.b_endpoint_address);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate notification interface: %s", zx_status_get_string(status));
     return status;

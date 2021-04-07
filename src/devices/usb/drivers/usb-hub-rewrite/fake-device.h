@@ -656,7 +656,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
   zx_status_t UsbEnableEndpointDispatch(const usb_endpoint_descriptor_t* ep_desc,
                                         const usb_ss_ep_comp_descriptor_t* ss_com_desc,
                                         bool enable) {
-    interrupt_endpoint_ = ep_desc->bEndpointAddress;
+    interrupt_endpoint_ = ep_desc->b_endpoint_address;
     return ZX_OK;
   }
 

@@ -14,6 +14,7 @@
 #include <atomic>
 
 #include <fbl/mutex.h>
+#include <usb/usb.h>
 
 namespace mt_usb_hci {
 
@@ -307,7 +308,7 @@ class Bulk : public BulkBase {
  public:
   Bulk(ddk::MmioView usb, uint8_t faddr, void* buf, size_t len,
        const usb_endpoint_descriptor_t& desc)
-      : BulkBase(usb, buf, len, desc), interval_(desc.bInterval), faddr_(faddr) {}
+      : BulkBase(usb, buf, len, desc), interval_(desc.b_interval), faddr_(faddr) {}
 
  private:
   // Configure MUSBMHDRC for USB Bulk-type transfer.  See: MUSBMHDRC section 22.2.
@@ -327,7 +328,7 @@ class Interrupt : public BulkBase {
  public:
   Interrupt(ddk::MmioView usb, uint8_t faddr, void* buf, size_t len,
             const usb_endpoint_descriptor_t& desc)
-      : BulkBase(usb, buf, len, desc), interval_(desc.bInterval), faddr_(faddr) {}
+      : BulkBase(usb, buf, len, desc), interval_(desc.b_interval), faddr_(faddr) {}
 
  private:
   // Configure MUSBMHDRC for USB Interrupt-type transfer.  See: MUSBMHDRC section 23.2.

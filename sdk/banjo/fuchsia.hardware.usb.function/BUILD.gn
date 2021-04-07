@@ -11,7 +11,6 @@ banjo("fuchsia.hardware.usb.function") {
     "//sdk/banjo/ddk.hw.physiter",
     "//sdk/banjo/fuchsia.hardware.usb.descriptor",
     "//sdk/banjo/fuchsia.hardware.usb.request",
-    "//sdk/banjo/zircon.hw.usb",
     "//sdk/banjo/zx",
   ]
 }

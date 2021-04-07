@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/telephony/tests/fake-drivers/usb-qmi-function/usb_qmi_function_bind.h"
@@ -128,76 +128,77 @@ zx_status_t FakeUsbQmiFunction::Bind() {
   descriptor_size_ = sizeof(FakeUsbQmiDescriptor);
 
   descriptor_.interface = {
-      .bLength = sizeof(usb_interface_descriptor_t),
-      .bDescriptorType = USB_DT_INTERFACE,
-      .bInterfaceNumber = 8,
-      .bAlternateSetting = 0,
-      .bNumEndpoints = 3,
-      .bInterfaceClass = USB_CLASS_VENDOR,
-      .bInterfaceSubClass = USB_SUBCLASS_VENDOR,
-      .bInterfaceProtocol = 0xFF,
-      .iInterface = 0,
+      .b_length = sizeof(usb_interface_descriptor_t),
+      .b_descriptor_type = USB_DT_INTERFACE,
+      .b_interface_number = 8,
+      .b_alternate_setting = 0,
+      .b_num_endpoints = 3,
+      .b_interface_class = USB_CLASS_VENDOR,
+      .b_interface_sub_class = USB_SUBCLASS_VENDOR,
+      .b_interface_protocol = 0xFF,
+      .i_interface = 0,
   };
   descriptor_.interrupt = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_IN,
-      .bmAttributes = USB_ENDPOINT_INTERRUPT,
-      .wMaxPacketSize = htole16(0x8),
-      .bInterval = 9,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_IN,
+      .bm_attributes = USB_ENDPOINT_INTERRUPT,
+      .w_max_packet_size = htole16(0x8),
+      .b_interval = 9,
   };
   descriptor_.bulk_in = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_IN,
-      .bmAttributes = USB_ENDPOINT_BULK,
-      .wMaxPacketSize = htole16(0x200),
-      .bInterval = 0,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_IN,
+      .bm_attributes = USB_ENDPOINT_BULK,
+      .w_max_packet_size = htole16(0x200),
+      .b_interval = 0,
   };
   descriptor_.bulk_out = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = USB_ENDPOINT_OUT,
-      .bmAttributes = USB_ENDPOINT_BULK,
-      .wMaxPacketSize = htole16(0x200),
-      .bInterval = 0,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = USB_ENDPOINT_OUT,
+      .bm_attributes = USB_ENDPOINT_BULK,
+      .w_max_packet_size = htole16(0x200),
+      .b_interval = 0,
   };
 
   for (uint32_t i = 0; i < kUsbIntfDummySize; i++) {
-    descriptor_.interface_dummy[i].bDescriptorType = USB_DT_INTERFACE;
-    descriptor_.interface_dummy[i].bLength = sizeof(usb_interface_descriptor_t);
-    zx_status_t status = function_.AllocInterface(&descriptor_.interface_dummy[i].bInterfaceNumber);
+    descriptor_.interface_dummy[i].b_descriptor_type = USB_DT_INTERFACE;
+    descriptor_.interface_dummy[i].b_length = sizeof(usb_interface_descriptor_t);
+    zx_status_t status =
+        function_.AllocInterface(&descriptor_.interface_dummy[i].b_interface_number);
     if (status != ZX_OK) {
       zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_interface failed");
       return status;
     }
   }
-  zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
+  zx_status_t status = function_.AllocInterface(&descriptor_.interface.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_interface failed");
     return status;
   }
-  assert(descriptor_.interface.bInterfaceNumber == 8);
-  status = function_.AllocEp(USB_DIR_IN, &descriptor_.interrupt.bEndpointAddress);
-  assert(descriptor_.interrupt.bEndpointAddress != 0);
+  assert(descriptor_.interface.b_interface_number == 8);
+  status = function_.AllocEp(USB_DIR_IN, &descriptor_.interrupt.b_endpoint_address);
+  assert(descriptor_.interrupt.b_endpoint_address != 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.bEndpointAddress);
-  assert(descriptor_.bulk_in.bEndpointAddress != 0);
+  status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.b_endpoint_address);
+  assert(descriptor_.bulk_in.b_endpoint_address != 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
-  assert(descriptor_.bulk_out.bEndpointAddress != 0);
+  status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.b_endpoint_address);
+  assert(descriptor_.bulk_out.b_endpoint_address != 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed");
     return status;
   }
   usb_request_t* usb_int_req_ptr;
-  status = usb_request_alloc(&usb_int_req_ptr, 0x200, descriptor_.interrupt.bEndpointAddress,
+  status = usb_request_alloc(&usb_int_req_ptr, 0x200, descriptor_.interrupt.b_endpoint_address,
                              function_.GetRequestSize());
   if (status != ZX_OK) {
     return status;

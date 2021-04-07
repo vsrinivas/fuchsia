@@ -84,6 +84,7 @@ test("mt-hci-transaction-test-bin") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",

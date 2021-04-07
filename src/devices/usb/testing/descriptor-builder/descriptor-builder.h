@@ -31,10 +31,10 @@ class EndpointBuilder {
  public:
   explicit EndpointBuilder(uint8_t config_num, uint8_t endpoint_type, uint8_t endpoint_index,
                            bool in) {
-    base_desc_.bmAttributes = endpoint_type;
-    base_desc_.bLength = sizeof(base_desc_);
-    base_desc_.bDescriptorType = USB_DT_ENDPOINT;
-    base_desc_.bEndpointAddress =
+    base_desc_.bm_attributes = endpoint_type;
+    base_desc_.b_length = sizeof(base_desc_);
+    base_desc_.b_descriptor_type = USB_DT_ENDPOINT;
+    base_desc_.b_endpoint_address =
         EpIndexToAddress(endpoint_index + (in ? kInEndpointStart : kOutEndpointStart));
   }
 
@@ -55,9 +55,9 @@ class EndpointBuilder {
 class InterfaceBuilder {
  public:
   explicit InterfaceBuilder(uint8_t config_num) {
-    base_desc_.bNumEndpoints = 0;
-    base_desc_.bLength = sizeof(base_desc_);
-    base_desc_.bDescriptorType = USB_DT_INTERFACE;
+    base_desc_.b_num_endpoints = 0;
+    base_desc_.b_length = sizeof(base_desc_);
+    base_desc_.b_descriptor_type = USB_DT_INTERFACE;
   }
 
   void AddEndpoint(const EndpointBuilder& builder) {
@@ -66,7 +66,7 @@ class InterfaceBuilder {
   }
   void AddEndpoint(void* desc, size_t desc_length) {
     VectorAppend(descriptors_, desc, desc_length);
-    base_desc_.bNumEndpoints++;
+    base_desc_.b_num_endpoints++;
   }
 
   std::vector<uint8_t> Generate() const {

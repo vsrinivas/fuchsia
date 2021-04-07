@@ -19,6 +19,8 @@
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 
+#include <usb/usb.h>
+
 #include "asix-88179-regs.h"
 #include "src/connectivity/ethernet/drivers/asix-88179/ethernet_ax88179-bind.h"
 
@@ -877,14 +879,14 @@ zx_status_t Asix88179Ethernet::Initialize() {
   if (interface == usb_interface_list->end()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (interface_descriptor->bNumEndpoints < 3) {
-    zxlogf(ERROR, "ax88179: Wrong number of endpoints: %d", interface_descriptor->bNumEndpoints);
+  if (interface_descriptor->b_num_endpoints < 3) {
+    zxlogf(ERROR, "ax88179: Wrong number of endpoints: %d", interface_descriptor->b_num_endpoints);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   fbl::AutoLock lock(&lock_);
 
-  interface_number_ = interface_descriptor->bInterfaceNumber;
+  interface_number_ = interface_descriptor->b_interface_number;
   uint8_t bulk_in_address = 0;
   uint8_t bulk_out_address = 0;
   uint8_t interrupt_address = 0;
@@ -893,13 +895,13 @@ zx_status_t Asix88179Ethernet::Initialize() {
     const usb_endpoint_descriptor_t* endp = &endpoint.descriptor;
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_out_address = endp->bEndpointAddress;
+        bulk_out_address = endp->b_endpoint_address;
       }
     } else {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_in_address = endp->bEndpointAddress;
+        bulk_in_address = endp->b_endpoint_address;
       } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
-        interrupt_address = endp->bEndpointAddress;
+        interrupt_address = endp->b_endpoint_address;
       }
     }
   }

@@ -4,6 +4,7 @@
 
 #include "dwc2.h"
 
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
@@ -14,10 +15,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
+#include <usb/usb.h>
 
 #include "src/devices/usb/drivers/dwc2/dwc2_bind.h"
 #include "usb_dwc_regs.h"
@@ -1087,13 +1088,13 @@ zx_status_t Dwc2::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
                                  const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
   auto* mmio = get_mmio();
 
-  uint8_t ep_num = DWC_ADDR_TO_INDEX(ep_desc->bEndpointAddress);
+  uint8_t ep_num = DWC_ADDR_TO_INDEX(ep_desc->b_endpoint_address);
   if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= std::size(endpoints_)) {
-    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X", ep_desc->bEndpointAddress);
+    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X", ep_desc->b_endpoint_address);
     return ZX_ERR_INVALID_ARGS;
   }
 
-  bool is_in = (ep_desc->bEndpointAddress & USB_DIR_MASK) == USB_DIR_IN;
+  bool is_in = (ep_desc->b_endpoint_address & USB_DIR_MASK) == USB_DIR_IN;
   uint8_t ep_type = usb_ep_type(ep_desc);
   uint16_t max_packet_size = usb_ep_max_packet(ep_desc);
 

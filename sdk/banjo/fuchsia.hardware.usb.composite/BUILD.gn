@@ -10,7 +10,6 @@ banjo("fuchsia.hardware.usb.composite") {
   sources = [ "usb-composite.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.usb.descriptor",
-    "//sdk/banjo/zircon.hw.usb",
     "//sdk/banjo/zx",
   ]
 }

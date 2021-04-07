@@ -40,7 +40,7 @@ zx_status_t UsbTest::Init() {
 
   parent_req_size_ = function_.GetRequestSize();
 
-  status = function_.AllocInterface(&descriptors_.intf.bInterfaceNumber);
+  status = function_.AllocInterface(&descriptors_.intf.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_interface failed", __func__);
     return status;
@@ -62,9 +62,9 @@ zx_status_t UsbTest::Init() {
     return status;
   }
 
-  descriptors_.bulk_out_ep.bEndpointAddress = bulk_out_addr_;
-  descriptors_.bulk_in_ep.bEndpointAddress = bulk_in_addr_;
-  descriptors_.intr_ep.bEndpointAddress = intr_addr_;
+  descriptors_.bulk_out_ep.b_endpoint_address = bulk_out_addr_;
+  descriptors_.bulk_in_ep.b_endpoint_address = bulk_in_addr_;
+  descriptors_.intr_ep.b_endpoint_address = intr_addr_;
 
   // Allocate bulk out usb requests.
   std::optional<usb::Request<void>> req;

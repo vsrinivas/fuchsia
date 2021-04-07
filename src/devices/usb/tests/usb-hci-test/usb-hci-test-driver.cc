@@ -19,6 +19,7 @@
 
 #include <fbl/algorithm.h>
 #include <usb/request-cpp.h>
+#include <usb/usb.h>
 
 #include "src/devices/usb/tests/usb-hci-test/usb_hci_test_bind.h"
 
@@ -44,7 +45,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   uint64_t host_packets = 0;
   // Test recovery from CancelAll
   // TODO (fxbug.dev/33848): Add asserts on every CancelAll when the rewrite goes in.
-  usb_.CancelAll(bulk_out_.bEndpointAddress);
+  usb_.CancelAll(bulk_out_.b_endpoint_address);
   struct {
     uint64_t start;
     uint64_t end;
@@ -65,7 +66,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       std::optional<Request> request;
       sync_completion_t completion;
       size_t bytes;
-      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
+      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.b_endpoint_address, parent_size,
                      [&bytes, &completion](Request request) {
                        bytes = request.request()->response.actual;
                        sync_completion_signal(&completion);
@@ -79,7 +80,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       std::optional<Request> request;
       sync_completion_t completion;
       size_t bytes;
-      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
+      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.b_endpoint_address, parent_size,
                      [&bytes, &completion](Request request) {
                        bytes = request.request()->response.actual;
                        sync_completion_signal(&completion);
@@ -93,7 +94,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       std::optional<Request> request;
       sync_completion_t completion;
       size_t bytes;
-      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
+      Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.b_endpoint_address, parent_size,
                      [&bytes, &completion](Request request) {
                        bytes = request.request()->response.actual;
                        sync_completion_signal(&completion);
@@ -109,7 +110,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
         std::optional<Request> request;
         sync_completion_t completion;
         size_t bytes;
-        Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
+        Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.b_endpoint_address, parent_size,
                        [&bytes, &completion](Request request) {
                          bytes = request.request()->response.actual;
                          uint32_t* val;
@@ -134,7 +135,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
         std::optional<Request> request;
         sync_completion_t completion;
         size_t bytes;
-        Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.bEndpointAddress, parent_size,
+        Request::Alloc(&request, (4096 * 3) + 1024, bulk_in_.b_endpoint_address, parent_size,
                        [&bytes, &completion](Request request) {
                          bytes = request.request()->response.actual;
                          uint32_t* val;
@@ -162,7 +163,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
 
   for (size_t i = 0; i < 4096; i++) {
     std::optional<Request> request;
-    Request::Alloc(&request, 8192, bulk_out_.bEndpointAddress, parent_size,
+    Request::Alloc(&request, 8192, bulk_out_.b_endpoint_address, parent_size,
                    [&running, this, &host_packets](Request request) {
                      if (!running) {
                        return;
@@ -180,9 +181,9 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   constexpr auto kTestRuntime = 15;
   sleep(kTestRuntime);
   running = false;
-  usb_.CancelAll(bulk_out_.bEndpointAddress);
+  usb_.CancelAll(bulk_out_.b_endpoint_address);
   // Test the case where we haven't queued any data
-  usb_.CancelAll(bulk_out_.bEndpointAddress);
+  usb_.CancelAll(bulk_out_.b_endpoint_address);
   status = usb_.ControlIn(USB_TYPE_VENDOR | USB_DIR_IN | USB_RECIP_DEVICE, StopTransfers, 0, 0,
                           ZX_TIME_INFINITE, reinterpret_cast<uint8_t*>(&results), sizeof(results),
                           &actual);
@@ -204,7 +205,7 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   for (size_t i = 0; i < 8 * 5; i++) {
     std::optional<Request> request;
     Request::Alloc(
-        &request, isoch_in_.wMaxPacketSize, isoch_in_.bEndpointAddress, parent_size,
+        &request, isoch_in_.w_max_packet_size, isoch_in_.b_endpoint_address, parent_size,
         [&isoch_packets, &clock_val, &dropped_packets, &timestamp, &running,
          this](Request request) {
           if (!running) {
@@ -235,11 +236,11 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   }
   sleep(kTestRuntime);
   test_results.received_isoch_packets = isoch_packets;
-  test_results.isoch_packet_size = isoch_in_.wMaxPacketSize;
-  test_results.bulk_packet_size = bulk_out_.wMaxPacketSize;
+  test_results.isoch_packet_size = isoch_in_.w_max_packet_size;
+  test_results.bulk_packet_size = bulk_out_.w_max_packet_size;
   test_results.got_correct_number_of_bytes_in_short_transfers = correct_byte_count;
   running = false;
-  usb_.CancelAll(isoch_in_.bEndpointAddress);
+  usb_.CancelAll(isoch_in_.b_endpoint_address);
   if (status != ZX_OK) {
     completer.ReplyError(status);
     return;
@@ -269,11 +270,11 @@ void HciTest::EnumerationThread(ddk::InitTxn txn) {
   usb::InterfaceList::Create(usb_, true, &interfaces);
   bool configured = false;
   for (auto iface : *interfaces) {
-    if ((iface.descriptor()->bNumEndpoints == kNumEndpoints) &&
-        (iface.descriptor()->bInterfaceSubClass == kInterfaceSubClass) &&
-        (iface.descriptor()->bInterfaceProtocol == kInterfaceProtocol)) {
-      usb_.SetInterface(iface.descriptor()->bInterfaceNumber,
-                        iface.descriptor()->bAlternateSetting);
+    if ((iface.descriptor()->b_num_endpoints == kNumEndpoints) &&
+        (iface.descriptor()->b_interface_sub_class == kInterfaceSubClass) &&
+        (iface.descriptor()->b_interface_protocol == kInterfaceProtocol)) {
+      usb_.SetInterface(iface.descriptor()->b_interface_number,
+                        iface.descriptor()->b_alternate_setting);
       size_t i = 0;
       for (auto ep : iface.GetEndpointList()) {
         switch (i) {

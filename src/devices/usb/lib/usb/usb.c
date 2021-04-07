@@ -177,7 +177,7 @@ __EXPORT usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_
       if (desc == NULL) {
         return NULL;
       }
-      if (!skip_alt || desc->bAlternateSetting == 0) {
+      if (!skip_alt || desc->b_alternate_setting == 0) {
         usb_desc_iter_advance(iter);
         return desc;
       }

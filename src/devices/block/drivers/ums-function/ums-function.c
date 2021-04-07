@@ -42,33 +42,33 @@ static struct {
 } descriptors = {
     .intf =
         {
-            .bLength = sizeof(usb_interface_descriptor_t),
-            .bDescriptorType = USB_DT_INTERFACE,
-            //      .bInterfaceNumber set later
-            .bAlternateSetting = 0,
-            .bNumEndpoints = 2,
-            .bInterfaceClass = USB_CLASS_MSC,
-            .bInterfaceSubClass = USB_SUBCLASS_MSC_SCSI,
-            .bInterfaceProtocol = USB_PROTOCOL_MSC_BULK_ONLY,
-            .iInterface = 0,
+            .b_length = sizeof(usb_interface_descriptor_t),
+            .b_descriptor_type = USB_DT_INTERFACE,
+            //      .b_interface_number set later
+            .b_alternate_setting = 0,
+            .b_num_endpoints = 2,
+            .b_interface_class = USB_CLASS_MSC,
+            .b_interface_sub_class = USB_SUBCLASS_MSC_SCSI,
+            .b_interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
+            .i_interface = 0,
         },
     .out_ep =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            //      .bEndpointAddress set later
-            .bmAttributes = USB_ENDPOINT_BULK,
-            .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            //      .b_endpoint_address set later
+            .bm_attributes = USB_ENDPOINT_BULK,
+            .w_max_packet_size = htole16(BULK_MAX_PACKET),
+            .b_interval = 0,
         },
     .in_ep =
         {
-            .bLength = sizeof(usb_endpoint_descriptor_t),
-            .bDescriptorType = USB_DT_ENDPOINT,
-            //      .bEndpointAddress set later
-            .bmAttributes = USB_ENDPOINT_BULK,
-            .wMaxPacketSize = htole16(BULK_MAX_PACKET),
-            .bInterval = 0,
+            .b_length = sizeof(usb_endpoint_descriptor_t),
+            .b_descriptor_type = USB_DT_ENDPOINT,
+            //      .b_endpoint_address set later
+            .bm_attributes = USB_ENDPOINT_BULK,
+            .w_max_packet_size = htole16(BULK_MAX_PACKET),
+            .b_interval = 0,
         },
 };
 
@@ -554,7 +554,7 @@ static void usb_ums_unbind(void* ctx) {
 
   usb_function_cancel_all(&ums->function, ums->bulk_out_addr);
   usb_function_cancel_all(&ums->function, ums->bulk_in_addr);
-  usb_function_cancel_all(&ums->function, descriptors.intf.bInterfaceNumber);
+  usb_function_cancel_all(&ums->function, descriptors.intf.b_interface_number);
 
   mtx_lock(&ums->mtx);
   ums->active = false;
@@ -676,7 +676,7 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
   ums->parent_req_size = usb_function_get_request_size(&ums->function);
   ZX_DEBUG_ASSERT(ums->parent_req_size != 0);
 
-  status = usb_function_alloc_interface(&ums->function, &descriptors.intf.bInterfaceNumber);
+  status = usb_function_alloc_interface(&ums->function, &descriptors.intf.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "usb_ums_bind: usb_function_alloc_interface failed");
     goto fail;
@@ -691,8 +691,8 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "usb_ums_bind: usb_function_alloc_ep failed");
     goto fail;
   }
-  descriptors.out_ep.bEndpointAddress = ums->bulk_out_addr;
-  descriptors.in_ep.bEndpointAddress = ums->bulk_in_addr;
+  descriptors.out_ep.b_endpoint_address = ums->bulk_out_addr;
+  descriptors.in_ep.b_endpoint_address = ums->bulk_in_addr;
 
   status =
       usb_request_alloc(&ums->cbw_req, BULK_MAX_PACKET, ums->bulk_out_addr, ums->parent_req_size);

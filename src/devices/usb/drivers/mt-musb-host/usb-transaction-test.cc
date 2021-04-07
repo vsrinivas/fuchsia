@@ -149,21 +149,21 @@ class BulkTest : public zxtest::Test {
   std::optional<ddk::MmioBuffer> usb_;
 
   static constexpr usb_endpoint_descriptor_t in_descriptor_ = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = 0x81,
-      .bmAttributes = 0x2,
-      .wMaxPacketSize = 512,
-      .bInterval = 255,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = 0x81,
+      .bm_attributes = 0x2,
+      .w_max_packet_size = 512,
+      .b_interval = 255,
   };
 
   static constexpr usb_endpoint_descriptor_t out_descriptor_ = {
-      .bLength = sizeof(usb_endpoint_descriptor_t),
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = 0x2,
-      .bmAttributes = 0x2,
-      .wMaxPacketSize = 512,
-      .bInterval = 255,
+      .b_length = sizeof(usb_endpoint_descriptor_t),
+      .b_descriptor_type = USB_DT_ENDPOINT,
+      .b_endpoint_address = 0x2,
+      .bm_attributes = 0x2,
+      .w_max_packet_size = 512,
+      .b_interval = 255,
   };
 };
 
@@ -284,21 +284,21 @@ class InterruptTest : public zxtest::Test {
   std::optional<ddk::MmioBuffer> usb_;
 
   static constexpr usb_endpoint_descriptor_t in_descriptor_ = {
-      sizeof(usb_endpoint_descriptor_t),  // .bLength
-      USB_DT_ENDPOINT,                    // .bDescriptorType
-      0x81,                               // .bEndpointAddress (ep=1, dir=in)
-      0x3,                                // .bmAttributes (type=interrupt)
-      512,                                // .wMaxPacketSize
-      16,                                 // .bInterval
+      sizeof(usb_endpoint_descriptor_t),  // .b_length
+      USB_DT_ENDPOINT,                    // .b_descriptor_type
+      0x81,                               // .b_endpoint_address (ep=1, dir=in)
+      0x3,                                // .bm_attributes (type=interrupt)
+      512,                                // .w_max_packet_size
+      16,                                 // .b_interval
   };
 
   static constexpr usb_endpoint_descriptor_t out_descriptor_ = {
-      sizeof(usb_endpoint_descriptor_t),  // .bLength
-      USB_DT_ENDPOINT,                    // .bDescriptorType
-      0x2,                                // .bEndpointAddress (ep=2, dir=out)
-      0x3,                                // .bmAttributes (type=interrupt)
-      512,                                // .wMaxPacketSize
-      16,                                 // .bInterval
+      sizeof(usb_endpoint_descriptor_t),  // .b_length
+      USB_DT_ENDPOINT,                    // .b_descriptor_type
+      0x2,                                // .b_endpoint_address (ep=2, dir=out)
+      0x3,                                // .bm_attributes (type=interrupt)
+      512,                                // .w_max_packet_size
+      16,                                 // .b_interval
   };
 };
 

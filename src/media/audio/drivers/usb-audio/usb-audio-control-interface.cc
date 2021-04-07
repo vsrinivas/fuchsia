@@ -55,8 +55,8 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
   // These should already have been checked before Initialize was called.
   ZX_DEBUG_ASSERT(interface_hdr_ != nullptr);
-  ZX_DEBUG_ASSERT(interface_hdr_->bInterfaceClass == USB_CLASS_AUDIO);
-  ZX_DEBUG_ASSERT(interface_hdr_->bInterfaceSubClass == USB_SUBCLASS_AUDIO_CONTROL);
+  ZX_DEBUG_ASSERT(interface_hdr_->b_interface_class == USB_CLASS_AUDIO);
+  ZX_DEBUG_ASSERT(interface_hdr_->b_interface_sub_class == USB_SUBCLASS_AUDIO_CONTROL);
 
   // Parse all of the descriptors which belong to this audio control
   // interface.  As soon as we find something which does not belong to the
@@ -91,7 +91,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
       continue;
     }
 
-    auto unit = AudioUnit::Create(*iter, interface_hdr_->bInterfaceNumber);
+    auto unit = AudioUnit::Create(*iter, interface_hdr_->b_interface_number);
     if (unit == nullptr) {
       LOG(WARNING, "Failed to create audio Terminal/Unit (type %u) @ offset %zu",
           hdr->bDescriptorSubtype, iter->offset());

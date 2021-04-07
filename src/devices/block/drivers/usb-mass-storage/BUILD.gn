@@ -28,6 +28,7 @@ driver_module("usb-mass-storage") {
   deps = [
     ":block",
     "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
   ]
 }
 
@@ -82,6 +83,7 @@ test("ums") {
     "//sdk/lib/fit",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/zxtest",
   ]
 }

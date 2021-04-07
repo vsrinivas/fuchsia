@@ -96,6 +96,19 @@ static inline zx_status_t usb_clear_feature(const usb_protocol_t* usb, uint8_t r
                          0);
 }
 
+// Descriptor support macros.
+#define usb_ep_num(ep) ((ep)->b_endpoint_address & USB_ENDPOINT_NUM_MASK)
+// usb_ep_num2() useful with you have b_endpoint_address outside of a descriptor.
+#define usb_ep_num2(addr) ((addr)&USB_ENDPOINT_NUM_MASK)
+#define usb_ep_direction(ep) ((ep)->b_endpoint_address & USB_ENDPOINT_DIR_MASK)
+#define usb_ep_type(ep) ((ep)->bm_attributes & USB_ENDPOINT_TYPE_MASK)
+#define usb_ep_sync_type(ep) ((ep)->bm_attributes & USB_ENDPOINT_SYNCHRONIZATION_MASK)
+// Max packet size is in bits 10..0
+#define usb_ep_max_packet(ep) (le16toh((ep)->w_max_packet_size) & 0x07FF)
+// For high speed interrupt and isochronous endpoints, additional transactions per microframe
+// are in bits 12..11
+#define usb_ep_add_mf_transactions(ep) ((le16toh((ep)->w_max_packet_size) >> 11) & 3)
+
 __END_CDECLS
 
 #ifdef __cplusplus
@@ -265,7 +278,7 @@ class EndpointList {
       const usb_endpoint_descriptor_t* a = &endpoint_.descriptor;
       const usb_endpoint_descriptor_t* b = &other.endpoint_.descriptor;
       // Note that within a configuration, endpoint addresses are unique.
-      return (a->bEndpointAddress == b->bEndpointAddress);
+      return (a->b_endpoint_address == b->b_endpoint_address);
     }
     bool operator!=(const iterator_impl& other) const { return !(*this == other); }
 

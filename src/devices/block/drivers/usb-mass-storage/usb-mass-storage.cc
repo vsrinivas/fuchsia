@@ -14,6 +14,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <usb/usb.h>
 
 #include "block.h"
 #include "src/devices/block/drivers/usb-mass-storage/usb_mass_storage_bind.h"
@@ -155,15 +156,15 @@ void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
   const usb_interface_descriptor_t* interface_descriptor = interface->descriptor();
   // Since interface != interface->end(), interface_descriptor is guaranteed not null.
   ZX_DEBUG_ASSERT(interface_descriptor);
-  uint8_t interface_number = interface_descriptor->bInterfaceNumber;
+  uint8_t interface_number = interface_descriptor->b_interface_number;
   uint8_t bulk_in_addr = 0;
   uint8_t bulk_out_addr = 0;
   size_t bulk_in_max_packet = 0;
   size_t bulk_out_max_packet = 0;
 
-  if (interface_descriptor->bNumEndpoints < 2) {
+  if (interface_descriptor->b_num_endpoints < 2) {
     DEBUG_PRINT(
-        ("UMS:ums_bind wrong number of endpoints: %d\n", interface_descriptor->bNumEndpoints));
+        ("UMS:ums_bind wrong number of endpoints: %d\n", interface_descriptor->b_num_endpoints));
     txn.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -172,12 +173,12 @@ void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
     const usb_endpoint_descriptor_t* endp = &ep_itr.descriptor;
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_out_addr = endp->bEndpointAddress;
+        bulk_out_addr = endp->b_endpoint_address;
         bulk_out_max_packet = usb_ep_max_packet(endp);
       }
     } else {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_in_addr = endp->bEndpointAddress;
+        bulk_in_addr = endp->b_endpoint_address;
         bulk_in_max_packet = usb_ep_max_packet(endp);
       }
     }
