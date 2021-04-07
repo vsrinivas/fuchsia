@@ -2,8 +2,6 @@
 // which is a test which connects to this injected server, tests it and
 // passes back result using `fuchsia.test.Suite`
 {
-    // Two children: a server and client. "echo_rust_client" has "eager" startup so it
-    // will be started along with the realm.
     children: [
         {
             name: "echo_server",
@@ -12,7 +10,6 @@
         {
             name: "echo_rust_client",
             url: "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo_rust_client.cm",
-            startup: "eager",
         },
     ],
     offer: [

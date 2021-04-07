@@ -10,7 +10,6 @@
         {
             name: "concurrency_test_driver",
             url: "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/concurrency-test-driver.cm",
-            startup: "eager",
         },
     ],
     offer: [
