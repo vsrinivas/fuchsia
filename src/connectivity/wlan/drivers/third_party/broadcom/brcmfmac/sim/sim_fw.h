@@ -368,9 +368,6 @@ class SimFirmware {
     std::vector<brcmf_wsec_key_le> wsec_key_list;
     uint32_t wpa_auth = 0;
     uint32_t tlv = 0;
-    uint32_t arpoe = 0;
-    uint32_t arp_ol = 0;
-    uint32_t ndoe = 0;
     uint16_t auth_type = BRCMF_AUTH_MODE_OPEN;
     uint32_t allmulti = 0;
   } sim_iface_entry_t;
@@ -559,6 +556,9 @@ class SimFirmware {
   std::atomic<unsigned long> error_inject_bits_ = 0;
   uint8_t assoc_resp_ies_[ASSOC_IES_MAX_LEN];
   size_t assoc_resp_ies_len_ = 0;
+  uint32_t arpoe_ = 0;
+  uint32_t arp_ol_ = 0;
+  uint32_t ndoe_ = 0;
 
   std::unordered_map<std::string, SimIovar> iovar_table_;
 };

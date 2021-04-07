@@ -65,6 +65,7 @@ class ArpTest : public SimTest {
 
   // Interface management
   zx_status_t SetMulticastPromisc(bool enable);
+  void StartAndStopSoftAP();
 
   // Simulation of client associating to a SoftAP interface
   void TxAuthandAssocReq();
@@ -189,6 +190,15 @@ void ArpTest::ScheduleNonArpFrameTx(zx::duration when) {
   env_->ScheduleNotification(std::bind(&ArpTest::Tx, this, frame_bytes), when);
 }
 
+void ArpTest::StartAndStopSoftAP() {
+  common::MacAddr ap_mac({0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff});
+  GenericIfc softap_ifc;
+  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc, std::nullopt, ap_mac),
+            ZX_OK);
+  softap_ifc.StartSoftAp();
+  softap_ifc.StopSoftAp();
+}
+
 // Verify that an ARP frame received by an AP interface is not offloaded, even after multicast
 // promiscuous mode is enabled.
 TEST_F(ArpTest, SoftApArpOffload) {
@@ -243,6 +253,43 @@ TEST_F(ArpTest, ClientArpOffload) {
   ScheduleNonArpFrameTx(zx::sec(3));
 
   env_->ScheduleNotification(std::bind(&ArpTest::SetMulticastPromisc, this, true), zx::sec(4));
+
+  // Send another ARP frame that we expect to receive (not get offloaded)
+  ScheduleArpFrameTx(zx::sec(5), false);
+  ScheduleNonArpFrameTx(zx::sec(6));
+
+  env_->Run(kTestDuration);
+
+  // Verify that we completed the association process
+  EXPECT_EQ(sim_ifc_.stats_.assoc_successes, 1U);
+
+  // Verify that all ARP frames were received, and not offloaded
+  EXPECT_EQ(sim_ifc_.arp_frames_received_, 2U);
+
+  // Verify that no non-ARP frames were suppressed
+  EXPECT_EQ(sim_ifc_.non_arp_frames_received_, 2U);
+}
+
+// Start and Stop of SoftAP should not affect ARP OL configured by client.
+TEST_F(ArpTest, SoftAPStartStopDoesNotAffectArpOl) {
+  Init();
+
+  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac),
+            ZX_OK);
+
+  // Start a fake AP
+  simulation::FakeAp ap(env_.get(), kTheirMac, SimInterface::kDefaultSoftApSsid,
+                        SimInterface::kDefaultSoftApChannel);
+
+  // Associate with fake AP
+  sim_ifc_.AssociateWith(ap, zx::sec(1));
+
+  // Send an ARP frame that we expect to receive (not get offloaded)
+  ScheduleArpFrameTx(zx::sec(2), false);
+  ScheduleNonArpFrameTx(zx::sec(3));
+
+  // Start and Stop SoftAP. This should not affect ARP Ol
+  env_->ScheduleNotification(std::bind(&ArpTest::StartAndStopSoftAP, this), zx::sec(4));
 
   // Send another ARP frame that we expect to receive (not get offloaded)
   ScheduleArpFrameTx(zx::sec(5), false);

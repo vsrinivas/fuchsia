@@ -1877,14 +1877,14 @@ zx_status_t SimFirmware::IovarNdoeSet(uint16_t ifidx, int32_t bsscfgidx, const v
   if (!iface_tbl_[ifidx].allocated) {
     return ZX_ERR_INVALID_ARGS;
   }
-  iface_tbl_[ifidx].ndoe = *(reinterpret_cast<const uint32_t*>(value));
+  ndoe_ = *(reinterpret_cast<const uint32_t*>(value));
   return ZX_OK;
 }
 zx_status_t SimFirmware::IovarNdoeGet(uint16_t ifidx, void* value_out, size_t value_len) {
   if (!iface_tbl_[ifidx].allocated) {
     return ZX_ERR_INVALID_ARGS;
   }
-  memcpy(value_out, &iface_tbl_[ifidx].ndoe, sizeof(uint32_t));
+  memcpy(value_out, &ndoe_, sizeof(uint32_t));
   return ZX_OK;
 }
 
@@ -1893,14 +1893,14 @@ zx_status_t SimFirmware::IovarArpoeSet(uint16_t ifidx, int32_t bsscfgidx, const 
   if (!iface_tbl_[ifidx].allocated) {
     return ZX_ERR_INVALID_ARGS;
   }
-  iface_tbl_[ifidx].arpoe = *(reinterpret_cast<const uint32_t*>(value));
+  arpoe_ = *(reinterpret_cast<const uint32_t*>(value));
   return ZX_OK;
 }
 zx_status_t SimFirmware::IovarArpoeGet(uint16_t ifidx, void* value_out, size_t value_len) {
   if (!iface_tbl_[ifidx].allocated) {
     return ZX_ERR_INVALID_ARGS;
   }
-  memcpy(value_out, &iface_tbl_[ifidx].arpoe, sizeof(uint32_t));
+  memcpy(value_out, &arpoe_, sizeof(uint32_t));
   return ZX_OK;
 }
 
@@ -1909,14 +1909,14 @@ zx_status_t SimFirmware::IovarArpolSet(uint16_t ifidx, int32_t bsscfgidx, const 
   if (!iface_tbl_[ifidx].allocated) {
     return ZX_ERR_INVALID_ARGS;
   }
-  iface_tbl_[ifidx].arp_ol = *(reinterpret_cast<const uint32_t*>(value));
+  arp_ol_ = *(reinterpret_cast<const uint32_t*>(value));
   return ZX_OK;
 }
 zx_status_t SimFirmware::IovarArpolGet(uint16_t ifidx, void* value_out, size_t value_len) {
   if (!iface_tbl_[ifidx].allocated) {
     return ZX_ERR_INVALID_ARGS;
   }
-  memcpy(value_out, &iface_tbl_[ifidx].arp_ol, sizeof(uint32_t));
+  memcpy(value_out, &arp_ol_, sizeof(uint32_t));
   return ZX_OK;
 }
 
@@ -2649,7 +2649,7 @@ void SimFirmware::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFra
 bool SimFirmware::OffloadArpFrame(int16_t ifidx,
                                   std::shared_ptr<const simulation::SimDataFrame> data_frame) {
   // Feature is disabled for this interface
-  if (iface_tbl_[ifidx].arpoe == 0) {
+  if (arpoe_ == 0) {
     return false;
   }
 
@@ -2664,12 +2664,11 @@ bool SimFirmware::OffloadArpFrame(int16_t ifidx,
 
   auto arp_hdr = reinterpret_cast<const ether_arp*>(&data_frame->payload_.data()[sizeof(eth_hdr)]);
   uint16_t ar_op = ntohs(arp_hdr->ea_hdr.ar_op);
-  uint32_t arp_ol = iface_tbl_[ifidx].arp_ol;
 
   if (ar_op == ARPOP_REQUEST) {
     // TODO: Actually construct the ARP reply, which would require us to sniff for IP addresses.
     // For now, not forwarding the packet to the host is enough.
-    return (arp_ol & BRCMF_ARP_OL_AGENT) && (arp_ol & BRCMF_ARP_OL_PEER_AUTO_REPLY);
+    return (arp_ol_ & BRCMF_ARP_OL_AGENT) && (arp_ol_ & BRCMF_ARP_OL_PEER_AUTO_REPLY);
   }
 
   // TODO: Add support for ARP offloading of other commands

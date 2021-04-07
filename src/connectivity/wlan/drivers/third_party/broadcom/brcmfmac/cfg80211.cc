@@ -2991,7 +2991,6 @@ static wlan_stop_result_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
     }
   }
   brcmf_vif_clear_mgmt_ies(ifp->vif);
-  brcmf_configure_arp_nd_offload(ifp, true);
 
   // ap_started must be unset for brcmf_enable_mpc() to take effect.
   cfg->ap_started = false;
@@ -3062,7 +3061,6 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   ssid_le.SSID_len = req->ssid.len;
 
   brcmf_enable_mpc(ifp, 0);
-  brcmf_configure_arp_nd_offload(ifp, false);
 
   // Start timer before starting to issue commands.
   cfg->ap_start_timer->Start(BRCMF_AP_START_TIMER_DUR_MS);
