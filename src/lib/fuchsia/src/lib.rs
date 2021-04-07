@@ -102,7 +102,7 @@ fn init_logging_with_threads(tag: Option<&'static str>) -> impl Drop {
             futures::future::abortable(on_interest_changes);
         send.send(cancel_interest).unwrap();
         drop(send);
-        exec.run(on_interest_changes, 1 /* threads */).ok();
+        exec.run_singlethreaded(on_interest_changes).ok();
     });
 
     AbortAndJoinOnDrop(recv.recv().unwrap(), Some(bg_thread))
