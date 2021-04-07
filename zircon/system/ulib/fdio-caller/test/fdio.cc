@@ -21,23 +21,29 @@ namespace fio = fuchsia_io;
 
 namespace {
 
-void TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
+void TryFilesystemOperations(zx::unowned_channel channel) {
   const char* golden = "foobar";
-  auto write_result =
-      fidl::WireCall<fio::File>(caller.channel())
-          .WriteAt(
-              fidl::VectorView<uint8_t>::FromExternal(
-                  const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden)),
-              0);
+  auto write_result = fidl::WireCall<fio::File>(channel).WriteAt(
+      fidl::VectorView<uint8_t>::FromExternal(
+          const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden)),
+      0);
   ASSERT_EQ(write_result.status(), ZX_OK);
   ASSERT_EQ(write_result->s, ZX_OK);
   ASSERT_EQ(write_result->actual, strlen(golden));
 
-  auto read_result = fidl::WireCall<fio::File>(caller.channel()).ReadAt(256, 0);
+  auto read_result = fidl::WireCall<fio::File>(channel).ReadAt(256, 0);
   ASSERT_EQ(read_result.status(), ZX_OK);
   ASSERT_EQ(read_result->s, ZX_OK);
   ASSERT_EQ(read_result->data.count(), strlen(golden));
   ASSERT_EQ(memcmp(read_result->data.data(), golden, strlen(golden)), 0);
+}
+
+void TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
+  TryFilesystemOperations(caller.channel());
+}
+
+void TryFilesystemOperations(const fdio_cpp::UnownedFdioCaller& caller) {
+  TryFilesystemOperations(caller.channel());
 }
 
 class Harness {
@@ -109,6 +115,16 @@ TEST(FdioCallTests, FdioCallerMoveConstructor) {
   ASSERT_TRUE(move_ctor_caller);
   ASSERT_FALSE(caller);
   ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(move_ctor_caller));
+}
+
+TEST(FdioCallTests, UnownedFdioCaller) {
+  Harness harness;
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
+  auto fd = harness.fd();
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  ASSERT_TRUE(caller);
+  ASSERT_TRUE(fd);
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller));
 }
 
 }  // namespace

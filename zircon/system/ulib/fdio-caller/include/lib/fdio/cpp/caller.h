@@ -107,6 +107,7 @@ class UnownedFdioCaller {
   UnownedFdioCaller() : io_(nullptr) {}
 
   explicit UnownedFdioCaller(int fd) : io_(fdio_unsafe_fd_to_io(fd)) {}
+  explicit UnownedFdioCaller(const fbl::unique_fd& fd) : UnownedFdioCaller(fd.get()) {}
 
   ~UnownedFdioCaller() { release(); }
 
