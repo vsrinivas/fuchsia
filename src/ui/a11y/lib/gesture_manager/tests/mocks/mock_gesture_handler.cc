@@ -10,23 +10,28 @@ bool MockGestureHandler::BindMFingerNTapAction(uint32_t num_fingers, uint32_t nu
                                                OnGestureCallback on_recognize) {
   if (num_fingers == 1 && num_taps == 1) {
     gesture_handlers_[GestureType::kOneFingerSingleTap] = {.on_recognize = std::move(on_recognize)};
+    bound_gestures_.push_back(GestureType::kOneFingerSingleTap);
     return true;
   }
   if (num_fingers == 1 && num_taps == 2) {
     gesture_handlers_[GestureType::kOneFingerDoubleTap] = {.on_recognize = std::move(on_recognize)};
+    bound_gestures_.push_back(GestureType::kOneFingerDoubleTap);
     return true;
   }
   if (num_fingers == 1 && num_taps == 3) {
     gesture_handlers_[GestureType::kOneFingerTripleTap] = {.on_recognize = std::move(on_recognize)};
+    bound_gestures_.push_back(GestureType::kOneFingerTripleTap);
     return true;
   }
   if (num_fingers == 2 && num_taps == 1) {
     gesture_handlers_[GestureType::kTwoFingerSingleTap] = {.on_recognize = std::move(on_recognize)};
+    bound_gestures_.push_back(GestureType::kTwoFingerSingleTap);
     return true;
   }
   if (num_fingers == 3 && num_taps == 2) {
     gesture_handlers_[GestureType::kThreeFingerDoubleTap] = {.on_recognize =
                                                                  std::move(on_recognize)};
+    bound_gestures_.push_back(GestureType::kThreeFingerDoubleTap);
     return true;
   }
 
@@ -71,18 +76,18 @@ bool MockGestureHandler::BindSwipeAction(OnGestureCallback callback, GestureType
   return true;
 }
 
-void MockGestureHandler::TriggerGesture(GestureType gesture_type) {
+void MockGestureHandler::TriggerGesture(GestureType gesture_type,
+                                        a11y::GestureContext gesture_context) {
   auto it = gesture_handlers_.find(gesture_type);
   FX_DCHECK(it != gesture_handlers_.end());
-  // These values are not important and are here so that the callback can be invoked.
   if (it->second.on_recognize) {
-    it->second.on_recognize(a11y::GestureContext());
+    it->second.on_recognize(gesture_context);
   }
   if (it->second.on_update) {
-    it->second.on_update(a11y::GestureContext());
+    it->second.on_update(gesture_context);
   }
   if (it->second.on_complete) {
-    it->second.on_complete(a11y::GestureContext());
+    it->second.on_complete(gesture_context);
   }
 }
 
@@ -101,9 +106,11 @@ bool MockGestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recogniz
         .on_recognize = std::move(on_recognize),
         .on_update = std::move(on_update),
         .on_complete = std::move(on_complete)};
+    bound_gestures_.push_back(GestureType::kOneFingerTripleTapDrag);
     return true;
   }
   if (num_fingers == 3 && num_taps == 2) {
+    bound_gestures_.push_back(GestureType::kThreeFingerDoubleTapDrag);
     gesture_handlers_[GestureType::kThreeFingerDoubleTapDrag] = {
         .on_recognize = std::move(on_recognize),
         .on_update = std::move(on_update),

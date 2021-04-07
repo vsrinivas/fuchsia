@@ -27,7 +27,7 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
   static constexpr float kMinScale = 1, kMaxScale = 20;
   static constexpr float kDefaultScale = 4;
 
-  Magnifier2() = default;
+  Magnifier2();
   ~Magnifier2() override = default;
 
   // |fuchsia::accessibility::Magnifier|
@@ -53,17 +53,17 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
     // magnification mode.
     TEMPORARY = 1,
 
-    // The permanent magnification mode is activated by a one-finger-triple-tap
+    // The persistent magnification mode is activated by a one-finger-triple-tap
     // or a three-finger-double-tap. The screen remains magnified until the next
     // tap gesture explicity returns the magnifier to the unmagnified mode.
-    // The magnifier is responsive to two-finger drags in permanent
+    // The magnifier is responsive to two-finger drags in persistent
     // magnification mode.
-    PERMANENT = 2
+    PERSISTENT = 2
   };
 
   struct State {
     // Indicates current mode of magnification.
-    Mode mode;
+    Mode mode = Mode::UNMAGNIFIED;
 
     // Indicates current pointer locations (if a gesture has been recognized and
     // is still in progress).
@@ -72,26 +72,26 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
     GestureContext gesture_context;
 
     float transition_rate = 0;
-    float magnified_scale = kDefaultScale;
-    glm::vec2 magnified_translation = {0, 0};
+    float scale = kDefaultScale;
+    glm::vec2 translation = {0, 0};
 
     bool operator==(const State& o) const;
     bool operator!=(const State& o) const;
 
     // Helper that sets the magnified translation to focus on the given screen coordinate. This does
     // not call |UpdateTransform|.
-    void FocusOn(const glm::vec2& focus);
+    void FocusOn(const ::fuchsia::math::PointF& focus);
 
     // True if a call to SetClipSpaceTransform() is in progress, and we are
     // waiting on a response from scenic.
     // We need to maintain this state in order to avoid requesting multiple clip
     // space transform updates before the first call returns.
-    bool update_in_progress;
+    bool update_in_progress = false;
 
     // True if the clip space transform requires further updates.
     // This state is used to help animate "smooth" transitions between different
     // zoom levels.
-    bool update_pending;
+    bool update_pending = false;
 
     // When we transition from one zoom/focus to another, we update the clip
     // space transform incrementally to animate a "smooth" transition (e.g.
@@ -101,8 +101,27 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
     // |transition_progress_| is a float between 0 and 1, and it's used to
     // compute the transform at some intermediate point during the transition
     // between two zoom/focus states.
-    float transition_progress;
+    float transition_progress = 0;
+
+    // Indicates whether to draw the viewport highlight.
+    // This state is necessary to avoid a race condition when transitioning out
+    // of zoom where we clear highlights before the transition is complete, in
+    // which case we would re-draw the magnification highlight (and it would
+    // never be cleared).
+    bool draw_highlight = false;
   };
+
+  // Transitions from unmagnified to magnified at kDefaultScale.
+  void TransitionIntoZoom();
+
+  // Transitions from magnified to unmagnified.
+  void TransitionOutOfZoom();
+
+  // Sends the updated transform to the handler.
+  void UpdateTransform();
+
+  // Toggles magnification on/off.
+  void ToggleMagnification();
 
   // Magnifier state.
   State state_;

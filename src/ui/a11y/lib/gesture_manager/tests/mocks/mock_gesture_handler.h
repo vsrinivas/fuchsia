@@ -35,7 +35,8 @@ class MockGestureHandler : public a11y::GestureHandler {
 
   std::vector<GestureType>& bound_gestures() { return bound_gestures_; }
 
-  void TriggerGesture(GestureType gesture_type);
+  void TriggerGesture(GestureType gesture_type,
+                      a11y::GestureContext gesture_context = a11y::GestureContext());
 
  private:
   // Holds the gestures bound to the handler, in order of registration.
