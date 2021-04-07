@@ -61,7 +61,7 @@ documentation pages for FIDL files.
 See the [FIDL style guide][comment_style_guide] for more details on
 comments.
 
-## Grammar
+## Grammar {#grammar}
 
 `file` is the starting symbol.
 

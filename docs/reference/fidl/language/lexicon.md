@@ -2,7 +2,51 @@
 
 This document defines general terms that have a specific meaning in a FIDL
 context. To learn more about specific FIDL topics, refer to the [FIDL
-traihead][trailhead]
+traihead][trailhead].
+
+## Type, layout, constraint {#type-terms}
+
+A **type** classifies a value in the FIDL type system. Types appear in the
+`type-constructor` position defined in the [FIDL grammar][grammar]. For example,
+`uint32`, `string:10`, and `vector<bool>` are types.
+
+A **layout** is a parametrizable description of a type. It does not refer to a
+single type, but describes a family of types obtained by instantiating the
+layout with zero or more **layout parameters**. For example, `vector` is a
+layout which takes one layout parameter, a type such as `vector<bool>` itself a
+type. As another example, `array` is a layout which takes two layout parameters,
+producing types such as `array<bool, 3>`.
+
+The difference between layout and type can be subtle. For example, the statement
+above that `uint32` is a type is not strictly correct. Rather, it is a layout
+that takes zero parameters, distinct from the type obtained by instantiating it.
+The FIDL syntax does not capture this distinction, so when `uint32` is used in
+type position (e.g. `alias uint = uint32;`), it is really referencing the layout
+`uint32` and implicitly instantiating it with zero layout parameters.
+
+A **constraint** restricts a type to only allow values satisfying a predicate.
+For example, the type `string:10` has the constraint `length <= 10` abbreviated
+as `10`, meaning the string length cannot exceed 10 bytes.
+
+Layouts and layout parameters affect how bytes are laid out in the [FIDL wire
+format][wire-format], while constraints affect validation that restricts what
+can be represented (see [RFC-050][rfc-050-layouts-constraints] for more detail).
+Syntactically, layout parameters can only be applied to layouts, and constraints
+can only be applied to types. For example:
+
+```fidl
+alias Bools = vector<bool>;       // ok: layout parameter applied to layout
+alias MaxTenBools = Bools:10;     // ok: constraint applied to type
+alias MaxTenBytes = Bools<byte>;  // INVALID: layout parameter applied to type
+alias MaxTen = vector:10;         // INVALID: constraint applied to layout
+```
+
+The general form of a type instantiation is
+
+    L<L_1, L_2, ..., L_n>:<C_1, C_2, ..., C_n>
+
+where `L` is a layout, `L_1` through `L_n` are layout parameters, and `C_1`
+through `C_n` are constraints.
 
 ## Member, field, variant {#member-terms}
 
@@ -116,3 +160,5 @@ server for this method, i.e. the union that consists of either a result of
 <!-- xrefs -->
 [trailhead]: /docs/development/languages/fidl/README.md
 [wire-format]: /docs/reference/fidl/language/wire-format
+[grammar]: /docs/reference/fidl/language/grammar.md#grammar
+[rfc-050-layouts-constraints]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#layouts-constraints
