@@ -128,10 +128,8 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
   }
 
   uint64_t file_block_aligned_size = blob_layout->FileBlockAlignedSize();
-  fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(*inode.value(), &data_vmo_name);
 
-  if (zx_status_t status = result.data.CreateAndMap(file_block_aligned_size, data_vmo_name.c_str());
+  if (zx_status_t status = result.data.CreateAndMap(file_block_aligned_size, nullptr);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize data vmo; error: " << zx_status_get_string(status);
     return zx::error(status);
@@ -217,10 +215,6 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlobPaged(
   auto data_vmo_or = create_data(blob_layout->FileBlockAlignedSize(), std::move(userpager_info));
   if (data_vmo_or.is_error())
     return data_vmo_or.take_error();
-
-  fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(*inode.value(), &data_vmo_name);
-  data_vmo_or->set_property(ZX_PROP_NAME, data_vmo_name.c_str(), data_vmo_name.length());
 
   if (zx_status_t status = result.data.Map(std::move(data_vmo_or.value())); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create mapping for data vmo: " << zx_status_get_string(status);

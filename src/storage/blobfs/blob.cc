@@ -132,6 +132,7 @@ zx_status_t Blob::VerifyNullBlob() const {
 }
 
 uint64_t Blob::SizeData() const {
+  std::lock_guard lock(mutex_);
   if (state() == BlobState::kReadable) {
     return inode_.blob_size;
   }
@@ -179,6 +180,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  std::lock_guard lock(mutex_);
   if (state() != BlobState::kEmpty) {
     return ZX_ERR_BAD_STATE;
   }
@@ -240,7 +242,10 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
   return inode_.blob_size == 0 ? WriteNullBlob() : ZX_OK;
 }
 
-void Blob::SetOldBlob(Blob& blob) { write_info_->old_blob = fbl::RefPtr(&blob); }
+void Blob::SetOldBlob(Blob& blob) {
+  std::lock_guard lock(mutex_);
+  write_info_->old_blob = fbl::RefPtr(&blob);
+}
 
 zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
@@ -294,18 +299,7 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   return ZX_OK;
 }
 
-bool Blob::IsDataLoaded() const { return data_mapping_.vmo().is_valid(); }
-bool Blob::IsMerkleTreeLoaded() const { return merkle_mapping_.vmo().is_valid(); }
-
-void* Blob::GetDataBuffer() const { return data_mapping_.start(); }
-void* Blob::GetMerkleTreeBuffer(const BlobLayout& blob_layout) const {
-  void* vmo_start = merkle_mapping_.start();
-  if (vmo_start == nullptr) {
-    return nullptr;
-  }
-  // In the compact format the Merkle tree doesn't start at the beginning of the VMO.
-  return static_cast<uint8_t*>(vmo_start) + blob_layout.MerkleTreeOffsetWithinBlockOffset();
-}
+bool Blob::IsDataLoaded() const { return vmo().is_valid(); }
 
 bool Blob::IsPagerBacked() const {
   return SupportsPaging(inode_) && state() == BlobState::kReadable;
@@ -414,7 +408,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       return status;
     }
   } else {
-    if (zx_status_t status = data_mapping_.vmo().write(data, offset, to_write); status != ZX_OK) {
+    if (zx_status_t status = vmo().write(data, offset, to_write); status != ZX_OK) {
       FX_LOGS(ERROR) << "blob: VMO write failed: " << zx_status_get_string(status);
       return status;
     }
@@ -628,10 +622,7 @@ zx_status_t Blob::MarkReadable() {
     }
   }
   set_state(BlobState::kReadable);
-  {
-    std::scoped_lock guard(mutex_);
-    syncing_state_ = SyncingState::kSyncing;
-  }
+  { syncing_state_ = SyncingState::kSyncing; }
   write_info_.reset();
   return ZX_OK;
 }
@@ -660,6 +651,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
 
 zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights);
+
   if (state() != BlobState::kReadable) {
     return ZX_ERR_BAD_STATE;
   }
@@ -671,10 +663,9 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   if (status != ZX_OK) {
     return status;
   }
-  const zx::vmo& data_vmo = data_mapping_.vmo();
 
   zx::vmo clone;
-  status = data_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, inode_.blob_size, &clone);
+  status = vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, inode_.blob_size, &clone);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create child VMO: " << zx_status_get_string(status);
     return status;
@@ -703,7 +694,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   *out_size = inode_.blob_size;
 
   if (clone_watcher_.object() == ZX_HANDLE_INVALID) {
-    clone_watcher_.set_object(data_vmo.get());
+    clone_watcher_.set_object(vmo().get());
     clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
 
     // Keep a reference to "this" alive, preventing the blob
@@ -722,39 +713,53 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
 // is complete.
 void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
-  const zx::vmo& vmo = data_mapping_.vmo();
-  if (vmo.is_valid()) {
-    zx_info_vmo_t info;
-    zx_status_t info_status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
-    if (info_status == ZX_OK) {
-      if (info.num_children > 0) {
-        // A clone was added at some point since the asynchronous HandleNoClones call was enqueued.
-        // Re-arm the watcher, and return.
-        //
-        // clone_watcher_ is level triggered, so even if there are no clones now (since the call to
-        // get_info), HandleNoClones will still be enqueued.
-        //
-        // No new clones can be added during this function, since clones are added on the main
-        // dispatch thread which is currently running this function. If blobfs becomes
-        // multi-threaded, locking will be necessary here.
-        clone_watcher_.set_object(vmo.get());
-        clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
-        clone_watcher_.Begin(blobfs_->dispatcher());
-        return;
+  fbl::RefPtr<Blob> local_clone_ref;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (IsDataLoaded()) {
+      zx_info_vmo_t info;
+      zx_status_t info_status = vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+      if (info_status == ZX_OK) {
+        if (info.num_children > 0) {
+          // A clone was added at some point since the asynchronous HandleNoClones call was
+          // enqueued. Re-arm the watcher, and return.
+          //
+          // clone_watcher_ is level triggered, so even if there are no clones now (since the call
+          // to get_info), HandleNoClones will still be enqueued.
+          //
+          // No new clones can be added during this function, since clones are added on the main
+          // dispatch thread which is currently running this function. If blobfs becomes
+          // multi-threaded, locking will be necessary here.
+          clone_watcher_.set_object(vmo().get());
+          clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
+          clone_watcher_.Begin(blobfs_->dispatcher());
+          return;
+        }
+      } else {
+        FX_LOGS(WARNING) << "Failed to get_info for vmo (" << zx_status_get_string(info_status)
+                         << "); unable to verify VMO has no clones.";
       }
-    } else {
-      FX_LOGS(WARNING) << "Failed to get_info for vmo (" << zx_status_get_string(info_status)
-                       << "); unable to verify VMO has no clones.";
     }
+    if (!tearing_down_) {
+      ZX_DEBUG_ASSERT(status == ZX_OK);
+      ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
+      ZX_DEBUG_ASSERT(clone_watcher_.object() != ZX_HANDLE_INVALID);
+    }
+    clone_watcher_.set_object(ZX_HANDLE_INVALID);
+
+    // Save the clone ref to the stack to prevent releasing it (and hence ourselves) inside the
+    // lock.
+    local_clone_ref = std::move(clone_ref_);
   }
-  if (!tearing_down_) {
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-    ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
-    ZX_DEBUG_ASSERT(clone_watcher_.object() != ZX_HANDLE_INVALID);
-  }
-  clone_watcher_.set_object(ZX_HANDLE_INVALID);
-  clone_ref_ = nullptr;
+
+  // Free the clone ref (outside the lock).
+  //
+  // This will trigger recycling which will call back into us via an external (non-lock-held)
+  // function, so must be done outside of the lock to avoid reentrant locking.
+  local_clone_ref = nullptr;
+
   // This might have been the last reference to a deleted blob, so try purging it.
+  std::lock_guard<std::mutex> lock(mutex_);
   if (zx_status_t status = TryPurge(); status != ZX_OK) {
     FX_LOGS(WARNING) << "Purging blob " << MerkleRoot()
                      << " failed: " << zx_status_get_string(status);
@@ -762,8 +767,8 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
   if (!HasReferences()) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
     FormatInactiveBlobDataVmoName(inode_, &data_vmo_name);
-    if (zx_status_t status = data_mapping_.vmo().set_property(ZX_PROP_NAME, data_vmo_name.c_str(),
-                                                              data_vmo_name.size());
+    if (zx_status_t status =
+            vmo().set_property(ZX_PROP_NAME, data_vmo_name.c_str(), data_vmo_name.size());
         status != ZX_OK) {
       FX_LOGS(WARNING) << "Failed to update blob VMO name: " << zx_status_get_string(status);
     }
@@ -772,6 +777,7 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
 
 zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
   TRACE_DURATION("blobfs", "Blobfs::ReadInternal", "len", len, "off", off);
+  std::lock_guard lock(mutex_);
 
   if (state() != BlobState::kReadable) {
     return ZX_ERR_BAD_STATE;
@@ -794,7 +800,7 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
     len = inode_.blob_size - off;
   }
 
-  status = data_mapping_.vmo().read(data, off, len);
+  status = vmo().read(data, off, len);
   if (status == ZX_OK) {
     *actual = len;
   }
@@ -821,7 +827,6 @@ zx_status_t Blob::LoadVmosFromDisk() {
     // In the new pager, the VMO is created by the PagedVmo.
     auto create_vmo = [this](BlobLayout::ByteCountType aligned_size,
                              pager::UserPagerInfo info) -> zx::status<zx::vmo> {
-      std::scoped_lock guard(mutex_);
       if (auto status = EnsureCreateVmo(aligned_size); status.is_error())
         return status.take_error();
 
@@ -857,7 +862,6 @@ zx_status_t Blob::LoadVmosFromDisk() {
     load_result = blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
   }
 
-  std::scoped_lock guard(mutex_);
   syncing_state_ = SyncingState::kDone;  // Nothing to sync when blob was loaded from the device.
 
   if (load_result.is_ok()) {
@@ -866,6 +870,8 @@ zx_status_t Blob::LoadVmosFromDisk() {
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
     page_watcher_ = std::move(created_page_watcher);  // No-op for new pager.
 #endif
+
+    SetVmoName();
   } else {
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
     // VMO creation could have succeeded but the load failed for other reasons.
@@ -880,20 +886,35 @@ zx_status_t Blob::LoadVmosFromDisk() {
 zx_status_t Blob::PrepareDataVmoForWriting() {
   if (IsDataLoaded())
     return ZX_OK;
-  fzl::OwnedVmoMapper data_mapping;
-  fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(inode_, &data_vmo_name);
-  if (zx_status_t status = data_mapping.CreateAndMap(
-          fbl::round_up(inode_.blob_size, kBlobfsBlockSize), data_vmo_name.c_str());
+
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  // TODO(fxbug.dev/51111): Blob writing needs to be addressed in the new pager. The problem is
+  // that we can not write directly into the paged VMO (this will cause the kernel to try to fault
+  // it in so we can write to it, which will call back into us).
+  //
+  // The write path either needs to have a different mode where the vmo() isn't registered with the
+  // pager, or we need to write into a parallel write VMO. The latter option would be better
+  // because it would enable us to page from just-written blobs (currently you have to close and
+  // reopen the blob to support paging).
+  return ZX_ERR_NOT_SUPPORTED;
+#else
+
+  uint64_t block_aligned_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
+  if (zx_status_t status = data_mapping_.CreateAndMap(block_aligned_size, nullptr);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to map data vmo: " << zx_status_get_string(status);
     return status;
   }
-  data_mapping_ = std::move(data_mapping);
+
+  SetVmoName();
+
   return ZX_OK;
+#endif
 }
 
 zx_status_t Blob::QueueUnlink() {
+  std::lock_guard lock(mutex_);
+
   deletable_ = true;
   // Attempt to purge in case the blob has been unlinked with no open fds
   return TryPurge();
@@ -903,14 +924,13 @@ zx_status_t Blob::CommitDataBuffer() {
   if (inode_.blob_size == 0) {
     // It's the null blob, so just verify.
     return VerifyNullBlob();
-  } else {
-    return data_mapping_.vmo().op_range(ZX_VMO_OP_COMMIT, 0, inode_.blob_size, nullptr, 0);
   }
+  return vmo().op_range(ZX_VMO_OP_COMMIT, 0, inode_.blob_size, nullptr, 0);
 }
 
 zx_status_t Blob::Verify() {
-  auto status = LoadVmosFromDisk();
-  if (status != ZX_OK) {
+  std::lock_guard lock(mutex_);
+  if (auto status = LoadVmosFromDisk(); status != ZX_OK) {
     return status;
   }
 
@@ -935,6 +955,7 @@ void Blob::OnNoClones() {
 BlobCache& Blob::Cache() { return blobfs_->Cache(); }
 
 bool Blob::ShouldCache() const {
+  std::lock_guard lock(mutex_);
   switch (state()) {
     // All "Valid", cacheable states, where the blob still exists on storage.
     case BlobState::kReadable:
@@ -967,15 +988,21 @@ fs::VnodeProtocolSet Blob::GetProtocols() const { return fs::VnodeProtocol::kFil
 
 bool Blob::ValidateRights(fs::Rights rights) {
   // To acquire write access to a blob, it must be empty.
+  //
+  // TODO(fxbug.dev/67659) If we run FIDL on multiple threads (we currently don't) there is a race
+  // condition here where another thread could start writing at the same time. Decide whether we
+  // support FIDL from multiple threads and if so, whether this condition is important.
+  std::lock_guard lock(mutex_);
   return !rights.write || state() == BlobState::kEmpty;
 }
 
 zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                          [[maybe_unused]] fs::Rights rights,
                                          fs::VnodeRepresentation* info) {
+  std::lock_guard lock(mutex_);
+
   zx::event observer;
-  zx_status_t status = GetReadableEvent(&observer);
-  if (status != ZX_OK) {
+  if (zx_status_t status = GetReadableEvent(&observer); status != ZX_OK) {
     return status;
   }
   *info = fs::VnodeRepresentation::File{.observer = std::move(observer)};
@@ -991,12 +1018,17 @@ zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
 
 zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
+
+  std::lock_guard lock(mutex_);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
   return WriteInternal(data, len, out_actual);
 }
 
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kAppend);
+
+  std::lock_guard lock(mutex_);
+
   zx_status_t status = WriteInternal(data, len, out_actual);
   if (state() == BlobState::kDataWrite) {
     ZX_DEBUG_ASSERT(write_info_ != nullptr);
@@ -1027,6 +1059,7 @@ zx_status_t Blob::Truncate(size_t len) {
 }
 
 void Blob::SetTargetCompressionSize(uint64_t size) {
+  std::lock_guard lock(mutex_);
   write_info_.get()->SetTargetCompressionSize(size);
 }
 
@@ -1043,6 +1076,8 @@ zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_l
 
 zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);
+
+  std::lock_guard lock(mutex_);
 
   if (flags & fuchsia_io::wire::VMO_FLAG_WRITE) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -1109,7 +1144,7 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  ZX_DEBUG_ASSERT(vmo().is_valid());
+  ZX_DEBUG_ASSERT(IsDataLoaded());
 
   if (is_corrupt_) {
     FX_LOGS(ERROR) << "Blobfs failing page request because blob was previously found corrupt.";
@@ -1150,10 +1185,7 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
 }
 #endif
 
-bool Blob::HasReferences() const {
-  std::lock_guard lock(mutex_);
-  return open_count() > 0 || has_clones();
-}
+bool Blob::HasReferences() const { return open_count() > 0 || has_clones(); }
 
 void Blob::CompleteSync() {
   // Called on the journal thread when the syncing is complete.
@@ -1166,6 +1198,7 @@ void Blob::CompleteSync() {
 // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
 // is complete.
 fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
+  std::lock_guard lock(mutex_);
   if (clone_watcher_.is_pending()) {
     clone_watcher_.Cancel();
     clone_watcher_.set_object(ZX_HANDLE_INVALID);
@@ -1177,25 +1210,22 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
 
 zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,
                            fbl::RefPtr<Vnode>* out_redirect) {
+  std::lock_guard lock(mutex_);
   if (IsDataLoaded()) {
-    fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-    FormatBlobDataVmoName(inode_, &data_vmo_name);
-    if (zx_status_t status = data_mapping_.vmo().set_property(ZX_PROP_NAME, data_vmo_name.c_str(),
-                                                              data_vmo_name.size());
-        status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to update blob VMO name: " << zx_status_get_string(status);
-    }
+    SetVmoName();
   }
   return ZX_OK;
 }
 
 zx_status_t Blob::CloseNode() {
+  std::lock_guard lock(mutex_);
+
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kClose);
   if (IsDataLoaded() && !HasReferences()) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
     FormatInactiveBlobDataVmoName(inode_, &data_vmo_name);
-    if (zx_status_t status = data_mapping_.vmo().set_property(ZX_PROP_NAME, data_vmo_name.c_str(),
-                                                              data_vmo_name.size());
+    if (zx_status_t status =
+            vmo().set_property(ZX_PROP_NAME, data_vmo_name.data(), data_vmo_name.size());
         status != ZX_OK) {
       FX_LOGS(WARNING) << "Failed to update blob VMO name: " << zx_status_get_string(status);
     }
@@ -1216,9 +1246,9 @@ zx_status_t Blob::Purge() {
 
   if (state() == BlobState::kReadable) {
     // A readable blob should only be purged if it has been unlinked.
-    ZX_ASSERT(DeletionQueued());
+    ZX_ASSERT(deletable_);
     BlobTransaction transaction;
-    ZX_ASSERT(blobfs_->FreeInode(GetMapIndex(), transaction) == ZX_OK);
+    ZX_ASSERT(blobfs_->FreeInode(map_index_, transaction) == ZX_OK);
     transaction.Commit(*blobfs_->journal());
   }
   ZX_ASSERT(Cache().Evict(fbl::RefPtr(this)) == ZX_OK);
@@ -1227,5 +1257,11 @@ zx_status_t Blob::Purge() {
 }
 
 uint32_t Blob::GetBlockSize() const { return blobfs_->Info().block_size; }
+
+void Blob::SetVmoName() {
+  fbl::StringBuffer<ZX_MAX_NAME_LEN> name;
+  FormatBlobDataVmoName(inode_, &name);
+  vmo().set_property(ZX_PROP_NAME, name.data(), name.size());
+}
 
 }  // namespace blobfs

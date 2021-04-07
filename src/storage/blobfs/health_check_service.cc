@@ -38,6 +38,10 @@ void HealthCheckService::Verify(fuv::wire::VerifyOptions options,
       // Skip blobs that are scheduled for deletion.
       return ZX_OK;
     }
+    // If we run multithreaded, the blob cound transition to deleted between the above
+    // DeletionQueued() check and this Verify() call. That should be OK as it only means we
+    // check a blob that we didn't need to. If we need 100% correctness, we'll need to add a
+    // Blob::VerifyIfNotDeleted() function that can atomically check and verify.
     if (zx_status_t status = blob->Verify(); status != ZX_OK) {
       FX_LOGS(ERROR) << "Detected corrupted blob " << blob->MerkleRoot();
       return ZX_ERR_IO_DATA_INTEGRITY;
