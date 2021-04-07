@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("nonhardware_tests") {
   testonly = true
@@ -58,12 +58,7 @@ source_set("hardware_tests") {
   ]
 }
 
-test_package("msd-vsi-vip-nonhardware-tests") {
+fuchsia_unittest_package("msd-vsi-vip-nonhardware-tests") {
+  manifest = "meta/msd-vsi-vip-nonhardware-tests.cmx"
   deps = [ ":nonhardware_tests" ]
-
-  tests = [
-    {
-      name = "msd-vsi-vip-nonhardware-tests"
-    },
-  ]
 }
