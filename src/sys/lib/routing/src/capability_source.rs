@@ -12,8 +12,8 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{
-        CapabilityName, CapabilityPath, CapabilityTypeName, DirectoryDecl, ExposeDecl,
-        ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl,
+        CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, DirectoryDecl,
+        ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl,
         ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
         OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource,
         OfferStorageDecl, ProtocolDecl, RegistrationSource, ResolverDecl, RunnerDecl, ServiceDecl,
@@ -480,6 +480,9 @@ impl EnvironmentCapability {
         }
     }
 }
+
+/// The list of declarations for capabilities from component manager's namespace.
+pub type NamespaceCapabilities = Vec<CapabilityDecl>;
 
 #[cfg(test)]
 mod tests {

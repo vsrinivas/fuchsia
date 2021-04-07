@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        capability::NamespaceCapabilities,
         channel,
         model::{
             actions::{
@@ -35,9 +36,7 @@ use {
     },
     async_trait::async_trait,
     clonable_error::ClonableError,
-    cm_rust::{
-        self, CapabilityDecl, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl,
-    },
+    cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
@@ -166,9 +165,6 @@ impl TryFrom<fsys::Package> for Package {
 
 pub const DEFAULT_KILL_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// The list of declarations for capabilities from component manager's namespace.
-pub type NamespaceCapabilities = Vec<CapabilityDecl>;
-
 /// A special instance identified with component manager, at the top of the tree.
 #[derive(Debug)]
 pub struct ComponentManagerInstance {
@@ -190,7 +186,11 @@ impl ComponentManagerInstance {
     }
 }
 
-impl TopInstanceInterface for ComponentManagerInstance {}
+impl TopInstanceInterface for ComponentManagerInstance {
+    fn namespace_capabilities(&self) -> &NamespaceCapabilities {
+        &self.namespace_capabilities
+    }
+}
 
 /// Models a component instance, possibly with links to children.
 pub struct ComponentInstance {

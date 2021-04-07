@@ -2,20 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod collection;
-
 use {
     crate::{
-        capability::{CapabilitySource, ComponentCapability, InternalCapability},
-        model::{
-            component::{ComponentInstance, ExtendedInstance},
-            routing::{
-                error::RoutingError,
-                router::collection::{RouteExposeFromCollection, RouteOfferFromCollection},
-            },
+        capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
+        collection::{RouteExposeFromCollection, RouteOfferFromCollection},
+        component_instance::{
+            ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
         },
+        error::RoutingError,
     },
-    ::routing::component_instance::ComponentInstanceInterface,
     cm_rust::{
         CapabilityDecl, CapabilityDeclCommon, CapabilityName, ComponentDecl, ExposeDecl,
         ExposeDeclCommon, ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource,
@@ -104,14 +99,15 @@ where
     /// See [`AllowedSourcesBuilder`].
     /// `visitor` is invoked for each `Offer` declaration in the routing path, as well as the final
     /// `Capability` declaration if `sources` permits.
-    pub async fn route<S, V>(
+    pub async fn route<C, S, V>(
         self,
         use_decl: U,
-        use_target: Arc<ComponentInstance>,
+        use_target: Arc<C>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, RoutingError>
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
+        C: ComponentInstanceInterface + 'static,
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
@@ -130,14 +126,15 @@ where
     /// See [`AllowedSourcesBuilder`].
     /// `visitor` is invoked for each `Offer` declaration in the routing path, as well as the final
     /// `Capability` declaration if `sources` permits.
-    pub async fn route_from_offer<S, V>(
+    pub async fn route_from_offer<C, S, V>(
         self,
         offer_decl: O,
-        offer_target: Arc<ComponentInstance>,
+        offer_target: Arc<C>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, RoutingError>
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
+        C: ComponentInstanceInterface + 'static,
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
@@ -183,14 +180,15 @@ where
     /// See [`AllowedSourcesBuilder`].
     /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as well
     /// as the final `Capability` declaration if `sources` permits.
-    pub async fn route<S, V>(
+    pub async fn route<C, S, V>(
         self,
         use_decl: U,
-        use_target: Arc<ComponentInstance>,
+        use_target: Arc<C>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, RoutingError>
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
+        C: ComponentInstanceInterface + 'static,
         S: Sources + 'static,
         V: OfferVisitor<OfferDecl = O>,
         V: ExposeVisitor<ExposeDecl = E>,
@@ -231,14 +229,15 @@ where
     /// See [`AllowedSourcesBuilder`].
     /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as
     /// well as the final `Capability` declaration if `sources` permits.
-    pub async fn route<S, V>(
+    pub async fn route<C, S, V>(
         self,
         registration_decl: R,
-        registration_target: Arc<ComponentInstance>,
+        registration_target: Arc<C>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, RoutingError>
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
+        C: ComponentInstanceInterface + 'static,
         S: Sources + 'static,
         V: OfferVisitor<OfferDecl = O>,
         V: ExposeVisitor<ExposeDecl = E>,
@@ -282,14 +281,15 @@ where
     /// See [`AllowedSourcesBuilder`].
     /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as well
     /// as the final `Capability` declaration if `sources` permits.
-    pub async fn route_from_offer<S, V>(
+    pub async fn route_from_offer<C, S, V>(
         self,
         offer_decl: O,
-        offer_target: Arc<ComponentInstance>,
+        offer_target: Arc<C>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, RoutingError>
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
+        C: ComponentInstanceInterface + 'static,
         S: Sources + 'static,
         V: OfferVisitor<OfferDecl = O>,
         V: ExposeVisitor<ExposeDecl = E>,
@@ -303,7 +303,7 @@ where
                 self.route_from_expose(expose, component, sources, visitor).await
             }
             OfferResult::OfferFromCollection(offer_decl, collection_component, collection_name) => {
-                Ok(CapabilitySource::Collection {
+                Ok(CapabilitySourceInterface::<C>::Collection {
                     collection_name: collection_name.clone(),
                     source_name: offer_decl.source_name().clone(),
                     capability_provider: Box::new(RouteOfferFromCollection {
@@ -339,14 +339,15 @@ where
     /// See [`AllowedSourcesBuilder`].
     /// `visitor` is invoked for each `Expose` declaration in the routing path, as well
     /// as the final `Capability` declaration if `sources` permits.
-    pub async fn route_from_expose<S, V>(
+    pub async fn route_from_expose<C, S, V>(
         self,
         expose_decl: E,
-        expose_target: Arc<ComponentInstance>,
+        expose_target: Arc<C>,
         sources: S,
         visitor: &mut V,
-    ) -> Result<CapabilitySource, RoutingError>
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
+        C: ComponentInstanceInterface + 'static,
         S: Sources + 'static,
         V: ExposeVisitor<ExposeDecl = E>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
@@ -358,7 +359,7 @@ where
                 expose_decl,
                 collection_component,
                 collection_name,
-            ) => Ok(CapabilitySource::Collection {
+            ) => Ok(CapabilitySourceInterface::<C>::Collection {
                 collection_name: collection_name.clone(),
                 source_name: expose_decl.source_name().clone(),
                 capability_provider: Box::new(RouteExposeFromCollection {
@@ -669,11 +670,11 @@ where
 pub struct Use<U>(PhantomData<U>);
 
 /// The result of routing a Use declaration to the next phase.
-enum UseResult<O> {
+enum UseResult<C: ComponentInstanceInterface, O> {
     /// The source of the Use was found (Framework, AboveRoot, etc.)
-    Source(CapabilitySource),
+    Source(CapabilitySourceInterface<C>),
     /// The Use led to a parent Offer declaration.
-    FromParent(O, Arc<ComponentInstance>),
+    FromParent(O, Arc<C>),
 }
 
 impl<U> Use<U>
@@ -682,49 +683,54 @@ where
 {
     /// Routes the capability starting from the `use_` declaration at `target` to either a valid
     /// source (as defined by `sources`) or the Offer declaration that ends this phase of routing.
-    async fn route<S, V, O>(
+    async fn route<C, S, V, O>(
         use_: U,
-        target: Arc<ComponentInstance>,
+        target: Arc<C>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<UseResult<O>, RoutingError>
+    ) -> Result<UseResult<C, O>, RoutingError>
     where
+        C: ComponentInstanceInterface,
         S: Sources,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
         O: OfferDeclCommon + FromEnum<OfferDecl> + ErrorNotFoundFromParent + Clone,
     {
         match use_.source() {
-            UseSource::Framework => Ok(UseResult::Source(CapabilitySource::Framework {
-                capability: sources.framework_source(use_.source_name().clone())?,
-                component: target.as_weak(),
-            })),
+            UseSource::Framework => {
+                Ok(UseResult::Source(CapabilitySourceInterface::<C>::Framework {
+                    capability: sources.framework_source(use_.source_name().clone())?,
+                    component: target.as_weak(),
+                }))
+            }
             UseSource::Capability(_) => {
                 sources.capability_source()?;
-                Ok(UseResult::Source(CapabilitySource::Capability {
+                Ok(UseResult::Source(CapabilitySourceInterface::<C>::Capability {
                     component: target.as_weak(),
                     source_capability: ComponentCapability::Use(use_.into()),
                 }))
             }
             UseSource::Parent => match target.try_get_parent()? {
-                ExtendedInstance::AboveRoot(top_instance) => {
+                ExtendedInstanceInterface::<C>::AboveRoot(top_instance) => {
                     if sources.is_namespace_supported() {
                         if let Some(capability) = sources.find_namespace_source(
                             use_.source_name(),
-                            &top_instance.namespace_capabilities,
+                            top_instance.namespace_capabilities(),
                             visitor,
                         )? {
-                            return Ok(UseResult::Source(CapabilitySource::Namespace {
-                                capability,
-                                top_instance: Arc::downgrade(&top_instance),
-                            }));
+                            return Ok(UseResult::Source(
+                                CapabilitySourceInterface::<C>::Namespace {
+                                    capability,
+                                    top_instance: Arc::downgrade(&top_instance),
+                                },
+                            ));
                         }
                     }
-                    Ok(UseResult::Source(CapabilitySource::Builtin {
+                    Ok(UseResult::Source(CapabilitySourceInterface::<C>::Builtin {
                         capability: sources.builtin_source(use_.source_name().clone())?,
                         top_instance: Arc::downgrade(&top_instance),
                     }))
                 }
-                ExtendedInstance::Component(parent_component) => {
+                ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
                         let parent_decl = parent_component.decl().await?;
                         let child_moniker =
@@ -733,7 +739,7 @@ where
                             .cloned()
                             .ok_or_else(|| {
                                 <U as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                    target.abs_moniker.clone(),
+                                    target.abs_moniker().clone(),
                                     use_.source_name().clone(),
                                 )
                             })?
@@ -754,13 +760,13 @@ where
 pub struct Registration<R>(PhantomData<R>);
 
 /// The result of routing a Registration declaration to the next phase.
-enum RegistrationResult<O, E> {
+enum RegistrationResult<C: ComponentInstanceInterface, O, E> {
     /// The source of the Registration was found (Framework, AboveRoot, etc.).
-    Source(CapabilitySource),
+    Source(CapabilitySourceInterface<C>),
     /// The Registration led to a parent Offer declaration.
-    FromParent(O, Arc<ComponentInstance>),
+    FromParent(O, Arc<C>),
     /// The Registration led to a child Expose declaration.
-    FromChild(E, Arc<ComponentInstance>),
+    FromChild(E, Arc<C>),
 }
 
 impl<R> Registration<R>
@@ -770,13 +776,14 @@ where
     /// Routes the capability starting from the `registration` declaration at `target` to either a
     /// valid source (as defined by `sources`) or the Offer or Expose declaration that ends this
     /// phase of routing.
-    async fn route<S, V, O, E>(
+    async fn route<C, S, V, O, E>(
         registration: R,
-        target: Arc<ComponentInstance>,
+        target: Arc<C>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<RegistrationResult<O, E>, RoutingError>
+    ) -> Result<RegistrationResult<C, O, E>, RoutingError>
     where
+        C: ComponentInstanceInterface,
         S: Sources,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
         O: OfferDeclCommon + FromEnum<OfferDecl> + Clone,
@@ -785,7 +792,7 @@ where
         match registration.source() {
             RegistrationSource::Self_ => {
                 let decl = target.decl().await?;
-                Ok(RegistrationResult::Source(CapabilitySource::Component {
+                Ok(RegistrationResult::Source(CapabilitySourceInterface::<C>::Component {
                     capability: sources.find_component_source(
                         registration.source_name(),
                         &decl.capabilities,
@@ -795,25 +802,27 @@ where
                 }))
             }
             RegistrationSource::Parent => match target.try_get_parent()? {
-                ExtendedInstance::AboveRoot(top) => {
+                ExtendedInstanceInterface::<C>::AboveRoot(top_instance) => {
                     if sources.is_namespace_supported() {
                         if let Some(capability) = sources.find_namespace_source(
                             registration.source_name(),
-                            &top.namespace_capabilities,
+                            top_instance.namespace_capabilities(),
                             visitor,
                         )? {
-                            return Ok(RegistrationResult::Source(CapabilitySource::Namespace {
-                                capability,
-                                top_instance: Arc::downgrade(&top),
-                            }));
+                            return Ok(RegistrationResult::Source(
+                                CapabilitySourceInterface::<C>::Namespace {
+                                    capability,
+                                    top_instance: Arc::downgrade(&top_instance),
+                                },
+                            ));
                         }
                     }
-                    Ok(RegistrationResult::Source(CapabilitySource::Builtin {
+                    Ok(RegistrationResult::Source(CapabilitySourceInterface::<C>::Builtin {
                         capability: sources.builtin_source(registration.source_name().clone())?,
-                        top_instance: Arc::downgrade(&top),
+                        top_instance: Arc::downgrade(&top_instance),
                     }))
                 }
-                ExtendedInstance::Component(parent_component) => {
+                ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
                         let parent_decl = parent_component.decl().await?;
                         let child_moniker =
@@ -826,7 +835,7 @@ where
                         .cloned()
                         .ok_or_else(|| {
                             <R as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                target.abs_moniker.clone(),
+                                target.abs_moniker().clone(),
                                 registration.source_name().clone(),
                             )
                         })?
@@ -840,12 +849,13 @@ where
                     target.get_live_child(&partial).await?.ok_or_else(|| {
                         RoutingError::EnvironmentFromChildInstanceNotFound {
                             child_moniker: partial,
-                            moniker: target.abs_moniker.clone(),
+                            moniker: target.abs_moniker().clone(),
                             capability_name: registration.source_name().clone(),
                             capability_type: R::TYPE,
                         }
                     })?
                 };
+
                 let child_expose: E = {
                     let child_decl = child_component.decl().await?;
                     find_matching_expose(registration.source_name(), &child_decl)
@@ -856,7 +866,7 @@ where
                                 .expect("ChildMoniker should exist")
                                 .to_partial();
                             <R as ErrorNotFoundInChild>::error_not_found_in_child(
-                                target.abs_moniker.clone(),
+                                target.abs_moniker().clone(),
                                 child_moniker,
                                 registration.source_name().clone(),
                             )
@@ -872,14 +882,14 @@ where
 pub struct Offer<O>(PhantomData<O>);
 
 /// The result of routing an Offer declaration to the next phase.
-enum OfferResult<O> {
+enum OfferResult<C: ComponentInstanceInterface, O> {
     /// The source of the Offer was found (Framework, AboveRoot, Component, etc.).
-    Source(CapabilitySource),
+    Source(CapabilitySourceInterface<C>),
     /// The Offer led to an Offer-from-child declaration.
     /// Not all capabilities can be exposed, so let the caller decide how to handle this.
-    OfferFromChild(O, Arc<ComponentInstance>),
+    OfferFromChild(O, Arc<C>),
     /// Offer from collection.
-    OfferFromCollection(O, Arc<ComponentInstance>, String),
+    OfferFromCollection(O, Arc<C>, String),
 }
 
 impl<O> Offer<O>
@@ -888,13 +898,14 @@ where
 {
     /// Routes the capability starting from the `offer` declaration at `target` to either a valid
     /// source (as defined by `sources`) or the declaration that ends this phase of routing.
-    async fn route<S, V>(
+    async fn route<C, S, V>(
         mut offer: O,
-        mut target: Arc<ComponentInstance>,
+        mut target: Arc<C>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<OfferResult<O>, RoutingError>
+    ) -> Result<OfferResult<C, O>, RoutingError>
     where
+        C: ComponentInstanceInterface,
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
@@ -905,7 +916,7 @@ where
             match offer.source() {
                 OfferSource::Self_ => {
                     let decl = target.decl().await?;
-                    return Ok(OfferResult::Source(CapabilitySource::Component {
+                    return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             offer.source_name(),
                             &decl.capabilities,
@@ -915,39 +926,44 @@ where
                     }));
                 }
                 OfferSource::Framework => {
-                    return Ok(OfferResult::Source(CapabilitySource::Framework {
+                    return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Framework {
                         capability: sources.framework_source(offer.source_name().clone())?,
                         component: target.as_weak(),
                     }))
                 }
                 OfferSource::Capability(_) => {
                     sources.capability_source()?;
-                    return Ok(OfferResult::Source(CapabilitySource::Capability {
+                    return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Capability {
                         source_capability: ComponentCapability::Offer(offer.into()),
                         component: target.as_weak(),
                     }));
                 }
                 OfferSource::Parent => {
                     let parent_component = match target.try_get_parent()? {
-                        ExtendedInstance::AboveRoot(top_instance) => {
+                        ExtendedInstanceInterface::<C>::AboveRoot(top_instance) => {
                             if sources.is_namespace_supported() {
                                 if let Some(capability) = sources.find_namespace_source(
                                     offer.source_name(),
-                                    &top_instance.namespace_capabilities,
+                                    top_instance.namespace_capabilities(),
                                     visitor,
                                 )? {
-                                    return Ok(OfferResult::Source(CapabilitySource::Namespace {
-                                        capability,
-                                        top_instance: Arc::downgrade(&top_instance),
-                                    }));
+                                    return Ok(OfferResult::Source(
+                                        CapabilitySourceInterface::<C>::Namespace {
+                                            capability,
+                                            top_instance: Arc::downgrade(&top_instance),
+                                        },
+                                    ));
                                 }
                             }
-                            return Ok(OfferResult::Source(CapabilitySource::Builtin {
-                                capability: sources.builtin_source(offer.source_name().clone())?,
-                                top_instance: Arc::downgrade(&top_instance),
-                            }));
+                            return Ok(OfferResult::Source(
+                                CapabilitySourceInterface::<C>::Builtin {
+                                    capability: sources
+                                        .builtin_source(offer.source_name().clone())?,
+                                    top_instance: Arc::downgrade(&top_instance),
+                                },
+                            ));
                         }
-                        ExtendedInstance::Component(component) => component,
+                        ExtendedInstanceInterface::<C>::Component(component) => component,
                     };
                     let child_moniker =
                         target.child_moniker().cloned().expect("ChildMoniker should exist");
@@ -957,7 +973,7 @@ where
                             .cloned()
                             .ok_or_else(|| {
                                 <O as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                    target.abs_moniker.clone(),
+                                    target.abs_moniker().clone(),
                                     offer.source_name().clone(),
                                 )
                             })?
@@ -975,7 +991,7 @@ where
                         decl.collections.iter().find(|c| &c.name == name).ok_or_else(|| {
                             RoutingError::OfferFromCollectionNotFound {
                                 collection: name.clone(),
-                                moniker: target.abs_moniker.clone(),
+                                moniker: target.abs_moniker().clone(),
                                 capability: offer.source_name().clone(),
                             }
                         })?;
@@ -990,11 +1006,12 @@ where
 
 /// Finds the matching Expose declaration for an Offer-from-child, changing the
 /// direction in which the Component Tree is being navigated (from up to down).
-async fn change_directions<O, E>(
+async fn change_directions<C, O, E>(
     offer: O,
-    component: Arc<ComponentInstance>,
-) -> Result<(E, Arc<ComponentInstance>), RoutingError>
+    component: Arc<C>,
+) -> Result<(E, Arc<C>), RoutingError>
 where
+    C: ComponentInstanceInterface,
     O: OfferDeclCommon + ErrorNotFoundInChild,
     E: ExposeDeclCommon + FromEnum<ExposeDecl> + Clone,
 {
@@ -1005,7 +1022,7 @@ where
                 component.get_live_child(&partial).await?.ok_or_else(|| {
                     RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker: partial,
-                        moniker: component.abs_moniker.clone(),
+                        moniker: component.abs_moniker().clone(),
                         capability_id: offer.source_name().clone().into(),
                     }
                 })?
@@ -1019,7 +1036,7 @@ where
                             .expect("ChildMoniker should exist")
                             .to_partial();
                         <O as ErrorNotFoundInChild>::error_not_found_in_child(
-                            component.abs_moniker.clone(),
+                            component.abs_moniker().clone(),
                             child_moniker,
                             offer.source_name().clone(),
                         )
@@ -1036,11 +1053,11 @@ where
 pub struct Expose<E>(PhantomData<E>);
 
 /// The result of routing an Expose declaration to the next phase.
-enum ExposeResult<E> {
+enum ExposeResult<C: ComponentInstanceInterface, E> {
     /// The source of the Expose was found (Framework, Component, etc.).
-    Source(CapabilitySource),
+    Source(CapabilitySourceInterface<C>),
     /// The source of the Expose comes from a collection.
-    ExposeFromCollection(E, Arc<ComponentInstance>, String),
+    ExposeFromCollection(E, Arc<C>, String),
 }
 
 impl<E> Expose<E>
@@ -1049,13 +1066,14 @@ where
 {
     /// Routes the capability starting from the `expose` declaration at `target` to a valid source
     /// (as defined by `sources`).
-    async fn route<S, V>(
+    async fn route<C, S, V>(
         mut expose: E,
-        mut target: Arc<ComponentInstance>,
+        mut target: Arc<C>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<ExposeResult<E>, RoutingError>
+    ) -> Result<ExposeResult<C, E>, RoutingError>
     where
+        C: ComponentInstanceInterface,
         S: Sources,
         V: ExposeVisitor<ExposeDecl = E>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
@@ -1066,7 +1084,7 @@ where
             match expose.source() {
                 ExposeSource::Self_ => {
                     let decl = target.decl().await?;
-                    return Ok(ExposeResult::Source(CapabilitySource::Component {
+                    return Ok(ExposeResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             expose.source_name(),
                             &decl.capabilities,
@@ -1076,14 +1094,14 @@ where
                     }));
                 }
                 ExposeSource::Framework => {
-                    return Ok(ExposeResult::Source(CapabilitySource::Framework {
+                    return Ok(ExposeResult::Source(CapabilitySourceInterface::<C>::Framework {
                         capability: sources.framework_source(expose.source_name().clone())?,
                         component: target.as_weak(),
                     }))
                 }
                 ExposeSource::Capability(_) => {
                     sources.capability_source()?;
-                    return Ok(ExposeResult::Source(CapabilitySource::Capability {
+                    return Ok(ExposeResult::Source(CapabilitySourceInterface::<C>::Capability {
                         source_capability: ComponentCapability::Expose(expose.into()),
                         component: target.as_weak(),
                     }));
@@ -1094,7 +1112,7 @@ where
                         target.get_live_child(&child_moniker).await?.ok_or_else(|| {
                             RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,
-                                moniker: target.abs_moniker.clone(),
+                                moniker: target.abs_moniker().clone(),
                                 capability_id: expose.source_name().clone().into(),
                             }
                         })?
@@ -1109,7 +1127,7 @@ where
                                     .expect("ChildMoniker should exist")
                                     .to_partial();
                                 <E as ErrorNotFoundInChild>::error_not_found_in_child(
-                                    target.abs_moniker.clone(),
+                                    target.abs_moniker().clone(),
                                     child_moniker,
                                     expose.source_name().clone(),
                                 )
@@ -1125,7 +1143,7 @@ where
                         decl.collections.iter().find(|c| &c.name == name).ok_or_else(|| {
                             RoutingError::ExposeFromCollectionNotFound {
                                 collection: name.clone(),
-                                moniker: target.abs_moniker.clone(),
+                                moniker: target.abs_moniker().clone(),
                                 capability: expose.source_name().clone(),
                             }
                         })?;
@@ -1182,7 +1200,7 @@ pub trait CapabilityVisitor {
     }
 }
 
-fn find_matching_offer<'a, O>(
+pub fn find_matching_offer<'a, O>(
     source_name: &CapabilityName,
     child_moniker: &ChildMoniker,
     decl: &'a ComponentDecl,
@@ -1196,7 +1214,7 @@ where
     })
 }
 
-fn find_matching_expose<'a, E>(
+pub fn find_matching_expose<'a, E>(
     source_name: &CapabilityName,
     decl: &'a ComponentDecl,
 ) -> Option<&'a E>
@@ -1226,6 +1244,7 @@ pub trait ErrorNotFoundInChild {
 }
 
 /// Creates a unit struct that implements a visitor for each declared type.
+#[macro_export]
 macro_rules! make_noop_visitor {
     ($name:ident, {
         $(OfferDecl => $offer_decl:ty,)*
@@ -1236,30 +1255,30 @@ macro_rules! make_noop_visitor {
         struct $name;
 
         $(
-            impl crate::model::routing::router::OfferVisitor for $name {
+            impl $crate::router::OfferVisitor for $name {
                 type OfferDecl = $offer_decl;
 
-                fn visit(&mut self, _decl: &Self::OfferDecl) -> Result<(), ::routing::error::RoutingError> {
+                fn visit(&mut self, _decl: &Self::OfferDecl) -> Result<(), $crate::error::RoutingError> {
                     Ok(())
                 }
             }
         )*
 
         $(
-            impl crate::model::routing::router::ExposeVisitor for $name {
+            impl $crate::router::ExposeVisitor for $name {
                 type ExposeDecl = $expose_decl;
 
-                fn visit(&mut self, _decl: &Self::ExposeDecl) -> Result<(), ::routing::error::RoutingError> {
+                fn visit(&mut self, _decl: &Self::ExposeDecl) -> Result<(), $crate::error::RoutingError> {
                     Ok(())
                 }
             }
         )*
 
         $(
-            impl crate::model::routing::router::CapabilityVisitor for $name {
+            impl $crate::router::CapabilityVisitor for $name {
                 type CapabilityDecl = $cap_decl;
 
-                fn visit(&mut self, _decl: &Self::CapabilityDecl) -> Result<(), ::routing::error::RoutingError> {
+                fn visit(&mut self, _decl: &Self::CapabilityDecl) -> Result<(), $crate::error::RoutingError> {
                     Ok(())
                 }
             }

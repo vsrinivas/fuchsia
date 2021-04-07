@@ -4,22 +4,13 @@
 
 use {
     crate::{
-        capability::CapabilitySource,
-        model::{
-            component::{ComponentInstance, WeakComponentInstance},
-            routing::{
-                error::RoutingError,
-                router::{
-                    find_matching_expose, CapabilityVisitor, ErrorNotFoundFromParent,
-                    ErrorNotFoundInChild, Expose, ExposeVisitor, Offer, OfferVisitor,
-                    RoutingStrategy, Sources,
-                },
-            },
+        capability_source::{CapabilitySourceInterface, CollectionCapabilityProvider},
+        component_instance::{ComponentInstanceInterface, WeakComponentInstanceInterface},
+        error::RoutingError,
+        router::{
+            find_matching_expose, CapabilityVisitor, ErrorNotFoundFromParent, ErrorNotFoundInChild,
+            Expose, ExposeVisitor, Offer, OfferVisitor, RoutingStrategy, Sources,
         },
-    },
-    ::routing::{
-        capability_source::CollectionCapabilityProvider,
-        component_instance::ComponentInstanceInterface,
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, OfferDecl, OfferDeclCommon},
@@ -29,9 +20,9 @@ use {
 };
 
 /// Routes an offer declaration to its sources within a collection.
-pub(super) struct RouteOfferFromCollection<B, O, E, S, V> {
+pub(super) struct RouteOfferFromCollection<C: ComponentInstanceInterface, B, O, E, S, V> {
     pub router: RoutingStrategy<B, Offer<O>, Expose<E>>,
-    pub collection_component: WeakComponentInstance,
+    pub collection_component: WeakComponentInstanceInterface<C>,
     pub collection_name: String,
     pub offer_decl: O,
     pub sources: S,
@@ -39,9 +30,10 @@ pub(super) struct RouteOfferFromCollection<B, O, E, S, V> {
 }
 
 #[async_trait]
-impl<B, O, E, S, V> CollectionCapabilityProvider<ComponentInstance>
-    for RouteOfferFromCollection<B, O, E, S, V>
+impl<C, B, O, E, S, V> CollectionCapabilityProvider<C>
+    for RouteOfferFromCollection<C, B, O, E, S, V>
 where
+    C: ComponentInstanceInterface + 'static,
     B: Send + Sync + 'static,
     O: OfferDeclCommon
         + ErrorNotFoundFromParent
@@ -63,7 +55,7 @@ where
     V: Clone + Send + Sync + 'static,
 {
     async fn list_instances(&self) -> Result<Vec<String>, RoutingError> {
-        list_instances_impl::<E>(
+        list_instances_impl::<C, E>(
             &self.collection_component,
             &self.collection_name,
             self.offer_decl.source_name(),
@@ -71,9 +63,12 @@ where
         .await
     }
 
-    async fn route_instance(&self, instance: &str) -> Result<CapabilitySource, RoutingError> {
+    async fn route_instance(
+        &self,
+        instance: &str,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError> {
         let target = self.collection_component.upgrade()?;
-        let (child_moniker, child_component): (PartialMoniker, Arc<ComponentInstance>) = {
+        let (child_moniker, child_component): (PartialMoniker, Arc<C>) = {
             target
                 .live_children_in_collection(&self.collection_name)
                 .await?
@@ -84,7 +79,7 @@ where
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
-                    moniker: target.abs_moniker.clone(),
+                    moniker: target.abs_moniker().clone(),
                     capability_id: self.offer_decl.source_name().clone().into(),
                 })?
         };
@@ -94,7 +89,7 @@ where
             find_matching_expose(self.offer_decl.source_name(), &child_decl).cloned().ok_or_else(
                 || {
                     O::error_not_found_in_child(
-                        target.abs_moniker.clone(),
+                        target.abs_moniker().clone(),
                         child_moniker,
                         self.offer_decl.source_name().clone(),
                     )
@@ -111,7 +106,7 @@ where
             .await
     }
 
-    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<ComponentInstance>> {
+    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C>> {
         Box::new(self.clone())
     }
 }
@@ -119,8 +114,9 @@ where
 // NOTE: Manual implementation of Clone is required, as the derived implementation
 // puts a Clone requirement on all generic params, which are used in PhantomData
 // and don't need to be Clone.
-impl<B, O, E, S, V> Clone for RouteOfferFromCollection<B, O, E, S, V>
+impl<C, B, O, E, S, V> Clone for RouteOfferFromCollection<C, B, O, E, S, V>
 where
+    C: ComponentInstanceInterface,
     O: Clone,
     S: Clone,
     V: Clone,
@@ -138,9 +134,9 @@ where
 }
 
 /// Routes an expose declaration to its sources within a collection.
-pub(super) struct RouteExposeFromCollection<B, O, E, S, V> {
+pub(super) struct RouteExposeFromCollection<C: ComponentInstanceInterface, B, O, E, S, V> {
     pub router: RoutingStrategy<B, O, Expose<E>>,
-    pub collection_component: WeakComponentInstance,
+    pub collection_component: WeakComponentInstanceInterface<C>,
     pub collection_name: String,
     pub expose_decl: E,
     pub sources: S,
@@ -148,9 +144,10 @@ pub(super) struct RouteExposeFromCollection<B, O, E, S, V> {
 }
 
 #[async_trait]
-impl<B, O, E, S, V> CollectionCapabilityProvider<ComponentInstance>
-    for RouteExposeFromCollection<B, O, E, S, V>
+impl<C, B, O, E, S, V> CollectionCapabilityProvider<C>
+    for RouteExposeFromCollection<C, B, O, E, S, V>
 where
+    C: ComponentInstanceInterface + 'static,
     B: Send + Sync + 'static,
     O: Send + Sync + 'static,
     E: ExposeDeclCommon
@@ -165,7 +162,7 @@ where
     V: Clone + Send + Sync + 'static,
 {
     async fn list_instances(&self) -> Result<Vec<String>, RoutingError> {
-        list_instances_impl::<E>(
+        list_instances_impl::<C, E>(
             &self.collection_component,
             &self.collection_name,
             self.expose_decl.source_name(),
@@ -173,9 +170,12 @@ where
         .await
     }
 
-    async fn route_instance(&self, instance: &str) -> Result<CapabilitySource, RoutingError> {
+    async fn route_instance(
+        &self,
+        instance: &str,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError> {
         let target = self.collection_component.upgrade()?;
-        let (child_moniker, child_component): (PartialMoniker, Arc<ComponentInstance>) = {
+        let (child_moniker, child_component): (PartialMoniker, Arc<C>) = {
             target
                 .live_children_in_collection(&self.collection_name)
                 .await?
@@ -186,7 +186,7 @@ where
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
-                    moniker: target.abs_moniker.clone(),
+                    moniker: target.abs_moniker().clone(),
                     capability_id: self.expose_decl.source_name().clone().into(),
                 })?
         };
@@ -196,7 +196,7 @@ where
             find_matching_expose(self.expose_decl.source_name(), &child_decl).cloned().ok_or_else(
                 || {
                     E::error_not_found_in_child(
-                        target.abs_moniker.clone(),
+                        target.abs_moniker().clone(),
                         child_moniker,
                         self.expose_decl.source_name().clone(),
                     )
@@ -213,7 +213,7 @@ where
             .await
     }
 
-    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<ComponentInstance>> {
+    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C>> {
         Box::new(self.clone())
     }
 }
@@ -221,8 +221,9 @@ where
 // NOTE: Manual implementation of Clone is required, as the derived implementation
 // puts a Clone requirement on all generic params, which are used in PhantomData
 // and don't need to be Clone.
-impl<B, O, E, S, V> Clone for RouteExposeFromCollection<B, O, E, S, V>
+impl<C, B, O, E, S, V> Clone for RouteExposeFromCollection<C, B, O, E, S, V>
 where
+    C: ComponentInstanceInterface,
     E: Clone,
     S: Clone,
     V: Clone,
@@ -241,17 +242,18 @@ where
 
 /// Returns a list of instance names, where the names are derived from components in the
 /// collection `collection_name` that expose the capability `E` with source name `capability_name`.
-async fn list_instances_impl<E>(
-    component: &WeakComponentInstance,
+async fn list_instances_impl<C, E>(
+    component: &WeakComponentInstanceInterface<C>,
     collection_name: &str,
     capability_name: &CapabilityName,
 ) -> Result<Vec<String>, RoutingError>
 where
+    C: ComponentInstanceInterface,
     E: ExposeDeclCommon + FromEnum<ExposeDecl>,
 {
     let mut instances = Vec::new();
     let component = component.upgrade()?;
-    let components: Vec<(PartialMoniker, Arc<ComponentInstance>)> =
+    let components: Vec<(PartialMoniker, Arc<C>)> =
         component.live_children_in_collection(collection_name).await?;
     for (partial_moniker, component) in components {
         match component.decl().await {

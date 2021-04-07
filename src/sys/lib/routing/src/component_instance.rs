@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{environment::EnvironmentInterface, error::ComponentInstanceError},
+    crate::{
+        capability_source::NamespaceCapabilities, environment::EnvironmentInterface,
+        error::ComponentInstanceError,
+    },
     async_trait::async_trait,
     cm_rust::ComponentDecl,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
@@ -17,7 +20,7 @@ use {
 /// A trait providing a representation of a component instance.
 // TODO(https://fxbug.dev/71901): Add methods providing all the data needed for capability routing.
 #[async_trait]
-pub trait ComponentInstanceInterface: Sized {
+pub trait ComponentInstanceInterface: Sized + Send + Sync {
     type TopInstance: TopInstanceInterface;
 
     /// Returns a new `WeakComponentInstanceInterface<Self>` pointing to `self`.
@@ -136,4 +139,6 @@ impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
 }
 
 /// A special instance identified with the top of the tree, i.e. component manager's instance.
-pub trait TopInstanceInterface: Sized {}
+pub trait TopInstanceInterface: Sized {
+    fn namespace_capabilities(&self) -> &NamespaceCapabilities;
+}
