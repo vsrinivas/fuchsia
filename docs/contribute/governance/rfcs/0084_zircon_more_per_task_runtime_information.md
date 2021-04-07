@@ -1,6 +1,7 @@
-{% set rfcid = "RFC-NNNN" %} {% include
-"docs/contribute/governance/rfcs/_common/_rfc_header.md" %} # {{ rfc.name }} -
-{{ rfc.title }} <!-- *** DO NOT EDIT ABOVE THIS LINE -->
+{% set rfcid = "RFC-NNNN" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+# {{ rfc.name }} - {{ rfc.title }}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 
