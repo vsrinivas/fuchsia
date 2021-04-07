@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/testing/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
@@ -13,6 +12,7 @@
 
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_element.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
@@ -24,67 +24,18 @@ namespace {
 using ::testing::ByRef;
 using ::testing::ElementsAre;
 
-class FakeElement : public modular_testing::FakeComponent {
- public:
-  explicit FakeElement(modular_testing::FakeComponent::Args args) : FakeComponent(std::move(args)) {
-    spec_.set_component_url(url());
-  };
-
-  ~FakeElement() override = default;
-
-  // Instantiates a FakeElement with a randomly generated URL and default sandbox services
-  // (see GetDefaultSandboxServices()).
-  static std::unique_ptr<FakeElement> CreateWithDefaultOptions() {
-    return std::make_unique<FakeElement>(modular_testing::FakeComponent::Args{
-        .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-        .sandbox_services = GetDefaultSandboxServices()});
-  }
-
-  // Returns the default list of services (capabilities) an element expects in its namespace.
-  //
-  // Default services:
-  //  * fuchsia.testing.modular.TestProtocol
-  static std::vector<std::string> GetDefaultSandboxServices() {
-    return {fuchsia::testing::modular::TestProtocol::Name_};
-  }
-
-  // Returns a Spec that can be used to propose this element.
-  const fuchsia::element::Spec& spec() const { return spec_; }
-
-  // Sets a function to be called when the element's component is created.
-  void set_on_create(fit::function<void(fuchsia::sys::StartupInfo)> on_create) {
-    on_create_ = std::move(on_create);
-  }
-
-  // Sets a function to be called when the element's component is destroyed.
-  void set_on_destroy(fit::function<void()> on_destroy) { on_destroy_ = std::move(on_destroy); }
-
- protected:
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
-    on_create_(std::move(startup_info));
-  }
-
-  void OnDestroy() override { on_destroy_(); }
-
- private:
-  fuchsia::element::Spec spec_;
-  fit::function<void(fuchsia::sys::StartupInfo)> on_create_ =
-      [](fuchsia::sys::StartupInfo /*unused*/) {};
-  fit::function<void()> on_destroy_ = []() {};
-};
-
 class ElementManagerTest : public modular_testing::TestHarnessFixture {
  protected:
   ElementManagerTest()
       : session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()),
         story_shell_(modular_testing::FakeStoryShell::CreateWithDefaultOptions()),
-        element_(FakeElement::CreateWithDefaultOptions()) {}
+        element_(modular_testing::FakeElement::CreateWithDefaultOptions()) {}
 
   fuchsia::modular::PuppetMasterPtr& puppet_master() { return puppet_master_; }
   fuchsia::element::ManagerPtr& element_manager() { return element_manager_; }
   modular_testing::FakeSessionShell* session_shell() { return session_shell_.get(); }
   modular_testing::FakeStoryShell* story_shell() { return story_shell_.get(); }
-  FakeElement* element() { return element_.get(); }
+  modular_testing::FakeElement* element() { return element_.get(); }
 
   void StartSession() {
     modular_testing::TestHarnessBuilder builder;
@@ -107,7 +58,7 @@ class ElementManagerTest : public modular_testing::TestHarnessFixture {
   fuchsia::element::ManagerPtr element_manager_;
   std::unique_ptr<modular_testing::FakeSessionShell> session_shell_;
   std::unique_ptr<modular_testing::FakeStoryShell> story_shell_;
-  std::unique_ptr<FakeElement> element_;
+  std::unique_ptr<modular_testing::FakeElement> element_;
 };
 
 // Tests that ElementManager.ProposeElement creates the element's component.
