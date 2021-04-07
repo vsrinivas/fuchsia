@@ -64,7 +64,6 @@ impl BufferSource for VmoBufferSource {
 
     unsafe fn sub_slice(&self, range: &Range<usize>) -> &mut [u8] {
         assert!(range.start < self.size() && range.end <= self.size());
-        assert!(range.start % zx::system_get_page_size() as usize == 0);
         std::slice::from_raw_parts_mut(
             ((&mut *self.slice.get()).as_mut_ptr() as usize + range.start) as *mut u8,
             range.end - range.start,
@@ -91,6 +90,10 @@ const TRANSFER_VMO_SIZE: usize = 128 * 1024 * 1024;
 impl BlockDevice {
     /// Creates a new BlockDevice over |remote|.
     pub fn new(remote: Box<dyn BlockClient>) -> Self {
+        // TODO(jfsulliv): Should we align buffers to the system page size as well? This will be
+        // necessary for splicing pages out of the transfer buffer, but that only improves
+        // performance for large data transfers, and we might simply attach separate VMOs to the
+        // block device in those cases.
         let allocator = BufferAllocator::new(
             remote.block_size() as usize,
             Box::new(VmoBufferSource::new(remote.as_ref(), TRANSFER_VMO_SIZE)),
@@ -118,6 +121,9 @@ impl Device for BlockDevice {
     }
 
     async fn read(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<(), Error> {
+        if buffer.len() == 0 {
+            return Ok(());
+        }
         let vmoid = self.buffer_source().vmoid();
         ensure!(vmoid.is_valid(), "Device is closed");
         assert_eq!(offset % self.block_size() as u64, 0);
@@ -136,6 +142,9 @@ impl Device for BlockDevice {
     }
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
+        if buffer.len() == 0 {
+            return Ok(());
+        }
         let vmoid = self.buffer_source().vmoid();
         ensure!(vmoid.is_valid(), "Device is closed");
         assert_eq!(offset % self.block_size() as u64, 0);
@@ -189,17 +198,17 @@ mod tests {
 
         {
             let mut buf1 = device.allocate_buffer(8192);
-            let mut buf2 = device.allocate_buffer(8192);
+            let mut buf2 = device.allocate_buffer(1024);
             buf1.as_mut_slice().fill(0xaa as u8);
             buf2.as_mut_slice().fill(0xbb as u8);
             device.write(65536, buf1.as_ref()).await.expect("Write failed");
             device.write(65536 + 8192, buf2.as_ref()).await.expect("Write failed");
         }
         {
-            let mut buf = device.allocate_buffer(16384);
+            let mut buf = device.allocate_buffer(8192 + 1024);
             device.read(65536, buf.as_mut()).await.expect("Read failed");
             assert_eq!(buf.as_slice()[..8192], vec![0xaa as u8; 8192]);
-            assert_eq!(buf.as_slice()[8192..], vec![0xbb as u8; 8192]);
+            assert_eq!(buf.as_slice()[8192..], vec![0xbb as u8; 1024]);
         }
 
         device.close().await.expect("Close failed");

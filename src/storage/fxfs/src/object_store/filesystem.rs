@@ -270,8 +270,14 @@ impl FxFilesystem {
     }
 
     pub async fn close(&self) -> Result<(), Error> {
-        self.journal.sync(SyncOptions::default()).await?;
-        self.device.close().await
+        // Regardless of whether sync succeeds, we should close the device, since otherwise we will
+        // crash instead of exiting gracefully.
+        let sync_status = self.journal.sync(SyncOptions::default()).await;
+        if sync_status.is_err() {
+            log::error!("Failed to sync filesystem; data may be lost: {:?}", sync_status);
+        }
+        self.device.close().await.expect("Failed to close device");
+        sync_status
     }
 }
 
