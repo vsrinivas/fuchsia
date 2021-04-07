@@ -76,7 +76,7 @@ int Astro::Thread() {
   }
   zxlogf(INFO, "Detected board rev 0x%x", info.board_revision);
 
-  if (info.board_revision != BOARD_REV_PVT) {
+  if (info.board_revision != BOARD_REV_DVT && info.board_revision != BOARD_REV_PVT) {
     zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue", info.board_revision);
     return -1;
   }
