@@ -10,8 +10,8 @@ For information on the GN C++ Frontend SDK see [this getting started guide](/doc
 
 Fuchsia is taking a modular approach to exposing the Fuchsia platform to developers.
 
-At the center of this strategy is the Integrator Development Kit (IDK), distilled out of the
-present Git repository.
+At the center of this strategy is the Integrator Development Kit (IDK), distilled out
+of the Git repository mentioned in [Contributing changes](/docs/development/source_code/contribute_changes.md).
 This IDK contains a small set of libraries and tools required to start building
 and running programs that target Fuchsia.
 The contents of that IDK represent the most basic contract that the Fuchsia
