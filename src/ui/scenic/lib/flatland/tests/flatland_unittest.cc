@@ -2871,6 +2871,88 @@ TEST_F(FlatlandTest, CreateImageValidCase) {
   CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
 }
 
+TEST_F(FlatlandTest, SetOpacityTestCases) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland();
+  const TransformId kId = 1;
+
+  // Zero is not a valid transform ID.
+  {
+    flatland.SetOpacity(0, 0.5);
+    PRESENT(flatland, false);
+  }
+
+  // The transform id hasn't been imported yet.
+  {
+    flatland.SetOpacity(kId, 0.5);
+    PRESENT(flatland, false);
+  }
+
+  // Setup a valid transform.
+  flatland.CreateTransform(kId);
+  flatland.SetRootTransform(kId);
+
+  // The alpha values are out of range.
+  {
+    flatland.SetOpacity(kId, -0.5);
+    PRESENT(flatland, false);
+
+    flatland.SetOpacity(kId, 1.5);
+    PRESENT(flatland, false);
+  }
+
+  // Testing now with good values should finally work.
+  {
+    flatland.SetOpacity(kId, 0.5);
+    PRESENT(flatland, true);
+  }
+
+  const TransformId kIdChild = 2;
+  flatland.CreateTransform(kIdChild);
+
+  // Adding a child should fail because the alpha value is not 1.0
+  {
+    flatland.AddChild(kId, kIdChild);
+    PRESENT(flatland, false);
+  }
+
+  // We should still be able to add an *image* to the transform though since that is
+  // content and is treated differently from a normal child.
+  {
+    const uint32_t kImageId = 5;
+    BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+    ImageProperties properties;
+    properties.set_width(150);
+    properties.set_height(175);
+    std::shared_ptr<Allocator> allocator = CreateAllocator();
+    CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
+    flatland.SetContentOnTransform(kImageId, kId);
+    PRESENT(flatland, true);
+  }
+
+  // We shold still be able to change the opacity to another value < 1 even with an image
+  // on the transform.
+  {
+    flatland.SetOpacity(kId, 0.3);
+    PRESENT(flatland, true);
+  }
+
+  // If we set the alpha to 1.0 again and then add the child, now it
+  // should work.
+  {
+    flatland.SetOpacity(kId, 1.0);
+    flatland.AddChild(kId, kIdChild);
+    PRESENT(flatland, true);
+  }
+
+  // Now that a child is added, if we try to change the alpha again, it
+  // should fail.
+  {
+    flatland.SetOpacity(kId, 0.5);
+    PRESENT(flatland, false);
+  }
+}
+
 TEST_F(FlatlandTest, CreateImageErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
   Flatland flatland = CreateFlatland();

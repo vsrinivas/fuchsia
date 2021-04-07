@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
+
+config("renderer_test_config") {
+  defines = []
+  if (board_name == "astro" || board_name == "sherlock") {
+    defines += [ "PLATFORM_AMLOGIC" ]
+  }
+}
+
 group("tests") {
   testonly = true
 
@@ -38,4 +47,6 @@ executable("unittests") {
 
   # TODO(fxbug.dev/58615): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  public_configs = [ ":renderer_test_config" ]
 }

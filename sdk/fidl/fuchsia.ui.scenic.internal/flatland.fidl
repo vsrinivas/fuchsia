@@ -352,6 +352,17 @@ protocol Flatland {
     /// objects that are not referenced by the new root.
     SetRootTransform(TransformId transform_id);
 
+    /// Sets an opacity in linear space to be applied to a transform and its descendents,
+    /// which include other transforms and content. This is meant to support "group opacity",
+    /// which allows multiple images to be rendered as a unit with the same opacity value
+    /// applied over the whole.
+    ///
+    /// TODO (fxbug.dev/44255): The implementation for group opacity is not complete, so at
+    /// the moment |SetOpacity| is only valid when called on a leaf transform. Flatland will
+    /// report an error if the opacity is changed to be anything other than 1.0 on a non-leaf
+    /// node, or if a child is added to an existing leaf node with an opacity value < 1.0.
+    SetOpacity(TransformId transform_id, float32 val);
+
     // ***** Content *****
 
     // Content comes in many forms, but most content can be treated conceptually as a bitmap.

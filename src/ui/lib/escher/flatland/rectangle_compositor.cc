@@ -92,7 +92,7 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
 
     float z = 1.f;
     for (int64_t i = num_renderables - 1; i >= 0; i--) {
-      if (!color_data[i].is_transparent) {
+      if (color_data[i].is_opaque) {
         DrawSingle(cmd_buf, program, rectangles[i], textures[i].get(), color_data[i].color, z);
       }
       z += 1.f;
@@ -105,7 +105,7 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
     cmd_buf->SetDepthTestAndWrite(true, false);
     float z = static_cast<float>(rectangles.size());
     for (int64_t i = 0; i < num_renderables; i++) {
-      if (color_data[i].is_transparent) {
+      if (!color_data[i].is_opaque) {
         DrawSingle(cmd_buf, program, rectangles[i], textures[i].get(), color_data[i].color, z);
       }
       z -= 1.f;

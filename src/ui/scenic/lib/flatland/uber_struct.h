@@ -43,6 +43,10 @@ struct UberStruct {
   // TransformHandle. Handles with no entry indicate an identity matrix.
   std::unordered_map<TransformHandle, glm::mat3> local_matrices;
 
+  // The local (i.e. relative to the parent) opacity values of each TransformHandles. Handles
+  // with no entry indcate an opacity value of 1.0.
+  std::unordered_map<TransformHandle, float> local_opacity_values;
+
   // The images associated with each TransformHandle.
   std::unordered_map<TransformHandle, allocation::ImageMetadata> images;
 };

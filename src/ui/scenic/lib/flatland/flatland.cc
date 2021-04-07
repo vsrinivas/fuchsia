@@ -162,6 +162,10 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
       uber_struct->local_matrices[handle] = matrix_data.GetMatrix();
     }
 
+    for (const auto& [handle, opacity_value] : opacity_values_) {
+      uber_struct->local_opacity_values[handle] = opacity_value;
+    }
+
     uber_struct->images = image_metadatas_;
 
     // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
@@ -405,6 +409,13 @@ void Flatland::AddChild(TransformId parent_transform_id, TransformId child_trans
     return;
   }
 
+  if (opacity_values_.find(parent_global_kv->second) != opacity_values_.end() &&
+      opacity_values_[parent_global_kv->second] != 1.f) {
+    FX_LOGS(ERROR) << "Cannot add a child to a node with an opacity value < 1.0.";
+    ReportError();
+    return;
+  }
+
   bool added = transform_graph_.AddChild(parent_global_kv->second, child_global_kv->second);
 
   if (!added) {
@@ -572,6 +583,7 @@ void Flatland::CreateImage(ContentId image_id,
   metadata.vmo_index = vmo_index;
   metadata.width = properties.width();
   metadata.height = properties.height();
+  metadata.is_opaque = false;
 
   for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {
     auto& importer = buffer_collection_importers_[i];
@@ -599,6 +611,41 @@ void Flatland::CreateImage(ContentId image_id,
   auto handle = transform_graph_.CreateTransform();
   content_handles_[image_id] = handle;
   image_metadatas_[handle] = metadata;
+}
+
+void Flatland::SetOpacity(TransformId transform_id, float val) {
+  if (transform_id == kInvalidId) {
+    FX_LOGS(ERROR) << "SetOpacity called with transform_id 0";
+    ReportError();
+    return;
+  }
+
+  if (val < 0.f || val > 1.f) {
+    FX_LOGS(ERROR) << "Opacity value is not within valid range [0,1].";
+    ReportError();
+    return;
+  }
+
+  auto transform_kv = transforms_.find(transform_id);
+
+  if (transform_kv == transforms_.end()) {
+    FX_LOGS(ERROR) << "SetOpacity failed, transform_id " << transform_id << " not found";
+    ReportError();
+    return;
+  }
+
+  if (transform_graph_.HasChildren(transform_kv->second)) {
+    FX_LOGS(ERROR) << "Cannot set the opacity value of a non-leaf node below 1.0";
+    ReportError();
+    return;
+  }
+
+  // Erase the value from the map since we store 1.f implicity.
+  if (val == 1.f) {
+    opacity_values_.erase(transform_kv->second);
+  } else {
+    opacity_values_[transform_kv->second] = val;
+  }
 }
 
 void Flatland::SetContentOnTransform(ContentId content_id, TransformId transform_id) {

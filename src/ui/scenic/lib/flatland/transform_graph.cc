@@ -33,6 +33,16 @@ bool TransformGraph::ReleaseTransform(TransformHandle handle) {
   return true;
 }
 
+bool TransformGraph::HasChildren(TransformHandle parent) const {
+  return children_.find({parent, NORMAL}) != children_.end();
+}
+
+void TransformGraph::ClearChildren(TransformHandle parent) {
+  FX_DCHECK(is_valid_);
+  FX_DCHECK(working_set_.count(parent));
+  children_.erase({parent, NORMAL});
+}
+
 bool TransformGraph::AddChild(TransformHandle parent, TransformHandle child) {
   FX_DCHECK(is_valid_);
   FX_DCHECK(working_set_.count(parent));
@@ -61,12 +71,6 @@ bool TransformGraph::RemoveChild(TransformHandle parent, TransformHandle child) 
   }
 
   return false;
-}
-
-void TransformGraph::ClearChildren(TransformHandle parent) {
-  FX_DCHECK(is_valid_);
-  FX_DCHECK(working_set_.count(parent));
-  children_.erase({parent, NORMAL});
 }
 
 void TransformGraph::SetPriorityChild(TransformHandle parent, TransformHandle child) {

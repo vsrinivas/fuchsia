@@ -456,10 +456,9 @@ void VkRenderer::Render(const ImageMetadata& render_target,
     // Pass the texture into the above vector to keep it alive outside of this loop.
     textures.emplace_back(local_texture_map.at(image.identifier));
 
-    // TODO(fxbug.dev/52632): We are hardcoding the multiply color. Eventually it will
-    // be exposed in the API.
-    color_data.emplace_back(
-        escher::RectangleCompositor::ColorData(glm::vec4(1.f), image.has_transparency));
+    glm::vec4 multiply(image.multiply_color[0], image.multiply_color[1], image.multiply_color[2],
+                       image.multiply_color[3]);
+    color_data.emplace_back(escher::RectangleCompositor::ColorData(multiply, image.is_opaque));
   }
 
   // Grab the output image and use it to generate a depth texture. The depth texture needs to

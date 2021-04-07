@@ -727,8 +727,6 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 // ----------------
 // ----------------
 // ----------------
-// TODO(fxbug.dev/52632): Transparency is currently hardcoded in the renderer to be on. This test
-// will break if that is changed to be hardcoded to false before we expose it in the API.
 VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
@@ -741,7 +739,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
 
   auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
-  // Register and the collection with the renderer.
+  // Register the collection with the renderer.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
 
   auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
@@ -812,7 +810,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
                                        .vmo_index = 1,
                                        .width = 1,
                                        .height = 1,
-                                       .has_transparency = true};
+                                       .is_opaque = false};
 
   // Import all the images.
   renderer.ImportBufferImage(render_target);
@@ -896,6 +894,212 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 4), glm::ivec4(128, 255, 0, 255));
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 3), glm::ivec4(0, 255, 0, 128));
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 4), glm::ivec4(0, 255, 0, 128));
+
+        // Make sure the remaining pixels are black.
+        uint32_t black_pixels = 0;
+        for (uint32_t y = 0; y < kTargetHeight; y++) {
+          for (uint32_t x = 0; x < kTargetWidth; x++) {
+            auto col = GetPixel(vmo_host, kTargetWidth, x, y);
+            if (col == glm::ivec4(0, 0, 0, 0))
+              black_pixels++;
+          }
+        }
+        EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - 10U);
+      });
+}
+
+// Tests the multiply color for images, which can also affect transparency.
+// Render two overlapping rectangles, a red opaque one covered slightly by
+// a green transparent one with an alpha of 0.5. These values are set not
+// on the pixel values of the images which should be all white and opaque
+// (1,1,1,1) but instead via the multiply_color value on the ImageMetadata.
+// ----------------
+// ----------------
+// ----------------
+// ------RYYYG----
+// ------RYYYG----
+// ----------------
+// ----------------
+// ----------------
+VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  // First create the pair of sysmem tokens, one for the client, one for the renderer.
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+
+  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+
+  // Register the collection with the renderer.
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+
+  auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
+                                                std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  auto client_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ 1,
+      /*height*/ 1, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
+
+  auto target_id = allocation::GenerateUniqueBufferCollectionId();
+  result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
+                                                   std::move(target_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(target_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ 60,
+      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
+
+  // Have the client wait for buffers allocated so it can populate its information
+  // struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status =
+        client_collection->WaitForBuffersAllocated(&allocation_status, &client_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  const uint32_t kTargetWidth = 16;
+  const uint32_t kTargetHeight = 8;
+
+  // Create the render_target image metadata.
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
+
+  // Create the image meta data for the renderable.
+  ImageMetadata renderable_texture = {.collection_id = collection_id,
+                                      .identifier = allocation::GenerateUniqueImageId(),
+                                      .vmo_index = 0,
+                                      .width = 1,
+                                      .height = 1,
+                                      .multiply_color = {1, 0, 0, 1},
+                                      .is_opaque = false};
+
+  // Create the texture that will go on the transparent renderable.
+  ImageMetadata transparent_texture = {.collection_id = collection_id,
+                                       .identifier = allocation::GenerateUniqueImageId(),
+                                       .vmo_index = 0,
+                                       .width = 1,
+                                       .height = 1,
+                                       .multiply_color = {0, 1, 0, 0.5},
+                                       .is_opaque = false};
+
+  // Import all the images.
+  renderer.ImportBufferImage(render_target);
+  renderer.ImportBufferImage(renderable_texture);
+  renderer.ImportBufferImage(transparent_texture);
+
+  // Create the two renderables.
+  const uint32_t kRenderableWidth = 4;
+  const uint32_t kRenderableHeight = 2;
+  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  Rectangle2D transparent_renderable(glm::vec2(7, 3),
+                                     glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  // Have the client write white pixel values to image backing the above two renderables.
+  MapHostPointer(client_collection_info, renderable_texture.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Create a red opaque pixel.
+                   const uint8_t kNumWrites = 4;
+                   const uint8_t kWriteValues[] = {/*red*/ 255U, /*green*/ 255U, /*blue*/ 255U,
+                                                   /*alpha*/ 255U};
+                   memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+
+                   // Flush the cache after writing to host VMO.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kNumWrites,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+                 });
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable, transparent_renderable},
+                  {renderable_texture, transparent_texture});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(
+      client_target_info, render_target.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        // Flush the cache before reading back target image.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+        // Directly reading the vmo values does not unmap the sRGB image values back
+        // into a linear space. So we have to do that conversion here before we do
+        // any value comparisons. This conversion could be done automatically if we were
+        // doing a Vulkan read on the vk::Image directly and not a sysmem read of the vmo,
+        // but we don't have direct access to the images in the Renderer.
+        uint8_t linear_vals[num_bytes];
+        for (uint32_t i = 0; i < num_bytes; i++) {
+          // Do not de-encode the alpha value.
+          if ((i + 1) % 4 == 0) {
+            linear_vals[i] = vmo_host[i];
+            continue;
+          }
+
+          // Function to convert from sRGB to linear RGB.
+          float s_val = (float(vmo_host[i]) / float(0xFF));
+          if (0.f <= s_val && s_val <= 0.04045f) {
+            linear_vals[i] = (s_val / 12.92f) * 255U;
+          } else {
+            linear_vals[i] = std::powf(((s_val + 0.055f) / 1.055f), 2.4f) * 255U;
+          }
+        }
+
+// The sRGB values are different on the amlogic platforms than on other platforms and
+// so we define different uncompressed linear rgb values to compare against depending
+// on the platform.
+#ifdef PLATFORM_AMLOGIC
+        const uint32_t kCompVal = 128;
+#else
+        const uint32_t kCompVal = 126;
+#endif
+
+        // Make sure the pixels are in the right order give that we rotated
+        // the rectangle.
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 3), glm::ivec4(0, 0, 255, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 4), glm::ivec4(0, 0, 255, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 3),
+                  glm::ivec4(0, kCompVal, kCompVal, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 4),
+                  glm::ivec4(0, kCompVal, kCompVal, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 3),
+                  glm::ivec4(0, kCompVal, kCompVal, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 4),
+                  glm::ivec4(0, kCompVal, kCompVal, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 3),
+                  glm::ivec4(0, kCompVal, kCompVal, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 4),
+                  glm::ivec4(0, kCompVal, kCompVal, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 3), glm::ivec4(0, kCompVal, 0, 128));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 4), glm::ivec4(0, kCompVal, 0, 128));
 
         // Make sure the remaining pixels are black.
         uint32_t black_pixels = 0;

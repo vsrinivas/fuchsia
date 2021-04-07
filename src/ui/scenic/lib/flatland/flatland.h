@@ -110,6 +110,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
                    uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void SetOpacity(TransformId transform_id, float val) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void SetContentOnTransform(ContentId content_id, TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkProperties(ContentId link_id,
@@ -276,6 +278,11 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A geometric transform for each TransformHandle. If not present, that TransformHandle has the
   // identity matrix for its transform.
   std::unordered_map<TransformHandle, MatrixData> matrices_;
+
+  // A map of transform handles to opacity values where the values are strictly in the range
+  // [0.f,1.f). 0.f is completely transparent and 1.f, which is completely opaque, is stored
+  // implicitly as a transform handle with no entry in this map will default to 1.0.
+  std::unordered_map<TransformHandle, float> opacity_values_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, allocation::ImageMetadata> image_metadatas_;

@@ -110,7 +110,7 @@ VK_TEST_F(RectangleCompositorTest, SingleRenderableTest) {
   EXPECT_TRUE(ren_);
 
   Rectangle2D rectangle(vec2(150, 200), vec2(100, 300));
-  RectangleCompositor::ColorData color_data(vec4(1), /*is_transparent*/ false);
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_opaque*/ true);
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
@@ -142,7 +142,7 @@ VK_TEST_F(RectangleCompositorTest, SimpleTextureTest) {
   gpu_uploader->Submit();
 
   Rectangle2D rectangle(vec2(0, 0), vec2(512, 512));
-  RectangleCompositor::ColorData color_data(vec4(1), /*is_transparent*/ false);
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_opaque*/ true);
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
@@ -190,7 +190,7 @@ VK_TEST_F(RectangleCompositorTest, RotatedTextureTest) {
 
   Rectangle2D rectangle(vec2(256, 0), vec2(512, 512),
                         {vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)});
-  RectangleCompositor::ColorData color_data(vec4(1), /*is_transparent*/ false);
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_opaque*/ true);
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
@@ -227,7 +227,7 @@ VK_TEST_F(RectangleCompositorTest, MultiRenderableTest) {
   vec4 colors[4] = {vec4{1, 0, 0, 1}, vec4(0, 1, 0, 1), vec4(0, 0, 1, 1), vec4(1, 1, 1, 1)};
   for (uint32_t i = 0; i < 4; i++) {
     Rectangle2D rectangle(vec2(128 * i, 0), vec2(128, 512));
-    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ false);
+    RectangleCompositor::ColorData color_data(colors[i], /*is_opaque*/ true);
 
     rectangles.emplace_back(rectangle);
     color_datas.emplace_back(color_data);
@@ -273,7 +273,7 @@ VK_TEST_F(RectangleCompositorTest, OverlapTest) {
   for (uint32_t i = 0; i < 2; i++) {
     Rectangle2D rectangle(vec2(200, 200), vec2(100, 100));
 
-    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ false);
+    RectangleCompositor::ColorData color_data(colors[i], /*is_opaque*/ true);
 
     rectangles.emplace_back(rectangle);
     color_datas.emplace_back(color_data);
@@ -302,8 +302,8 @@ VK_TEST_F(RectangleCompositorTest, OverlapTest) {
 // This test makes sure that alpha-blending transparency works.
 // It renders a blue rectangle with 0.6 alpha on top of an
 // opaque red rectangle.
-// It does this test *twice*, once with is_transparent turned on
-// and one with it off. Transparency should only be applied when
+// It does this test *twice*, once with is_opaque turned off
+// and one with it on. Transparency should only be applied when
 // the flag is on, even if the RectangleRenderable color has an
 // alpha that is < 1.0.
 // TODO (43394): Add testing for multiple interleaved opaque and
@@ -319,7 +319,7 @@ VK_TEST_F(RectangleCompositorTest, TransparencyTest) {
   vec4 colors[2] = {vec4{1, 0, 0, 1}, vec4(0, 0, 1, 0.6)};
   for (uint32_t i = 0; i < 2; i++) {
     Rectangle2D rectangle(vec2(200, 200), vec2(100, 100));
-    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ true);
+    RectangleCompositor::ColorData color_data(colors[i], /*is_opaque*/ false);
 
     rectangles.emplace_back(rectangle);
     color_datas.emplace_back(color_data);
@@ -363,7 +363,7 @@ VK_TEST_F(RectangleCompositorTest, TransparencyFlagOffTest) {
   vec4 colors[2] = {vec4{1, 0, 0, 1}, vec4(0, 0, 1, 0.6)};
   for (uint32_t i = 0; i < 2; i++) {
     Rectangle2D rectangle(vec2(200, 200), vec2(100, 100));
-    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ false);
+    RectangleCompositor::ColorData color_data(colors[i], /*is_opaque*/ true);
 
     rectangles.emplace_back(rectangle);
     color_datas.emplace_back(color_data);
@@ -403,7 +403,7 @@ VK_TEST_F(RectangleCompositorTest, StressTest) {
   uint32_t max_renderables = 100;
   for (uint32_t i = 0; i < max_renderables; i++) {
     Rectangle2D rectangle(vec2(i, 0), vec2(1, 1));
-    RectangleCompositor::ColorData color_data(vec4(1, 0, 0, 1), /*is_transparent*/ false);
+    RectangleCompositor::ColorData color_data(vec4(1, 0, 0, 1), /*is_opaque*/ true);
 
     rectangles.emplace_back(rectangle);
     color_datas.emplace_back(color_data);

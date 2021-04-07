@@ -73,8 +73,8 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
           GlobalTopologyData::ComputeGlobalTopologyData(snapshot, links, link_system_id, transform);
       const auto global_matrices = ComputeGlobalMatrices(topology_data.topology_vector,
                                                          topology_data.parent_indices, snapshot);
-      const auto [image_indices, images] =
-          ComputeGlobalImageData(topology_data.topology_vector, snapshot);
+      const auto [image_indices, images] = ComputeGlobalImageData(
+          topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
       const auto image_rectangles =
           ComputeGlobalRectangles(SelectMatrices(global_matrices, image_indices));
@@ -83,9 +83,8 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
                                 global_matrices, pixel_scale, snapshot);
 
       FX_DCHECK(image_rectangles.size() == images.size());
-      image_list_per_display.push_back({.rectangles = image_rectangles,
-                                        .images = images,
-                                        .display_id = display_id});
+      image_list_per_display.push_back(
+          {.rectangles = image_rectangles, .images = images, .display_id = display_id});
     }
     return image_list_per_display;
   }

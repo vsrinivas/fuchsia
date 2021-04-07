@@ -62,6 +62,9 @@ class TransformGraph {
   // already been released.
   bool ReleaseTransform(TransformHandle handle);
 
+  // Checks to see if the current transform has and child transform handles.
+  bool HasChildren(TransformHandle parent) const;
+
   // Creates a directed edge from the parent to the child transform. Children are kept alive by
   // unreleased parents. The parent transform should be an unreleased transform created by calling
   // CreateTransform() on this object, but this is only enforced by DCHECK. Returns false if the

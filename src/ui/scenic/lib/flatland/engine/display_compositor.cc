@@ -199,7 +199,6 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   for (uint32_t i = 0; i < num_images; i++) {
     ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0, /*signal_id*/ 0);
   }
-
   return true;
 }
 
@@ -225,10 +224,10 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D r
 
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
 
-  auto alpha_mode = image.has_transparency ? fuchsia::hardware::display::AlphaMode::PREMULTIPLIED
-                                           : fuchsia::hardware::display::AlphaMode::DISABLE;
+  auto alpha_mode = image.is_opaque ? fuchsia::hardware::display::AlphaMode::DISABLE
+                                    : fuchsia::hardware::display::AlphaMode::PREMULTIPLIED;
 
-  (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, 1.f);
+  (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
 
   // Set the imported image on the layer.
   // TODO(fxbug.dev/59646): Add wait and signal events.
@@ -434,8 +433,7 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
                                         .identifier = allocation::GenerateUniqueImageId(),
                                         .vmo_index = i,
                                         .width = kWidth,
-                                        .height = kHeight,
-                                        .has_transparency = false};
+                                        .height = kHeight};
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
     bool res = ImportBufferImage(target);

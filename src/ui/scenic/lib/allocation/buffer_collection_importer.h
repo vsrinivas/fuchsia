@@ -33,15 +33,18 @@ struct ImageMetadata {
   uint32_t width = 0;
   uint32_t height = 0;
 
-  // If false, the image will be rendered as opaque even if there are pixels that have
-  // transparent values. If true, each pixel's alpha value will be taken into
-  // account during rendering.
-  bool has_transparency = false;
+  // Linear-space RGBA values to multiply with the pixel values of the image.
+  std::array<float, 4> multiply_color = {1.f, 1.f, 1.f, 1.f};
+
+  // If false, the image will be rendered with translucency, taking into account both
+  // the individual pixel alpha and the alpha of the |multiply_color| field multiplied
+  // together.
+  bool is_opaque = true;
 
   bool operator==(const ImageMetadata& meta) const {
-    return collection_id == meta.collection_id && vmo_index == meta.vmo_index &&
-           width == meta.width && height == meta.height &&
-           has_transparency == meta.has_transparency;
+    return (collection_id == meta.collection_id && vmo_index == meta.vmo_index &&
+            width == meta.width && height == meta.height && is_opaque == meta.is_opaque &&
+            multiply_color == meta.multiply_color);
   }
 };
 

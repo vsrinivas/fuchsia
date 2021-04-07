@@ -377,8 +377,7 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
                                       .identifier = allocation::GenerateUniqueImageId(),
                                       .vmo_index = 0,
                                       .width = kTextureWidth,
-                                      .height = kTextureHeight,
-                                      .has_transparency = false};
+                                      .height = kTextureHeight};
   auto result = display_compositor->ImportBufferImage(image_metadata);
   EXPECT_TRUE(result);
 
@@ -452,8 +451,7 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
                           .identifier = allocation::GenerateUniqueImageId(),
                           .vmo_index = i,
                           .width = kTextureWidth,
-                          .height = kTextureHeight,
-                          .has_transparency = false};
+                          .height = kTextureHeight};
   }
 
   // Use the VK renderer here so we can make use of software rendering.
@@ -581,7 +579,7 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
                           .vmo_index = i,
                           .width = kTextureWidth,
                           .height = kTextureHeight,
-                          .has_transparency = (i == 1)};
+                          .is_opaque = (i != 1)};
   }
 
   // Use the VK renderer here so we can make use of software rendering.

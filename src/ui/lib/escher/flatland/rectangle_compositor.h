@@ -21,14 +21,13 @@ class RectangleCompositor {
   static const vk::ImageUsageFlags kTextureUsageFlags;
 
   struct ColorData {
-    ColorData(vec4 in_color, bool in_transparent)
-        : color(in_color), is_transparent(in_transparent) {
+    ColorData(vec4 in_color, bool in_opaque) : color(in_color), is_opaque(in_opaque) {
       FX_CHECK(glm::all(glm::greaterThanEqual(in_color, vec4(0.f))));
       FX_CHECK(glm::all(glm::lessThanEqual(in_color, vec4(1.f))));
     }
 
     const vec4 color = vec4(1.f);
-    const bool is_transparent = true;
+    const bool is_opaque = false;
   };
 
   explicit RectangleCompositor(Escher* escher);
@@ -39,9 +38,9 @@ class RectangleCompositor {
   // - cmd_buf: The command buffer used to record commands.
   // - rectangles: geometry to be drawn.
   // - textures: must be 1-1 with rectangles, to which they are textured onto.
-  // - metadata: must be 1-1 with rectangles.
+  // - color_data: must be 1-1 with rectangles and textures.
   //             |color| is multiply_color to the texture used in the shader.
-  //             |is_transparent| determines use of opaque or transparent rendering.
+  //             |is_opaque| determines use of opaque or transparent rendering.
   // - output_image: the render target the renderables will be rendered into.
   // - depth_buffer: The depth texture to be used for z-buffering.
   //
