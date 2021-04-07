@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -86,11 +86,6 @@ executable("aml-gpu-test-bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-test_package("aml-gpu-test") {
+fuchsia_unittest_package("aml-gpu-test") {
   deps = [ ":aml-gpu-test-bin" ]
-  tests = [
-    {
-      name = "aml-gpu-test"
-    },
-  ]
 }
