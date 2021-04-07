@@ -87,6 +87,7 @@ source_set("lib") {
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
+    "//src/devices/lib/bind:bind-lib",
     "//src/devices/lib/log",
     "//src/lib/ddk",
     "//src/lib/files",
@@ -147,6 +148,7 @@ test("driver_manager_test") {
   sources = [
     "autobind_tests.cc",
     "binding_test.cc",
+    "binding_v2_test.cc",
     "composite_device_tests.cc",
     "coordinator_test_utils.cc",
     "init_tests.cc",
@@ -166,6 +168,7 @@ test("driver_manager_test") {
     ":lib",
     "//sdk/lib/fdio",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//src/devices/lib/bind:bind-lib",
     "//src/lib/storage/vfs/cpp:test_support",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mock-boot-arguments",

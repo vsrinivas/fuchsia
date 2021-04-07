@@ -4,10 +4,29 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_staticlib.gni")
 import("//src/sys/build/components.gni")
 
 group("bind") {
   deps = [ ":lib" ]
+}
+
+rustc_staticlib("bind-lib") {
+  name = "bind_lib_c"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  public = [ "ffi_bindings.h" ]
+
+  deps = [
+    ":lib",
+    "//third_party/rust_crates:libc",
+  ]
+
+  source_root = "src/ffi.rs"
+
+  sources = [ "src/ffi.rs" ]
 }
 
 rustc_binary("bin") {

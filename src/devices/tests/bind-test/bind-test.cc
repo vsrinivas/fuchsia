@@ -120,6 +120,7 @@ TEST_F(BindCompilerTest, ValidDriver) {
     ASSERT_EQ(instructions[i].op, expected_instructions[i].op);
     ASSERT_EQ(instructions[i].arg, expected_instructions[i].arg);
   }
+  ASSERT_EQ(instructions.size(), countof(expected_instructions));
 }
 
 // Check that calling GetDeviceProperties with an invalid device path returns ZX_ERR_NOT_FOUND.

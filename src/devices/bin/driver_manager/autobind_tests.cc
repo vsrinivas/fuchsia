@@ -23,6 +23,7 @@ class AutobindTest : public MultipleDeviceTestCase {
     drv->name = "always_match";
     drv->binding = std::move(bind_program);
     drv->binding_size = sizeof(zx_bind_inst_t);
+    drv->bytecode_version = 1;
     drv->libname = "<always_match.so>";
     // Borrow a DSO VMO from another driver, because we need an executable VMO (or else duplicating
     // it to send to the driver host will fail)

@@ -12,6 +12,7 @@
 #include "binding_internal.h"
 #include "coordinator.h"
 #include "device.h"
+#include "src/devices/lib/bind/ffi_bindings.h"
 #include "src/devices/lib/log/log.h"
 
 namespace internal {
@@ -132,12 +133,35 @@ template Match MatchParts(const fbl::RefPtr<Device>& device, const FragmentPartD
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
                         const fbl::Array<const zx_device_prop_t>& props, bool autobind) {
-  internal::BindProgramContext ctx;
-  ctx.props = &props;
-  ctx.protocol_id = protocol_id;
-  ctx.binding = drv->binding.get();
-  ctx.binding_size = drv->binding_size;
-  ctx.name = drv->name.c_str();
-  ctx.autobind = autobind ? 1 : 0;
-  return internal::EvaluateBindProgram(&ctx);
+  if (drv->bytecode_version == 1) {
+    auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv->binding);
+    if (!binding && drv->binding_size > 0) {
+      return false;
+    }
+
+    internal::BindProgramContext ctx;
+    ctx.props = &props;
+    ctx.protocol_id = protocol_id;
+    ctx.binding = binding ? binding->get() : nullptr;
+    ctx.binding_size = drv->binding_size;
+    ctx.name = drv->name.c_str();
+    ctx.autobind = autobind ? 1 : 0;
+    return internal::EvaluateBindProgram(&ctx);
+  } else if (drv->bytecode_version == 2) {
+    auto* bytecode = std::get_if<std::unique_ptr<uint8_t[]>>(&drv->binding);
+    if (!bytecode && drv->binding_size > 0) {
+      return false;
+    }
+
+    fbl::Array<device_property_t> properties(new device_property_t[props.size()], props.size());
+    for (size_t i = 0; i < props.size(); i++) {
+      properties[i] = device_property_t{.key = props[i].id, .value = props[i].value};
+    }
+
+    return match_bind_rules(drv->binding_size, bytecode ? bytecode->get() : nullptr, props.size(),
+                            properties.get());
+  }
+
+  LOGF(ERROR, "Invalid bytecode version: %i", drv->bytecode_version);
+  return false;
 }

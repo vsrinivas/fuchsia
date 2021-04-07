@@ -307,15 +307,37 @@ void Coordinator::DumpDrivers(VmoWriter* vmo) const {
     vmo->Printf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
     vmo->Printf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
     vmo->Printf("Flags   : %#08x\n", drv.flags);
-    if (drv.binding_size) {
+    vmo->Printf("Bytecode Version   : %u\n", drv.bytecode_version);
+
+    if (!drv.binding_size) {
+      continue;
+    }
+
+    if (drv.bytecode_version == 1) {
+      auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv.binding);
+      if (!binding) {
+        continue;
+      }
+
       char line[256];
-      uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(drv.binding[0]));
+      uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(binding->get()[0]));
       vmo->Printf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
                   drv.binding_size);
       for (uint32_t i = 0; i < count; ++i) {
-        di_dump_bind_inst(&drv.binding[i], line, sizeof(line));
+        di_dump_bind_inst(&binding->get()[i], line, sizeof(line));
         vmo->Printf("[%u/%u]: %s\n", i + 1, count, line);
       }
+    } else if (drv.bytecode_version == 2) {
+      auto* binding = std::get_if<std::unique_ptr<uint8_t[]>>(&drv.binding);
+      if (!binding) {
+        continue;
+      }
+
+      vmo->Printf("Bytecode (%u byte%s): \n", drv.binding_size, (drv.binding_size == 1) ? "" : "s");
+      for (uint32_t i = 0; i < drv.binding_size; ++i) {
+        vmo->Printf("0x%02x", (binding->get()[i]));
+      }
+      vmo->Printf("\n");
     }
     first = false;
   }
@@ -1592,9 +1614,22 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
     return;
   }
 
+  // Only the old bytecode version is supported.
+  if (driver->bytecode_version != 1) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&driver->binding);
+  if (!binding) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+  auto binding_insts = binding->get();
+
   uint32_t count = 0;
   if (driver->binding_size > 0) {
-    count = driver->binding_size / sizeof(driver->binding[0]);
+    count = driver->binding_size / sizeof(binding_insts[0]);
   }
   if (count > fuchsia_device_manager_BIND_PROGRAM_INSTRUCTIONS_MAX) {
     completer.ReplyError(ZX_ERR_BUFFER_TOO_SMALL);
@@ -1604,9 +1639,9 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
   std::vector<fuchsia_device_manager::wire::BindInstruction> instructions;
   for (uint32_t i = 0; i < count; i++) {
     instructions.push_back(fuchsia_device_manager::wire::BindInstruction{
-        .op = driver->binding[i].op,
-        .arg = driver->binding[i].arg,
-        .debug = driver->binding[i].debug,
+        .op = binding_insts[i].op,
+        .arg = binding_insts[i].arg,
+        .debug = binding_insts[i].debug,
     });
   }
   completer.ReplySuccess(

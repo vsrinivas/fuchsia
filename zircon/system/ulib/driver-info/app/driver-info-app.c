@@ -10,17 +10,24 @@
 #include <driver-info/driver-info.h>
 
 static void callback(zircon_driver_note_payload_t* dn, const zx_bind_inst_t* binding,
-                     void* cookie) {
+                     const uint8_t* bytecode, void* cookie) {
   printf("name:    %s\n", dn->name);
   printf("vendor:  %s\n", dn->vendor);
   printf("version: %s\n", dn->version);
-  printf("binding:\n");
+  printf("bytecode version: %u\n", dn->bytecodeversion);
 
+  printf("binding:\n");
   char line[256];
   for (size_t n = 0; n < dn->bindcount; n++) {
     di_dump_bind_inst(&binding[n], line, sizeof(line));
     printf("  %s\n", line);
   }
+
+  printf("bytecode:\n");
+  for (size_t n = 0; n < dn->bytecount; n++) {
+    printf(" %02x", bytecode[n]);
+  }
+  printf("\n");
 }
 
 int main(int argc, char** argv) {

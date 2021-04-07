@@ -310,7 +310,8 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
     auto binding = std::make_unique<zx_bind_inst_t[]>(instruction_count);
     memcpy(binding.get(), instructions, instruction_count * sizeof(instructions[0]));
     auto drv = std::make_unique<Driver>();
-    drv->binding.reset(binding.release());
+    drv->binding = std::move(binding);
+    drv->bytecode_version = 1;
     drv->binding_size = static_cast<uint32_t>(instruction_count * sizeof(instructions[0]));
     return drv;
   };

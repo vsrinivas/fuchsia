@@ -101,7 +101,9 @@ static zx_status_t callback(void* note, size_t sz, void* _ctx) {
     return ZX_ERR_INTERNAL;
   }
   const zx_bind_inst_t* binding = (const void*)(&dn->payload + 1);
-  ctx->func(&dn->payload, binding, ctx->cookie);
+  const uint8_t* bytecode =
+      (const void*)(binding + (dn->payload.bindcount * sizeof(zx_bind_inst_t)));
+  ctx->func(&dn->payload, binding, bytecode, ctx->cookie);
   return ZX_OK;
 }
 
