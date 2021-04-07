@@ -317,7 +317,6 @@ template("assemble_system") {
       "--blob_layout_format",
       blob_layout_format,
     ]
-    hermetic_deps = false
   }
 
   compiled_action("${image_name}_data.blk") {

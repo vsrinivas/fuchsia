@@ -12,6 +12,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 
+#include <filesystem>
 #include <iterator>
 
 #include <fbl/algorithm.h>
@@ -208,6 +209,11 @@ zx_status_t FsCreator::ParseManifestLine(FILE* manifest, const char* dir_path, c
     *new_line = '\0';
   }
 
+  if (depfile_.is_valid()) {
+    // Add source to depfile
+    AppendDepfile(src);
+  }
+
   return ZX_OK;
 }
 
@@ -377,6 +383,30 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
     return Usage();
   }
 
+  zx_status_t status;
+  if (depfile_needed) {
+    size_t len = strlen(device);
+    assert(len + 2 < PATH_MAX);
+    char buf[PATH_MAX] = {0};
+    memcpy(&buf[0], device, strlen(device));
+    buf[len++] = '.';
+    buf[len++] = 'd';
+
+    depfile_.reset(open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0644));
+    if (!depfile_) {
+      fprintf(stderr, "error: cannot open '%s'\n", buf);
+      return ZX_ERR_IO;
+    }
+
+    // update the buf to be suitable to pass to AppendDepfile.
+    buf[len - 2] = ':';
+    buf[len - 1] = 0;
+
+    if ((status = AppendDepfile(&buf[0])) != ZX_OK) {
+      return status;
+    }
+  }
+
   // Process remaining arguments.
   while (argc > 0) {
     // Default to 2 arguments processed for manifest. If ProcessCustom is called, processed
@@ -401,30 +431,8 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
   }
 
   // Resize the file if we need to.
-  zx_status_t status;
   if ((status = ResizeFile(requested_size, stats)) != ZX_OK) {
     return status;
-  }
-
-  if (depfile_needed) {
-    size_t len = strlen(device);
-    assert(len + 2 < PATH_MAX);
-    char buf[PATH_MAX] = {0};
-    memcpy(&buf[0], device, strlen(device));
-    buf[len++] = '.';
-    buf[len++] = 'd';
-
-    depfile_.reset(open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0644));
-    if (!depfile_) {
-      fprintf(stderr, "error: cannot open '%s'\n", buf);
-      return ZX_ERR_IO;
-    }
-
-    // update the buf to be suitable to pass to AppendDepfile.
-    buf[len - 2] = ':';
-    buf[len - 1] = 0;
-
-    status = AppendDepfile(&buf[0]);
   }
 
   return status;

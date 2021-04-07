@@ -374,8 +374,6 @@ blob_size_list = "$root_build_dir/blobs.json"
 
 # Pack up all the blobs!
 compiled_action("blob.blk") {
-  hermetic_deps = false
-
   visibility = [ ":*" ]
   testonly = true
   deps = [ ":blob.manifest" ]
