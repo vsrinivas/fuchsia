@@ -96,6 +96,4 @@
   </div>
 </div>
 
-<!--Comments to improve SEO
-<p>RFC{{ rfc.name|trim("RFC-")|int }}</p>
-<p>RFC {{ rfc.name|trim("RFC-")|int }}</p>-->
+<meta name="keywords" value="RFC{{ rfc.name|trim('RFC-')|int }}, RFC {{ rfc.name|trim('RFC-')|int }}" />
