@@ -23,9 +23,9 @@ import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/security.gni")
+import("//build/security/verify_build.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/zx_host_tool.gni")
-import("//build/zbi/verify_zbi.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
@@ -369,7 +369,7 @@ collect_blob_manifest("blob.manifest") {
 }
 
 blob_image_path = "$target_out_dir/blob.blk"
-rebased_blob_image_path = rebase_path(blob_image_path, root_build_dir)
+rebased_blob_path = rebase_path(blob_image_path, root_build_dir)
 blob_size_list = "$root_build_dir/blobs.json"
 
 # Pack up all the blobs!
@@ -407,13 +407,18 @@ compiled_action("blob.blk") {
     images = [
       {
         name = "blob"
-        path = rebased_blob_image_path
+        path = rebased_blob_path
         type = "blk"
       },
     ]
-    image_paths = [ "IMAGE_BLOB_RAW=$rebased_blob_image_path" ]
+    image_paths = [ "IMAGE_BLOB_RAW=$rebased_blob_path" ]
+  }
+
+  if (fuchsia_static_pkgs_goldens != []) {
+    deps += [ ":static_pkgs_verify_files" ]
   }
 }
+
 default_image_deps += [ ":blob.blk" ]
 
 # The prime images are used to have an alternate known-compatible OTA
@@ -603,6 +608,17 @@ if (fuchsia_zbi_bootfs_filelist_goldens != []) {
     zbi = "$root_out_dir/fuchsia_unverified.zbi"
     goldens = fuchsia_zbi_bootfs_filelist_goldens
     zbi_target = ":fuchsia_unverified"
+  }
+}
+if (fuchsia_static_pkgs_goldens != []) {
+  verify_static_pkgs("static_pkgs_verify_files") {
+    # This depends on blob_manifest which has testonly=true.
+    testonly = true
+    zbi = "$root_out_dir/fuchsia_unverified.zbi"
+    zbi_target = ":fuchsia_unverified"
+    blobfs_manifest = blob_manifest
+    blobfs_manifest_target = ":blob.manifest"
+    goldens = fuchsia_static_pkgs_goldens
   }
 }
 

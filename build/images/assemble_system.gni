@@ -14,8 +14,8 @@ import("//build/images/shell_commands.gni")
 import("//build/images/system_image_fuchsia_packages.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
+import("//build/security/verify_build.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/zbi/verify_zbi.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
@@ -85,6 +85,12 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   bootfs_goldens (optional)
 #     [list of files] A list of possible bootFS golden file to compare against.
 #     Verified if matches one of the goldens. At most two entries are
+#     supported for soft migration, if the content matches either of the entries,
+#     it is consider a match. Only one entry should be used for normal case.
+#
+#   static_pkgs_goldens (optional)
+#     [list of files] A list of possible static pkgs golden file to compare
+#     against. Verified if matches one of the goldens. At most two entries are
 #     supported for soft migration, if the content matches either of the entries,
 #     it is consider a match. Only one entry should be used for normal case.
 #
@@ -491,7 +497,8 @@ template("assemble_system") {
       assert_no_deps = [ "//build/validate:non_production_tag" ]
     }
   }
-  if (defined(invoker.cmdline_goldens) || defined(invoker.bootfs_goldens)) {
+  if (defined(invoker.cmdline_goldens) || defined(invoker.bootfs_goldens) ||
+      defined(invoker.static_pkgs_golden)) {
     zbi_outputs = get_target_outputs(":${image_name}_zbi")
   }
 
@@ -503,13 +510,22 @@ template("assemble_system") {
       zbi_target = ":${image_name}_zbi"
     }
   }
-
   if (defined(invoker.bootfs_goldens)) {
     verify_bootfs_filelist("${image_name}_bootfs_verify_files") {
       forward_variables_from(invoker, [ "testonly" ])
       zbi = zbi_outputs[0]
       goldens = invoker.bootfs_goldens
       zbi_target = ":${image_name}_zbi"
+    }
+  }
+  if (defined(invoker.static_pkgs_goldens)) {
+    verify_static_pkgs("${image_name}_static_pkgs_verify_files") {
+      forward_variables_from(invoker, [ "testonly" ])
+      zbi = zbi_outputs[0]
+      zbi_target = ":${image_name}_zbi"
+      blobfs_manifest = blob_manifest
+      blobfs_manifest_target = ":${image_name}_blob.manifest"
+      goldens = invoker.static_pkgs_goldens
     }
   }
 
@@ -522,6 +538,9 @@ template("assemble_system") {
     }
     if (defined(invoker.bootfs_goldens)) {
       deps += [ ":${image_name}_bootfs_verify_files" ]
+    }
+    if (defined(invoker.static_pkgs_goldens)) {
+      deps += [ ":${image_name}_static_pkgs_verify_files" ]
     }
   }
 }

@@ -6,13 +6,13 @@
 
 import argparse
 import difflib
+import json
 import os
 import re
 import shlex
 import subprocess
 import sys
 import tempfile
-import json
 
 SUPPORTED_TYPES = ['kernel_cmdline', 'bootfs_filelist', 'static_pkgs']
 
@@ -35,8 +35,8 @@ def main(input_args):
     parser.add_argument(
         '--zbi-file', help='Path to the zbi to verify', required=True)
     parser.add_argument(
-        '--blobfs-file',
-        help='Path to blobfs.blk file, required for "static_pkgs"',
+        '--blobfs-manifest',
+        help='Path to blobfs manifest file, required for "static_pkgs"',
         required=False)
     parser.add_argument(
         '--scrutiny',
@@ -72,7 +72,6 @@ def main(input_args):
             'At most two optional golden files are supported, ' +
             'is there a soft transition already in place? Please wait for ' +
             'that to finish before starting a new one.')
-
     try:
         verify_build(args)
     except VerificationError as e:
@@ -218,9 +217,9 @@ def verify_static_pkgs(
     Raises:
       VerificationError: If verification fails.
     """
-    if not args.blobfs_file:
+    if not args.blobfs_manifest:
         raise VerificationError(
-            '"blobfs-file" must be specified for "static_pkgs" check')
+            '"blobfs-manifest" must be specified for "static_pkgs" check')
     if not args.far:
         raise VerificationError(
             '"far" must be specified for "static_pkgs" check')
@@ -230,12 +229,18 @@ def verify_static_pkgs(
         raise VerificationError('Failed to get devmgr config: {0}'.format(e))
     except KeyError as e:
         raise VerificationError('Invalid devmgr config: {0}'.format(e))
-    blobfs_folder = os.path.join(scrutiny_out, 'blobfs')
+
     try:
-        extract_blobs(args.scrutiny, args.blobfs_file, blobfs_folder)
-    except subprocess.CalledProcessError as e:
-        raise VerificationError('Failed to extract blobFS: {0}'.format(e))
-    system_image_blob = os.path.join(blobfs_folder, system_image_hash)
+        blob_manifest = parse_key_value_file(args.blobfs_manifest)
+    except IOError as e:
+        raise VerificationError('Failed to open blob manifest: {0}'.format(e))
+
+    try:
+        system_image_blob = os.path.join(
+            os.path.dirname(args.blobfs_manifest),
+            blob_manifest[system_image_hash])
+    except KeyError as e:
+        raise VerificationError('System image blob not found: {0}'.format(e))
     system_image_folder = os.path.join(scrutiny_out, 'system_image')
     try:
         extract_package(args.far, system_image_blob, system_image_folder)
@@ -253,8 +258,12 @@ def verify_static_pkgs(
     except IOError as e:
         raise VerificationError(
             'Failed to read system_image/meta/contents file: {0}'.format(e))
-
-    static_packages_blob = os.path.join(blobfs_folder, static_packages_hash)
+    try:
+        static_packages_blob = os.path.join(
+            os.path.dirname(args.blobfs_manifest),
+            blob_manifest[static_packages_hash])
+    except KeyError as e:
+        raise VerificationError('Static pkgs blob not found: {0}'.format(e))
     try:
         with open(static_packages_blob, 'r') as f:
             static_packages_content = f.read().strip()
@@ -292,8 +301,7 @@ def verify_static_pkgs(
             tofile='got'))
     error_msgs.append(
         SOFT_TRANSITION_MESSAGE_TEMPLATE.format(
-            'fuchsia_zbi_static_pkgs_goldens',
-            'recovery_zbi_static_pkgs_goldens'))
+            'fuchsia_static_pkgs_goldens', 'recovery_static_pkgs_goldens'))
     raise VerificationError('\n'.join(error_msgs))
 
 
@@ -311,26 +319,6 @@ def get_system_image_hash(scrutiny_out):
         scrutiny_out, 'bootfs', 'config', 'devmgr')
     key_value_map = parse_key_value_file(devmgr_config_file)
     return key_value_map['zircon.system.pkgfs.cmd'].replace('bin/pkgsvr+', '')
-
-
-def extract_blobs(scrutiny_path, blobfs_file, blobs_folder):
-    """Extract blobs from the BlobFS using scrutiny.
-
-    Args:
-        scrutiny_path: The path to the scrutiny tool.
-        blobfs_file: The blobFS block file.
-        blobs_folder: The output folder to put the extracted blob files.
-
-    Raises:
-        subprocess.CalledProcessError: If extraction fails.
-    """
-    run_scrutiny_command(
-        scrutiny_path, ' '.join(
-            [
-                'tool.blobfs.extract', '--input',
-                shlex.quote(blobfs_file), '--output',
-                shlex.quote(blobs_folder)
-            ]))
 
 
 def run_scrutiny_command(scrutiny_path, command):

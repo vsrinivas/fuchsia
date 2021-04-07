@@ -81,7 +81,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
             zbi_files = {}
             for file in got_files:
                 zbi_files[os.path.join('bootfs', file)] = 'bootfs file'
-            fake_subprocess = FakeSubprocess(zbi_files, {}, {})
+            fake_subprocess = FakeSubprocess(zbi_files, {})
             with mock.patch('subprocess.run') as mock_run:
                 mock_run.side_effect = fake_subprocess.run
 
@@ -120,21 +120,27 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
             # to parse it so its content doesn't matter.
             with open(test_zbi, 'w+') as f:
                 f.write('test ZBI')
-            # Create a dummy test.blob. We are not going to use the real scrutiny
-            # to parse it so its content doesn't matter.
-            with open(test_blobfs, 'w+') as f:
-                f.write('test blob')
 
-            fake_subprocess = FakeSubprocess(
-                zbi_files, blobfs_files, system_image_files)
+            blobs_folder = os.path.join(test_folder, 'blobs')
+            os.mkdir(blobs_folder)
+            blobfs_manifest = os.path.join(blobs_folder, 'blobs.manifest')
+            with open(blobfs_manifest, 'w+') as bf:
+                for blobfs_file in blobfs_files:
+                    # We use the blob merkle as the blob content file name here.
+                    with open(os.path.join(blobs_folder, blobfs_file),
+                              'w+') as f:
+                        f.write(blobfs_files[blobfs_file])
+                    bf.write(blobfs_file + '=' + blobfs_file + '\n')
+
+            fake_subprocess = FakeSubprocess(zbi_files, system_image_files)
             with mock.patch('subprocess.run') as mock_run:
                 mock_run.side_effect = fake_subprocess.run
 
                 args = [
                     '--type', 'static_pkgs', '--zbi-file', test_zbi,
-                    '--blobfs-file', test_blobfs, '--scrutiny', fake_scrutiny,
-                    '--far', fake_far, '--golden-files', golden_file, '--stamp',
-                    stamp_file
+                    '--blobfs-manifest', blobfs_manifest, '--scrutiny',
+                    fake_scrutiny, '--far', fake_far, '--golden-files',
+                    golden_file, '--stamp', stamp_file
                 ]
                 result = verify_build.main(args)
 
@@ -488,9 +494,8 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
 
 class FakeSubprocess(object):
 
-    def __init__(self, zbi_files, blobfs_files, system_image_files):
+    def __init__(self, zbi_files, system_image_files):
         self.zbi_files = zbi_files
-        self.blobfs_files = blobfs_files
         self.system_image_files = system_image_files
 
     def _write_files(files, output):
@@ -522,8 +527,6 @@ class FakeSubprocess(object):
             op = scrutiny_commands[0]
             if op == 'tool.zbi.extract':
                 FakeSubprocess._write_files(self.zbi_files, output)
-            elif op == 'tool.blobfs.extract':
-                FakeSubprocess._write_files(self.blobfs_files, output)
             else:
                 raise subprocess.CalledProcessError(
                     cmd=command,
