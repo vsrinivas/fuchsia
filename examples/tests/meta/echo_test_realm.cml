@@ -12,7 +12,6 @@
         {
             name: "echo_test_client",
             url: "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_client.cm",
-            startup: "eager",
         },
     ],
     offer: [
