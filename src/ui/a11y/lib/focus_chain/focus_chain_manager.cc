@@ -94,6 +94,11 @@ void FocusChainManager::ChangeFocusToView(zx_koid_t view_ref_koid,
     callback(false);
     return;
   }
+  if (semantics_source_->ViewHasVisibleVirtualkeyboard(view_ref_koid)) {
+    callback(true);
+    return;
+  }
+
   auto view_ref = semantics_source_->ViewRefClone(view_ref_koid);
   focuser_->RequestFocus(std::move(*view_ref), [callback = std::move(callback)](auto result) {
     if (result.is_err()) {

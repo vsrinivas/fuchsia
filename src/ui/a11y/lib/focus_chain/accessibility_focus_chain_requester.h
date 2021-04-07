@@ -22,6 +22,7 @@ class AccessibilityFocusChainRequester {
   // request is finished processing. The callback receives the return value informaing whether the
   // request was granted or not.
   // For now, requests are granted only to Views that are providing semantics.
+  // TODO(fxbug.dev/73940): Refactor a11y code to have a single owner of focus chain updates.
   virtual void ChangeFocusToView(zx_koid_t view_ref_koid, ChangeFocusToViewCallback callback) = 0;
 };
 

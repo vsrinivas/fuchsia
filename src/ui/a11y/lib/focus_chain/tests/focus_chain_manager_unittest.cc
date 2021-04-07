@@ -184,5 +184,18 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterFocuserDenies) {
   EXPECT_TRUE(mock_focuser_.GetFocusRequestReceived());
 }
 
+TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewHasVisibleVirtualkeyboard) {
+  mock_semantics_source_.AddViewRef(view_a_.Clone());
+  mock_semantics_source_.set_has_visible_keyboard(true);
+  auto* requester = manager_.get();
+  bool success = false;
+  requester->ChangeFocusToView(view_a_.koid(), [&success](bool result) { success = result; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(success);
+  // The request should be successful, but the focus chain does not update to the view with the
+  // virtual keyboard.
+  EXPECT_FALSE(mock_focuser_.GetFocusRequestReceived());
+}
+
 }  // namespace
 }  // namespace a11y
