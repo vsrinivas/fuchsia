@@ -9,7 +9,12 @@ import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 template("component_manager") {
-  deps = [
+  forward_variables_from(invoker, [ "is_test" ])
+  if (!defined(is_test)) {
+    is_test = false
+  }
+
+  _deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
@@ -79,11 +84,11 @@ template("component_manager") {
     # separate integration test targets.
     "//garnet/examples/fidl/services:echo-rustc",
   ]
-  non_rust_deps = [
+  _non_rust_deps = [
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-  sources = [
+  _sources = [
     "src/builtin/arguments.rs",
     "src/builtin/capability.rs",
     "src/builtin/debug_resource.rs",
@@ -189,29 +194,21 @@ template("component_manager") {
     "src/work_scheduler/work_scheduler.rs",
   ]
 
-  is_test = false
-  if (defined(invoker.is_test)) {
-    is_test = invoker.is_test
-  }
-
   if (is_test) {
-    sources += [
-      "src/model/tests/mod.rs",
-      "src/model/tests/rights.rs",
-      "src/model/tests/routing.rs",
-      "src/model/tests/storage.rs",
-      "src/model/tests/storage_admin.rs",
-      "src/work_scheduler/routing_tests.rs",
-    ]
-
     rustc_test(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "non_rust_deps",
-                             ])
-
       edition = "2018"
+      sources = _sources
+      deps = _deps
+      non_rust_deps = _non_rust_deps
+
+      sources += [
+        "src/model/tests/mod.rs",
+        "src/model/tests/rights.rs",
+        "src/model/tests/routing.rs",
+        "src/model/tests/storage.rs",
+        "src/model/tests/storage_admin.rs",
+        "src/work_scheduler/routing_tests.rs",
+      ]
 
       # Test-only deps. Prefer adding deps used only in tests here instead of
       # above, which has the benefit of keeping unneeded deps out of the production
@@ -226,13 +223,12 @@ template("component_manager") {
     }
   } else {
     rustc_library(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "non_rust_deps",
-                             ])
       name = "component_manager_lib"
       edition = "2018"
+
+      sources = _sources
+      deps = _deps
+      non_rust_deps = _non_rust_deps
 
       # Only for internal use.
       visibility = [

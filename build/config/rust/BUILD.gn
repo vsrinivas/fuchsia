@@ -108,3 +108,95 @@ config("allow_legacy_derive_helpers") {
 config("deny_unused_results") {
   rustflags = [ "-Dunused_results" ]
 }
+
+config("allow_unused_results") {
+  rustflags = [ "-Aunused_results" ]
+
+  # This visibility list allows for targets to opt out of allowing unused results.
+  #
+  # There is currently no platform mandate to adopt the unused_results lint and it's opt-in for
+  # developers that want to use it. See https://fxbug.dev/73468 for more context.
+  #
+  # To adopt the lint, add the following to your rust target:
+  #   configs -= ["//build/config/rust:allow_unused_results"]
+  # The visibility list below can be used to enforce the list on certain areas of the tree while
+  # we evaluate wider adoption.
+  #
+  # TODO(https://fxbug.dev/73468): remove all references to src/connectivity/network and friends.
+  visibility = [
+    "//build/*",
+    "//examples/*",
+    "//garnet/*",
+    "//sdk/*",
+    "//src/bringup/*",
+    "//src/camera/*",
+    "//src/cast/*",
+    "//src/chromium/*",
+    "//src/cobalt/*",
+    "//src/connectivity/bluetooth/*",
+    "//src/connectivity/bundles/*",
+    "//src/connectivity/ethernet/*",
+    "//src/connectivity/lib/*",
+    "//src/connectivity/location/*",
+    "//src/connectivity/lowpan/*",
+    "//src/connectivity/management/*",
+    "//src/connectivity/network/dhcp-cli/*",
+    "//src/connectivity/network/dhcp/*",
+    "//src/connectivity/network/dhcpd-cli/*",
+    "//src/connectivity/network/dhcpv6/*",
+    "//src/connectivity/network/http-client/*",
+    "//src/connectivity/network/lib/*",
+    "//src/connectivity/network/net-cli:*",
+    "//src/connectivity/network/netcfg:*",
+    "//src/connectivity/network/netdump/*",
+    "//src/connectivity/network/netstack:*",
+    "//src/connectivity/network/netstack3/*",
+    "//src/connectivity/network/ping3:*",
+    "//src/connectivity/network/testing/*",
+    "//src/connectivity/network/tests/connect:*",
+    "//src/connectivity/network/tests/dhcp_interop/*",
+    "//src/connectivity/network/tools/*",
+    "//src/connectivity/network/tun/examples:*",
+    "//src/connectivity/openthread/*",
+    "//src/connectivity/overnet/*",
+    "//src/connectivity/ppp/*",
+    "//src/connectivity/telephony/*",
+    "//src/connectivity/weave/*",
+    "//src/connectivity/wlan/*",
+    "//src/dart/*",
+    "//src/developer/*",
+    "//src/devices/*",
+    "//src/diagnostics/*",
+    "//src/experiences/*",
+    "//src/factory/*",
+    "//src/fidl/*",
+    "//src/firmware/*",
+    "//src/flutter/*",
+    "//src/fonts/*",
+    "//src/go/*",
+    "//src/graphics/*",
+    "//src/hwinfo/*",
+    "//src/identity/*",
+    "//src/intl/*",
+    "//src/lib/*",
+    "//src/media/*",
+    "//src/modular/*",
+    "//src/power/*",
+    "//src/proc/*",
+    "//src/recovery/*",
+    "//src/security/*",
+    "//src/session/*",
+    "//src/speech/*",
+    "//src/storage/*",
+    "//src/sys/*",
+    "//src/testing/*",
+    "//src/tests/*",
+    "//src/ui/*",
+    "//src/virtualization/*",
+    "//src/zircon/*",
+    "//third_party/*",
+    "//tools/*",
+    "//vendor/*",
+    "//zircon/*",
+  ]
+}

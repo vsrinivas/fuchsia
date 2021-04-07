@@ -30,5 +30,5 @@ rustc_test("socket") {
     "//third_party/rust_crates:pin-utils",
   ]
   sources = [ "src/lib.rs" ]
-  configs += [ "//build/config/rust:deny_unused_results" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }

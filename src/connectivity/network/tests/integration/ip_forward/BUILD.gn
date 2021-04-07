@@ -21,7 +21,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:structopt",
   ]
-  configs += [ "//build/config/rust:deny_unused_results" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 
   sources = [ "src/main.rs" ]
 }

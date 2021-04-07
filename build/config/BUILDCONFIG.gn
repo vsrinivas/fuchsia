@@ -482,40 +482,45 @@ set_defaults("executable") {
 }
 
 # Rustc wrapper defaults
+default_rust_configs = [
+  "//build/config/rust:deny_unused_results",
+  "//build/config/rust:allow_unused_results",
+]
+
 set_defaults("rustc_binary") {
-  configs = default_executable_configs
+  configs = default_executable_configs + default_rust_configs
 }
 
 set_defaults("rustc_binary_sdk") {
-  configs = default_executable_configs
+  configs = default_executable_configs + default_rust_configs
 }
 
 set_defaults("rustc_test") {
-  configs = default_executable_configs
+  configs = default_executable_configs + default_rust_configs
 }
 
 set_defaults("rustc_library") {
-  configs = default_common_binary_configs
+  configs = default_common_binary_configs + default_rust_configs
 }
 
 set_defaults("rustc_wasm_library") {
-  configs = default_shared_library_configs
+  configs = default_shared_library_configs + default_rust_configs
 }
 
 set_defaults("rustc_cdylib") {
-  configs = default_shared_library_configs
+  configs = default_shared_library_configs + default_rust_configs
 }
 set_defaults("rustc_dylib") {
-  configs = default_shared_library_configs
+  configs = default_shared_library_configs + default_rust_configs
 }
 
 set_defaults("rustc_macro") {
-  configs = default_shared_library_configs +
+  configs = default_shared_library_configs + default_rust_configs +
             [ "//build/config/rust:allow_unused_extern_crates" ]
 }
 
 set_defaults("rustc_staticlib") {
-  configs = default_common_binary_configs
+  configs = default_common_binary_configs + default_rust_configs
 }
 
 declare_args() {

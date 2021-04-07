@@ -34,7 +34,7 @@ rustc_library("lib") {
     "src/udp.rs",
   ]
 
-  configs += [ "//build/config/rust:deny_unused_results" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("dns_lib_test") {
@@ -83,7 +83,7 @@ rustc_binary("bin") {
 
   sources = [ "src/main.rs" ]
 
-  configs += [ "//build/config/rust:deny_unused_results" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("dns-resolver-tests") {
