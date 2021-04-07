@@ -12,6 +12,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include <string_view>
+
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace component {
@@ -134,7 +136,7 @@ fs::VnodeProtocolSet ServiceProviderDirImpl::GetProtocols() const {
   return fs::VnodeProtocol::kDirectory;
 }
 
-zx_status_t ServiceProviderDirImpl::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t ServiceProviderDirImpl::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   const std::string service_name(name.data(), name.length());
   if (!IsServiceAllowlisted(service_name)) {
     FX_LOGS(WARNING) << ServiceNotInSandbox(component_moniker_, service_name);

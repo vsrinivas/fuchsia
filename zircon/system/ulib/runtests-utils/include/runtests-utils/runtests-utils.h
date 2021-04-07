@@ -13,13 +13,13 @@
 #include <zircon/types.h>
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <fbl/vector.h>
 
 namespace runtests {
@@ -86,20 +86,20 @@ class Stopwatch {
 
 // Splits |input| by ',' and appends the results onto |output|.
 // Empty strings are not put into output.
-void ParseTestNames(fbl::StringPiece input, fbl::Vector<fbl::String>* output);
+void ParseTestNames(std::string_view input, fbl::Vector<fbl::String>* output);
 
 // Returns true iff |name| is equal to one of strings in |whitelist|.
-bool IsInWhitelist(fbl::StringPiece name, const fbl::Vector<fbl::String>& whitelist);
+bool IsInWhitelist(std::string_view name, const fbl::Vector<fbl::String>& whitelist);
 
 // Ensures |dir_name| exists by creating it and its parents if it doesn't.
 // Returns 0 on success, else an error code compatible with errno.
-int MkDirAll(fbl::StringPiece dir_name);
+int MkDirAll(std::string_view dir_name);
 
 // Returns "|parent|/|child|". Unless child is absolute, in which case it returns |child|.
 //
 // |parent| is the parent path.
 // |child| is the child path.
-fbl::String JoinPath(fbl::StringPiece parent, fbl::StringPiece child);
+fbl::String JoinPath(std::string_view parent, std::string_view child);
 
 // Writes a JSON summary of test results given a sequence of results.
 //
@@ -109,7 +109,7 @@ fbl::String JoinPath(fbl::StringPiece parent, fbl::StringPiece child);
 //
 // Returns 0 on success, else an error code compatible with errno.
 int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
-                     fbl::StringPiece syslog_path, FILE* summary_json);
+                     std::string_view syslog_path, FILE* summary_json);
 
 // Resolves a set of globs.
 //
@@ -170,7 +170,7 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
 // Returns EXIT_SUCCESS if all tests passed; else, returns EXIT_FAILURE.
 int DiscoverAndRunTests(int argc, const char* const* argv,
                         const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
-                        fbl::StringPiece syslog_file_name);
+                        std::string_view syslog_file_name);
 
 // Returns true iff |s| is a fuchsia-pkg URI.
 bool IsFuchsiaPkgURI(const char* s);

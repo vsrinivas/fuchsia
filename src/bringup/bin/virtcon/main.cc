@@ -36,7 +36,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 

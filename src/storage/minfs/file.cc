@@ -18,9 +18,9 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <string_view>
 
 #include <fbl/algorithm.h>
-#include <fbl/string_piece.h>
 #include <safemath/checked_math.h>
 
 #include "src/lib/storage/vfs/cpp/debug.h"

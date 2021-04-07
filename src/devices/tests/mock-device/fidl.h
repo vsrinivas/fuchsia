@@ -10,7 +10,6 @@
 #include <lib/zx/channel.h>
 
 #include <fbl/array.h>
-#include <fbl/string_piece.h>
 
 namespace mock_device {
 

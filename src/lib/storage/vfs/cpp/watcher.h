@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <mutex>
+#include <string_view>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
@@ -32,7 +33,7 @@ class WatcherContainer {
 
   // Notifies all VnodeWatchers in the watch list, if their mask indicates they are interested in
   // the incoming event.
-  void Notify(fbl::StringPiece name, unsigned event);
+  void Notify(std::string_view name, unsigned event);
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(WatcherContainer);

@@ -14,6 +14,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <string_view>
+
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
@@ -35,9 +37,9 @@ fbl::String packaged_script_dir();
 // target directory.
 class PackagedScriptFile {
  public:
-  PackagedScriptFile(const fbl::StringPiece path);
+  PackagedScriptFile(const std::string_view path);
   ~PackagedScriptFile();
-  fbl::StringPiece path() const;
+  std::string_view path() const;
 
  private:
   fbl::String path_;
@@ -46,11 +48,11 @@ class PackagedScriptFile {
 // Creates an empty file and deletes it in its destructor.
 class ScopedStubFile {
  public:
-  ScopedStubFile(const fbl::StringPiece path);
+  ScopedStubFile(const std::string_view path);
   ~ScopedStubFile();
 
  private:
-  const fbl::StringPiece path_;
+  const std::string_view path_;
 };
 
 // Creates a script file with given contents in its constructor and deletes it
@@ -59,12 +61,12 @@ class ScopedTestFile {
  public:
   // |path| is the path of the file to be created. Should start with kMemFsPath.
   // |contents| are the script contents. Shebang line will be added automatically.
-  ScopedTestFile(const fbl::StringPiece path, const fbl::StringPiece file);
+  ScopedTestFile(const std::string_view path, const std::string_view file);
   ~ScopedTestFile();
-  fbl::StringPiece path() const;
+  std::string_view path() const;
 
  private:
-  const fbl::StringPiece path_;
+  const std::string_view path_;
 };
 
 // Creates a subdirectory of kMemFsRoot in its constructor and deletes it in
@@ -141,7 +143,7 @@ int NumEntriesInDir(const char* dir_path);
 // test at |test_path|, setting |output_file_rel_path| as its value if
 // successful.
 // Returns true iff successful.
-bool GetOutputFileRelPath(const fbl::StringPiece& output_dir, const fbl::StringPiece& test_path,
+bool GetOutputFileRelPath(std::string_view output_dir, std::string_view test_path,
                           fbl::String* output_file_rel_path);
 
 }  // namespace runtests

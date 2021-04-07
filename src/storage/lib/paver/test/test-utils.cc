@@ -13,9 +13,9 @@
 
 #include <memory>
 #include <optional>
+#include <string_view>
 
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 

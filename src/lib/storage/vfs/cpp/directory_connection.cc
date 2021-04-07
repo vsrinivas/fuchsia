@@ -19,6 +19,7 @@
 #include <zircon/assert.h>
 
 #include <memory>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -38,7 +39,7 @@ namespace {
 
 // Performs a path walk and opens a connection to another node.
 void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Node> channel,
-            fbl::StringPiece path, VnodeConnectionOptions options, Rights parent_rights,
+            std::string_view path, VnodeConnectionOptions options, Rights parent_rights,
             uint32_t mode) {
   bool describe = options.flags.describe;
   vfs->Open(parent, path, options, parent_rights, mode).visit([&](auto&& result) {
@@ -177,7 +178,7 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
     FS_PRETTY_TRACE_DEBUG("Rights violation during DirectoryOpen");
     return write_error(std::move(channel), status);
   }
-  OpenAt(vfs(), vnode(), std::move(channel), fbl::StringPiece(path.data(), path.size()),
+  OpenAt(vfs(), vnode(), std::move(channel), std::string_view(path.data(), path.size()),
          open_options, options().rights, mode);
 }
 
@@ -192,7 +193,7 @@ void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync& c
     completer.Reply(ZX_ERR_BAD_HANDLE);
     return;
   }
-  zx_status_t status = vfs()->Unlink(vnode(), fbl::StringPiece(path.data(), path.size()));
+  zx_status_t status = vfs()->Unlink(vnode(), std::string_view(path.data(), path.size()));
   completer.Reply(status);
 }
 
@@ -257,8 +258,8 @@ void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_tok
     return;
   }
   zx_status_t status =
-      vfs()->Rename(std::move(token), vnode(), fbl::StringPiece(src.data(), src.size()),
-                    fbl::StringPiece(dst.data(), dst.size()));
+      vfs()->Rename(std::move(token), vnode(), std::string_view(src.data(), src.size()),
+                    std::string_view(dst.data(), dst.size()));
   completer.Reply(status);
 }
 
@@ -283,8 +284,8 @@ void DirectoryConnection::Link(fidl::StringView src, zx::handle dst_parent_token
     return;
   }
   zx_status_t status =
-      vfs()->Link(std::move(token), vnode(), fbl::StringPiece(src.data(), src.size()),
-                  fbl::StringPiece(dst.data(), dst.size()));
+      vfs()->Link(std::move(token), vnode(), std::string_view(src.data(), src.size()),
+                  std::string_view(dst.data(), dst.size()));
   completer.Reply(status);
 }
 
@@ -330,7 +331,7 @@ void DirectoryConnection::MountAndCreate(fidl::ClientEnd<fio::Directory> remote,
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }
-  zx_status_t status = vfs()->MountMkdir(vnode(), fbl::StringPiece(name.data(), name.size()),
+  zx_status_t status = vfs()->MountMkdir(vnode(), std::string_view(name.data(), name.size()),
                                          MountChannel(std::move(remote)), flags);
   completer.Reply(status);
 }

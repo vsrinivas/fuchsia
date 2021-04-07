@@ -7,6 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <zircon/device/vfs.h>
 
+#include <string_view>
 #include <utility>
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -83,7 +84,7 @@ VnodeProtocolSet BufferedPseudoFile::Content::GetProtocols() const { return Vnod
 
 zx_status_t BufferedPseudoFile::Content::CloseNode() {
   if (options_.rights.write) {
-    return file_->write_handler_(fbl::StringPiece(input_data_, input_length_));
+    return file_->write_handler_(std::string_view(input_data_, input_length_));
   }
   return ZX_OK;
 }
@@ -204,7 +205,7 @@ zx_status_t UnbufferedPseudoFile::Content::OpenNode(ValidatedOptions options,
 
 zx_status_t UnbufferedPseudoFile::Content::CloseNode() {
   if (options_.rights.write && truncated_since_last_successful_write_) {
-    return file_->write_handler_(fbl::StringPiece());
+    return file_->write_handler_(std::string_view());
   }
   return ZX_OK;
 }
@@ -247,7 +248,7 @@ zx_status_t UnbufferedPseudoFile::Content::Write(const void* data, size_t length
   }
 
   zx_status_t status =
-      file_->write_handler_(fbl::StringPiece(static_cast<const char*>(data), length));
+      file_->write_handler_(std::string_view(static_cast<const char*>(data), length));
   if (status == ZX_OK) {
     truncated_since_last_successful_write_ = false;
     *out_actual = length;

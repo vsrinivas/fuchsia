@@ -10,6 +10,7 @@
 #include <lib/zx/channel.h>
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -96,7 +97,7 @@ class ServiceNamespace : public fuchsia::sys::ServiceProvider {
   // Overridden from |ServiceProvider|:
   void ConnectToService(std::string service_name, zx::channel channel) override;
 
-  void Connect(fbl::StringPiece name, zx::channel channel);
+  void Connect(std::string_view name, zx::channel channel);
   void ConnectCommon(const std::string& service_name, zx::channel channel);
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;

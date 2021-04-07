@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_KCOUNTER_KCOUNTER_H_
+#define ZIRCON_SYSTEM_ULIB_KCOUNTER_KCOUNTER_H_
 
 #include <inttypes.h>
 #include <lib/counter-vmo-abi.h>
@@ -11,11 +12,11 @@
 #include <lib/zx/time.h>
 
 #include <map>
+#include <string_view>
 #include <vector>
 
 #include <fbl/macros.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 
 namespace kcounter {
 
@@ -49,3 +50,5 @@ class VmoToInspectMapper final {
 };
 
 }  // namespace kcounter
+
+#endif  // ZIRCON_SYSTEM_ULIB_KCOUNTER_KCOUNTER_H_

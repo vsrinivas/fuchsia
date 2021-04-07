@@ -7,6 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <sys/stat.h>
 
+#include <string_view>
 #include <utility>
 
 #include <fbl/auto_lock.h>
@@ -32,7 +33,7 @@ zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t PseudoDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   auto it = entries_by_name_.find(name);
@@ -44,7 +45,7 @@ zx_status_t PseudoDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out
   return ZX_ERR_NOT_FOUND;
 }
 
-void PseudoDir::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
+void PseudoDir::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
 
 zx_status_t PseudoDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
                                 zx::channel watcher) {
@@ -113,7 +114,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name) {
+zx_status_t PseudoDir::RemoveEntry(std::string_view name) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   auto it = entries_by_name_.find(name);
@@ -127,7 +128,7 @@ zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name) {
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name, fs::Vnode* vn) {
+zx_status_t PseudoDir::RemoveEntry(std::string_view name, fs::Vnode* vn) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   auto it = entries_by_name_.find(name);

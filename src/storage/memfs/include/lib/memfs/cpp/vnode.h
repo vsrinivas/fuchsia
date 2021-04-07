@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <ctime>
+#include <string_view>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
@@ -121,16 +122,16 @@ class VnodeDir final : public VnodeMemfs {
 
   fs::VnodeProtocolSet GetProtocols() const final;
 
-  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
-  zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
 
   // Create a vnode from a VMO.
   // Fails if the vnode already exists.
   // Passes the vmo to the Vnode; does not duplicate it.
-  zx_status_t CreateFromVmo(fbl::StringPiece name, zx_handle_t vmo, zx_off_t off, zx_off_t len);
+  zx_status_t CreateFromVmo(std::string_view name, zx_handle_t vmo, zx_off_t off, zx_off_t len);
 
   // Use the watcher container to implement a directory watcher
-  void Notify(fbl::StringPiece name, unsigned event) final;
+  void Notify(std::string_view name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
   zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) final;
 
@@ -147,16 +148,16 @@ class VnodeDir final : public VnodeMemfs {
 
   // Resolves the question, "Can this directory create a child node with the name?"
   // Returns "ZX_OK" on success; otherwise explains failure with error message.
-  zx_status_t CanCreate(fbl::StringPiece name) const;
+  zx_status_t CanCreate(std::string_view name) const;
 
   // Creates a dnode for the Vnode, attaches vnode to dnode, (if directory) attaches
   // dnode to vnode, and adds dnode to parent directory.
-  zx_status_t AttachVnode(fbl::RefPtr<memfs::VnodeMemfs> vn, fbl::StringPiece name, bool isdir);
+  zx_status_t AttachVnode(fbl::RefPtr<memfs::VnodeMemfs> vn, std::string_view name, bool isdir);
 
-  zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
-  zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, fbl::StringPiece oldname,
-                     fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) final;
-  zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
+  zx_status_t Unlink(std::string_view name, bool must_be_dir) final;
+  zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, std::string_view oldname,
+                     std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) final;
+  zx_status_t Link(std::string_view name, fbl::RefPtr<fs::Vnode> target) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
@@ -199,7 +200,7 @@ class Vfs : public fs::ManagedVfs {
   // Creates a VnodeVmo under |parent| with |name| which is backed by |vmo|.
   // N.B. The VMO will not be taken into account when calculating
   // number of allocated pages in this Vfs.
-  zx_status_t CreateFromVmo(VnodeDir* parent, fbl::StringPiece name, zx_handle_t vmo, zx_off_t off,
+  zx_status_t CreateFromVmo(VnodeDir* parent, std::string_view name, zx_handle_t vmo, zx_off_t off,
                             zx_off_t len);
 
   uint64_t GetFsId() const { return fs_id_; }

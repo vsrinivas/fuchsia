@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <forward_list>
 #include <optional>
+#include <string_view>
 #include <system_error>
 #include <unordered_map>
 #include <vector>
@@ -92,7 +93,7 @@ std::optional<std::string> GetVMOName(const zx::vmo& vmo) {
   return name;
 }
 
-fbl::String JoinPath(const fbl::StringPiece parent, const fbl::StringPiece child) {
+fbl::String JoinPath(std::string_view parent, std::string_view child) {
   if (parent.empty()) {
     return fbl::String(child);
   }

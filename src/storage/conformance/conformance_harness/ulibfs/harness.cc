@@ -26,7 +26,7 @@
 
 zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
-zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
+zx_status_t DummyWriter(std::string_view input) { return ZX_OK; }
 
 class UlibfsHarness : public fuchsia::io::test::Io1Harness {
  public:

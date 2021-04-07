@@ -12,9 +12,9 @@
 
 #include <memory>
 #include <optional>
+#include <string_view>
 
 #include <fbl/function.h>
-#include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 
 #include "src/lib/uuid/uuid.h"
@@ -76,9 +76,9 @@ zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root,
                                 std::optional<uuid::Uuid> unique_guid,
                                 std::optional<uuid::Uuid> type_guid);
 
-zx::status<> IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_name);
+zx::status<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_name);
 
-zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, fbl::StringPiece vendor);
+zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view vendor);
 
 }  // namespace paver
 

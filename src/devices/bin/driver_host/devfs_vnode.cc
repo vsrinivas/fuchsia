@@ -6,6 +6,8 @@
 
 #include <lib/ddk/device.h>
 
+#include <string_view>
+
 #include <fbl/string_buffer.h>
 
 #include "driver_host.h"
@@ -21,7 +23,7 @@ fbl::StringBuffer<fuchsia_device_MAX_DRIVER_PATH_LEN> GetFullDriverPath(
     const fidl::StringView& driver_path) {
   fbl::StringBuffer<fuchsia_device_MAX_DRIVER_PATH_LEN> buffer;
   if (!driver_path.empty() && driver_path[0] != '/') {
-    buffer.Append(fbl::StringPiece(internal::ContextForApi()->root_driver_path()));
+    buffer.Append(std::string_view(internal::ContextForApi()->root_driver_path()));
   }
   return buffer.Append(driver_path.data(), driver_path.size());
 }

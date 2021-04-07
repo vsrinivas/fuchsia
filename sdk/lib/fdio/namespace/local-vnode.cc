@@ -4,6 +4,7 @@
 
 #include "local-vnode.h"
 
+#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
@@ -12,7 +13,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
 
 namespace fdio_internal {
 
@@ -52,8 +52,8 @@ void LocalVnode::Unlink() {
 
 // Returns a child if it has the name |name|.
 // Otherwise, returns nullptr.
-fbl::RefPtr<LocalVnode> LocalVnode::Lookup(const fbl::StringPiece& name) const {
-  auto it = entries_by_name_.find(name);
+fbl::RefPtr<LocalVnode> LocalVnode::Lookup(cpp17::string_view name) const {
+  auto it = entries_by_name_.find(fbl::String{name});
   if (it != entries_by_name_.end()) {
     return it->node();
   }
@@ -88,7 +88,7 @@ zx_status_t EnumerateInternal(const LocalVnode& vn, fbl::StringBuffer<PATH_MAX>*
   // object.
   path->Append(vn.Name().data(), vn.Name().length());
   if (vn.Remote().is_valid()) {
-    func(fbl::StringPiece(path->data(), path->length()), vn.Remote());
+    func(cpp17::string_view(path->data(), path->length()), vn.Remote());
   }
 
   // If we added a non-null path, add a separator and enumerate all the

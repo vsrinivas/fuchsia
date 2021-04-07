@@ -23,13 +23,13 @@
 
 #include <algorithm>
 #include <memory>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
 #include <safemath/checked_math.h>
 
 #include "src/lib/digest/digest.h"

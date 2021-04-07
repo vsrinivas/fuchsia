@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #ifdef __Fuchsia__
@@ -279,7 +280,7 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t InitVmo();
 
   // Use the watcher container to implement a directory watcher
-  void Notify(fbl::StringPiece name, unsigned event) final;
+  void Notify(std::string_view name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
 #endif
 

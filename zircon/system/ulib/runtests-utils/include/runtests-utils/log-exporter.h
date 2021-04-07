@@ -16,6 +16,7 @@
 #include <stdint.h>
 
 #include <memory>
+#include <string_view>
 
 #include <fbl/function.h>
 #include <fbl/string.h>
@@ -136,7 +137,7 @@ class LogExporter {
 // |error| error to set in case of failure.
 //
 // Returns nullptr if it is not possible to launch Log Exporter.
-std::unique_ptr<LogExporter> LaunchLogExporter(fbl::StringPiece syslog_path,
+std::unique_ptr<LogExporter> LaunchLogExporter(std::string_view syslog_path,
                                                ExporterLaunchError* error);
 
 }  // namespace runtests

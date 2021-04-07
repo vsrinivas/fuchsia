@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <zircon/status.h>
 
+#include <string_view>
 #include <utility>
 
 #include <runtests-utils/log-exporter.h>
@@ -257,7 +258,7 @@ void LogExporter::NotifyFileError(const char* error) {
   }
 }
 
-std::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
+std::unique_ptr<LogExporter> LaunchLogExporter(const std::string_view syslog_path,
                                                ExporterLaunchError* error) {
   *error = NO_ERROR;
   fbl::String syslog_path_str = fbl::String(syslog_path.data());

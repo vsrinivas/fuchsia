@@ -8,6 +8,8 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fit/defer.h>
 
+#include <string_view>
+
 #include <gpt/c/gpt.h>
 
 #include "src/storage/lib/paver/pave-logging.h"
@@ -55,7 +57,7 @@ zx::status<Uuid> GptPartitionType(Partition type) {
   }
 }
 
-bool FilterByName(const gpt_partition_t& part, fbl::StringPiece name) {
+bool FilterByName(const gpt_partition_t& part, std::string_view name) {
   char cstring_name[GPT_NAME_LEN / 2 + 1];
   ::utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name),
                      sizeof(cstring_name));
@@ -70,7 +72,7 @@ bool FilterByName(const gpt_partition_t& part, fbl::StringPiece name) {
   return strncasecmp(cstring_name, name.data(), name.length()) == 0;
 }
 
-bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, fbl::StringPiece name) {
+bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, std::string_view name) {
   return type == Uuid(part.type) && FilterByName(part, name);
 }
 

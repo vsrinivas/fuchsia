@@ -13,10 +13,10 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <string_view>
 #include <utility>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
@@ -59,7 +59,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
   return ZX_ERR_NOT_FILE;
 }
 
-zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("blobfs", "Directory::Lookup", "name", name);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kLookUp);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
@@ -96,7 +96,7 @@ zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
   return ZX_OK;
 }
 
-zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("blobfs", "Directory::Create", "name", name, "mode", mode);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kCreate);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
@@ -131,7 +131,7 @@ zx_status_t Directory::GetDevicePath(size_t buffer_len, char* out_name, size_t* 
 
 #endif  // __Fuchsia__
 
-zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
+zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   TRACE_DURATION("blobfs", "Directory::Unlink", "name", name, "must_be_dir", must_be_dir);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kUnlink);
   assert(memchr(name.data(), '/', name.length()) == nullptr);

@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 
 #include <string>
+#include <string_view>
 
 #include <runtests-utils/service-proxy-dir.h>
 
@@ -41,7 +42,7 @@ zx_status_t ServiceProxyDir::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodePr
 
 fs::VnodeProtocolSet ServiceProxyDir::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
-zx_status_t ServiceProxyDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t ServiceProxyDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   std::unique_lock lock(lock_);
   auto entry_name = std::string(name.data(), name.length());
 

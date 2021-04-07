@@ -7,6 +7,8 @@
 
 #include <lib/fit/function.h>
 
+#include <string_view>
+
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
@@ -45,7 +47,7 @@ class PseudoFile : public Vnode {
   using ReadHandler = fit::function<zx_status_t(fbl::String* output)>;
 
   // Handler called to write into the pseudo-file.
-  using WriteHandler = fit::function<zx_status_t(fbl::StringPiece input)>;
+  using WriteHandler = fit::function<zx_status_t(std::string_view input)>;
 
   ~PseudoFile() override;
 

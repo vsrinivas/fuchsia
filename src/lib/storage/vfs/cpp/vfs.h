@@ -18,6 +18,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <string_view>
 
 #include "src/lib/storage/vfs/cpp/locking.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
@@ -37,6 +38,7 @@
 #endif  // __Fuchsia__
 
 #include <memory>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -44,7 +46,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 
 namespace fs {
 
@@ -92,9 +93,9 @@ class Vfs {
   //
   // The return value will suggest the next action to take. Refer to the variants in |OpenResult|
   // for more information.
-  OpenResult Open(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, VnodeConnectionOptions options,
+  OpenResult Open(fbl::RefPtr<Vnode> vn, std::string_view path, VnodeConnectionOptions options,
                   Rights parent_rights, uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
-  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, fbl::StringPiece path) FS_TA_EXCLUDES(vfs_lock_);
+  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view path) FS_TA_EXCLUDES(vfs_lock_);
 
   // Sets whether this file system is read-only.
   void SetReadonly(bool value) FS_TA_EXCLUDES(vfs_lock_);
@@ -116,10 +117,10 @@ class Vfs {
   void TokenDiscard(zx::event ios_token) FS_TA_EXCLUDES(vfs_lock_);
   zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token, zx::event* out)
       FS_TA_EXCLUDES(vfs_lock_);
-  zx_status_t Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::StringPiece oldStr,
-                   fbl::StringPiece newStr) FS_TA_EXCLUDES(vfs_lock_);
-  zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::StringPiece oldStr,
-                     fbl::StringPiece newStr) FS_TA_EXCLUDES(vfs_lock_);
+  zx_status_t Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
+                   std::string_view newStr) FS_TA_EXCLUDES(vfs_lock_);
+  zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
+                     std::string_view newStr) FS_TA_EXCLUDES(vfs_lock_);
   // Calls readdir on the Vnode while holding the vfs_lock, preventing path modification operations
   // for the duration of the operation.
   zx_status_t Readdir(Vnode* vn, VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual)
@@ -164,7 +165,7 @@ class Vfs {
   zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_EXCLUDES(vfs_lock_);
 
   // Create and mount a directory with a provided name
-  zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountChannel h,
+  zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountChannel h,
                          uint32_t flags) FS_TA_EXCLUDES(vfs_lock_);
 
   // Unpin a handle to a remote filesystem from a vnode, if one exists.
@@ -174,7 +175,7 @@ class Vfs {
   // Forwards an open request to a remote handle. If the remote handle is closed (handing off
   // returns ZX_ERR_PEER_CLOSED), it is automatically unmounted.
   zx_status_t ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fuchsia_io::Node> channel,
-                                fbl::StringPiece path, VnodeConnectionOptions options,
+                                std::string_view path, VnodeConnectionOptions options,
                                 uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
 
   // Unpins all remote filesystems in the current filesystem, and waits for the response of each one
@@ -213,10 +214,10 @@ class Vfs {
   // On success,
   // |out| is the vnode at which we stopped searching.
   // |pathout| is the remainder of the path to search.
-  zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, fbl::RefPtr<Vnode>* out,
-                   fbl::StringPiece* pathout) FS_TA_REQUIRES(vfs_lock_);
+  zx_status_t Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<Vnode>* out,
+                   std::string_view* pathout) FS_TA_REQUIRES(vfs_lock_);
 
-  OpenResult OpenLocked(fbl::RefPtr<Vnode> vn, fbl::StringPiece path,
+  OpenResult OpenLocked(fbl::RefPtr<Vnode> vn, std::string_view path,
                         VnodeConnectionOptions options, Rights parent_rights, uint32_t mode)
       FS_TA_REQUIRES(vfs_lock_);
 
@@ -228,7 +229,7 @@ class Vfs {
   //
   // In the above two cases, |did_create| will be updated to indicate if an entry was created.
   // Otherwise, a corresponding error code is returned.
-  zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece name,
+  zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view name,
                            fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                            uint32_t mode, Rights parent_rights, bool* did_create)
       FS_TA_REQUIRES(vfs_lock_);
@@ -296,7 +297,7 @@ class Vfs::OpenResult {
   // this open request to that vnode.
   struct Remote {
     fbl::RefPtr<Vnode> vnode;
-    fbl::StringPiece path;
+    std::string_view path;
   };
 
   // When this variant is active, the path being opened is a remote node itself. The caller should

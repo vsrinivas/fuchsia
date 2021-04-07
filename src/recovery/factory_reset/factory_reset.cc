@@ -21,8 +21,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
 
+#include <string_view>
+
 #include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
 #include <fs-management/mount.h>
 
 #include "src/security/kms-stateless/kms-stateless.h"

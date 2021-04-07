@@ -18,6 +18,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/hw/gpt.h>
 
+#include <string_view>
+
 #include <fbl/algorithm.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -186,7 +188,7 @@ class FactoryResetTest : public Test {
               ZX_OK);
   }
 
-  zx_status_t AttachDriver(const fbl::unique_fd& fd, const fbl::StringPiece& driver) {
+  zx_status_t AttachDriver(const fbl::unique_fd& fd, std::string_view driver) {
     fdio_cpp::UnownedFdioCaller connection(fd.get());
     zx_status_t call_status = ZX_OK;
     auto resp =

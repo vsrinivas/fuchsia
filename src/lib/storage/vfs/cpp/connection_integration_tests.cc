@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include <atomic>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -26,7 +27,7 @@ namespace fio = fuchsia_io;
 
 zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
-zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
+zx_status_t DummyWriter(std::string_view input) { return ZX_OK; }
 
 // Example vnode that supports protocol negotiation. Here the vnode may be opened as a file or a
 // directory.

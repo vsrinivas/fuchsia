@@ -22,11 +22,11 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <runtests-utils/runtests-utils.h>
@@ -38,7 +38,7 @@ namespace runtests {
 constexpr char kFailureSignature[] = "\n[runtests][FAILED]";
 constexpr char kSuccessSignature[] = "\n[runtests][PASSED]";
 
-void ParseTestNames(const fbl::StringPiece input, fbl::Vector<fbl::String>* output) {
+void ParseTestNames(const std::string_view input, fbl::Vector<fbl::String>* output) {
   // strsep modifies its input, so we have to make a mutable copy.
   // +1 because StringPiece::size() excludes null terminator.
   std::unique_ptr<char[]> input_copy(new char[input.size() + 1]);
@@ -53,16 +53,16 @@ void ParseTestNames(const fbl::StringPiece input, fbl::Vector<fbl::String>* outp
   }
 }
 
-bool IsInWhitelist(const fbl::StringPiece name, const fbl::Vector<fbl::String>& whitelist) {
+bool IsInWhitelist(const std::string_view name, const fbl::Vector<fbl::String>& whitelist) {
   for (const fbl::String& whitelist_entry : whitelist) {
-    if (name == fbl::StringPiece(whitelist_entry)) {
+    if (name == std::string_view(whitelist_entry)) {
       return true;
     }
   }
   return false;
 }
 
-int MkDirAll(const fbl::StringPiece dir_name) {
+int MkDirAll(const std::string_view dir_name) {
   fbl::StringBuffer<PATH_MAX> dir_buf;
   if (dir_name.length() > dir_buf.capacity()) {
     return ENAMETOOLONG;
@@ -92,7 +92,7 @@ int MkDirAll(const fbl::StringPiece dir_name) {
   return 0;
 }
 
-fbl::String JoinPath(const fbl::StringPiece parent, const fbl::StringPiece child) {
+fbl::String JoinPath(std::string_view parent, std::string_view child) {
   if (parent.empty()) {
     return fbl::String(child);
   }
@@ -109,7 +109,7 @@ fbl::String JoinPath(const fbl::StringPiece parent, const fbl::StringPiece child
 }
 
 int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
-                     const fbl::StringPiece syslog_path, FILE* summary_json) {
+                     std::string_view syslog_path, FILE* summary_json) {
   int test_count = 0;
   fprintf(summary_json, "{\n  \"tests\": [\n");
   for (const auto& result : results) {
@@ -201,10 +201,10 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
   return 0;
 }
 
-bool IsSharedLibraryName(fbl::StringPiece filename) {
+bool IsSharedLibraryName(std::string_view filename) {
   struct ExcludePattern {
-    fbl::StringPiece prefix;
-    fbl::StringPiece suffix;
+    std::string_view prefix;
+    std::string_view suffix;
   };
   static const fbl::Vector<ExcludePattern> kExcludePatterns = {
       {"lib", ".so"},
@@ -216,8 +216,8 @@ bool IsSharedLibraryName(fbl::StringPiece filename) {
       continue;
     }
 
-    fbl::StringPiece start(filename.begin(), exclusion.prefix.length());
-    fbl::StringPiece finish(filename.end() - exclusion.suffix.length(), exclusion.suffix.length());
+    std::string_view start(filename.begin(), exclusion.prefix.length());
+    std::string_view finish(filename.end() - exclusion.suffix.length(), exclusion.suffix.length());
     if (start == exclusion.prefix && finish == exclusion.suffix) {
       return true;
     }
@@ -273,7 +273,7 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
 
     struct dirent* de;
     while ((de = readdir(dir)) != nullptr) {
-      fbl::StringPiece test_name = de->d_name;
+      std::string_view test_name = de->d_name;
       if (!basename_whitelist.is_empty() &&
           !runtests::IsInWhitelist(test_name, basename_whitelist)) {
         continue;

@@ -5,6 +5,7 @@
 #include <zircon/device/vfs.h>
 
 #include <initializer_list>
+#include <string_view>
 
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
@@ -25,7 +26,7 @@ using VnodeOptions = fs::VnodeConnectionOptions;
 
 zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
-zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
+zx_status_t DummyWriter(std::string_view input) { return ZX_OK; }
 
 class VectorReader {
  public:
@@ -52,7 +53,7 @@ class VectorWriter {
   VectorWriter(size_t max_strings) : max_strings_(max_strings) {}
 
   fs::PseudoFile::WriteHandler GetHandler() {
-    return [this](fbl::StringPiece input) {
+    return [this](std::string_view input) {
       if (strings_.size() >= max_strings_)
         return ZX_ERR_IO;
       strings_.push_back(fbl::String(input));
@@ -68,7 +69,7 @@ class VectorWriter {
 };
 
 void CheckRead(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, size_t length, size_t offset,
-               fbl::StringPiece expected) {
+               std::string_view expected) {
   uint8_t buf[length];
   memset(buf, '!', length);
   size_t actual = 0u;
@@ -78,13 +79,13 @@ void CheckRead(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, size_t le
 }
 
 void CheckWrite(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, size_t offset,
-                fbl::StringPiece content, size_t expected_actual) {
+                std::string_view content, size_t expected_actual) {
   size_t actual = 0u;
   EXPECT_EQ(status, file->Write(content.data(), content.size(), offset, &actual));
   EXPECT_EQ(expected_actual, actual);
 }
 
-void CheckAppend(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, fbl::StringPiece content,
+void CheckAppend(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, std::string_view content,
                  size_t expected_end, size_t expected_actual) {
   size_t end = 0u;
   size_t actual = 0u;
@@ -363,7 +364,7 @@ TEST(PseudoFile, GetattrUnbuffered) {
 }
 
 TEST(PseudoFile, ReadBuffered) {
-  VectorReader reader{"first", "second", "", fbl::String(fbl::StringPiece("null\0null", 9u))};
+  VectorReader reader{"first", "second", "", fbl::String(std::string_view("null\0null", 9u))};
   auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(reader.GetHandler());
 
   {
@@ -407,9 +408,9 @@ TEST(PseudoFile, ReadBuffered) {
     EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     CheckRead(redirect, ZX_OK, 0u, 0u, "");
     CheckRead(redirect, ZX_OK, 4u, 0u, "null");
-    CheckRead(redirect, ZX_OK, 4u, 2u, fbl::StringPiece("ll\0n", 4u));
-    CheckRead(redirect, ZX_OK, 9u, 0u, fbl::StringPiece("null\0null", 9u));
-    CheckRead(redirect, ZX_OK, 12u, 0u, fbl::StringPiece("null\0null", 9u));
+    CheckRead(redirect, ZX_OK, 4u, 2u, std::string_view("ll\0n", 4u));
+    CheckRead(redirect, ZX_OK, 9u, 0u, std::string_view("null\0null", 9u));
+    CheckRead(redirect, ZX_OK, 12u, 0u, std::string_view("null\0null", 9u));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
@@ -428,7 +429,7 @@ TEST(PseudoFile, ReadUnbuffered) {
                       "fourth",
                       "fifth",
                       "",
-                      fbl::String(fbl::StringPiece("null\0null", 9u))};
+                      fbl::String(std::string_view("null\0null", 9u))};
   auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(reader.GetHandler());
 
   {
@@ -451,7 +452,7 @@ TEST(PseudoFile, ReadUnbuffered) {
     EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     CheckRead(redirect, ZX_OK, 8u, 0u, "fifth");
     CheckRead(redirect, ZX_OK, 4u, 0u, "");
-    CheckRead(redirect, ZX_OK, 12u, 0u, fbl::StringPiece("null\0null", 9u));
+    CheckRead(redirect, ZX_OK, 12u, 0u, std::string_view("null\0null", 9u));
     CheckRead(redirect, ZX_ERR_IO, 0u, 0u, "");
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
@@ -563,7 +564,7 @@ TEST(PseudoFile, WriteUnbuffered) {
     EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     CheckWrite(redirect, ZX_OK, 0u, "", 0u);
     CheckAppend(redirect, ZX_OK, "third", 5u, 5u);
-    CheckAppend(redirect, ZX_OK, fbl::StringPiece("null\0null", 9u), 9u, 9u);
+    CheckAppend(redirect, ZX_OK, std::string_view("null\0null", 9u), 9u, 9u);
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 

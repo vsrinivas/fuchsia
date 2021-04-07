@@ -6,6 +6,7 @@
 #define LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
 #include <zircon/types.h>
@@ -18,12 +19,11 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
 
 namespace fdio_internal {
 
 using EnumerateCallback = fbl::Function<zx_status_t(
-    const fbl::StringPiece& path, const fidl::ClientEnd<fuchsia_io::Directory>& client_end)>;
+    cpp17::string_view path, const fidl::ClientEnd<fuchsia_io::Directory>& client_end)>;
 
 // Represents a mapping from a string name to a remote connection.
 //
@@ -66,7 +66,7 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
 
   // Returns a child if it has the name |name|.
   // Otherwise, returns nullptr.
-  fbl::RefPtr<LocalVnode> Lookup(const fbl::StringPiece& name) const;
+  fbl::RefPtr<LocalVnode> Lookup(cpp17::string_view name) const;
 
   // Returns the next child vnode from the list of children, assuming that
   // |last_seen| is the ID of the last returned vnode. At the same time,

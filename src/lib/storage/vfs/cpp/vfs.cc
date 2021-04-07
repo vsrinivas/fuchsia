@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -43,7 +44,7 @@ namespace {
 
 // Trim a name before sending it to internal filesystem functions. Trailing '/' characters imply
 // that the name must refer to a directory.
-zx_status_t TrimName(fbl::StringPiece name, fbl::StringPiece* name_out, bool* dir_out) {
+zx_status_t TrimName(std::string_view name, std::string_view* name_out, bool* dir_out) {
   size_t len = name.length();
   bool is_dir = false;
   while ((len > 0) && name[len - 1] == '/') {
@@ -62,12 +63,12 @@ zx_status_t TrimName(fbl::StringPiece name, fbl::StringPiece* name_out, bool* di
     return ZX_ERR_INVALID_ARGS;
   }
 
-  *name_out = fbl::StringPiece(name.data(), len);
+  *name_out = std::string_view(name.data(), len);
   *dir_out = is_dir;
   return ZX_OK;
 }
 
-zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, fbl::RefPtr<Vnode>* out) {
+zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, std::string_view name, fbl::RefPtr<Vnode>* out) {
   if (name == "..") {
     return ZX_ERR_INVALID_ARGS;
   } else if (name == ".") {
@@ -124,13 +125,13 @@ void Vfs::SetDispatcher(async_dispatcher_t* dispatcher) {
 
 #endif
 
-Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
+Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, std::string_view path,
                           VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
   std::lock_guard<std::mutex> lock(vfs_lock_);
   return OpenLocked(std::move(vndir), path, options, parent_rights, mode);
 }
 
-Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
+Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                 VnodeConnectionOptions options, Rights parent_rights,
                                 uint32_t mode) {
   FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", Path(path.data(), path.size()), "' options=", options);
@@ -225,7 +226,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
   return OpenResult::Ok{.vnode = std::move(vn), .validated_options = validated_options.value()};
 }
 
-zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
+zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                               fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                               uint32_t mode, Rights parent_rights, bool* did_create) {
   zx_status_t status;
@@ -259,7 +260,7 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
   return ZX_OK;
 }
 
-zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
+zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) {
   bool must_be_dir;
   zx_status_t r;
   if ((r = TrimName(path, &path, &must_be_dir)) != ZX_OK) {
@@ -372,8 +373,8 @@ zx_status_t Vfs::TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) {
   return ZX_OK;
 }
 
-zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::StringPiece oldStr,
-                        fbl::StringPiece newStr) {
+zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
+                        std::string_view newStr) {
   // Local filesystem
   bool old_must_be_dir;
   bool new_must_be_dir;
@@ -418,8 +419,8 @@ zx_status_t Vfs::Readdir(Vnode* vn, VdirCookie* cookie, void* dirents, size_t le
   return vn->Readdir(cookie, dirents, len, out_actual);
 }
 
-zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::StringPiece oldStr,
-                      fbl::StringPiece newStr) {
+zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
+                      std::string_view newStr) {
   std::lock_guard<std::mutex> lock(vfs_lock_);
   fbl::RefPtr<fs::Vnode> newparent;
   zx_status_t r;
@@ -607,22 +608,22 @@ void Vfs::SetReadonly(bool value) {
   readonly_ = value;
 }
 
-zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, fbl::RefPtr<Vnode>* out_vn,
-                      fbl::StringPiece* out_path) {
+zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<Vnode>* out_vn,
+                      std::string_view* out_path) {
   zx_status_t r;
   while (!path.empty() && path[path.length() - 1] == '/') {
     // Discard extra trailing '/' characters.
-    path = fbl::StringPiece(path.data(), path.length() - 1);
+    path = std::string_view(path.data(), path.length() - 1);
   }
 
   for (;;) {
     while (!path.empty() && path[0] == '/') {
       // Discard extra leading '/' characters.
-      path = fbl::StringPiece(&path[1], path.length() - 1);
+      path = std::string_view(&path[1], path.length() - 1);
     }
     if (path.empty()) {
       // Convert empty initial path of final path segment to ".".
-      path = fbl::StringPiece(".", 1);
+      path = std::string_view(".", 1);
     }
 #ifdef __Fuchsia__
     if (vn->IsRemote()) {
@@ -643,7 +644,7 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, fbl::RefPtr<
     }
 
     // Path has at least one additional segment.
-    fbl::StringPiece component(path.data(), next_path - path.data());
+    std::string_view component(path.data(), next_path - path.data());
     if (component.length() > NAME_MAX) {
       return ZX_ERR_BAD_PATH;
     }
@@ -651,7 +652,7 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, fbl::RefPtr<
       return r;
     }
     // Traverse to the next segment.
-    path = fbl::StringPiece(next_path + 1, path.length() - (component.length() + 1));
+    path = std::string_view(next_path + 1, path.length() - (component.length() + 1));
   }
 }
 

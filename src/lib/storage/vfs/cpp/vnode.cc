@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <string_view>
 #include <utility>
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -98,7 +99,7 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
 
 #endif  // __Fuchsia__
 
-void Vnode::Notify(fbl::StringPiece name, unsigned event) {}
+void Vnode::Notify(std::string_view name, unsigned event) {}
 
 void Vnode::WillDestroyVfs() {
   std::lock_guard lock(mutex_);
@@ -185,7 +186,7 @@ zx_status_t Vnode::Append(const void* data, size_t len, size_t* out_end, size_t*
 
 void Vnode::DidModifyStream() {}
 
-zx_status_t Vnode::Lookup(fbl::StringPiece name, fbl::RefPtr<Vnode>* out) {
+zx_status_t Vnode::Lookup(std::string_view name, fbl::RefPtr<Vnode>* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -197,20 +198,20 @@ zx_status_t Vnode::Readdir(VdirCookie* cookie, void* dirents, size_t len, size_t
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<Vnode>* out) {
+zx_status_t Vnode::Create(std::string_view name, uint32_t mode, fbl::RefPtr<Vnode>* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Unlink(fbl::StringPiece name, bool must_be_dir) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Vnode::Unlink(std::string_view name, bool must_be_dir) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Vnode::Truncate(size_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t Vnode::Rename(fbl::RefPtr<Vnode> newdir, fbl::StringPiece oldname,
-                          fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) {
+zx_status_t Vnode::Rename(fbl::RefPtr<Vnode> newdir, std::string_view oldname,
+                          std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Link(fbl::StringPiece name, fbl::RefPtr<Vnode> target) {
+zx_status_t Vnode::Link(std::string_view name, fbl::RefPtr<Vnode> target) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -262,7 +263,7 @@ size_t Vnode::GetInflightTransactions() const {
 DirentFiller::DirentFiller(void* ptr, size_t len)
     : ptr_(static_cast<char*>(ptr)), pos_(0), len_(len) {}
 
-zx_status_t DirentFiller::Next(fbl::StringPiece name, uint8_t type, uint64_t ino) {
+zx_status_t DirentFiller::Next(std::string_view name, uint8_t type, uint64_t ino) {
   vdirent_t* de = reinterpret_cast<vdirent_t*>(ptr_ + pos_);
   size_t sz = sizeof(vdirent_t) + name.length();
 

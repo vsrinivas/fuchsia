@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <memory>
+#include <string_view>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
@@ -40,7 +41,7 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Dnode);
 
   // Allocates a dnode, attached to a vnode
-  static std::unique_ptr<Dnode> Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn);
+  static std::unique_ptr<Dnode> Create(std::string_view name, fbl::RefPtr<VnodeMemfs> vn);
 
   // Takes a parent-less node and makes it a child of the parent node.
   //
@@ -70,7 +71,7 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
   // ZX_OK is still returned.
   // If "out" is provided as "nullptr", the returned status appears the
   // same, but the "out" argument is not touched.
-  zx_status_t Lookup(fbl::StringPiece name, Dnode** out);
+  zx_status_t Lookup(std::string_view name, Dnode** out);
 
   // Acquire a pointer to the vnode underneath this dnode.
   // Acquires a reference to the underlying vnode.
@@ -101,7 +102,7 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
   Dnode(fbl::RefPtr<VnodeMemfs> vn, std::unique_ptr<char[]> name, uint32_t flags);
 
   size_t NameLen() const;
-  bool NameMatch(fbl::StringPiece name) const;
+  bool NameMatch(std::string_view name) const;
 
   fbl::RefPtr<VnodeMemfs> vnode_;
   // Refers to the parent named node in the directory hierarchy.

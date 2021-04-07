@@ -15,6 +15,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <string_view>
 
 #include "coordinator.h"
 #include "devfs.h"
@@ -216,7 +217,7 @@ zx_status_t Device::CreateProxy() {
   if (!(this->flags & DEV_CTX_IMMORTAL)) {
     const char* begin = driver_path.data();
     const char* end = strstr(begin, ".so");
-    fbl::StringPiece prefix(begin, end == nullptr ? driver_path.size() : end - begin);
+    std::string_view prefix(begin, end == nullptr ? driver_path.size() : end - begin);
     fbl::AllocChecker ac;
     driver_path = fbl::String::Concat({prefix, ".proxy.so"}, &ac);
     if (!ac.check()) {
@@ -818,9 +819,9 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
                        bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
                        AddDeviceCompleter::Sync& completer) {
   auto parent = fbl::RefPtr(this);
-  fbl::StringPiece name(name_view.data(), name_view.size());
-  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
-  fbl::StringPiece args(args_view.data(), args_view.size());
+  std::string_view name(name_view.data(), name_view.size());
+  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view args(args_view.data(), args_view.size());
 
   bool invisible = static_cast<bool>(device_add_config &
                                      fuchsia_device_manager::wire::AddDeviceConfig::INVISIBLE);
@@ -912,7 +913,7 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
 
 void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
 
   fuchsia_device_manager::wire::Coordinator_BindDevice_Result response;
   if (dev->coordinator->InSuspend()) {
@@ -1065,7 +1066,7 @@ void Device::AddCompositeDevice(::fidl::StringView name_view,
                                 fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
                                 AddCompositeDeviceCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  fbl::StringPiece name(name_view.data(), name_view.size());
+  std::string_view name(name_view.data(), name_view.size());
   zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, std::move(comp_desc));
   fuchsia_device_manager::wire::Coordinator_AddCompositeDevice_Result response;
   if (status != ZX_OK) {

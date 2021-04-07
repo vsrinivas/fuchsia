@@ -14,12 +14,12 @@
 #include <string.h>
 
 #include <algorithm>
+#include <string_view>
 
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/string_piece.h>
 
 #include "src/devices/misc/drivers/test/test_bind.h"
 
@@ -72,7 +72,7 @@ class TestRootDevice : public TestRootDeviceType {
 
  private:
   // Create a new child device with this |name|
-  zx_status_t CreateDevice(const fbl::StringPiece& name, zx::channel client_remote, char* path_out,
+  zx_status_t CreateDevice(std::string_view name, zx::channel client_remote, char* path_out,
                            size_t path_size, size_t* path_actual);
 };
 
@@ -151,7 +151,7 @@ void TestDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, zx::channel client_remote,
+zx_status_t TestRootDevice::CreateDevice(std::string_view name, zx::channel client_remote,
                                          char* path_out, size_t path_size, size_t* path_actual) {
   static_assert(fuchsia_device_test_MAX_DEVICE_NAME_LEN == ZX_DEVICE_NAME_MAX);
 
@@ -192,7 +192,7 @@ zx_status_t TestRootDevice::FidlCreateDevice(void* ctx, const char* name_data, s
 
   char path[fuchsia_device_test_MAX_DEVICE_PATH_LEN];
   size_t path_size = 0;
-  zx_status_t status = root->CreateDevice(fbl::StringPiece(name_data, name_len),
+  zx_status_t status = root->CreateDevice(std::string_view(name_data, name_len),
                                           std::move(client_remote), path, sizeof(path), &path_size);
   return fuchsia_device_test_RootDeviceCreateDevice_reply(txn, status, path, path_size);
 }

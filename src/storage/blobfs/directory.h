@@ -14,6 +14,8 @@
 #include <fuchsia/blobfs/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 
+#include <string_view>
+
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 
@@ -47,12 +49,12 @@ class Directory final : public fs::Vnode {
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
-  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
   zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-  zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
+  zx_status_t Unlink(std::string_view name, bool must_be_dir) final;
   void Sync(SyncCallback closure) final;
 
 #ifdef __Fuchsia__

@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <lib/trace-engine/fields.h>
 
+#include <string_view>
 #include <utility>
 
 #include <fbl/string_printf.h>
@@ -127,7 +128,7 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
     case MetadataType::kProviderInfo: {
       auto id = ProviderInfoMetadataRecordFields::Id::Get<ProviderId>(header);
       auto name_length = ProviderInfoMetadataRecordFields::NameLength::Get<size_t>(header);
-      fbl::StringPiece name_view;
+      std::string_view name_view;
       if (!record.ReadString(name_length, &name_view))
         return false;
       fbl::String name(name_view);
@@ -206,7 +207,7 @@ bool TraceReader::ReadStringRecord(Chunk& record, RecordHeader header) {
   }
 
   auto length = StringRecordFields::StringLength::Get<size_t>(header);
-  fbl::StringPiece string_view;
+  std::string_view string_view;
   if (!record.ReadString(length, &string_view))
     return false;
   fbl::String string(string_view);
@@ -423,7 +424,7 @@ bool TraceReader::ReadLogRecord(Chunk& record, RecordHeader header) {
   auto thread_ref = LogRecordFields::ThreadRef::Get<trace_encoded_thread_ref_t>(header);
   trace_ticks_t timestamp;
   ProcessThread process_thread;
-  fbl::StringPiece log_message;
+  std::string_view log_message;
   if (!record.ReadUint64(&timestamp) || !DecodeThreadRef(record, thread_ref, &process_thread) ||
       !record.ReadString(log_message_length, &log_message))
     return false;
@@ -678,7 +679,7 @@ bool TraceReader::DecodeStringRef(Chunk& chunk, trace_encoded_string_ref_t strin
 
   if (string_ref & TRACE_ENCODED_STRING_REF_INLINE_FLAG) {
     size_t length = string_ref & TRACE_ENCODED_STRING_REF_LENGTH_MASK;
-    fbl::StringPiece string_view;
+    std::string_view string_view;
     if (length > TRACE_ENCODED_STRING_REF_MAX_LENGTH || !chunk.ReadString(length, &string_view)) {
       ReportError("Could not read inline string");
       return false;
@@ -760,12 +761,12 @@ bool Chunk::ReadChunk(size_t num_words, Chunk* out_chunk) {
   return true;
 }
 
-bool Chunk::ReadString(size_t length, fbl::StringPiece* out_string) {
+bool Chunk::ReadString(size_t length, std::string_view* out_string) {
   auto num_words = BytesToWords(length);
   if (current_ + num_words > end_)
     return false;
 
-  *out_string = fbl::StringPiece(reinterpret_cast<const char*>(current_), length);
+  *out_string = std::string_view(reinterpret_cast<const char*>(current_), length);
   current_ += num_words;
   return true;
 }

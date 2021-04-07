@@ -11,6 +11,7 @@
 #include <lib/fdio/fdio.h>
 #include <zircon/device/vfs.h>
 
+#include <string_view>
 #include <utility>
 
 #include <fbl/unique_fd.h>
@@ -55,7 +56,7 @@ void ServiceNamespace::RemoveServiceForName(const std::string& service_name) {
   directory_->RemoveEntry(service_name);
 }
 
-void ServiceNamespace::Connect(fbl::StringPiece name, zx::channel channel) {
+void ServiceNamespace::Connect(std::string_view name, zx::channel channel) {
   ConnectCommon(std::string(name.data(), name.length()), std::move(channel));
 }
 

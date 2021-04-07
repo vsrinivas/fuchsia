@@ -9,6 +9,8 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <string_view>
+
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 
@@ -109,7 +111,7 @@ class __OWNER(char) StringBuffer final {
 
   // Appends content to the string buffer from a string piece.
   // The result is truncated if the appended content does not fit completely.
-  StringBuffer& Append(const fbl::StringPiece& piece) {
+  StringBuffer& Append(const std::string_view& piece) {
     AppendInternal(piece.data(), piece.length());
     return *this;
   }
@@ -144,7 +146,7 @@ class __OWNER(char) StringBuffer final {
   // Creates a string piece backed by the string.
   // The string piece does not take ownership of the data so the string
   // must outlast the string piece.
-  operator StringPiece() const { return {data(), length()}; }
+  operator std::string_view() const { return {data(), length()}; }
 
  private:
   void AppendInternal(const char* data, size_t length) {

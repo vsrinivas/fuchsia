@@ -17,6 +17,8 @@
 #include <lib/fdio/watcher.h>
 #include <lib/service/llcpp/service.h>
 
+#include <string_view>
+
 #include <gpt/gpt.h>
 
 #include "src/lib/uuid/uuid.h"
@@ -229,7 +231,7 @@ zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<
   return zx::ok();
 }
 
-zx::status<> IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_name) {
+zx::status<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_name) {
   zx::channel local, remote;
   auto status = zx::make_status(zx::channel::create(0, &local, &remote));
   if (status.is_error()) {
@@ -255,7 +257,7 @@ zx::status<> IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_na
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, fbl::StringPiece vendor) {
+zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view vendor) {
   zx::channel local, remote;
   zx::status<> status = zx::make_status(zx::channel::create(0, &local, &remote));
   if (status.is_error()) {

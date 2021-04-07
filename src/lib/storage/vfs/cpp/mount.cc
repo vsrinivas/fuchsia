@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -92,7 +93,7 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
   return ZX_OK;
 }
 
-zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountChannel h,
+zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountChannel h,
                             uint32_t flags) {
   std::lock_guard<std::mutex> lock(vfs_lock_);
   return OpenLocked(
@@ -132,7 +133,7 @@ zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fio::Dir
 }
 
 zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fio::Node> channel,
-                                   fbl::StringPiece path, VnodeConnectionOptions options,
+                                   std::string_view path, VnodeConnectionOptions options,
                                    uint32_t mode) {
   std::lock_guard<std::mutex> lock(vfs_lock_);
   auto h = vn->GetRemote();

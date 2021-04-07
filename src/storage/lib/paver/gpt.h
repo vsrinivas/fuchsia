@@ -9,6 +9,8 @@
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 
+#include <string_view>
+
 #include <fbl/function.h>
 #include <gpt/gpt.h>
 
@@ -138,10 +140,10 @@ inline bool FilterByType(const gpt_partition_t& part, const uuid::Uuid& type) {
   return type == uuid::Uuid(part.type);
 }
 
-bool FilterByName(const gpt_partition_t& part, fbl::StringPiece name);
+bool FilterByName(const gpt_partition_t& part, std::string_view name);
 
 bool FilterByTypeAndName(const gpt_partition_t& part, const uuid::Uuid& type,
-                         fbl::StringPiece name);
+                         std::string_view name);
 
 inline bool IsFvmPartition(const gpt_partition_t& part) {
   return FilterByType(part, GUID_FVM_VALUE) ||

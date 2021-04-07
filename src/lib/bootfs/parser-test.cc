@@ -11,11 +11,11 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -24,7 +24,7 @@ constexpr uint64_t kVmoSize = 1024 * 1024;
 
 struct BootfsEntry {
   fbl::String name;
-  fbl::StringPiece data;
+  std::string_view data;
 };
 
 // helper for creating a bootfs to use

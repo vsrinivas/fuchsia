@@ -39,7 +39,7 @@ VnodeDir::~VnodeDir() = default;
 
 fs::VnodeProtocolSet VnodeDir::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
-void VnodeDir::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
+void VnodeDir::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
 
 zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
@@ -87,7 +87,7 @@ void VnodeDir::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) {
   return remoter_.SetRemote(std::move(remote));
 }
 
-zx_status_t VnodeDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t VnodeDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   if (!IsDirectory()) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -138,7 +138,7 @@ zx_status_t VnodeDir::Readdir(fs::VdirCookie* cookie, void* data, size_t len, si
 }
 
 // postcondition: reference taken on vn returned through "out"
-zx_status_t VnodeDir::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t VnodeDir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
   zx_status_t status;
   if ((status = CanCreate(name)) != ZX_OK) {
     return status;
@@ -163,7 +163,7 @@ zx_status_t VnodeDir::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<f
   return status;
 }
 
-zx_status_t VnodeDir::Unlink(fbl::StringPiece name, bool must_be_dir) {
+zx_status_t VnodeDir::Unlink(std::string_view name, bool must_be_dir) {
   if (!IsDirectory()) {
     // Calling unlink from unlinked, empty directory
     return ZX_ERR_BAD_STATE;
@@ -186,8 +186,8 @@ zx_status_t VnodeDir::Unlink(fbl::StringPiece name, bool must_be_dir) {
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece oldname,
-                             fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) {
+zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
+                             std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) {
   auto newdir = fbl::RefPtr<VnodeMemfs>::Downcast(std::move(_newdir));
 
   if (!IsDirectory() || !newdir->IsDirectory()) {
@@ -266,7 +266,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) {
+zx_status_t VnodeDir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> target) {
   auto vn = fbl::RefPtr<VnodeMemfs>::Downcast(std::move(target));
 
   if (!IsDirectory()) {
@@ -296,7 +296,7 @@ zx_status_t VnodeDir::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target)
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::CreateFromVmo(fbl::StringPiece name, zx_handle_t vmo, zx_off_t off,
+zx_status_t VnodeDir::CreateFromVmo(std::string_view name, zx_handle_t vmo, zx_off_t off,
                                     zx_off_t len) {
   zx_status_t status;
   if ((status = CanCreate(name)) != ZX_OK) {
@@ -316,7 +316,7 @@ zx_status_t VnodeDir::CreateFromVmo(fbl::StringPiece name, zx_handle_t vmo, zx_o
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::CanCreate(fbl::StringPiece name) const {
+zx_status_t VnodeDir::CanCreate(std::string_view name) const {
   if (!IsDirectory()) {
     return ZX_ERR_BAD_STATE;
   }
@@ -329,7 +329,7 @@ zx_status_t VnodeDir::CanCreate(fbl::StringPiece name) const {
   return status;
 }
 
-zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, fbl::StringPiece name, bool isdir) {
+zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, std::string_view name, bool isdir) {
   // dnode takes a reference to the vnode
   std::unique_ptr<Dnode> dn;
   if ((dn = Dnode::Create(name, vn)) == nullptr) {

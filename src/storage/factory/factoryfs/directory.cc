@@ -22,7 +22,7 @@ Directory::Directory(factoryfs::Factoryfs& fs, std::string_view path)
 
 Directory::~Directory() { factoryfs_.DidClose(path_); }
 
-zx_status_t Directory::Create(fbl::StringPiece name_view, uint32_t mode,
+zx_status_t Directory::Create(std::string_view name_view, uint32_t mode,
                               fbl::RefPtr<fs::Vnode>* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -47,7 +47,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
 
 void Directory::Sync(SyncCallback closure) {}
 
-zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   ZX_ASSERT(name.find('/') == std::string::npos);
 
   if (name == ".") {
@@ -97,7 +97,7 @@ zx_status_t Directory::GetDevicePath(size_t buffer_len, char* out_name, size_t* 
   return factoryfs_.Device().GetDevicePath(buffer_len, out_name, out_len);
 }
 #endif
-zx_status_t Directory::Unlink(fbl::StringPiece path, bool is_dir) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Directory::Unlink(std::string_view path, bool is_dir) { return ZX_ERR_NOT_SUPPORTED; }
 
 const factoryfs::Superblock& Directory::Info() const { return factoryfs_.Info(); }
 
@@ -113,8 +113,8 @@ zx_status_t Directory::GetAttributes(fs::VnodeAttributes* attributes) {
   return ZX_OK;
 }
 
-zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> newdirectory, fbl::StringPiece currname,
-                              fbl::StringPiece newname, bool srcdir, bool dstdir) {
+zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> newdirectory, std::string_view currname,
+                              std::string_view newname, bool srcdir, bool dstdir) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

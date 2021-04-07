@@ -8,8 +8,7 @@
 #include <zircon/status.h>
 
 #include <algorithm>
-
-#include <fbl/string_piece.h>
+#include <string_view>
 
 namespace fuzzing {
 

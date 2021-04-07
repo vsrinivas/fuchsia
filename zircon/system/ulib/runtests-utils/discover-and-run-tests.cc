@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <string_view>
 #include <utility>
 
 #include <fbl/string.h>
@@ -86,7 +87,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
 
 int DiscoverAndRunTests(int argc, const char* const* argv,
                         const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
-                        const fbl::StringPiece syslog_file_name) {
+                        const std::string_view syslog_file_name) {
   bool use_default_globs = false;
   fbl::Vector<fbl::String> basename_whitelist;
   fbl::Vector<fbl::String> test_args;

@@ -11,6 +11,7 @@
 #include <lib/fdio/fdio.h>
 #include <zircon/device/vfs.h>
 
+#include <string_view>
 #include <utility>
 
 #include "src/lib/storage/vfs/cpp/service.h"
@@ -84,7 +85,7 @@ fs::VnodeProtocolSet ServiceProviderBridge::ServiceProviderDir::GetProtocols() c
   return fs::VnodeProtocol::kDirectory;
 }
 
-zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(fbl::StringPiece name,
+zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(std::string_view name,
                                                               fbl::RefPtr<fs::Vnode>* out) {
   *out = fbl::MakeRefCounted<fs::Service>(
       [bridge = bridge_, name = std::string(name.data(), name.length())](zx::channel channel) {

@@ -7,10 +7,10 @@
 
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
@@ -28,7 +28,7 @@ class ServiceProxyDir : public fs::Vnode {
   // Overridden from |fs::Vnode|:
 
   fs::VnodeProtocolSet GetProtocols() const final;
-  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;

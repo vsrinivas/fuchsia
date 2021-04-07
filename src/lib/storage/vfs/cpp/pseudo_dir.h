@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <mutex>
+#include <string_view>
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
@@ -44,14 +45,14 @@ class PseudoDir : public Vnode {
   //
   // Returns |ZX_OK| on success.
   // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name.
-  zx_status_t RemoveEntry(fbl::StringPiece name);
+  zx_status_t RemoveEntry(std::string_view name);
 
   // An extension of |RemoveEntry| which additionally verifies
   // that the target vnode is |vn|.
   //
   // Returns |ZX_OK| on success.
   // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name/vn pair.
-  zx_status_t RemoveEntry(fbl::StringPiece name, fs::Vnode* vn);
+  zx_status_t RemoveEntry(std::string_view name, fs::Vnode* vn);
 
   // Removes all directory entries.
   void RemoveAllEntries();
@@ -63,8 +64,8 @@ class PseudoDir : public Vnode {
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
-  void Notify(fbl::StringPiece name, unsigned event) final;
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
+  void Notify(std::string_view name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
   zx_status_t Readdir(VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,

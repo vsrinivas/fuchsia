@@ -10,11 +10,11 @@
 #include <lib/ddk/binding.h>
 
 #include <memory>
+#include <string_view>
 
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 
 #include "metadata.h"
 
@@ -115,7 +115,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
 
   ~CompositeDevice();
 
-  static zx_status_t Create(const fbl::StringPiece& name,
+  static zx_status_t Create(std::string_view name,
                             fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
                             std::unique_ptr<CompositeDevice>* out);
 

@@ -10,12 +10,12 @@
 #include <stdint.h>
 
 #include <array>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 #include "garnet/bin/ktrace_provider/tags.h"
@@ -47,13 +47,13 @@ class Importer {
   bool ImportCounterRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
 
-  bool HandleThreadName(zx_koid_t thread, zx_koid_t process, const fbl::StringPiece& name);
-  bool HandleProcessName(zx_koid_t process, const fbl::StringPiece& name);
-  bool HandleSyscallName(uint32_t syscall, const fbl::StringPiece& name);
-  bool HandleIRQName(uint32_t irq, const fbl::StringPiece& name);
-  bool HandleProbeName(uint32_t probe, const fbl::StringPiece& name);
-  bool HandleVcpuMeta(uint32_t meta, const fbl::StringPiece& name);
-  bool HandleVcpuExitMeta(uint32_t exit, const fbl::StringPiece& name);
+  bool HandleThreadName(zx_koid_t thread, zx_koid_t process, std::string_view name);
+  bool HandleProcessName(zx_koid_t process, std::string_view name);
+  bool HandleSyscallName(uint32_t syscall, std::string_view name);
+  bool HandleIRQName(uint32_t irq, std::string_view name);
+  bool HandleProbeName(uint32_t probe, std::string_view name);
+  bool HandleVcpuMeta(uint32_t meta, std::string_view name);
+  bool HandleVcpuExitMeta(uint32_t exit, std::string_view name);
 
   bool HandleIRQEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number, uint32_t irq);
   bool HandleIRQExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number, uint32_t irq);
@@ -65,9 +65,9 @@ class Importer {
   bool HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                            uint64_t virtual_address, uint32_t flags);
   bool HandleAccessFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                            uint64_t virtual_address, uint32_t flags);
+                              uint64_t virtual_address, uint32_t flags);
   bool HandleAccessFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                           uint64_t virtual_address, uint32_t flags);
+                             uint64_t virtual_address, uint32_t flags);
   bool HandleContextSwitch(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                            trace_thread_state_t outgoing_thread_state,
                            trace_thread_priority_t outgoing_thread_priority,

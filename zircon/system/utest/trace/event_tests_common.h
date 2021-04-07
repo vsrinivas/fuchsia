@@ -19,8 +19,9 @@
 #include <zxtest/zxtest.h>
 
 #ifdef __cplusplus
+#include <string_view>
+
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #endif  // __cplusplus
 
 #include "fixture_macros.h"
@@ -917,7 +918,7 @@ TEST(TEST_SUITE, test_string_arguments) {
   TRACE_DURATION_BEGIN("+enabled", "name", "key", string);
   TRACE_DURATION_BEGIN("+enabled", "name", "key", nonterminated);
   TRACE_DURATION_BEGIN("+enabled", "name", "key", fbl::String("dynamic string"));
-  TRACE_DURATION_BEGIN("+enabled", "name", "key", fbl::StringPiece("piece", 3u));
+  TRACE_DURATION_BEGIN("+enabled", "name", "key", std::string_view("piece", 3u));
   TRACE_DURATION_BEGIN("+enabled", "name", "key", nonterminated);
 #endif  // __cplusplus
 

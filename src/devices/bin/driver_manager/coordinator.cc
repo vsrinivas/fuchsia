@@ -41,6 +41,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <driver-info/driver-info.h>
@@ -197,7 +198,7 @@ zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
   return ZX_OK;
 }
 
-const Driver* Coordinator::LibnameToDriver(const fbl::StringPiece& libname) const {
+const Driver* Coordinator::LibnameToDriver(std::string_view libname) const {
   for (const auto& drv : drivers_) {
     if (libname.compare(drv.libname) == 0) {
       return &drv;
@@ -475,8 +476,8 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
                                    zx::channel coordinator,
                                    const fuchsia_device_manager::wire::DeviceProperty* props_data,
-                                   size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
-                                   fbl::StringPiece driver_path, fbl::StringPiece args,
+                                   size_t props_count, std::string_view name, uint32_t protocol_id,
+                                   std::string_view driver_path, std::string_view args,
                                    bool invisible, bool skip_autobind, bool has_init,
                                    bool always_init, zx::vmo inspect, zx::channel client_remote,
                                    fbl::RefPtr<Device>* new_device) {
@@ -784,7 +785,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 }
 
 zx_status_t Coordinator::AddCompositeDevice(
-    const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
+    const fbl::RefPtr<Device>& dev, std::string_view name,
     fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc) {
   // Only the platform bus driver should be able to use this.  It is the
   // descendant of the sys device node.
@@ -1497,7 +1498,7 @@ zx::status<std::vector<const Driver*>> Coordinator::MatchDevice(const fbl::RefPt
   return zx::ok(std::move(matched_drivers));
 }
 
-zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
+zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
                                     bool new_device) {
   // shouldn't be possible to get a bind request for a proxy device
   if (dev->flags & DEV_CTX_PROXY) {
@@ -1607,7 +1608,7 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
 
 void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
                                  GetBindProgramCompleter::Sync& completer) {
-  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
   const Driver* driver = LibnameToDriver(driver_path);
   if (driver == nullptr) {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
@@ -1869,7 +1870,7 @@ std::string Coordinator::GetFragmentDriverPath() const {
 
 void Coordinator::RestartDriverHosts(fidl::StringView driver_path_view,
                                      RestartDriverHostsCompleter::Sync& completer) {
-  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
 
   // Find devices containing the driver.
   for (auto& dev : devices_) {

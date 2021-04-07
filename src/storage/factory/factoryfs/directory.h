@@ -46,12 +46,12 @@ class Directory final : public fs::Vnode {
   void OpenFile(std::string name, fs::Vnode* file);
   void CloseFile(std::string name);
 
-  zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
-  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
-  zx_status_t Unlink(fbl::StringPiece name, bool is_dir) final;
+  zx_status_t Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Unlink(std::string_view name, bool is_dir) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* attributes) final;
-  zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, fbl::StringPiece oldname,
-                     fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) final;
+  zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, std::string_view oldname,
+                     std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) final;
 
   zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;

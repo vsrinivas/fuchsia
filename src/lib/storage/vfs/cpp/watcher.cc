@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <string_view>
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/llcpp/fidl.h>
@@ -48,7 +49,7 @@ class WatchBuffer {
   DISALLOW_COPY_ASSIGN_AND_MOVE(WatchBuffer);
   WatchBuffer() = default;
 
-  zx_status_t AddMsg(const zx::channel& c, unsigned event, fbl::StringPiece name);
+  zx_status_t AddMsg(const zx::channel& c, unsigned event, std::string_view name);
   zx_status_t Send(const zx::channel& c);
 
  private:
@@ -56,7 +57,7 @@ class WatchBuffer {
   char watch_buf_[fio::wire::MAX_BUF]{};
 };
 
-zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, fbl::StringPiece name) {
+zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, std::string_view name) {
   size_t slen = name.length();
   size_t mlen = sizeof(vfs_watch_msg_t) + slen;
   if (mlen + watch_buf_size_ > sizeof(watch_buf_)) {
@@ -119,7 +120,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
           auto dirent = reinterpret_cast<vdirent_t*>(ptr);
           if (dirent->name[0]) {
             wb.AddMsg(watcher->h, fio::wire::WATCH_EVENT_EXISTING,
-                      fbl::StringPiece(dirent->name, dirent->size));
+                      std::string_view(dirent->name, dirent->size));
           }
           size_t entry_len = dirent->size + sizeof(vdirent_t);
           ZX_ASSERT(entry_len <= actual);  // Prevent underflow
@@ -143,7 +144,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
   return ZX_OK;
 }
 
-void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
+void WatcherContainer::Notify(std::string_view name, unsigned event) {
   if (name.length() > fio::wire::MAX_FILENAME) {
     return;
   }

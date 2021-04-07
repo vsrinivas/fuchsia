@@ -14,7 +14,6 @@
 #include <memory>
 #include <string_view>
 
-#include <fbl/string_piece.h>
 #include <fs-management/mount.h>
 
 namespace devmgr {

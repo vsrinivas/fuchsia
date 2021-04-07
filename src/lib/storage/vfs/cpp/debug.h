@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/string_buffer.h>
@@ -189,7 +190,7 @@ void PrintEach(fbl::StringBuffer<N>* sb, T val, Args... args) {
   PrintEach(sb, args...);
 }
 
-void Log(fbl::StringPiece buffer);
+void Log(std::string_view buffer);
 
 template <typename... Args>
 void ConnectionTraceDebug(Args... args) {

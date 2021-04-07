@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -60,7 +61,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
 
   fs::VnodeProtocolSet GetProtocols() const final;
 
-  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
 
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
 

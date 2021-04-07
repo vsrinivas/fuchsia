@@ -7,6 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <algorithm>
+#include <string_view>
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
@@ -48,7 +49,7 @@ zx_status_t LazyDir::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t LazyDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out_vnode) {
+zx_status_t LazyDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out_vnode) {
   LazyEntryVector entries;
   GetContents(&entries);
   for (const auto& entry : entries) {

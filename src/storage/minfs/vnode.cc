@@ -17,7 +17,6 @@
 #include <string_view>
 
 #include <fbl/algorithm.h>
-#include <fbl/string_piece.h>
 #include <safemath/checked_math.h>
 
 #include "src/lib/storage/vfs/cpp/trace.h"
@@ -635,7 +634,7 @@ zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
 VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
 
 #ifdef __Fuchsia__
-void VnodeMinfs::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
+void VnodeMinfs::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
 zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
                                  zx::channel watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));

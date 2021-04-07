@@ -4,9 +4,9 @@
 
 #include <lib/fit/defer.h>
 
+#include <string_view>
 #include <utility>
 
-#include <fbl/string_piece.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/base/runner.h>
@@ -214,7 +214,7 @@ int RunAllTests(int argc, char** argv) {
 }
 
 namespace {
-bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
+bool MatchPatterns(std::string_view pattern, std::string_view str) {
   static constexpr auto match_pattern = [](const char* pattern, const char* str) -> bool {
     auto advance = [](const char* pattern, const char* str, auto& self) -> bool {
       switch (*pattern) {
@@ -271,11 +271,11 @@ bool FilterOp::operator()(const fbl::String& test_case, const fbl::String& test)
 
   const char* p = pattern.c_str();
   const char* d = strchr(p, '-');
-  fbl::StringPiece positive, negative;
+  std::string_view positive, negative;
 
   // No negative string.
   if (d == nullptr) {
-    positive = fbl::StringPiece(p, pattern.size());
+    positive = std::string_view(p, pattern.size());
   } else {
     size_t delta = d - p;
     // No positive pattern.
@@ -283,8 +283,8 @@ bool FilterOp::operator()(const fbl::String& test_case, const fbl::String& test)
     if (delta == 1) {
       delta--;
     }
-    positive = fbl::StringPiece(p, delta);
-    negative = fbl::StringPiece(d + 1, pattern.size() - delta - 1);
+    positive = std::string_view(p, delta);
+    negative = std::string_view(d + 1, pattern.size() - delta - 1);
   }
   return (positive.empty() || MatchPatterns(positive, full_test_name)) &&
          (negative.empty() || !MatchPatterns(negative, full_test_name));

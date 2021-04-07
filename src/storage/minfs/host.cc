@@ -19,6 +19,7 @@
 
 #include <limits>
 #include <memory>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -245,7 +246,7 @@ int emu_open(const char* path, int flags, mode_t mode) {
   }
   for (int fd = 0; fd < kMaxFd; fd++) {
     if (fdtab[fd].vn == nullptr) {
-      fbl::StringPiece str(path + PREFIX_SIZE);
+      std::string_view str(path + PREFIX_SIZE);
       fs::VnodeConnectionOptions options = fdio_flags_to_connection_options(flags);
       auto result =
           fake_fs.fake_vfs->Open(fake_fs.fake_root, str, options, fs::Rights::ReadWrite(), mode);
@@ -420,7 +421,7 @@ int emu_stat(const char* fn, struct stat* s) {
       nextpath++;
     }
     fbl::RefPtr<fs::Vnode> vn_fs;
-    zx_status_t status = cur->Lookup(fbl::StringPiece(fn, len), &vn_fs);
+    zx_status_t status = cur->Lookup(std::string_view(fn, len), &vn_fs);
     if (status != ZX_OK) {
       return -ENOENT;
     }
@@ -464,7 +465,7 @@ int emu_mkdir(const char* path, mode_t mode) {
 
 DIR* emu_opendir(const char* name) {
   ZX_DEBUG_ASSERT_MSG(!host_path(name), "'emu_' functions can only operate on target paths");
-  fbl::StringPiece path(name + PREFIX_SIZE);
+  std::string_view path(name + PREFIX_SIZE);
   fs::VnodeConnectionOptions options;
   options.rights.read = true;
   options.flags.posix = true;

@@ -5,9 +5,10 @@
 #include "src/lib/storage/vfs/cpp/debug.h"
 
 #include <iostream>
+#include <string_view>
 
 namespace fs::debug_internal {
 
-void Log(fbl::StringPiece buffer) { std::cerr << buffer << std::endl; }
+void Log(std::string_view buffer) { std::cerr << buffer << std::endl; }
 
 }  // namespace fs::debug_internal

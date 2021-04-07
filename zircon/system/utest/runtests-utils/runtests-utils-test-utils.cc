@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <string_view>
+
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
@@ -33,7 +35,7 @@ fbl::String packaged_script_dir() {
   return runtests_utils_test_data_dir;
 }
 
-PackagedScriptFile::PackagedScriptFile(const fbl::StringPiece path) {
+PackagedScriptFile::PackagedScriptFile(const std::string_view path) {
   fbl::String script_dir = packaged_script_dir();
   path_ = JoinPath(script_dir, path);
 
@@ -45,9 +47,9 @@ PackagedScriptFile::PackagedScriptFile(const fbl::StringPiece path) {
 
 PackagedScriptFile::~PackagedScriptFile() {}
 
-fbl::StringPiece PackagedScriptFile::path() const { return path_; }
+std::string_view PackagedScriptFile::path() const { return path_; }
 
-ScopedStubFile::ScopedStubFile(const fbl::StringPiece path) : path_(path) {
+ScopedStubFile::ScopedStubFile(const std::string_view path) : path_(path) {
   const int fd = open(path_.data(), O_CREAT | O_WRONLY, S_IRWXU);
   ZX_ASSERT_MSG(-1 != fd, "%s", strerror(errno));
   ZX_ASSERT_MSG(-1 != close(fd), "%s", strerror(errno));
@@ -55,7 +57,7 @@ ScopedStubFile::ScopedStubFile(const fbl::StringPiece path) : path_(path) {
 
 ScopedStubFile::~ScopedStubFile() { remove(path_.data()); }
 
-ScopedTestFile::ScopedTestFile(const fbl::StringPiece path, const fbl::StringPiece file)
+ScopedTestFile::ScopedTestFile(const std::string_view path, const std::string_view file)
     : path_(path) {
   fbl::unique_fd input_fd{open(file.data(), O_RDONLY)};
   ZX_ASSERT_MSG(input_fd, "%s", strerror(errno));
@@ -75,7 +77,7 @@ ScopedTestFile::ScopedTestFile(const fbl::StringPiece path, const fbl::StringPie
 
 ScopedTestFile::~ScopedTestFile() { remove(path_.data()); }
 
-fbl::StringPiece ScopedTestFile::path() const { return path_; }
+std::string_view ScopedTestFile::path() const { return path_; }
 
 int ScopedTestDir::num_test_dirs_created_ = 0;
 
@@ -108,7 +110,7 @@ int NumEntriesInDir(const char* dir_path) {
 // test at |test_path|, setting |output_file_rel_path| as its value if
 // successful.
 // Returns true iff successful.
-bool GetOutputFileRelPath(const fbl::StringPiece& output_dir, const fbl::StringPiece& test_path,
+bool GetOutputFileRelPath(std::string_view output_dir, std::string_view test_path,
                           fbl::String* output_file_rel_path) {
   if (output_file_rel_path == nullptr) {
     printf("FAILURE: |output_file_rel_path| was null.");

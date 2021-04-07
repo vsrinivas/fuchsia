@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <iterator>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -21,7 +22,7 @@ TEST(TraceReader, EmptyChunk) {
   uint64_t value;
   int64_t int64_value;
   double double_value;
-  fbl::StringPiece string_value;
+  std::string_view string_value;
   trace::Chunk subchunk;
 
   trace::Chunk empty;
@@ -46,7 +47,7 @@ TEST(TraceReader, NonEmptyChunk) {
   uint64_t value;
   int64_t int64_value;
   double double_value;
-  fbl::StringPiece string_value;
+  std::string_view string_value;
   trace::Chunk subchunk;
 
   uint64_t kData[] = {

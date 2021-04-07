@@ -7,6 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/types.h>
 #include <zircon/device/vfs.h>
@@ -19,7 +20,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <sdk/lib/fdio/zxio.h>
 
 #include "local-connection.h"
@@ -42,11 +42,11 @@ struct ExportState {
   char** path;
 };
 
-zx_status_t ValidateName(const fbl::StringPiece& name) {
+zx_status_t ValidateName(const cpp17::string_view& name) {
   if ((name.length() == 0) || (name.length() > NAME_MAX)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (name == fbl::StringPiece(".") || name == fbl::StringPiece("..")) {
+  if (name == cpp17::string_view(".") || name == cpp17::string_view("..")) {
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
@@ -84,7 +84,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
 
     // "." matches current node.
     if (!((path[0] == '.') && (path[1] == 0))) {
-      fbl::RefPtr<LocalVnode> child = vn->Lookup(fbl::StringPiece(name, len));
+      fbl::RefPtr<LocalVnode> child = vn->Lookup(cpp17::string_view(name, len));
       if (child == nullptr) {
         // If no child exists with this name, we either failed to lookup a node,
         // or we must transmit this request to the remote node.
@@ -206,7 +206,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
                                     size_t length, zxio_dirent_t** out_entry) const {
   fbl::AutoLock lock(&lock_);
 
-  auto populate_entry = [length](zxio_dirent_t* entry, fbl::StringPiece name) {
+  auto populate_entry = [length](zxio_dirent_t* entry, cpp17::string_view name) {
     if (name.size() > NAME_MAX) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -225,7 +225,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
 
   if (!state->encountered_dot) {
     auto entry = reinterpret_cast<zxio_dirent_t*>(buffer);
-    zx_status_t status = populate_entry(entry, fbl::StringPiece("."));
+    zx_status_t status = populate_entry(entry, cpp17::string_view("."));
     if (status != ZX_OK) {
       *out_entry = nullptr;
       return status;
@@ -301,7 +301,7 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
 
   for (;;) {
     const char* next = strchr(path, '/');
-    fbl::StringPiece name(path, next ? (next - path) : strlen(path));
+    cpp17::string_view name(path, next ? (next - path) : strlen(path));
     zx_status_t status = ValidateName(name);
     if (status != ZX_OK) {
       return status;
@@ -392,7 +392,7 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
 
   for (;;) {
     const char* next = strchr(path, '/');
-    fbl::StringPiece name(path, next ? (next - path) : strlen(path));
+    cpp17::string_view name(path, next ? (next - path) : strlen(path));
     status = ValidateName(name);
     if (status != ZX_OK) {
       return status;
@@ -496,7 +496,7 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
     return root_;
   }();
 
-  auto count_callback = [&es](const fbl::StringPiece& path,
+  auto count_callback = [&es](const cpp17::string_view& path,
                               const fidl::ClientEnd<fio::Directory>& client_end) {
     // Each entry needs one slot in the handle table,
     // one slot in the type table, and one slot in the
@@ -524,7 +524,7 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
   es.buffer = reinterpret_cast<char*>(es.path + es.count);
   es.count = 0;
 
-  auto export_callback = [&es](const fbl::StringPiece& path,
+  auto export_callback = [&es](const cpp17::string_view& path,
                                const fidl::ClientEnd<fio::Directory>& client_end) {
     zx::channel remote(fdio_service_clone(client_end.channel().get()));
     if (!remote.is_valid()) {

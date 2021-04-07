@@ -10,6 +10,7 @@
 #include <zircon/syscalls.h>
 
 #include <iterator>
+#include <string_view>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
@@ -241,9 +242,11 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
     case KTRACE_EVENT(TAG_PAGE_FAULT_EXIT):
       return HandlePageFaultExit(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
     case KTRACE_EVENT(TAG_ACCESS_FAULT):
-      return HandleAccessFaultEnter(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+      return HandleAccessFaultEnter(record->ts, record->d, ToUInt64(record->a, record->b),
+                                    record->c);
     case KTRACE_EVENT(TAG_ACCESS_FAULT_EXIT):
-      return HandleAccessFaultExit(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+      return HandleAccessFaultExit(record->ts, record->d, ToUInt64(record->a, record->b),
+                                   record->c);
     case KTRACE_EVENT(TAG_CONTEXT_SWITCH): {
       trace_cpu_number_t cpu = record->b & 0xff;
       trace_thread_state_t outgoing_thread_state = ToTraceThreadState((record->b >> 8) & 0xff);
@@ -366,7 +369,7 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
 }
 
 bool Importer::ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& tag_info) {
-  fbl::StringPiece name(record->name, strnlen(record->name, ZX_MAX_NAME_LEN - 1));
+  std::string_view name(record->name, strnlen(record->name, ZX_MAX_NAME_LEN - 1));
   FX_VLOGS(5) << "NAME: tag=0x" << std::hex << record->tag << " (" << tag_info.name << "), id=0x"
               << record->id << ", arg=0x" << record->arg << ", name='" << fbl::String(name).c_str()
               << "'";
@@ -509,44 +512,44 @@ bool Importer::ImportUnknownRecord(const ktrace_header_t* record, size_t record_
   return false;
 }
 
-bool Importer::HandleThreadName(zx_koid_t thread, zx_koid_t process, const fbl::StringPiece& name) {
+bool Importer::HandleThreadName(zx_koid_t thread, zx_koid_t process, std::string_view name) {
   trace_string_ref name_ref = trace_make_inline_string_ref(name.data(), name.length());
   trace_context_write_thread_info_record(context_, process, thread, &name_ref);
   thread_refs_.emplace(thread, trace_context_make_registered_thread(context_, process, thread));
   return true;
 }
 
-bool Importer::HandleProcessName(zx_koid_t process, const fbl::StringPiece& name) {
+bool Importer::HandleProcessName(zx_koid_t process, std::string_view name) {
   trace_string_ref name_ref = trace_make_inline_string_ref(name.data(), name.length());
   trace_context_write_process_info_record(context_, process, &name_ref);
   return true;
 }
 
-bool Importer::HandleSyscallName(uint32_t syscall, const fbl::StringPiece& name) {
+bool Importer::HandleSyscallName(uint32_t syscall, std::string_view name) {
   syscall_names_.emplace(
       syscall, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleIRQName(uint32_t irq, const fbl::StringPiece& name) {
+bool Importer::HandleIRQName(uint32_t irq, std::string_view name) {
   irq_names_.emplace(
       irq, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleProbeName(uint32_t event_name_id, const fbl::StringPiece& name) {
+bool Importer::HandleProbeName(uint32_t event_name_id, std::string_view name) {
   probe_names_.emplace(event_name_id, trace_context_make_registered_string_copy(
                                           context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleVcpuMeta(uint32_t meta, const fbl::StringPiece& name) {
+bool Importer::HandleVcpuMeta(uint32_t meta, std::string_view name) {
   vcpu_meta_.emplace(
       meta, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleVcpuExitMeta(uint32_t exit, const fbl::StringPiece& name) {
+bool Importer::HandleVcpuExitMeta(uint32_t exit, std::string_view name) {
   vcpu_exit_meta_.emplace(
       exit, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
   return true;

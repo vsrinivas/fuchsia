@@ -8,6 +8,7 @@
 #include <zircon/assert.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -15,7 +16,6 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/macros.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <trace-reader/records.h>
 
 namespace trace {
@@ -163,7 +163,7 @@ class Chunk final {
   bool ReadUint64(uint64_t* out_value);
   bool ReadInt64(int64_t* out_value);
   bool ReadDouble(double* out_value);
-  bool ReadString(size_t length, fbl::StringPiece* out_string);
+  bool ReadString(size_t length, std::string_view* out_string);
   bool ReadChunk(size_t num_words, Chunk* out_chunk);
   bool ReadInPlace(size_t num_words, const void** out_ptr);
 

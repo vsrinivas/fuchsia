@@ -17,11 +17,11 @@
 #include <zircon/status.h>
 
 #include <iterator>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 
 namespace {

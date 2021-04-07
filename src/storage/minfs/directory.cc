@@ -17,10 +17,10 @@
 #include <zircon/time.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/string_piece.h>
 
 #include "lib/zx/status.h"
 #include "src/lib/storage/vfs/cpp/debug.h"
@@ -133,7 +133,7 @@ void Directory::CancelPendingWriteback() {}
 #endif
 
 zx_status_t Directory::DirentCallbackFind(fbl::RefPtr<Directory> vndir, Dirent* de, DirArgs* args) {
-  if ((de->ino != 0) && fbl::StringPiece(de->name, de->namelen) == args->name) {
+  if ((de->ino != 0) && std::string_view(de->name, de->namelen) == args->name) {
     args->ino = de->ino;
     args->type = de->type;
     return kDirIteratorDone;
@@ -241,7 +241,7 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
 // caller is expected to prevent unlink of "." or ".."
 zx_status_t Directory::DirentCallbackUnlink(fbl::RefPtr<Directory> vndir, Dirent* de,
                                             DirArgs* args) {
-  if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
+  if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
 
@@ -264,7 +264,7 @@ zx_status_t Directory::DirentCallbackUnlink(fbl::RefPtr<Directory> vndir, Dirent
 // same as unlink, but do not validate vnode
 zx_status_t Directory::DirentCallbackForceUnlink(fbl::RefPtr<Directory> vndir, Dirent* de,
                                                  DirArgs* args) {
-  if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
+  if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
 
@@ -287,7 +287,7 @@ zx_status_t Directory::DirentCallbackForceUnlink(fbl::RefPtr<Directory> vndir, D
 //      - Replace the old vnode's position in the directory with the new inode
 zx_status_t Directory::DirentCallbackAttemptRename(fbl::RefPtr<Directory> vndir, Dirent* de,
                                                    DirArgs* args) {
-  if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
+  if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
 
@@ -334,7 +334,7 @@ zx_status_t Directory::DirentCallbackAttemptRename(fbl::RefPtr<Directory> vndir,
 
 zx_status_t Directory::DirentCallbackUpdateInode(fbl::RefPtr<Directory> vndir, Dirent* de,
                                                  DirArgs* args) {
-  if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
+  if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
 
@@ -503,14 +503,14 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
   return ZX_ERR_NOT_FILE;
 }
 
-zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("minfs", "Directory::Lookup", "name", name);
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
   return LookupInternal(out, name);
 }
 
-zx_status_t Directory::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t Directory::LookupInternal(fbl::RefPtr<fs::Vnode>* out, std::string_view name) {
   DirArgs args;
   args.name = name;
 
@@ -592,7 +592,7 @@ zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len
       goto fail;
     }
 
-    fbl::StringPiece name(de->name, de->namelen);
+    std::string_view name(de->name, de->namelen);
 
     if (de->ino && name != "..") {
       zx_status_t status;
@@ -618,7 +618,7 @@ fail:
   return ZX_ERR_IO;
 }
 
-zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
+zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("minfs", "Directory::Create", "name", name);
 
   if (!fs::vfs_valid_name(name)) {
@@ -724,7 +724,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
   return ZX_OK;
 }
 
-zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
+zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Unlink", "name", name);
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
   bool success = false;
@@ -777,8 +777,8 @@ zx_status_t Directory::CheckNotSubdirectory(fbl::RefPtr<Directory> newdir) {
   return status;
 }
 
-zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece oldname,
-                              fbl::StringPiece newname, bool src_must_be_dir,
+zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
+                              std::string_view newname, bool src_must_be_dir,
                               bool dst_must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Rename", "src", oldname, "dst", newname);
   bool success = false;
@@ -911,7 +911,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   return ZX_OK;
 }
 
-zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _target) {
+zx_status_t Directory::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _target) {
   TRACE_DURATION("minfs", "Directory::Link", "name", name);
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 

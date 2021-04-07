@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -20,7 +21,7 @@
 namespace memfs {
 
 // Create a new dnode and attach it to a vnode
-std::unique_ptr<Dnode> Dnode::Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn) {
+std::unique_ptr<Dnode> Dnode::Create(std::string_view name, fbl::RefPtr<VnodeMemfs> vn) {
   if ((name.length() > kDnodeNameMax) || (name.length() < 1)) {
     return nullptr;
   }
@@ -90,7 +91,7 @@ void Dnode::AddChild(Dnode* parent, std::unique_ptr<Dnode> child) {
   parent->vnode_->UpdateModified();
 }
 
-zx_status_t Dnode::Lookup(fbl::StringPiece name, Dnode** out) {
+zx_status_t Dnode::Lookup(std::string_view name, Dnode** out) {
   auto dn = children_.find_if([&name](const Dnode& elem) -> bool { return elem.NameMatch(name); });
   if (dn == children_.end()) {
     return ZX_ERR_NOT_FOUND;
@@ -154,7 +155,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
       continue;
     }
     uint32_t vtype = dn.IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
-    if ((r = df->Next(fbl::StringPiece(dn.name_.get(), dn.NameLen()), VTYPE_TO_DTYPE(vtype),
+    if ((r = df->Next(std::string_view(dn.name_.get(), dn.NameLen()), VTYPE_TO_DTYPE(vtype),
                       dn.AcquireVnode()->ino())) != ZX_OK) {
       return;
     }
@@ -196,8 +197,8 @@ Dnode::~Dnode() = default;
 
 size_t Dnode::NameLen() const { return flags_ & kDnodeNameMax; }
 
-bool Dnode::NameMatch(fbl::StringPiece name) const {
-  return name == fbl::StringPiece(name_.get(), NameLen());
+bool Dnode::NameMatch(std::string_view name) const {
+  return name == std::string_view(name_.get(), NameLen());
 }
 
 }  // namespace memfs

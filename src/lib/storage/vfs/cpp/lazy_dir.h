@@ -5,6 +5,8 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_LAZY_DIR_H_
 #define SRC_LIB_STORAGE_VFS_CPP_LAZY_DIR_H_
 
+#include <string_view>
+
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -37,7 +39,7 @@ class LazyDir : public Vnode {
   // Read the directory contents. Note that cookie->p is used to denote if the "." entry has been
   // returned. All IDs other than 0 are valid.
   zx_status_t Readdir(VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
-  zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out_vnode) final;
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out_vnode) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 

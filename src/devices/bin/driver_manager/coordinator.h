@@ -25,6 +25,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/intrusive_double_list.h>
@@ -180,7 +181,7 @@ class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger
   void DriverAdded(Driver* drv, const char* version);
   void DriverAddedInit(Driver* drv, const char* version);
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
-  const Driver* LibnameToDriver(const fbl::StringPiece& libname) const;
+  const Driver* LibnameToDriver(std::string_view libname) const;
 
   // Function that is invoked to request a driver try to bind to a device
   using AttemptBindFunc =
@@ -206,8 +207,8 @@ class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger
   zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
                         zx::channel coordinator,
                         const fuchsia_device_manager::wire::DeviceProperty* props_data,
-                        size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
-                        fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
+                        size_t props_count, std::string_view name, uint32_t protocol_id,
+                        std::string_view driver_path, std::string_view args, bool invisible,
                         bool skip_autobind, bool has_init, bool always_init, zx::vmo inspect,
                         zx::channel client_remote, fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
@@ -221,7 +222,7 @@ class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
   // Try binding a driver to the device. Returns ZX_ERR_ALREADY_BOUND if there
   // is a driver bound to the device and the device is not allowed to be bound multiple times.
-  zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
+  zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
                          bool new_device);
   zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;
   zx_status_t LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path, zx::vmo* vmo,
@@ -236,7 +237,7 @@ class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger
                           uint32_t length);
   zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
                               const void* data, uint32_t length);
-  zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
+  zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, std::string_view name,
                                  fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
 
   // Implementation of fuchsia::device::manager::DriverHostDevelopment FIDL protocol.

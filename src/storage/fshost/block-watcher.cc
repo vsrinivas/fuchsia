@@ -35,12 +35,12 @@
 #include <condition_variable>
 #include <fstream>
 #include <mutex>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>

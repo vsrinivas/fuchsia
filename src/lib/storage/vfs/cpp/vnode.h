@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <mutex>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -26,7 +27,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 
 #include "src/lib/storage/vfs/cpp/locking.h"
 #include "src/lib/storage/vfs/cpp/ref_counted.h"
@@ -46,7 +46,7 @@ namespace fs {
 class Vfs;
 struct VdirCookie;
 
-inline bool vfs_valid_name(fbl::StringPiece name) {
+inline bool vfs_valid_name(std::string_view name) {
   return name.length() > 0 && name.length() <= NAME_MAX &&
          memchr(name.data(), '/', name.length()) == nullptr && name != "." && name != "..";
 }
@@ -294,7 +294,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Attempt to find child of vn, child returned on success. Name is len bytes long, and does not
   // include a null terminator.
-  virtual zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<Vnode>* out);
+  virtual zx_status_t Lookup(std::string_view name, fbl::RefPtr<Vnode>* out);
 
   // Read attributes of the vnode.
   virtual zx_status_t GetAttributes(fs::VnodeAttributes* a);
@@ -305,23 +305,23 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Create a new node under vn. The vfs layer assumes that upon success, the |out| vnode has been
   // already opened i.e. |Open()| is not called again on the created vnode. Name is len bytes long,
   // and does not include a null terminator. Mode specifies the type of entity to create.
-  virtual zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<Vnode>* out);
+  virtual zx_status_t Create(std::string_view name, uint32_t mode, fbl::RefPtr<Vnode>* out);
 
   // Removes name from directory vn
-  virtual zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir);
+  virtual zx_status_t Unlink(std::string_view name, bool must_be_dir);
 
   // Renames the path at oldname in olddir to the path at newname in newdir. Called on the "olddir"
   // vnode.
   //
   // Unlinks any prior newname if it already exists.
-  virtual zx_status_t Rename(fbl::RefPtr<Vnode> newdir, fbl::StringPiece oldname,
-                             fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir);
+  virtual zx_status_t Rename(fbl::RefPtr<Vnode> newdir, std::string_view oldname,
+                             std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir);
 
   // Creates a hard link to the 'target' vnode with a provided name in vndir
-  virtual zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<Vnode> target);
+  virtual zx_status_t Link(std::string_view name, fbl::RefPtr<Vnode> target);
 
   // Invoked by the VFS layer whenever files are added or removed.
-  virtual void Notify(fbl::StringPiece name, unsigned event);
+  virtual void Notify(std::string_view name, unsigned event);
 
   // Called when the Vfs associated with this node is shutting down. The associated VFS will still
   // be valid at the time of the call.
@@ -426,7 +426,7 @@ class DirentFiller {
 
   // Attempts to add the name to the end of the dirent buffer
   // which is returned by readdir.
-  zx_status_t Next(fbl::StringPiece name, uint8_t type, uint64_t ino);
+  zx_status_t Next(std::string_view name, uint8_t type, uint64_t ino);
 
   zx_status_t BytesFilled() const { return static_cast<zx_status_t>(pos_); }
 

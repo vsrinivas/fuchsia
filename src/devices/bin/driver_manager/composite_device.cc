@@ -6,6 +6,7 @@
 
 #include <zircon/status.h>
 
+#include <string_view>
 #include <utility>
 
 #include "binding_internal.h"
@@ -27,7 +28,7 @@ CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_pr
 CompositeDevice::~CompositeDevice() = default;
 
 zx_status_t CompositeDevice::Create(
-    const fbl::StringPiece& name, fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
+    std::string_view name, fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
     std::unique_ptr<CompositeDevice>* out) {
   fbl::String name_obj(name);
   fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[comp_desc.props.count() + 1],
