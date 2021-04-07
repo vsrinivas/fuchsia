@@ -69,8 +69,6 @@ impl BluetoothHandler {
         let discovery_connection_result = self
             .common_earcons_params
             .service_context
-            .lock()
-            .await
             .connect_with_publisher::<DiscoveryMarker>(self.publisher.clone())
             .await
             .context("Connecting to fuchsia.media.sessions2.Discovery");

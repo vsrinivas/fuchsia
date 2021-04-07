@@ -13,6 +13,7 @@ use crate::service_context::ServiceContextHandle;
 
 use futures::future::BoxFuture;
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -65,10 +66,16 @@ pub enum Lifespan {
 }
 
 /// Struct of information passed to the agent during each invocation.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Invocation {
     pub lifespan: Lifespan,
     pub service_context: ServiceContextHandle,
+}
+
+impl Debug for Invocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Invocation").field("lifespan", &self.lifespan).finish_non_exhaustive()
+    }
 }
 
 impl PartialEq for Invocation {

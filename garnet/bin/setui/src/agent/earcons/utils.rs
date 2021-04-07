@@ -47,8 +47,6 @@ pub async fn connect_to_sound_player(
     let mut sound_player_connection_lock = sound_player_connection.lock().await;
     if sound_player_connection_lock.is_none() {
         *sound_player_connection_lock = service_context_handle
-            .lock()
-            .await
             .connect_with_publisher::<PlayerMarker>(publisher)
             .await
             .context("Connecting to fuchsia.media.sounds.Player")

@@ -40,11 +40,8 @@ impl DeviceStorageAccess for LightSensorController {
 impl controller::Create for LightSensorController {
     async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError> {
         let service_context = client.get_service_context().await;
-        let sensor_proxy_result = service_context
-            .lock()
-            .await
-            .connect_named::<InputDeviceMarker>(LIGHT_SENSOR_SERVICE_NAME)
-            .await;
+        let sensor_proxy_result =
+            service_context.connect_named::<InputDeviceMarker>(LIGHT_SENSOR_SERVICE_NAME).await;
 
         let sensor = if let Ok(proxy) = sensor_proxy_result {
             Sensor::new(&proxy, &service_context)

@@ -139,8 +139,6 @@ impl BrightnessManager for ExternalBrightnessControl {
         client
             .get_service_context()
             .await
-            .lock()
-            .await
             .connect::<BrightnessControlMarker>()
             .await
             .map(|brightness_service| Self { brightness_service })

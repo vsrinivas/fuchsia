@@ -107,8 +107,6 @@ impl LightController {
         let light_proxy = client
             .get_service_context()
             .await
-            .lock()
-            .await
             .connect_device_path::<LightMarker>(DEVICE_PATH)
             .await
             .or_else(|e| {

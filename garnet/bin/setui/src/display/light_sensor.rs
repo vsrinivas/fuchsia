@@ -46,7 +46,7 @@ impl Sensor {
     ) -> Result<Self, Error> {
         let (reader, server) = fidl::endpoints::create_proxy::<InputReportsReaderMarker>()?;
         call!(proxy => get_input_reports_reader(server))?;
-        let reader = service_context.lock().await.wrap_proxy(reader).await;
+        let reader = service_context.wrap_proxy(reader).await;
 
         let sensor_axes = proxy
             .call_async(InputDeviceProxy::get_descriptor)
@@ -72,7 +72,7 @@ pub async fn open_sensor(
     for entry in entries {
         let path = entry?.path();
         let path = path.to_str().expect("Bad path");
-        let proxy = service_context.lock().await.connect_path::<InputDeviceMarker>(path).await?;
+        let proxy = service_context.connect_path::<InputDeviceMarker>(path).await?;
         let res = proxy.call_async(InputDeviceProxy::get_descriptor).await;
         if let Ok(device_descriptor) = res {
             if let Some(DeviceInfo { vendor_id, product_id, .. }) = device_descriptor.device_info {

@@ -15,14 +15,13 @@ use fuchsia_component::client::{connect_to_service, connect_to_service_at_path};
 use glob::glob;
 
 use fuchsia_zircon as zx;
-use futures::lock::Mutex;
 use std::future::Future;
 use std::sync::Arc;
 
 pub type GenerateService =
     Box<dyn Fn(&str, zx::Channel) -> BoxFuture<'static, Result<(), Error>> + Send + Sync>;
 
-pub type ServiceContextHandle = Arc<Mutex<ServiceContext>>;
+pub type ServiceContextHandle = Arc<ServiceContext>;
 
 /// A wrapper around service operations, allowing redirection to a nested
 /// environment.
@@ -36,7 +35,7 @@ impl ServiceContext {
         generate_service: Option<GenerateService>,
         messenger_factory: Option<service::message::Factory>,
     ) -> ServiceContextHandle {
-        return Arc::new(Mutex::new(ServiceContext::new(generate_service, messenger_factory)));
+        return Arc::new(ServiceContext::new(generate_service, messenger_factory));
     }
 
     pub fn new(

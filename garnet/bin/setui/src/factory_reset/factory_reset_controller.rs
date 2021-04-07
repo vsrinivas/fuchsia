@@ -63,8 +63,6 @@ impl FactoryResetManager {
         client
             .get_service_context()
             .await
-            .lock()
-            .await
             .connect::<DeviceMarker>()
             .await
             .map(|factory_reset_policy_service| {

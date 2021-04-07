@@ -19,8 +19,6 @@ use {
 
 async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), ControllerError> {
     let hardware_power_statecontrol_admin = service_context_handle
-        .lock()
-        .await
         .connect::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
         .await
         .or_else(|_| {

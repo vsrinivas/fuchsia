@@ -111,7 +111,7 @@ pub async fn monitor_media_buttons(
     sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
 ) -> Result<(), Error> {
     let presenter_service =
-        service_context_handle.lock().await.connect::<DeviceListenerRegistryMarker>().await?;
+        service_context_handle.connect::<DeviceListenerRegistryMarker>().await?;
     let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>().unwrap();
 
     if call!(presenter_service => register_media_buttons_listener(client_end)).is_err() {
@@ -140,7 +140,7 @@ pub async fn monitor_media_buttons(
 async fn connect_to_camera_watcher(
     service_context_handle: ServiceContextHandle,
 ) -> Result<ExternalServiceProxy<Camera3DeviceWatcherProxy>, Error> {
-    service_context_handle.lock().await.connect::<DeviceWatcherMarker>().await
+    service_context_handle.connect::<DeviceWatcherMarker>().await
 }
 
 /// Retrieves the id of a camera device given the camera device watcher proxy.

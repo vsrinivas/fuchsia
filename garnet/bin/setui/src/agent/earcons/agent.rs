@@ -22,6 +22,7 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 blueprint_definition!("earcons_agent", Agent::create);
@@ -39,11 +40,20 @@ impl DeviceStorageAccess for Agent {
 }
 
 /// Params that are common to handlers of the earcons agent.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CommonEarconsParams {
     pub service_context: ServiceContextHandle,
     pub sound_player_added_files: Arc<Mutex<HashSet<&'static str>>>,
     pub sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
+}
+
+impl Debug for CommonEarconsParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommonEarconsParams")
+            .field("sound_player_added_files", &self.sound_player_added_files)
+            .field("sound_player_connection", &self.sound_player_connection)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Agent {

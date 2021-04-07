@@ -51,8 +51,6 @@ async fn schedule_clear_accounts(
     service_context_handle: &ServiceContextHandle,
 ) -> Result<(), ControllerError> {
     let connect_result = service_context_handle
-        .lock()
-        .await
         .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>()
         .await;
 

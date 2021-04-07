@@ -37,8 +37,6 @@ async fn test_drop_thread() {
         ServiceContext::create(Some(ServiceRegistry::serve(create_service().await)), None);
 
     let audio_proxy = service_context
-        .lock()
-        .await
         .connect::<fidl_fuchsia_media::AudioCoreMarker>()
         .await
         .expect("service should be present");
@@ -84,8 +82,6 @@ async fn test_detect_early_exit() {
         ServiceContext::create(Some(ServiceRegistry::serve(service_registry)), None);
 
     let audio_proxy = service_context_handle
-        .lock()
-        .await
         .connect::<fidl_fuchsia_media::AudioCoreMarker>()
         .await
         .expect("proxy should be present");

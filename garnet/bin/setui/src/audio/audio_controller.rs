@@ -158,8 +158,6 @@ impl VolumeController {
             .client
             .get_service_context()
             .await
-            .lock()
-            .await
             .connect::<fidl_fuchsia_media::AudioCoreMarker>()
             .await;
 

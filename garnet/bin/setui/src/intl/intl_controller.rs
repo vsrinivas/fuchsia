@@ -128,11 +128,8 @@ impl IntlController {
     async fn write_intl_info_to_service(&self, info: IntlInfo) {
         let service_context = self.client.get_service_context().await.clone();
         fasync::Task::spawn(async move {
-            let service_result = service_context
-                .lock()
-                .await
-                .connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>()
-                .await;
+            let service_result =
+                service_context.connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>().await;
 
             let proxy = match service_result {
                 Ok(proxy) => proxy,
