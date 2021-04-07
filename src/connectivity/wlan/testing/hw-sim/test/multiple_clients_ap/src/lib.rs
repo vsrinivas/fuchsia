@@ -17,7 +17,7 @@ use {
     wlan_common::{
         bss::Protection::Open,
         channel::{Cbw, Phy},
-        RadioConfig,
+        fake_fidl_bss, RadioConfig,
     },
     wlan_hw_sim::*,
 };
@@ -101,7 +101,12 @@ async fn multiple_clients_ap() {
     // Start client 1
     let mut client1_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
-        bss_desc: None,
+        bss_desc: fake_fidl_bss!(
+            Open,
+            ssid: SSID.to_vec(),
+            bssid: AP_MAC_ADDR.0,
+            chan: WLANCFG_DEFAULT_AP_CHANNEL,
+        ),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),
@@ -136,7 +141,12 @@ async fn multiple_clients_ap() {
     // Start client 2
     let mut client2_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
-        bss_desc: None,
+        bss_desc: fake_fidl_bss!(
+            Open,
+            ssid: SSID.to_vec(),
+            bssid: AP_MAC_ADDR.0,
+            chan: WLANCFG_DEFAULT_AP_CHANNEL,
+        ),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),

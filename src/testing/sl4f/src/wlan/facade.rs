@@ -88,10 +88,8 @@ impl WlanFacade {
         // send the bss descriptions back to the test
         let mut hashmap = HashMap::new();
         for bss in results.drain(..) {
-            if let Some(bss_desc) = bss.bss_desc {
-                let entry = hashmap.entry(bss.ssid).or_insert(vec![]);
-                entry.push(bss_desc);
-            }
+            let entry = hashmap.entry(bss.ssid).or_insert(vec![]);
+            entry.push(Box::new(bss.bss_desc));
         }
 
         Ok(hashmap)
@@ -101,7 +99,7 @@ impl WlanFacade {
         &self,
         target_ssid: Vec<u8>,
         target_pwd: Vec<u8>,
-        target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
+        target_bss_desc: fidl_internal::BssDescription,
     ) -> Result<bool, Error> {
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
