@@ -43,7 +43,7 @@ pub struct Daemon {
     pub event_queue: events::Queue<DaemonEvent>,
 
     target_collection: Arc<TargetCollection>,
-    ascendd: Arc<Ascendd>,
+    ascendd: Arc<Option<Ascendd>>,
 }
 
 // This is just for mocking config values for unit testing.
@@ -206,7 +206,7 @@ impl Daemon {
         log::info!("Starting daemon overnet server");
         let target_collection = Arc::new(TargetCollection::new());
         let queue = events::Queue::new(&target_collection);
-        let ascendd = Arc::new(create_ascendd().await?);
+        let ascendd = Arc::new(Some(create_ascendd().await?));
         let daemon_event_handler = DaemonEventHandler::new(Arc::downgrade(&target_collection));
         queue.add_handler(daemon_event_handler).await;
         target_collection.set_event_queue(queue.clone()).await;
@@ -220,7 +220,7 @@ impl Daemon {
         };
         let mut mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(queue.clone())?;
-        Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue, ascendd })
+        Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue, ascendd: ascendd, })
     }
 
     /// get_target attempts to get the target that matches the match string if
@@ -238,11 +238,7 @@ impl Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let event_queue = events::Queue::new(&target_collection);
         target_collection.set_event_queue(event_queue.clone()).await;
-        Daemon {
-            target_collection,
-            event_queue,
-            ascendd: Arc::new(create_ascendd().await.unwrap()),
-        }
+        Daemon { target_collection, event_queue, ascendd: Arc::new(None) }
     }
 
     pub async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
@@ -795,9 +791,8 @@ mod test {
     async fn spawn_daemon_server_with_fake_target(
         nodename: &str,
         stream: DaemonRequestStream,
-    ) -> (TargetControl, Arc<Ascendd>) {
+    ) -> TargetControl {
         let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let fake_target = Target::new_with_addrs(
             Some(nodename.to_string()),
             BTreeSet::from_iter(
@@ -805,17 +800,16 @@ mod test {
             ),
         );
         res.send_mdns_discovery_event(fake_target).await;
-        (res, ascendd)
+        res
     }
 
     async fn spawn_daemon_server_with_fake_fastboot_target(
         stream: DaemonRequestStream,
-    ) -> (TargetControl, Arc<Ascendd>) {
+    ) -> TargetControl {
         let mut res = spawn_daemon_server_with_target_ctrl_for_fastboot(stream).await;
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let fake_target = Target::new_with_serial("florp");
         res.send_fastboot_discovery_event(fake_target).await;
-        (res, ascendd)
+        res
     }
 
     fn setup_fake_target_service(nodename: String, addrs: Vec<SocketAddr>) -> RemoteControlProxy {
@@ -866,7 +860,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
         if let Ok(_) = daemon_proxy.get_remote_control(None, remote_server_end).await.unwrap() {
             panic!("failure expected for multiple targets");
@@ -880,7 +874,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
         assert!(matches!(
             daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap(),
@@ -895,14 +889,14 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
-        if let Err(_) =
-            daemon_proxy.get_remote_control(Some("foobar"), remote_server_end).await.unwrap()
-        {
-            panic!("failure unexpected for multiple targets with a matching selector");
-        }
-        Ok(())
+        daemon_proxy
+            .get_remote_control(Some("foobar"), remote_server_end)
+            .await
+            .unwrap()
+            .map(|_| ())
+            .map_err(|e| anyhow!("daemon error: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -911,7 +905,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
         if let Ok(_) = timeout(Duration::from_millis(10), async move {
             daemon_proxy.get_remote_control(Some("rando"), remote_server_end).await.unwrap()
@@ -927,7 +921,7 @@ mod test {
     async fn test_list_targets_mdns_discovery() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
 
         ctrl.send_mdns_discovery_event(Target::new("baz".to_string())).await;
         ctrl.send_mdns_discovery_event(Target::new("quux".to_string())).await;
@@ -967,7 +961,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_ssh_address() -> Result<()> {
         let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
-        let (mut _ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let mut _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         let timeout = std::i64::MAX;
         let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
 
@@ -1001,8 +995,6 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_daemon_mdns_event_handler() {
-        let _ascendd = Arc::new(create_ascendd().await.unwrap());
-
         let t = Target::new("this-town-aint-big-enough-for-the-three-of-us");
 
         let tc = Arc::new(TargetCollection::new());
@@ -1113,7 +1105,6 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_empty() {
-        let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename).await;
@@ -1123,7 +1114,6 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_query() {
-        let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename).await;
@@ -1136,7 +1126,6 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_ambiguous() {
-        let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let t = Target::new_autoconnected("where-is-my-hasenpfeffer").await;
         let t2 = Target::new_autoconnected("it-is-rabbit-season").await;
@@ -1150,7 +1139,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, fastboot_server_end) = fidl::endpoints::create_proxy::<FastbootMarker>()?;
-        let (mut _ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let mut _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         let got = daemon_proxy.get_fastboot(None, fastboot_server_end).await?;
         match got {
             Err(DaemonError::NonFastbootDevice) => Ok(()),
@@ -1163,7 +1152,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut _ctrl, _ascendd) = spawn_daemon_server_with_fake_fastboot_target(stream).await;
+        let mut _ctrl = spawn_daemon_server_with_fake_fastboot_target(stream).await;
         let got = daemon_proxy.get_remote_control(None, remote_server_end).await?;
         match got {
             Err(DaemonError::TargetInFastboot) => Ok(()),
