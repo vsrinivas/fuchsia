@@ -3,7 +3,8 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/audio_core"
+        "binary": "bin/audio_core",
+        "args": ["--disable-cobalt"]
     },
     "sandbox": {
         "features": [
@@ -11,7 +12,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.thermal.Controller",
             "fuchsia.tracing.provider.Registry"

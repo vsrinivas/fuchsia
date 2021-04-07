@@ -41,7 +41,7 @@ using ::testing::IsSupersetOf;
 
 class ReporterTest : public testing::ThreadingModelFixture {
  public:
-  ReporterTest() : under_test_(context().component_context(), threading_model()) {}
+  ReporterTest() : under_test_(context().component_context(), threading_model(), false) {}
 
   inspect::Hierarchy GetHierarchy() {
     zx::vmo duplicate = under_test_.inspector().DuplicateVmo();

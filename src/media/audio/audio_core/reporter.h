@@ -59,7 +59,7 @@ class Reporter {
  public:
   static Reporter& Singleton();
   static void InitializeSingleton(sys::ComponentContext& component_context,
-                                  ThreadingModel& threading_model);
+                                  ThreadingModel& threading_model, bool enable_cobalt);
 
   class Device {
    public:
@@ -205,7 +205,8 @@ class Reporter {
   };
 
   Reporter() {}
-  Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model);
+  Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model,
+           bool enable_cobalt);
 
   static constexpr size_t kObjectsToCache = 4;
   static constexpr size_t kVolumeControlsToCache = 10;

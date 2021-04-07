@@ -25,7 +25,7 @@ namespace media::audio {
 
 constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
 
-static int StartAudioCore() {
+static int StartAudioCore(const fxl::CommandLine& cl) {
   auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
 
@@ -36,9 +36,9 @@ static int StartAudioCore() {
   // Page in and pin our executable.
   PinExecutableMemory::Singleton();
 
-  // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  Reporter::InitializeSingleton(*component_context, *threading_model);
+  auto enable_cobalt = !cl.HasOption("disable-cobalt");
+  Reporter::InitializeSingleton(*component_context, *threading_model, enable_cobalt);
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   if (process_config.is_error()) {
@@ -72,6 +72,5 @@ static int StartAudioCore() {
 }  // namespace media::audio
 
 int main(int argc, const char** argv) {
-  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  media::audio::StartAudioCore();
+  media::audio::StartAudioCore(fxl::CommandLineFromArgcArgv(argc, argv));
 }

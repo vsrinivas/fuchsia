@@ -970,21 +970,24 @@ Reporter& Reporter::Singleton() {
 
 // static
 void Reporter::InitializeSingleton(sys::ComponentContext& component_context,
-                                   ThreadingModel& threading_model) {
+                                   ThreadingModel& threading_model, bool enable_cobalt) {
   std::lock_guard<std::mutex> lock(singleton_mutex);
   if (singleton_real) {
     FX_LOGS(ERROR) << "Reporter::Singleton double initialized";
     return;
   }
-  singleton_real = new Reporter(component_context, threading_model);
+  singleton_real = new Reporter(component_context, threading_model, enable_cobalt);
 }
 
-Reporter::Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model)
+Reporter::Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model,
+                   bool enable_cobalt)
     : impl_(std::make_unique<Impl>(component_context, threading_model)) {
   // This lock isn't necessary, but the lock analysis can't tell that.
   std::lock_guard<std::mutex> lock(mutex_);
   InitInspect();
-  InitCobalt();
+  if (enable_cobalt) {
+    InitCobalt();
+  }
 }
 
 void Reporter::InitInspect() {
