@@ -551,7 +551,7 @@
 - name: 'RFC-0043'
   title: 'Documentation comment format'
   short_description: 'This FTP standardizes on a single format for writing documentation comments. This format can be consumed by tools that generate API documentation in other human readable and machine consumable formats (e.g., HTML, Markdown).'
-  authors: ['jeremeymanson@google.com']
+  authors: ['jeremymanson@google.com']
   file: '0043_documentation_comment_format.md'
   area: ['FIDL']
   issue: []
