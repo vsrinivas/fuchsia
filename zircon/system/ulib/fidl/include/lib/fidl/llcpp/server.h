@@ -240,7 +240,10 @@ class ServerBindingRef {
 
   // Return the interface for sending FIDL events. If the server has been unbound, calls on the
   // interface return error with status ZX_ERR_CANCELED.
-  const fidl::internal::WireWeakEventSender<Protocol>* get() const { return &event_sender_; }
+  //
+  // Persisting this pointer to a local variable is discouraged, since that
+  // results in unsafe borrows. Always prefer making calls directly via the
+  // |fidl::ServerBindingRef| reference-counting type.
   const fidl::internal::WireWeakEventSender<Protocol>* operator->() const { return &event_sender_; }
   const fidl::internal::WireWeakEventSender<Protocol>& operator*() const { return event_sender_; }
 

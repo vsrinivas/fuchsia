@@ -231,7 +231,7 @@ DeviceControllerConnection::DeviceControllerConnection(
       dev_(std::move(dev)),
       coordinator_client_(std::move(coordinator_client)) {
   dev_->rpc = zx::unowned_channel(rpc);
-  dev_->coordinator_client = coordinator_client_.get();
+  dev_->coordinator_client = coordinator_client_.Clone();
   dev_->conn.store(this);
   set_channel(std::move(rpc));
 }

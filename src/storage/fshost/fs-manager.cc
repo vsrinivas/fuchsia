@@ -266,7 +266,7 @@ zx_status_t FsManager::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server) 
 
 void FsManager::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
   // If we don't have a connection to Driver Manager, just return ZX_OK.
-  if (driver_admin_.get() == nullptr) {
+  if (!driver_admin_.is_valid()) {
     callback(ZX_OK);
     return;
   }

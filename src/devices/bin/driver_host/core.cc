@@ -455,7 +455,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     dev->set_flag(DEV_FLAG_ADDED);
     dev->unset_flag(DEV_FLAG_BUSY);
     dev->rpc = zx::unowned_channel(creation_ctx->device_controller_rpc);
-    dev->coordinator_client = creation_ctx->coordinator_client;
+    dev->coordinator_client = creation_ctx->coordinator_client.Clone();
     creation_ctx->child = dev;
     mark_dead.cancel();
     return ZX_OK;

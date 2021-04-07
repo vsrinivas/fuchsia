@@ -230,7 +230,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     props_list.push_back(convert_device_prop(props[i]));
   }
 
-  const auto rpc = parent->coordinator_client;
+  const auto& rpc = parent->coordinator_client;
   if (!rpc) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -297,7 +297,7 @@ zx_status_t DriverHostContext::DriverManagerRemove(fbl::RefPtr<zx_device_t> dev)
   // Forget about our rpc channel since after the port_queue below it may be
   // closed.
   dev->rpc = zx::unowned_channel();
-  dev->coordinator_client = nullptr;
+  dev->coordinator_client = {};
 
   // queue an event to destroy the connection
   ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop_.dispatcher(), conn);
@@ -465,7 +465,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_client,
       .parent = std::move(parent),
       .child = nullptr,
       .device_controller_rpc = zx::unowned_channel(device_controller_rpc),
-      .coordinator_client = coordinator.get(),
+      .coordinator_client = coordinator.Clone(),
   };
 
   r = drv->CreateOp(&creation_context, creation_context.parent, "proxy", proxy_args.data(),
@@ -756,7 +756,7 @@ void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
   ZX_ASSERT_MSG(!dev->ops()->init,
                 "Cannot call device_make_visible if init hook is implemented."
                 "The device will automatically be made visible once the init hook is replied to.");
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return;
   }
@@ -803,7 +803,7 @@ void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
 
 zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& dev,
                                               bool unbind_self) {
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   ZX_ASSERT(client);
   VLOGD(1, *dev, "schedule-remove");
   auto resp = client->ScheduleRemove(unbind_self);
@@ -812,7 +812,7 @@ zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& de
 }
 
 zx_status_t DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) {
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   ZX_ASSERT(client);
   VLOGD(1, *dev, "schedule-unbind-children");
   auto resp = client->ScheduleUnbindChildren();
@@ -835,7 +835,7 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
     remote_dev = dev->parent();
   }
 
-  const auto client = remote_dev->coordinator_client;
+  const auto& client = remote_dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -874,7 +874,7 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
 
 zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
                                           const char* drv_libname) {
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -896,7 +896,7 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
 
 zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_device_t>& dev,
                                                            int64_t hook_wait_time) {
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -921,7 +921,7 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
   }
 
   zx::vmo vmo;
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -955,7 +955,7 @@ void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, c
 
   fbl::RefPtr<zx_device_t> device_ref = dev;
 
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     callback(context, ZX_ERR_IO_REFUSED, ZX_HANDLE_INVALID, 0);
     return;
@@ -997,7 +997,7 @@ zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -1024,7 +1024,7 @@ zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, 
 
 zx_status_t DriverHostContext::GetMetadataSize(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
                                                size_t* out_length) {
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -1047,7 +1047,7 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   if (!data && length) {
     return ZX_ERR_INVALID_ARGS;
   }
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -1069,7 +1069,7 @@ zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& d
   if (!path || (!data && length)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -1093,7 +1093,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
       comp_desc->fragments == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  const auto client = dev->coordinator_client;
+  const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }

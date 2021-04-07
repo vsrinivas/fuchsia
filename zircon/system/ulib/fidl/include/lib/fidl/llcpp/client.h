@@ -105,6 +105,10 @@ class Client final {
     ZX_ASSERT_MSG(status == ZX_OK, "%s: Failed Bind() with status %d.", __func__, status);
   }
 
+  // Returns if the |Client| is initialized.
+  bool is_valid() const { return static_cast<bool>(client_); }
+  explicit operator bool() const { return is_valid(); }
+
   // If the current |Client| is the last instance controlling the current
   // connection, the destructor of this |Client| will trigger unbinding,
   // which will cause any strong references to the |ClientBase| to be released.
@@ -194,14 +198,20 @@ class Client final {
     return fidl::ClientEnd<Protocol>(client_->WaitForChannel());
   }
 
-  // Return the Client interface for making outgoing FIDL calls. If the client
+  // Returns the interface for making outgoing FIDL calls. If the client
   // has been unbound, calls on the interface return error with status
   // |ZX_ERR_CANCELED|.
-  ClientImpl* get() const { return client_.get(); }
+  //
+  // Persisting this pointer to a local variable is discouraged, since that
+  // results in unsafe borrows. Always prefer making calls directly via the
+  // |fidl::Client| or |fidl::WireClient| reference-counting type. A client
+  // may be cloned and handed off through the |Clone()| method.
   ClientImpl* operator->() const { return get(); }
   ClientImpl& operator*() const { return *get(); }
 
  private:
+  ClientImpl* get() const { return client_.get(); }
+
   // Used to clone a |Client|.
   Client(std::shared_ptr<ClientImpl> client,
          std::shared_ptr<internal::ControlBlock<Protocol>> control)

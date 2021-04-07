@@ -156,7 +156,7 @@ TEST(ClientBindingTestCase, AsyncTxn) {
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
-  TestResponseContext context(client.get());
+  TestResponseContext context(client.operator->());
   client->PrepareAsyncTxn(&context);
   EXPECT_TRUE(client->IsPending(context.Txid()));
   fidl_message_header_t hdr;
@@ -204,7 +204,7 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
   std::vector<std::unique_ptr<TestResponseContext>> contexts;
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    contexts.emplace_back(std::make_unique<TestResponseContext>(client.get()));
+    contexts.emplace_back(std::make_unique<TestResponseContext>(client.operator->()));
     threads[i] = std::thread([context = contexts[i].get(), remote = &remote.channel(), &client] {
       client->PrepareAsyncTxn(context);
       EXPECT_TRUE(client->IsPending(context->Txid()));
@@ -232,7 +232,7 @@ TEST(ClientBindingTestCase, ForgetAsyncTxn) {
   Client<TestProtocol> client(std::move(local), loop.dispatcher());
 
   // Generate a txid for a ResponseContext.
-  TestResponseContext context(client.get());
+  TestResponseContext context(client.operator->());
   client->PrepareAsyncTxn(&context);
   EXPECT_TRUE(client->IsPending(context.Txid()));
 
@@ -471,7 +471,7 @@ TEST(ClientBindingTestCase, Clone) {
   std::vector<std::unique_ptr<TestResponseContext>> contexts;
   for (size_t i = 0; i < kNumClones; i++) {
     auto clone = client.Clone();
-    contexts.emplace_back(std::make_unique<TestResponseContext>(clone.get()));
+    contexts.emplace_back(std::make_unique<TestResponseContext>(clone.operator->()));
     // Generate a txid for a ResponseContext.
     clone->PrepareAsyncTxn(contexts.back().get());
     // Both clone and the client should delegate to the same underlying binding.
@@ -519,17 +519,17 @@ TEST(ClientBindingTestCase, CloneCanExtendClientLifetime) {
   {
     fidl::internal::WireClientImpl<TestProtocol>* client_ptr = nullptr;
     fidl::Client<TestProtocol> outer_clone;
-    ASSERT_NULL(outer_clone.get());
+    ASSERT_NULL(outer_clone.operator->());
 
     {
       fidl::Client<TestProtocol> inner_clone;
-      ASSERT_NULL(inner_clone.get());
+      ASSERT_NULL(inner_clone.operator->());
 
       {
         fidl::Client client(std::move(endpoints->client), loop.dispatcher(),
                             std::make_shared<EventHandler>(did_unbind));
-        ASSERT_NOT_NULL(client.get());
-        client_ptr = client.get();
+        ASSERT_NOT_NULL(client.operator->());
+        client_ptr = &*client;
 
         ASSERT_OK(loop.RunUntilIdle());
         ASSERT_FALSE(did_unbind);
@@ -538,8 +538,8 @@ TEST(ClientBindingTestCase, CloneCanExtendClientLifetime) {
         inner_clone = client.Clone();
       }
 
-      ASSERT_NOT_NULL(inner_clone.get());
-      ASSERT_EQ(inner_clone.get(), client_ptr);
+      ASSERT_NOT_NULL(inner_clone.operator->());
+      ASSERT_EQ(&*inner_clone, client_ptr);
 
       ASSERT_OK(loop.RunUntilIdle());
       ASSERT_FALSE(did_unbind);
@@ -548,8 +548,8 @@ TEST(ClientBindingTestCase, CloneCanExtendClientLifetime) {
       outer_clone = inner_clone.Clone();
     }
 
-    ASSERT_NOT_NULL(outer_clone.get());
-    ASSERT_EQ(outer_clone.get(), client_ptr);
+    ASSERT_NOT_NULL(outer_clone.operator->());
+    ASSERT_EQ(&*outer_clone, client_ptr);
 
     ASSERT_OK(loop.RunUntilIdle());
     ASSERT_FALSE(did_unbind);
