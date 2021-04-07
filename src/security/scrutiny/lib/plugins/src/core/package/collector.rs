@@ -220,7 +220,7 @@ impl PackageDataCollector {
                         let mut cap_uses = Vec::new();
                         let base64_bytes = base64::encode(&decl_bytes);
 
-                        if let Ok(cm_decl) = decode_persistent(&decl_bytes) {
+                        if let Ok(cm_decl) = decode_persistent::<fsys::ComponentDecl>(&decl_bytes) {
                             if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
                                 warn!("Invalid cm {} {}", url, err);
                             } else {
@@ -330,7 +330,7 @@ impl PackageDataCollector {
                 info!("Extracting bootfs manifest: {}", file_name);
                 let url = format!("fuchsia-boot:///#{}", file_name);
                 let base64_bytes = base64::encode(&file_data);
-                if let Ok(cm_decl) = decode_persistent(&file_data) {
+                if let Ok(cm_decl) = decode_persistent::<fsys::ComponentDecl>(&file_data) {
                     if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
                         warn!("Invalid cm {} {}", file_name, err);
                     } else {
