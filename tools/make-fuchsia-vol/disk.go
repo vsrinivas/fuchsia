@@ -440,7 +440,9 @@ func writeDisk(disk string, partitions partitionLayout, diskInfo diskInfo, sizes
 		if *useSparseFvm {
 			partitionCopy(f, int64(fvmStart), *fvmSize, *sparseFvm)
 		} else {
-			fvm(disk, int64(fvmStart), int64(sizes.fvmSize), "create", "--blob", *blob, "--data", *data)
+			slice_size := strconv.FormatInt(8*(1<<20), 10)
+			fvm(disk, int64(fvmStart), int64(sizes.fvmSize), "create",
+				"--slice", slice_size, "--blob", *blob, "--data", *data)
 		}
 	}
 
