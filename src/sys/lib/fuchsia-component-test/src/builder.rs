@@ -781,32 +781,40 @@ impl RealmBuilder {
             }
         }
 
-        match &route.capability {
-            Capability::Protocol(name) => {
-                exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-                    source: expose_source,
-                    source_name: name.clone().into(),
-                    target,
-                    target_name: name.clone().into(),
-                }))
+        let new_decl = {
+            match &route.capability {
+                Capability::Protocol(name) => {
+                    cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                        source: expose_source,
+                        source_name: name.clone().into(),
+                        target,
+                        target_name: name.clone().into(),
+                    })
+                }
+                Capability::Directory(name, _, _) => {
+                    cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+                        source: expose_source,
+                        source_name: name.as_str().into(),
+                        target,
+                        target_name: name.as_str().into(),
+                        rights: None,
+                        subdir: None,
+                    })
+                }
+                Capability::Storage(name, _) => {
+                    return Err(BuilderError::StorageCannotBeExposed(name.clone()).into());
+                }
+                Capability::Event(event, _) => {
+                    return Err(
+                        BuilderError::EventsCannotBeExposed(event.name().to_string()).into()
+                    );
+                }
             }
-            Capability::Directory(name, _, _) => {
-                exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
-                    source: expose_source,
-                    source_name: name.as_str().into(),
-                    target,
-                    target_name: name.as_str().into(),
-                    rights: None,
-                    subdir: None,
-                }))
-            }
-            Capability::Storage(name, _) => {
-                return Err(BuilderError::StorageCannotBeExposed(name.clone()).into());
-            }
-            Capability::Event(event, _) => {
-                return Err(BuilderError::EventsCannotBeExposed(event.name().to_string()).into());
-            }
+        };
+        if !exposes.contains(&new_decl) {
+            exposes.push(new_decl);
         }
+
         Ok(())
     }
 }
@@ -1011,6 +1019,32 @@ mod tests {
             Ok(_) => panic!("builder commands should have errored"),
             Err(e) => assert_matches!(e, error::Error::Builder(BuilderError::EmptyRouteTargets)),
         }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn multiple_offer_same_source() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        builder
+            .add_component("1/src", ComponentSource::url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_component("2/target_1", ComponentSource::url("fuchsia-pkg://b"))
+            .await
+            .unwrap()
+            .add_component("2/target_2", ComponentSource::url("fuchsia-pkg://c"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("1/src"),
+                targets: vec![
+                    RouteEndpoint::component("2/target_1"),
+                    RouteEndpoint::component("2/target_2"),
+                ],
+            })
+            .unwrap();
+        builder.build().initialize().await.unwrap();
     }
 
     #[fasync::run_until_stalled(test)]
