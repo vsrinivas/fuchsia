@@ -39,7 +39,12 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
                         const Location& location, SourceAffinity source_affinity);
 
 struct FormatSourceOpts {
-  // If set, syntax highlights source code according to the given language.
+  // Sets the language member based on the extension of the file name, falling back to C for
+  // anything that doesn't match.
+  void SetLanguageFromFileName(const std::string& file_name);
+
+  // If set, syntax highlights source code according to the given language. If unset, does not
+  // highlight. See SetLanguageFromFileName() to autodetect.
   std::optional<ExprLanguage> language;
 
   // Show the full file path before printing source code. Useful for debugging symbol issues.

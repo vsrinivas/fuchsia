@@ -221,6 +221,11 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
                "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>");
   }
 
+  if (!opts.language) {
+    // Autodetect the language for anything that doesn't have a language from the symbols.
+    opts.SetLanguageFromFileName(file_line.file());
+  }
+
   opts.show_file_name =
       cmd.HasSwitch(kListFilePaths) ||
       cmd.target()->session()->system().settings().GetBool(ClientSettings::System::kShowFilePaths);

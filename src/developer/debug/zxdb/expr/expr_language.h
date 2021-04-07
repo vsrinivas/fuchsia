@@ -5,6 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_LANGUAGE_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_LANGUAGE_H_
 
+#include <optional>
+#include <string>
+
 #include "src/developer/debug/zxdb/symbols/dwarf_lang.h"
 
 namespace zxdb {
@@ -24,6 +27,10 @@ inline ExprLanguage DwarfLangToExprLanguage(DwarfLang dwarf) {
     return ExprLanguage::kRust;
   return ExprLanguage::kC;
 }
+
+// Attempts to determine the source language corresponding to a given file name. Returns nullopt
+// if no explicit match.
+std::optional<ExprLanguage> FileNameToLanguage(const std::string& name);
 
 }  // namespace zxdb
 

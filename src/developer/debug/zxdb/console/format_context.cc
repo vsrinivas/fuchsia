@@ -247,6 +247,15 @@ OutputBuffer DescribeAsmCallDest(Process* process, uint64_t call_dest) {
 
 }  // namespace
 
+void FormatSourceOpts::SetLanguageFromFileName(const std::string& file_name) {
+  language = FileNameToLanguage(file_name);
+  if (!language) {
+    // Default to C for anything still unknown because it should give reasonable highlighting for
+    // most languages.
+    language = ExprLanguage::kC;
+  }
+}
+
 Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> file_provider,
                         const Location& location, SourceAffinity source_affinity) {
   if (source_affinity != SourceAffinity::kAssembly && location.file_line().is_valid()) {
@@ -555,6 +564,7 @@ Err FormatBreakpointContext(const Location& location, const SourceFileProvider& 
   constexpr int kBreakpointContext = 1;
 
   FormatSourceOpts opts;
+  opts.SetLanguageFromFileName(location.file_line().file());
   opts.first_line = line - kBreakpointContext;
   opts.last_line = line + kBreakpointContext;
   opts.highlight_line = line;
