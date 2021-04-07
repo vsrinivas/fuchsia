@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/msd_img_rgx_nonhardware_tests"
+        "binary": "bin/msd_img_rgx_nonhardware_tests"
     },
     "sandbox": {
         "features": [

@@ -104,4 +104,4 @@ static void test_shutdown(uint32_t iters) {
 
 }  // namespace
 
-TEST(Shutdown, Test) { test_shutdown(1); }
+TEST(Shutdown, DISABLED_Test) { test_shutdown(1); }

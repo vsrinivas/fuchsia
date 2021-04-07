@@ -22,7 +22,7 @@ namespace {
 #error Test should only be built for running against the no hardware driver.
 #endif
 
-TEST(ImgtecNoHardware, QueryReturnsBuffer) {
+TEST(ImgtecNoHardware, DISABLED_QueryReturnsBuffer) {
   magma::TestDeviceBase test_device("/dev/test/msd-img-rgx-no-hardware");
 
   uint32_t buffer_id;

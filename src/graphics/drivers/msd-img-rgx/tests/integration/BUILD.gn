@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/images/manifest.gni")
-import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
 executable("msd_img_rgx_integration_tests_executable") {
   testonly = true
@@ -67,28 +67,14 @@ executable("msd_img_rgx_no_hardware_integration_tests_executable") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-test_package("msd_img_rgx_integration_tests") {
+fuchsia_unittest_package("msd_img_rgx_integration_tests") {
   deps = [ ":msd_img_rgx_integration_tests_executable" ]
-
-  tests = [
-    {
-      name = "msd_img_rgx_integration_tests"
-      disabled = true
-    },
-  ]
 }
 
-test_package("msd-img-rgx-no-hardware-integration-tests") {
+fuchsia_unittest_package("msd-img-rgx-no-hardware-integration-tests") {
   deps = [ ":msd_img_rgx_no_hardware_integration_tests_executable" ]
-  tests = [
-    {
-      name = "msd_img_rgx_no_hardware_integration_tests"
-
-      # The test requires the nonhardware MSD (which can be built using
-      # dev_system_image_deps = [
-      #  "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware"
-      # ]
-      disabled = true
-    },
-  ]
+  # The test requires the nonhardware MSD (which can be built using
+  # dev_system_image_deps = [
+  #  "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware"
+  # ]
 }
