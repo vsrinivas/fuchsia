@@ -11,6 +11,7 @@ executable("fvm") {
     "//sdk/lib/fit",
     "//src/storage/fvm",
     "//src/storage/fvm/host",
+    "//src/storage/volume_image/adapter:commands",
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/ftl:ftl-raw-nand-image-writer",
     "//src/storage/volume_image/ftl:raw-nand-image-utils",

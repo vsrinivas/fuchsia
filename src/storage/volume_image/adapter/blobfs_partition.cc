@@ -29,7 +29,7 @@ namespace storage::volume_image {
 namespace {
 
 // Expected label for blobfs volume
-constexpr std::string_view kBlobfsLabel = "blob";
+constexpr std::string_view kBlobfsLabel = "blobfs";
 
 // Expected GUID for blobfs instance.
 constexpr std::array<uint8_t, kGuidLength> kBlobfsTypeGuid = GUID_BLOB_VALUE;

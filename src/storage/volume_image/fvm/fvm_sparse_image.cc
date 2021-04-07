@@ -600,10 +600,19 @@ fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const R
   compressed_data.resize(std::min(kMaxBufferSize, reader.length()), 0);
 
   uint64_t read_offset = header_or.value().header_length;
+  uint64_t last_hint = reader.length();
   while (read_offset < reader.length()) {
-    auto compressed_view = fbl::Span<uint8_t>(
-        compressed_data.data(),
-        std::min(compressed_data.size(), static_cast<size_t>(reader.length() - read_offset)));
+    auto compressed_view = fbl::Span<uint8_t>(compressed_data);
+
+    if (compressed_view.size() > reader.length() - read_offset) {
+      compressed_view = compressed_view.subspan(0, reader.length() - read_offset);
+    }
+
+    if (last_hint < compressed_view.size()) {
+      compressed_view = compressed_view.subspan(0, last_hint);
+    }
+
+    decompressor.ProvideSizeHint(compressed_view.size());
     auto read_or = reader.Read(read_offset, compressed_view);
     if (read_or.is_error()) {
       return read_or.take_error_result();
@@ -628,6 +637,7 @@ fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const R
     if (hint > compressed_data.size()) {
       compressed_data.resize(hint, 0);
     }
+    last_hint = hint;
   }
 
   return fit::ok(true);

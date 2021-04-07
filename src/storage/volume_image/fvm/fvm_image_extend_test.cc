@@ -459,7 +459,7 @@ TEST(FvmImageGetTrimmedSizeTest, BadFvmHeaderIsError) {
       },
       20u << 20);
 
-  ASSERT_TRUE(FvmImageGetTrimmedSize(reader, MakeOptions()).is_error());
+  ASSERT_TRUE(FvmImageGetTrimmedSize(reader).is_error());
 }
 
 TEST(FvmImageGetTrimmedSizeTest, ValidHeaderWithBadMetadataIsError) {
@@ -479,51 +479,7 @@ TEST(FvmImageGetTrimmedSizeTest, ValidHeaderWithBadMetadataIsError) {
       },
       kDefaultImageSize);
 
-  ASSERT_TRUE(FvmImageGetTrimmedSize(reader, options).is_error());
-}
-
-TEST(FvmImageGetTrimmedSizeTest, NoTargetVolumeImageSizeIsError) {
-  auto options = MakeOptions();
-  const auto header = MakeHeader(options, kDefaultSliceCount);
-
-  // This reader just copyes over and over a valid header. This means, that both Superblocks are
-  // 'valid', but the rest of the metadata is wrong. This should be caught when trying to synthesize
-  // the metadata.
-  DelegateReader reader(
-      [&header](auto offset, auto buffer) {
-        StreamContents(
-            offset,
-            fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&header), sizeof(header)),
-            buffer);
-        return fit::ok();
-      },
-      kDefaultImageSize);
-
-  options.target_volume_size = std::nullopt;
-
-  ASSERT_TRUE(FvmImageGetTrimmedSize(reader, options).is_error());
-}
-
-TEST(FvmImageGetTrimmedSizeTest, TargetVolumeSizeBiggerThanHeaderPartitionSizeIsError) {
-  auto options = MakeOptions();
-  const auto header = MakeHeader(options, kDefaultSliceCount);
-
-  // '4 GB image'.
-  constexpr uint64_t kImageSize = 4u * (1ull << 32);
-
-  std::vector<fvm::VPartitionEntry> partitions = {MakePartitionEntry("partition-1-2-3", 0),
-                                                  MakePartitionEntry("partition-2-3-4", 0)};
-
-  auto metadata_or = fvm::Metadata::Synthesize(header, partitions, fbl::Span<fvm::SliceEntry>());
-  ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error_value();
-
-  DelegateReader reader(
-      [&metadata_or, &options](auto offset, auto buffer) {
-        return ValidFvmRead(metadata_or.value(), options, kImageSize, offset, buffer);
-      },
-      kDefaultImageSize);
-  options.target_volume_size = header.fvm_partition_size + 1;
-  ASSERT_TRUE(FvmImageGetTrimmedSize(reader, options).is_error());
+  ASSERT_TRUE(FvmImageGetTrimmedSize(reader).is_error());
 }
 
 TEST(FvmImageGetTrimmedSizeTest, TrimmedValueWithNoAllocatedSlicesIsOk) {
@@ -546,7 +502,7 @@ TEST(FvmImageGetTrimmedSizeTest, TrimmedValueWithNoAllocatedSlicesIsOk) {
       },
       kDefaultImageSize);
 
-  auto trim_size_result = FvmImageGetTrimmedSize(reader, options);
+  auto trim_size_result = FvmImageGetTrimmedSize(reader);
   ASSERT_TRUE(trim_size_result.is_ok()) << trim_size_result.error();
 
   uint64_t primary_metadata_end = header.GetSuperblockOffset(fvm::SuperblockType::kPrimary) +
@@ -555,10 +511,50 @@ TEST(FvmImageGetTrimmedSizeTest, TrimmedValueWithNoAllocatedSlicesIsOk) {
                                     header.GetMetadataAllocatedBytes();
   uint64_t metadata_end = std::max(primary_metadata_end, secondary_metadata_end);
   uint64_t last_slice_end = header.GetSliceDataOffset(0);
-  uint64_t slice_end_or_target = std::max(options.target_volume_size.value(), last_slice_end);
+
   // No slices allocated here.
-  uint64_t expected_size = std::max(metadata_end, slice_end_or_target);
-  EXPECT_EQ(expected_size, trim_size_result.value());
+  EXPECT_EQ(trim_size_result.value(), std::max(metadata_end, last_slice_end));
+}
+
+TEST(FvmImageGetTrimmedSizeTest, TrimmedValueWithAllocatedSlicesIsOk) {
+  auto options = MakeOptions();
+  const auto header = MakeHeader(options, kDefaultSliceCount);
+  options.target_volume_size = header.fvm_partition_size;
+
+  // '4 GB image'.
+  constexpr uint64_t kImageSize = 4u * (1ull << 32);
+
+  std::vector<fvm::VPartitionEntry> partitions = {MakePartitionEntry("partition-1-2-3", 2),
+                                                  MakePartitionEntry("partition-2-3-4", 2)};
+
+  std::array<fvm::SliceEntry, 4> slices;
+  slices[0].Set(1, 0);
+  slices[1].Set(1, 25);
+  slices[2].Set(2, 0);
+  slices[3].Set(2, 95);
+
+  auto metadata_or = fvm::Metadata::Synthesize(header, partitions, slices);
+  ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error_value();
+
+  DelegateReader reader(
+      [&metadata_or, &options](auto offset, auto buffer) {
+        return ValidFvmRead(metadata_or.value(), options, kImageSize, offset, buffer);
+      },
+      kDefaultImageSize);
+
+  auto trim_size_result = FvmImageGetTrimmedSize(reader);
+  ASSERT_TRUE(trim_size_result.is_ok()) << trim_size_result.error();
+
+  uint64_t primary_metadata_end = header.GetSuperblockOffset(fvm::SuperblockType::kPrimary) +
+                                  header.GetMetadataAllocatedBytes();
+  uint64_t secondary_metadata_end = header.GetSuperblockOffset(fvm::SuperblockType::kSecondary) +
+                                    header.GetMetadataAllocatedBytes();
+  uint64_t metadata_end = std::max(primary_metadata_end, secondary_metadata_end);
+  // Pslice are 1 indexed, plus we account for the data in the slice itself.
+  uint64_t last_slice_end = header.GetSliceDataOffset(5);
+
+  // No slices allocated here.
+  EXPECT_EQ(trim_size_result.value(), std::max(metadata_end, last_slice_end));
 }
 
 }  // namespace

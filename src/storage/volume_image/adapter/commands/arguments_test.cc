@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/volume_image/adapter/commands.h"
+#include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/guid.h"
 #include "zircon/hw/gpt.h"
 
@@ -79,7 +80,7 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
   ASSERT_EQ(params.size(), 6u);
 
   auto blob_params = params[0];
-  EXPECT_EQ(blob_params.label, "blob");
+  EXPECT_EQ(blob_params.label, "");
   EXPECT_EQ(blob_params.source_image_path, "path");
   EXPECT_EQ(blob_params.format, PartitionImageFormat::kBlobfs);
   EXPECT_FALSE(blob_params.type_guid.has_value());
@@ -139,13 +140,20 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
 }
 
 TEST(ArgumentTest, CreateParamsFromArgsIsOk) {
-  std::array<std::string_view, 19> kArgs = {
+  std::array<std::string_view, 21> kArgs = {
       "binary",      "output_path",      "create", "--blob",
       "blobfs_path", "--minimum-inodes", "123",    "--minimum-data-bytes",
       "1M",          "--maximum-bytes",  "12G",    "--slice",
       "8K",          "--offset",         "1234",   "--length",
-      "1234567",     "--max-disk-size",  "160M",
+      "1234567",     "--max-disk-size",  "160M",   "--compress",
+      "lz4",
   };
+
+  {
+    auto params_or = CreateParams::FromArguments(fbl::Span<std::string_view>(kArgs).subspan(0, 19));
+    auto params = params_or.take_value();
+    EXPECT_EQ(params.fvm_options.compression.schema, CompressionSchema::kNone);
+  }
 
   {
     auto params_or = CreateParams::FromArguments(kArgs);
@@ -159,12 +167,13 @@ TEST(ArgumentTest, CreateParamsFromArgsIsOk) {
     EXPECT_EQ(params.fvm_options.slice_size, 8 * kKilo);
     EXPECT_EQ(params.fvm_options.target_volume_size, 1234567u);
     EXPECT_EQ(params.fvm_options.max_volume_size, 160 * kMega);
+    EXPECT_EQ(params.fvm_options.compression.schema, CompressionSchema::kLz4);
     EXPECT_TRUE(params.is_output_embedded);
 
     ASSERT_EQ(params.partitions.size(), 1u);
 
     auto blob_params = params.partitions[0];
-    EXPECT_EQ(blob_params.label, "blob");
+    EXPECT_EQ(blob_params.label, "");
     EXPECT_EQ(blob_params.source_image_path, "blobfs_path");
     EXPECT_EQ(blob_params.format, PartitionImageFormat::kBlobfs);
     EXPECT_FALSE(blob_params.type_guid.has_value());
@@ -187,12 +196,13 @@ TEST(ArgumentTest, CreateParamsFromArgsIsOk) {
     EXPECT_EQ(params.fvm_options.slice_size, 8 * kKilo);
     EXPECT_EQ(params.fvm_options.target_volume_size, 1234567u);
     EXPECT_EQ(params.fvm_options.max_volume_size, 160 * kMega);
+    EXPECT_EQ(params.fvm_options.compression.schema, CompressionSchema::kLz4);
     EXPECT_TRUE(params.is_output_embedded);
 
     ASSERT_EQ(params.partitions.size(), 1u);
 
     auto blob_params = params.partitions[0];
-    EXPECT_EQ(blob_params.label, "blob");
+    EXPECT_EQ(blob_params.label, "");
     EXPECT_EQ(blob_params.source_image_path, "blobfs_path");
     EXPECT_EQ(blob_params.format, PartitionImageFormat::kBlobfs);
     EXPECT_FALSE(blob_params.type_guid.has_value());
@@ -200,6 +210,13 @@ TEST(ArgumentTest, CreateParamsFromArgsIsOk) {
     EXPECT_EQ(blob_params.options.max_bytes.value(), 12 * kGiga);
     EXPECT_EQ(blob_params.options.min_data_bytes.value(), 1 * kMega);
     EXPECT_EQ(blob_params.options.min_inode_count.value(), 123u);
+  }
+
+  {
+    auto params_or = CreateParams::FromArguments(fbl::Span<std::string_view>(kArgs).subspan(0, 19));
+    ASSERT_TRUE(params_or.is_ok()) << params_or.error();
+    auto params = params_or.take_value();
+    EXPECT_EQ(params.fvm_options.compression.schema, CompressionSchema::kNone);
   }
 }
 

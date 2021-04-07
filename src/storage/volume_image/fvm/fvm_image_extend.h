@@ -22,17 +22,13 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
                                               Writer& target_image);
 
 // Returns the trimmed sized of a raw fvm image. If the resource containing the fvm image, is
-// truncated to the trimmed sized, all the trailing data on unallocated slices is removed. For
-// example, a 14 terabyte fvn image with 1 MB worth of data, could be trimmed to a coupole of
+// truncated to the trimmed sized, all the trailing data on unallocated slices are removed.
+//
+// For example, a 14 terabyte fvm image with 1 MB worth of data, could be trimmed to a coupole of
 // MBs(metadata and the actual data).
 //
-// Supported Options:
-//   - target_volume_size
-//
-// An error is returned if the fvm image contains invalid metadata, or the target size is smaller
-// than the trim size.
-fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image,
-                                                          const FvmOptions& options);
+// An error is returned if the fvm image contains invalid metadata.
+fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image);
 
 }  // namespace storage::volume_image
 

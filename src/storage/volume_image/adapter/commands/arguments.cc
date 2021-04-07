@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "src/storage/volume_image/adapter/commands.h"
+#include "src/storage/volume_image/options.h"
 
 namespace storage::volume_image {
 namespace {
@@ -149,7 +150,8 @@ fit::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArgu
     PartitionParams params;
     params.encrypted = arg == "--data";
     params.format = arg == "--blob" ? PartitionImageFormat::kBlobfs : PartitionImageFormat::kMinfs;
-    params.label = arg.substr(2);
+    auto potential_label = arg.substr(2);
+    params.label = potential_label == "blob" ? "" : potential_label;
 
     if (auto result = GetArgumentValue(argument_range, arg, params.source_image_path);
         result.is_error()) {
@@ -230,10 +232,28 @@ fit::result<CreateParams, std::string> CreateParams::FromArguments(
     return result.take_error_result();
   }
 
+  if (FindArgumentByName(arguments, "--resize-image-file-to-fit")) {
+    params.trim_image = true;
+  }
+
   if (auto result =
           GetSizeArgumentValue(arguments, "--max-disk-size", params.fvm_options.max_volume_size);
       result.is_error()) {
     return result.take_error_result();
+  }
+
+  std::optional<std::string> compression_type;
+  if (auto result = GetArgumentValue(arguments, "--compress", compression_type);
+      result.is_error()) {
+    return result.take_error_result();
+  }
+
+  if (compression_type.has_value()) {
+    if (compression_type.value() != "lz4") {
+      return fit::error("Unsupported compression type'" + compression_type.value() +
+                        "'. Currently only 'lz4' compression type is supported.");
+    }
+    params.fvm_options.compression.schema = CompressionSchema::kLz4;
   }
 
   auto partition_params_or = PartitionParams::FromArguments(arguments, params.fvm_options);
@@ -241,6 +261,13 @@ fit::result<CreateParams, std::string> CreateParams::FromArguments(
     return partition_params_or.take_error_result();
   }
   params.partitions = partition_params_or.take_value();
+
+  // We cant generate an image with encrypted contents.
+  if (params.format == FvmImageFormat::kBlockImage) {
+    for (auto& partition : params.partitions) {
+      partition.encrypted = false;
+    }
+  }
 
   return fit::ok(params);
 }

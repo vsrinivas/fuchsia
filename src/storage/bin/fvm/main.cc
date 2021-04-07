@@ -8,12 +8,15 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/span.h>
 #include <safemath/checked_math.h>
 
 #include "range/interval-tree.h"
@@ -26,6 +29,7 @@
 #include "src/storage/fvm/host/fvm_reservation.h"
 #include "src/storage/fvm/host/sparse_container.h"
 #include "src/storage/fvm/sparse_reader.h"
+#include "src/storage/volume_image/adapter/commands.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
 #include "src/storage/volume_image/ftl/ftl_raw_nand_image_writer.h"
 #include "src/storage/volume_image/ftl/options.h"
@@ -441,6 +445,11 @@ int main(int argc, char** argv) {
     usage();
   }
 
+  std::vector<std::string_view> arguments;
+  for (int i = 0; i < argc; ++i) {
+    arguments.push_back(argv[i]);
+  }
+
   int i = 1;
   const char* path = argv[i++];     // Output path
   const char* command = argv[i++];  // Command
@@ -550,10 +559,6 @@ int main(int argc, char** argv) {
     }
 
     ++i;
-  }
-
-  if (!strcmp(command, "create") && should_unlink) {
-    unlink(path);
   }
 
   if (strcmp(command, "check") == 0) {
@@ -786,46 +791,15 @@ int main(int argc, char** argv) {
   }
 
   if (!strcmp(command, "create")) {
-    // If length was specified, an offset was not, we were asked to create a
-    // file, and the file does not exist, truncate it to the given length.
-    if (length != 0 && offset == 0) {
-      fbl::unique_fd fd(open(path, O_CREAT | O_EXCL | O_WRONLY, 0644));
-
-      if (fd) {
-        ftruncate(fd.get(), length);
-      }
-    }
-
-    std::unique_ptr<FvmContainer> fvmContainer;
-    if (FvmContainer::CreateNew(path, slice_size, offset, length, &fvmContainer) != ZX_OK) {
-      fprintf(stderr, "Failed to create FVM container\n");
+    auto create_params_or = storage::volume_image::CreateParams::FromArguments(arguments);
+    if (create_params_or.is_error()) {
+      std::cout << create_params_or.error() << std::endl;
       return -1;
     }
 
-    if (add_partitions(fvmContainer.get(), argc - i, argv + i) < 0) {
+    if (auto result = storage::volume_image::Create(create_params_or.value()); result.is_error()) {
+      std::cout << result.error() << std::endl;
       return -1;
-    }
-
-    if (fvmContainer->Commit() != ZX_OK) {
-      return -1;
-    }
-
-    if (resize_image_file_to_fit) {
-      if (auto status = fvmContainer->ResizeImageFileToFit(); status != ZX_OK) {
-        return status;
-      }
-    }
-
-    if (convert_to_android_sparse_format) {
-      if (fvmContainer->ConvertToAndroidSparseImage() != ZX_OK) {
-        return -1;
-      }
-    }
-
-    if (flags & fvm::kSparseFlagLz4) {
-      if (fvmContainer->CompressWithLZ4() != ZX_OK) {
-        return -1;
-      }
     }
   } else if (!strcmp(command, "add")) {
     std::unique_ptr<FvmContainer> fvmContainer;

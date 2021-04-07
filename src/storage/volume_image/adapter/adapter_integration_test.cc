@@ -337,7 +337,7 @@ TEST(AdapterTest, BlobfsMinfsAndEmptyPartitionPartitonInFvmImageFromFvmDescripto
     fsck_options.verbose = true;
     fsck_options.force = true;
     ASSERT_EQ(fsck(partition_path.data(),
-                   partition.volume().name == "blob" ? DISK_FORMAT_BLOBFS : DISK_FORMAT_MINFS,
+                   partition.volume().name == "blobfs" ? DISK_FORMAT_BLOBFS : DISK_FORMAT_MINFS,
                    &fsck_options, &launch_stdio_sync),
               ZX_OK);
   }

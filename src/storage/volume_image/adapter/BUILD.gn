@@ -77,6 +77,7 @@ source_set("commands") {
     ":minfs-partition",
     "//src/storage/fvm",
     "//src/storage/volume_image/fvm:fvm-descriptor",
+    "//src/storage/volume_image/fvm:fvm-image-extend",
     "//src/storage/volume_image/fvm:fvm-sparse-image",
     "//src/storage/volume_image/utils:fd-io",
     "//src/storage/volume_image/utils:lz4-compression",
@@ -210,6 +211,7 @@ source_set("adapter-tests") {
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:fd-io",
     "//src/storage/volume_image/utils:fd-test-helper",
+    "//src/storage/volume_image/utils:lz4-compression",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

@@ -178,12 +178,7 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
   return fit::ok();
 }
 
-fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image,
-                                                          const FvmOptions& options) {
-  if (!options.target_volume_size.has_value()) {
-    return fit::error("FvmImageGetTrimmedSize requires |options.target_volume_size|.");
-  }
-
+fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image) {
   std::vector<uint8_t> primary_metadata_buffer;
   std::vector<uint8_t> secondary_metadata_buffer;
 
@@ -191,14 +186,10 @@ fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_i
   if (metadata_or.is_error()) {
     return metadata_or.take_error_result();
   }
+
   const auto& header = metadata_or.value().GetHeader();
 
-  if (options.target_volume_size.value() > header.fvm_partition_size) {
-    return fit::error(
-        "|FvmImageGetTrimmedSize| calculated size cannot be bigger that the original image.");
-  }
-
-  uint64_t last_allocated_slice = 0;
+  std::optional<uint64_t> last_allocated_slice;
   for (uint64_t pslice = header.pslice_count; pslice > 0; --pslice) {
     const auto& slice_entry = metadata_or.value().GetSliceEntry(pslice);
 
@@ -208,7 +199,11 @@ fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_i
     }
   }
 
-  uint64_t last_offset = header.GetSliceDataOffset(last_allocated_slice);
+  uint64_t last_offset =
+      last_allocated_slice.has_value()
+          ? header.GetSliceDataOffset(last_allocated_slice.value()) + header.slice_size
+          : header.GetSliceDataOffset(1);
+
   if (last_offset < header.GetSuperblockOffset(fvm::SuperblockType::kPrimary)) {
     last_offset = header.GetSuperblockOffset(fvm::SuperblockType::kPrimary) +
                   header.GetMetadataAllocatedBytes();
@@ -218,17 +213,6 @@ fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_i
     last_offset = header.GetSuperblockOffset(fvm::SuperblockType::kSecondary) +
                   header.GetMetadataAllocatedBytes();
   }
-
-  if (options.target_volume_size.value() < last_offset) {
-    return fit::error(
-        "FvmImageGetTrimmedSize cannot remove metadata or allocated slice data. Minimum image "
-        "size: " +
-        std::to_string(last_offset) +
-        " target volume size: " + std::to_string(options.target_volume_size.value()) + ".");
-  }
-
-  // At the very least the target size is is same as last_offset.
-  last_offset = options.target_volume_size.value();
 
   return fit::ok(last_offset);
 }

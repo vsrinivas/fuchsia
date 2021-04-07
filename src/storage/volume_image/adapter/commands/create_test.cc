@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 
 #include <array>
@@ -22,6 +23,7 @@
 #include "src/storage/volume_image/utils/fd_reader.h"
 #include "src/storage/volume_image/utils/fd_test_helper.h"
 #include "src/storage/volume_image/utils/fd_writer.h"
+#include "src/storage/volume_image/utils/lz4_decompressor.h"
 
 namespace storage::volume_image {
 namespace {
@@ -87,14 +89,6 @@ TEST(CreateCommandTest, EmbeddedOutputWithoutLengthIsError) {
   ASSERT_TRUE(Create(params).is_error());
 }
 
-TEST(CreateCommandTest, CompressedDataForBlockImageFormatIsError) {
-  CreateParams params = MakeParams();
-  params.format = FvmImageFormat::kBlockImage;
-  params.fvm_options.compression.schema = CompressionSchema::kLz4;
-
-  ASSERT_TRUE(Create(params).is_error());
-}
-
 TEST(CreateCommandTest, SliceSizeZeroIsError) {
   CreateParams params = MakeParams();
   params.fvm_options.slice_size = 0;
@@ -151,6 +145,109 @@ TEST(CreateCommandTest, CreateFvmBlockImageIsOk) {
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
+fit::result<void, std::string> Decompress(std::string_view path) {
+  auto output_file_or = TempFile::Create();
+  if (output_file_or.is_error()) {
+    return output_file_or.take_error_result();
+  }
+
+  Lz4Decompressor decompressor;
+
+  auto reader_or = FdReader::Create(path);
+  if (reader_or.is_error()) {
+    return reader_or.take_error_result();
+  }
+  auto reader = reader_or.take_value();
+
+  auto writer_or = FdWriter::Create(output_file_or.value().path());
+  if (writer_or.is_error()) {
+    return writer_or.take_error_result();
+  }
+  auto writer = writer_or.take_value();
+
+  uint64_t decompressed_bytes = 0;
+  if (auto result = decompressor.Prepare(
+          [&decompressed_bytes, &writer](auto decompressed_data) -> fit::result<void, std::string> {
+            if (auto result = writer.Write(decompressed_bytes, decompressed_data);
+                result.is_error()) {
+              return result;
+            }
+            decompressed_bytes += decompressed_data.size();
+            return fit::ok();
+          });
+      result.is_error()) {
+    return result;
+  }
+
+  std::vector<uint8_t> read_buffer;
+  read_buffer.resize(1 << 20, 0);
+  uint64_t read_bytes = 0;
+  uint64_t hint = read_buffer.size();
+
+  while (read_bytes < reader.length()) {
+    uint64_t view_size = read_buffer.size();
+    if (view_size > reader.length() - read_bytes) {
+      view_size = reader.length() - read_bytes;
+    }
+    if (view_size > hint) {
+      view_size = hint;
+    }
+
+    decompressor.ProvideSizeHint(view_size);
+    auto read_view = fbl::Span<uint8_t>(read_buffer).subspan(0, view_size);
+
+    if (auto result = reader.Read(read_bytes, read_view); result.is_error()) {
+      return result;
+    }
+
+    auto decompress_result = decompressor.Decompress(read_view);
+    if (decompress_result.is_error()) {
+      return decompress_result.take_error_result();
+    }
+
+    // How much was actually consumed from the input buffer.
+    auto [result_hint, consumed_bytes] = decompress_result.value();
+    read_bytes += consumed_bytes;
+
+    if (hint == 0) {
+      break;
+    }
+    hint = result_hint;
+  }
+  if (auto result = decompressor.Finalize(); result.is_error()) {
+    return result;
+  }
+
+  if (rename(output_file_or.value().path().data(), path.data()) == -1) {
+    return fit::error("Failed to move decompressed data to final destination. More specifically: " +
+                      std::string(strerror(errno)));
+  }
+
+  return fit::ok();
+}
+
+TEST(CreateCommandTest, CreateCompressedFvmBlockImageIsOk) {
+  auto output_file_or = TempFile::Create();
+  ASSERT_TRUE(output_file_or.is_ok());
+
+  CreateParams params = MakeParams();
+  params.output_path = output_file_or.value().path();
+  params.format = FvmImageFormat::kBlockImage;
+  params.fvm_options.compression.schema = CompressionSchema::kLz4;
+
+  auto create_result = Create(params);
+  ASSERT_TRUE(create_result.is_ok()) << create_result.error();
+
+  auto result = Decompress(output_file_or.value().path());
+  ASSERT_TRUE(result.is_ok()) << result.error();
+
+  fbl::unique_fd fvm_fd(open(output_file_or.value().path().data(), O_RDONLY));
+  ASSERT_TRUE(fvm_fd.is_valid());
+
+  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  ASSERT_TRUE(fvm_checker.Validate());
+}
+
 TEST(CreateCommandTest, CreateNonCompressedFvmSpareImageIsOk) {
   auto output_file_or = TempFile::Create();
   ASSERT_TRUE(output_file_or.is_ok());
@@ -182,7 +279,7 @@ TEST(CreateCommandTest, CreateNonCompressedFvmSpareImageIsOk) {
   // This is set as the default params.
   int checked_count = 0;
   for (const auto& partition : descriptor_or.value().partitions()) {
-    if (partition.volume().name == "blob") {
+    if (partition.volume().name == "blobfs") {
       ASSERT_EQ(partition.volume().encryption, EncryptionType::kNone);
       checked_count++;
       continue;
@@ -281,7 +378,7 @@ TEST(CreateCommandTest, CreateCompressedFvmSpareImageIsOk) {
   // This is set as the default params.
   int checked_count = 0;
   for (const auto& partition : descriptor_or.value().partitions()) {
-    if (partition.volume().name == "blob") {
+    if (partition.volume().name == "blobfs") {
       ASSERT_EQ(partition.volume().encryption, EncryptionType::kNone);
       checked_count++;
       continue;

@@ -107,6 +107,9 @@ struct CreateParams {
 
   // Information about the FVM.
   FvmOptions fvm_options;
+
+  // When set the image will be trimmed to remove all unallocated slices from the tail.
+  bool trim_image = false;
 };
 
 // Creates an fvm image according to |params| and |options|.

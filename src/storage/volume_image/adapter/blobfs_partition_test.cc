@@ -227,7 +227,7 @@ void CheckJournalMapping(const Partition& partition, const Reader& original_read
 }
 
 void CheckPartition(const Partition& partition) {
-  EXPECT_EQ(partition.volume().name, "blob");
+  EXPECT_EQ(partition.volume().name, "blobfs");
   EXPECT_THAT(partition.volume().instance, testing::ElementsAreArray(kBlobfsInstanceGuid));
   EXPECT_THAT(partition.volume().type, testing::ElementsAreArray(kBlobfsTypeGuid));
 

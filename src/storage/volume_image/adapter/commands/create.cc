@@ -9,6 +9,7 @@
 
 #include <charconv>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -16,6 +17,7 @@
 
 #include <fbl/unique_fd.h>
 
+#include "lib/fit/defer.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/adapter/blobfs_partition.h"
 #include "src/storage/volume_image/adapter/commands.h"
@@ -23,6 +25,7 @@
 #include "src/storage/volume_image/adapter/minfs_partition.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
+#include "src/storage/volume_image/fvm/fvm_image_extend.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
@@ -128,6 +131,89 @@ fit::result<Partition, std::string> ProcessPartition(const PartitionParams& para
 
   return fit::ok(std::move(partition));
 }
+
+fit::result<void, std::string> CompressFile(std::string_view input, std::string_view output) {
+  auto input_reader_or = FdReader::Create(input);
+  if (input_reader_or.is_error()) {
+    return input_reader_or.take_error_result();
+  }
+  auto input_reader = input_reader_or.take_value();
+
+  std::string output_tmp = std::string(output) + ".lz4.tmp";
+  auto remove_temp_file = fit::defer([&output_tmp]() { unlink(output_tmp.c_str()); });
+  // Clean up any existing remainders from previous run if it wasnt cleaned up properly.
+  unlink(output_tmp.c_str());
+
+  // Create a temporary file to compress into, just in case, input == output.
+  fbl::unique_fd output_tmp_fd(open(output_tmp.c_str(), O_CREAT | O_WRONLY, 0644));
+  if (!output_tmp_fd.is_valid()) {
+    auto err = Errno();
+    return fit::error("Failed to create temporary file at " + output_tmp +
+                      "for decompression. More specifically: " + err + ".");
+  }
+
+  auto compression_writer_or = FdWriter::Create(output_tmp.c_str());
+  if (compression_writer_or.is_error()) {
+    return compression_writer_or.take_error_result();
+  }
+  auto compression_writer = compression_writer_or.take_value();
+
+  // Now stream the contents of the input file.
+  uint64_t read_bytes = 0;
+
+  // 1 MB buffer size.
+  constexpr uint64_t kMaxBufferSize = 1 << 20;
+  std::vector<uint8_t> read_buffer;
+  read_buffer.resize(kMaxBufferSize, 0);
+
+  // Initialize the compressor
+  CompressionOptions options;
+  options.schema = CompressionSchema::kLz4;
+  auto compressor_or = Lz4Compressor::Create(options);
+  if (compressor_or.is_error()) {
+    return compressor_or.take_error_result();
+  }
+  auto compressor = compressor_or.take_value();
+  uint64_t written_bytes = 0;
+
+  compressor.Prepare(
+      [&compression_writer, &written_bytes](auto buffer) -> fit::result<void, std::string> {
+        if (auto result = compression_writer.Write(written_bytes, buffer); result.is_error()) {
+          return result;
+        }
+        written_bytes += buffer.size();
+        return fit::ok();
+      });
+  while (read_bytes < input_reader.length()) {
+    auto read_view =
+        fbl::Span<uint8_t>(read_buffer)
+            .subspan(0, std::min(kMaxBufferSize,
+                                 static_cast<uint64_t>(input_reader.length() - read_bytes)));
+    if (auto result = input_reader.Read(read_bytes, read_view); result.is_error()) {
+      return result;
+    }
+    read_bytes += read_view.size();
+
+    if (auto compress_result = compressor.Compress(read_view); compress_result.is_error()) {
+      return compress_result;
+    }
+  }
+
+  if (auto compress_result = compressor.Finalize(); compress_result.is_error()) {
+    return compress_result;
+  }
+
+  // Move the temporary output into the primary one.
+  if (auto result = rename(output_tmp.c_str(), std::string(output).c_str()); result == -1) {
+    auto err = Errno();
+    return fit::error("Failed to move temporary compressed file " + output_tmp +
+                      " to final location " + std::string(output) + ". More specifically: " + err +
+                      ".");
+  }
+
+  return fit::ok();
+}
+
 }  // namespace
 
 fit::result<void, std::string> Create(const CreateParams& params) {
@@ -145,11 +231,6 @@ fit::result<void, std::string> Create(const CreateParams& params) {
     }
   }
 
-  if (params.fvm_options.compression.schema != CompressionSchema::kNone &&
-      params.format != FvmImageFormat::kSparseImage) {
-    return fit::error("Compression is only supported for Sparse FVM Image format.");
-  }
-
   if (params.fvm_options.slice_size == 0) {
     return fit::error("Slice size must be greater than zero.");
   }
@@ -159,7 +240,12 @@ fit::result<void, std::string> Create(const CreateParams& params) {
                       std::to_string(fvm::kBlockSize >> 10) + " KB).");
   }
 
-  fbl::unique_fd output_fd(open(params.output_path.c_str(), O_CREAT | O_WRONLY));
+  // When not embedded, clean up any existing file under such name.
+  if (!params.is_output_embedded) {
+    unlink(params.output_path.c_str());
+  }
+
+  fbl::unique_fd output_fd(open(params.output_path.c_str(), O_CREAT | O_WRONLY, 0644));
   if (!output_fd.is_valid()) {
     return fit::error("Opening output file failed. More specifically: " + Errno() + ".");
   }
@@ -189,12 +275,6 @@ fit::result<void, std::string> Create(const CreateParams& params) {
     if (partition_or.is_error()) {
       return partition_or.take_error_result();
     }
-    if (params.format == FvmImageFormat::kBlockImage &&
-        (partition_param.encrypted ||
-         partition_or.value().volume().encryption != EncryptionType::kNone)) {
-      return fit::error("FVM Block Image does not support encrypted partitions. Partition: \n" +
-                        partition_or.value().volume().DebugString() + ".");
-    }
     builder.AddPartition(partition_or.take_value());
   }
 
@@ -206,7 +286,33 @@ fit::result<void, std::string> Create(const CreateParams& params) {
 
   switch (params.format) {
     case FvmImageFormat::kBlockImage:
-      return descriptor.WriteBlockImage(*writer);
+      if (auto result = descriptor.WriteBlockImage(*writer); result.is_error()) {
+        return result.take_error_result();
+      }
+
+      if (params.trim_image) {
+        auto output_reader_or = FdReader::Create(params.output_path);
+        if (output_reader_or.is_error()) {
+          return output_reader_or.take_error_result();
+        }
+        // Calculate the trim size.
+        auto trim_size_or = FvmImageGetTrimmedSize(output_reader_or.value());
+        if (trim_size_or.is_error()) {
+          return trim_size_or.take_error_result();
+        }
+        if (truncate(params.output_path.c_str(),
+                     static_cast<off_t>(params.offset.value_or(0) + trim_size_or.value())) == -1) {
+          return fit::error("Resize to fit image failed. Trimming " + params.output_path +
+                            " to length " + std::to_string(trim_size_or.value()) +
+                            ". More specifically: " + Errno() + ".");
+        }
+      }
+
+      if (params.fvm_options.compression.schema != CompressionSchema::kNone) {
+        return CompressFile(params.output_path, params.output_path);
+      }
+
+      return fit::ok();
 
     case FvmImageFormat::kSparseImage:
       std::unique_ptr<Compressor> compressor = nullptr;
