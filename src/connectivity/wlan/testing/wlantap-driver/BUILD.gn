@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("wlantapctl_bind") {
   rules = "wlantapctl.bind"
@@ -54,12 +54,7 @@ driver_module("wlantap_driver") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-driver_package("wlantap") {
+fuchsia_system_package("wlantap") {
   deps = [ ":wlantap_driver" ]
-
-  drivers = [
-    {
-      name = "wlantap.so"
-    },
-  ]
+  allowed_in_extra_deps = true
 }

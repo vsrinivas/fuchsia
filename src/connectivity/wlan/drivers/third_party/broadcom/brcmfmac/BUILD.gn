@@ -13,7 +13,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 import("config.gni")
 
 # By default, targets are only visible here and to subdirectories.
@@ -279,18 +279,6 @@ driver_module("test_driver_module") {
   visibility += [ "//src/connectivity/wlan:drivers" ]
 }
 
-# Firmware file copying below.  There are three targets:
-#
-# * brcmfmac-firmware-copy
-# * brcmfmac-nvram-copy
-# * brcmfmac-clm-copy
-#
-# which copy the firmware, NVRAM definition, and CLM blob respectively.  They are either copy()
-# targets, or empty group() targets, for use in the driver_driver_package() targets below.
-#
-# All files that must be included as libraries in the driver_driver_package() target are added to the
-# driver_library_files list.
-
 brcmfmac_driver("brcmfmac-astro") {
   board = "astro"
   bus = "sdio"
@@ -375,5 +363,10 @@ group("brcmfmac_host_tests") {
 # Driver packages.  Depend on one or the other, depending on whether the board definition would like
 # runtime tests in the driver or not.
 
-driver_package("brcmfmac") {
+fuchsia_system_package("brcmfmac") {
+  # Allow upper level targets to depend on this one.
+  visibility = []
+  visibility = [ "*" ]
+
+  allowed_in_extra_deps = true
 }

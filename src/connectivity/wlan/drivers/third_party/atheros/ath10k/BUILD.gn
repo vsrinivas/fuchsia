@@ -16,7 +16,6 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//src/sys/build/components.gni")
 
 bind_rules("ath10k_bind") {
@@ -131,40 +130,29 @@ if (internal_access) {
   ]
 
   foreach(fw_file, all_fw_files) {
-    copy("ath10k-firmware-copy-" + fw_file) {
+    resource("ath10k-firmware-" + fw_file) {
       sources = [ "firmware/" + fw_file ]
-      outputs = [ "$root_out_dir/firmware/ath10k/" + fw_file ]
+      outputs = [ "lib/firmware/ath10k/" + fw_file ]
     }
   }
 }
 
-driver_package("ath10k") {
+fuchsia_system_package("ath10k") {
   deps = [ ":ath10k_driver" ]
 
-  drivers = [
-    {
-      name = "ath10k.so"
-    },
-  ]
-
   if (internal_access) {
-    libraries = []
-
     foreach(fw_file, all_fw_files) {
       deps += [
         # The copy step has to be in the shared-library toolchain to use the
         # expected output directory, since we treat firmware blobs as if they
         # were libraries which always use the shared-library toolchain to build.
-        ":ath10k-firmware-copy-" + fw_file + "($shlib_toolchain)",
-      ]
-
-      libraries += [
-        {
-          name = "firmware/ath10k/" + fw_file
-        },
+        ":ath10k-firmware-" + fw_file,
       ]
     }
   }
+
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }
 
 executable("sparse_array_tests") {

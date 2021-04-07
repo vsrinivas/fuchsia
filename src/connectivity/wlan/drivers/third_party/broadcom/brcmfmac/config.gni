@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//build/dist/resource.gni")
+import("//src/sys/build/components.gni")
 
 # Firmware file copying below.  There are three targets:
 #
@@ -27,69 +28,38 @@ template("brcmfmac_driver") {
                          ])
   orig_target_name = target_name
 
-  driver_library_files = [
-    "${chip}-${bus}.bin",
-    "${chip}-${bus}.txt",
-    "${chip}-${bus}.clm_blob",
-  ]
-  copy("brcmfmac-firmware-copy-${orig_target_name}") {
+  resource("brcmfmac-firmware-${orig_target_name}") {
     sources = [ "firmware/${chip}-${bus}-${board}.bin" ]
-    outputs = [
-      "$root_out_dir/firmware/${orig_target_name}/brcmfmac/${chip}-${bus}.bin",
-    ]
+    outputs = [ "lib/firmware/brcmfmac/${chip}-${bus}.bin" ]
   }
-  copy("brcmfmac-nvram-copy-${orig_target_name}") {
+  resource("brcmfmac-nvram-${orig_target_name}") {
     sources = [ "firmware/${chip}-${bus}-${board}.txt" ]
-    outputs = [
-      "$root_out_dir/firmware/${orig_target_name}/brcmfmac/${chip}-${bus}.txt",
-    ]
+    outputs = [ "lib/firmware/brcmfmac/${chip}-${bus}.txt" ]
   }
-  copy("brcmfmac-clm-copy-${orig_target_name}") {
-    sources = [ "firmware/${chip}-${bus}-${board}.clm_blob" ]
-    outputs = [ "$root_out_dir/firmware/${orig_target_name}/brcmfmac/${chip}-${bus}.clm_blob" ]
-  }
-
   _deps = [
-    ":brcmfmac-firmware-copy-${orig_target_name}($shlib_toolchain)",
-    ":brcmfmac-nvram-copy-${orig_target_name}($shlib_toolchain)",
+    ":brcmfmac-firmware-${orig_target_name}",
+    ":brcmfmac-nvram-${orig_target_name}",
   ]
   if (clm_present) {
-    _deps += [ ":brcmfmac-clm-copy-${orig_target_name}($shlib_toolchain)" ]
-  }
-
-  _libraries = []
-  foreach(file, driver_library_files) {
-    _libraries += [
-      {
-        name = "firmware/brcmfmac/$file"
-        source = get_label_info(shlib_toolchain, "name")
-        source += "/firmware/${orig_target_name}/brcmfmac/$file"
-      },
-    ]
+    resource("brcmfmac-clm-${orig_target_name}") {
+      sources = [ "firmware/${chip}-${bus}-${board}.clm_blob" ]
+      outputs = [ "lib/firmware/brcmfmac/${chip}-${bus}.clm_blob" ]
+    }
+    _deps += [ ":brcmfmac-clm-${orig_target_name}" ]
   }
 
   # Driver package for the brcmfmac driver.
-  driver_package(orig_target_name) {
+  fuchsia_system_package(orig_target_name) {
     deps = _deps
     deps += [ ":driver_module" ]
-    drivers = [
-      {
-        name = "brcmfmac.so"
-      },
-    ]
-    libraries = _libraries
     visibility = [ "*" ]
+    allowed_in_extra_deps = true
   }
 
-  driver_package("test-${orig_target_name}") {
+  fuchsia_system_package("test-${orig_target_name}") {
     deps = _deps
     deps += [ ":test_driver_module" ]
-    drivers = [
-      {
-        name = "brcmfmac-test.so"
-      },
-    ]
-    libraries = _libraries
     visibility = [ "*" ]
+    allowed_in_extra_deps = true
   }
 }

@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("bt_hog_bind") {
   rules = "bt_hog.bind"
@@ -33,14 +33,11 @@ driver_module("driver") {
   ]
 }
 
-driver_package("bt-hog") {
+fuchsia_system_package("bt-hog") {
   deps = [ ":driver" ]
 
-  drivers = [
-    {
-      name = "bt-hog.so"
-    },
-  ]
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }
 
 group("tests") {

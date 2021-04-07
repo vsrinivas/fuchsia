@@ -5,7 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//build/dist/resource.gni")
+import("//src/sys/build/components.gni")
 
 template("ot_radio_driver") {
   forward_variables_from(invoker,
@@ -74,10 +75,10 @@ template("ot_radio_driver") {
       deps = [ ":gen-version-string-${driver_suffix}" ]
     }
 
-    copy("ot-radio-firmware-${driver_suffix}") {
+    resource("ot-radio-firmware-${driver_suffix}") {
       sources = [ "//prebuilt/connectivity/openthread/radio-firmware/" +
                   firmware_name ]
-      outputs = [ "$root_out_dir/firmware/${firmware_name}" ]
+      outputs = [ "lib/firmware/${firmware_name}" ]
     }
 
     action("gen-version-string-${driver_suffix}") {
@@ -93,30 +94,14 @@ template("ot_radio_driver") {
     }
   }
 
-  driver_package("openthread-${driver_suffix}") {
+  fuchsia_system_package("openthread-${driver_suffix}") {
     # Fuchsia does not yet support loading drivers out of packages.
 
     deps = [ ":ot-radio-${driver_suffix}" ]
-
-    drivers = [
-      {
-        name = "ot-radio-driver-${driver_suffix}.so"
-      },
-    ]
-
     if (internal_access) {
-      deps += [
-        # The copy step has to be in the shared-library toolchain to use the
-        # expected output directory, since we treat firmware blobs as if they
-        # were libraries which always use the shared-library toolchain to build.
-        ":ot-radio-firmware-${driver_suffix}($shlib_toolchain)",
-      ]
-
-      libraries = [
-        {
-          name = "firmware/" + firmware_name
-        },
-      ]
+      deps += [ ":ot-radio-firmware-${driver_suffix}" ]
     }
+
+    allowed_in_extra_deps = true
   }
 }

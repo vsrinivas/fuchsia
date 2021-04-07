@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("rtl88xx_bind") {
   rules = "rtl88xx.bind"
@@ -57,14 +57,11 @@ driver_module("rtl88xx_driver") {
   ]
 }
 
-driver_package("rtl88xx") {
+fuchsia_system_package("rtl88xx") {
   # Fuchsia does not yet support loading drivers out of packages.
 
   deps = [ ":rtl88xx_driver" ]
 
-  drivers = [
-    {
-      name = "rtl88xx.so"
-    },
-  ]
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }

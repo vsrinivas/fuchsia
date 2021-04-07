@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 all_hdrs = [
   "convert.h",
@@ -55,12 +55,8 @@ driver_module("wlanif_driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-driver_package("wlanif") {
+fuchsia_system_package("wlanif") {
   deps = [ ":wlanif_driver" ]
 
-  drivers = [
-    {
-      name = "wlanif.so"
-    },
-  ]
+  allowed_in_extra_deps = true
 }

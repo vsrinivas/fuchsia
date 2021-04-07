@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("bt-hci-emulator-bind") {
   rules = "bt-hci-emulator.bind"
@@ -48,16 +48,13 @@ driver_module("driver") {
   ]
 }
 
-driver_package("emulator") {
+fuchsia_system_package("emulator") {
   testonly = true
 
   deps = [ ":driver" ]
 
-  drivers = [
-    {
-      name = "bt-hci-emulator.so"
-    },
-  ]
+  # This package is reachable from //src/connectivity/bluetooth
+  allowed_in_extra_deps = true
 }
 
 group("tests") {

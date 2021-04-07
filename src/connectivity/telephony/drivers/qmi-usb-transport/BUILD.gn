@@ -4,16 +4,13 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
-driver_package("qmi-usb-transport") {
+fuchsia_system_package("qmi-usb-transport") {
   deps = [ ":qmi_driver" ]
 
-  drivers = [
-    {
-      name = "qmi-transport.so"
-    },
-  ]
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }
 
 bind_rules("qmi_usb_bind") {

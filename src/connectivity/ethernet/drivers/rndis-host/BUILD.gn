@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("rndishost_bind") {
   rules = "rndishost.bind"
@@ -46,14 +46,8 @@ driver_module("driver") {
   ]
 }
 
-driver_package("rndis-host") {
+fuchsia_system_package("rndis-host") {
   deps = [ ":driver" ]
-
-  drivers = [
-    {
-      name = "rndis-host.so"
-    },
-  ]
 }
 
 group("tests") {

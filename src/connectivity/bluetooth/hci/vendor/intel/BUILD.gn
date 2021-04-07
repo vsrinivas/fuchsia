@@ -5,7 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//build/dist/resource.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("bt_hci_intel_bind") {
   rules = "bt_hci_intel.bind"
@@ -55,7 +56,7 @@ driver_module("driver") {
 }
 
 if (internal_access) {
-  copy("btintel-firmware") {
+  resource("btintel-firmware") {
     sources = [
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-11-5.sfi",
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-12-16.sfi",
@@ -64,46 +65,17 @@ if (internal_access) {
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-hw-37.8.bseq",
     ]
-    outputs = [ "$root_out_dir/firmware/{{source_file_part}}" ]
+    outputs = [ "lib/firmware/{{source_file_part}}" ]
   }
 }
 
-driver_package("intel") {
+fuchsia_system_package("intel") {
   deps = [ ":driver" ]
 
-  drivers = [
-    {
-      name = "bt-hci-intel.so"
-    },
-  ]
-
   if (internal_access) {
-    deps += [
-      # The copy step has to be in the shared-library toolchain to use the
-      # expected output directory, since we treat firmware blobs as if they
-      # were libraries which always use the shared-library toolchain to build.
-      ":btintel-firmware($shlib_toolchain)",
-    ]
-
-    libraries = [
-      {
-        name = "firmware/ibt-11-5.sfi"
-      },
-      {
-        name = "firmware/ibt-12-16.sfi"
-      },
-      {
-        name = "firmware/ibt-17-2.sfi"
-      },
-      {
-        name = "firmware/ibt-18-2.sfi"
-      },
-      {
-        name = "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq"
-      },
-      {
-        name = "firmware/ibt-hw-37.8.bseq"
-      },
-    ]
+    deps += [ ":btintel-firmware($shlib_toolchain)" ]
   }
+
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }

@@ -4,7 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("bt_hci_passthrough_bind") {
   rules = "bt_hci_passthrough.bind"
@@ -31,14 +31,11 @@ driver_module("driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-driver_package("passthrough") {
+fuchsia_system_package("passthrough") {
   deps = [ ":driver" ]
 
-  drivers = [
-    {
-      name = "bt-hci-passthrough.so"
-    },
-  ]
+  # This package is reachable from //garnet/packages/prod:all
+  allowed_in_extra_deps = true
 }
 
 group("tests") {

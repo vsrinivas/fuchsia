@@ -4,18 +4,12 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
-driver_package("usb-qmi-function") {
+fuchsia_system_package("usb-qmi-function") {
   testonly = true
 
   deps = [ ":qmi_function" ]
-
-  drivers = [
-    {
-      name = "qmi-function.so"
-    },
-  ]
 }
 
 bind_rules("usb_qmi_function_bind") {
