@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1561
+From //build/config/BUILDCONFIG.gn:1563
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -575,7 +575,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:525
+From //build/config/BUILDCONFIG.gn:527
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -649,7 +649,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:529
+From //build/config/BUILDCONFIG.gn:531
 
 ### chromium_build_dir
 This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
@@ -1070,7 +1070,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1318
+From //build/config/BUILDCONFIG.gn:1320
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1826,7 +1826,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1169
+From //build/config/BUILDCONFIG.gn:1171
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3177,7 +3177,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1551
+From //build/config/BUILDCONFIG.gn:1553
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3186,7 +3186,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1556
+From //build/config/BUILDCONFIG.gn:1558
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3230,7 +3230,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1364
+From //build/config/BUILDCONFIG.gn:1366
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3527,7 +3527,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1348
+From //build/config/BUILDCONFIG.gn:1350
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3921,7 +3921,7 @@ From //build/images/args.gni:69
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:165
+From //build/config/fuchsia/BUILD.gn:168
 
 ### zircon_b_partition
 
