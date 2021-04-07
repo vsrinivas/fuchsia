@@ -130,8 +130,8 @@ class FileV2 : public zxtest::Test {
       return status;
     }
 
-    auto result = fio2::File::Call::Describe(client_end.borrow(),
-                                             fio2::wire::ConnectionInfoQuery::REPRESENTATION);
+    auto result = fidl::WireCall<fio2::File>(client_end.borrow())
+                      .Describe(fio2::wire::ConnectionInfoQuery::REPRESENTATION);
 
     if (result.status() != ZX_OK) {
       return status;

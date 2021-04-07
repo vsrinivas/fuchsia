@@ -550,9 +550,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     } else {
       dir_path = current_dir;
     }
-    fio::Directory::Call::Open(*diagnostics_channel, flags, 0,
-                               fidl::StringView::FromExternal(dir_path),
-                               fidl::ServerEnd<fio::Node>(std::move(ipc)));
+    fidl::WireCall(*diagnostics_channel)
+        .Open(flags, 0, fidl::StringView::FromExternal(dir_path),
+              fidl::ServerEnd<fio::Node>(std::move(ipc)));
     return;
   }
 
@@ -596,9 +596,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
   }
 
   // Otherwise we will pass the request on to the remote.
-  fio::Directory::Call::Open(
-      fidl::UnownedClientEnd<fio::Directory>(dn->device->device_controller().channel().get()),
-      flags, 0, ".", fidl::ServerEnd<fio::Node>(std::move(ipc)));
+  fidl::WireCall(
+      fidl::UnownedClientEnd<fio::Directory>(dn->device->device_controller().channel().get()))
+      .Open(flags, 0, ".", fidl::ServerEnd<fio::Node>(std::move(ipc)));
 }
 
 void devfs_remove(Devnode* dn) {
@@ -784,9 +784,8 @@ zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fio::Node> client_r
   if (!client_remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  fio::Directory::Call::Open(
-      fidl::UnownedClientEnd<fio::Directory>(dev->device_controller().channel().get()), 0, 0, ".",
-      std::move(client_remote));
+  fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(dev->device_controller().channel().get()))
+      .Open(0, 0, ".", std::move(client_remote));
   return ZX_OK;
 }
 

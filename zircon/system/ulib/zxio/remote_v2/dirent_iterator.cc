@@ -31,10 +31,9 @@ class DirentIteratorImpl {
       return status;
     }
     RemoteV2 dir(directory);
-    status =
-        fio2::Directory::Call::Enumerate(dir.control(), fio2::wire::DirectoryEnumerateOptions(),
-                                         std::move(iterator_server_end))
-            .status();
+    status = fidl::WireCall<fio2::Directory>(dir.control())
+                 .Enumerate(fio2::wire::DirectoryEnumerateOptions(), std::move(iterator_server_end))
+                 .status();
     if (status != ZX_OK) {
       return status;
     }

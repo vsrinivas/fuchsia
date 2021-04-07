@@ -234,8 +234,8 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
   }
 
   fdio_cpp::FdioCaller caller(std::move(dc_fd));
-  auto open_status = fhd::Provider::Call::OpenController(caller.channel(), std::move(device_server),
-                                                         std::move(dc_server));
+  auto open_status = fidl::WireCall<fhd::Provider>(caller.channel())
+                         .OpenController(std::move(device_server), std::move(dc_server));
   if (open_status.status() != ZX_OK) {
     *err_msg_out = "Failed to call service handle";
     return open_status.status();

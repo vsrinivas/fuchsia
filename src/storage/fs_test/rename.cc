@@ -364,7 +364,7 @@ TEST_P(RenameTest, Raw) {
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
 
-  auto token_result = fio::Directory::Call::GetToken(caller.channel());
+  auto token_result = fidl::WireCall<fio::Directory>(caller.channel()).GetToken();
   ASSERT_EQ(token_result.status(), ZX_OK);
   ASSERT_EQ(token_result.Unwrap()->s, ZX_OK);
 
@@ -372,9 +372,9 @@ TEST_P(RenameTest, Raw) {
   // Observe that paths are rejected.
   constexpr char src[] = "bravo/charlie";
   constexpr char dst[] = "bravo/delta";
-  auto rename_result =
-      fio::Directory::Call::Rename(caller.channel(), fidl::StringView(src),
-                                   std::move(token_result.Unwrap()->token), fidl::StringView(dst));
+  auto rename_result = fidl::WireCall<fio::Directory>(caller.channel())
+                           .Rename(fidl::StringView(src), std::move(token_result.Unwrap()->token),
+                                   fidl::StringView(dst));
   ASSERT_EQ(rename_result.status(), ZX_OK);
   ASSERT_EQ(rename_result.Unwrap()->s, ZX_ERR_INVALID_ARGS);
 

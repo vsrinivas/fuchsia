@@ -68,7 +68,7 @@ class PartitionMappingTest : public zxtest::Test {
   }
 
   static std::string GetType(const fdio_cpp::FdioCaller& caller) {
-    auto guid_resp = fuchsia_partition::Partition::Call::GetTypeGuid(caller.channel());
+    auto guid_resp = fidl::WireCall<fuchsia_partition::Partition>(caller.channel()).GetTypeGuid();
     if (guid_resp.ok() && guid_resp->status == ZX_OK && guid_resp->guid) {
       return gpt::KnownGuid::TypeDescription(guid_resp->guid->value.data());
     }
@@ -76,7 +76,7 @@ class PartitionMappingTest : public zxtest::Test {
   }
 
   static std::string GetLabel(const fdio_cpp::FdioCaller& caller) {
-    auto name_resp = fuchsia_partition::Partition::Call::GetName(caller.channel());
+    auto name_resp = fidl::WireCall<fuchsia_partition::Partition>(caller.channel()).GetName();
     if (name_resp.ok() && name_resp->status == ZX_OK) {
       return std::string(name_resp->name.data(), name_resp->name.size());
     }

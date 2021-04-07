@@ -135,7 +135,7 @@ zx_status_t FetchTable(const zx::channel& channel, const TableInfo& table,
 
   // Fetch the data.
   fidl::WireResult<Acpi::ReadNamedTable> result =
-      Acpi::Call::ReadNamedTable(channel.borrow(), table.name, 0, std::move(vmo_copy));
+      fidl::WireCall<Acpi>(channel.borrow()).ReadNamedTable(table.name, 0, std::move(vmo_copy));
   if (!result.ok()) {
     return result.status();
   }
@@ -237,7 +237,8 @@ zx_status_t AcpiDump(const Args& args) {
   fdio_cpp::FdioCaller dev(std::move(fd));
 
   // List ACPI entries.
-  fidl::WireResult<Acpi::ListTableEntries> result = Acpi::Call::ListTableEntries(dev.channel());
+  fidl::WireResult<Acpi::ListTableEntries> result =
+      fidl::WireCall<Acpi>(dev.channel()).ListTableEntries();
   if (!result.ok()) {
     fprintf(stderr, "Could not list ACPI table entries: %s.\n",
             zx_status_get_string(result.status()));

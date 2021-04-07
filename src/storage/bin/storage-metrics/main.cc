@@ -93,7 +93,7 @@ zx_status_t GetFsMetrics(const char* path, MinfsFidlMetrics* out_metrics) {
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fuchsia_minfs::Minfs::Call::GetMetrics(caller.channel());
+  auto result = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel()).GetMetrics();
   if (!result.ok()) {
     fprintf(stderr, "Error getting metrics for %s, status %d\n", path, result.status());
     return result.status();
@@ -179,8 +179,9 @@ void RunFsMetrics(const char* path, const StorageMetricOptions options) {
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
-      ::fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result = fidl::WireCall<fio::DirectoryAdmin>(
+                    ::fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+                    .QueryFilesystem();
   if (!result.ok()) {
     fprintf(stderr, "storage-metrics could not open %s, status %d\n", path, result.status());
     return;
@@ -244,8 +245,8 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
 
   fdio_cpp::FdioCaller caller(std::move(fd));
 
-  auto result = fio::DirectoryAdmin::Call::GetDevicePath(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+                    .GetDevicePath();
 
   zx_status_t rc;
   fuchsia_hardware_block_BlockStats stats;

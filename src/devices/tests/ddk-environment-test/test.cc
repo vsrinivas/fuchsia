@@ -44,7 +44,7 @@ class EnvironmentTest : public zxtest::Test {
 };
 
 TEST_F(EnvironmentTest, GetServiceList) {
-  auto result = TestDevice::Call::GetServiceList(zx::unowned(chan_));
+  auto result = fidl::WireCall<TestDevice>(zx::unowned(chan_)).GetServiceList();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->services.count(), 3);
 

@@ -243,8 +243,8 @@ struct ramdisk_client {
 
   static zx_status_t DestroyByHandle(zx::channel ramdisk) {
     zx_status_t call_status = ZX_OK;
-    auto resp =
-        fuchsia_device::Controller::Call::ScheduleUnbind(zx::unowned_channel(ramdisk.get()));
+    auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(ramdisk.get()))
+                    .ScheduleUnbind();
     zx_status_t status = resp.status();
     if (status != ZX_OK) {
       return status;

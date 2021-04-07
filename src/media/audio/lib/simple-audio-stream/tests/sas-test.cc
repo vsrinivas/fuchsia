@@ -207,11 +207,12 @@ TEST_F(SimpleAudioTest, SetAndGetGain) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_gain_db(allocator, MockSimpleAudio::kTestGain);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state.status());
   ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
   server->DdkAsyncRemove();
@@ -232,19 +233,20 @@ TEST_F(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_gain_db(allocator, MockSimpleAudio::kTestGain);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
   // One watch for initial reply.
-  auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state.status());
   ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
 
   // A second watch with no reply since there is no change of gain.
   auto f = [](void* arg) -> int {
     auto ch = static_cast<fidl::WireResult<audio_fidl::Device::GetChannel>*>(arg);
-    audio_fidl::StreamConfig::Call::WatchGainState((*ch)->channel);
+    fidl::WireCall<audio_fidl::StreamConfig>((*ch)->channel).WatchGainState();
     return 0;
   };
   thrd_t th;
@@ -275,11 +277,12 @@ TEST_F(SimpleAudioTest, SetAndGetAgc) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_agc_enabled(allocator, true);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state1.status());
   ASSERT_TRUE(gain_state1->gain_state.agc_enabled());
 
@@ -287,11 +290,12 @@ TEST_F(SimpleAudioTest, SetAndGetAgc) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_agc_enabled(allocator, false);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state2 = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.agc_enabled());
   server->DdkAsyncRemove();
@@ -312,11 +316,12 @@ TEST_F(SimpleAudioTest, SetAndGetMute) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_muted(allocator, true);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state1.status());
   ASSERT_TRUE(gain_state1->gain_state.muted());
 
@@ -324,11 +329,12 @@ TEST_F(SimpleAudioTest, SetAndGetMute) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_muted(allocator, false);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state2 = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.muted());
   server->DdkAsyncRemove();
@@ -357,11 +363,12 @@ TEST_F(SimpleAudioTest, SetMuteWhenDisabled) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_muted(allocator, true);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state1.status());
   ASSERT_FALSE(gain_state1->gain_state.has_muted());
   server->DdkAsyncRemove();
@@ -497,7 +504,7 @@ TEST_F(SimpleAudioTest, CreateRingBuffer1) {
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
   client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  auto result = audio_fidl::RingBuffer::Call::GetProperties(local);
+  auto result = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
@@ -547,7 +554,7 @@ TEST_F(SimpleAudioTest, CreateRingBuffer2) {
   format.set_pcm_format(allocator, std::move(pcm_format));
   client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  auto result = audio_fidl::RingBuffer::Call::GetProperties(local);
+  auto result = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
@@ -584,7 +591,7 @@ TEST_F(SimpleAudioTest, SetBadFormat1) {
   auto result1 = client.GetSupportedFormats();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result1.status());  // With a bad format we get a channel close.
 
-  auto result2 = audio_fidl::RingBuffer::Call::GetProperties(local);
+  auto result2 = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
@@ -620,7 +627,7 @@ TEST_F(SimpleAudioTest, SetBadFormat2) {
   auto result1 = client.GetSupportedFormats();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result1.status());  // With a bad format we get a channel close.
 
-  auto result2 = audio_fidl::RingBuffer::Call::GetProperties(local);
+  auto result2 = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
@@ -636,7 +643,7 @@ TEST_F(SimpleAudioTest, GetIds) {
   fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto result = audio_fidl::StreamConfig::Call::GetProperties(ch->channel);
+  auto result = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).GetProperties();
   ASSERT_OK(result.status());
 
   audio_stream_unique_id_t mic = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
@@ -663,8 +670,8 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_EQ(ch1.status(), ZX_OK);
   ASSERT_EQ(ch2.status(), ZX_OK);
 
-  auto prop1 = audio_fidl::StreamConfig::Call::GetProperties(ch1->channel);
-  auto prop2 = audio_fidl::StreamConfig::Call::GetProperties(ch2->channel);
+  auto prop1 = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).GetProperties();
+  auto prop2 = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).GetProperties();
   ASSERT_OK(prop1.status());
   ASSERT_OK(prop2.status());
 
@@ -673,8 +680,8 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
 
-  auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
-  auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
+  auto state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchPlugState();
+  auto state2 = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchPlugState();
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
   ASSERT_FALSE(state1->plug_state.plugged());
@@ -696,8 +703,8 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   ASSERT_EQ(ch1.status(), ZX_OK);
   ASSERT_EQ(ch2.status(), ZX_OK);
 
-  auto prop1 = audio_fidl::StreamConfig::Call::GetProperties(ch1->channel);
-  auto prop2 = audio_fidl::StreamConfig::Call::GetProperties(ch2->channel);
+  auto prop1 = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).GetProperties();
+  auto prop2 = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).GetProperties();
   ASSERT_OK(prop1.status());
   ASSERT_OK(prop2.status());
 
@@ -707,8 +714,8 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
             audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
 
   // Watch each channel for initial reply.
-  auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
-  auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
+  auto state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchPlugState();
+  auto state2 = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchPlugState();
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
   ASSERT_FALSE(state1->plug_state.plugged());
@@ -718,7 +725,7 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   auto f = [](void* arg) -> int {
     fidl::WireResult<audio_fidl::Device::GetChannel>* ch =
         static_cast<fidl::WireResult<audio_fidl::Device::GetChannel>*>(arg);
-    audio_fidl::StreamConfig::Call::WatchPlugState((*ch)->channel);
+    fidl::WireCall<audio_fidl::StreamConfig>((*ch)->channel).WatchPlugState();
     return 0;
   };
   thrd_t th1;
@@ -756,9 +763,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   ASSERT_EQ(ch2.status(), ZX_OK);
   ASSERT_EQ(ch3.status(), ZX_OK);
 
-  auto state1a = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
-  auto state2a = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
-  auto state3a = audio_fidl::StreamConfig::Call::WatchPlugState(ch3->channel);
+  auto state1a = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchPlugState();
+  auto state2a = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchPlugState();
+  auto state3a = fidl::WireCall<audio_fidl::StreamConfig>(ch3->channel).WatchPlugState();
   ASSERT_OK(state1a.status());
   ASSERT_OK(state2a.status());
   ASSERT_OK(state3a.status());
@@ -768,9 +775,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
 
   server->PostSetPlugState(true, zx::duration(zx::msec(100)));
 
-  auto state1b = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
-  auto state2b = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
-  auto state3b = audio_fidl::StreamConfig::Call::WatchPlugState(ch3->channel);
+  auto state1b = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchPlugState();
+  auto state2b = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchPlugState();
+  auto state3b = fidl::WireCall<audio_fidl::StreamConfig>(ch3->channel).WatchPlugState();
   ASSERT_OK(state1b.status());
   ASSERT_OK(state2b.status());
   ASSERT_OK(state3b.status());
@@ -794,8 +801,8 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainState) {
   ASSERT_EQ(ch1.status(), ZX_OK);
   ASSERT_EQ(ch2.status(), ZX_OK);
 
-  auto state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch1->channel);
-  auto state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch2->channel);
+  auto state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchGainState();
+  auto state2 = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchGainState();
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
   ASSERT_EQ(0.f, state1->gain_state.gain_db());
@@ -819,9 +826,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   ASSERT_EQ(ch2.status(), ZX_OK);
   ASSERT_EQ(ch3.status(), ZX_OK);
 
-  auto state1a = audio_fidl::StreamConfig::Call::WatchGainState(ch1->channel);
-  auto state2a = audio_fidl::StreamConfig::Call::WatchGainState(ch2->channel);
-  auto state3a = audio_fidl::StreamConfig::Call::WatchGainState(ch3->channel);
+  auto state1a = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchGainState();
+  auto state2a = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchGainState();
+  auto state3a = fidl::WireCall<audio_fidl::StreamConfig>(ch3->channel).WatchGainState();
   ASSERT_OK(state1a.status());
   ASSERT_OK(state2a.status());
   ASSERT_OK(state3a.status());
@@ -839,16 +846,16 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
     gain_state.set_muted(allocator, false)
         .set_agc_enabled(allocator, false)
         .set_gain_db(allocator, MockSimpleAudio::kTestGain);
-    audio_fidl::StreamConfig::Call::SetGain((*ch1)->channel, std::move(gain_state));
+    fidl::WireCall<audio_fidl::StreamConfig>((*ch1)->channel).SetGain(std::move(gain_state));
 
     return 0;
   };
   thrd_t th;
   ASSERT_OK(thrd_create_with_name(&th, f, &ch1, "test-thread"));
 
-  auto state1b = audio_fidl::StreamConfig::Call::WatchGainState(ch1->channel);
-  auto state2b = audio_fidl::StreamConfig::Call::WatchGainState(ch2->channel);
-  auto state3b = audio_fidl::StreamConfig::Call::WatchGainState(ch3->channel);
+  auto state1b = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchGainState();
+  auto state2b = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchGainState();
+  auto state3b = fidl::WireCall<audio_fidl::StreamConfig>(ch3->channel).WatchGainState();
   ASSERT_OK(state1b.status());
   ASSERT_OK(state2b.status());
   ASSERT_OK(state3b.status());
@@ -881,16 +888,16 @@ TEST_F(SimpleAudioTest, RingBufferTests) {
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
 
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, std::move(format),
-                                                             std::move(remote));
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
   // Buffer is set to hold at least 1 second, with kNumberOfPositionNotifications notifications
   // per ring buffer (i.e. per second) we set the time waiting for the watch below to 200ms+.
 
-  auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, MockSimpleAudio::kTestFrameRate,
-                                                  kNumberOfPositionNotifications);
+  auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(MockSimpleAudio::kTestFrameRate,
+                                                                  kNumberOfPositionNotifications);
   ASSERT_OK(vmo.status());
 
   // Check inspect state.
@@ -907,7 +914,7 @@ TEST_F(SimpleAudioTest, RingBufferTests) {
                       inspect::UintPropertyValue(MockSimpleAudio::kTestFrameRate)));
   }
 
-  auto start = audio_fidl::RingBuffer::Call::Start(local);
+  auto start = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
   ASSERT_OK(start.status());
 
   // Check updated inspect state.
@@ -921,10 +928,10 @@ TEST_F(SimpleAudioTest, RingBufferTests) {
         CheckPropertyNotEqual(simple_audio->node(), "start_time", inspect::IntPropertyValue(0)));
   }
 
-  auto position = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(local);
+  auto position = fidl::WireCall<audio_fidl::RingBuffer>(local).WatchClockRecoveryPositionInfo();
   ASSERT_EQ(MockSimpleAudio::kTestPositionNotify, position->position_info.position);
 
-  auto stop = audio_fidl::RingBuffer::Call::Stop(local);
+  auto stop = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
   ASSERT_OK(stop.status());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
@@ -948,25 +955,25 @@ TEST_F(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
 
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, std::move(format),
-                                                             std::move(remote));
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
   // Buffer is set to hold at least 1 second, with kNumberOfPositionNotifications notifications
   // per ring buffer (i.e. per second) the time waiting before getting a position reply is 200ms+.
 
-  auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, MockSimpleAudio::kTestFrameRate,
-                                                  kNumberOfPositionNotifications);
+  auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(MockSimpleAudio::kTestFrameRate,
+                                                                  kNumberOfPositionNotifications);
   ASSERT_OK(vmo.status());
 
-  auto start = audio_fidl::RingBuffer::Call::Start(local);
+  auto start = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
   ASSERT_OK(start.status());
 
   // Watch position notifications.
   auto f = [](void* arg) -> int {
     auto ch = static_cast<fidl::ClientEnd<audio_fidl::RingBuffer>*>(arg);
-    audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(*ch);
+    fidl::WireCall<audio_fidl::RingBuffer>(*ch).WatchClockRecoveryPositionInfo();
     return 0;
   };
   thrd_t th;

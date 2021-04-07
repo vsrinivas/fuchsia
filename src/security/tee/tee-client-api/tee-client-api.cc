@@ -106,8 +106,8 @@ TEEC_Result CheckGlobalPlatformCompliance(
     if (!server_end.is_ok()) {
       return TEEC_ERROR_COMMUNICATION;
     }
-    auto result = fuchsia_hardware_tee::DeviceConnector::Call::ConnectToDeviceInfo(
-        std::move(maybe_device_connector), std::move(server_end.value()));
+    auto result = fidl::WireCall(std::move(maybe_device_connector))
+                      .ConnectToDeviceInfo(std::move(server_end.value()));
     if (!result.ok()) {
       return TEEC_ERROR_NOT_SUPPORTED;
     }
@@ -119,7 +119,7 @@ TEEC_Result CheckGlobalPlatformCompliance(
     device_info = std::move(result.value());
   }
 
-  auto result = fuchsia_tee::DeviceInfo::Call::GetOsInfo(device_info);
+  auto result = fidl::WireCall(device_info).GetOsInfo();
   if (!result.ok() || !result->info.has_is_global_platform_compliant() ||
       !result->info.is_global_platform_compliant()) {
     return TEEC_ERROR_NOT_SUPPORTED;
@@ -713,10 +713,11 @@ TEEC_Result ConnectApplicationViaDeviceConnector(
     return TEEC_ERROR_COMMUNICATION;
   }
 
-  auto result = fuchsia_hardware_tee::DeviceConnector::Call::ConnectToApplication(
-      std::move(device_connector), app_uuid,
-      fidl::ClientEnd<::fuchsia_tee_manager::Provider>() /* service_provider */,
-      std::move(app_ends->server));
+  auto result =
+      fidl::WireCall(std::move(device_connector))
+          .ConnectToApplication(
+              app_uuid, fidl::ClientEnd<::fuchsia_tee_manager::Provider>() /* service_provider */,
+              std::move(app_ends->server));
   if (!result.ok()) {
     return TEEC_ERROR_COMMUNICATION;
   }
@@ -918,8 +919,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return result;
   }
 
-  auto result =
-      fuchsia_tee::Application::Call::OpenSession2(app_client_end, std::move(parameter_set));
+  auto result = fidl::WireCall(app_client_end).OpenSession2(std::move(parameter_set));
   zx_status_t status = result.status();
 
   if (status != ZX_OK) {
@@ -983,8 +983,7 @@ void TEEC_CloseSession(TEEC_Session* session) {
   }
 
   // TEEC_CloseSession simply swallows errors, so no need to check here.
-  fuchsia_tee::Application::Call::CloseSession(GetApplicationFromSession(session),
-                                               session->imp.session_id);
+  fidl::WireCall(GetApplicationFromSession(session)).CloseSession(session->imp.session_id);
   session->imp.application_channel = ZX_HANDLE_INVALID;
 }
 
@@ -1008,9 +1007,8 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return processing_rc;
   }
 
-  auto result = fuchsia_tee::Application::Call::InvokeCommand(GetApplicationFromSession(session),
-                                                              session->imp.session_id, commandID,
-                                                              std::move(parameter_set));
+  auto result = fidl::WireCall(GetApplicationFromSession(session))
+                    .InvokeCommand(session->imp.session_id, commandID, std::move(parameter_set));
   zx_status_t status = result.status();
   if (status != ZX_OK) {
     if (returnOrigin) {

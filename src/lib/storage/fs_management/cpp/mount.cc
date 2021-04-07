@@ -174,7 +174,7 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
   }
 
   fdio_cpp::UnownedFdioCaller caller(fd);
-  auto resp = fblock::Block::Call::GetInfo(caller.channel());
+  auto resp = fidl::WireCall<fblock::Block>(caller.channel()).GetInfo();
   if (!resp.ok() || resp.value().status != ZX_OK) {
     fprintf(stderr, "detect_disk_format: Could not acquire block device info\n");
     return DISK_FORMAT_UNKNOWN;
@@ -302,7 +302,7 @@ zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const mount_optio
   }
 
   fdio_cpp::FdioCaller caller{fbl::unique_fd(mount_fd)};
-  auto resp = fio::DirectoryAdmin::Call::Mount(caller.channel(), std::move(data_root));
+  auto resp = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).Mount(std::move(data_root));
   caller.release().release();
   if (!resp.ok()) {
     return resp.status();
@@ -370,7 +370,7 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
 __EXPORT
 zx_status_t fumount(int mount_fd) {
   fdio_cpp::FdioCaller caller{fbl::unique_fd(mount_fd)};
-  auto resp = fio::DirectoryAdmin::Call::UnmountNode(caller.channel());
+  auto resp = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).UnmountNode();
   caller.release().release();
   if (!resp.ok()) {
     return resp.status();

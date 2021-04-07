@@ -78,8 +78,8 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto result =
-      sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(handle));
+  auto result = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(handle))
+                    .WaitForBuffersAllocated();
   if (!result.ok()) {
     return result.status();
   }
@@ -299,8 +299,8 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   image_constraints.bytes_per_row_divisor = 32;
   image_constraints.start_offset_divisor = 32;
 
-  auto res = sysmem::BufferCollection::Call::SetConstraints(zx::unowned_channel(collection), true,
-                                                            constraints);
+  auto res = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
+                 .SetConstraints(true, constraints);
 
   if (!res.ok()) {
     DISP_ERROR("Failed to set constraints: %d", res.status());

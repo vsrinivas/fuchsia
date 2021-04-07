@@ -75,8 +75,8 @@ void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
         fidl::ObjectView<fidl_tel_snoop::wire::QmiMessage>::FromExternal(&msg));
     zxlogf(INFO, "at-fake-transport: snoop msg %u %u %u %u sent", msg.opaque_bytes.data_[0],
            msg.opaque_bytes.data_[1], msg.opaque_bytes.data_[2], msg.opaque_bytes.data_[3]);
-    fidl_tel_snoop::Publisher::Call::SendMessage(zx::unowned_channel(GetCtrlSnoopChannel().get()),
-                                                 std::move(snoop_msg));
+    fidl::WireCall<fidl_tel_snoop::Publisher>(zx::unowned_channel(GetCtrlSnoopChannel().get()))
+        .SendMessage(std::move(snoop_msg));
   }
 }
 

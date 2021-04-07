@@ -49,7 +49,7 @@ TEST(FtlFidlTest, GetVmoReturnsVmoWithCounters) {
   fbl::unique_fd ftl_service_fd(open(path_to_device.substr(0, length).c_str(), O_RDWR));
   ASSERT_TRUE(ftl_service_fd);
   fdio_cpp::UnownedFdioCaller caller(ftl_service_fd.get());
-  auto r = block_fidl::Ftl::Call::GetVmo(caller.channel());
+  auto r = fidl::WireCall<block_fidl::Ftl>(caller.channel()).GetVmo();
   ASSERT_OK(r.status());
   ASSERT_FALSE(r->result.is_err());
   zx::vmo inspect_vmo(std::move(r->result.mutable_response().vmo));

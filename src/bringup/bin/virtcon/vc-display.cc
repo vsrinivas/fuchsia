@@ -310,9 +310,8 @@ static zx_status_t create_buffer_collection(
   }
   constexpr uint32_t kVcNamePriority = 1000000;
   const char kVcCollectionName[] = "vc-framebuffer";
-  zx_status_t status = sysmem::BufferCollectionToken::Call::SetName(
-                           token, kVcNamePriority, fidl::StringView(kVcCollectionName))
-                           .status();
+  zx_status_t status =
+      fidl::WireCall(token).SetName(kVcNamePriority, fidl::StringView(kVcCollectionName)).status();
   if (status != ZX_OK) {
     printf("vc: Failed to set debug info: %d\n", status);
     return status;
@@ -326,8 +325,8 @@ static zx_status_t create_buffer_collection(
       return display_token_server.status_value();
     }
 
-    status = sysmem::BufferCollectionToken::Call::Duplicate(token, ZX_RIGHT_SAME_RIGHTS,
-                                                            *std::move(display_token_server))
+    status = fidl::WireCall(token)
+                 .Duplicate(ZX_RIGHT_SAME_RIGHTS, *std::move(display_token_server))
                  .status();
     if (status != ZX_OK) {
       printf("vc: Failed to duplicate token: %d\n", status);
@@ -646,8 +645,9 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto open_rsp = fhd::Provider::Call::OpenVirtconController(
-      caller.borrow_as<fhd::Provider>(), std::move(device_server), std::move(dc_endpoints->server));
+  auto open_rsp =
+      fidl::WireCall(caller.borrow_as<fhd::Provider>())
+          .OpenVirtconController(std::move(device_server), std::move(dc_endpoints->server));
   if (!open_rsp.ok()) {
     return open_rsp.status();
   }
@@ -760,8 +760,8 @@ static void vc_find_display_controller() {
 
   fdio_cpp::UnownedFdioCaller dir_caller(dc_dir_fd);
 
-  auto result = fio::Directory::Call::Watch(dir_caller.directory(), fio::wire::WATCH_MASK_ALL, 0,
-                                            server.TakeChannel());
+  auto result = fidl::WireCall(dir_caller.directory())
+                    .Watch(fio::wire::WATCH_MASK_ALL, 0, server.TakeChannel());
   if (result.status() != ZX_OK) {
     printf("vc: Failed to watch dc directory\n");
     return;

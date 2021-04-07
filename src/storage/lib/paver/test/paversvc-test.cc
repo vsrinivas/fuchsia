@@ -1602,7 +1602,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
 
 void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
   fdio_cpp::UnownedFdioCaller caller(device.get());
-  auto result = partition::Partition::Call::GetTypeGuid(caller.channel());
+  auto result = fidl::WireCall<partition::Partition>(caller.channel()).GetTypeGuid();
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   auto* guid = result.value().guid.get();
@@ -1948,8 +1948,8 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(gpt->Sync());
 
     fdio_cpp::UnownedFdioCaller caller(gpt_dev_->fd());
-    auto result = fuchsia_device::Controller::Call::Rebind(caller.channel(),
-                                                           fidl::StringView("/boot/driver/gpt.so"));
+    auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
+                      .Rebind(fidl::StringView("/boot/driver/gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->result.is_err());
   }

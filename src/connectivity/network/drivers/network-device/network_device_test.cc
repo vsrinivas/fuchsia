@@ -74,9 +74,9 @@ class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
       return fit::error(endpoints.status_value());
     }
     auto [client_end, server_end] = std::move(*endpoints);
-    auto result = netdev::DeviceInstance::Call::GetDevice(
-        fidl::UnownedClientEnd<netdev::DeviceInstance>(zx::unowned(FidlClient())),
-        std::move(server_end));
+    auto result =
+        fidl::WireCall(fidl::UnownedClientEnd<netdev::DeviceInstance>(zx::unowned(FidlClient())))
+            .GetDevice(std::move(server_end));
     if (!result.ok()) {
       return fit::error(result.status());
     }
@@ -91,9 +91,9 @@ class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
     }
     auto [client_end, server_end] = std::move(*endpoints);
 
-    auto result = netdev::DeviceInstance::Call::GetMacAddressing(
-        fidl::UnownedClientEnd<netdev::DeviceInstance>(zx::unowned(FidlClient())),
-        std::move(server_end));
+    auto result =
+        fidl::WireCall(fidl::UnownedClientEnd<netdev::DeviceInstance>(zx::unowned(FidlClient())))
+            .GetMacAddressing(std::move(server_end));
     if (!result.ok()) {
       return fit::error(result.status());
     }

@@ -273,7 +273,7 @@ TEST(UsbAudioTest, GetStreamProperties) {
   fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto result = audio_fidl::StreamConfig::Call::GetProperties(ch->channel);
+  auto result = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).GetProperties();
   ASSERT_OK(result.status());
 
   ASSERT_EQ(result->properties.clock_domain(), 0);
@@ -305,11 +305,12 @@ TEST(UsbAudioTest, SetAndGetGain) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_gain_db(allocator, kTestGain);
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    auto status =
+        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
+  auto gain_state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).WatchGainState();
   ASSERT_OK(gain_state.status());
 
   ASSERT_EQ(kTestGain, gain_state->gain_state.gain_db());
@@ -405,11 +406,11 @@ TEST(UsbAudioTest, RingBuffer) {
   fidl::FidlAllocator allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, std::move(format),
-                                                             std::move(remote));
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
-  auto result = audio_fidl::RingBuffer::Call::GetProperties(local);
+  auto result = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.external_delay(), 0);
   ASSERT_EQ(result->properties.fifo_depth(), 576);  // Changes with frame rate.
@@ -417,8 +418,8 @@ TEST(UsbAudioTest, RingBuffer) {
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
   constexpr uint32_t kMinFrames = 10;
-  auto vmo =
-      audio_fidl::RingBuffer::Call::GetVmo(local, kMinFrames, kNumberOfPositionNotifications);
+  auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(kMinFrames,
+                                                                  kNumberOfPositionNotifications);
   ASSERT_OK(vmo.status());
 
   fake_device.DdkAsyncRemove();

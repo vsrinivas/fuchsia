@@ -245,7 +245,7 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   uint32_t blk_size;
   {
     fdio_cpp::UnownedFdioCaller caller(fd.get());
-    auto result = fuchsia_hardware_block::Block::Call::GetInfo(caller.channel());
+    auto result = fidl::WireCall<fuchsia_hardware_block::Block>(caller.channel()).GetInfo();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
     blk_size = result->info->block_size;
   }
@@ -286,7 +286,7 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   uint32_t blk_size;
   {
     fdio_cpp::UnownedFdioCaller caller(fd.get());
-    auto result = fuchsia_hardware_block::Block::Call::GetInfo(caller.channel());
+    auto result = fidl::WireCall<fuchsia_hardware_block::Block>(caller.channel()).GetInfo();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
     blk_size = result->info->block_size;
   }

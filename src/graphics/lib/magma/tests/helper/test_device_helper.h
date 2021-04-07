@@ -50,7 +50,7 @@ class TestDeviceBase {
   // requires sandbox access to /dev/sys.
   fidl::ClientEnd<fuchsia_device::Controller> GetParentDevice() {
     char path[fuchsia_device::wire::MAX_DEVICE_PATH_LEN + 1];
-    auto res = fuchsia_device::Controller::Call::GetTopologicalPath(device_controller_);
+    auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_).GetTopologicalPath();
 
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
@@ -72,7 +72,7 @@ class TestDeviceBase {
   }
 
   void ShutdownDevice() {
-    auto res = fuchsia_device::Controller::Call::ScheduleUnbind(device_controller_);
+    auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_).ScheduleUnbind();
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
   }
@@ -92,8 +92,8 @@ class TestDeviceBase {
       ASSERT_TRUE(retry_count++ < kMaxRetryCount) << "Timed out rebinding driver";
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have
       // other children that shouldn't be unbound.
-      auto res = fuchsia_device::Controller::Call::Bind(parent_device,
-                                                        fidl::StringView::FromExternal(path));
+      auto res = fidl::WireCall<fuchsia_device::Controller>(parent_device)
+                     .Bind(fidl::StringView::FromExternal(path));
       ASSERT_EQ(ZX_OK, res.status());
       if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));

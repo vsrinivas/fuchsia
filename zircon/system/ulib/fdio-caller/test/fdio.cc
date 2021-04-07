@@ -23,16 +23,17 @@ namespace {
 
 void TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
   const char* golden = "foobar";
-  auto write_result = fio::File::Call::WriteAt(
-      caller.channel(),
-      fidl::VectorView<uint8_t>::FromExternal(
-          const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden)),
-      0);
+  auto write_result =
+      fidl::WireCall<fio::File>(caller.channel())
+          .WriteAt(
+              fidl::VectorView<uint8_t>::FromExternal(
+                  const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden)),
+              0);
   ASSERT_EQ(write_result.status(), ZX_OK);
   ASSERT_EQ(write_result->s, ZX_OK);
   ASSERT_EQ(write_result->actual, strlen(golden));
 
-  auto read_result = fio::File::Call::ReadAt(caller.channel(), 256, 0);
+  auto read_result = fidl::WireCall<fio::File>(caller.channel()).ReadAt(256, 0);
   ASSERT_EQ(read_result.status(), ZX_OK);
   ASSERT_EQ(read_result->s, ZX_OK);
   ASSERT_EQ(read_result->data.count(), strlen(golden));

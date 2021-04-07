@@ -88,7 +88,7 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
       case fio::wire::NodeInfo::Tag::kVmofile: {
         auto& file = info.mutable_vmofile();
         auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
-        auto result = fio::File::Call::Seek(control.borrow(), 0, fio::wire::SeekOrigin::START);
+        auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::START);
         zx_status_t status = result.status();
         if (status != ZX_OK) {
           return zx::error(status);
@@ -138,7 +138,7 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
 }
 
 zx::status<fdio_ptr> fdio::create_with_describe(fidl::ClientEnd<fio::Node> node) {
-  auto response = fio::Node::Call::Describe(node);
+  auto response = fidl::WireCall(node).Describe();
   zx_status_t status = response.status();
   if (status != ZX_OK) {
     return zx::error(status);

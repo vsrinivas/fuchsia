@@ -40,7 +40,7 @@ class ResizeTest : public BaseFilesystemTest, public testing::WithParamInterface
     fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
+    auto query_result = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).QueryFilesystem();
     ASSERT_EQ(query_result.status(), ZX_OK);
     ASSERT_NE(query_result.Unwrap()->info, nullptr);
     fio::wire::FilesystemInfo* info = query_result.Unwrap()->info.get();

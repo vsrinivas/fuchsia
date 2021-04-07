@@ -64,8 +64,8 @@ void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   ASSERT_TRUE(fd);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+                    .QueryFilesystem();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   fio::wire::FilesystemInfo info = *result.value().info;
@@ -275,8 +275,8 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   fbl::unique_fd weak_root_fd(open(mount_path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(weak_root_fd);
   fdio_cpp::FdioCaller caller(std::move(weak_root_fd));
-  auto result = fio::DirectoryAdmin::Call::Unmount(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+                    .Unmount();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->s, ZX_ERR_ACCESS_DENIED);
   weak_root_fd.reset(caller.release().release());
@@ -287,8 +287,9 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   fbl::unique_fd weak_subdir_fd(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(weak_subdir_fd);
   caller.reset(std::move(weak_subdir_fd));
-  auto result2 = fio::DirectoryAdmin::Call::Unmount(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result2 =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+          .Unmount();
   ASSERT_OK(result2.status());
   ASSERT_EQ(result2->s, ZX_ERR_ACCESS_DENIED);
 
@@ -433,8 +434,8 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   fbl::unique_fd mountfd(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
   fdio_cpp::FdioCaller caller(std::move(mountfd));
-  auto result = fio::DirectoryAdmin::Call::GetDevicePath(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+                    .GetDevicePath();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->s, ZX_ERR_NOT_SUPPORTED);
 
@@ -447,8 +448,9 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  auto result2 = fio::DirectoryAdmin::Call::GetDevicePath(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result2 =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+          .GetDevicePath();
   ASSERT_OK(result2.status());
   ASSERT_OK(result2->s);
   ASSERT_GT(result2.value().path.size(), 0, "Device path not found");
@@ -457,8 +459,9 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   mountfd.reset(open(mount_path, O_RDONLY));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  auto result3 = fio::DirectoryAdmin::Call::GetDevicePath(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result3 =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+          .GetDevicePath();
   ASSERT_OK(result3.status());
   ASSERT_EQ(result3->s, ZX_ERR_ACCESS_DENIED);
 
@@ -468,8 +471,9 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  auto result4 = fio::DirectoryAdmin::Call::GetDevicePath(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  auto result4 =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+          .GetDevicePath(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
   ASSERT_OK(result4.status());
   ASSERT_EQ(result4->s, ZX_ERR_NOT_SUPPORTED);
 

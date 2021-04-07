@@ -143,9 +143,9 @@ void TestDevice::BindFvmDriver() {
   // Binds the FVM driver to the active ramdisk_.
   fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
   ASSERT_NOT_NULL(io);
-  auto resp =
-      fuchsia_device::Controller::Call::Bind(zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-                                             fidl::StringView::FromExternal(kFvmDriver));
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(
+                  zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
+                  .Bind(fidl::StringView::FromExternal(kFvmDriver));
   zx_status_t status = resp.status();
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK);
@@ -168,9 +168,9 @@ void TestDevice::Rebind() {
     ASSERT_NOT_NULL(io);
     zx_status_t call_status = ZX_OK;
     ;
-    auto resp = fuchsia_device::Controller::Call::Rebind(
-        zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-        fidl::StringView::FromExternal(kFvmDriver));
+    auto resp = fidl::WireCall<fuchsia_device::Controller>(
+                    zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
+                    .Rebind(fidl::StringView::FromExternal(kFvmDriver));
     zx_status_t status = resp.status();
     if (resp->result.is_err()) {
       call_status = resp->result.err();
@@ -360,8 +360,9 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   size_t out_len;
   zx_status_t status;
   zx_status_t call_status;
-  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
-      zx::unowned_channel(parent_channel()->get()));
+  auto resp =
+      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(parent_channel()->get()))
+          .GetTopologicalPath();
   status = resp.status();
 
   if (resp->result.is_err()) {

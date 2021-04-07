@@ -181,9 +181,10 @@ static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   memcpy(func_descs, config->descs,
          sizeof(peripheral::wire::FunctionDescriptor) * config->descs_count);
   config_desc = ConfigurationDescriptor::FromExternal(func_descs, config->descs_count);
-  auto resp = peripheral::Device::Call::SetConfiguration(
-      zx::unowned_channel(svc), std::move(device_desc),
-      fidl::VectorView<ConfigurationDescriptor>::FromExternal(&config_desc, 1));
+  auto resp = fidl::WireCall<peripheral::Device>(zx::unowned_channel(svc))
+                  .SetConfiguration(
+                      std::move(device_desc),
+                      fidl::VectorView<ConfigurationDescriptor>::FromExternal(&config_desc, 1));
   if (resp.status() != ZX_OK) {
     return resp.status();
   }
@@ -199,13 +200,14 @@ static zx_status_t device_clear_functions(zx_handle_t svc) {
   if (status != ZX_OK) {
     return status;
   }
-  auto set_result = peripheral::Device::Call::SetStateChangeListener(zx::unowned_channel(svc),
-                                                                     std::move(handles[1]));
+  auto set_result = fidl::WireCall<peripheral::Device>(zx::unowned_channel(svc))
+                        .SetStateChangeListener(std::move(handles[1]));
   if (set_result.status() != ZX_OK) {
     return set_result.status();
   }
 
-  auto clear_functions = peripheral::Device::Call::ClearFunctions(zx::unowned_channel(svc));
+  auto clear_functions =
+      fidl::WireCall<peripheral::Device>(zx::unowned_channel(svc)).ClearFunctions();
   if (clear_functions.status() != ZX_OK) {
     return clear_functions.status();
   }

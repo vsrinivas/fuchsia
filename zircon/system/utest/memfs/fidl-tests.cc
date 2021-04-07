@@ -54,7 +54,7 @@ TEST(FidlTests, TestFidlBasic) {
     ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
     ASSERT_EQ(fdio_service_connect("/fidltmp/file-a", request), ZX_OK);
 
-    auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
+    auto describe_result = fidl::WireCall<fio::File>(zx::unowned_channel(h)).Describe();
     ASSERT_EQ(describe_result.status(), ZX_OK);
     ASSERT_TRUE(describe_result.Unwrap()->info.is_file());
     ASSERT_EQ(describe_result.Unwrap()->info.file().event.get(), ZX_HANDLE_INVALID);
@@ -87,7 +87,7 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
     ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
     ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE, request), ZX_OK);
 
-    auto result = fio::File::Call::GetFlags(zx::unowned_channel(h));
+    auto result = fidl::WireCall<fio::File>(zx::unowned_channel(h)).GetFlags();
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_EQ(result.Unwrap()->s, ZX_OK);
     ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
@@ -104,7 +104,7 @@ void QueryInfo(const char* path, fio::wire::FilesystemInfo* info) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem((caller.channel()));
+  auto result = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result.Unwrap()->s, ZX_OK);
   ASSERT_NOT_NULL(result.Unwrap()->info);

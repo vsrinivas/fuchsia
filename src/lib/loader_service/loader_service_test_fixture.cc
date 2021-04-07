@@ -155,7 +155,7 @@ zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
       return status.take_error();
     }
 
-    auto result = fkernel::VmexResource::Call::Get(client.borrow());
+    auto result = fidl::WireCall<fkernel::VmexResource>(client.borrow()).Get();
     if (!result.ok()) {
       return zx::error(result.status());
     }

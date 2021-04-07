@@ -40,8 +40,8 @@ zx_status_t RemoteBlockDevice::ReadBlock(uint64_t block_num, uint64_t block_size
   uint64_t offset = block_num * block_size;
   fidl::Buffer<fio::File::ReadAtRequest> request_buffer;
   fidl::Buffer<fio::File::ReadAtResponse> response_buffer;
-  auto result = fio::File::Call::ReadAt(device_.borrow(), request_buffer.view(), block_size, offset,
-                                        response_buffer.view());
+  auto result = fidl::WireCall<fio::File>(device_.borrow())
+                    .ReadAt(request_buffer.view(), block_size, offset, response_buffer.view());
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -66,8 +66,8 @@ zx_status_t RemoteBlockDevice::GetDevicePath(size_t buffer_len, char* out_name,
   }
   zx_status_t status, io_status;
 
-  auto resp =
-      fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(device_.get()));
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device_.get()))
+                  .GetTopologicalPath();
 
   io_status = resp.status();
   if (io_status != ZX_OK) {
@@ -130,7 +130,7 @@ zx_status_t RemoteBlockDevice::VolumeQuery(
     return status;
   }
   uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-  auto result = fio::Node::Call::Clone(device_.borrow(), flags, std::move(server));
+  auto result = fidl::WireCall<fio::Node>(device_.borrow()).Clone(flags, std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();
   }

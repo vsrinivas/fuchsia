@@ -103,13 +103,13 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
   // Opening with OPEN_FLAG_CREATE should fail.
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-  auto result = fio::Directory::Call::Open(
-      caller.channel(),
-      fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE | fio::wire::OPEN_FLAG_CREATE,
-      0755, fidl::StringView("."), std::move(remote));
+  auto result = fidl::WireCall<fio::Directory>(caller.channel())
+                    .Open(fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
+                              fio::wire::OPEN_FLAG_CREATE,
+                          0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  auto close_result = fio::Directory::Call::Close(local.borrow());
+  auto close_result = fidl::WireCall<fio::Directory>(local.borrow()).Close();
   // Can't get an epitaph with LLCPP bindings, so this will do for now.
   ASSERT_EQ(close_result.status(), ZX_ERR_PEER_CLOSED);
 }
@@ -123,14 +123,13 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
   // Opening with OPEN_FLAG_CREATE_IF_ABSENT should fail.
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-  auto result = fio::Directory::Call::Open(
-      caller.channel(),
-      fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
-          fio::wire::OPEN_FLAG_CREATE | fio::wire::OPEN_FLAG_CREATE_IF_ABSENT,
-      0755, fidl::StringView("."), std::move(remote));
+  auto result = fidl::WireCall<fio::Directory>(caller.channel())
+                    .Open(fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
+                              fio::wire::OPEN_FLAG_CREATE | fio::wire::OPEN_FLAG_CREATE_IF_ABSENT,
+                          0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  auto close_result2 = fio::Directory::Call::Close(local.borrow());
+  auto close_result2 = fidl::WireCall<fio::Directory>(local.borrow()).Close();
   // Can't get an epitaph with LLCPP bindings, so this will do for now.
   ASSERT_EQ(close_result2.status(), ZX_ERR_PEER_CLOSED);
 }

@@ -76,8 +76,9 @@ zx_status_t fd_matches_name(const fbl::unique_fd& fd, const char* dev_name, bool
   }
   zx_status_t call_status = ZX_OK;
   size_t path_len;
-  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
-      zx::unowned_channel(fdio_unsafe_borrow_channel(io)));
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(
+                  zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
+                  .GetTopologicalPath();
   zx_status_t status = resp.status();
   if (resp->result.is_err()) {
     call_status = resp->result.err();

@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
                                                     PDEV_VID_GENERIC, PDEV_PID_GENERIC,
                                                     PDEV_DID_SSD1306};
 
-  auto resp =
-      fuchsia_hardware_ftdi::Device::Call::CreateI2C(zx::unowned_channel(handle), layout, i2c_dev);
+  auto resp = fidl::WireCall<fuchsia_hardware_ftdi::Device>(zx::unowned_channel(handle))
+                  .CreateI2C(layout, i2c_dev);
   status = resp.status();
   if (status != ZX_OK) {
     printf("Create I2C device failed with %d\n", status);

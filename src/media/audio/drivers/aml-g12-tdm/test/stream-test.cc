@@ -407,7 +407,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
 
   // To make sure we have initialized in the controller driver make a sync call
   // (we know the controller is single threaded, initialization is completed if received a reply).
-  auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+  auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
   ASSERT_OK(props.status());
 
   // Wait until codecs have received a SetGainState call.
@@ -532,9 +532,9 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     format.set_pcm_format(allocator, GetDefaultPcmFormat());
     client.CreateRingBuffer(std::move(format), std::move(remote));
 
-    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, 8192, 0);
+    auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(8192, 0);
     ASSERT_OK(vmo.status());
-    auto start = audio_fidl::RingBuffer::Call::Start(local);
+    auto start = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
     ASSERT_OK(start.status());
 
     // Wait until codecs have received a SetGainState call.
@@ -732,7 +732,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
   // Changes to 96'000.
@@ -750,7 +750,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -825,7 +825,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -862,7 +862,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -942,7 +942,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -978,7 +978,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -1014,7 +1014,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -1081,7 +1081,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -1117,7 +1117,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -1153,7 +1153,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
     ASSERT_OK(props.status());
   }
 
@@ -1398,7 +1398,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     format.set_pcm_format(allocator, std::move(pcm_format));
     client.CreateRingBuffer(std::move(format), std::move(remote));
 
-    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, frames_req, 0);
+    auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(frames_req, 0);
     ASSERT_OK(vmo.status());
     ASSERT_EQ(vmo.Unwrap()->result.response().num_frames, frames_expected);
 

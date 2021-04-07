@@ -68,7 +68,7 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 
 // Pass-through.
 void IntelDspStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
-  auto result = audio_fidl::RingBuffer::Call::GetProperties(ring_buffer_);
+  auto result = fidl::WireCall(ring_buffer_).GetProperties();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetProperties res = %d", result.status());
     completer.Close(result.status());
@@ -80,8 +80,7 @@ void IntelDspStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
 // Pass-through.
 void IntelDspStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
                             GetVmoCompleter::Sync& completer) {
-  auto result =
-      audio_fidl::RingBuffer::Call::GetVmo(ring_buffer_, min_frames, notifications_per_ring);
+  auto result = fidl::WireCall(ring_buffer_).GetVmo(min_frames, notifications_per_ring);
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetVmo res = %d", result.status());
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
@@ -94,7 +93,7 @@ void IntelDspStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
 // Not just pass-through, we also start the DSP pipeline.
 void IntelDspStream::Start(StartCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
-  auto result = audio_fidl::RingBuffer::Call::Start(ring_buffer_);
+  auto result = fidl::WireCall(ring_buffer_).Start();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on Start res = %d", result.status());
     completer.Close(result.status());
@@ -122,7 +121,7 @@ void IntelDspStream::Stop(StopCompleter::Sync& completer) {
     return;
   }
 
-  auto result = audio_fidl::RingBuffer::Call::Stop(ring_buffer_);
+  auto result = fidl::WireCall(ring_buffer_).Stop();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on Stop res = %d", result.status());
     completer.Close(result.status());
@@ -134,7 +133,7 @@ void IntelDspStream::Stop(StopCompleter::Sync& completer) {
 // Pass-through.
 void IntelDspStream::WatchClockRecoveryPositionInfo(
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
-  auto result = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(ring_buffer_);
+  auto result = fidl::WireCall(ring_buffer_).WatchClockRecoveryPositionInfo();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on Watch clock recovery position res = %d", result.status());
   }

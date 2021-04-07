@@ -52,15 +52,15 @@ bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
   }
   zxlogf(INFO, "Opening controller");
   if (is_vc) {
-    auto response = fhd::Provider::Call::OpenVirtconController(
-        zx::unowned_channel(provider), std::move(device_server), std::move(dc_server));
+    auto response = fidl::WireCall<fhd::Provider>(zx::unowned_channel(provider))
+                        .OpenVirtconController(std::move(device_server), std::move(dc_server));
     if (!response.ok()) {
       zxlogf(ERROR, "Could not open VC controller, error=%s", response.error());
       return false;
     }
   } else {
-    auto response = fhd::Provider::Call::OpenController(
-        zx::unowned_channel(provider), std::move(device_server), std::move(dc_server));
+    auto response = fidl::WireCall<fhd::Provider>(zx::unowned_channel(provider))
+                        .OpenController(std::move(device_server), std::move(dc_server));
     if (!response.ok()) {
       zxlogf(ERROR, "Could not open controller, error=%s", response.error());
       return false;

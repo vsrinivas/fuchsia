@@ -103,7 +103,8 @@ void BlockWatcher::Thread() {
     if (ignore_existing) {
       mask &= ~fio::wire::WATCH_MASK_EXISTING;
     }
-    auto result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+    auto result =
+        fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
     if (result.status() != ZX_OK) {
       FX_LOGS(ERROR) << "failed to send watch: " << zx_status_get_string(result.status());
       return;

@@ -97,8 +97,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
                                           sizeof(vfs_client_info), nullptr, nullptr));
 
   // register the filesystem through the fidl interface
-  auto resp =
-      fuchsia_fshost::Registry::Call::RegisterFilesystem(registry_client, std::move(vfs_client));
+  auto resp = fidl::WireCall(registry_client).RegisterFilesystem(std::move(vfs_client));
   ASSERT_TRUE(resp.ok());
   ASSERT_OK(resp.value().s);
 

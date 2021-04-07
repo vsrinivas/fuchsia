@@ -74,7 +74,7 @@ class NandDevice {
       ASSERT_TRUE(dir_fd);
       ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
 
-      fuchsia_device::Controller::Call::ScheduleUnbind(zx::unowned_channel(channel()));
+      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel())).ScheduleUnbind();
 
       ASSERT_EQ(watcher->WaitForRemoval(filename_, zx::sec(5)), ZX_OK);
     }
@@ -134,8 +134,9 @@ NandDevice::NandDevice() {
     }
     zx_status_t call_status = ZX_OK;
     const char kBroker[] = "/boot/driver/nand-broker.so";
-    auto resp = fuchsia_device::Controller::Call::Bind(
-        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), ::fidl::StringView(kBroker));
+    auto resp = fidl::WireCall<fuchsia_device::Controller>(
+                    zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
+                    .Bind(::fidl::StringView(kBroker));
     zx_status_t status = resp.status();
     if (resp->result.is_err()) {
       call_status = resp->result.err();

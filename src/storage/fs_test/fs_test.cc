@@ -732,11 +732,10 @@ fidl::ClientEnd<fuchsia_io::Directory> TestFilesystem::GetSvcDirectory() const {
     std::cout << "warning: failed to create svc handles" << status;
     return zx::channel();
   }
-  if (!fuchsia_io::Directory::Call::Open(fs_outgoing,
-                                         fuchsia_io::wire::OPEN_FLAG_DIRECTORY |
-                                             fuchsia_io::wire::OPEN_RIGHT_READABLE |
-                                             fuchsia_io::wire::OPEN_RIGHT_WRITABLE,
-                                         0, "svc", std::move(server))
+  if (!fidl::WireCall(fs_outgoing)
+           .Open(fuchsia_io::wire::OPEN_FLAG_DIRECTORY | fuchsia_io::wire::OPEN_RIGHT_READABLE |
+                     fuchsia_io::wire::OPEN_RIGHT_WRITABLE,
+                 0, "svc", std::move(server))
            .ok()) {
     std::cout << "warning: Open failed";
     return zx::channel();
@@ -749,8 +748,7 @@ zx::status<uint64_t> TestFilesystem::GetFsInfoTotalBytes() const {
   auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
   if (client_end.is_error())
     return client_end.take_error();
-  auto result =
-      fuchsia_fs::Query::Call::GetInfo(*client_end, fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+  auto result = fidl::WireCall(*client_end).GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
   if (!result.ok())
     return zx::error(result.status());  // Transport error.
   if (result->result.is_err())
@@ -763,8 +761,7 @@ zx::status<uint64_t> TestFilesystem::GetFsInfoUsedBytes() const {
   auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
   if (client_end.is_error())
     return client_end.take_error();
-  auto result =
-      fuchsia_fs::Query::Call::GetInfo(*client_end, fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+  auto result = fidl::WireCall(*client_end).GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
   if (!result.ok())
     return zx::error(result.status());  // Transport error.
   if (result->result.is_err())

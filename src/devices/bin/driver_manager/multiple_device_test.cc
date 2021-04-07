@@ -412,9 +412,10 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
                                        std::move(system_state_transition_server), &state_mgr));
   coordinator().set_system_state_manager(std::move(state_mgr));
-  auto response = fuchsia_device_manager::SystemStateTransition::Call::SetTerminationSystemState(
-      zx::unowned_channel(system_state_transition_client.get()),
-      fuchsia_hardware_power_statecontrol::wire::SystemPowerState::POWEROFF);
+  auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
+                      zx::unowned_channel(system_state_transition_client.get()))
+                      .SetTerminationSystemState(
+                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::POWEROFF);
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -443,9 +444,10 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   std::string service = svc_dir + fuchsia_device_manager::SystemStateTransition::Name;
   ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
 
-  auto response = fuchsia_device_manager::SystemStateTransition::Call::SetTerminationSystemState(
-      zx::unowned_channel(channel.get()),
-      fuchsia_hardware_power_statecontrol::wire::SystemPowerState::MEXEC);
+  auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
+                      zx::unowned_channel(channel.get()))
+                      .SetTerminationSystemState(
+                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::MEXEC);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -469,9 +471,10 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
                                        std::move(system_state_transition_server), &state_mgr));
   coordinator().set_system_state_manager(std::move(state_mgr));
 
-  auto response = fuchsia_device_manager::SystemStateTransition::Call::SetTerminationSystemState(
-      zx::unowned_channel(system_state_transition_client.get()),
-      fuchsia_hardware_power_statecontrol::wire::SystemPowerState::FULLY_ON);
+  auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
+                      zx::unowned_channel(system_state_transition_client.get()))
+                      .SetTerminationSystemState(
+                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::FULLY_ON);
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;

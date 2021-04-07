@@ -187,7 +187,8 @@ RamNand::~RamNand() {
       fprintf(stderr, "Could not get service handle when unbinding ram_nand, %d\n", status);
       return;
     }
-    auto resp = fuchsia_device::Controller::Call::ScheduleUnbind(zx::unowned_channel(dev.get()));
+    auto resp =
+        fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(dev.get())).ScheduleUnbind();
     status = resp.status();
     if (status == ZX_OK && resp->result.is_err()) {
       status = resp->result.err();

@@ -222,9 +222,9 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   ASSERT_OK(zx::channel::create(0, &test_file, &test_file_server));
   uint32_t file_flags =
       fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE | fio::wire::OPEN_FLAG_CREATE;
-  ASSERT_OK(fio::Directory::Call::Open(std::move(export_root), file_flags, 0,
-                                       fidl::StringView::FromExternal(test_file_name),
-                                       std::move(test_file_server))
+  ASSERT_OK(fidl::WireCall<fio::Directory>(std::move(export_root))
+                .Open(file_flags, 0, fidl::StringView::FromExternal(test_file_name),
+                      std::move(test_file_server))
                 .status());
 
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file));

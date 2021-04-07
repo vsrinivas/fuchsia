@@ -91,11 +91,10 @@ TEST(ServiceProxyDirTest, Simple) {
     zx::channel h1, h2;
     ASSERT_OK(zx::channel::create(0, &h1, &h2));
 
-    ASSERT_OK(fio::Directory::Call::Open(zx::unowned_channel(proxy_dir_client),
-                                         fio::wire::OPEN_RIGHT_READABLE |
-                                             fio::wire::OPEN_RIGHT_WRITABLE |
-                                             fio::wire::OPEN_FLAG_DESCRIBE,
-                                         0755, fidl::StringView(kProxyEchoString), std::move(h1))
+    ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(proxy_dir_client))
+                  .Open(fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
+                            fio::wire::OPEN_FLAG_DESCRIBE,
+                        0755, fidl::StringView(kProxyEchoString), std::move(h1))
                   .status());
 
     class EventHandler : public fidl::WireSyncEventHandler<fio::Directory> {
@@ -130,11 +129,10 @@ TEST(ServiceProxyDirTest, Simple) {
     zx::channel h1, h2;
     ASSERT_OK(zx::channel::create(0, &h1, &h2));
 
-    ASSERT_OK(fio::Directory::Call::Open(zx::unowned_channel(proxy_dir_client),
-                                         fio::wire::OPEN_RIGHT_READABLE |
-                                             fio::wire::OPEN_RIGHT_WRITABLE |
-                                             fio::wire::OPEN_FLAG_DESCRIBE,
-                                         0755, fidl::StringView(kEchoString), std::move(h1))
+    ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(proxy_dir_client))
+                  .Open(fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
+                            fio::wire::OPEN_FLAG_DESCRIBE,
+                        0755, fidl::StringView(kEchoString), std::move(h1))
                   .status());
 
     class EventHandler : public fidl::WireSyncEventHandler<fio::Directory> {

@@ -64,7 +64,7 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoNonPreallocatedMetadata) {
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
 
   fidl::WireResult<VolumeManager::GetInfo> result =
-      VolumeManager::Call::GetInfo(fvm->device()->channel());
+      fidl::WireCall<VolumeManager>(fvm->device()->channel()).GetInfo();
 
   ASSERT_OK(result.status(), "Transport layer error");
   ASSERT_OK(result->status, "Service returned error.");
@@ -95,7 +95,7 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoWithPreallocatedMetadata) {
       fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kBlockSize * kMaxBlockCount, kSliceSize);
 
   fidl::WireResult<VolumeManager::GetInfo> result =
-      VolumeManager::Call::GetInfo(fvm->device()->channel());
+      fidl::WireCall<VolumeManager>(fvm->device()->channel()).GetInfo();
 
   ASSERT_OK(result.status(), "Transport layer error");
   ASSERT_OK(result->status, "Service returned error.");
@@ -132,33 +132,34 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
 
   // The partition hasn't been created yet, the result should be "not found".
   fidl::WireResult<VolumeManager::GetPartitionLimit> unfound_result =
-      VolumeManager::Call::GetPartitionLimit(fvm->device()->channel(), guid);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel()).GetPartitionLimit(guid);
   ASSERT_OK(unfound_result.status(), "Transport layer error");
   ASSERT_EQ(unfound_result->status, ZX_ERR_NOT_FOUND);
 
   // Create the partition inside FVM with one slice.
   const char kPartitionName[] = "mypart";
   fidl::WireResult<VolumeManager::AllocatePartition> alloc_result =
-      VolumeManager::Call::AllocatePartition(fvm->device()->channel(), 1, type_guid, guid,
-                                             kPartitionName, 0);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel())
+          .AllocatePartition(1, type_guid, guid, kPartitionName, 0);
   ASSERT_OK(alloc_result.status(), "Transport layer error");
   ASSERT_OK(alloc_result->status, "Service returned error.");
 
   // That partition's initial limit should be 0 (no limit).
   fidl::WireResult<VolumeManager::GetPartitionLimit> get_result =
-      VolumeManager::Call::GetPartitionLimit(fvm->device()->channel(), guid);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel()).GetPartitionLimit(guid);
   ASSERT_OK(get_result.status(), "Transport layer error");
   ASSERT_OK(get_result->status, "Service returned error.");
   EXPECT_EQ(get_result->byte_count, 0, "Expected 0 limit on init.");
 
   // Set the limit to two slices.
   fidl::WireResult<VolumeManager::SetPartitionLimit> set_result =
-      VolumeManager::Call::SetPartitionLimit(fvm->device()->channel(), guid, kSliceSize * 2);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel())
+          .SetPartitionLimit(guid, kSliceSize * 2);
   ASSERT_OK(set_result.status(), "Transport layer error");
 
   // Validate the new value can be retrieved.
   fidl::WireResult<VolumeManager::GetPartitionLimit> get_result2 =
-      VolumeManager::Call::GetPartitionLimit(fvm->device()->channel(), guid);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel()).GetPartitionLimit(guid);
   ASSERT_OK(get_result2.status(), "Transport layer error");
   ASSERT_OK(get_result2->status, "Service returned error.");
   EXPECT_EQ(get_result2->byte_count, kSliceSize * 2, "Expected the limit we set.");
@@ -176,32 +177,33 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   // Try to expand it by one slice. Since the initial size was one slice and the limit is two, this
   // should succeed.
   fidl::WireResult<Volume::Extend> good_extend =
-      Volume::Call::Extend(volume.channel()->borrow(), 100, 1);
+      fidl::WireCall<Volume>(volume.channel()->borrow()).Extend(100, 1);
   ASSERT_OK(good_extend.status(), "Transport error");
   ASSERT_OK(good_extend->status, "Expected Expand() call to succeed.");
 
   // Adding a third slice should fail since it's already at the max size.
   fidl::WireResult<Volume::Extend> bad_extend =
-      Volume::Call::Extend(volume.channel()->borrow(), 200, 1);
+      fidl::WireCall<Volume>(volume.channel()->borrow()).Extend(200, 1);
   ASSERT_OK(bad_extend.status(), "Transport error");
   ASSERT_EQ(bad_extend->status, ZX_ERR_NO_SPACE, "Expected Expand() call to fail.");
 
   // Delete and re-create the partition. It should have no limit.
   fidl::WireResult<Volume::Destroy> destroy_result =
-      Volume::Call::Destroy(volume.channel()->borrow());
+      fidl::WireCall<Volume>(volume.channel()->borrow()).Destroy();
   ASSERT_OK(destroy_result.status(), "Transport layer error");
   ASSERT_OK(destroy_result->status, "Can't destroy partition.");
   volume_fd.reset();
 
   fidl::WireResult<VolumeManager::AllocatePartition> alloc2_result =
-      VolumeManager::Call::AllocatePartition(fvm->device()->channel(), 1, type_guid, guid,
-                                             /*kPartitionName*/ "thepart", 0);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel())
+          .AllocatePartition(1, type_guid, guid,
+                             /*kPartitionName*/ "thepart", 0);
   ASSERT_OK(alloc2_result.status(), "Transport layer error");
   ASSERT_OK(alloc2_result->status, "Service returned error.");
 
   // That partition's initial limit should be 0 (no limit).
   fidl::WireResult<VolumeManager::GetPartitionLimit> last_get_result =
-      VolumeManager::Call::GetPartitionLimit(fvm->device()->channel(), guid);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel()).GetPartitionLimit(guid);
   ASSERT_OK(last_get_result.status(), "Transport layer error");
   ASSERT_OK(last_get_result->status, "Service returned error.");
   EXPECT_EQ(last_get_result->byte_count, 0, "Expected 0 limit on new partition.");

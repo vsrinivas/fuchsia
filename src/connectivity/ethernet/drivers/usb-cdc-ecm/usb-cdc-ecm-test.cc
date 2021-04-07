@@ -36,8 +36,9 @@ constexpr const char kSerial[] = "ebfd5ad49d2a";
 zx_status_t GetTopologicalPath(int fd, std::string* out) {
   size_t path_len;
   fdio_cpp::UnownedFdioCaller connection(fd);
-  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
-      ::fidl::UnownedClientEnd<fuchsia_device::Controller>(connection.borrow_channel()));
+  auto resp = fidl::WireCall(
+                  ::fidl::UnownedClientEnd<fuchsia_device::Controller>(connection.borrow_channel()))
+                  .GetTopologicalPath();
   zx_status_t status = resp.status();
   if (status != ZX_OK) {
     return status;

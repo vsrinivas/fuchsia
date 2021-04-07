@@ -60,8 +60,8 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookSuccess) {
   ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
   uint32_t call_status;
-  auto resp = Controller::Call::RunCompatibilityTests(
-      zx::unowned_channel(parent_device_handle.get()), zx::duration(zx::msec(2000)).get());
+  auto resp = fidl::WireCall<Controller>(zx::unowned_channel(parent_device_handle.get()))
+                  .RunCompatibilityTests(zx::duration(zx::msec(2000)).get());
   status = resp.status();
   call_status = resp->status;
 
@@ -104,8 +104,8 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingAddInB
   ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
   uint32_t call_status;
-  auto resp = Controller::Call::RunCompatibilityTests(
-      zx::unowned_channel(parent_device_handle.get()), zx::duration(zx::msec(2000)).get());
+  auto resp = fidl::WireCall<Controller>(zx::unowned_channel(parent_device_handle.get()))
+                  .RunCompatibilityTests(zx::duration(zx::msec(2000)).get());
   status = resp.status();
   call_status = resp->status;
 
@@ -148,8 +148,8 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingRemove
   ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
   uint32_t call_status;
-  auto resp = Controller::Call::RunCompatibilityTests(
-      zx::unowned_channel(parent_device_handle.get()), zx::duration(zx::msec(2000)).get());
+  auto resp = fidl::WireCall<Controller>(zx::unowned_channel(parent_device_handle.get()))
+                  .RunCompatibilityTests(zx::duration(zx::msec(2000)).get());
   status = resp.status();
   call_status = resp->status;
 

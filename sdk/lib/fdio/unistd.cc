@@ -2063,7 +2063,7 @@ static int fs_stat(int fd, struct statfs* buf) {
   if (!directory_admin.is_valid()) {
     return ERRNO(ENOTSUP);
   }
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(directory_admin);
+  auto result = fidl::WireCall(directory_admin).QueryFilesystem();
   if (result.status() != ZX_OK) {
     return ERROR(result.status());
   }

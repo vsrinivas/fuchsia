@@ -109,8 +109,8 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto open_response = fhd::Provider::Call::OpenController(
-      caller.channel(), std::move(device_server), std::move(dc_server));
+  auto open_response = fidl::WireCall<fhd::Provider>(caller.channel())
+                           .OpenController(std::move(device_server), std::move(dc_server));
   if (!open_response.ok()) {
     printf("Failed to call service handle %d (%s)\n", open_response.status(),
            open_response.error());
@@ -659,7 +659,7 @@ Platforms GetPlatform() {
     return UNKNOWN_PLATFORM;
   }
   fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
-  auto result = sysinfo::SysInfo::Call::GetBoardName(caller_sysinfo.channel());
+  auto result = fidl::WireCall<sysinfo::SysInfo>(caller_sysinfo.channel()).GetBoardName();
   if (!result.ok() || result.value().status != ZX_OK) {
     return UNKNOWN_PLATFORM;
   }

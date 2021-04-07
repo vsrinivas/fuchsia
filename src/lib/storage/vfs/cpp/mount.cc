@@ -140,8 +140,9 @@ zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fio::N
     return ZX_ERR_NOT_FOUND;
   }
 
-  auto r = fio::Directory::Call::Open(h, options.ToIoV1Flags(), mode,
-                                      fidl::StringView::FromExternal(path), std::move(channel))
+  auto r = fidl::WireCall(h)
+               .Open(options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path),
+                     std::move(channel))
                .status();
   if (r == ZX_ERR_PEER_CLOSED) {
     fidl::ClientEnd<fio::Directory> c;

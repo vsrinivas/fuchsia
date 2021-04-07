@@ -55,9 +55,8 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   fdio_cpp::FdioCaller caller{std::move(dir_fd)};
   uint32_t mask =
       fio::wire::WATCH_MASK_ADDED | fio::wire::WATCH_MASK_EXISTING | fio::wire::WATCH_MASK_IDLE;
-  auto result =
-      fio::Directory::Call::Watch(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()),
-                                  mask, 0, zx::channel(server.release()));
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
+                    .Watch(mask, 0, zx::channel(server.release()));
   if (result.status() != ZX_OK || result->s != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create device watcher for " << directory_path
                    << ", status=" << result->s;

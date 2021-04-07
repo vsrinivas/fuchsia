@@ -451,8 +451,8 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
                   return sender.UnbindReplyDone(action.unbind_reply().action_id);
                 },
                 [&](zx::unowned_channel& channel) {
-                  return device_mock::MockDevice::Call::UnbindReplyDone(
-                             zx::unowned_channel(channel), action.unbind_reply().action_id)
+                  return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
+                      .UnbindReplyDone(action.unbind_reply().action_id)
                       .status();
                 },
             },
@@ -473,8 +473,8 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
                   return sender.SuspendReplyDone(action.suspend_reply().action_id);
                 },
                 [&](zx::unowned_channel& channel) {
-                  return device_mock::MockDevice::Call::SuspendReplyDone(
-                             zx::unowned_channel(channel), action.suspend_reply().action_id)
+                  return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
+                      .SuspendReplyDone(action.suspend_reply().action_id)
                       .status();
                 },
             },
@@ -495,8 +495,8 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
                   return sender.ResumeReplyDone(action.resume_reply().action_id);
                 },
                 [&](zx::unowned_channel& channel) {
-                  return device_mock::MockDevice::Call::ResumeReplyDone(
-                             zx::unowned_channel(channel), action.resume_reply().action_id)
+                  return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
+                      .ResumeReplyDone(action.resume_reply().action_id)
                       .status();
                 },
             },
@@ -535,18 +535,18 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
           return status;
         }
 
-        status =
-            std::visit(matchers{
-                           [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                             return sender.AddDeviceDone(add_device_action.action_id);
-                           },
-                           [&](zx::unowned_channel& channel) {
-                             return device_mock::MockDevice::Call::AddDeviceDone(
-                                        zx::unowned_channel(channel), add_device_action.action_id)
-                                 .status();
-                           },
-                       },
-                       ctx->channel_variants);
+        status = std::visit(
+            matchers{
+                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
+                  return sender.AddDeviceDone(add_device_action.action_id);
+                },
+                [&](zx::unowned_channel& channel) {
+                  return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
+                      .AddDeviceDone(add_device_action.action_id)
+                      .status();
+                },
+            },
+            ctx->channel_variants);
         ZX_ASSERT(status == ZX_OK);
         break;
       }
@@ -573,9 +573,8 @@ zx_status_t MockDeviceBind(void* ctx, zx_device_t* parent) {
   test_get_channel(&proto, c.reset_and_get_address());
 
   // Ask the control channel what to do about this bind().
-  auto result = device_mock::MockDevice::Call::Bind(
-      zx::unowned_channel(c),
-      MockDevice::ConstructHookInvocation(reinterpret_cast<uintptr_t>(parent)));
+  auto result = fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(c))
+                    .Bind(MockDevice::ConstructHookInvocation(reinterpret_cast<uintptr_t>(parent)));
   ZX_ASSERT(result.ok());
 
   ProcessActionsContext::ChannelVariants channel_variants = zx::unowned_channel(c);

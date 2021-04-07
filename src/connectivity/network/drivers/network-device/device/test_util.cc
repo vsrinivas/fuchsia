@@ -301,10 +301,12 @@ void TestSession::Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::
 }
 
 zx_status_t TestSession::SetPaused(bool paused) {
-  return netdev::Session::Call::SetPaused(session_, paused).status();
+  return fidl::WireCall<netdev::Session>(session_).SetPaused(paused).status();
 }
 
-zx_status_t TestSession::Close() { return netdev::Session::Call::Close(session_).status(); }
+zx_status_t TestSession::Close() {
+  return fidl::WireCall<netdev::Session>(session_).Close().status();
+}
 
 zx_status_t TestSession::WaitClosed(zx::time deadline) {
   return session_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);

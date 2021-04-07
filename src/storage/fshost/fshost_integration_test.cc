@@ -53,13 +53,13 @@ void FshostIntegrationTest::TearDown() {
 }
 
 void FshostIntegrationTest::PauseWatcher() const {
-  auto result = fuchsia_fshost::BlockWatcher::Call::Pause(watcher_channel_.borrow());
+  auto result = fidl::WireCall<fuchsia_fshost::BlockWatcher>(watcher_channel_.borrow()).Pause();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->status, ZX_OK);
 }
 
 void FshostIntegrationTest::ResumeWatcher() const {
-  auto result = fuchsia_fshost::BlockWatcher::Call::Resume(watcher_channel_.borrow());
+  auto result = fidl::WireCall<fuchsia_fshost::BlockWatcher>(watcher_channel_.borrow()).Resume();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->status, ZX_OK);
 }

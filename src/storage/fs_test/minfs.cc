@@ -46,7 +46,7 @@ void QueryInfo(const TestFilesystem& fs, fio::wire::FilesystemInfo* info) {
   fsync(root_fd.get());
 
   fdio_cpp::FdioCaller caller(std::move(root_fd));
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
+  auto result = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result.Unwrap()->s, ZX_OK);
   ASSERT_NE(result.Unwrap()->info, nullptr);

@@ -59,7 +59,7 @@ TEST(BindTestCase, UniquePtrDestroyOnServerClose) {
   ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = ::fidl_test_simple::Simple::Call::Close(zx::unowned_channel{local});
+  auto result = fidl::WireCall<::fidl_test_simple::Simple>(zx::unowned_channel{local}).Close();
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
   // Make sure the other end closed
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
@@ -102,7 +102,7 @@ TEST(BindTestCase, CallbackDestroyOnServerClose) {
                                          std::move(cb)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = ::fidl_test_simple::Simple::Call::Close(zx::unowned_channel{local});
+  auto result = fidl::WireCall<::fidl_test_simple::Simple>(zx::unowned_channel{local}).Close();
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
 
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
@@ -159,7 +159,7 @@ TEST(BindTestCase, MultipleInheritanceServer) {
   ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = ::fidl_test_simple::Simple::Call::Close(zx::unowned_channel{local});
+  auto result = fidl::WireCall<::fidl_test_simple::Simple>(zx::unowned_channel{local}).Close();
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
   // Make sure the other end closed
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));

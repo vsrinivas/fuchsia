@@ -79,7 +79,7 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint
     return zx::error(status);
   }
 
-  auto result = fio::Node::Call::Describe(client_end.borrow());
+  auto result = fidl::WireCall(client_end).Describe();
   if (!result.ok()) {
     return zx::error(result.status());
   }

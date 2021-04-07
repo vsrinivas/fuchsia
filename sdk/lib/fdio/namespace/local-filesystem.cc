@@ -155,9 +155,9 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
 
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  status = fio::Directory::Call::Open(vn->Remote(), flags, mode,
-                                      fidl::StringView::FromExternal(path, length),
-                                      std::move(endpoints->server))
+  status = fidl::WireCall(vn->Remote())
+               .Open(flags, mode, fidl::StringView::FromExternal(path, length),
+                     std::move(endpoints->server))
                .status();
   if (status != ZX_OK) {
     return zx::error(status);
@@ -196,9 +196,9 @@ zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const c
   auto event_mask = static_cast<::fuchsia_io2::wire::InotifyWatchMask>(mask);
   // Active remote connections are immutable, so referencing remote here
   // is safe. But we do not want to do a blocking call under the ns lock.
-  return fio::Directory::Call::AddInotifyFilter(vn->Remote(),
-                                                fidl::StringView::FromExternal(path, length),
-                                                event_mask, watch_descriptor, std::move(socket))
+  return fidl::WireCall(vn->Remote())
+      .AddInotifyFilter(fidl::StringView::FromExternal(path, length), event_mask, watch_descriptor,
+                        std::move(socket))
       .status();
 }
 
@@ -450,11 +450,10 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
     return endpoints.take_error();
   }
 
-  zx_status_t status =
-      fio::Directory::Call::Clone(vn->Remote(),
-                                  fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
+  zx_status_t status = fidl::WireCall(vn->Remote())
+                           .Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
                                   std::move(endpoints->server))
-          .status();
+                           .status();
   if (status != ZX_OK) {
     return zx::error(status);
   }

@@ -30,7 +30,8 @@ constexpr uint32_t MaxSizeInChannel() {
 //
 //     fidl::Buffer<mylib::FooRequest> request_buffer;
 //     fidl::Buffer<mylib::FooResponse> response_buffer;
-//     auto result = mylib::Call::Foo(channel, request_buffer.view(), args, response_buffer.view());
+//     auto result = fidl::WireCall<mylib>(channel).Foo(request_buffer.view(), args,
+//     response_buffer.view());
 //
 // Since the |Buffer| type is always used at client side, we can assume responses are processed in
 // the |kSending| context, and requests are processed in the |kReceiving| context.

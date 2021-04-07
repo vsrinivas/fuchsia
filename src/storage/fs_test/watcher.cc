@@ -80,8 +80,8 @@ TEST_P(WatcherTest, Add) {
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
-  auto watch_result = fio::Directory::Call::Watch(caller.channel(), fio::wire::WATCH_MASK_ADDED, 0,
-                                                  std::move(server));
+  auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
+                          .Watch(fio::wire::WATCH_MASK_ADDED, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
   ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 
@@ -141,7 +141,8 @@ TEST_P(WatcherTest, Existing) {
   uint32_t mask =
       fio::wire::WATCH_MASK_ADDED | fio::wire::WATCH_MASK_EXISTING | fio::wire::WATCH_MASK_IDLE;
   {
-    auto watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+    auto watch_result =
+        fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
     ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
   }
@@ -168,7 +169,8 @@ TEST_P(WatcherTest, Existing) {
   zx::channel client2;
   ASSERT_EQ(zx::channel::create(0, &client2, &server), ZX_OK);
   {
-    auto watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+    auto watch_result =
+        fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
     ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
   }
@@ -207,7 +209,8 @@ TEST_P(WatcherTest, Removed) {
   uint32_t mask = fio::wire::WATCH_MASK_ADDED | fio::wire::WATCH_MASK_REMOVED;
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
-  auto watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+  auto watch_result =
+      fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
   ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 

@@ -96,7 +96,8 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
 
   void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
                       UseBlockDeviceCompleter::Sync& _completer) override {
-    auto result = fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned(block_device));
+    auto result =
+        fidl::WireCall<fuchsia_device::Controller>(zx::unowned(block_device)).GetTopologicalPath();
     if (!result.ok() || result->result.is_err()) {
       return;
     }

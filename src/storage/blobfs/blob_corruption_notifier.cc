@@ -14,9 +14,9 @@ void FidlBlobCorruptionNotifier::NotifyCorruptBlob(const digest::Digest& digest)
   FX_LOGS(ERROR) << "Corrupt blob: " << digest.ToString();
 
   if (corruption_handler_.is_valid()) {
-    fuchsia_blobfs::CorruptBlobHandler::Call::CorruptBlob(
-        corruption_handler_,
-        fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(digest.get()), digest.len()));
+    fidl::WireCall(corruption_handler_)
+        .CorruptBlob(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(digest.get()),
+                                                             digest.len()));
   } else {
     // We normally expect the updater system to be registered for corrupted blobs.
     FX_LOGS(INFO) << "No corruption handler registered while processing corrupt blob.";

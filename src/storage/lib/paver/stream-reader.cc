@@ -24,7 +24,7 @@ zx::status<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel strea
     return status.take_error();
   }
   auto result =
-      fuchsia_paver::PayloadStream::Call::RegisterVmo(zx::unowned(stream), std::move(dup));
+      fidl::WireCall<fuchsia_paver::PayloadStream>(zx::unowned(stream)).RegisterVmo(std::move(dup));
   status = zx::make_status(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     ERROR("Unable to register vmo: %d\n", status.error_value());

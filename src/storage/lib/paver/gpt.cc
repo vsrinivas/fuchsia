@@ -80,8 +80,8 @@ zx::status<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_r
   if (pauser.is_error()) {
     return pauser.take_error();
   }
-  auto result = fuchsia_device::Controller::Call::Rebind(std::move(chan),
-                                                         fidl::StringView("/boot/driver/gpt.so"));
+  auto result = fidl::WireCall<fuchsia_device::Controller>(std::move(chan))
+                    .Rebind(fidl::StringView("/boot/driver/gpt.so"));
   return zx::make_status(result.ok() ? (result->result.is_err() ? result->result.err() : ZX_OK)
                                      : result.status());
 }
@@ -109,7 +109,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     }
     fdio_cpp::FdioCaller caller(std::move(fd));
 
-    auto result = block::Block::Call::GetInfo(caller.channel());
+    auto result = fidl::WireCall<block::Block>(caller.channel()).GetInfo();
     if (!result.ok()) {
       continue;
     }
@@ -120,7 +120,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     if (response.info->flags & BLOCK_FLAG_REMOVABLE) {
       continue;
     }
-    auto result2 = device::Controller::Call::GetTopologicalPath(caller.channel());
+    auto result2 = fidl::WireCall<device::Controller>(caller.channel()).GetTopologicalPath();
     if (result2.status() != ZX_OK) {
       continue;
     }
@@ -156,7 +156,7 @@ zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
     return pauser.take_error();
   }
   fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
-  auto result = block::Block::Call::GetInfo(caller.channel());
+  auto result = fidl::WireCall<block::Block>(caller.channel()).GetInfo();
   if (!result.ok()) {
     ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(result.status()));
     return zx::error(result.status());
@@ -218,7 +218,7 @@ zx::status<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   for (auto& [_, gpt_device] : gpt_devices) {
     fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
-    auto result = block::Block::Call::GetInfo(caller.channel());
+    auto result = fidl::WireCall<block::Block>(caller.channel()).GetInfo();
     if (!result.ok()) {
       ERROR("Warning: Could not acquire GPT block info: %s\n",
             zx_status_get_string(result.status()));

@@ -43,8 +43,9 @@ int main(int argc, char** argv) {
     }
 
     fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
-    auto result = fuchsia_hardware_serial::Device::Call::GetClass(
-        zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)));
+    auto result = fidl::WireCall<fuchsia_hardware_serial::Device>(
+                      zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)))
+                      .GetClass();
     fuchsia_hardware_serial::wire::Class device_class = result->device_class;
     fdio_unsafe_release(fdio);
     if (!result.ok() || device_class != fuchsia_hardware_serial::wire::Class::GENERIC) {

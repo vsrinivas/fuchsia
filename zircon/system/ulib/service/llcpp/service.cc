@@ -101,8 +101,9 @@ namespace internal {
                                  ::zx::channel remote) {
   constexpr uint32_t flags =
       fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE;
-  fidl::WireResult<fuchsia_io::Directory::Open> result = fuchsia_io::Directory::Call::Open(
-      dir, flags, uint32_t(0755), std::move(path), std::move(remote));
+  fidl::WireResult<fuchsia_io::Directory::Open> result =
+      fidl::WireCall<fuchsia_io::Directory>(dir).Open(flags, uint32_t(0755), std::move(path),
+                                                      std::move(remote));
   return ::zx::make_status(result.status());
 }
 

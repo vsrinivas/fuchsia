@@ -146,8 +146,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     return status;
   }
 
-  auto result =
-      sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(handle));
+  auto result = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(handle))
+                    .WaitForBuffersAllocated();
   if (!result.ok()) {
     return result.status();
   }
@@ -557,14 +557,14 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   // Set priority to 10 to override the Vulkan driver name priority of 5, but be less than most
   // application priorities.
   constexpr uint32_t kNamePriority = 10;
-  auto name_res = sysmem::BufferCollection::Call::SetName(
-      zx::unowned_channel(collection), kNamePriority, fidl::StringView::FromExternal(buffer_name));
+  auto name_res = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
+                      .SetName(kNamePriority, fidl::StringView::FromExternal(buffer_name));
   if (!name_res.ok()) {
     DISP_ERROR("Failed to set name: %d", name_res.status());
     return name_res.status();
   }
-  auto res = sysmem::BufferCollection::Call::SetConstraints(zx::unowned_channel(collection), true,
-                                                            constraints);
+  auto res = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
+                 .SetConstraints(true, constraints);
 
   if (!res.ok()) {
     DISP_ERROR("Failed to set constraints: %d", res.status());
@@ -589,8 +589,8 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
     return ZX_ERR_NO_MEMORY;
   }
   fbl::AutoLock lock(&capture_lock_);
-  auto result =
-      sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(collection));
+  auto result = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
+                    .WaitForBuffersAllocated();
   if (!result.ok()) {
     return result.status();
   }

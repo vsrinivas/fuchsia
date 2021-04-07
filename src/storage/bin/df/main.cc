@@ -176,8 +176,9 @@ int main(int argc, const char** argv) {
 
     fio::wire::FilesystemInfo info;
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
-        fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+    auto result =
+        fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+            .QueryFilesystem();
     if (!result.ok() || result->s != ZX_OK) {
       print_fs_type(dirs[i], &options, nullptr, "Unknown; cannot query filesystem");
       continue;
@@ -185,8 +186,9 @@ int main(int argc, const char** argv) {
     info = *result->info;
     info.name[fio::wire::MAX_FS_NAME_BUFFER - 1] = '\0';
 
-    auto result2 = fio::DirectoryAdmin::Call::GetDevicePath(
-        fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+    auto result2 =
+        fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+            .GetDevicePath();
     std::string path(std::string("I/O failure: ") + result2.status_string());
     if (result2.ok()) {
       if (result2->s == ZX_OK) {

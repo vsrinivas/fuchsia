@@ -65,7 +65,7 @@ constexpr size_t kZxcryptExtraSlices = 1;
 // Upon success, |buf| will contain the null-terminated topological path.
 zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_len) {
   fdio_cpp::UnownedFdioCaller caller(fd.get());
-  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(caller.channel());
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(caller.channel()).GetTopologicalPath();
   if (!resp.ok()) {
     return resp.status();
   }
@@ -121,7 +121,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
                                 block_client::Client* out_client) {
   fdio_cpp::UnownedFdioCaller caller(fd.get());
 
-  auto result = block::Block::Call::GetFifo(caller.channel());
+  auto result = fidl::WireCall<block::Block>(caller.channel()).GetFifo();
   if (!result.ok()) {
     return result.status();
   }
@@ -136,7 +136,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
     return ZX_ERR_IO;
   }
 
-  auto result2 = block::Block::Call::AttachVmo(caller.channel(), std::move(dup));
+  auto result2 = fidl::WireCall<block::Block>(caller.channel()).AttachVmo(std::move(dup));
   if (result2.status() != ZX_OK) {
     return result2.status();
   }
@@ -264,8 +264,8 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
 
   fdio_cpp::UnownedFdioCaller caller(partition_fd.get());
   constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
-  auto resp =
-      fuchsia_device::Controller::Call::Rebind(caller.channel(), fidl::StringView(kFvmDriverLib));
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
+                  .Rebind(fidl::StringView(kFvmDriverLib));
   status = resp.status();
   if (status == ZX_OK) {
     if (resp->result.is_err()) {
@@ -304,8 +304,9 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       if (fvm_fd) {
         LOG("Found already formatted FVM.\n");
         fdio_cpp::UnownedFdioCaller volume_manager(fvm_fd.get());
-        auto result = volume::VolumeManager::Call::GetInfo(
-            fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel());
+        auto result = fidl::WireCall<volume::VolumeManager>(
+                          fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel())
+                          .GetInfo();
         if (result.status() == ZX_OK) {
           auto get_maximum_slice_count = [](const fvm::SparseImage& header) {
             return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, header.maximum_disk_size,
@@ -339,7 +340,7 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
     }
 
     fdio_cpp::UnownedFdioCaller partition_connection(partition_fd.get());
-    auto block_info_result = block::Block::Call::GetInfo(partition_connection.channel());
+    auto block_info_result = fidl::WireCall<block::Block>(partition_connection.channel()).GetInfo();
     if (!block_info_result.ok()) {
       ERROR("Failed to query block info: %s\n", zx_status_get_string(block_info_result.status()));
       return fbl::unique_fd();
@@ -421,7 +422,8 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
   uint64_t length = needed - allocated;
   {
     fdio_cpp::UnownedFdioCaller partition_connection(part->new_part.get());
-    auto result = volume::Volume::Call::Extend(partition_connection.channel(), offset, length);
+    auto result =
+        fidl::WireCall<volume::Volume>(partition_connection.channel()).Extend(offset, length);
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
       ERROR("Failed to extend zxcrypt volume: %s\n", zx_status_get_string(status));
@@ -478,7 +480,7 @@ zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uin
     // destroy it before we pave anew.
 
     fdio_cpp::UnownedFdioCaller partition_connection(old_part.get());
-    auto result = volume::Volume::Call::Destroy(partition_connection.channel());
+    auto result = fidl::WireCall<volume::Volume>(partition_connection.channel()).Destroy();
     zx_status_t status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
       ERROR("Couldn't destroy partition: %s\n", zx_status_get_string(status));
@@ -611,7 +613,8 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
       uint64_t length = ext.slice_count;
 
       fdio_cpp::UnownedFdioCaller partition_connection((*parts)[p].new_part.get());
-      auto result = volume::Volume::Call::Extend(partition_connection.channel(), offset, length);
+      auto result =
+          fidl::WireCall<volume::Volume>(partition_connection.channel()).Extend(offset, length);
       auto status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to extend partition: %s\n", zx_status_get_string(status));
@@ -744,7 +747,7 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     }
 
     fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
-    auto result = block::Block::Call::GetInfo(partition_connection.channel());
+    auto result = fidl::WireCall<block::Block>(partition_connection.channel()).GetInfo();
     if (!result.ok()) {
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(result.status()));
       return zx::error(result.status());
@@ -781,14 +784,16 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
     // Upgrade the old partition (currently active) to the new partition (currently
     // inactive) so the new partition persists.
-    auto result = partition::Partition::Call::GetInstanceGuid(partition_connection.channel());
+    auto result =
+        fidl::WireCall<partition::Partition>(partition_connection.channel()).GetInstanceGuid();
     if (!result.ok() || result.value().status != ZX_OK) {
       ERROR("Failed to get unique GUID of new partition\n");
       return zx::error(ZX_ERR_BAD_STATE);
     }
     auto* guid = result.value().guid.get();
 
-    auto result2 = volume::VolumeManager::Call::Activate(volume_manager.channel(), *guid, *guid);
+    auto result2 =
+        fidl::WireCall<volume::VolumeManager>(volume_manager.channel()).Activate(*guid, *guid);
     if (result2.status() != ZX_OK || result2.value().status != ZX_OK) {
       ERROR("Failed to upgrade partition\n");
       return zx::error(ZX_ERR_IO);
@@ -825,7 +830,7 @@ zx_status_t FvmUnbind(const fbl::unique_fd& devfs_root, const char* device) {
           name_buffer.data());
     return status;
   }
-  auto resp = device::Controller::Call::ScheduleUnbind(local.borrow());
+  auto resp = fidl::WireCall<device::Controller>(local.borrow()).ScheduleUnbind();
   if (resp.status() != ZX_OK) {
     ERROR("Failed to schedule FVM unbind: %s on device %s\n", zx_status_get_string(resp.status()),
           name_buffer.data());

@@ -171,8 +171,8 @@ void StorageWatchdog::PurgeCache() {
 
 zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
                                                fio::wire::FilesystemInfo* out_info) {
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(directory));
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(directory)).QueryFilesystem();
   if (result.ok())
     *out_info = *result->info;
   return !result.ok() ? result.status() : result->s;

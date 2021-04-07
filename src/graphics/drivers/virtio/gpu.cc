@@ -89,8 +89,8 @@ zx_status_t GpuDevice::DisplayControllerImplImportVmoImage(image_t* image, zx::v
 zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handle, uint32_t index,
                                        zx::vmo* vmo_out, size_t* offset_out,
                                        uint32_t* pixel_size_out, uint32_t* row_bytes_out) {
-  auto wait_result =
-      sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(handle));
+  auto wait_result = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(handle))
+                         .WaitForBuffersAllocated();
   if (!wait_result.ok()) {
     zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated %d", tag(), wait_result.status());
     return wait_result.status();
@@ -284,8 +284,8 @@ zx_status_t GpuDevice::DisplayControllerImplSetBufferCollectionConstraints(
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  zx_status_t status = sysmem::BufferCollection::Call::SetConstraints(
-                           zx::unowned_channel(collection), true, constraints)
+  zx_status_t status = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
+                           .SetConstraints(true, constraints)
                            .status();
 
   if (status != ZX_OK) {

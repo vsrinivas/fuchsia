@@ -45,30 +45,31 @@ class FirmwareTest : public zxtest::Test {
 };
 
 TEST_F(FirmwareTest, LoadFirmwareSync) {
-  auto result =
-      TestDevice::Call::LoadFirmware(zx::unowned(chan_), fidl::StringView(TEST_FIRMWARE_PATH));
+  auto result = fidl::WireCall<TestDevice>(zx::unowned(chan_))
+                    .LoadFirmware(fidl::StringView(TEST_FIRMWARE_PATH));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err(), "LoadFirmware failed: %s",
                zx_status_get_string(result->result.err()));
 }
 
 TEST_F(FirmwareTest, LoadNonexistantFirmwareSyncFails) {
-  auto result = TestDevice::Call::LoadFirmware(zx::unowned(chan_), fidl::StringView("not_a_file"));
+  auto result =
+      fidl::WireCall<TestDevice>(zx::unowned(chan_)).LoadFirmware(fidl::StringView("not_a_file"));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_err(), "LoadFirmware should have failed");
 }
 
 TEST_F(FirmwareTest, LoadFirmwareAsync) {
-  auto result =
-      TestDevice::Call::LoadFirmwareAsync(zx::unowned(chan_), fidl::StringView(TEST_FIRMWARE_PATH));
+  auto result = fidl::WireCall<TestDevice>(zx::unowned(chan_))
+                    .LoadFirmwareAsync(fidl::StringView(TEST_FIRMWARE_PATH));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err(), "LoadFirmwareAsync failed: %s",
                zx_status_get_string(result->result.err()));
 }
 
 TEST_F(FirmwareTest, LoadNonexistantFirmwareAsyncFails) {
-  auto result =
-      TestDevice::Call::LoadFirmwareAsync(zx::unowned(chan_), fidl::StringView("not_a_file"));
+  auto result = fidl::WireCall<TestDevice>(zx::unowned(chan_))
+                    .LoadFirmwareAsync(fidl::StringView("not_a_file"));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_err(), "LoadFirmwareAsync should have failed");
 }

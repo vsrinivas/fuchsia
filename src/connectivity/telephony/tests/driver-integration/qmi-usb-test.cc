@@ -101,8 +101,9 @@ TEST_F(UsbQmiTest, RequestImei) {
   // set QMI channel to driver
   zx::channel channel_local, channel_remote;
   ASSERT_EQ(zx::channel::create(0, &channel_local, &channel_remote), ZX_OK);
-  auto result = fuchsia_hardware_telephony_transport::Qmi::Call::SetChannel(
-      qmi_fdio_caller_.channel(), std::move(channel_remote));
+  auto result =
+      fidl::WireCall<fuchsia_hardware_telephony_transport::Qmi>(qmi_fdio_caller_.channel())
+          .SetChannel(std::move(channel_remote));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->result.is_err(), false);
   ASSERT_EQ(zx::port::create(0, &channel_port), ZX_OK);

@@ -246,7 +246,7 @@ migrating a `zx::unowned_channel`:
   ```c++
   // |client| should speak the |fuchsia.foobar/Baz| protocol.
   zx_status_t DoThing(zx::unowned_channel client, int64_t args) {
-    return fuchsia_foobar::Baz::Call::Method(std::move(client), args).status();
+    return fidl::WireCall<fuchsia_foobar::Baz>(std::move(client)).Method(args).status();
   }
   ```
 
@@ -255,7 +255,7 @@ migrating a `zx::unowned_channel`:
   ```c++
   // The intended protocol is encoded in the type system. No need for comment.
   zx_status_t DoThing(fidl::UnownedClientEnd<fuchsia_foobar::Baz> client, int64_t args) {
-    return fuchsia_foobar::Baz::Call::Method(client, args).status();
+    return fidl::WireCall(client).Method(args).status();
   }
   ```
 
@@ -305,15 +305,6 @@ You may add one of ianloic@, yifeit@ if need specific review from the FIDL team.
   `fidl::ClientEnd<T>`.
 * When converting `fdio_open(path, flags, server.release())`, there is no
   type-safe alternative of `fdio_open`.
-* Need to spell the namespace twice when making a call on an unowned client-end:
-
-```c++
-fdio_cpp::UnownedFdioCaller connection(fd);
-auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
-    fidl::UnownedClientEnd<fuchsia_device::Controller>(
-        connection.borrow_channel()));
-```
-
 * Converting between HLCPP and LLCPP endpoint types is tricky. We would like
   `fidl::ClientEnd<::my_thing::Protocol>` and
   `fidl::InterfaceHandle<my::thing::Protocol>` to easily convert into one

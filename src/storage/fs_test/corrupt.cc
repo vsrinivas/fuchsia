@@ -73,7 +73,7 @@ TEST(CorruptTest, CorruptTest) {
     zx::channel local, remote;
     ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
     ASSERT_EQ(fdio_service_connect(fs.GetRamNand()->path(), remote.release()), ZX_OK);
-    auto resp = device::Controller::Call::ScheduleUnbind(local.borrow());
+    auto resp = fidl::WireCall<device::Controller>(local.borrow()).ScheduleUnbind();
     ASSERT_EQ(resp.status(), ZX_OK);
     ASSERT_FALSE(resp->result.is_err());
 

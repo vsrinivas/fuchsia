@@ -60,8 +60,8 @@ class BindCompilerTest : public testing::Test {
     // Bind the test driver to the new device.
     driver_libpath_ = kDriverTestDir + "/" + kDriverLibname;
     auto response =
-        fuchsia_device::Controller::Call::Bind(zx::unowned_channel(device_channel_.get()),
-                                               ::fidl::StringView::FromExternal(driver_libpath_));
+        fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device_channel_.get()))
+            .Bind(::fidl::StringView::FromExternal(driver_libpath_));
     status = response.status();
     if (status == ZX_OK) {
       if (response->result.is_err()) {
@@ -84,7 +84,7 @@ class BindCompilerTest : public testing::Test {
   }
 
   void TearDown() override {
-    fuchsia_device_test::Device::Call::Destroy(zx::unowned_channel{device_channel_});
+    fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{device_channel_}).Destroy();
   }
 
   IsolatedDevmgr devmgr_;

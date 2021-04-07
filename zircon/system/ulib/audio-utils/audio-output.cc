@@ -147,7 +147,7 @@ zx_status_t AudioOutput::PlayToCompletion(AudioSource& source) {
     if (res != ZX_OK)
       break;
 
-    auto position = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(rb_ch_);
+    auto position = fidl::WireCall(rb_ch_).WatchClockRecoveryPositionInfo();
 
     rd = position->position_info.position;
 

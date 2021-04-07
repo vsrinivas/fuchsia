@@ -72,7 +72,8 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
   zx::channel input_channel;
   ASSERT_OK(fdio_get_service_handle(fd_input.release(), input_channel.reset_and_get_address()));
   auto hid_device_path_response =
-      fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(input_channel));
+      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(input_channel))
+          .GetTopologicalPath();
   ASSERT_OK(hid_device_path_response.status());
   zx::channel usbhid_channel;
   std::string hid_device_path = hid_device_path_response->result.response().path.data();
@@ -89,8 +90,8 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
   ASSERT_GE(fd_usb_hid_parent.get(), 0);
   std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_usb_hid_parent), &watcher));
-  auto result =
-      fuchsia_device::Controller::Call::ScheduleUnbind(zx::unowned_channel(usbhid_channel));
+  auto result = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(usbhid_channel))
+                    .ScheduleUnbind();
   ASSERT_OK(result.status());
   ASSERT_OK(watcher->WaitForRemoval("usb-hid", zx::duration::infinite()));
 }

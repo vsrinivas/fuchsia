@@ -219,13 +219,15 @@ void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collec
   if (is_vc_) {
     zx::channel vc_token_server, vc_token_client;
     zx::channel::create(0, &vc_token_server, &vc_token_client);
-    if (sysmem::BufferCollectionToken::Call::Duplicate(zx::unowned_channel(collection_token),
-                                                       UINT32_MAX, std::move(vc_token_server))
+    if (fidl::WireCall<sysmem::BufferCollectionToken>(zx::unowned_channel(collection_token))
+            .Duplicate(UINT32_MAX, std::move(vc_token_server))
             .error()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
-    if (sysmem::BufferCollectionToken::Call::Sync(zx::unowned_channel(collection_token)).error()) {
+    if (fidl::WireCall<sysmem::BufferCollectionToken>(zx::unowned_channel(collection_token))
+            .Sync()
+            .error()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }

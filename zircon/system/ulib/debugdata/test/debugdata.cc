@@ -47,8 +47,8 @@ TEST(DebugDataTest, PublishData) {
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
 
-  ASSERT_OK(fuchsia_debugdata::DebugData::Call::Publish(zx::unowned_channel(client), kTestSink,
-                                                        std::move(vmo))
+  ASSERT_OK(fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
+                .Publish(kTestSink, std::move(vmo))
                 .status());
 
   ASSERT_OK(loop.RunUntilIdle());
@@ -101,8 +101,8 @@ TEST(DebugDataTest, LoadConfig) {
 
   const auto path = (directory / filename).string();
 
-  auto result = fuchsia_debugdata::DebugData::Call::LoadConfig(
-      zx::unowned_channel(client), fidl::StringView::FromExternal(path));
+  auto result = fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
+                    .LoadConfig(fidl::StringView::FromExternal(path));
   ASSERT_OK(result.status());
   zx::vmo vmo = std::move(result->config);
 

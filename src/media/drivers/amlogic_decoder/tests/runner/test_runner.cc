@@ -26,7 +26,7 @@ class TestDeviceBase {
   // can require sandbox access to /dev/sys.
   zx::channel GetParentDevice() {
     char path[fuchsia_device::wire::MAX_DEVICE_PATH_LEN + 1];
-    auto res = fuchsia_device::Controller::Call::GetTopologicalPath(channel());
+    auto res = fidl::WireCall<fuchsia_device::Controller>(channel()).GetTopologicalPath();
 
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
@@ -48,7 +48,8 @@ class TestDeviceBase {
   }
 
   static void UnbindChildren(const zx::channel& parent_device) {
-    auto res = fuchsia_device::Controller::Call::UnbindChildren(zx::unowned_channel(parent_device));
+    auto res = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(parent_device))
+                   .UnbindChildren();
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
   }
@@ -66,8 +67,8 @@ class TestDeviceBase {
     while (retry_count++ < kMaxRetryCount) {
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have
       // other children that shouldn't be unbound.
-      auto res = fuchsia_device::Controller::Call::Bind(zx::unowned_channel(parent_device),
-                                                        fidl::StringView::FromExternal(path));
+      auto res = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(parent_device))
+                     .Bind(fidl::StringView::FromExternal(path));
       EXPECT_EQ(ZX_OK, res.status());
       if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));
@@ -82,7 +83,7 @@ class TestDeviceBase {
   }
 
   void Unbind() {
-    auto res = fuchsia_device::Controller::Call::ScheduleUnbind(channel());
+    auto res = fidl::WireCall<fuchsia_device::Controller>(channel()).ScheduleUnbind();
     fprintf(stderr, "Result: %d\n", res.status());
   }
 
@@ -111,10 +112,11 @@ TEST(TestRunner, RunTests) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   ASSERT_OK(fdio_service_connect("/tmp", remote.release()));
 
-  auto set_output_res = fuchsia_hardware_mediacodec::Tester::Call::SetOutputDirectoryHandle(
-      test_device2->channel(), std::move(local));
+  auto set_output_res = fidl::WireCall<fuchsia_hardware_mediacodec::Tester>(test_device2->channel())
+                            .SetOutputDirectoryHandle(std::move(local));
   EXPECT_OK(set_output_res.status());
-  auto res = fuchsia_hardware_mediacodec::Tester::Call::RunTests(test_device2->channel());
+  auto res =
+      fidl::WireCall<fuchsia_hardware_mediacodec::Tester>(test_device2->channel()).RunTests();
   EXPECT_OK(res.status());
   if (res.ok())
     EXPECT_OK(res->result);

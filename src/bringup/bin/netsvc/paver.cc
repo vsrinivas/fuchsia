@@ -151,8 +151,8 @@ int Paver::StreamBuffer() {
   loop.StartThread("payload-streamer");
 
   // Blocks until paving is complete.
-  auto res2 =
-      fuchsia_paver::DataSink::Call::WriteVolumes(zx::unowned(data_sink), std::move(client));
+  auto res2 = fidl::WireCall<fuchsia_paver::DataSink>(zx::unowned(data_sink))
+                  .WriteVolumes(std::move(client));
   status = res2.status() == ZX_OK ? res2.value().status : res2.status();
 
   exit_code_.store(status);

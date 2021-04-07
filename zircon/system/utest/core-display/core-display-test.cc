@@ -100,8 +100,9 @@ void CoreDisplayTest::SetUp() {
   ASSERT_OK(status);
 
   caller_.reset(std::move(fd));
-  auto open_status = fhd::Provider::Call::OpenController(
-      caller_.channel(), std::move(device_server_channel), std::move(dc_server_channel));
+  auto open_status =
+      fidl::WireCall<fhd::Provider>(caller_.channel())
+          .OpenController(std::move(device_server_channel), std::move(dc_server_channel));
   ASSERT_TRUE(open_status.ok());
   ASSERT_EQ(ZX_OK, open_status.value().s);
 
@@ -330,8 +331,8 @@ TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
   ASSERT_EQ(status, ZX_OK);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto open_status = fhd::Provider::Call::OpenController(caller.channel(), std::move(device_server),
-                                                         std::move(dc_server));
+  auto open_status = fidl::WireCall<fhd::Provider>(caller.channel())
+                         .OpenController(std::move(device_server), std::move(dc_server));
   EXPECT_TRUE(open_status.ok());
   EXPECT_EQ(ZX_ERR_ALREADY_BOUND, open_status.value().s);
 }

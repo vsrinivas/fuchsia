@@ -458,8 +458,8 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   auto svc = fs.GetSvcDirectory();
   auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
   ASSERT_TRUE(client_end.is_ok());
-  const auto& query_result = fuchsia_fs::Query::Call::GetInfo(
-      client_end->borrow(), fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+  const auto& query_result =
+      fidl::WireCall(client_end->borrow()).GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
   ASSERT_TRUE(query_result.ok());
 
   const fuchsia_fs::wire::FilesystemInfo& info = query_result.value().result.response().info;
@@ -989,10 +989,10 @@ TEST_P(BlobfsIntegrationTest, InvalidOperations) {
   // Hence we clone the fd into a |canary_channel| which we know will have its peer closed.
   zx::channel canary_channel;
   ASSERT_EQ(fdio_fd_clone(fd.get(), canary_channel.reset_and_get_address()), ZX_OK);
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
-            fio::DirectoryAdmin::Call::Unmount(
-                fidl::UnownedClientEnd<fio::DirectoryAdmin>(zx::unowned_channel(canary_channel)))
-                .status());
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(
+                                                   zx::unowned_channel(canary_channel)))
+                                    .Unmount()
+                                    .status());
   zx_signals_t pending;
   EXPECT_EQ(canary_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &pending),
             ZX_OK);
@@ -1093,8 +1093,9 @@ TEST_P(BlobfsIntegrationTest, MultipleWrites) {
 
 zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* path) {
   fdio_cpp::FdioCaller caller(std::move(directory));
-  auto result = fio::DirectoryAdmin::Call::GetDevicePath(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(zx::unowned_channel(caller.borrow_channel())));
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(
+                                   zx::unowned_channel(caller.borrow_channel())))
+                    .GetDevicePath();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -1158,9 +1159,9 @@ void OpenBlockDevice(const std::string& path,
   auto [channel, server] = *std::move(endpoints);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fio::Node::Call::Clone(
-                fidl::UnownedClientEnd<fio::Node>(zx::unowned_channel(caller.borrow_channel())),
-                fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(server))
+  ASSERT_EQ(fidl::WireCall(
+                fidl::UnownedClientEnd<fio::Node>(zx::unowned_channel(caller.borrow_channel())))
+                .Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(server))
                 .status(),
             ZX_OK);
   ASSERT_EQ(block_client::RemoteBlockDevice::Create(channel.TakeChannel(), block_device), ZX_OK);

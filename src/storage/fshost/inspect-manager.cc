@@ -21,10 +21,10 @@ zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::str
   }
 
   fidl::StringView path_view(fidl::StringView::FromExternal(path));
-  zx_status_t status =
-      fio::Directory::Call::Open(root, fs::VnodeConnectionOptions::ReadOnly().ToIoV1Flags(), mode,
+  zx_status_t status = fidl::WireCall(root)
+                           .Open(fs::VnodeConnectionOptions::ReadOnly().ToIoV1Flags(), mode,
                                  std::move(path_view), std::move(dir->server))
-          .status();
+                           .status();
   if (status != ZX_OK) {
     return status;
   }
@@ -72,7 +72,7 @@ void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
   // Note: we are unsafely assuming that the directory also speaks
   // |fuchsia.io/DirectoryAdmin|.
   fidl::UnownedClientEnd<fio::DirectoryAdmin> dir_admin(dir_chan.channel());
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(dir_admin);
+  auto result = fidl::WireCall(dir_admin).QueryFilesystem();
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
   if (result.status() == ZX_OK) {
     fio::DirectoryAdmin::QueryFilesystemResponse* response = result.Unwrap();
@@ -199,7 +199,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
   }
 
   // Get child attributes to know whether the child is a directory or not.
-  auto result = fio::Node::Call::GetAttr(child_chan);
+  auto result = fidl::WireCall(child_chan).GetAttr();
   if (result.status() != ZX_OK) {
     return std::nullopt;
   }
@@ -216,7 +216,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
 
 // Reads the next set of dirents and loads them into `pending_entries_`.
 void DirectoryEntriesIterator::RefreshPendingEntries() {
-  auto result = fio::Directory::Call::ReadDirents(directory_, fio::wire::MAX_BUF);
+  auto result = fidl::WireCall(directory_).ReadDirents(fio::wire::MAX_BUF);
   if (result.status() != ZX_OK) {
     return;
   }

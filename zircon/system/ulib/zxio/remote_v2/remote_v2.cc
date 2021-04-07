@@ -86,7 +86,7 @@ fio2::wire::NodeAttributes ToIo2NodeAttributes(fidl::AnyAllocator& allocator,
 zx_status_t zxio_remote_v2_close(zxio_t* io) {
   RemoteV2 rio(io);
   zx_status_t status = [&]() {
-    auto result = fio2::Node::Call::Close(rio.control());
+    auto result = fidl::WireCall<fio2::Node>(rio.control()).Close();
     // TODO(yifeit): The |Node.Close| method is one-way. In order to catch
     // any server-side error during close, we should wait for an epitaph.
     if (result.status() != ZX_OK) {
@@ -111,8 +111,8 @@ zx_status_t zxio_remote_v2_clone(zxio_t* io, zx_handle_t* out_handle) {
   if (status != ZX_OK) {
     return status;
   }
-  auto result =
-      fio2::Node::Call::Reopen(rio.control(), fio2::wire::ConnectionOptions(), std::move(remote));
+  auto result = fidl::WireCall<fio2::Node>(rio.control())
+                    .Reopen(fio2::wire::ConnectionOptions(), std::move(remote));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -180,7 +180,7 @@ void zxio_remote_v2_wait_end(zxio_t* io, zx_signals_t zx_signals,
 
 zx_status_t zxio_remote_sync(zxio_t* io) {
   RemoteV2 rio(io);
-  auto result = fio2::Node::Call::Sync(rio.control());
+  auto result = fidl::WireCall<fio2::Node>(rio.control()).Sync();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -192,8 +192,8 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
 
 zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   RemoteV2 rio(io);
-  auto result =
-      fio2::Node::Call::GetAttributes(rio.control(), fio2::wire::NodeAttributesQuery::kMask);
+  auto result = fidl::WireCall<fio2::Node>(rio.control())
+                    .GetAttributes(fio2::wire::NodeAttributesQuery::kMask);
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -209,7 +209,7 @@ zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* at
   fidl::FidlAllocator<1024> allocator;
   auto attributes = ToIo2NodeAttributes(allocator, *attr);
   RemoteV2 rio(io);
-  auto result = fio2::Node::Call::UpdateAttributes(rio.control(), std::move(attributes));
+  auto result = fidl::WireCall<fio2::Node>(rio.control()).UpdateAttributes(std::move(attributes));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -360,8 +360,8 @@ zx_status_t zxio_remote_v2_readv(zxio_t* io, const zx_iovec_t* vector, size_t ve
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio2::File::ReadRequest> request_buffer;
         fidl::Buffer<fio2::File::ReadResponse> response_buffer;
-        auto result = fio2::File::Call::Read(std::move(control), request_buffer.view(), capacity,
-                                             response_buffer.view());
+        auto result = fidl::WireCall<fio2::File>(std::move(control))
+                          .Read(request_buffer.view(), capacity, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -396,8 +396,8 @@ zx_status_t zxio_remote_v2_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         fidl::Buffer<fio2::File::ReadAtRequest> request_buffer;
         fidl::Buffer<fio2::File::ReadAtResponse> response_buffer;
-        auto result = fio2::File::Call::ReadAt(std::move(control), request_buffer.view(), capacity,
-                                               offset, response_buffer.view());
+        auto result = fidl::WireCall<fio2::File>(std::move(control))
+                          .ReadAt(request_buffer.view(), capacity, offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -434,9 +434,10 @@ zx_status_t zxio_remote_v2_writev(zxio_t* io, const zx_iovec_t* vector, size_t v
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio2::File::WriteRequest> request_buffer;
         fidl::Buffer<fio2::File::WriteResponse> response_buffer;
-        auto result = fio2::File::Call::Write(
-            std::move(control), request_buffer.view(),
-            fidl::VectorView<uint8_t>::FromExternal(buffer, capacity), response_buffer.view());
+        auto result = fidl::WireCall<fio2::File>(std::move(control))
+                          .Write(request_buffer.view(),
+                                 fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
+                                 response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -470,10 +471,10 @@ zx_status_t zxio_remote_v2_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio2::File::WriteAtRequest> request_buffer;
         fidl::Buffer<fio2::File::WriteAtResponse> response_buffer;
-        auto result =
-            fio2::File::Call::WriteAt(std::move(control), request_buffer.view(),
-                                      fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
-                                      offset, response_buffer.view());
+        auto result = fidl::WireCall<fio2::File>(std::move(control))
+                          .WriteAt(request_buffer.view(),
+                                   fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
+                                   offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -498,8 +499,8 @@ zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t of
     return rio.stream()->seek(start, offset, out_offset);
   }
 
-  auto result =
-      fio2::File::Call::Seek(rio.control(), static_cast<fio2::wire::SeekOrigin>(start), offset);
+  auto result = fidl::WireCall<fio2::File>(rio.control())
+                    .Seek(static_cast<fio2::wire::SeekOrigin>(start), offset);
   if (result.status() != ZX_OK) {
     return result.status();
   }

@@ -89,7 +89,7 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_opt
 
   if (options.wait_until_ready) {
     // Wait until the filesystem is ready to take incoming requests
-    auto result = fio::Node::Call::Describe(outgoing_directory.client);
+    auto result = fidl::WireCall<fio::Node>(outgoing_directory.client).Describe();
     switch (result.status()) {
       case ZX_OK:
         break;
@@ -112,8 +112,8 @@ zx::status<zx::channel> GetFsRootHandle(zx::unowned_channel export_root, uint32_
     return status.take_error();
   }
 
-  auto resp = fio::Directory::Call::Open(zx::unowned_channel(export_root), flags, 0,
-                                         fidl::StringView("root"), std::move(root_server));
+  auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root))
+                  .Open(flags, 0, fidl::StringView("root"), std::move(root_server));
   if (!resp.ok()) {
     return zx::error(resp.status());
   }
@@ -186,9 +186,8 @@ zx_status_t fs_register(zx_handle_t export_root) {
     return status;
   }
 
-  auto clone_resp =
-      fio::Node::Call::Clone(zx::unowned_channel(export_root), fio::wire::CLONE_FLAG_SAME_RIGHTS,
-                             std::move(export_server));
+  auto clone_resp = fidl::WireCall<fio::Node>(zx::unowned_channel(export_root))
+                        .Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(export_server));
   if (!clone_resp.ok()) {
     return clone_resp.status();
   }

@@ -375,7 +375,7 @@ Errno pty::posix_ioctl(int request, va_list va) {
         return Errno(ENOTTY);
       }
 
-      auto result = fpty::Device::Call::GetWindowSize(device);
+      auto result = fidl::WireCall(device).GetWindowSize();
       if (result.status() != ZX_OK || result->status != ZX_OK) {
         return Errno(ENOTTY);
       }
@@ -399,7 +399,7 @@ Errno pty::posix_ioctl(int request, va_list va) {
       size.width = in_size->ws_col;
       size.height = in_size->ws_row;
 
-      auto result = fpty::Device::Call::SetWindowSize(device, size);
+      auto result = fidl::WireCall(device).SetWindowSize(size);
       if (result.status() != ZX_OK || result->status != ZX_OK) {
         return Errno(ENOTTY);
       }

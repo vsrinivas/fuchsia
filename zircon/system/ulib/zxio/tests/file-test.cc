@@ -137,7 +137,7 @@ class File : public zxtest::Test {
     if (client_end.is_error()) {
       return client_end.error();
     }
-    auto result = fio::File::Call::Describe(client_end.value().borrow());
+    auto result = fidl::WireCall<fio::File>(client_end.value().borrow()).Describe();
 
     if (result.status() != ZX_OK) {
       return result.status();
