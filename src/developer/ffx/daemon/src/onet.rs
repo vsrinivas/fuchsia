@@ -33,7 +33,7 @@ async fn latency_sensitive_copy(
     reader: &mut (impl AsyncRead + Unpin),
     writer: &mut (impl AsyncWrite + Unpin),
 ) -> std::io::Result<()> {
-    let mut buf = [0u8; 2048];
+    let mut buf = [0u8; 16384];
     loop {
         let n = reader.read(&mut buf).await?;
         if n == 0 {
