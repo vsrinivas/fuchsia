@@ -181,10 +181,13 @@ config("compiler") {
       }
     } else if (current_cpu == "x64") {
       # Let the compiler generate the cmpxchg16b instruction.
-      compiler_flags += [
-        "-mcx16",
-        "-march=x86-64",
-      ]
+      compiler_flags += [ "-mcx16" ]
+      if (!is_gcc) {
+        # TODO(fxrev.dev/485257): Enable for GCC when it supports march=x86-64-v2
+        compiler_flags += [ "-march=x86-64-v2" ]
+      } else {
+        compiler_flags += [ "-march=x86-64" ]
+      }
     }
   } else if (current_os == "win") {
     # This enables build ID-like PDB UUIDs without timestamp.
