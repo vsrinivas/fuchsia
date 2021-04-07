@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/instrumentation/asan.h>
+#include <lib/zircon-internal/macros.h>
 #include <trace.h>
 
 #include <new>
@@ -609,7 +610,7 @@ uint64_t PmmNode::CountTotalBytes() const TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void PmmNode::DumpFree() const TA_NO_THREAD_SAFETY_ANALYSIS {
-  auto megabytes_free = CountFreePages() / 256u;
+  auto megabytes_free = CountFreePages() * PAGE_SIZE / MB;
   printf(" %zu free MBs\n", megabytes_free);
 }
 
