@@ -4,8 +4,5 @@
 
 # The allowlist of components that can use the "services" feature in CML.
 group("services") {
-  visibility = [
-    "//src/sys/component_manager/tests/services:*",
-    "//tools/cmc:*",
-  ]
+  visibility = [ "//tools/cmc:*" ]
 }

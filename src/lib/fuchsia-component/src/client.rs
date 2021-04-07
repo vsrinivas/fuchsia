@@ -192,23 +192,6 @@ impl MemberOpener for DirectoryProtocolImpl {
     }
 }
 
-/// Connect to an instance of a FIDL Unified Service at the specified root directory, using the
-/// provided path.
-pub fn connect_to_unified_service_instance_in_dir_at<US: UnifiedServiceMarker>(
-    dir: &DirectoryProxy,
-    path: &str,
-    instance: &str,
-) -> Result<US::Proxy, Error> {
-    let service_path = format!("{}/{}", path, instance);
-    let directory_proxy = io_util::directory::open_directory_no_describe(
-        dir,
-        &service_path,
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-    )
-    .unwrap();
-    Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
-}
-
 /// Connect to an instance of a FIDL Unified Service using the provided namespace prefix.
 pub fn connect_to_unified_service_instance_at<US: UnifiedServiceMarker>(
     service_prefix: &str,
