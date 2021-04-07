@@ -9,7 +9,9 @@
 
 #include <array>
 #include <functional>
+#include <iterator>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include <fbl/string.h>
@@ -17,6 +19,30 @@
 #include <zxtest/base/types.h>
 
 namespace zxtest {
+
+namespace internal {
+
+inline std::string_view ToStringView(std::string_view str) { return str; }
+
+// We avoid calling std::string_view's constructor of a single `const char*`
+// argument, as that will call std::char_traits<char>::length() which may not
+// support nullptrs. Similarly we avoid calling strlen on a nullptr, as it
+// varies by implementation whether that is supported.
+inline std::string_view ToStringView(const char* str) { return {str, str ? strlen(str) : 0}; }
+
+inline std::string_view ToStringView(char* str) {
+  return ToStringView(static_cast<const char*>(str));
+}
+
+// Else, default to assuming that std::data will yield a C string.
+template <typename Stringlike>
+inline std::string_view ToStringView(const Stringlike& str) {
+  static_assert(
+      std::is_convertible_v<decltype(std::data(std::declval<Stringlike&>())), const char*>);
+  return ToStringView(std::data(str));
+}
+
+}  // namespace internal
 
 // Helper class for handling the error information, plus some logic for printing the correct error
 // messages.
@@ -170,17 +196,19 @@ fbl::String PrintValue(const std::tuple<Ts...>& value) {
   return fbl::String(buffer, current);
 }
 
-// Overloads for string compare.
-bool StrCmp(const char* actual, const char* expected);
-bool StrCmp(const char* actual, const fbl::String& expected);
-bool StrCmp(const fbl::String& actual, const char* expected);
-bool StrCmp(const fbl::String& actual, const fbl::String& expected);
+template <typename StringTypeA, typename StringTypeB>
+inline bool StrCmp(StringTypeA&& actual, StringTypeB&& expected) {
+  std::string_view actual_sv = internal::ToStringView(actual);
+  std::string_view expected_sv = internal::ToStringView(expected);
+  return actual_sv == expected_sv;
+}
 
-// Overloads for string contain.
-bool StrContain(const fbl::String& str, const fbl::String& substr);
-bool StrContain(const fbl::String& str, const char* substr);
-bool StrContain(const char* str, const fbl::String& substr);
-bool StrContain(const char* str, const char* substr);
+template <typename StringTypeA, typename StringTypeB>
+inline bool StrContain(StringTypeA&& str, StringTypeB&& substr) {
+  std::string_view str_view = internal::ToStringView(str);
+  std::string_view substr_view = internal::ToStringView(substr);
+  return str_view.find(substr_view) != std::string_view::npos;
+}
 
 }  // namespace zxtest
 

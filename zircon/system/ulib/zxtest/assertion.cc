@@ -6,7 +6,6 @@
 #include <stdio.h>
 
 #include <cinttypes>
-#include <string_view>
 
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
@@ -131,44 +130,6 @@ fbl::String PrintStatus(zx_status_t status) {
 #else
   return fbl::StringPrintf("%d", status);
 #endif
-}
-
-bool StrCmp(const char* actual, const char* expected) {
-  // We take precaution not to call strcmp on a nullptr, as it varies by
-  // implementation whether that is supported.
-  if (actual == nullptr && expected == nullptr) {
-    return true;
-  }
-  return (!actual == !expected) && strcmp(actual, expected) == 0;
-}
-
-bool StrCmp(const fbl::String& actual, const char* expected) {
-  return StrCmp(actual.c_str(), expected);
-}
-
-bool StrCmp(const char* actual, const fbl::String& expected) {
-  return StrCmp(actual, expected.c_str());
-}
-
-bool StrCmp(const fbl::String& actual, const fbl::String& expected) { return actual == expected; }
-
-bool StrContain(const fbl::String& str, const fbl::String& substr) {
-  const auto str_view = std::string_view(str.data(), str.size());
-  const auto substr_view = std::string_view(substr.data(), substr.size());
-
-  return str_view.find(substr_view) != std::string_view::npos;
-}
-
-bool StrContain(const fbl::String& str, const char* substr) {
-  return StrContain(str, fbl::String(substr, strlen(substr)));
-}
-
-bool StrContain(const char* str, const fbl::String& substr) {
-  return StrContain(fbl::String(str, strlen(str)), substr);
-}
-
-bool StrContain(const char* str, const char* substr) {
-  return StrContain(fbl::String(str, strlen(str)), fbl::String(substr, strlen(substr)));
 }
 
 }  // namespace zxtest
