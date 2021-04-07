@@ -17,7 +17,7 @@ use {
         AsyncWrite, AsyncWriteExt,
     },
     log::{info, warn},
-    std::{collections::HashMap, io::Cursor},
+    std::{collections::HashMap, collections::VecDeque, io::Cursor},
 };
 
 use crate::{
@@ -218,6 +218,8 @@ pub struct ServiceLevelConnection {
     state: SlcState,
     /// The current active procedures serviced by this SLC.
     procedures: HashMap<ProcedureMarker, Box<dyn Procedure>>,
+    /// Queued AG requests waiting for the SLC to be initialized.
+    requests_pending_initialization: VecDeque<(ProcedureMarker, AgUpdate)>,
     /// The sender used to relay updates to the stream implementation.
     sender: Sender<InformationRequest>,
     /// The receiver polled by the stream implementation producing requests for more information
@@ -233,6 +235,7 @@ impl ServiceLevelConnection {
             connection: None,
             state: SlcState::default(),
             procedures: HashMap::new(),
+            requests_pending_initialization: VecDeque::new(),
             sender,
             receiver,
         }
@@ -361,10 +364,21 @@ impl ServiceLevelConnection {
 
     /// Consume and handle a command received from the local device.
     /// This method:
-    ///   1) Attempts to drive the procedure with the `command`.
+    ///   1) Attempts to drive the procedure with the `command`. SLCI updates are handled immediately.
+    ///      Any non-SLCI updates received before the SLC has been initialized will be queued and
+    ///      processed FIFO after initialization.
     ///   2) Handles any subsequent request from (1) - sending any bytes to the peer
     ///      if needed or queueing up information requests to be consumed by the internal receiver.
     pub async fn receive_ag_request(&mut self, id: ProcedureMarker, command: AgUpdate) {
+        // Non-SLCI requests received before initialization will be queued for later.
+        // If there are still outstanding requests pending initialization, queue the request to
+        // be processed after to maintain ordering of events.
+        if id != ProcedureMarker::SlcInitialization {
+            if !self.initialized() || !self.requests_pending_initialization.is_empty() {
+                self.requests_pending_initialization.push_back((id, command));
+                return;
+            }
+        }
         let request = self.handle_command(id, command.into());
 
         // If the command requires more information, relay the request to the stream implementation.
@@ -490,6 +504,31 @@ impl ServiceLevelConnection {
             .hf_update(message, &mut self.state)
     }
 
+    /// Helper function to process any requests that are pending SLC initialization.
+    fn process_requests_pending_initialization(
+        &mut self,
+        cx: &mut Context<'_>,
+    ) -> Option<Result<InformationRequest, ProcedureError>> {
+        if self.initialized() {
+            while let Some((marker, request)) = self.requests_pending_initialization.pop_front() {
+                let request = self.handle_command(marker, request.into());
+                let info_req = self.procedure_request(request);
+                match info_req {
+                    Some(info_req) => return Some(Ok(info_req)),
+                    None => {
+                        if let Some(conn) = &mut self.connection {
+                            if let Err(e) = conn.try_send_queued(cx) {
+                                return Some(Err(e.into()));
+                            }
+                        }
+                        continue;
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Helper function to poll the internal channel for information requests from any procedures.
     fn poll_next_procedure_update(
         &mut self,
@@ -560,6 +599,12 @@ impl Stream for ServiceLevelConnection {
             }
         }
 
+        // Try to process any local procedure requests pending channel initialization.
+        match self.process_requests_pending_initialization(cx) {
+            None => {}
+            request => return Poll::Ready(request),
+        }
+
         // Check for any local procedural updates.
         match self.poll_next_procedure_update(cx) {
             Poll::Pending => {}
@@ -585,7 +630,10 @@ pub(crate) mod tests {
             procedure::InformationRequest,
             protocol::{
                 features::{AgFeatures, HfFeatures},
-                indicators::{Indicator, BATT_CHG_INDICATOR_INDEX},
+                indicators::{
+                    Indicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX,
+                    CALL_INDICATOR_INDEX,
+                },
             },
         },
         fuchsia_async as fasync,
@@ -656,6 +704,26 @@ pub(crate) mod tests {
         let mut vec = Vec::new();
         let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
         assert_matches!(exec.run_until_stalled(&mut remote_fut), Poll::Pending);
+    }
+
+    /// Serializes the AT Response into a byte buffer.
+    #[track_caller]
+    fn serialize_at_response(response: at::Response) -> Vec<u8> {
+        let mut buf = Vec::new();
+        response.serialize(&mut buf).expect("serialization is ok");
+        buf
+    }
+
+    /// Simulates the HFP component responding to the `slc` with the provided `update`.
+    #[track_caller]
+    fn do_ag_update(
+        exec: &mut fasync::Executor,
+        slc: &mut ServiceLevelConnection,
+        marker: ProcedureMarker,
+        update: AgUpdate,
+    ) {
+        let mut fut = Box::pin(slc.receive_ag_request(marker, update));
+        assert_matches!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
     }
 
     #[fasync::run_until_stalled(test)]
@@ -765,12 +833,8 @@ pub(crate) mod tests {
 
         // Simulate local response with AG Features - expect these to be sent to the peer.
         let features = AgFeatures::empty();
-        {
-            let mut next_request =
-                Box::pin(slc.receive_ag_request(slci_marker, response_fn1(features)));
-            assert_matches!(exec.run_until_stalled(&mut next_request), Poll::Ready(()));
-            expect_peer_ready(&mut exec, &mut remote, None);
-        }
+        do_ag_update(&mut exec, &mut slc, slci_marker, response_fn1(features));
+        expect_peer_ready(&mut exec, &mut remote, None);
         // No further requests - waiting on peer response.
         assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
 
@@ -794,14 +858,9 @@ pub(crate) mod tests {
             }
         };
 
-        // Simulate local response with AG status - expect this to go to the peer.
-        let status = Indicators::default();
-        {
-            let mut next_request =
-                Box::pin(slc.receive_ag_request(slci_marker, response_fn2(status)));
-            assert_matches!(exec.run_until_stalled(&mut next_request), Poll::Ready(()));
-            expect_peer_ready(&mut exec, &mut remote, None);
-        }
+        // Simulate local response with the AG indicators status - expect this to go to the peer.
+        do_ag_update(&mut exec, &mut slc, slci_marker, response_fn2(Indicators::default()));
+        expect_peer_ready(&mut exec, &mut remote, None);
         // No further requests - waiting on peer response.
         assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
 
@@ -863,6 +922,101 @@ pub(crate) mod tests {
 
         // Since status updates require no response, the procedure should be terminated.
         assert!(!slc.is_active(&expected_marker));
+    }
+
+    #[test]
+    fn ag_updates_are_queued_until_slc_initialization() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (mut slc, mut remote) = create_and_connect_slc();
+        assert!(!slc.initialized());
+
+        // Receiving a Ag request to send the phone status update should result in no action
+        // because the SLC is not initialized yet.
+        let status1 = Indicator::Call(0);
+        let expected1 = at::Response::Success(at::Success::Ciev {
+            ind: CALL_INDICATOR_INDEX as i64,
+            value: 0i64,
+        });
+        do_ag_update(&mut exec, &mut slc, ProcedureMarker::PhoneStatus, status1.into());
+        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_peer_pending(&mut exec, &mut remote);
+
+        // Peer sends us HF features - we expect a request for the AG features on the
+        // SLC stream and the SLCI procedure should begin.
+        let features = HfFeatures::THREE_WAY_CALLING;
+        let command1 = format!("AT+BRSF={}\r", features.bits()).into_bytes();
+        let _ = remote.as_ref().write(&command1);
+
+        // Simulate local response with AG Features - expect these to be sent to the peer.
+        let ag_features_update = {
+            match exec.run_until_stalled(&mut slc.next()) {
+                Poll::Ready(Some(Ok(InformationRequest::GetAgFeatures { response }))) => {
+                    response(AgFeatures::empty())
+                }
+                x => panic!("Expected GetAgFeatures but got: {:?}", x),
+            }
+        };
+        do_ag_update(&mut exec, &mut slc, ProcedureMarker::SlcInitialization, ag_features_update);
+        expect_peer_ready(&mut exec, &mut remote, None);
+
+        // Receiving another phone status amidst the SLCI procedure should be saved for later.
+        let status2 = Indicator::CallHeld(1);
+        let expected2 = at::Response::Success(at::Success::Ciev {
+            ind: CALL_HELD_INDICATOR_INDEX as i64,
+            value: 1i64,
+        });
+        do_ag_update(&mut exec, &mut slc, ProcedureMarker::PhoneStatus, status2.into());
+        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_peer_pending(&mut exec, &mut remote);
+
+        // Peer continues the SLCI procedure.
+        let command2 = format!("AT+CIND=?\r").into_bytes();
+        let _ = remote.as_ref().write(&command2);
+        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_peer_ready(&mut exec, &mut remote, None);
+        let command3 = format!("AT+CIND?\r").into_bytes();
+        let _ = remote.as_ref().write(&command3);
+        let ag_indicators = {
+            match exec.run_until_stalled(&mut slc.next()) {
+                Poll::Ready(Some(Ok(InformationRequest::GetAgIndicatorStatus { response }))) => {
+                    response(Indicators::default())
+                }
+                x => panic!("Expected GetAgFeatures but got: {:?}", x),
+            }
+        };
+
+        // Simulate local response with AG indicators status - expect this to go to the peer.
+        do_ag_update(&mut exec, &mut slc, ProcedureMarker::SlcInitialization, ag_indicators);
+        expect_peer_ready(&mut exec, &mut remote, None);
+        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+
+        // Peer requests to enable the Indicator Status update in the AG.
+        let command4 = format!("AT+CMER=3,0,0,1\r").into_bytes();
+        let _ = remote.as_ref().write(&command4);
+        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_peer_ready(&mut exec, &mut remote, None);
+
+        // At this point, the mandatory portion of the SLCI procedure is complete. There are no optional
+        // steps since we responded with an empty set of AgFeatures.
+        assert!(slc.initialized());
+
+        // A third request to send a PhoneStatus update _after_ SLCI completes is OK. This should
+        // only be processed after any queued requests so that the peer gets the updates in order.
+        let status3 = Indicator::CallHeld(0);
+        let expected3 = at::Response::Success(at::Success::Ciev {
+            ind: CALL_HELD_INDICATOR_INDEX as i64,
+            value: 0i64,
+        });
+        do_ag_update(&mut exec, &mut slc, ProcedureMarker::PhoneStatus, status3.into());
+
+        // The next time the SLC stream is polled, we expect the updates to be processed.
+        // Since these are phone status updates, we expect the one-shot procedures to send data
+        // to the peer and therefore no SLC stream items.
+        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(expected1)));
+        expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(expected2)));
+        expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(expected3)));
     }
 
     #[fasync::run_until_stalled(test)]

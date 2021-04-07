@@ -323,26 +323,19 @@ impl PeerTask {
         self.connection.receive_ag_request(ProcedureMarker::PhoneStatus, status.into()).await;
     }
 
-    /// Update the network information with the provided `update` value. Pass updates to the HF if
-    /// the service level connection is initialized.
+    /// Update the network information with the provided `update` value.
     async fn handle_network_update(&mut self, update: NetworkInformation) {
         if update_table_entry(&mut self.network.service_available, &update.service_available) {
-            if self.connection.initialized() {
-                let status = Indicator::Service(self.network.service_available.unwrap() as u8);
-                self.phone_status_update(status).await;
-            }
+            let status = Indicator::Service(self.network.service_available.unwrap() as u8);
+            self.phone_status_update(status).await;
         }
         if update_table_entry(&mut self.network.signal_strength, &update.signal_strength) {
-            if self.connection.initialized() {
-                let status = Indicator::Signal(self.network.signal_strength.unwrap() as u8);
-                self.phone_status_update(status).await;
-            }
+            let status = Indicator::Signal(self.network.signal_strength.unwrap() as u8);
+            self.phone_status_update(status).await;
         }
         if update_table_entry(&mut self.network.roaming, &update.roaming) {
-            if self.connection.initialized() {
-                let status = Indicator::Roam(self.network.roaming.unwrap() as u8);
-                self.phone_status_update(status).await;
-            }
+            let status = Indicator::Roam(self.network.roaming.unwrap() as u8);
+            self.phone_status_update(status).await;
         }
     }
 }
