@@ -28,9 +28,9 @@ class AmlHdmiHost {
   explicit AmlHdmiHost(zx_device_t* parent) : pdev_(ddk::PDev::FromFragment(parent)) {}
 
   zx_status_t Init();
-  zx_status_t HostOn() { return hdmitx_->InitHw(); }
-  void HostOff() { return hdmitx_->ShutDown(); }
-  zx_status_t ModeSet() { return hdmitx_->InitInterface(&p_, &color_); }
+  zx_status_t HostOn();
+  void HostOff();
+  zx_status_t ModeSet();
 
   void UpdateOutputColorFormat(uint8_t output_color_format) {
     color_.output_color_format = output_color_format;
@@ -44,6 +44,9 @@ class AmlHdmiHost {
   zx_status_t ConfigurePll();
 
  private:
+  void ConfigEncoder();
+  void ConfigPhy();
+
   void ConfigureHpllClkOut(uint32_t hpll);
   void ConfigureOd3Div(uint32_t div_sel);
   void WaitForPllLocked();
@@ -54,6 +57,7 @@ class AmlHdmiHost {
 
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   std::optional<ddk::MmioBuffer> hhi_mmio_;
+  std::optional<ddk::MmioBuffer> cbus_mmio_;
 
   hdmi_param p_;
   hdmi_color_param color_{

@@ -128,14 +128,12 @@ class AmlHdmitx {
   void WriteReg(uint32_t addr, uint32_t data);
   uint32_t ReadReg(uint32_t addr);
 
-  void ShutDown();
+  void ShutDown() {}  // no-op. Shut down handled by phy
 
   zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
 
  private:
-  void ConfigEncoder(const hdmi_param* p);
   void ConfigHdmitx(const hdmi_param* p, const hdmi_color_param* c);
-  void ConfigPhy(const hdmi_param* p);
   void ConfigCsc(const hdmi_color_param* c);
 
   void ScdcWrite(uint8_t addr, uint8_t val);
@@ -143,11 +141,8 @@ class AmlHdmitx {
 
   ddk::PDev pdev_;
 
-  std::optional<ddk::MmioBuffer> vpu_mmio_;
   fbl::Mutex register_lock_;
   std::optional<ddk::MmioBuffer> hdmitx_mmio_ TA_GUARDED(register_lock_);
-  std::optional<ddk::MmioBuffer> hhi_mmio_;
-  std::optional<ddk::MmioBuffer> cbus_mmio_;
 
   fbl::Mutex i2c_lock_;
 };
