@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1550
+From //build/config/BUILDCONFIG.gn:1561
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -105,7 +105,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:88
+From //build/security.gni:118
 
 ### avb_algorithm
 AVB algorithm type.Supported options:
@@ -575,7 +575,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:522
+From //build/config/BUILDCONFIG.gn:525
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -649,7 +649,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:526
+From //build/config/BUILDCONFIG.gn:529
 
 ### chromium_build_dir
 This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
@@ -726,7 +726,7 @@ errors we explicitly reduce the number of jobs.
 
 **Current value (from the default):** `32`
 
-From //build/dart/BUILD.gn:16
+From //build/dart/BUILD.gn:17
 
 ### config_have_heap
 Tells openweave to include files that require heap access.
@@ -1039,7 +1039,7 @@ changed.  Set the version of the C++ standard to compile for, 17 or 20.
 
 **Current value (from the default):** `17`
 
-From //build/config/BUILD.gn:36
+From //build/config/BUILD.gn:29
 
 ### experimental_wlan_client_mlme
 Selects the SoftMAC client implementation to use. Choices:
@@ -1070,7 +1070,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1307
+From //build/config/BUILDCONFIG.gn:1318
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1200,6 +1200,25 @@ non-SDK buildroots.
 **Current value (from the default):** `""`
 
 From //build/fuchsia/sdk.gni:17
+
+### fuchsia_static_pkgs_goldens
+An optional lit of golden files for fuchsia.zbi static pkgs list. If
+specified, they would be compared against fuchsia.zbi static pkgs list
+during build time. At least one of the golden files must match.
+In normal case, there should only be one golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:81
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional lit of golden files for fuchsia.zbi bootFS file list. If
@@ -1735,6 +1754,9 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/profile:rustcoverage"]
   tags = ["instrumented", "coverage"]
 }, {
+  configs = ["//build/config/profile:coverage-sdk"]
+  tags = ["instrumented", "coverage"]
+}, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
   tags = ["instrumented", "instrumentation-runtime", "kernel-excluded", "ubsan"]
@@ -1804,7 +1826,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1166
+From //build/config/BUILDCONFIG.gn:1169
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2839,6 +2861,25 @@ Path to file to use for recovery logo
 
 From //src/recovery/system/system_recovery_args.gni:7
 
+### recovery_static_pkgs_goldens
+An optional list of golden files for recovery.zbi static pkgs list. If
+specified, they would be compared against recovery.zbi static pkgs list
+during build time.  At least one of the golden files must match.
+In normal case, there should only be golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:96
+
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
 specified, they would be compared against recovery.zbi bootFS file list
@@ -2898,7 +2939,7 @@ as the cache.
 
 **Current value (from the default):** `""`
 
-From //build/config/BUILD.gn:40
+From //build/config/rust/BUILD.gn:17
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
@@ -2949,7 +2990,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:32
+From //build/config/rust/BUILD.gn:13
 
 ### rustc_lib_dir
 Path to rustc lib directory.
@@ -3136,7 +3177,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1540
+From //build/config/BUILDCONFIG.gn:1551
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3145,7 +3186,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1545
+From //build/config/BUILDCONFIG.gn:1556
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3189,7 +3230,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1353
+From //build/config/BUILDCONFIG.gn:1364
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3373,7 +3414,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:79
+From //build/security.gni:109
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -3486,7 +3527,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1337
+From //build/config/BUILDCONFIG.gn:1348
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3554,6 +3595,14 @@ otherwise the most recently validated version is used.
 **Current value (from the default):** `false`
 
 From //src/chromium/build_args.gni:13
+
+### use_cxx_relative_vtables
+Controls if we enable relative-vtables for C++ targets.
+TODO(fxbug.dev/45314): Set this to true in a followup one-line CL.
+
+**Current value (from the default):** `true`
+
+From //build/config/clang/clang.gni:20
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -3639,7 +3688,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:36
+From //src/media/lib/ffmpeg/BUILD.gn:37
 
 ### use_swiftshader_vulkan_icd_on_host
 
@@ -3872,7 +3921,7 @@ From //build/images/args.gni:69
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:157
+From //build/config/fuchsia/BUILD.gn:165
 
 ### zircon_b_partition
 
