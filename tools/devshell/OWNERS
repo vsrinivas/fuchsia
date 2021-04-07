@@ -19,8 +19,8 @@ per-file             get-build-dir,list-boards,list-build-artifacts       = file
 # per-file-COMPONENT get-build-dir,list-boards,list-build-artifacts       = Build>Workflow
 per-file             list-products,ninjatrace2json,set-build-dir,use      = file: /build/OWNERS
 # per-file-COMPONENT list-products,ninjatrace2json,set-build-dir,use      = Build>Workflow
-per-file             list-packages                                        = file: /build/OWNERS
-# per-file-COMPONENT list-packages                                        = Build>Workflow
+per-file             list-packages,get-src-dir                            = file: /build/OWNERS
+# per-file-COMPONENT list-packages,get-src-dir                            = Build>Workflow
 
 per-file             set = olivernewman@google.com
 # per-file-COMPONENT set = Tools>Fx
