@@ -1040,11 +1040,11 @@ When [adding your component](#add-component-to-topology), assign the shared
 Your project may contain a `fuchsia_shell_package()` build target designed to
 execute in a shell environment. Many of these packages also contain a CMX file
 to support invoking the binary as a v1 component.
-When [exposing your services][#expose-services] to the `sys` environment,
+When [exposing your services](#expose-services) to the `sys` environment,
 include any services required by shell binaries.
 
 Note: If your component requires `shell-commands` directory access to invoke
-shell binaries, see [directory features][#directory-features] for more details.
+shell binaries, see [directory features](#directory-features) for more details.
 
 Shell binaries are run in the `sys` [environment][glossary-environment],
 and have access to all the capabilities provided there.
