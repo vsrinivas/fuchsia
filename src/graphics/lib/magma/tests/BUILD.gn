@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -87,56 +87,52 @@ group("l1") {
   ]
 }
 
-test_package("magma_nonhardware_tests") {
+fuchsia_unittest_package("magma_nonhardware_tests") {
+  manifest = "meta/magma_unit_tests.cmx"
   deps = [ "unit_tests" ]
-
-  tests = [
-    {
-      name = "magma_unit_tests"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 # Runs on any GPU if the only device present; if multiple
 # GPUs are present the vendor must be specified.
-test_package("magma-abi-conformance-tests") {
+fuchsia_unittest_package("magma-abi-conformance-tests") {
+  manifest = "meta/magma-abi-conformance-tests.cmx"
   deps = [ "integration" ]
-
-  tests = [
-    {
-      name = "magma_abi_conformance_tests"
-      manifest = "meta/magma-abi-conformance-tests.cmx"
-      environments = magma_hardware_envs - [ arm_gpu_envs ]
-    },
-  ]
+  test_specs = {
+    environments = magma_hardware_envs - [ arm_gpu_envs ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 # Runs only on ARM devices
-test_package("magma-abi-conformance-tests-arm") {
+fuchsia_unittest_package("magma-abi-conformance-tests-arm") {
+  manifest = "meta/magma-abi-conformance-tests-arm.cmx"
   deps = [ "integration" ]
-
-  tests = [
-    {
-      name = "magma_abi_conformance_tests"
-      manifest = "meta/magma-abi-conformance-tests-arm.cmx"
-      environments = arm_gpu_envs
-    },
-  ]
+  test_specs = {
+    environments = arm_gpu_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 # Runs only on VSI devices
-test_package("magma-abi-conformance-tests-vsi") {
+fuchsia_unittest_package("magma-abi-conformance-tests-vsi") {
+  manifest = "meta/magma-abi-conformance-tests-vsi.cmx"
   deps = [ "integration" ]
-
-  tests = [
-    {
-      name = "magma_abi_conformance_tests"
-      manifest = "meta/magma-abi-conformance-tests-vsi.cmx"
-
-      environments = [
-        sherlock_env,
-        vim3_env,
-      ]
-    },
-  ]
+  test_specs = {
+    environments = [
+      sherlock_env,
+      vim3_env,
+    ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

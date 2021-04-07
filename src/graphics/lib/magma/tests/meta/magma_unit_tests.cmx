@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/magma_unit_tests"
+        "binary": "bin/magma_unit_tests"
     },
     "sandbox": {
         "features": [
