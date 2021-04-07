@@ -21,6 +21,7 @@ fuchsia::ui::views::ViewRef MockSemanticProvider::CreateOrphanViewRef() {
 }
 
 namespace {
+
 fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref) {
   fuchsia::ui::views::ViewRef clone;
   FX_CHECK(fidl::Clone(view_ref, &clone) == ZX_OK);
@@ -30,11 +31,18 @@ fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref) {
 }  // namespace
 
 MockSemanticProvider::MockSemanticProvider(
-    fuchsia::accessibility::semantics::SemanticsManager* manager)
+    fuchsia::accessibility::semantics::SemanticsManager* manager,
+    fuchsia::accessibility::virtualkeyboard::Registry* registry)
     : view_ref_(CreateOrphanViewRef()) {
   manager->RegisterViewForSemantics(Clone(view_ref_),
                                     semantic_listener_bindings_.AddBinding(&semantic_listener_),
                                     tree_ptr_.NewRequest());
+
+  if (registry) {
+    registry->Register(Clone(view_ref_), /*is_visible=*/false,
+                       virtualkeyboard_listener_.NewRequest());
+  }
+
   commit_failed_ = false;
 
   semantic_listener_.SetSliderValueActionCallback(
@@ -111,6 +119,17 @@ void MockSemanticProvider::SetOnAccessibilityActionCallbackStatus(bool status) {
 
 bool MockSemanticProvider::OnAccessibilityActionRequestedCalled() const {
   return semantic_listener_.OnAccessibilityActionRequestedCalled();
+}
+
+bool MockSemanticProvider::IsVirtualkeyboardListenerConnected() const {
+  return virtualkeyboard_listener_.is_bound();
+}
+
+void MockSemanticProvider::UpdateVirtualkeyboardVisibility(bool is_visible) {
+  if (!virtualkeyboard_listener_) {
+    return;
+  }
+  virtualkeyboard_listener_->OnVisibilityChanged(is_visible, [](auto...) {});
 }
 
 }  // namespace accessibility_test

@@ -24,6 +24,7 @@ ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
       view_semantics_factory_(std::move(view_semantics_factory)),
       annotation_view_factory_(std::move(annotation_view_factory)),
       semantics_event_manager_(std::move(semantics_event_manager)),
+      virtualkeyboard_listener_binding_(this),
       context_(context),
       debug_dir_(debug_dir) {}
 
@@ -90,6 +91,33 @@ void ViewManager::RegisterViewForSemantics(
       []() {}, []() {}, []() {});
   view_wrapper_map_[koid] = std::make_unique<ViewWrapper>(
       std::move(view_ref), std::move(view_semantics), std::move(annotation_view));
+}
+
+void ViewManager::Register(
+    fuchsia::ui::views::ViewRef view_ref, bool is_visible,
+    fidl::InterfaceRequest<fuchsia::accessibility::virtualkeyboard::Listener> listener) {
+  zx_koid_t koid = GetKoid(view_ref);
+
+  if (virtualkeyboard_listener_binding_.is_bound() || !ViewHasSemantics(koid)) {
+    // In order to dispose of 'listener', as requested in the API, we need to finish the connection
+    // and then close it right away. If we don't do that here, the client may wait forever for the
+    // connection to finish.
+    fidl::Binding<fuchsia::accessibility::virtualkeyboard::Listener> temp(this,
+                                                                          std::move(listener));
+    temp.Close(ZX_ERR_PEER_CLOSED);
+    return;
+  }
+
+  // Note that we don't need to listen for the signals of this ViewRef here, since we are already
+  // listening for them when the view started providing semantics.
+  virtualkeyboard_listener_binding_.Bind(std::move(listener));
+  virtualkeyboard_visibility_ = {koid, is_visible};
+}
+
+void ViewManager::OnVisibilityChanged(bool updated_visibility,
+                                      OnVisibilityChangedCallback callback) {
+  virtualkeyboard_visibility_.second = updated_visibility;
+  callback();
 }
 
 const fxl::WeakPtr<::a11y::SemanticTree> ViewManager::GetTreeByKoid(const zx_koid_t koid) const {
@@ -187,6 +215,10 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
   }
 
   return tree_weak_ptr->GetPreviousNode(node_id, std::move(filter));
+}
+
+bool ViewManager::ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) {
+  return view_ref_koid == virtualkeyboard_visibility_.first && virtualkeyboard_visibility_.second;
 }
 
 void ViewManager::ClearAllHighlights() {

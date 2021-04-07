@@ -15,6 +15,7 @@ source_set("view") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.accessibility.virtualkeyboard",
     "//sdk/fidl/fuchsia.math",
     "//src/ui/a11y/lib/util",
     "//src/ui/scenic/lib/gfx",

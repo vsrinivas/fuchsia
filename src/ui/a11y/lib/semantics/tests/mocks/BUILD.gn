@@ -30,6 +30,7 @@ source_set("mocks") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.accessibility.virtualkeyboard",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",

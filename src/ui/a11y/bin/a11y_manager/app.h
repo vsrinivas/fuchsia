@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/accessibility/gesture/cpp/fidl.h>
+#include <fuchsia/accessibility/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -169,6 +170,8 @@ class App {
   a11y::Magnifier magnifier_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> semantics_manager_bindings_;
+  fidl::BindingSet<fuchsia::accessibility::virtualkeyboard::Registry>
+      virtualkeyboard_registry_bindings_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
   fidl::BindingSet<fuchsia::ui::focus::FocusChainListener> focus_chain_listener_bindings_;

@@ -6,6 +6,7 @@
 #define SRC_UI_A11Y_LIB_SEMANTICS_TESTS_MOCKS_MOCK_SEMANTIC_PROVIDER_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/accessibility/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
@@ -23,9 +24,13 @@ namespace accessibility_test {
 class MockSemanticProvider {
  public:
   // On initialization, MockSemanticProvider tries to connect to
-  // |fuchsia::accessibility::ViewManager| service in |manager| and
+  // |fuchsia::accessibility::SemanticsManager| service in |manager| and
   // registers with it's view_ref, binding and interface request.
-  explicit MockSemanticProvider(fuchsia::accessibility::semantics::SemanticsManager* manager);
+  // If not nullptr, it also connects through |registry| to
+  // |fuchsia::accessibility::virtualkeyboard::Registry|.
+  explicit MockSemanticProvider(
+      fuchsia::accessibility::semantics::SemanticsManager* manager,
+      fuchsia::accessibility::virtualkeyboard::Registry* registry = nullptr);
   ~MockSemanticProvider() = default;
 
   zx_koid_t koid() const { return a11y::GetKoid(view_ref_); };
@@ -84,10 +89,19 @@ class MockSemanticProvider {
   // Returns true if a call to OnAccessibilityActionRequested() is made.
   bool OnAccessibilityActionRequestedCalled() const;
 
+  // Returns true if the virtual keyboard listener is connected.
+  bool IsVirtualkeyboardListenerConnected() const;
+
+  // Updates the virtual keyboard visibility if the listener is connected.
+  void UpdateVirtualkeyboardVisibility(bool is_visible);
+
  private:
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
+
+  // The virtual keyboard listener used to indicate the visibility of a virtual keyboard in a view.
+  fuchsia::accessibility::virtualkeyboard::ListenerPtr virtualkeyboard_listener_;
 
   // Value by which the slider is incremented or decremented.
   uint32_t slider_delta_ = 1;

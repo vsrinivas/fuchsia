@@ -605,6 +605,14 @@ TEST_F(AppUnitTest, ScreenReaderUsesDefaultLocaleIfPropertyProviderDisconnectsOr
   EXPECT_EQ(app->screen_reader()->context()->locale_id(), "en-US");
 }
 
+TEST_F(AppUnitTest, OffersVirtualkeyboardServices) {
+  auto app = GetApp();
+  fuchsia::accessibility::virtualkeyboard::RegistryPtr registry;
+  context_provider_.ConnectToPublicService(registry.NewRequest());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(registry.is_bound());
+}
+
 // TODO(fxbug.dev/49924): Improve tests to cover what happens if services aren't available at
 // startup.
 

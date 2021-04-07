@@ -6,8 +6,9 @@
 #define SRC_UI_A11Y_LIB_VIEW_VIEW_MANAGER_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/accessibility/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/types.h>
@@ -21,12 +22,14 @@
 
 namespace a11y {
 
-// A service to manage producing and consuming of semantics.
+// A manager to manage the information offered by views to accessibility.
 //
 // Semantic Providers connect to this service to start supplying semantic
 // information for a particular View while Semantic Consumers query available
-// semantic information managed by this service.
+// semantic information managed by this manager.
 class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
+                    public fuchsia::accessibility::virtualkeyboard::Registry,
+                    public fuchsia::accessibility::virtualkeyboard::Listener,
                     public SemanticsSource,
                     public FocusHighlightManager {
  public:
@@ -72,6 +75,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       zx_koid_t koid, uint32_t node_id,
       fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
+  // |SemanticsSource|
+  bool ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) override;
+
   // |FocusHighlightManager|
   void ClearAllHighlights() override;
   void ClearFocusHighlights() override;
@@ -112,12 +118,20 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // Returns true on success, false on failure.
   bool RemoveHighlight();
 
-  // |fuchsia::accessibility::semantics::ViewManager|:
+  // |fuchsia::accessibility::semantics::SemanticsManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
       override;
+
+  // |fuchsia::accessibility::virtualkeyboard::Registry|:
+  void Register(
+      fuchsia::ui::views::ViewRef view_ref, bool is_visible,
+      fidl::InterfaceRequest<fuchsia::accessibility::virtualkeyboard::Listener> listener) override;
+
+  // |fuchsia::accessibility::virtualkeyboard::Listener|:
+  void OnVisibilityChanged(bool updated_visibility, OnVisibilityChangedCallback callback) override;
 
   // ViewSignalHandler is called when ViewRef peer is destroyed. It is
   // responsible for closing the channel and cleaning up the associated SemanticTree.
@@ -151,6 +165,10 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory_;
 
   std::unique_ptr<SemanticsEventManager> semantics_event_manager_;
+
+  fidl::Binding<fuchsia::accessibility::virtualkeyboard::Listener>
+      virtualkeyboard_listener_binding_;
+  std::pair<zx_koid_t, bool> virtualkeyboard_visibility_;
 
   sys::ComponentContext* context_;
 

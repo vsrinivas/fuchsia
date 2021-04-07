@@ -41,6 +41,8 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   state_.set_announce_screen_reader_enabled(boot_info_manager->LastRebootWasUserInitiated());
 
   context->outgoing()->AddPublicService(semantics_manager_bindings_.GetHandler(view_manager_));
+  context->outgoing()->AddPublicService(
+      virtualkeyboard_registry_bindings_.GetHandler(view_manager_));
   context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
   context->outgoing()->AddPublicService(
       gesture_listener_registry_bindings_.GetHandler(gesture_listener_registry_));

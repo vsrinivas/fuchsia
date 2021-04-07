@@ -27,6 +27,9 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
 
   // |SemanticsSource|
+  bool ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) override { return false; }
+
+  // |SemanticsSource|
   std::optional<fuchsia::ui::views::ViewRef> ViewRefClone(zx_koid_t view_ref_koid) override;
 
   // Creates a semantic node that can be retrieved using |GetSemanticNode()|.

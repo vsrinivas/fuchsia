@@ -60,7 +60,10 @@ class ViewManagerTest : public gtest::TestLoopFixture {
         context_provider_.context(), debug_dir());
     view_manager_->SetAnnotationsEnabled(true);
 
-    semantic_provider_ = std::make_unique<MockSemanticProvider>(view_manager_.get());
+    semantic_provider_ =
+        std::make_unique<MockSemanticProvider>(view_manager_.get(), view_manager_.get());
+
+    RunLoopUntilIdle();
   }
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
@@ -441,6 +444,27 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawHighlightWithAnnotationsDisable
   ASSERT_TRUE(maybe_highlighted_view);
   auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
+}
+
+TEST_F(ViewManagerTest, VirtualkeyboardListenerUpdates) {
+  EXPECT_TRUE(semantic_provider_->IsVirtualkeyboardListenerConnected());
+  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
+  semantic_provider_->UpdateVirtualkeyboardVisibility(true);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
+  auto invalid_koid = semantic_provider_->koid() + 1;
+  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(invalid_koid));
+
+  // Connects a second semantic provider which tries to add a new virtual keyboard listener. This
+  // one should fail, as only one registered is supported.
+  auto semantic_provider_2 =
+      std::make_unique<MockSemanticProvider>(view_manager_.get(), view_manager_.get());
+  RunLoopUntilIdle();
+  EXPECT_FALSE(semantic_provider_2->IsVirtualkeyboardListenerConnected());
+
+  semantic_provider_->UpdateVirtualkeyboardVisibility(false);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
 }
 
 }  // namespace
