@@ -63,7 +63,7 @@ func newServer(ctx context.Context, dir, blobsDir string, localHostname string, 
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			lw := &loggingWriter{w, 0}
 			mux.ServeHTTP(lw, r)
-			logger.Infof(ctx, "%s [pm serve] %d %s\n",
+			logger.Infof(ctx, "%s [repo serve] %d %s\n",
 				time.Now().Format("2006-01-02 15:04:05"), lw.status, r.RequestURI)
 		}),
 	}
@@ -117,11 +117,13 @@ func genConfig(dir string, localHostname string, repoName string, port int) (con
 	}
 
 	type sourceConfig struct {
-		ID           string           `json:"id"`
-		RepoURL      string           `json:"repoUrl"`
-		BlobRepoURL  string           `json:"blobRepoUrl"`
-		RootKeys     []repo.KeyConfig `json:"rootKeys"`
-		StatusConfig statusConfig     `json:"statusConfig"`
+		ID            string           `json:"id"`
+		RepoURL       string           `json:"repoUrl"`
+		BlobRepoURL   string           `json:"blobRepoUrl"`
+		RootKeys      []repo.KeyConfig `json:"rootKeys"`
+		RootVersion   int              `json:"rootVersion"`
+		RootThreshold int              `json:"rootThreshold"`
+		StatusConfig  statusConfig     `json:"statusConfig"`
 	}
 
 	f, err := os.Open(filepath.Join(dir, "root.json"))
@@ -156,11 +158,18 @@ func genConfig(dir string, localHostname string, repoName string, port int) (con
 	}
 	configURL = fmt.Sprintf("%s/%s/config.json", repoURL, repoName)
 
+	var rootThreshold int
+	if rootRole, ok := root.Roles["root"]; ok {
+		rootThreshold = rootRole.Threshold
+	}
+
 	config, err = json.Marshal(&sourceConfig{
-		ID:          repoName,
-		RepoURL:     repoURL,
-		BlobRepoURL: fmt.Sprintf("%s/blobs", repoURL),
-		RootKeys:    rootKeys,
+		ID:            repoName,
+		RepoURL:       repoURL,
+		BlobRepoURL:   fmt.Sprintf("%s/blobs", repoURL),
+		RootKeys:      rootKeys,
+		RootVersion:   root.Version,
+		RootThreshold: rootThreshold,
 		StatusConfig: statusConfig{
 			Enabled: true,
 		},
