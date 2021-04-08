@@ -1,0 +1,93 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Executes an ffx command as an action during the build.
+#
+# This is a wrapper around compiled_action() that automatically adds ffx as
+# a dependency and an input, and properly configures the args.
+#
+# Parameters
+#
+#   args (required)
+#       [list of strings] Same meaning as action().  All args to ffx need to be
+#       specified.
+#
+#   outputs (required)
+#       [list of files] Like the outputs of action().
+#
+#   inputs (optional)
+#   sources (optional)
+#       Files the plugin takes as input. The step will be re-run whenever any
+#       of these change. If inputs is empty, the step will run only when the
+#       plugin itself changes.
+#
+#   args (all optional)
+#   depfile
+#   deps
+#   public_deps
+#   testonly
+#   visibility
+#       Same meaning as action()
+#
+# Example of usage:
+#
+#   ffx_action("run_a_plugin") {
+#     outputs = [
+#       "$target_obj_dir/some_output_file",
+#       "$target_obj_dir/some_other_output_file",
+#     ]
+#
+#     # The tool takes this input.
+#     inputs = [ "my_input_file" ]
+#
+#     # In this case, the plugin takes as arguments the input file and the output
+#     # build dir (both relative to the root_build_dir that the plugin will be
+#     # run in) and will produce the output files listed above.
+#     args = [
+#       "path",
+#       "to",
+#       "plugin",
+#       rebase_path("my_input_file", root_build_dir),
+#       "--output-dir", rebase_path(target_out_dir, root_build_dir),
+#     ]
+#   }
+#
+#  Which is equivalent to:
+#    `ffx path to plugin src/foo/my_input_file --output-dir obj/bar`
+
+template("ffx_action") {
+  assert(defined(invoker.args), "args must be defined for $target_name")
+  assert(defined(invoker.outputs), "outputs must be defined for $target_name")
+
+  # Invoke the compiled_action template for the call to the ffx plugin.
+  #
+  # This uses the compiled_action() template instead of directly creating an
+  # action so that it will pick up the "gn_run_binary.sh" and hermetic deps
+  # checking that's done with the compiled_action() template.
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "args",
+                             "data_deps",
+                             "depfile",
+                             "deps",
+                             "hermetic_deps",
+                             "all_outputs_fresh",
+                             "repeatable",
+                             "inputs",
+                             "metadata",
+                             "outputs",
+                             "public_deps",
+                             "sources",
+                             "testonly",
+                             "tool_output_name",
+                             "visibility",
+                           ])
+
+    tool = "//src/developer/ffx:ffx_bin"
+    tool_output_name = "ffx"
+  }
+}
