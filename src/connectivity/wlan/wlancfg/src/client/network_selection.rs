@@ -193,6 +193,11 @@ impl NetworkSelector {
                 info!("Scan results are {}s old, triggering a scan", scan_age.into_seconds());
             }
 
+            // Clear out the old scan results
+            let mut scan_result_guard = self.scan_result_cache.lock().await;
+            scan_result_guard.results = vec![];
+            drop(scan_result_guard);
+
             let mut cobalt_api_clone = self.cobalt_api.lock().await.clone();
             let potentially_hidden_saved_networks =
                 config_management::select_subset_potentially_hidden_networks(
@@ -1619,6 +1624,56 @@ mod tests {
         let scan_result_guard = exec.run_singlethreaded(network_selector.scan_result_cache.lock());
         assert!(scan_result_guard.updated_at > test_start_time);
         assert!(scan_result_guard.updated_at < zx::Time::get_monotonic());
+        drop(scan_result_guard);
+    }
+
+    #[test]
+    fn perform_scan_error_doesnt_use_stale_results() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+        let network_selector = test_values.network_selector;
+
+        // Set the scan result cache to be older than STALE_SCAN_AGE
+        let mut scan_result_guard =
+            exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+        scan_result_guard.updated_at =
+            zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_seconds(1));
+        // Add some stale/old results to the cache
+        scan_result_guard.results = vec![types::ScanResult {
+            ssid: "foo".as_bytes().to_vec(),
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
+            entries: vec![],
+            compatibility: types::Compatibility::Supported,
+        }];
+        drop(scan_result_guard);
+
+        // Kick off scan
+        let scan_fut = network_selector.perform_scan(test_values.iface_manager);
+        pin_mut!(scan_fut);
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back an error
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
+        // Process scan
+        exec.run_singlethreaded(&mut scan_fut);
+
+        // Check there are no scan results presents for use
+        let scan_result_guard = exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+        assert_eq!(scan_result_guard.results.len(), 0);
         drop(scan_result_guard);
     }
 
