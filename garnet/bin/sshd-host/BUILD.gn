@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [ "service.cc" ]
@@ -34,54 +33,29 @@ executable("bin") {
   ]
 }
 
-package("sshd-host") {
+resource("sshd-host-resources") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_package_with_single_component("sshd-host") {
+  manifest = "meta/sshd-host.cmx"
   deps = [
     ":bin",
+
+    # Used by programs that need to load ICU locale data, such as tz-util.
+    ":sshd-host-resources",
     "//build/validate:non_production_tag",
     "//third_party/openssh-portable:hostkeygen",
     "//third_party/openssh-portable:scp",
     "//third_party/openssh-portable:sftp-server",
     "//third_party/openssh-portable:sshd",
   ]
-
-  binaries = [
-    {
-      name = "sshd-host"
-    },
-    {
-      name = "hostkeygen"
-    },
-    {
-      name = "scp"
-    },
-    {
-      name = "sftp-server"
-    },
-    {
-      name = "sshd"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/sshd-host.cmx")
-      dest = "sshd-host.cmx"
-    },
-  ]
-
-  # Used by programs that need to load ICU locale data, such as tz-util.
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
-  ]
 }
 
 config_data("config") {
   for_pkg = "sshd-host"
-  sources =
-      [ rebase_path("//third_party/openssh-portable/fuchsia/sshd_config") ]
+  sources = [ "//third_party/openssh-portable/fuchsia/sshd_config" ]
   outputs = [ "sshd_config" ]
 }
 
@@ -106,15 +80,12 @@ executable("test") {
   ]
 }
 
-test_package("sshd-host-tests") {
+fuchsia_unittest_package("sshd-host-tests") {
+  manifest = "meta/sshd-host-test.cmx"
   deps = [ ":test" ]
-
-  tests = [
-    {
-      name = "sshd-host-test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
