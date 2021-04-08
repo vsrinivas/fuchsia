@@ -5,16 +5,11 @@
 #include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/inotify.h>
-#include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/unsafe.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zxio/inception.h>
-#include <lib/zxio/ops.h>
 #include <limits.h>
 
 #include <fbl/unique_fd.h>
@@ -96,18 +91,18 @@ class TestServer final : public fidl::WireInterface<fio::Directory> {
 };
 
 class InotifyAddFilter : public zxtest::Test {
- public:
+ protected:
+  InotifyAddFilter() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
   void SetUp() override {
-    server_ = std::make_unique<TestServer>();
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_OK(loop_->StartThread("fake-filesystem"));
+    ASSERT_OK(loop_.StartThread("fake-filesystem"));
     ASSERT_TRUE(fd_ = fbl::unique_fd(inotify_init1(0)), "%s", strerror(errno));
 
     // client-server channel logic
     zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_OK(endpoints.status_value());
     fit::result result =
-        fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server), server_.get());
+        fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &server_);
     ASSERT_TRUE(result.is_ok(), "%s", zx_status_get_string(result.error()));
 
     // install namespace for local-filesystem.
@@ -118,16 +113,16 @@ class InotifyAddFilter : public zxtest::Test {
   const fbl::unique_fd& fd() { return fd_; }
   void TearDown() final { ASSERT_OK(fdio_ns_unbind(namespace_, kTmpfsPath)); }
 
- protected:
-  std::unique_ptr<TestServer> server_;
-  std::unique_ptr<async::Loop> loop_;
+ private:
+  TestServer server_;
+  async::Loop loop_;
   fdio_ns_t* namespace_;
   fbl::unique_fd fd_;
 };
 
 TEST(InotifyTest, InitBadFlags) {
-  int inotifyfd = inotify_init1(5);
-  ASSERT_EQ(inotifyfd, -1, "inotify_init1() did not fail with bad flags.");
+  ASSERT_EQ(inotify_init1(5), -1);
+  ASSERT_ERRNO(EINVAL);
 }
 
 TEST_F(InotifyAddFilter, AddWatchWithNullFilePath) {
