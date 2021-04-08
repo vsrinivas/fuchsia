@@ -128,6 +128,29 @@ void MemoryWatchdog::OnOom() {
   }
 }
 
+bool MemoryWatchdog::IsSignalDue(PressureLevel idx, zx_time_t time_now) const {
+  // We signal a memory state change immediately if any of these conditions are met:
+  // 1) The current index is lower than the previous one signaled (i.e. available memory is lower
+  // now), so that clients can act on the signal quickly.
+  // 2) |hysteresis_seconds_| have elapsed since the last time we examined the state.
+  return idx < prev_mem_event_idx_ ||
+         zx_time_sub_time(time_now, prev_mem_state_eval_time_) >= hysteresis_seconds_;
+}
+
+bool MemoryWatchdog::IsEvictionRequired(PressureLevel idx) const {
+  // Trigger asynchronous eviction if:
+  // 1) the memory availability state is more critical than the previous one
+  // AND
+  // 2) we're configured to evict at that level.
+  //
+  // Do not trigger asynchronous eviction at OOM level, since we perform synchronous eviction in
+  // that case in order to attempt a quick recovery. Also, we're about to signal filesystems to shut
+  // down on OOM, after which eviction will be a no-op anyway, since there will no longer be any
+  // pager-backed memory to evict.
+  return idx < prev_mem_event_idx_ && idx <= max_eviction_level_ &&
+         idx != PressureLevel::kOutOfMemory;
+}
+
 void MemoryWatchdog::WorkerThread() {
   while (true) {
     // If we've hit OOM level perform some immediate synchronous eviction to attempt to avoid OOM.
@@ -155,20 +178,10 @@ void MemoryWatchdog::WorkerThread() {
 
     auto time_now = current_time();
 
-    // We signal a memory state change immediately if:
-    // 1) The current index is lower than the previous one signaled (i.e. available memory is lower
-    // now), so that clients can act on the signal quickly.
-    // 2) |hysteresis_seconds_| have elapsed since the last time we examined the state.
-    if (idx < prev_mem_event_idx_ ||
-        zx_time_sub_time(time_now, prev_mem_state_eval_time_) >= hysteresis_seconds_) {
+    if (IsSignalDue(idx, time_now)) {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
 
-      // Trigger eviction if the memory availability state is more critical than the previous one,
-      // and we're configured to evict at that level.
-      // Do not trigger asynchronous eviction at OOM level, since we already performed synchronous
-      // eviction above. Also, we're about to signal filesystems to shut down, after which eviction
-      // will be a no-op anyway, since there will no longer be any pager-backed memory to evict.
-      if (idx < prev_mem_event_idx_ && idx <= max_eviction_level_ && idx != 0) {
+      if (IsEvictionRequired(idx)) {
         // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
         // with the callback and are free to update the targets. Cancel will return true if the
         // timer was canceled before it was scheduled on a cpu, i.e. an eviction was outstanding.
@@ -214,7 +227,7 @@ void MemoryWatchdog::WorkerThread() {
       prev_mem_state_eval_time_ = time_now;
 
       // If we're below the out-of-memory watermark, trigger OOM behavior.
-      if (idx == 0) {
+      if (idx == PressureLevel::kOutOfMemory) {
         OnOom();
       }
 

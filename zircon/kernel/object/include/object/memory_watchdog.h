@@ -49,6 +49,14 @@ class MemoryWatchdog {
   // Helper called by the WorkerThread when OOM conditions are hit.
   void OnOom();
 
+  // Called by the WorkerThread to determine if a kernel event needs to be signaled corresponding to
+  // pressure change to level |idx|.
+  inline bool IsSignalDue(PressureLevel idx, zx_time_t time_now) const;
+
+  // Called by the WorkerThread to determine if kernel eviction (asynchronous) needs to be triggered
+  // in response to pressure change to level |idx|.
+  inline bool IsEvictionRequired(PressureLevel idx) const;
+
   // Kernel-owned events used to signal userspace at different levels of memory pressure.
   ktl::array<fbl::RefPtr<EventDispatcher>, PressureLevel::kNumLevels> mem_pressure_events_;
 
