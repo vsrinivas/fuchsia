@@ -576,6 +576,41 @@ protocol Foo {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+TEST(ConverterTests, ResourceDeclaration) {
+  std::string old_version = R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type obj_type = strict enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, StructEmpty) {
   std::string old_version = R"FIDL(
 library example;

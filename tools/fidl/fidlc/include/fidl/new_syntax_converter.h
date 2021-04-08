@@ -35,9 +35,6 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {}
   void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const& element) override {}
   void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {}
-  void OnResourceDeclaration(
-      std::unique_ptr<fidl::raw::ResourceDeclaration> const& element) override {}
-  void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override {}
   void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override {}
   void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override {}
   void OnSourceElementStart(const raw::SourceElement& element) override {}
@@ -58,6 +55,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override {}
   // void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {}
   // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {}
+  // void OnResourceDeclaration(std::unique_ptr<fidl::raw::ResourceDeclaration> const& element)
+  // override {}
 
   // The remaining "On*" methods are loosely organized by keyword.  All of them
   // must be overwritten by the implementation.
@@ -76,6 +75,9 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
   // Method Parameters.
   void OnParameter(std::unique_ptr<raw::Parameter> const& element) override;
+
+  // Resource Property.
+  void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override;
 
   // Structs.
   void OnStructDeclaration(std::unique_ptr<raw::StructDeclaration> const& element) override;

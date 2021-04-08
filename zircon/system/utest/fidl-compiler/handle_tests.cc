@@ -30,7 +30,7 @@ resource struct MyStruct {
 };
 )FIDL",
                                std::move(experimental_flags));
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
@@ -59,7 +59,7 @@ resource struct MyStruct {
 )FIDL",
                                std::move(experimental_flags));
 
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
@@ -69,7 +69,28 @@ resource struct MyStruct {
   ASSERT_NULL(h_type_ctor->handle_rights);
 }
 
+// TODO(fxbug.dev/71536): implement client/server end in the new syntax
 TEST(HandleTests, BadInvalidHandleRightsTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  auto library = WithLibraryZx(R"FIDL(
+library example;
+
+using zx;
+
+protocol P {
+    Method(h zx.handle:<VMO, 1>);  // rights must be zx.rights-typed.
+};
+)FIDL",
+                               std::move(experimental_flags));
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveHandleRights);
+}
+
+TEST(HandleTests, BadInvalidHandleRightsTestOld) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -102,7 +123,7 @@ resource struct MyStruct {
 };
 )FIDL",
                                std::move(experimental_flags));
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
@@ -127,7 +148,7 @@ resource struct MyStruct {
 )FIDL",
                                std::move(experimental_flags));
 
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   auto a = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
   EXPECT_TRUE(a->handle_subtype_identifier.has_value());
   ASSERT_TRUE(a->handle_subtype_identifier.value().span()->data() == "THREAD");
@@ -163,6 +184,26 @@ resource struct MyStruct {
 
 TEST(HandleTests, BadInvalidFidlDefinedHandleSubtype) {
   fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  auto library = WithLibraryZx(R"FIDL(
+library example;
+
+using zx;
+
+type MyStruct = struct {
+  a zx.handle:ZIPPY;
+};
+)FIDL",
+                               std::move(experimental_flags));
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleSubtype);
+  EXPECT_TRUE(library.errors()[0]->msg.find("ZIPPY") != std::string::npos);
+}
+
+TEST(HandleTests, BadInvalidFidlDefinedHandleSubtypeOld) {
+  fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
@@ -180,7 +221,7 @@ struct MyStruct {
   EXPECT_TRUE(library.errors()[0]->msg.find("ZIPPY") != std::string::npos);
 }
 
-TEST(HandleTests, BadDisallowOldHandles) {
+TEST(HandleTests, BadDisallowOldHandlesOld) {
   fidl::ExperimentalFlags experimental_flags;
 
   auto library = WithLibraryZx(R"FIDL(
@@ -222,7 +263,7 @@ resource struct MyStruct {
 )FIDL",
                       std::move(experimental_flags));
 
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
@@ -233,6 +274,35 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+    };
+};
+
+type MyStruct = resource struct {
+    h handle:<VMO, 1>;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingRightsProperty,
+                                      fidl::ErrCouldNotResolveHandleRights);
+}
+
+TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTestOld) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -262,6 +332,30 @@ resource struct MyStruct {
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition handle : uint32 {
+    properties {
+        rights uint32;
+    };
+};
+
+type MyStruct = resource struct {
+    h handle:VMO;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingSubtypeProperty,
+                                      fidl::ErrCouldNotResolveHandleSubtype);
+}
+
+TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTestOld) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 

@@ -223,6 +223,15 @@ void ConvertingTreeVisitor::OnStructDeclaration(
   TreeVisitor::OnStructDeclaration(element);
 }
 
+void ConvertingTreeVisitor::OnResourceProperty(
+    const std::unique_ptr<raw::ResourceProperty>& element) {
+  const auto& type_ctor = std::get<std::unique_ptr<raw::TypeConstructorOld>>(element->type_ctor);
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<NameAndTypeConversion>(element->identifier, type_ctor);
+  Converting converting(this, std::move(conv), type_ctor->start_, element->identifier->end_);
+  TreeVisitor::OnResourceProperty(element);
+}
+
 void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMember>& element) {
   std::unique_ptr<Conversion> conv =
       std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);

@@ -176,6 +176,9 @@ class TestLibrary final {
     new_syntax_lib.experimental_flags_ = experimental_flags_;
     new_syntax_lib.experimental_flags_.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
     new_syntax_lib.typespace_ = &fresh_typespace;
+    new_syntax_lib.library_ = std::make_unique<fidl::flat::Library>(
+        new_syntax_lib.all_libraries_, new_syntax_lib.reporter_, new_syntax_lib.typespace_,
+        GetGeneratedOrdinal64ForTesting, new_syntax_lib.experimental_flags_);
 
     for (auto& source : converted_files) {
       new_syntax_lib.AddSource(std::move(source));
