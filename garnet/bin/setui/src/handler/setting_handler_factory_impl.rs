@@ -135,7 +135,6 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::future::FutureExt;
     use futures::select;
-    use std::convert::TryFrom;
 
     /// Test controller used to test startup waiting behavior in SettingHandlerFactoryImpl.
     struct TestController;
@@ -196,8 +195,10 @@ mod tests {
                 filter::Condition::Custom(Arc::new(move |message: &Message<_, _, _>| {
                     // Only filter for reply's that contain results.
                     matches!(message.get_type(), MessageType::Reply(_))
-                        && Payload::try_from(message.payload())
-                            .map_or(false, |payload| matches!(payload, Payload::Result(_)))
+                        && matches!(
+                            message.payload(),
+                            service::Payload::Controller(Payload::Result(_))
+                        )
                 })),
             ))))
             .await

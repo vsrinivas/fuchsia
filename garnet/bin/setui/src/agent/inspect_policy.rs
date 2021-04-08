@@ -73,8 +73,7 @@ impl InspectPolicyAgent {
             .messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(|message| {
-                    PolicyPayload::try_from(message.payload())
-                        .map_or(false, |payload| matches!(payload, PolicyPayload::Request(_)))
+                    matches!(message.payload(), service::Payload::Policy(PolicyPayload::Request(_)))
                 })),
             ))))
             .await

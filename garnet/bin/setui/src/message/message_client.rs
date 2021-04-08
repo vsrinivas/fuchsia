@@ -85,7 +85,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageClien
     }
 
     /// Returns the payload associated with the associated Message.
-    pub fn get_payload(&self) -> P {
+    pub fn get_payload(&self) -> &P {
         self.message.payload()
     }
 

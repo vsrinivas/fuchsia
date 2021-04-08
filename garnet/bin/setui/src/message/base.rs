@@ -557,9 +557,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
         }
     }
 
-    /// Returns a copy of the message's payload.
-    pub fn payload(&self) -> P {
-        self.payload.clone()
+    /// Returns a reference to the message's payload.
+    pub fn payload(&self) -> &P {
+        &self.payload
     }
 
     /// Delivers the supplied status to all participants in the return path.

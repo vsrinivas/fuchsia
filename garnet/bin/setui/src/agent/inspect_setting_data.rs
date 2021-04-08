@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 use fuchsia_async as fasync;
@@ -95,11 +94,12 @@ impl InspectSettingAgent {
             .messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
-                    HandlerPayload::try_from(message.payload()).map_or(false, |payload| {
-                        // Only catch messages that were originally sent from the interfaces, and
-                        // that contain a request for the specific setting type we're interested in.
-                        matches!(payload, HandlerPayload::Event(Event::Changed(_)))
-                    })
+                    // Only catch messages that were originally sent from the interfaces, and
+                    // that contain a request for the specific setting type we're interested in.
+                    matches!(
+                        message.payload(),
+                        service::Payload::Controller(HandlerPayload::Event(Event::Changed(_)))
+                    )
                 })),
             ))))
             .await

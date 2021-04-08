@@ -711,7 +711,7 @@ async fn test_reply_propagation() {
     // Create broker to propagate a derived message.
     let (_, mut broker) = messenger_factory
         .create(MessengerType::Broker(Some(filter::Builder::single(filter::Condition::Custom(
-            Arc::new(move |message| message.payload() == REPLY),
+            Arc::new(move |message| *message.payload() == REPLY),
         )))))
         .await
         .expect("broker should be created");
@@ -1002,7 +1002,7 @@ async fn test_broker_filter_custom() {
         .expect("broadcast messenger should be created");
     // Filter to target only the ORIGINAL message.
     let filter = filter::Builder::single(filter::Condition::Custom(Arc::new(|message| {
-        message.payload() == ORIGINAL
+        *message.payload() == ORIGINAL
     })));
     // Broker that should only target ORIGINAL messages.
     let (_, mut broker_receptor) = messenger_factory
@@ -1036,7 +1036,7 @@ async fn test_broker_filter_caputring_closure() {
     let expected_payload = TestMessage::Foo;
     let expected_payload_clone = expected_payload.clone();
     let filter = filter::Builder::single(filter::Condition::Custom(Arc::new(move |message| {
-        message.payload() == expected_payload_clone
+        *message.payload() == expected_payload_clone
     })));
     // Broker that should only target Foo messages.
     let (_, mut broker_receptor) = messenger_factory
@@ -1073,7 +1073,7 @@ async fn test_broker_filter_combined_any() {
 
     // Filter to target only the ORIGINAL message.
     let filter = filter::Builder::new(
-        filter::Condition::Custom(Arc::new(|message| message.payload() == ORIGINAL)),
+        filter::Condition::Custom(Arc::new(|message| *message.payload() == ORIGINAL)),
         filter::Conjugation::Any,
     )
     .append(filter::Condition::Filter(filter::Builder::single(filter::Condition::Audience(
@@ -1121,7 +1121,7 @@ async fn test_broker_filter_combined_all() {
 
     // Filter to target only the ORIGINAL message.
     let filter = filter::Builder::new(
-        filter::Condition::Custom(Arc::new(|message| message.payload() == ORIGINAL)),
+        filter::Condition::Custom(Arc::new(|message| *message.payload() == ORIGINAL)),
         filter::Conjugation::All,
     )
     .append(filter::Condition::Filter(filter::Builder::single(filter::Condition::Audience(

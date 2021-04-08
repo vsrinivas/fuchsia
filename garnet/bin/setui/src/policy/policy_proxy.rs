@@ -15,7 +15,6 @@ use crate::policy::{
 use crate::service;
 use crate::service::TryFromWithClient;
 use futures::lock::Mutex;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 /// `PolicyProxy` handles the routing of policy requests and the intercepting of setting requests to
@@ -53,8 +52,7 @@ impl PolicyProxy {
             filter::Conjugation::All,
         )
         .append(filter::Condition::Custom(Arc::new(|message| {
-            Payload::try_from(message.payload())
-                .map_or(false, |payload| matches!(payload, Payload::Response(Ok(Some(_)))))
+            matches!(message.payload(), service::Payload::Setting(Payload::Response(Ok(Some(_)))))
         })))
         .append(filter::Condition::Custom(Arc::new(move |message| {
             if let MessageType::Reply(message) = message.get_type() {

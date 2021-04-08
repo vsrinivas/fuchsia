@@ -139,7 +139,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
         if self
             .event_sender
             .unbounded_send(MessageEvent::Message(
-                message.payload(),
+                message.payload().clone(),
                 MessageClient::new(client_id, message, self.messenger.clone()),
             ))
             .is_err()
