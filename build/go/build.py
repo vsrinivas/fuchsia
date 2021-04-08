@@ -9,7 +9,6 @@ import argparse
 import errno
 import json
 import os
-import shutil
 import subprocess
 import sys
 
@@ -134,8 +133,20 @@ def main():
 
     # Clean up any old project path to avoid leaking old dependencies.
     gopath_src = os.path.join(project_path, 'src')
+    # Manually removing all subdirectories and files instead of using
+    # shutil.rmtree, to avoid registering spurious reads on stale
+    # subdirectories. See https://fxbug.dev/74084.
     if os.path.exists(gopath_src):
-        shutil.rmtree(gopath_src)
+        for root, dirs, files in os.walk(gopath_src, topdown=False):
+            for file in files:
+                os.unlink(os.path.join(root, file))
+            for dir in dirs:
+                full_path = os.path.join(root, dir)
+                if os.path.islink(full_path):
+                    os.unlink(full_path)
+                else:
+                    os.rmdir(full_path)
+
     dst_vendor = os.path.join(gopath_src, 'vendor')
     os.makedirs(dst_vendor)
     for src in ['go.mod', 'go.sum']:
