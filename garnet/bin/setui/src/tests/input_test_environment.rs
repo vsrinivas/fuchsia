@@ -59,6 +59,14 @@ impl TestInputEnvironmentBuilder {
         }
     }
 
+    pub fn set_starting_input_info_sources(
+        mut self,
+        starting_input_info_sources: InputInfoSources,
+    ) -> Self {
+        self.starting_input_info_sources = Some(starting_input_info_sources);
+        self
+    }
+
     pub fn set_input_device_config(mut self, input_device_config: InputConfiguration) -> Self {
         self.input_device_config = Some(input_device_config);
         self

@@ -21,7 +21,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt};
 
 use crate::base::{SettingInfo, SettingType};
 use crate::event;
@@ -131,8 +131,10 @@ enum ProxyRequest {
     RemoveActive,
     /// Request to remove listen request.
     EndListen(RequestInfo),
-    /// Requests resources be torn down. Called when there are no more requests
-    /// to process.
+    /// Starts a timeout for resources be torn down. Called when there are no
+    /// more requests to process.
+    TeardownTimeout,
+    /// Request for resources to be torn down.
     Teardown,
     /// Request to retry the active request.
     Retry,
@@ -168,8 +170,10 @@ pub struct SettingProxy {
     /// Sender for passing messages about the active requests and controllers.
     proxy_request_sender: UnboundedSender<ProxyRequest>,
     max_attempts: u64,
+    teardown_timeout: Duration,
     request_timeout: Option<Duration>,
     retry_on_timeout: bool,
+    teardown_cancellation: Option<futures::channel::oneshot::Sender<()>>,
 }
 
 /// Publishes an event to the event_publisher.
@@ -187,6 +191,7 @@ impl SettingProxy {
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: service::message::Factory,
         max_attempts: u64,
+        teardown_timeout: Duration,
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
     ) -> Result<service::message::Signature, Error> {
@@ -226,8 +231,10 @@ impl SettingProxy {
             event_publisher: event_publisher,
             proxy_request_sender,
             max_attempts,
+            teardown_timeout,
             request_timeout: request_timeout,
             retry_on_timeout,
+            teardown_cancellation: None,
         };
 
         // Main task loop for receiving and processing incoming messages.
@@ -296,6 +303,9 @@ impl SettingProxy {
             }
             ProxyRequest::RemoveActive => {
                 self.remove_active_request();
+            }
+            ProxyRequest::TeardownTimeout => {
+                self.start_teardown_timeout().await;
             }
             ProxyRequest::Teardown => self.teardown_if_needed().await,
             ProxyRequest::Retry => {
@@ -407,6 +417,9 @@ impl SettingProxy {
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
     fn add_request(&mut self, request: RequestInfo) {
+        if let Some(teardown_cancellation) = self.teardown_cancellation.take() {
+            let _ = teardown_cancellation.send(());
+        }
         self.pending_requests.push_back(request);
 
         // If this is the first request (no active request or pending requests),
@@ -421,7 +434,7 @@ impl SettingProxy {
     /// Sends a request to be processed by the proxy. Requests are sent as
     /// messages and marshalled onto a single event loop to ensure proper
     /// ordering.
-    fn request(&mut self, request: ProxyRequest) {
+    fn request(&self, request: ProxyRequest) {
         self.proxy_request_sender.unbounded_send(request).ok();
     }
 
@@ -455,7 +468,7 @@ impl SettingProxy {
             .send()
             .ack();
 
-        self.request(ProxyRequest::Teardown);
+        self.request(ProxyRequest::TeardownTimeout);
     }
 
     // TODO(fxbug.dev/67536): Remove this method once no more communication
@@ -536,7 +549,7 @@ impl SettingProxy {
         if !self.pending_requests.is_empty() {
             self.request(ProxyRequest::Execute(false));
         } else {
-            self.request(ProxyRequest::Teardown);
+            self.request(ProxyRequest::TeardownTimeout);
         }
     }
 
@@ -681,14 +694,48 @@ impl SettingProxy {
         self.request(ProxyRequest::Execute(true));
     }
 
-    /// Transitions the controller for the [setting_type] to the Teardown phase
-    /// and removes it from the active_controllers.
-    async fn teardown_if_needed(&mut self) {
-        if self.active_request.is_some()
+    fn has_active_work(&self) -> bool {
+        self.active_request.is_some()
             || !self.pending_requests.is_empty()
             || self.is_listening()
             || self.client_signature.is_none()
-        {
+    }
+
+    async fn start_teardown_timeout(&mut self) {
+        if self.has_active_work() {
+            return;
+        }
+
+        let (cancellation_tx, cancellation_rx) = futures::channel::oneshot::channel();
+        if self.teardown_cancellation.is_some() {
+            // Do not overwrite the cancellation. We do not want to extend it if it's already
+            // counting down.
+            return;
+        }
+
+        self.teardown_cancellation = Some(cancellation_tx);
+        let sender = self.proxy_request_sender.clone();
+        let teardown_timeout = self.teardown_timeout;
+        fasync::Task::spawn(async move {
+            let timeout = fuchsia_async::Timer::new(crate::clock::now() + teardown_timeout).fuse();
+            futures::pin_mut!(cancellation_rx, timeout);
+            futures::select! {
+                _ = cancellation_rx => {
+                    // Exit the loop and do not send teardown message when cancellation received.
+                    return;
+                }
+                _ = timeout => {}, // no-op
+            }
+
+            sender.unbounded_send(ProxyRequest::Teardown).ok();
+        })
+        .detach();
+    }
+
+    /// Transitions the controller for the [setting_type] to the Teardown phase
+    /// and removes it from the active_controllers.
+    async fn teardown_if_needed(&mut self) {
+        if self.has_active_work() {
             return;
         }
 

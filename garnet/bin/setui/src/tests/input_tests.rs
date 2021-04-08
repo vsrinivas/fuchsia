@@ -451,13 +451,13 @@ async fn test_camera_disable_combinations() {
 // Test that the input settings are restored correctly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_restore() {
+    let mut stored_info = create_default_input_info().clone();
+    stored_info.input_device_state = default_mic_cam_config_cam_disabled().into();
     let env = TestInputEnvironmentBuilder::new()
+        .set_starting_input_info_sources(stored_info)
         .set_input_device_config(default_mic_config_muted())
         .build()
         .await;
-    let mut stored_info = create_default_input_info().clone();
-    stored_info.input_device_state = default_mic_cam_config_cam_disabled().into();
-    assert!(env.store.write(&stored_info, false).await.is_ok());
 
     get_and_check_state(&env.input_service, true, true).await;
 }
@@ -485,10 +485,6 @@ fn test_input_info_copy() {
 // Test that the values in the persistent store are restored at the start.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_persisted_values_applied_at_start() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_cam_config())
-        .build()
-        .await;
     let mut test_input_info = InputInfoSources {
         input_device_state: InputState {
             input_categories: HashMap::<InputDeviceType, InputCategory>::new(),
@@ -519,9 +515,11 @@ async fn test_persisted_values_applied_at_start() {
         DeviceStateSource::HARDWARE,
         DeviceState::from_bits(MUTED_BITS).unwrap(),
     );
-
-    // Write values in the store.
-    env.store.write(&test_input_info, false).await.expect("write input info in store");
+    let env = TestInputEnvironmentBuilder::new()
+        .set_starting_input_info_sources(test_input_info)
+        .set_input_device_config(default_mic_cam_config())
+        .build()
+        .await;
 
     get_and_check_state(&env.input_service, true, true).await;
 }

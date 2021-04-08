@@ -26,9 +26,9 @@ use crate::handler::setting_handler::{
 };
 use crate::handler::setting_proxy::SettingProxy;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::service;
-use crate::service::TryFromWithClient;
+use crate::service::{self, message, TryFromWithClient};
 
+const TEARDOWN_TIMEOUT: Duration = Duration::from_seconds(5);
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const SETTING_PROXY_TIMEOUT_MS: i64 = 1;
 
@@ -41,6 +41,7 @@ struct SettingHandler {
     proxy_signature: service::message::Signature,
 }
 
+#[derive(Debug)]
 enum HandlerAction {
     Ignore,
     Exit(ExitResult),
@@ -239,6 +240,7 @@ impl TestEnvironmentBuilder {
             handler_factory.clone(),
             messenger_factory.clone(),
             SETTING_PROXY_MAX_ATTEMPTS,
+            TEARDOWN_TIMEOUT,
             self.timeout.map_or(None, |(duration, _)| Some(duration)),
             self.timeout.map_or(true, |(_, retry)| retry),
         )
@@ -312,12 +314,11 @@ async fn test_message_hub_presence() {
         .expect("should have result"));
 }
 
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_notify() {
-    let setting_type = SettingType::Unknown;
-    let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
-
-    {
+#[test]
+fn test_notify() {
+    async fn run_to_end_listen() -> TestEnvironment {
+        let setting_type = SettingType::Unknown;
+        let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
         // Send a listen state and make sure sink is notified.
         let mut listen_receptor = environment
             .service_client
@@ -336,17 +337,42 @@ async fn test_notify() {
         } else {
             panic!("should have received state update");
         }
+        // Drop the listener so the service transitions into teardown.
+        drop(listen_receptor);
+
+        if let Some(state) = environment.setting_handler_rx.next().await {
+            assert_eq!(state, State::EndListen);
+        } else {
+            panic!("should have received EndListen state update");
+        }
+
+        environment
     }
 
-    // Let the receptor go out of scope
+    let mut executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
 
-    if let Some(state) = environment.setting_handler_rx.next().await {
-        assert_eq!(state, State::EndListen);
+    let environment_fut = run_to_end_listen();
+    futures::pin_mut!(environment_fut);
+    let mut environment = if let Poll::Ready(env) = executor.run_until_stalled(&mut environment_fut)
+    {
+        env
     } else {
-        panic!("should have received EndListen state update");
-    }
+        panic!("environment creation stalled");
+    };
 
-    if let Some(state) = environment.setting_handler_rx.next().await {
+    // Validate that the teardown timeout matches the constant.
+    let deadline = crate::clock::now() + TEARDOWN_TIMEOUT;
+    assert_eq!(Some(deadline), executor.wake_next_timer().map(Into::into));
+
+    let state_fut = environment.setting_handler_rx.next();
+    futures::pin_mut!(state_fut);
+    let state = if let Poll::Ready(state) = executor.run_until_stalled(&mut state_fut) {
+        state
+    } else {
+        panic!("state retrieval stalled");
+    };
+
+    if let Some(state) = state {
         assert_eq!(state, State::Teardown);
     } else {
         panic!("should have received Teardown state update");
@@ -447,37 +473,63 @@ async fn test_request_order() {
     }
 }
 
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_regeneration() {
+#[test]
+fn test_regeneration() {
     let setting_type = SettingType::Unknown;
-    let (done_tx, done_rx) = oneshot::channel();
-    let mut environment =
-        TestEnvironmentBuilder::new(setting_type).set_done_tx(Some(done_tx)).build().await;
 
-    // Send initial request.
-    assert!(
-        get_response(
-            environment
-                .service_client
-                .message(
-                    HandlerPayload::Request(Request::Get).into(),
-                    Audience::Address(service::Address::Handler(setting_type)),
-                )
-                .send()
-        )
-        .await
-        .is_some(),
-        "response should have been received"
-    );
+    let mut executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
 
-    // Ensure the handler was only created once.
-    assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
+    async fn run_once(setting_type: SettingType) -> (oneshot::Receiver<()>, TestEnvironment) {
+        let (done_tx, done_rx) = oneshot::channel();
+        let environment =
+            TestEnvironmentBuilder::new(setting_type).set_done_tx(Some(done_tx)).build().await;
 
-    // The subsequent teardown should happen here.
-    done_rx.await.ok();
+        // Send initial request.
+        assert!(
+            get_response(
+                environment
+                    .service_client
+                    .message(
+                        HandlerPayload::Request(Request::Get).into(),
+                        Audience::Address(service::Address::Handler(setting_type)),
+                    )
+                    .send()
+            )
+            .await
+            .is_some(),
+            "response should have been received"
+        );
+
+        // Ensure the handler was only created once.
+        assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
+
+        // The subsequent teardown should happen here.
+        (done_rx, environment)
+    }
+
+    let environment_fut = run_once(setting_type);
+    futures::pin_mut!(environment_fut);
+    let (done_rx, mut environment) =
+        if let Poll::Ready(output) = executor.run_until_stalled(&mut environment_fut) {
+            output
+        } else {
+            panic!("initial call stalled");
+        };
+
+    executor.wake_next_timer();
+
+    futures::pin_mut!(done_rx);
+    matches::assert_matches!(executor.run_until_stalled(&mut done_rx), Poll::Ready(Ok(_)));
+
     let mut hit_teardown = false;
     loop {
-        let state = environment.setting_handler_rx.next().await;
+        let state_fut = environment.setting_handler_rx.next();
+        futures::pin_mut!(state_fut);
+        let state = if let Poll::Ready(state) = executor.run_until_stalled(&mut state_fut) {
+            state
+        } else {
+            panic!("getting next state stalled");
+        };
         match state {
             Some(State::Teardown) => {
                 hit_teardown = true;
@@ -488,141 +540,194 @@ async fn test_regeneration() {
         }
     }
     assert!(hit_teardown, "Handler should have torn down");
-    drop(environment.setting_handler);
 
-    // Now that the handler is dropped, the setting_handler_tx should be dropped too and the rx end
-    // will return none.
-    assert!(
-        environment.setting_handler_rx.next().await.is_none(),
-        "There should be no more states after teardown"
-    );
+    async fn complete(mut environment: TestEnvironment, setting_type: SettingType) {
+        drop(environment.setting_handler);
 
-    let (handler_messenger, handler_receptor) =
-        environment.handler_factory.lock().await.create(setting_type).await;
-    let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
-    let _handler = SettingHandler::create(
-        handler_messenger,
-        handler_receptor,
-        environment.proxy_handler_signature,
-        setting_type,
-        state_tx,
-        None,
-    );
+        // Now that the handler is dropped, the setting_handler_tx should be dropped too and the rx
+        // end will return none.
+        assert!(
+            environment.setting_handler_rx.next().await.is_none(),
+            "There should be no more states after teardown"
+        );
 
-    // Send followup request.
-    assert!(
-        get_response(
-            environment
-                .service_client
-                .message(
-                    HandlerPayload::Request(Request::Get).into(),
-                    Audience::Address(service::Address::Handler(setting_type)),
-                )
-                .send()
-        )
-        .await
-        .is_some(),
-        "response should have been received"
-    );
+        let (handler_messenger, handler_receptor) =
+            environment.handler_factory.lock().await.create(setting_type).await;
+        let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
+        let _handler = SettingHandler::create(
+            handler_messenger,
+            handler_receptor,
+            environment.proxy_handler_signature,
+            setting_type,
+            state_tx,
+            None,
+        );
 
-    // Check that the handler was re-generated.
-    assert_eq!(2, environment.handler_factory.lock().await.get_request_count(setting_type));
+        // Send followup request.
+        assert!(
+            get_response(
+                environment
+                    .service_client
+                    .message(
+                        HandlerPayload::Request(Request::Get).into(),
+                        Audience::Address(service::Address::Handler(setting_type)),
+                    )
+                    .send()
+            )
+            .await
+            .is_some(),
+            "response should have been received"
+        );
+
+        // Check that the handler was re-generated.
+        assert_eq!(2, environment.handler_factory.lock().await.get_request_count(setting_type));
+    }
+
+    let complete_fut = complete(environment, setting_type);
+    futures::pin_mut!(complete_fut);
+    assert_eq!(executor.run_until_stalled(&mut complete_fut), Poll::Ready(()));
 }
 
 /// Exercises the retry flow, ensuring the setting proxy goes through the
 /// defined number of tests and correctly reports back activity.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_retry() {
+#[test]
+fn test_retry() {
     let setting_type = SettingType::Unknown;
-    let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
+    async fn run_retries(setting_type: SettingType) -> (TestEnvironment, message::Receptor) {
+        let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    let mut event_receptor = service::build_event_listener(&environment.messenger_factory).await;
+        let mut event_receptor =
+            service::build_event_listener(&environment.messenger_factory).await;
 
-    // Queue up external failure responses in the handler.
-    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
-        environment.setting_handler.lock().await.queue_action(
-            Request::Get,
-            HandlerAction::Respond(Err(ControllerError::ExternalFailure(
-                setting_type,
-                "test_component".into(),
-                "connect".into(),
-            ))),
-        );
-    }
+        // Queue up external failure responses in the handler.
+        for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+            environment.setting_handler.lock().await.queue_action(
+                Request::Get,
+                HandlerAction::Respond(Err(ControllerError::ExternalFailure(
+                    setting_type,
+                    "test_component".into(),
+                    "connect".into(),
+                ))),
+            );
+        }
 
-    let request = Request::Get;
+        let request = Request::Get;
 
-    // Send request.
-    let handler_result = get_response(
-        environment
-            .service_client
-            .message(
-                HandlerPayload::Request(request.clone()).into(),
-                Audience::Address(service::Address::Handler(setting_type)),
-            )
-            .send(),
-    )
-    .await
-    .expect("result should be present");
-
-    // Make sure the result is an `ControllerError::IrrecoverableError`
-    if let Err(error) = handler_result {
-        assert_eq!(error, HandlerError::IrrecoverableError);
-    } else {
-        panic!("error should have been encountered");
-    }
-
-    // For each failed attempt, make sure a retry event was broadcasted
-    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
-        verify_handler_event(
-            setting_type,
-            event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
-        );
-        verify_handler_event(
-            setting_type,
-            event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
-        );
-    }
-
-    // Ensure that the final event reports that attempts were exceeded
-    verify_handler_event(
-        setting_type,
-        event_receptor.next().await.expect("should be notified of external failure"),
-        event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request.clone()),
-    );
-
-    // Regenerate setting handler
-    environment.regenerate_handler(None).await;
-
-    // Queue successful response
-    environment
-        .setting_handler
-        .lock()
+        // Send request.
+        let handler_result = get_response(
+            environment
+                .service_client
+                .message(
+                    HandlerPayload::Request(request.clone()).into(),
+                    Audience::Address(service::Address::Handler(setting_type)),
+                )
+                .send(),
+        )
         .await
-        .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
+        .expect("result should be present");
 
-    // Ensure subsequent request succeeds
-    assert!(get_response(
+        // Make sure the result is an `ControllerError::IrrecoverableError`
+        if let Err(error) = handler_result {
+            assert_eq!(error, HandlerError::IrrecoverableError);
+        } else {
+            panic!("error should have been encountered");
+        }
+
+        // For each failed attempt, make sure a retry event was broadcasted
+        for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+            verify_handler_event(
+                setting_type,
+                event_receptor.next().await.expect("should be notified of external failure"),
+                event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
+            );
+            verify_handler_event(
+                setting_type,
+                event_receptor.next().await.expect("should be notified of external failure"),
+                event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
+            );
+        }
+
+        // Ensure that the final event reports that attempts were exceeded
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Request(
+                event::handler::Action::AttemptsExceeded,
+                request.clone(),
+            ),
+        );
+
+        (environment, event_receptor)
+    }
+
+    async fn run_to_response(
+        mut environment: TestEnvironment,
+        mut _event_receptor: message::Receptor,
+        setting_type: SettingType,
+    ) -> (TestEnvironment, message::Receptor) {
+        // Regenerate setting handler
+        environment.regenerate_handler(None).await;
+
+        // Queue successful response
         environment
-            .service_client
-            .message(
-                HandlerPayload::Request(request.clone()).into(),
-                Audience::Address(service::Address::Handler(setting_type)),
+            .setting_handler
+            .lock()
+            .await
+            .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
+
+        let request = Request::Get;
+        // Ensure subsequent request succeeds
+        matches::assert_matches!(
+            get_response(
+                environment
+                    .service_client
+                    .message(
+                        HandlerPayload::Request(request.clone()).into(),
+                        Audience::Address(service::Address::Handler(setting_type)),
+                    )
+                    .send(),
             )
-            .send(),
-    )
-    .await
-    .expect("result should be present")
-    .is_ok());
+            .await,
+            Some(Ok(_))
+        );
+
+        (environment, _event_receptor)
+    }
+
+    let mut executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+
+    let environment_fut = run_retries(setting_type);
+    futures::pin_mut!(environment_fut);
+    let (environment, event_receptor) =
+        if let Poll::Ready(output) = executor.run_until_stalled(&mut environment_fut) {
+            output
+        } else {
+            panic!("environment creation and retries stalled");
+        };
+
+    executor.wake_next_timer();
+
+    let environment_fut = run_to_response(environment, event_receptor, setting_type);
+    futures::pin_mut!(environment_fut);
+    let (_environment, mut event_receptor) =
+        if let Poll::Ready(output) = executor.run_until_stalled(&mut environment_fut) {
+            output
+        } else {
+            panic!("running final step stalled");
+        };
+
+    executor.wake_next_timer();
+
+    let event_fut = event_receptor.next();
+    futures::pin_mut!(event_fut);
+    let state = if let Poll::Ready(Some(state)) = executor.run_until_stalled(&mut event_fut) {
+        state
+    } else {
+        panic!("state retrieval stalled or had no result");
+    };
 
     // Make sure SettingHandler tears down
-    verify_handler_event(
-        setting_type,
-        event_receptor.next().await.expect("should be notified of teardown"),
-        event::handler::Event::Teardown,
-    );
+    verify_handler_event(setting_type, state, event::handler::Event::Teardown);
 }
 
 /// Ensures early exit triggers retry flow.

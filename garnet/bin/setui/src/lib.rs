@@ -50,7 +50,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_inspect::component,
-    fuchsia_zircon::DurationNum,
+    fuchsia_zircon::{Duration, DurationNum},
     futures::lock::Mutex,
     futures::StreamExt,
     handler::setting_handler::Handler,
@@ -98,6 +98,12 @@ pub mod monitor;
 pub mod service_context;
 pub mod storage;
 
+/// This value represents the duration the proxy will wait after the last request
+/// before initiating the teardown of the controller. If a request is received
+/// before the timeout triggers, then the timeout will be canceled.
+// The value of 5 seconds was chosen arbitrarily to allow some time between manual
+// button presses that occurs for some settings.
+pub(crate) const DEFAULT_TEARDOWN_TIMEOUT: Duration = Duration::from_seconds(5);
 const DEFAULT_SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS: i64 = 10_000;
 
@@ -679,6 +685,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             handler_factory.clone(),
             messenger_factory.clone(),
             DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
+            DEFAULT_TEARDOWN_TIMEOUT,
             Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
             true,
         )
