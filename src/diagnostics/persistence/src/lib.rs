@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! `elephant` persists Inspect VMOs and serves them at the next boot.
+//! `diagnostics-persistence` component persists Inspect VMOs and serves them at the next boot.
 
 mod config;
 mod constants;
@@ -24,12 +24,12 @@ use {
 };
 
 /// The name of the subcommand and the logs-tag.
-pub const PROGRAM_NAME: &str = "elephant";
+pub const PROGRAM_NAME: &str = "diagnostics-persistence";
 pub const PERSIST_NODE_NAME: &str = "persist";
 
 /// Command line args
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "elephant")]
+#[argh(subcommand, name = "persistence")]
 pub struct CommandLine {
     /// how long to wait before we start offering persistence
     /// functionality.
@@ -50,13 +50,16 @@ macro_rules! on_error {
 }
 
 pub async fn main(args: CommandLine) -> Result<(), Error> {
-    info!("Starting Elephant service");
+    info!("Starting Diagnostics Persistence Service service");
     let config = on_error!(config::load_configuration_files(), "Error loading configs: {}")?;
 
     let startup_delay_duration = Duration::from_seconds(args.startup_delay_seconds);
 
     // Before doing anything else, wait the arg-provided seconds for the /cache directory to stabilize.
-    info!("Elephant delaying startup for {} seconds...", args.startup_delay_seconds);
+    info!(
+        "Diagnostics Persistence Service delaying startup for {} seconds...",
+        args.startup_delay_seconds
+    );
     fasync::Timer::new(fasync::Time::after(startup_delay_duration)).await;
     info!("...done delay, continuing startup");
 
@@ -84,7 +87,7 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     });
 
     component::health().set_ok();
-    info!("Elephant ready");
+    info!("Diagnostics Persistence Service ready");
     Ok(fs.collect::<()>().await)
 }
 

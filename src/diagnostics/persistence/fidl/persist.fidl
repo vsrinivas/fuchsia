@@ -15,16 +15,17 @@ enum PersistResult {
     // The provided tag for persistence wasn't present
     // in the service configuration.
     BAD_NAME = 3;
-    // Elephant encountered an issue that prevented the scheduling of
+    // Service encountered an issue that prevented the scheduling of
     // the persistence.
     INTERNAL_ERROR = 4;
 };
 
 /// Stores limited amounts of Inspect-formatted data till the next boot and publishes it in
-/// the "elephant" component's inspect tree.
+/// the "diagnostics-persistence" component's inspect tree.
 [Discoverable]
 protocol DataPersistence {
-    /// Schedule the persistence the selected data associated with this tag in Elephant's config files.
-    /// Fetching the selected data may be delayed, if there is other work in a given service's queue.
+    /// Schedule the persistence the selected data associated with this
+    /// tag in diagnostics-persistence config files.  Fetching the selected
+    /// data may be delayed if there is other work in a given service's queue.
     Persist(string:MAX_NAME_SIZE tag) -> (PersistResult result);
 };

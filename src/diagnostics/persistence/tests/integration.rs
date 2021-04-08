@@ -20,14 +20,15 @@ static GIVE_UP_POLLING_SECS: i64 = 120;
 
 static METADATA_KEY: &str = "metadata";
 static TIMESTAMP_KEY: &str = "timestamp";
-static ELEPHANT_INJECTED_PATH: &str = "/cache";
+static PERSISTENCE_INJECTED_PATH: &str = "/cache";
 static INJECTED_STORAGE_DIR: &str = "/tmp/injected_storage";
 
-const ELEPHANT_URL: &str = "fuchsia-pkg://fuchsia.com/elephant-integration-tests#meta/elephant.cmx";
+const PERSISTENCE_URL: &str = "fuchsia-pkg://fuchsia.com/diagnostics-persistence-integration-tests#meta/diagnostics-persistence.cmx";
 const INSPECT_PROVIDER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/elephant-integration-tests#meta/test_component.cmx";
+    "fuchsia-pkg://fuchsia.com/diagnostics-persistence-integration-tests#meta/test_component.cmx";
 
-const TEST_ELEPHANT_SERVICE_NAME: &str = "fuchsia.diagnostics.persist.DataPersistence-test-service";
+const TEST_PERSISTENCE_SERVICE_NAME: &str =
+    "fuchsia.diagnostics.persist.DataPersistence-test-service";
 
 // The capability name for the Inspect reader
 const INSPECT_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor";
@@ -53,26 +54,26 @@ struct FileChange<'a> {
     file_name: &'a str,
 }
 
-/// Runs the elephant persistor and a test component that can have its inspect properties
-/// manipulated by the test via fidl. Then just trigger persistence on elephant.
+/// Runs the persistence persistor and a test component that can have its inspect properties
+/// manipulated by the test via fidl. Then just trigger persistence on diagnostics-persistence.
 #[fuchsia::test]
-async fn elephant_integration() {
+async fn diagnostics_persistence_integration() {
     setup();
     let persisted_data_path = "/tmp/injected_storage/current/test-service/test-component-metric";
     let persisted_too_big_path =
         "/tmp/injected_storage/current/test-service/test-component-too-big";
 
-    let mut elephant_app = elephant().await;
+    let mut diagnostics_persistence_app = persistence().await;
 
-    let elephant_service = elephant_app
-        .connect_to_named_service::<DataPersistenceMarker>(TEST_ELEPHANT_SERVICE_NAME)
+    let diagnostics_persistence_service = diagnostics_persistence_app
+        .connect_to_named_service::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
         .unwrap();
 
     let mut example_app = inspect_source(Some(19i32)).await;
     // Contacting the wrong service, or giving the wrong name to the right service, should return
     // an error and not persist anything.
     assert_eq!(
-        elephant_service.persist("wrong-component-metric").await.unwrap(),
+        diagnostics_persistence_service.persist("wrong-component-metric").await.unwrap(),
         PersistResult::BadName
     );
     expect_file_change(FileChange {
@@ -84,7 +85,7 @@ async fn elephant_integration() {
     // Verify that the backoff mechanism works by observing the time between first and second
     // persistence. The duration should be the same as "repeat_seconds" in test_config.persist.
     let backoff_time = Time::get_monotonic() + Duration::from_seconds(1);
-    elephant_service.persist("test-component-metric").await.unwrap();
+    diagnostics_persistence_service.persist("test-component-metric").await.unwrap();
     expect_file_change(FileChange {
         old: FileState::None,
         new: FileState::Int(19),
@@ -95,7 +96,7 @@ async fn elephant_integration() {
     // Valid data can be replaced by missing data.
     example_app.kill().unwrap();
     let mut example_app = inspect_source(None).await;
-    elephant_service.persist("test-component-metric").await.unwrap();
+    diagnostics_persistence_service.persist("test-component-metric").await.unwrap();
     expect_file_change(FileChange {
         old: FileState::Int(19),
         new: FileState::NoInt,
@@ -106,7 +107,7 @@ async fn elephant_integration() {
 
     // Missing data can be replaced by new data.
     let _example_app = inspect_source(Some(42i32)).await;
-    elephant_service.persist("test-component-metric").await.unwrap();
+    diagnostics_persistence_service.persist("test-component-metric").await.unwrap();
     expect_file_change(FileChange {
         old: FileState::NoInt,
         new: FileState::Int(42),
@@ -114,11 +115,11 @@ async fn elephant_integration() {
         after: None,
     });
 
-    // The persisted data shouldn't be published until Elephant is killed and restarted.
-    verify_elephant_publication(Published::Nothing).await;
-    elephant_app.kill().unwrap();
-    let mut elephant_app = elephant().await;
-    verify_elephant_publication(Published::Int(42)).await;
+    // The persisted data shouldn't be published until Diagnostics Persistence is killed and restarted.
+    verify_diagnostics_persistence_publication(Published::Nothing).await;
+    diagnostics_persistence_app.kill().unwrap();
+    let mut diagnostics_persistence_app = persistence().await;
+    verify_diagnostics_persistence_publication(Published::Int(42)).await;
     expect_file_change(FileChange {
         old: FileState::None,
         new: FileState::None,
@@ -127,14 +128,14 @@ async fn elephant_integration() {
     });
 
     // After another restart, no data should be published.
-    elephant_app.kill().unwrap();
-    let mut elephant_app = elephant().await;
-    verify_elephant_publication(Published::Nothing).await;
+    diagnostics_persistence_app.kill().unwrap();
+    let mut diagnostics_persistence_app = persistence().await;
+    verify_diagnostics_persistence_publication(Published::Nothing).await;
     // The "too-big" tag should save a short error string instead of the data.
-    let elephant_service = elephant_app
-        .connect_to_named_service::<DataPersistenceMarker>(TEST_ELEPHANT_SERVICE_NAME)
+    let diagnostics_persistence_service = diagnostics_persistence_app
+        .connect_to_named_service::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
         .unwrap();
-    elephant_service.persist("test-component-too-big").await.unwrap();
+    diagnostics_persistence_service.persist("test-component-too-big").await.unwrap();
     expect_file_change(FileChange {
         old: FileState::None,
         new: FileState::TooBig,
@@ -142,19 +143,19 @@ async fn elephant_integration() {
         after: None,
     });
 
-    elephant_app.kill().unwrap();
-    let mut elephant_app = elephant().await;
-    verify_elephant_publication(Published::SizeError).await;
-    elephant_app.kill().unwrap();
+    diagnostics_persistence_app.kill().unwrap();
+    let mut diagnostics_persistence_app = persistence().await;
+    verify_diagnostics_persistence_publication(Published::SizeError).await;
+    diagnostics_persistence_app.kill().unwrap();
 }
 
-// Starts and returns an Elephant app. Assumes:
+// Starts and returns an Diagnostics Persistence app. Assumes:
 //  - The INJECTED_STORAGE_DIR has been created.
-//  - No other Elephant app is running in that directory.
-async fn elephant() -> App {
-    AppBuilder::new(ELEPHANT_URL)
+//  - No other Diagnostics Persistence app is running in that directory.
+async fn persistence() -> App {
+    AppBuilder::new(PERSISTENCE_URL)
         .add_dir_to_namespace(
-            ELEPHANT_INJECTED_PATH.into(),
+            PERSISTENCE_INJECTED_PATH.into(),
             File::open(INJECTED_STORAGE_DIR).unwrap(),
         )
         .unwrap()
@@ -352,17 +353,19 @@ fn zero_timestamps(contents: &str) -> String {
     format!("[{}]", string_result_array.join(","))
 }
 
-async fn verify_elephant_publication(published: Published) {
-    let mut inspect_fetcher =
-        InspectFetcher::create(INSPECT_SERVICE_PATH, vec!["INSPECT:elephant.cmx:root".to_string()])
-            .unwrap();
+async fn verify_diagnostics_persistence_publication(published: Published) {
+    let mut inspect_fetcher = InspectFetcher::create(
+        INSPECT_SERVICE_PATH,
+        vec!["INSPECT:diagnostics-persistence.cmx:root".to_string()],
+    )
+    .unwrap();
     loop {
         let published_inspect = inspect_fetcher.fetch().await.unwrap();
         if published_inspect != "[]" {
             assert!(json_strings_match(
                 &zero_timestamps(&published_inspect),
-                &expected_elephant_inspect(published),
-                "elephant publication"
+                &expected_diagnostics_persistence_inspect(published),
+                "persistence publication"
             ));
             break;
         }
@@ -382,7 +385,7 @@ fn expected_stored_data(number: Option<i32>) -> String {
     .replace("%VARIANT%", &variant)
 }
 
-fn expected_elephant_inspect(published: Published) -> String {
+fn expected_diagnostics_persistence_inspect(published: Published) -> String {
     let variant = match published {
         Published::Nothing => "".to_string(),
         Published::SizeError => r#"
@@ -413,12 +416,12 @@ fn expected_elephant_inspect(published: Published) -> String {
   {
     "data_source": "Inspect",
     "metadata": {
-      "component_url": "fuchsia-pkg://fuchsia.com/elephant-integration-tests#meta/elephant.cmx",
+      "component_url": "fuchsia-pkg://fuchsia.com/diagnostics-persistence-integration-tests#meta/diagnostics-persistence.cmx",
       "errors": null,
       "filename": "fuchsia.inspect.Tree",
       "timestamp": 0
     },
-    "moniker": "elephant.cmx",
+    "moniker": "diagnostics-persistence.cmx",
     "payload": {
       "root": {
         "persist":{%VARIANT%}

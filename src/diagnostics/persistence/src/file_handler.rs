@@ -77,7 +77,7 @@ pub fn remembered_data() -> Result<Vec<(String, Vec<(String, String)>)>, Error> 
                                     match fs::read(path.clone()) {
                                         Ok(text) => {
                                             // TODO(cphoenix): We want to encode failures at retrieving persisted
-                                            // metrics in the elephant inspect hierarchy so clients know why their data is
+                                            // metrics in the inspect hierarchy so clients know why their data is
                                             // missing.
                                             match std::str::from_utf8(&text) {
                                                 Ok(contents) => {

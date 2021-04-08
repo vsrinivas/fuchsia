@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
-  name = "elephant"
+  name = "persistence"
   edition = "2018"
   with_unit_tests = true
 
@@ -15,9 +15,9 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/diagnostics/control:controller-rustc",
-    "//src/diagnostics/elephant/fidl:persist-rustc",
     "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/lib/util/injectable-time",
+    "//src/diagnostics/persistence/fidl:persist-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
@@ -56,38 +56,38 @@ rustc_library("lib") {
   test_deps = []
 }
 
-fuchsia_component("elephant-component") {
-  component_name = "elephant"
+fuchsia_component("diagnostics-persistence-component") {
+  component_name = "diagnostics-persistence"
   deps = [
-    "//src/diagnostics/config/elephant:elephant",
+    "//src/diagnostics/config/persistence",
     "//src/diagnostics/launcher:bin",
   ]
-  manifest = "meta/elephant.cml"
+  manifest = "meta/diagnostics-persistence.cml"
 }
 
-fuchsia_component("elephant-v1") {
-  component_name = "elephant"
-  manifest = "meta/elephant.cmx"
+fuchsia_component("diagnostics-persistence-v1") {
+  component_name = "diagnostics-persistence"
+  manifest = "meta/diagnostics-persistence.cmx"
   deps = [
     ":lib",
-    "//src/diagnostics/config/elephant:elephant",
+    "//src/diagnostics/config/persistence",
     "//src/diagnostics/launcher:bin",
   ]
 }
 
-fuchsia_package("elephant") {
-  deps = [ ":elephant-component" ]
+fuchsia_package("diagnostics-persistence") {
+  deps = [ ":diagnostics-persistence-component" ]
 }
 
-fuchsia_unittest_package("elephant-tests") {
-  manifest = "meta/elephant-tests.cmx"
+fuchsia_unittest_package("diagnostics-persistence-tests") {
+  manifest = "meta/diagnostics-persistence-tests.cmx"
   deps = [ ":lib_test" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":elephant-tests",
-    "tests:elephant-integration-tests",
+    ":diagnostics-persistence-tests",
+    "tests:diagnostics-persistence-integration-tests",
   ]
 }

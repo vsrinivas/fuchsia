@@ -7,14 +7,14 @@
         runner: "elf",
         binary: "bin/launcher",
         args: [
-            "elephant",
+            "persistence",
             "--startup-delay-seconds",
             "120",
         ],
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.diagnostics.internal.ElephantController" ],
+            protocol: [ "fuchsia.diagnostics.internal.PersistenceController" ],
         },
     ],
     use: [
@@ -34,7 +34,7 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.diagnostics.internal.ElephantController" ],
+            protocol: [ "fuchsia.diagnostics.internal.PersistenceController" ],
             from: "self",
         },
     ],

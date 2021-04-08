@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/canonical_elephant_test_bin"
+        "binary": "bin/canonical_diagnostics_persistence_test_bin"
     },
     "sandbox": {
         "features": [
