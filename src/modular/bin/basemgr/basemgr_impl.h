@@ -11,7 +11,6 @@
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
@@ -64,7 +63,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |presenter| Service to initialize the presentation.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(modular::ModularConfigAccessor config_accessor,
-                       std::shared_ptr<sys::ServiceDirectory> incoming_services,
                        std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                        fuchsia::sys::LauncherPtr launcher,
                        fuchsia::ui::policy::PresenterPtr presenter,
@@ -90,17 +88,11 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
  private:
   using StartSessionResult = fit::result<void, zx_status_t>;
 
-  // Stops the Scenic component.
-  //
-  // Resolves to an zx_status_t error if Scenic's lifecycle control channel closes for a reason
-  // other than ZX_ERR_PEER_CLOSED.
-  fit::promise<void, zx_status_t> StopScenic();
-
   // Starts the session launcher component, if configured, or starts a session using the
   // configuration read from |config_accessor_|.
   void Start();
 
-  // Shuts down the session, session launcher component, and Scenic, if any are running.
+  // Shuts down the session and session launcher component, if any are running.
   void Shutdown() override;
 
   // Starts a new session.
@@ -162,8 +154,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
   fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> process_lifecycle_bindings_;
-
-  fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 
   AsyncHolder<SessionProvider> session_provider_;
 

@@ -43,7 +43,7 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
       config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
   return std::make_unique<modular::BasemgrImpl>(
-      std::move(config_accessor), component_context->svc(), component_context->outgoing(),
+      std::move(config_accessor), component_context->outgoing(),
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),

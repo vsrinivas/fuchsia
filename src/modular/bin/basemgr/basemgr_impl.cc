@@ -4,14 +4,11 @@
 
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
-#include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
 #include <lib/fostr/fidl/fuchsia/modular/session/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-
-#include <zxtest/zxtest.h>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/common/async_holder.h"
@@ -88,14 +85,12 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
 };
 
 BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
-                         std::shared_ptr<sys::ServiceDirectory> incoming_services,
                          std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                          fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fit::function<void()> on_shutdown)
     : config_accessor_(std::move(config_accessor)),
-      component_context_services_(std::move(incoming_services)),
       outgoing_services_(std::move(outgoing_services)),
       launcher_(std::move(launcher)),
       presenter_(std::move(presenter)),
@@ -129,31 +124,6 @@ BasemgrImpl::~BasemgrImpl() = default;
 void BasemgrImpl::Connect(
     fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
   basemgr_debug_bindings_.AddBinding(this, std::move(request));
-}
-
-fit::promise<void, zx_status_t> BasemgrImpl::StopScenic() {
-  fit::bridge<void, zx_status_t> bridge;
-
-  if (!presenter_) {
-    FX_LOGS(INFO) << "StopScenic: no presenter; assuming that Scenic has not been launched";
-    bridge.completer.complete_ok();
-    return bridge.consumer.promise();
-  }
-
-  // Lazily connect to lifecycle controller, instead of keeping open an often-unused channel.
-  component_context_services_->Connect(scenic_lifecycle_controller_.NewRequest());
-  scenic_lifecycle_controller_->Terminate();
-
-  scenic_lifecycle_controller_.set_error_handler(
-      [completer = std::move(bridge.completer)](zx_status_t status) mutable {
-        if (status == ZX_ERR_PEER_CLOSED) {
-          completer.complete_ok();
-        } else {
-          completer.complete_error(status);
-        }
-      });
-
-  return bridge.consumer.promise();
 }
 
 void BasemgrImpl::Start() {
@@ -206,25 +176,11 @@ void BasemgrImpl::Shutdown() {
     return bridge.consumer.promise();
   };
 
-  // Always completes successfully.
-  auto stop_scenic = [this]() {
-    return StopScenic().then([](const fit::result<void, zx_status_t>& result) {
-      if (result.is_error()) {
-        FX_PLOGS(ERROR, result.error())
-            << "Scenic LifecycleController experienced some error other than PEER_CLOSED";
-      } else {
-        FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
-      }
-    });
-  };
-
-  auto shutdown = teardown_session_provider()
-                      .and_then(teardown_session_component_app())
-                      .and_then(stop_scenic())
-                      .and_then([this]() {
-                        basemgr_debug_bindings_.CloseAll(ZX_OK);
-                        on_shutdown_();
-                      });
+  auto shutdown =
+      teardown_session_provider().and_then(teardown_session_component_app()).and_then([this]() {
+        basemgr_debug_bindings_.CloseAll(ZX_OK);
+        on_shutdown_();
+      });
 
   executor_.schedule_task(std::move(shutdown));
 }

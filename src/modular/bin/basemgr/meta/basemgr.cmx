@@ -16,7 +16,6 @@
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.lifecycle.LifecycleController",
             "fuchsia.ui.policy.Presenter"
         ]
     }

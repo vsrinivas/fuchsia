@@ -5,7 +5,6 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -22,8 +21,7 @@
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 
-class BasemgrImplTest : public sys::testing::TestWithEnvironment,
-                        fuchsia::ui::lifecycle::LifecycleController {
+class BasemgrImplTest : public sys::testing::TestWithEnvironment {
  public:
   BasemgrImplTest() {}
 
@@ -36,7 +34,6 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment,
                                      "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
         fuchsia::cobalt::LoggerFactory::Name_);
 
-    env_services->AddService(scenic_lifecycle_controller_bindings_.GetHandler(this));
     env_services->AddService(std::make_unique<vfs::Service>(
                                  [presenter_channels = std::vector<zx::channel>()](
                                      zx::channel channel, async_dispatcher_t* dispatcher) mutable {
@@ -118,21 +115,9 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment,
     return svc_dir;
   }
 
-  int ui_lifecycle_terminate_calls() const { return ui_lifecycle_terminate_calls_; }
-
  protected:
-  // |fuchsia.ui.lifecycle.Controller|
-  void Terminate() override {
-    ++ui_lifecycle_terminate_calls_;
-    scenic_lifecycle_controller_bindings_.CloseAll(ZX_ERR_PEER_CLOSED);
-  }
-
-  int ui_lifecycle_terminate_calls_ = 0;
-
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  fidl::BindingSet<fuchsia::ui::lifecycle::LifecycleController>
-      scenic_lifecycle_controller_bindings_;
 };
 
 TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdown) {
@@ -151,25 +136,5 @@ TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdown) {
                                         process_lifecycle.NewRequest().TakeChannel());
   FX_CHECK(ZX_OK == status);
   process_lifecycle->Stop();
-  RunLoopUntil([&]() { return is_terminated; });
-}
-
-TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdownAlsoShutsDownScenic) {
-  auto svc_dir = LaunchBasemgrWithConfigJson(GetTestConfig());
-
-  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
-  zx_status_t status = svc_dir->Connect("fuchsia.process.lifecycle.Lifecycle",
-                                        process_lifecycle.NewRequest().TakeChannel());
-  FX_CHECK(ZX_OK == status);
-
-  bool is_terminated = false;
-  controller_.events().OnTerminated =
-      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) { is_terminated = true; };
-
-  process_lifecycle->Stop();
-  RunLoopUntil([&]() { return ui_lifecycle_terminate_calls() > 0; });
-
-  // Ensure basemgr has shut down completely before tearing down the test environment to avoid
-  // error logs from the cobalt client in basemgr.
   RunLoopUntil([&]() { return is_terminated; });
 }
