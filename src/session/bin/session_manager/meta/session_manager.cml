@@ -55,6 +55,7 @@
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
