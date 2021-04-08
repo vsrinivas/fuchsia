@@ -564,7 +564,6 @@ config("Wno-conversion") {
     "//garnet/bin/ktrace_provider/*",
     "//garnet/bin/run_test_component/*",
     "//garnet/bin/sched/*",
-    "//garnet/bin/test_runner/report_result/*",
     "//garnet/bin/trace/*",
     "//garnet/bin/trace2json/*",
     "//garnet/bin/trace_manager/*",

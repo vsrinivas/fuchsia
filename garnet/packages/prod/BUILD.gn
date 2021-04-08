@@ -52,7 +52,6 @@ group("all") {
     "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
     "//garnet/packages/prod:terminal",
-    "//garnet/packages/prod:test_runner",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:tracing",
     "//garnet/packages/prod:wlan_drivers",
@@ -488,14 +487,6 @@ group("telephony") {
 group("terminal") {
   testonly = true
   public_deps = [ "//garnet/bin/terminal" ]
-}
-
-group("test_runner") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/test_runner:run_integration_tests",
-    "//garnet/bin/test_runner:run_test",
-  ]
 }
 
 group("tiles") {

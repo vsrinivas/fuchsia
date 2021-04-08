@@ -30,7 +30,6 @@ group("bin") {
     "sshd-host",
     "sysmgr",
     "terminal",
-    "test_runner",
     "time",
     "timezone",
     "trace",
