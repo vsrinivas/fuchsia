@@ -41,7 +41,7 @@ type S = struct{};
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(NewSyntaxTests, GoodSyntaxVersionDeprecated) {
@@ -69,7 +69,7 @@ type S = struct{};
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(NewSyntaxTests, BadSyntaxVersionMismatch) {
@@ -82,7 +82,7 @@ struct S {};
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(NewSyntaxTests, BadSyntaxVersionWithoutFlag) {
@@ -91,10 +91,7 @@ deprecated_syntax;
 library example;
 )FIDL");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrRemoveSyntaxVersion);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrRemoveSyntaxVersion);
 }
 
 TEST(NewSyntaxTests, BadSyntaxVersionMisplaced) {
@@ -106,10 +103,7 @@ deprecated_syntax;
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMisplacedSyntaxVersion);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMisplacedSyntaxVersion);
 }
 
 TEST(NewSyntaxTests, BadSyntaxVersionMisplacedWithoutFlag) {
@@ -118,10 +112,7 @@ library example;
 deprecated_syntax;
 )FIDL");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrRemoveSyntaxVersion);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrRemoveSyntaxVersion);
 }
 
 TEST(NewSyntaxTests, BadSyntaxVersionRepeated) {
@@ -134,10 +125,7 @@ deprecated_syntax;
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMisplacedSyntaxVersion);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMisplacedSyntaxVersion);
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfBitsLayout) {
@@ -254,7 +242,7 @@ type TypeDecl = enum : "123" {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrInvalidWrappedType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidWrappedType);
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfEnumLayoutWithStrictnesss) {
@@ -500,10 +488,7 @@ type t2 = strict t1;
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyModifier);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfAnonymousLayouts) {
@@ -563,10 +548,7 @@ type N = S;
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrNewTypesNotAllowed);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNewTypesNotAllowed);
 }
 
 TEST(NewSyntaxTests, GoodAlias) {
@@ -742,10 +724,7 @@ using foo = uint8;
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  EXPECT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrOldUsingSyntaxDeprecated);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOldUsingSyntaxDeprecated);
 }
 
 // TODO(fxbug.dev/72671): this should be covered by an existing old syntax test

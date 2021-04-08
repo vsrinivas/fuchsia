@@ -25,10 +25,7 @@ TEST(ParsingTests, BadCompoundIdentifierTest) {
   TestLibrary library(R"FIDL(
 library 0fidl.test.badcompoundidentifier;
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 // Test that library name formatting checks are done in the parser
@@ -37,12 +34,8 @@ TEST(ParsingTests, BadLibraryNameTest) {
 library a_b;
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
-  library.Parse(&ast);
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidLibraryNameComponent);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "a_b");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLibraryNameComponent);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "a_b");
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
@@ -294,11 +287,8 @@ struct Test {
     uint8 @uint8;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "@");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "@");
 }
 
 TEST(ParsingTests, BadCharSlashTest) {
@@ -309,11 +299,8 @@ struct Test / {
     uint8 uint8;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "/");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "/");
 }
 
 TEST(ParsingTests, BadIdentifierTest) {
@@ -324,11 +311,8 @@ struct test_ {
     uint8 uint8;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidIdentifier);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "test_");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidIdentifier);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "test_");
 }
 
 class LocaleSwapper {
@@ -342,7 +326,7 @@ class LocaleSwapper {
 
 TEST(ParsingTests, BadInvalidCharacterTest) {
   LocaleSwapper swapper("de_DE.iso88591");
-  TestLibrary test_library("invalid.character.fidl", R"FIDL(
+  TestLibrary library("invalid.character.fidl", R"FIDL(
 library fidl.test.maxbytes;
 
 // This is all alphanumeric in the appropriate locale, but not a valid
@@ -352,11 +336,8 @@ struct ß {
 };
 
 )FIDL");
-  ASSERT_FALSE(test_library.Compile());
-
-  const auto& errors = test_library.errors();
-  EXPECT_NE(errors.size(), 0);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidCharacter,
+                                      fidl::ErrInvalidCharacter);
 }
 
 TEST(ParsingTests, GoodEmptyStructTest) {
@@ -392,11 +373,7 @@ struct UseDependent {
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 }
 
 TEST(ParsingTests, GoodMultilineCommentHasCorrectSourceSpan) {
@@ -421,7 +398,7 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectSourceSpan) {
   /// comment!)EXPECTED");
 }
 
-TEST(ParsingTests, GoodDocCommentBlankLineTest) {
+TEST(ParsingTests, WarnDocCommentBlankLineTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -431,12 +408,10 @@ library example;
 struct Empty{};
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
-  library.set_warnings_as_errors(true);
-  library.Parse(&ast);
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::WarnBlankLinesWithinDocCommentBlock);
+  ASSERT_COMPILED(library);
+  const auto& warnings = library.warnings();
+  ASSERT_GE(warnings.size(), 1);
+  ASSERT_ERR(warnings[0], fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
 TEST(ParsingTests, WarnCommentInsideDocCommentTest) {
@@ -449,8 +424,7 @@ library example;
 struct Empty{};
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
-  library.Parse(&ast);
+  ASSERT_COMPILED(library);
   const auto& warnings = library.warnings();
   ASSERT_GE(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
@@ -467,8 +441,7 @@ library example;
 struct Empty{};
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
-  library.Parse(&ast);
+  ASSERT_COMPILED(library);
   const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 2);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
@@ -485,11 +458,7 @@ protocol Example {
 };
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
-  library.Parse(&ast);
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDocCommentOnParameters);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
 }
 
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
@@ -551,8 +520,7 @@ struct Empty{};
 /// bad
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
-  library.Parse(&ast);
+  ASSERT_COMPILED(library);
   const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnDocCommentMustBeFollowedByDeclaration);
@@ -569,10 +537,7 @@ struct Struct {
 )FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
-  EXPECT_FALSE(library.Parse(&ast));
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ParsingTests, BadFinalMemberMissingNameAndSemicolon) {
@@ -587,11 +552,8 @@ struct Struct {
 )FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
-  EXPECT_FALSE(library.Parse(&ast));
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
 }
 
 }  // namespace

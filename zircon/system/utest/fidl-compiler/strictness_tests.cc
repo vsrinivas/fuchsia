@@ -69,18 +69,14 @@ library example;
 strict flexible union SF { 1: bool b; }; // line 4
 flexible strict union FS { 1: bool b; }; // line 5
   )FIDL");
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConflictingModifier);
-  EXPECT_EQ(errors[0]->span->position().line, 4);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "strict");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "flexible");
-  ASSERT_ERR(errors[1], fidl::ErrConflictingModifier);
-  EXPECT_EQ(errors[1]->span->position().line, 5);
-  ASSERT_SUBSTR(errors[1]->msg.c_str(), "strict");
-  ASSERT_SUBSTR(errors[1]->msg.c_str(), "flexible");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
+                                      fidl::ErrConflictingModifier);
+  EXPECT_EQ(library.errors()[0]->span->position().line, 4);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "strict");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "flexible");
+  EXPECT_EQ(library.errors()[1]->span->position().line, 5);
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "strict");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "flexible");
 }
 
 TEST(StrictnessTests, BadConflictingModifiers) {
@@ -93,18 +89,14 @@ type SF = strict flexible union { 1: b bool; }; // line 4
 type FS = flexible strict union { 1: b bool; }; // line 5
   )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConflictingModifier);
-  EXPECT_EQ(errors[0]->span->position().line, 4);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "strict");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "flexible");
-  ASSERT_ERR(errors[1], fidl::ErrConflictingModifier);
-  EXPECT_EQ(errors[1]->span->position().line, 5);
-  ASSERT_SUBSTR(errors[1]->msg.c_str(), "strict");
-  ASSERT_SUBSTR(errors[1]->msg.c_str(), "flexible");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
+                                      fidl::ErrConflictingModifier);
+  EXPECT_EQ(library.errors()[0]->span->position().line, 4);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "strict");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "flexible");
+  EXPECT_EQ(library.errors()[1]->span->position().line, 5);
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "strict");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "flexible");
 }
 
 TEST(StrictnessTests, GoodBitsStrictness) {
@@ -189,7 +181,7 @@ strict struct Foo {
     int32 i;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotSpecifyModifier);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
 TEST(StrictnessTests, BadStrictnessTable) {
@@ -199,7 +191,7 @@ library example;
 strict table StrictFoo {
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotSpecifyModifier);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
 TEST(StrictnessTests, GoodUnionStrictness) {

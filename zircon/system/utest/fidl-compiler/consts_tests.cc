@@ -66,8 +66,8 @@ library example;
 const c bool = "foo";
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"foo\"");
 }
 
@@ -77,8 +77,8 @@ library example;
 
 const bool c = "foo";
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"foo\"");
 }
 
@@ -91,8 +91,8 @@ library example;
 const c bool = 6;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "6");
 }
 
@@ -102,8 +102,8 @@ library example;
 
 const bool c = 6;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "6");
 }
 
@@ -135,8 +135,8 @@ library example;
 const c int32 = "foo";
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"foo\"");
 }
 
@@ -146,8 +146,8 @@ library example;
 
 const int32 c = "foo";
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"foo\"");
 }
 
@@ -160,8 +160,8 @@ library example;
 const c int32 = true;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "true");
 }
 
@@ -171,8 +171,8 @@ library example;
 
 const int32 c = true;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "true");
 }
 
@@ -204,8 +204,8 @@ library example;
 const a uint64 = -42;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-42");
 }
 
@@ -215,8 +215,8 @@ library example;
 
 const uint64 a = -42;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-42");
 }
 
@@ -229,8 +229,8 @@ library example;
 const a uint64 = 18446744073709551616;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "18446744073709551616");
 }
 
@@ -240,8 +240,8 @@ library example;
 
 const uint64 a = 18446744073709551616;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "18446744073709551616");
 }
 
@@ -282,8 +282,8 @@ library example;
 const hi float32 = 3.41e38;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "3.41e38");
 }
 
@@ -293,8 +293,8 @@ library example;
 
 const float32 hi = 3.41e38;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "3.41e38");
 }
 
@@ -307,8 +307,8 @@ library example;
 const b float32 = -3.41e38;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-3.41e38");
 }
 
@@ -318,8 +318,8 @@ library example;
 
 const float32 b = -3.41e38;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-3.41e38");
 }
 
@@ -379,8 +379,8 @@ library example;
 const c string = 4;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "4");
 }
 
@@ -390,8 +390,8 @@ library example;
 
 const string c = 4;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "4");
 }
 
@@ -404,8 +404,8 @@ library example;
 const c string = true;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "true");
 }
 
@@ -415,8 +415,8 @@ library example;
 
 const string c = true;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "true");
 }
 
@@ -429,8 +429,8 @@ library example;
 const c string:4 = "hello";
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrStringConstantExceedsSizeBound,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrStringConstantExceedsSizeBound,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"hello\"");
 }
 
@@ -440,8 +440,8 @@ library example;
 
 const string:4 c = "hello";
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrStringConstantExceedsSizeBound,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrStringConstantExceedsSizeBound,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"hello\"");
 }
 
@@ -465,8 +465,8 @@ alias foo = int32;
 const c foo = "nope";
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"nope\"");
 }
 
@@ -477,8 +477,8 @@ library example;
 using foo = int32;
 const foo c = "nope";
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"nope\"");
 }
 
@@ -491,7 +491,7 @@ library example;
 const c string:optional = "";
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "string?");
 }
 
@@ -501,7 +501,7 @@ library example;
 
 const string? c = "";
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "string?");
 }
 
@@ -514,7 +514,7 @@ library example;
 const c array<int32,2> = -1;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   // TODO(fxdev.bug/73879): Update string matched when error output respects new
   //  syntax.
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "array<int32>:2");
@@ -526,7 +526,7 @@ library example;
 
 const array<int32>:2 c = -1;
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "array<int32>:2");
 }
 
@@ -539,7 +539,7 @@ library example;
 const c vector<int32>:2 = -1;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "vector<int32>:2");
 }
 
@@ -549,7 +549,7 @@ library example;
 
 const vector<int32>:2 c = -1;
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "vector<int32>:2");
 }
 
@@ -573,7 +573,7 @@ resource_definition handle : uint32 {
 const c handle:THREAD = -1;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   // TODO(fxdev.bug/73879): Update string matched when error output respects new
   //  syntax.
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle<thread>");
@@ -596,7 +596,7 @@ resource_definition handle : uint32 {
 
 const handle:THREAD c = -1;
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrInvalidConstantType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle<thread>");
 }
 
@@ -651,8 +651,8 @@ type OtherEnum = enum : int32 { VALUE = 5; };
 const c MyEnum = OtherEnum.VALUE;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadConstDifferentEnumMemberReferenceOld) {
@@ -663,8 +663,8 @@ enum MyEnum : int32 { VALUE = 1; };
 enum OtherEnum : int32 { VALUE = 5; };
 const MyEnum c = OtherEnum.VALUE;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadConstDifferentBitsMemberReference) {
@@ -678,8 +678,8 @@ type OtherBits = bits : uint32 { VALUE = 0x00000004; };
 const c MyBits = OtherBits.VALUE;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadConstDifferentBitsMemberReferenceOld) {
@@ -690,8 +690,8 @@ bits MyBits : uint32 { VALUE = 0x00000001; };
 bits OtherBits : uint32 { VALUE = 0x00000004; };
 const MyBits c = OtherBits.VALUE;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadConstAssignPrimitiveToEnum) {
@@ -704,8 +704,8 @@ type MyEnum = enum : int32 { VALUE = 1; };
 const c MyEnum = 5;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
 }
 
@@ -716,8 +716,8 @@ library example;
 enum MyEnum : int32 { VALUE = 1; };
 const MyEnum c = 5;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
 }
 
@@ -731,8 +731,8 @@ type MyBits = bits : uint32 { VALUE = 0x00000001; };
 const c MyBits = 5;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
 }
 
@@ -743,8 +743,8 @@ library example;
 bits MyBits : uint32 { VALUE = 0x00000001; };
 const MyBits c = 5;
 )FIDL");
-  ASSERT_ERRORED_TWICE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
 }
 
@@ -791,7 +791,7 @@ library example;
 const FOO uint32 = MAX;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrFailedConstantLookup);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFailedConstantLookup);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MAX");
 }
 
@@ -801,7 +801,7 @@ library example;
 
 const uint32 FOO = MAX;
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrFailedConstantLookup);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFailedConstantLookup);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MAX");
 }
 
@@ -826,7 +826,7 @@ type Example = struct { s string:dependency.MAX; };
 )FIDL",
                       experimental_flags);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_ERRORED(library, fidl::ErrCouldNotParseSizeBound);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
 }
 
 TEST(ConstsTests, BadMaxBoundTestLibraryQualifiedOld) {
@@ -847,7 +847,7 @@ using dependency;
 struct Example { string:dependency.MAX s; };
 )FIDL");
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_ERRORED(library, fidl::ErrCouldNotParseSizeBound);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
 }
 
 TEST(ConstsTests, BadParameterizePrimitive) {
@@ -859,7 +859,7 @@ library example;
 const u uint8<string> = 0;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrCannotBeParameterized);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeParameterized);
 }
 
 TEST(ConstsTests, BadParameterizePrimitiveOld) {
@@ -868,7 +868,7 @@ library example;
 
 const uint8<string> u = 0;
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotBeParameterized);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeParameterized);
 }
 
 TEST(ConstsTests, BadConstTestAssignTypeName) {
@@ -890,8 +890,8 @@ TEST(ConstsTests, BadConstTestAssignTypeName) {
     ss << "const FOO uint32 = Example;\n";
 
     TestLibrary library(ss.str(), experimental_flags);
-    ASSERT_ERRORED_TWICE(library, fidl::ErrExpectedValueButGotType,
-                         fidl::ErrCannotResolveConstantValue);
+    ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrExpectedValueButGotType,
+                                        fidl::ErrCannotResolveConstantValue);
   }
 }
 
@@ -912,8 +912,8 @@ TEST(ConstsTests, BadConstTestAssignTypeNameOld) {
     ss << "const uint32 FOO = Example;\n";
 
     TestLibrary library(ss.str());
-    ASSERT_ERRORED_TWICE(library, fidl::ErrExpectedValueButGotType,
-                         fidl::ErrCannotResolveConstantValue);
+    ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrExpectedValueButGotType,
+                                        fidl::ErrCannotResolveConstantValue);
   }
 }
 
@@ -927,7 +927,7 @@ const FOO uint8 = 0;
 const FOO uint8 = 1;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrNameCollision);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
 TEST(ConstsTests, BadNameCollisionOld) {
@@ -937,7 +937,7 @@ library example;
 const uint8 FOO = 0;
 const uint8 FOO = 1;
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrNameCollision);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
 TEST(ConstsTests, GoodMultiFileConstReference) {
@@ -975,7 +975,8 @@ type EnumType = enum : int32 {
 const dee EnumType = EnumType.D;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrUnknownEnumMember, fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnknownEnumMember,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadUnknownEnumMemberTestOld) {
@@ -994,7 +995,8 @@ enum EnumType : int32 {
 const EnumType dee = EnumType.D;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrUnknownEnumMember, fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnknownEnumMember,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadUnknownBitsMemberTest) {
@@ -1014,7 +1016,8 @@ type BitsType = bits {
 const dee BitsType = BitsType.D;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrUnknownBitsMember, fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnknownBitsMember,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadUnknownBitsMemberTestOld) {
@@ -1033,7 +1036,8 @@ bits BitsType {
 const BitsType dee = BitsType.D;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrUnknownBitsMember, fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnknownBitsMember,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, GoodOrOperatorTest) {
@@ -1072,8 +1076,8 @@ const two_fifty_six uint16 = 0x0100;
 const two_fifty_seven uint8 = one | two_fifty_six;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrCannotConvertConstantToType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "uint8");
 }
 
@@ -1089,8 +1093,8 @@ const uint16 two_fifty_six = 0x0100;
 const uint8 two_fifty_seven = one | two_fifty_six;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrCannotConvertConstantToType,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "uint8");
 }
 
@@ -1126,8 +1130,8 @@ const THERE string = "there";
 const result string = HI | THERE;
   )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrOrOperatorOnNonPrimitiveValue,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrOrOperatorOnNonPrimitiveValue,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadOrOperatorNonPrimitiveTypesTestOld) {
@@ -1142,8 +1146,8 @@ const string THERE = "there";
 const string result = HI | THERE;
   )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrOrOperatorOnNonPrimitiveValue,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrOrOperatorOnNonPrimitiveValue,
+                                      fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, GoodOrOperatorParenthesesTest) {
@@ -1191,7 +1195,7 @@ const eight uint16 = 8;
 const fifteen uint16 = ( three | seven | eight;
 )FIDL",
                                     std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ConstsTests, BadOrOperatorMissingRightParenTestOld) {
@@ -1207,7 +1211,7 @@ const uint16 eight = 8;
 const uint16 fifteen = ( three | seven | eight;
 )FIDL",
                                     std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ConstsTests, BadOrOperatorMissingLeftParenTest) {
@@ -1224,7 +1228,8 @@ const eight uint16 = 8;
 const fifteen uint16 = three | seven | eight );
 )FIDL",
                                     std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrUnexpectedTokenOfKind, fidl::ErrExpectedDeclaration);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrExpectedDeclaration);
 }
 
 TEST(ConstsTests, BadOrOperatorMissingLeftParenTestOld) {
@@ -1240,7 +1245,8 @@ const uint16 eight = 8;
 const uint16 fifteen = three | seven | eight );
 )FIDL",
                                     std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrUnexpectedTokenOfKind, fidl::ErrExpectedDeclaration);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrExpectedDeclaration);
 }
 
 TEST(ConstsTests, BadOrOperatorMisplacedParenTest) {
@@ -1257,7 +1263,7 @@ const eight uint16 = 8;
 const fifteen uint16 = ( three | seven | ) eight;
 )FIDL",
                                     std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrUnexpectedToken);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedToken);
 }
 
 TEST(ConstsTests, BadOrOperatorMisplacedParenTestOld) {
@@ -1273,7 +1279,7 @@ const uint16 eight = 8;
 const uint16 fifteen = ( three | seven | ) eight;
 )FIDL",
                                     std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrUnexpectedToken);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedToken);
 }
 
 TEST(ConstsTests, BadIdentifierConstMismatchedTypesTest) {
@@ -1294,8 +1300,8 @@ const a OneEnum = OneEnum.A;
 const b AnotherEnum = a;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "AnotherEnum");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "OneEnum");
 }
@@ -1317,8 +1323,8 @@ const OneEnum a = OneEnum.A;
 const AnotherEnum b = a;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "AnotherEnum");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "OneEnum");
 }
@@ -1340,8 +1346,8 @@ type AnotherEnum = enum {
 const a OneEnum = AnotherEnum.B;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "AnotherEnum");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "OneEnum");
 }
@@ -1362,8 +1368,8 @@ enum AnotherEnum {
 const OneEnum a = AnotherEnum.B;
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_TWICE(library, fidl::ErrMismatchedNameTypeAssignment,
-                       fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "AnotherEnum");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "OneEnum");
 }

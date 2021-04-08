@@ -84,11 +84,8 @@ protocol P {
 )FIDL",
                                std::move(experimental_flags));
 
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveHandleRights);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveHandleRights);
 }
 
 TEST(HandleTests, GoodPlainHandleTest) {
@@ -179,11 +176,8 @@ struct MyStruct {
 )FIDL",
                                std::move(experimental_flags));
 
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCouldNotResolveHandleSubtype);
-  EXPECT_TRUE(errors[0]->msg.find("ZIPPY") != std::string::npos);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleSubtype);
+  EXPECT_TRUE(library.errors()[0]->msg.find("ZIPPY") != std::string::npos);
 }
 
 TEST(HandleTests, BadDisallowOldHandles) {
@@ -200,10 +194,7 @@ struct MyStruct {
 )FIDL",
                                std::move(experimental_flags));
 
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -265,11 +256,8 @@ resource struct MyStruct {
 )FIDL",
                       std::move(experimental_flags));
 
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrResourceMissingRightsProperty);
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveHandleRights);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingRightsProperty,
+                                      fidl::ErrCouldNotResolveHandleRights);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -292,11 +280,8 @@ resource struct MyStruct {
 )FIDL",
                       std::move(experimental_flags));
 
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrResourceMissingSubtypeProperty);
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveHandleSubtype);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingSubtypeProperty,
+                                      fidl::ErrCouldNotResolveHandleSubtype);
 }
 
 }  // namespace

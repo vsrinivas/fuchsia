@@ -91,10 +91,8 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 2u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
-  ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType,
+                                      fidl::ErrMissingOrdinalBeforeType);
 }
 
 TEST(UnionTests, BadMustHaveExplicitOrdinals) {
@@ -110,10 +108,8 @@ type Foo = strict union {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 2u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
-  ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType,
+                                      fidl::ErrMissingOrdinalBeforeType);
 }
 
 TEST(UnionTests, GoodExplicitOrdinals) {
@@ -217,7 +213,7 @@ union Foo {
   -1: uint32 foo;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrOrdinalOutOfBound);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
 }
 
 TEST(UnionTests, BadOrdinalOutOfBounds) {
@@ -231,7 +227,7 @@ type Foo = strict union {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrOrdinalOutOfBound);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
 }
 
 TEST(UnionTests, BadOrdinalsMustBeUniqueOld) {
@@ -243,7 +239,7 @@ union Foo {
   1: uint64 x;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
 TEST(UnionTests, BadOrdinalsMustBeUnique) {
@@ -258,7 +254,7 @@ type Foo = strict union {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
 TEST(UnionTests, BadMemberNamesMustBeUniqueOld) {
@@ -270,7 +266,7 @@ union Duplicates {
     2: int32 s;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
 }
 
 TEST(UnionTests, BadMemberNamesMustBeUnique) {
@@ -285,7 +281,7 @@ type Duplicates = strict union {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
 }
 
 TEST(UnionTests, BadCannotStartAtZeroOld) {
@@ -297,7 +293,7 @@ union Foo {
   1: uint64 bar;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrOrdinalsMustStartAtOne);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
 TEST(UnionTests, BadCannotStartAtZero) {
@@ -312,7 +308,7 @@ type Foo = strict union {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrOrdinalsMustStartAtOne);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
 TEST(UnionTests, BadDefaultNotAllowedOld) {
@@ -324,7 +320,7 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDefaultsOnUnionsNotSupported);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDefaultsOnUnionsNotSupported);
 }
 
 // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
@@ -340,9 +336,10 @@ type Foo = strict union {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 2u);
-  ASSERT_ERR(library.errors()[0], fidl::ErrUnexpectedTokenOfKind);
+  // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
+  // TODO(fxbug.dev/72924): the second error doesn't make any sense
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrMissingOrdinalBeforeType);
 }
 
 TEST(UnionTests, BadMustBeDenseOld) {
@@ -355,7 +352,7 @@ union Example {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
@@ -372,7 +369,7 @@ type Example = strict union {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
@@ -386,7 +383,7 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, BadMustHaveNonReservedMember) {
@@ -402,7 +399,7 @@ type Foo = strict union {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, BadNoNullableMembersOld) {
@@ -414,7 +411,7 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
 }
 
 TEST(UnionTests, BadNoNullableMembers) {
@@ -430,7 +427,7 @@ type Foo = strict union {
 )FIDL",
                       std::move(experimental_flags));
   // NOTE(fxbug.dev/72924): we get a more general error in the new syntax
-  ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableOrdinaledMember);
 }
 
 TEST(UnionTests, BadNoDirectlyRecursiveUnionsOld) {
@@ -442,7 +439,7 @@ union Value {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
 TEST(UnionTests, BadNoDirectlyRecursiveUnions) {
@@ -457,20 +454,20 @@ type Value = strict union {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
-TEST(UnionTests, BadInvalidEmptyUnionOld) {
+TEST(UnionTests, BadEmptyUnionOld) {
   TestLibrary library(R"FIDL(
 library example;
 
 union Foo {};
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, BadInvalidEmptyUnion) {
+TEST(UnionTests, BadEmptyUnion) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -480,7 +477,7 @@ type Foo = strict union {};
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, GoodErrorSyntaxExplicitOrdinalsOld) {
@@ -523,7 +520,7 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrInvalidAttributePlacement);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Selector");
 }
 
@@ -541,7 +538,7 @@ type Foo = strict union {
                       std::move(experimental_flags));
   // TODO(fxbug.dev/72924): this should become ErrInvalidAttributePlacement
   // as before once attributes are implemented.
-  ASSERT_ERRORED(library, fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType);
 }
 
 // TODO(fxbug.dev/70247): as we clean up the migration, it will probably have
@@ -557,7 +554,7 @@ TEST(UnionTests, BadDeprecatedXUnionError) {
   };
 
   )FIDL");
-    ASSERT_ERRORED(library, fidl::ErrXunionDeprecated);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrXunionDeprecated);
   }
 
   {
@@ -569,7 +566,7 @@ TEST(UnionTests, BadDeprecatedXUnionError) {
   };
 
   )FIDL");
-    ASSERT_ERRORED(library, fidl::ErrXunionDeprecated);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrXunionDeprecated);
   }
 
   {
@@ -581,7 +578,7 @@ TEST(UnionTests, BadDeprecatedXUnionError) {
   };
 
   )FIDL");
-    ASSERT_ERRORED(library, fidl::ErrStrictXunionDeprecated);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStrictXunionDeprecated);
   }
 }
 

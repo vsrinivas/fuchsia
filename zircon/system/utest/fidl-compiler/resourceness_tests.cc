@@ -18,13 +18,9 @@ void invalid_resource_modifier(const std::string& type, const std::string& defin
   std::string fidl_library = "library example;\n\n" + definition + "\n";
 
   TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyModifier);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "resource");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), type);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "resource");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), type);
 }
 
 TEST(ResourcenessTests, BadBitsResourceness) {
@@ -368,20 +364,15 @@ resource struct Bottom {};
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeMustBeResource,
+                                      fidl::ErrTypeMustBeResource);
   // `Middle` must be a resource because it includes `bottom`, a *nominal* resource.
-  ASSERT_ERR(errors[0], fidl::ErrTypeMustBeResource);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Middle");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "bottom");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Middle");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bottom");
 
   // `Top` must be a resource because it includes `middle`, an *effective* resource.
-  ASSERT_ERR(errors[1], fidl::ErrTypeMustBeResource);
-  ASSERT_SUBSTR(errors[1]->msg.c_str(), "Top");
-  ASSERT_SUBSTR(errors[1]->msg.c_str(), "middle");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "Top");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "middle");
 }
 
 TEST(ResourcenessTests, GoodRecursiveValueTypes) {
@@ -432,13 +423,9 @@ struct Boros {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-
-  ASSERT_ERR(errors[0], fidl::ErrTypeMustBeResource);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Boros");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "bad_member");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Boros");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member");
 }
 
 TEST(ResourcenessTests, GoodStrictResourceOrderIndependent) {

@@ -34,12 +34,9 @@ type Fruit = enum : uint64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "APPLE");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ORANGE");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
 TEST(EnumsTests, BadEnumTestWithNonUniqueValuesOld) {
@@ -51,12 +48,9 @@ enum Fruit : uint64 {
     APPLE = 1;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "APPLE");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ORANGE");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
 TEST(EnumsTests, BadEnumTestWithNonUniqueValuesOutOfLine) {
@@ -74,12 +68,9 @@ const FOUR uint32 = 4;
 const TWO_SQUARED uint32 = 4;
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "APPLE");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ORANGE");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
 TEST(EnumsTests, BadEnumTestWithNonUniqueValuesOutOfLineOld) {
@@ -94,12 +85,9 @@ enum Fruit {
 const uint32 FOUR = 4;
 const uint32 TWO_SQUARED = 4;
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "APPLE");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ORANGE");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
 TEST(EnumsTests, BadEnumTestUnsignedWithNegativeMember) {
@@ -114,12 +102,9 @@ type Fruit = enum : uint64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "-2");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
 
 TEST(EnumsTests, BadEnumTestUnsignedWithNegativeMemberOld) {
@@ -131,12 +116,9 @@ enum Fruit : uint64 {
     APPLE = -2;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "-2");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
 
 TEST(EnumsTests, BadEnumTestInferredUnsignedWithNegativeMember) {
@@ -151,12 +133,9 @@ type Fruit = enum {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "-2");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
 
 TEST(EnumsTests, BadEnumTestInferredUnsignedWithNegativeMemberOld) {
@@ -168,12 +147,9 @@ enum Fruit {
     APPLE = -2;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "-2");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
 
 TEST(EnumsTests, BadEnumTestMemberOverflow) {
@@ -188,12 +164,9 @@ type Fruit = enum : uint8 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "256");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "256");
 }
 
 TEST(EnumsTests, BadEnumTestMemberOverflowOld) {
@@ -205,12 +178,9 @@ enum Fruit : uint8 {
     APPLE = 256;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "256");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "256");
 }
 
 TEST(EnumsTests, BadEnumTestFloatType) {
@@ -224,10 +194,7 @@ type Error = enum: float64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrEnumTypeMustBeIntegralPrimitive);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEnumTypeMustBeIntegralPrimitive);
 }
 
 TEST(EnumsTests, BadEnumTestFloatTypeOld) {
@@ -238,10 +205,7 @@ enum Error: float64 {
     ONE_POINT_FIVE = 1.5;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrEnumTypeMustBeIntegralPrimitive);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEnumTypeMustBeIntegralPrimitive);
 }
 
 TEST(EnumsTests, BadEnumTestDuplicateMember) {
@@ -257,7 +221,7 @@ type Fruit = enum : uint64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberName);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
@@ -271,7 +235,7 @@ enum Fruit : uint64 {
     ORANGE = 3;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberName);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
@@ -284,10 +248,7 @@ library example;
 type E = enum {};
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMustHaveOneMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
 }
 
 TEST(EnumsTests, BadEnumTestNoMembersOld) {
@@ -296,10 +257,7 @@ library example;
 
 enum E {};
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMustHaveOneMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
 }
 
 TEST(EnumsTests, GoodEnumTestKeywordNames) {
@@ -330,7 +288,7 @@ type Struct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
 }
 
@@ -346,7 +304,7 @@ struct Struct {
     NotNullable? not_nullable;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
 }
 

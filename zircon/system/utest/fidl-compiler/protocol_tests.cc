@@ -111,10 +111,7 @@ protocol Parent {};
 protocol Child : Parent {};
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ProtocolTests, BadColonNotSupported) {
@@ -128,10 +125,7 @@ protocol Child : Parent {};
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ProtocolTests, BadDocCommentOutsideAttributelistOld) {
@@ -144,7 +138,7 @@ protocol WellDocumented {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
 TEST(ProtocolTests, BadDocCommentOutsideAttributelist) {
@@ -160,7 +154,7 @@ protocol WellDocumented {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
 TEST(ProtocolTests, BadCannotAttachAttributesToCompose) {
@@ -172,7 +166,7 @@ protocol Child {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotAttachAttributesToCompose);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToCompose);
 }
 
 TEST(ProtocolTests, BadCannotComposeYourselfOld) {
@@ -184,7 +178,7 @@ protocol Narcisse {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
 TEST(ProtocolTests, BadCannotComposeYourself) {
@@ -199,7 +193,7 @@ protocol Narcisse {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
 TEST(ProtocolTests, BadCannotComposeSameProtocolTwiceOld) {
@@ -216,7 +210,7 @@ protocol Child {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrProtocolComposedMultipleTimes);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolComposedMultipleTimes);
 }
 
 TEST(ProtocolTests, BadCannotComposeSameProtocolTwice) {
@@ -236,7 +230,7 @@ protocol Child {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrProtocolComposedMultipleTimes);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolComposedMultipleTimes);
 }
 
 TEST(ProtocolTests, BadCannotComposeMissingProtocolOld) {
@@ -248,7 +242,7 @@ protocol Child {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrUnknownType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MissingParent");
 }
 
@@ -264,7 +258,7 @@ protocol Child {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrUnknownType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MissingParent");
 }
 
@@ -277,7 +271,7 @@ protocol P {
     compose S;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrComposingNonProtocol);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposingNonProtocol);
 }
 
 TEST(ProtocolTests, BadCannotComposeNonProtocol) {
@@ -292,7 +286,7 @@ protocol P {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrComposingNonProtocol);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposingNonProtocol);
 }
 
 TEST(ProtocolTests, BadCannotUseOrdinalsInProtocolDeclarationOld) {
@@ -304,7 +298,7 @@ protocol NoMoreOrdinals {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
 TEST(ProtocolTests, BadCannotUseOrdinalsInProtocolDeclaration) {
@@ -319,7 +313,7 @@ protocol NoMoreOrdinals {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
 TEST(ProtocolTests, BadNoOtherPragmaThanComposeOld) {
@@ -331,7 +325,7 @@ protocol Wrong {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
 TEST(ProtocolTests, BadNoOtherPragmaThanCompose) {
@@ -346,7 +340,7 @@ protocol Wrong {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
 TEST(ProtocolTests, BadComposedProtocolsHaveClashingNamesOld) {
@@ -374,7 +368,7 @@ protocol D {
     MethodA();
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodName);
 }
 
 TEST(ProtocolTests, BadComposedProtocolsHaveClashingNames) {
@@ -405,7 +399,7 @@ protocol D {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodName);
 }
 
 // See GetGeneratedOrdinal64ForTesting in test_library.h
@@ -422,7 +416,7 @@ protocol Special {
     ClashTwo();
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ClashTwo_");
 }
 
@@ -443,7 +437,7 @@ protocol Special {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ClashTwo_");
 }
 
@@ -462,7 +456,7 @@ protocol YearningForSimplicity {
     Simple();
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMemberMustBeSimple);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMemberMustBeSimple);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "arg");
 }
 
@@ -476,7 +470,7 @@ protocol P {
     Method(request<S> r);
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMustBeAProtocol);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeAProtocol);
 }
 
 // TODO(fxbug.dev/71536): implement client/server end in the new syntax
@@ -488,7 +482,7 @@ protocol P {
     Method(request r);
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 // TODO(fxbug.dev/71536): implement client/server end in the new syntax
@@ -501,7 +495,7 @@ struct S {
     request<P>:0 p;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotHaveSize);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotHaveSize);
 }
 
 TEST(ProtocolTests, BadDuplicateParameterNameOld) {
@@ -512,7 +506,7 @@ protocol P {
   MethodWithDuplicateParams(uint8 foo, uint8 foo);
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodParameterName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterName);
 }
 
 TEST(ProtocolTests, BadDuplicateParameterName) {
@@ -526,7 +520,7 @@ protocol P {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMethodParameterName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterName);
 }
 
 }  // namespace

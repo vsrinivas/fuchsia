@@ -98,7 +98,7 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
 }
 
 TEST(StructsTests, BadDefaultValueEnumTypeOld) {
@@ -112,7 +112,7 @@ struct MyStruct {
     MyEnum field = OtherEnum.A;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInEnum) {
@@ -128,7 +128,7 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
 }
 
@@ -142,7 +142,7 @@ struct MyStruct {
     MyEnum field = 1;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
 }
 
@@ -186,7 +186,7 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
 }
 
 TEST(StructsTests, BadDefaultValueBitsTypeOld) {
@@ -200,7 +200,7 @@ struct MyStruct {
     MyBits field = OtherBits.A;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInBits) {
@@ -216,7 +216,7 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
 }
 
@@ -230,7 +230,7 @@ struct MyStruct {
     MyBits field = 1;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
 }
 
@@ -275,7 +275,7 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrInvalidStructMemberType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidStructMemberType);
 }
 
 TEST(StructsTests, BadDefaultValueNullableStringOld) {
@@ -286,7 +286,7 @@ struct MyStruct {
     string? field = "";
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrInvalidStructMemberType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidStructMemberType);
 }
 
 TEST(StructsTests, BadDuplicateMemberName) {
@@ -301,7 +301,7 @@ type Duplicates = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrDuplicateStructMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberName);
 }
 
 TEST(StructsTests, BadDuplicateMemberNameOld) {
@@ -313,7 +313,7 @@ struct Duplicates {
     uint8 s;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateStructMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberName);
 }
 
 TEST(StructsTests, GoodMaxInlineSize) {
@@ -338,7 +338,7 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrInlineSizeExceeds64k);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceeds64k);
 }
 
 TEST(StructsTests, BadInlineSizeExceeds64kOld) {
@@ -349,7 +349,7 @@ struct MyStruct {
     array<uint8>:65536 arr;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrInlineSizeExceeds64k);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceeds64k);
 }
 
 }  // namespace

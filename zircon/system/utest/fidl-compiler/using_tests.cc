@@ -138,11 +138,8 @@ struct Foo {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent.Bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent.Bar");
 }
 
 TEST(UsingTests, BadUnknownUsing) {
@@ -156,11 +153,8 @@ struct Foo {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrUnknownLibrary);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownLibrary);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
 TEST(UsingTests, BadDuplicateUsing) {
@@ -181,11 +175,8 @@ using dependent; // duplicated
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateLibraryImport);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateLibraryImport);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
 TEST(UsingTests, BadUnusedUsing) {
@@ -210,12 +201,8 @@ struct Foo {
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrUnusedImport);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnusedImport);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
 TEST(UsingTests, BadUnknownDependentLibrary) {
@@ -224,10 +211,7 @@ library example;
 
 const foo.bar.baz QUX = 0;
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrUnknownDependentLibrary);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownDependentLibrary);
 }
 
 TEST(UsingTests, WarnTooManyProvidedLibraries) {
@@ -255,10 +239,7 @@ library lib;
 library dib;
   )FIDL");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrFilesDisagreeOnLibraryName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFilesDisagreeOnLibraryName);
 }
 
 TEST(UsingTests, BadLibraryDeclarationNameCollision) {
@@ -285,11 +266,8 @@ struct B{dep.A a;}; // So the import is used.
                       &shared);
 
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dep");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImport);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dep");
 }
 
 TEST(UsingTests, BadAliasedLibraryDeclarationNameCollision) {
@@ -316,11 +294,8 @@ struct B{dep.A a;}; // So the import is used.
                       &shared);
 
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "x");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImport);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "x");
 }
 
 TEST(UsingTests, BadAliasedLibraryNonaliasedDeclarationNameCollision) {
@@ -347,11 +322,8 @@ struct B{depnoconflict.A a;}; // So the import is used.
                       &shared);
 
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dep");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImport);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dep");
 }
 
 }  // namespace

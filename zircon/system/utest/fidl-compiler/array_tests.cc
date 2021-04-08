@@ -44,7 +44,7 @@ type S = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrMustHaveNonZeroSize);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonZeroSize);
 }
 
 TEST(ArrayTests, BadNoSizeArrayOld) {
@@ -55,9 +55,7 @@ struct S {
     array<uint8> arr;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_ERR(errors[0], fidl::ErrMustHaveSize);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveSize);
 }
 
 TEST(ArrayTests, BadNoSizeArray) {
@@ -71,7 +69,7 @@ type S = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrMustHaveSize);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveSize);
 }
 
 TEST(ArrayTests, BadNonParameterizedArrayOld) {
@@ -82,9 +80,7 @@ struct S {
     array arr;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 TEST(ArrayTests, BadNonParameterizedArray) {
@@ -98,7 +94,7 @@ type S = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 }  // namespace

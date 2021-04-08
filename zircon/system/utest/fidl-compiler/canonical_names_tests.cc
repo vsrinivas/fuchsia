@@ -253,13 +253,10 @@ struct Example {
   bool FooBar;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateStructMemberNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadTableMembers) {
@@ -271,13 +268,10 @@ table Example {
   2: bool FooBar;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateTableFieldNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadUnionMembers) {
@@ -289,13 +283,10 @@ union Example {
   2: bool FooBar;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateUnionMemberNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadEnumMembers) {
@@ -307,13 +298,10 @@ enum Example {
   FooBar = 2;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadBitsMembers) {
@@ -325,13 +313,10 @@ bits Example {
   FooBar = 2;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadProtocolMethods) {
@@ -343,13 +328,10 @@ protocol Example {
   FooBar() -> ();
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadMethodParameters) {
@@ -360,13 +342,10 @@ protocol Example {
   example(bool fooBar, bool FooBar) -> ();
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodParameterNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadMethodResults) {
@@ -377,13 +356,10 @@ protocol Example {
   example() -> (bool fooBar, bool FooBar);
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodParameterNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadServiceMembers) {
@@ -396,13 +372,10 @@ service Example {
   P FooBar;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateServiceMemberNameCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadUpperAcronym) {
@@ -412,13 +385,10 @@ library example;
 struct HTTPServer {};
 struct HttpServer {};
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "HTTPServer");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "HttpServer");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "http_server");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "HTTPServer");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "HttpServer");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "http_server");
 }
 
 TEST(CanonicalNamesTests, BadDependentLibrary) {
@@ -439,12 +409,9 @@ using foobar;
 using FOOBAR = foobar.Something;
 )FIDL");
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImportCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FOOBAR");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foobar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImportCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FOOBAR");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foobar");
 }
 
 TEST(CanonicalNamesTests, BadVariousCollisions) {
@@ -492,12 +459,9 @@ library example;
 struct it_is_the_same {};
 struct it__is___the____same {};
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "it_is_the_same");
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "it__is___the____same");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "it_is_the_same");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "it__is___the____same");
 }
 
 TEST(CanonicalNamesTests, BadInconsistentTypeSpelling) {

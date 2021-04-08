@@ -80,10 +80,7 @@ struct Message {
     uint32 f;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
 TEST(TypeAliasTests, BadNoOptionalOnPrimitive) {
@@ -95,11 +92,8 @@ struct Bad {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "int64");
 }
 
 TEST(TypeAliasTests, BadNoOptionalOnAliasedPrimitive) {
@@ -113,11 +107,8 @@ struct Bad {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "int64");
 }
 
 TEST(TypeAliasTests, GoodVectorParametrizedOnDecl) {
@@ -386,10 +377,7 @@ resource struct MyStruct {
     alias_of_handle:VMO h;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCouldNotParseSizeBound);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
 }
 
 TEST(TypeAliasTests, BadCannotParametrizeTwice) {
@@ -402,10 +390,7 @@ struct Message {
 
 using alias_of_vector_of_string = vector<string>;
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotParametrizeTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotParametrizeTwice);
 }
 
 TEST(TypeAliasTests, BadCannotBoundTwice) {
@@ -418,10 +403,7 @@ struct Message {
 
 using alias_of_vector_of_string_max_5 = vector<string>:5;
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotBoundTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBoundTwice);
 }
 
 TEST(TypeAliasTests, BadCannotNullTwice) {
@@ -434,10 +416,7 @@ struct Message {
 
 using alias_of_vector_nullable = vector?;
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotIndicateNullabilityTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateNullabilityTwice);
 }
 
 TEST(TypeAliasTests, GoodMultiFileAliasReference) {
@@ -502,10 +481,7 @@ library example;
 using foo.bar.baz = uint8;
 )FIDL");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrCompoundAliasIdentifier);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCompoundAliasIdentifier);
 }
 
 }  // namespace

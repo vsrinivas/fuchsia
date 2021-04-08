@@ -50,11 +50,7 @@ resource_definition SomeResource : uint32 {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1u);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedIdentifier);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
 TEST(Resource, BadNoProperties) {
@@ -67,11 +63,7 @@ resource_definition SomeResource : uint32 {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1u);
-  ASSERT_ERR(errors[0], fidl::ErrMustHaveOneProperty);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneProperty);
 }
 
 TEST(Resource, BadDuplicateProperty) {
@@ -90,11 +82,7 @@ resource_definition SomeResource : uint32 {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1u);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateResourcePropertyName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateResourcePropertyName);
 }
 
 }  // namespace

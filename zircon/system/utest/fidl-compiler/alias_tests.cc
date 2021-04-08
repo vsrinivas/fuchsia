@@ -448,11 +448,7 @@ using alias_of_int16 = int16;
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrOldUsingSyntaxDeprecated);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOldUsingSyntaxDeprecated);
 }
 
 }  // namespace

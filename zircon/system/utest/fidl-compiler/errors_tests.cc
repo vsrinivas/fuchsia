@@ -113,11 +113,8 @@ protocol Example {
 };
 )FIDL");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ErrorType");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ErrorType");
 }
 
 TEST(ErrorsTests, BadErrorWrongPrimitive) {
@@ -129,10 +126,7 @@ protocol Example {
 };
 )FIDL");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidErrorType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidErrorType);
 }
 
 TEST(ErrorsTests, BadErrorMissingType) {
@@ -142,10 +136,7 @@ protocol Example {
     Method() -> (int32 flub) error;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ErrorsTests, BadErrorNotAType) {
@@ -155,10 +146,7 @@ protocol Example {
     Method() -> (int32 flub) error "hello";
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ErrorsTests, BadErrorNoResponse) {
@@ -168,10 +156,7 @@ protocol Example {
     Method() -> error int32;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ErrorsTests, BadErrorUnexpectedEndOfFile) {
@@ -180,18 +165,12 @@ library example;
 table ForgotTheSemicolon {}
 )FIDL");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ErrorsTests, BadErrorEmptyFile) {
   TestLibrary library("");
 
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedIdentifier);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 }  // namespace

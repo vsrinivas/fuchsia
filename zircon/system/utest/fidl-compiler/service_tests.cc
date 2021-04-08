@@ -73,10 +73,7 @@ service SomeService {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateServiceMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberName);
 }
 
 TEST(ServiceTests, BadNoNullableProtocolMembers) {
@@ -90,10 +87,7 @@ service SomeService {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrNullableServiceMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableServiceMember);
 }
 
 TEST(ServiceTests, BadOnlyProtocolMembers) {
@@ -107,10 +101,7 @@ service SomeService {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotUseType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseType);
 }
 
 TEST(ServiceTests, BadCannotUseServicesInDecls) {
@@ -124,10 +115,7 @@ struct CannotUseService {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotUseService);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseService);
 }
 
 }  // namespace

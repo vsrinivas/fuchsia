@@ -382,6 +382,10 @@ All `fidlc` compiler tests written in C++ must conform to the following rules:
          new check, so tests prefixed with `Warn` should be changed to `Good`
          or `Bad` when the check is removed. Ex: `WarnTooManyProvidedLibraries`.
 
+Additionally, test cases which expect compilation failures should use the
+`ASSERT_ERRORED_DURING_COMPILE` and `ASSERT_ERRORED_TWICE_DURING_COMPILE` macros
+in cases when one and two errors are expected, respectively.
+
 #### `fidlc` goldens
 
 To regenerate the `fidlc` JSON goldens:

@@ -21,12 +21,7 @@ flexible enum Foo : uint8 {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-
-  ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnMultipleMembers);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
 TEST(FlexibleEnum, BadMaxValueWithoutUnknownUnsigned) {
@@ -41,12 +36,7 @@ flexible enum Foo : uint8 {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-
-  ASSERT_ERR(errors[0], fidl::ErrFlexibleEnumMemberWithMaxValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
 TEST(FlexibleEnum, BadMaxValueWithoutUnknownSigned) {
@@ -61,12 +51,7 @@ flexible enum Foo : int8 {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-
-  ASSERT_ERR(errors[0], fidl::ErrFlexibleEnumMemberWithMaxValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
 TEST(FlexibleEnum, GoodCanUseMaxValueIfOtherIsUnknownUnsigned) {
@@ -143,12 +128,7 @@ flexible union Foo {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-
-  ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnMultipleMembers);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
 TEST(FlexibleUnion, BadMaxValueWithoutUnknown) {

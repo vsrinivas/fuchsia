@@ -35,7 +35,7 @@ type Fruit = bits : int64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
 }
 
 TEST(BitsTests, BadBitsTestSignedOld) {
@@ -48,7 +48,7 @@ bits Fruit : int64 {
     BANANA = 4;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
 }
 
 TEST(BitsTests, BadBitsTestWithNonUniqueValues) {
@@ -63,7 +63,7 @@ type Fruit = bits : uint64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
@@ -77,7 +77,7 @@ bits Fruit : uint64 {
     APPLE = 1;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
@@ -97,7 +97,7 @@ const FOUR uint32 = 4;
 const TWO_SQUARED uint32 = 4;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
@@ -114,7 +114,7 @@ bits Fruit {
 const uint32 FOUR = 4;
 const uint32 TWO_SQUARED = 4;
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateMemberValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
@@ -131,12 +131,9 @@ type Fruit = bits : uint64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "-2");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
 
 TEST(BitsTests, BadBitsTestUnsignedWithNegativeMemberOld) {
@@ -148,12 +145,9 @@ bits Fruit : uint64 {
     APPLE = -2;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "-2");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
 
 TEST(BitsTests, BadBitsTestMemberOverflow) {
@@ -168,12 +162,9 @@ type Fruit = bits : uint8 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "256");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "256");
 }
 
 TEST(BitsTests, BadBitsTestMemberOverflowOld) {
@@ -185,12 +176,9 @@ bits Fruit : uint8 {
     APPLE = 256;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "256");
-  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "256");
 }
 
 TEST(BitsTests, BadBitsTestDuplicateMember) {
@@ -206,10 +194,7 @@ type Fruit = bits : uint64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
-  ASSERT_ERR(library.errors()[0], fidl::ErrDuplicateMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberName);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
@@ -223,10 +208,7 @@ bits Fruit : uint64 {
     ORANGE = 4;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
-  ASSERT_ERR(library.errors()[0], fidl::ErrDuplicateMemberName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberName);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
@@ -239,7 +221,7 @@ library example;
 type B = bits {};
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrMustHaveOneMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
 }
 
 TEST(BitsTests, BadBitsTestNoMembersOld) {
@@ -248,7 +230,7 @@ library example;
 
 bits B {};
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrMustHaveOneMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
 }
 
 TEST(BitsTests, GoodBitsTestKeywordNames) {
@@ -275,7 +257,7 @@ type non_power_of_two = bits : uint64 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrBitsMemberMustBePowerOfTwo);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsMemberMustBePowerOfTwo);
 }
 
 TEST(BitsTests, BadBitsTestNonPowerOfTwoOld) {
@@ -286,7 +268,7 @@ bits non_power_of_two : uint64 {
     three = 3;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrBitsMemberMustBePowerOfTwo);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsMemberMustBePowerOfTwo);
 }
 
 TEST(BitsTests, GoodBitsTestMask) {
@@ -321,11 +303,8 @@ type Struct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "NotNullable");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
 }
 
 TEST(EnumsTests, BadBitsShantBeNullableOld) {
@@ -340,11 +319,8 @@ struct Struct {
     NotNullable? not_nullable;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "NotNullable");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
 }
 
 }  // namespace

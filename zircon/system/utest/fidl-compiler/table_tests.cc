@@ -91,7 +91,7 @@ table Foo {
     int64 x;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrExpectedOrdinalOrCloseBrace);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedOrdinalOrCloseBrace);
 }
 
 TEST(TableTests, BadMissingOrdinals) {
@@ -105,7 +105,7 @@ type Foo = table {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrMissingOrdinalBeforeType)
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType)
 }
 
 TEST(TableTests, BadDuplicateFieldNamesOld) {
@@ -117,7 +117,7 @@ table Foo {
     2: uint32 field;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldName);
 }
 
 TEST(TableTests, BadDuplicateFieldNames) {
@@ -132,7 +132,7 @@ type Foo = table {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldName);
 }
 
 TEST(TableTests, BadDuplicateOrdinalsOld) {
@@ -144,7 +144,7 @@ table Foo {
     1: uint32 bar;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldOrdinal);
 }
 
 TEST(TableTests, BadDuplicateOrdinals) {
@@ -159,7 +159,7 @@ type Foo = table {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldOrdinal);
 }
 
 // TODO(fxbug.dev/72924): implement attributes
@@ -201,7 +201,7 @@ table Foo {
     1: reserved;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
 }
 
 TEST(TableTests, GoodKeywordsAsFieldNames) {
@@ -234,7 +234,7 @@ struct OptionalTableContainer {
     Foo? foo;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
 TEST(TableTests, BadOptionalInStruct) {
@@ -252,7 +252,7 @@ type OptionalTableContainer = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
 TEST(TableTests, BadOptionalInUnionOld) {
@@ -267,7 +267,7 @@ union OptionalTableContainer {
     1: Foo? foo;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
 }
 
 TEST(TableTests, BadOptionalInUnion) {
@@ -286,7 +286,7 @@ type OptionalTableContainer = union {
 )FIDL",
                       std::move(experimental_flags));
   // NOTE(fxbug.dev/72924): same error is used for tables and unions
-  ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableOrdinaledMember);
 }
 
 TEST(TableTests, GoodTableInTable) {
@@ -329,7 +329,7 @@ table Foo {
     1: int64? t;
 };
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrNullableTableMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
 }
 
 TEST(TableTests, BadOptionalTableMember) {
@@ -344,7 +344,7 @@ type Foo = table {
 )FIDL",
                       std::move(experimental_flags));
   // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
-  ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableOrdinaledMember);
 }
 
 TEST(TableTests, BadDefaultNotAllowedOld) {
@@ -356,7 +356,7 @@ table Foo {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrDefaultsOnTablesNotSupported);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDefaultsOnTablesNotSupported);
 }
 
 TEST(TableTests, BadDefaultNotAllowed) {
@@ -372,11 +372,9 @@ type Foo = table {
 )FIDL",
                       std::move(experimental_flags));
   // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
-  EXPECT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 2);
-  ASSERT_ERR(library.errors()[0], fidl::ErrUnexpectedTokenOfKind);
-  // TODO(fxbug.dev/72924): this error doesn't make any sense
-  ASSERT_ERR(library.errors()[1], fidl::ErrMissingOrdinalBeforeType);
+  // TODO(fxbug.dev/72924): the second error doesn't make any sense
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrMissingOrdinalBeforeType);
 }
 
 TEST(TableTests, BadMustBeDenseOld) {
@@ -389,7 +387,7 @@ table Example {
 };
 
 )FIDL");
-  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");
 }
 
@@ -406,7 +404,7 @@ type Example = table {
 
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");
 }
 

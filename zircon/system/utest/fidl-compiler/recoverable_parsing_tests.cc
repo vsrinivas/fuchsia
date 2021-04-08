@@ -22,11 +22,8 @@ bits Bits {
     CONSTANT = ;  // Second error
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedToken);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedToken);
 }
 
 TEST(RecoverableParsingTests, BadRecoverAtEndOfDecl) {
@@ -47,11 +44,8 @@ struct Struct {
     string value;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverAtEndOfMember) {
@@ -114,10 +108,7 @@ struct NameCollision {};              // This name collision error will not be
                                       // reported, because if parsing fails
                                       // compilation is skipped
   )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextBitsMember) {
@@ -131,11 +122,8 @@ bits Bits {
     EIGHT = 0x8;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextEnumMember) {
@@ -149,11 +137,8 @@ enum Enum {
     FOUR = 4;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextProtocolMember) {
@@ -198,11 +183,8 @@ service Service {
   R r;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextStructMember) {
@@ -254,11 +236,8 @@ union Union {
     5: int16 int_value;
 };
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextParameterInList) {
@@ -300,11 +279,8 @@ struct Good {};
 
 extra_token // Second error
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrExpectedDeclaration);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrExpectedDeclaration);
 }
 
 TEST(RecoverableParsingTests, BadRecoverFinalMemberMissingNameAndSemicolon) {
@@ -323,11 +299,8 @@ struct Good {};
 
 extra_token // Second error
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrExpectedDeclaration);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrExpectedDeclaration);
 }
 
 }  // namespace

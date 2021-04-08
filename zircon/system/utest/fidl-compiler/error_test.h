@@ -18,21 +18,21 @@
     }                                             \
   }
 
-#define ASSERT_ERRORED(library, error)            \
-  {                                               \
-    TestLibrary& library_ref = (library);         \
-    ASSERT_FALSE(library_ref.Compile());          \
-    ASSERT_EQ(library_ref.errors().size(), 1u);   \
-    EXPECT_ERR(library_ref.errors()[0], (error)); \
+#define ASSERT_ERRORED_DURING_COMPILE(library, error) \
+  {                                                   \
+    TestLibrary& library_ref = (library);             \
+    ASSERT_FALSE(library_ref.Compile());              \
+    ASSERT_EQ(library_ref.errors().size(), 1u);       \
+    EXPECT_ERR(library_ref.errors()[0], (error));     \
   }
 
-#define ASSERT_ERRORED_TWICE(library, err0, err1) \
-  {                                               \
-    TestLibrary& library_ref = (library);         \
-    ASSERT_FALSE(library_ref.Compile());          \
-    ASSERT_EQ(library_ref.errors().size(), 2u);   \
-    EXPECT_ERR(library_ref.errors()[0], (err0));  \
-    EXPECT_ERR(library_ref.errors()[1], (err1));  \
+#define ASSERT_ERRORED_TWICE_DURING_COMPILE(library, err0, err1) \
+  {                                                              \
+    TestLibrary& library_ref = (library);                        \
+    ASSERT_FALSE(library_ref.Compile());                         \
+    ASSERT_EQ(library_ref.errors().size(), 2u);                  \
+    EXPECT_ERR(library_ref.errors()[0], (err0));                 \
+    EXPECT_ERR(library_ref.errors()[1], (err1));                 \
   }
 
 #define ASSERT_COMPILED_AND_CONVERT(library)        \
