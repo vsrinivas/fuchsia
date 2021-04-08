@@ -73,6 +73,33 @@ pub fn format_cmx(buffer: String, pretty: bool) -> Result<Vec<u8>, Error> {
 }
 
 pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
+    let general_order = PathOption::PropertyNameOrder(vec![
+        "name",
+        "url",
+        "startup",
+        "environment",
+        "durability",
+        "service",
+        "protocol",
+        "directory",
+        "storage",
+        "runner",
+        "resolver",
+        "event",
+        "event_stream",
+        "from",
+        "as",
+        "to",
+        "rights",
+        "path",
+        "subdir",
+        "filter",
+        "dependency",
+        "extends",
+        "runners",
+        "resolvers",
+        "debug",
+    ]);
     let options = FormatOptions {
         collapse_containers_of_one: true,
         sort_array_items: true, // but use options_by_path to turn this off for program args
@@ -103,33 +130,10 @@ pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
                 PathOption::SortArrayItems(false),
             },
             "/*/*/*" => hashset! {
-                PathOption::PropertyNameOrder(vec![
-                    "name",
-                    "url",
-                    "startup",
-                    "environment",
-                    "durability",
-                    "service",
-                    "protocol",
-                    "directory",
-                    "storage",
-                    "runner",
-                    "resolver",
-                    "event",
-                    "event_stream",
-                    "from",
-                    "as",
-                    "to",
-                    "rights",
-                    "path",
-                    "subdir",
-                    "filter",
-                    "dependency",
-                    "extends",
-                    "runners",
-                    "resolvers",
-                    "debug",
-                ])
+                general_order.clone()
+            },
+            "/*/*/*/*/*" => hashset! {
+                general_order
             },
         },
         ..Default::default()
@@ -303,6 +307,102 @@ mod tests {
             ],
             from: "realm",
             to: "#elements",
+        },
+    ],
+}
+"##;
+        let tmp_dir = TempDir::new().unwrap();
+
+        let tmp_file_path = tmp_dir.path().join("input.cml");
+        File::create(&tmp_file_path).unwrap().write_all(example_json5.as_bytes()).unwrap();
+
+        let output_file_path = tmp_dir.path().join("output.cml");
+
+        // format as json5 with .cml style options
+        let result = format(&tmp_file_path, false, true, Some(output_file_path.clone()));
+        assert!(result.is_ok());
+
+        let mut buffer = String::new();
+        File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
+        assert_eq!(buffer, expected);
+    }
+
+    #[test]
+    fn test_format_cml_with_environments() {
+        let example_json5 = r##"{
+    include: [ "src/sys/test_manager/meta/common.shard.cml" ],
+    environments: [
+        {
+            name: "test-env",
+            extends: "realm",
+            runners: [
+                {
+                    from: "#elf_test_runner",
+                    runner: "elf_test_runner",
+                },
+                {
+                    from: "#gtest_runner",
+                    runner: "gtest_runner",
+                },
+                {
+                    from: "#rust_test_runner",
+                    runner: "rust_test_runner",
+                },
+                {
+                    from: "#go_test_runner",
+                    runner: "go_test_runner",
+                },
+                {
+                    from: "#fuchsia_component_test_framework_intermediary",
+                    runner: "fuchsia_component_test_mocks",
+                },
+            ],
+            resolvers: [
+                {
+                    from: "#fuchsia_component_test_framework_intermediary",
+                    resolver: "fuchsia_component_test_registry",
+                    scheme: "fuchsia-component-test-registry",
+                },
+            ],
+        },
+    ],
+}
+"##;
+        let expected = r##"{
+    include: [ "src/sys/test_manager/meta/common.shard.cml" ],
+    environments: [
+        {
+            name: "test-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "elf_test_runner",
+                    from: "#elf_test_runner",
+                },
+                {
+                    runner: "gtest_runner",
+                    from: "#gtest_runner",
+                },
+                {
+                    runner: "rust_test_runner",
+                    from: "#rust_test_runner",
+                },
+                {
+                    runner: "go_test_runner",
+                    from: "#go_test_runner",
+                },
+                {
+                    runner: "fuchsia_component_test_mocks",
+                    from: "#fuchsia_component_test_framework_intermediary",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "fuchsia_component_test_registry",
+                    from: "#fuchsia_component_test_framework_intermediary",
+                    scheme: "fuchsia-component-test-registry",
+                },
+            ],
         },
     ],
 }
