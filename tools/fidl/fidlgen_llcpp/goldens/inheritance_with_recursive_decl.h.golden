@@ -54,9 +54,6 @@ class Parent final {
   class First final {
     First() = delete;
   };
-
-  using FirstRequest = ::fidl::WireRequest<
-      ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -494,11 +491,6 @@ class Child final {
   class Second final {
     Second() = delete;
   };
-
-  using FirstRequest = ::fidl::WireRequest<
-      ::fidl_test_inheritancewithrecursivedecl::Child::First>;
-  using SecondRequest = ::fidl::WireRequest<
-      ::fidl_test_inheritancewithrecursivedecl::Child::Second>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

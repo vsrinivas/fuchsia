@@ -101,7 +101,7 @@ class DirentIteratorImpl {
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    fio::Directory::ReadDirentsResponse* response = result.Unwrap();
+    fidl::WireResponse<fio::Directory::ReadDirents>* response = result.Unwrap();
     if (response->s != ZX_OK) {
       return response->s;
     }
@@ -145,8 +145,8 @@ class DirentIteratorImpl {
     Boxed() = default;
 
     // Buffers used by the FIDL calls.
-    fidl::Buffer<fio::Directory::ReadDirentsRequest> request_buffer;
-    fidl::Buffer<fio::Directory::ReadDirentsResponse> response_buffer;
+    fidl::Buffer<fidl::WireRequest<fio::Directory::ReadDirents>> request_buffer;
+    fidl::Buffer<fidl::WireResponse<fio::Directory::ReadDirents>> response_buffer;
 
     // At each |zxio_dirent_iterator_next| call, we would extract the next
     // dirent segment from |response_buffer|, and populate |current_entry|
@@ -539,8 +539,8 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
       rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::Buffer<fio::File::ReadRequest> request_buffer;
-        fidl::Buffer<fio::File::ReadResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio::File::Read>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio::File::Read>> response_buffer;
         auto result = fidl::WireCall<fio::File>(std::move(control))
                           .Read(request_buffer.view(), capacity, response_buffer.view());
         zx_status_t status;
@@ -575,8 +575,8 @@ zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
-        fidl::Buffer<fio::File::ReadAtRequest> request_buffer;
-        fidl::Buffer<fio::File::ReadAtResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio::File::ReadAt>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio::File::ReadAt>> response_buffer;
         auto result = fidl::WireCall<fio::File>(std::move(control))
                           .ReadAt(request_buffer.view(), capacity, offset, response_buffer.view());
         zx_status_t status;
@@ -613,8 +613,8 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
       rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::Buffer<fio::File::WriteRequest> request_buffer;
-        fidl::Buffer<fio::File::WriteResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio::File::Write>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio::File::Write>> response_buffer;
         auto result = fidl::WireCall<fio::File>(std::move(control))
                           .Write(request_buffer.view(),
                                  fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
@@ -650,8 +650,8 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::Buffer<fio::File::WriteAtRequest> request_buffer;
-        fidl::Buffer<fio::File::WriteAtResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio::File::WriteAt>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio::File::WriteAt>> response_buffer;
         auto result = fidl::WireCall<fio::File>(std::move(control))
                           .WriteAt(request_buffer.view(),
                                    fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
@@ -724,7 +724,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  fio::File::GetBufferResponse* response = result.Unwrap();
+  fidl::WireResponse<fio::File::GetBuffer>* response = result.Unwrap();
   if (response->s != ZX_OK) {
     return response->s;
   }

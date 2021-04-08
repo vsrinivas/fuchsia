@@ -65,9 +65,10 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   void InitOpenThreadLibrary(bool reset_rcp);
 
   // Events.
-  void OnReadyForSendFrames(fidl_spinel::Device::OnReadyForSendFramesResponse* event) override;
-  void OnReceiveFrame(fidl_spinel::Device::OnReceiveFrameResponse* event) override;
-  void OnError(fidl_spinel::Device::OnErrorResponse* event) override;
+  void OnReadyForSendFrames(
+      fidl::WireResponse<fidl_spinel::Device::OnReadyForSendFrames>* event) override;
+  void OnReceiveFrame(fidl::WireResponse<fidl_spinel::Device::OnReceiveFrame>* event) override;
+  void OnError(fidl::WireResponse<fidl_spinel::Device::OnError>* event) override;
 
   zx_status_t Unknown() override;
 

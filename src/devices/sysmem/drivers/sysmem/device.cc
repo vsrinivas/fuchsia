@@ -527,7 +527,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
                 heap_(heap),
                 wait_for_close_(std::move(wait_for_close)) {}
 
-          void OnRegister(fuchsia_sysmem2::Heap::OnRegisterResponse* event) override {
+          void OnRegister(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* event) override {
             // A heap should not be registered twice.
             ZX_DEBUG_ASSERT(heap_client_);
             // This replaces any previously registered allocator for heap (also cancels the old

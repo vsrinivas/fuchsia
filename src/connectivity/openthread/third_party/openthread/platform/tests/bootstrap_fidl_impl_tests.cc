@@ -132,7 +132,7 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsHappy) {
   bool called = false;
   auto result_async = bootstrap_client()->ImportSettings(
       std::move(buffer),
-      [&called](fuchsia_lowpan_bootstrap::Thread::ImportSettingsResponse* response) {
+      [&called](fidl::WireResponse<fuchsia_lowpan_bootstrap::Thread::ImportSettings>* response) {
         called = true;
       });
 
@@ -172,7 +172,7 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailUnreadable) {
   bool called = false;
   auto result_async = bootstrap_client()->ImportSettings(
       std::move(buffer),
-      [&called](fuchsia_lowpan_bootstrap::Thread::ImportSettingsResponse* response) {
+      [&called](fidl::WireResponse<fuchsia_lowpan_bootstrap::Thread::ImportSettings>* response) {
         called = true;
       });
 
@@ -206,7 +206,7 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailNonWritable) {
   bool called = false;
   auto result_async = bootstrap_client()->ImportSettings(
       std::move(buffer),
-      [&called](fuchsia_lowpan_bootstrap::Thread::ImportSettingsResponse* response) {
+      [&called](fidl::WireResponse<fuchsia_lowpan_bootstrap::Thread::ImportSettings>* response) {
         called = true;
       });
 

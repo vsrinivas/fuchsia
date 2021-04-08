@@ -218,7 +218,8 @@ zx_status_t VerifiedVolumeClient::Close() {
 }
 
 zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
-    fidl::Buffer<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSealResponse>*
+    fidl::Buffer<
+        fidl::WireResponse<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSeal>>*
         seal_response_buffer,
     fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result* out) {
   // We use the caller-provided buffer FIDL call style because the caller

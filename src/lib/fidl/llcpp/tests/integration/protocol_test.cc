@@ -189,8 +189,8 @@ TEST(MagicNumberTest, ResponseWrite) {
   FrobinatorImpl server;
   fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &server);
 
-  fidl::Buffer<test::Frobinator::GrobRequest> request;
-  fidl::Buffer<test::Frobinator::GrobResponse> response;
+  fidl::Buffer<fidl::WireRequest<test::Frobinator::Grob>> request;
+  fidl::Buffer<fidl::WireResponse<test::Frobinator::Grob>> response;
   auto result = WireCall(endpoints->client)
                     .Grob(request.view(), fidl::StringView::FromExternal(s), response.view());
   ASSERT_TRUE(result.ok());
@@ -205,10 +205,10 @@ TEST(MagicNumberTest, EventRead) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [local, remote] = std::move(*endpoints);
   std::string s = "foo";
-  test::Frobinator::HrobResponse _response(fidl::StringView::FromExternal(s));
+  fidl::WireResponse<test::Frobinator::Hrob> _response(fidl::StringView::FromExternal(s));
   // Set an incompatible magic number
   _response._hdr.magic_number = 0;
-  fidl::OwnedEncodedMessage<test::Frobinator::HrobResponse> encoded(&_response);
+  fidl::OwnedEncodedMessage<fidl::WireResponse<test::Frobinator::Hrob>> encoded(&_response);
   encoded.Write(remote.channel());
   ASSERT_TRUE(encoded.ok());
 
@@ -216,7 +216,7 @@ TEST(MagicNumberTest, EventRead) {
    public:
     EventHandler() = default;
 
-    void Hrob(test::Frobinator::HrobResponse* event) override { EXPECT_TRUE(false); }
+    void Hrob(fidl::WireResponse<test::Frobinator::Hrob>* event) override { EXPECT_TRUE(false); }
 
     zx_status_t Unknown() override {
       EXPECT_TRUE(false);
@@ -251,7 +251,7 @@ TEST(EventSenderTest, SendEvent) {
 
     bool received() const { return received_; }
 
-    void Hrob(test::Frobinator::HrobResponse* event) override {
+    void Hrob(fidl::WireResponse<test::Frobinator::Hrob>* event) override {
       ASSERT_EQ(std::string(event->value.data(), event->value.size()), std::string("foo"));
       received_ = true;
       loop_.Quit();

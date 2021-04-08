@@ -229,7 +229,7 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
      public:
       explicit EventHandler(fit::function<void(fio::wire::NodeInfo)>& cb) : cb_(cb) {}
 
-      void OnOpen(fio::Node::OnOpenResponse* event) override {
+      void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
         EXPECT_OK(event->s);
         EXPECT_FALSE(event->info.has_invalid_tag());
         cb_(std::move(event->info));

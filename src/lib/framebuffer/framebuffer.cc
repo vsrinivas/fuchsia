@@ -286,7 +286,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
     bool has_display() const { return has_display_; }
     fhd::wire::Mode mode() const { return mode_; }
 
-    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
       has_display_ = true;
       // We're guaranteed that added contains at least one display, since we haven't
       // been notified of any displays to remove.
@@ -295,10 +295,10 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
       pixel_format_ = event->added[0].pixel_format[0];
     }
 
-    void OnVsync(fhd::Controller::OnVsyncResponse* event) override {}
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {}
 
-    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
-    }
+    void OnClientOwnershipChange(
+        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {}
 
     zx_status_t Unknown() override { return ZX_ERR_STOP; }
 

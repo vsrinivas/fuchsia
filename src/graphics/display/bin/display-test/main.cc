@@ -132,15 +132,18 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
 
     bool invalid_message() const { return invalid_message_; }
 
-    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
       for (size_t i = 0; i < event->added.count(); i++) {
         displays_->push_back(Display(event->added[i]));
       }
     }
 
-    void OnVsync(fhd::Controller::OnVsyncResponse* event) override { invalid_message_ = true; }
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
+      invalid_message_ = true;
+    }
 
-    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+    void OnClientOwnershipChange(
+        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
       has_ownership_ = event->has_ownership;
     }
 
@@ -255,12 +258,12 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
     zx_status_t status() const { return status_; }
 
-    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
       printf("Display disconnected\n");
       status_ = ZX_ERR_STOP;
     }
 
-    void OnVsync(fhd::Controller::OnVsyncResponse* event) override {
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
       // Acknowledge cookie if non-zero
       if (event->cookie) {
         dc->AcknowledgeVsync(event->cookie);
@@ -286,7 +289,8 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
       }
     }
 
-    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+    void OnClientOwnershipChange(
+        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
       has_ownership = event->has_ownership;
       status_ = ZX_ERR_NEXT;
     }

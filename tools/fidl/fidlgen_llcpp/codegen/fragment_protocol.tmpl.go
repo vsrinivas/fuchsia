@@ -64,17 +64,6 @@ class {{ .Name }} final {
     };
   {{- end }}
 
-  {{ "" }}
-  {{- range .Methods }}
-    {{- if .HasResponse }}
-      using {{ .WireResponseAlias.Self }} = {{ .WireResponse }};
-    {{- end }}
-
-    {{- if .HasRequest }}
-      using {{ .WireRequestAlias.Self }} = {{ .WireRequest }};
-    {{- end }}
-  {{- end }}
-
 {{- IfdefFuchsia -}}
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<{{ .WireType }}>|,

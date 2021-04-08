@@ -145,13 +145,6 @@ class OnlyLibfuzzerAndDeps final {
   class LibfuzzerNeedsNonemptyProtocol final {
     LibfuzzerNeedsNonemptyProtocol() = delete;
   };
-
-  using LibfuzzerNeedsNonemptyProtocolResponse =
-      ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                               LibfuzzerNeedsNonemptyProtocol>;
-  using LibfuzzerNeedsNonemptyProtocolRequest =
-      ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                              LibfuzzerNeedsNonemptyProtocol>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

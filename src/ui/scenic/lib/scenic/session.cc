@@ -164,7 +164,7 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
 void Session::SchedulePresentRequest(scheduling::PresentId present_id,
                                      zx::time requested_presentation_time,
                                      std::vector<zx::event> acquire_fences) {
-  TRACE_DURATION("gfx", "scenic_impl::Sesssion::SchedulePresentRequest");
+  TRACE_DURATION("gfx", "fidl::WireRequest<scenic_impl::Sesssion::SchedulePresent>");
   TRACE_FLOW_BEGIN("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_id));
 
   // Safe to capture |this| because the Session is guaranteed to outlive |fence_queue_|,

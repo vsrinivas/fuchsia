@@ -345,19 +345,6 @@ class Protocol final {
   class RequestFlexibleResponseStrict final {
     RequestFlexibleResponseStrict() = delete;
   };
-
-  using RequestStrictResponseFlexibleResponse =
-      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestStrictResponseFlexible>;
-  using RequestStrictResponseFlexibleRequest =
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                              RequestStrictResponseFlexible>;
-  using RequestFlexibleResponseStrictResponse =
-      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestFlexibleResponseStrict>;
-  using RequestFlexibleResponseStrictRequest =
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                              RequestFlexibleResponseStrict>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

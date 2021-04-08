@@ -183,7 +183,7 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    url = std::move(url), binary = std::move(binary.value()),
                    message = std::move(message),
-                   _ = file.Clone()](fio::File::GetBufferResponse* response) mutable {
+                   _ = file.Clone()](fidl::WireResponse<fio::File::GetBuffer>* response) mutable {
     if (response->s != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),
            zx_status_get_string(response->s));

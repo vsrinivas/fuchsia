@@ -72,7 +72,7 @@ template <typename Protocol, typename = void>
 struct has_fidl_method_named_clone : public ::std::false_type {};
 template <typename Protocol>
 struct has_fidl_method_named_clone<
-    Protocol, std::void_t<decltype(typename Protocol::CloneRequest(
+    Protocol, std::void_t<decltype(fidl::WireRequest<typename Protocol::Clone>(
                   std::declval<zx_txid_t>() /* txid */, std::declval<uint32_t>() /* flags */,
                   std::declval<::fidl::ServerEnd<fuchsia_io::Node>&>() /* object */))>>
     : public std::true_type {};

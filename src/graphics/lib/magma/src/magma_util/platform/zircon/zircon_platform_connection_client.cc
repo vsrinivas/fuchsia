@@ -88,7 +88,8 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
             result_flags_out_(result_flags_out) {}
 
       void OnPerformanceCounterReadCompleted(
-          fuchsia_gpu_magma::PerformanceCounterEvents::OnPerformanceCounterReadCompletedResponse*
+          fidl::WireResponse<
+              fuchsia_gpu_magma::PerformanceCounterEvents::OnPerformanceCounterReadCompleted>*
               event) override {
         *trigger_id_out_ = event->trigger_id;
         *buffer_id_out_ = event->buffer_id;

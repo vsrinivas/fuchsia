@@ -340,7 +340,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   uint64_t ordinal = hdr->ordinal;
   // llcpp (intentionally!) does not expose the fidl ordinal, so this is a hacky way to get it
   // anyway for backwards compatibility for porting code from the old C bindings.
-  static fuchsia_io::Directory::OpenRequest for_ordinal(zx_txid_t(0));
+  static fidl::WireRequest<fuchsia_io::Directory::Open> for_ordinal(zx_txid_t(0));
   if (ordinal == for_ordinal._hdr.ordinal) {
     VLOGD(1, *dev(), "Opening device %p", dev().get());
     zx::unowned_channel conn = channel();

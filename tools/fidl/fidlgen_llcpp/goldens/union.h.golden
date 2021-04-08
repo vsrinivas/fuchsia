@@ -3132,19 +3132,6 @@ class TestProtocol final {
   class FlexibleXUnionHenceResponseMustBeHeapAllocated final {
     FlexibleXUnionHenceResponseMustBeHeapAllocated() = delete;
   };
-
-  using StrictXUnionHenceResponseMayBeStackAllocatedResponse =
-      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
-                               StrictXUnionHenceResponseMayBeStackAllocated>;
-  using StrictXUnionHenceResponseMayBeStackAllocatedRequest =
-      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                              StrictXUnionHenceResponseMayBeStackAllocated>;
-  using FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse =
-      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
-                               FlexibleXUnionHenceResponseMustBeHeapAllocated>;
-  using FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest =
-      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_union::TestProtocol>|,

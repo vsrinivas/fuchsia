@@ -139,7 +139,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
    public:
     EventHandler() = default;
 
-    void OnOpen(fio::Node::OnOpenResponse* event) override {
+    void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
       EXPECT_EQ(ZX_ERR_NOT_DIR, event->s);
       EXPECT_TRUE(event->info.has_invalid_tag());
     }

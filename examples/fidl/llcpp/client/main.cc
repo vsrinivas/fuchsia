@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
    public:
     explicit EventHandler(async::Loop& loop) : loop_(loop) {}
 
-    void OnString(fuchsia_examples::Echo::OnStringResponse* event) override {
+    void OnString(fidl::WireResponse<fuchsia_examples::Echo::OnString>* event) override {
       std::string response(event->response.data(), event->response.size());
       std::cout << "Got event: " << response << std::endl;
       loop_.Quit();
@@ -50,8 +50,8 @@ int main(int argc, const char** argv) {
                                               std::make_shared<EventHandler>(loop));
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
-  auto result_async =
-      client->EchoString("hello", [&](fuchsia_examples::Echo::EchoStringResponse* response) {
+  auto result_async = client->EchoString(
+      "hello", [&](fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
         std::string reply(response->response.data(), response->response.size());
         std::cout << "Got response: " << reply << std::endl;
         loop.Quit();

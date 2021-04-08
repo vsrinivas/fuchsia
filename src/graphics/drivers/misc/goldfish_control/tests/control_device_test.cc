@@ -208,34 +208,36 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
   class SysmemHeapEventHandler : public fidl::WireSyncEventHandler<fuchsia_sysmem2::Heap> {
    public:
     SysmemHeapEventHandler() = default;
-    void OnRegister(fuchsia_sysmem2::Heap::OnRegisterResponse* message) override {
+    void OnRegister(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* message) override {
       if (handler != nullptr) {
         handler(message);
       }
     }
     zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
     void SetOnRegisterHandler(
-        fit::function<void(fuchsia_sysmem2::Heap::OnRegisterResponse*)> new_handler) {
+        fit::function<void(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>*)> new_handler) {
       handler = std::move(new_handler);
     }
 
    private:
-    fit::function<void(fuchsia_sysmem2::Heap::OnRegisterResponse*)> handler;
+    fit::function<void(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>*)> handler;
   };
 
   zx_status_t HandleSysmemEvents() {
     zx_status_t status = ZX_OK;
     for (auto& kv : heap_info_) {
       SysmemHeapEventHandler handler;
-      handler.SetOnRegisterHandler([this, heap = kv.first](
-                                       fuchsia_sysmem2::Heap::OnRegisterResponse* message) {
-        auto& heap_info = heap_info_[heap];
-        heap_info.is_registered = true;
-        heap_info.cpu_supported = message->properties.coherency_domain_support().cpu_supported();
-        heap_info.ram_supported = message->properties.coherency_domain_support().ram_supported();
-        heap_info.inaccessible_supported =
-            message->properties.coherency_domain_support().inaccessible_supported();
-      });
+      handler.SetOnRegisterHandler(
+          [this, heap = kv.first](fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* message) {
+            auto& heap_info = heap_info_[heap];
+            heap_info.is_registered = true;
+            heap_info.cpu_supported =
+                message->properties.coherency_domain_support().cpu_supported();
+            heap_info.ram_supported =
+                message->properties.coherency_domain_support().ram_supported();
+            heap_info.inaccessible_supported =
+                message->properties.coherency_domain_support().inaccessible_supported();
+          });
       status = handler.HandleOneEvent(kv.second.channel.borrow()).status();
       if (status != ZX_OK) {
         break;

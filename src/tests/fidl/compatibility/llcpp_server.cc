@@ -182,7 +182,7 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
 
         zx_status_t status() const { return status_; }
 
-        void EchoEvent(Echo::EchoEventResponse* event) override {
+        void EchoEvent(fidl::WireResponse<Echo::EchoEvent>* event) override {
           status_ = connection_->server_binding_.value()->EchoEvent(std::move(event->value));
         }
 

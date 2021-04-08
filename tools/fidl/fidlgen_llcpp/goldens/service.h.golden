@@ -62,9 +62,6 @@ class SecondProtocol final {
   class MethodOnSecond final {
     MethodOnSecond() = delete;
   };
-
-  using MethodOnSecondRequest =
-      ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -391,9 +388,6 @@ class FirstProtocol final {
   class MethodOnFirst final {
     MethodOnFirst() = delete;
   };
-
-  using MethodOnFirstRequest =
-      ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_service::FirstProtocol>|,

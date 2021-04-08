@@ -316,9 +316,9 @@ void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_
   fdm::wire::DeviceController_Unbind_Response result_resp;
   auto result = fdm::wire::DeviceController_Unbind_Result::WithResponse(
       fidl::ObjectView<fdm::wire::DeviceController_Unbind_Response>::FromExternal(&result_resp));
-  fdm::DeviceController::UnbindResponse resp(result);
+  fidl::WireResponse<fdm::DeviceController::Unbind> resp(result);
   resp._hdr.txid = txid;
-  fidl::OwnedEncodedMessage<fdm::DeviceController::UnbindResponse> encoded(&resp);
+  fidl::OwnedEncodedMessage<fidl::WireResponse<fdm::DeviceController::Unbind>> encoded(&resp);
   ASSERT_TRUE(encoded.ok());
   encoded.Write(remote.get());
   ASSERT_TRUE(encoded.ok());
@@ -362,9 +362,10 @@ void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_
   auto result = fdm::wire::DeviceController_CompleteRemoval_Result::WithResponse(
       fidl::ObjectView<fdm::wire::DeviceController_CompleteRemoval_Response>::FromExternal(
           &result_resp));
-  fdm::DeviceController::CompleteRemovalResponse resp(result);
+  fidl::WireResponse<fdm::DeviceController::CompleteRemoval> resp(result);
   resp._hdr.txid = txid;
-  fidl::OwnedEncodedMessage<fdm::DeviceController::CompleteRemovalResponse> encoded(&resp);
+  fidl::OwnedEncodedMessage<fidl::WireResponse<fdm::DeviceController::CompleteRemoval>> encoded(
+      &resp);
   ASSERT_TRUE(encoded.ok());
   encoded.Write(remote.get());
   ASSERT_TRUE(encoded.ok());

@@ -338,14 +338,14 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
     zxlogf(ERROR, "%s: invalid arguments: width? %d height? %d format? %d memory property? %d\n",
            kTag, create_params.has_width(), create_params.has_height(), create_params.has_format(),
            create_params.has_memory_property());
-    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
+    return fit::ok(fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
   }
   if ((create_params.memory_property() &
        fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
-    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
+    return fit::ok(fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
   }
 
   TRACE_DURATION("gfx", "Control::CreateColorBuffer2", "width", create_params.width(), "height",
@@ -362,11 +362,12 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
 
   auto it = buffer_handles_.find(koid);
   if (it == buffer_handles_.end()) {
-    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
+    return fit::ok(fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
   }
 
   if (it->second != kInvalidBufferHandle) {
-    return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_ALREADY_EXISTS, -1));
+    return fit::ok(
+        fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_ALREADY_EXISTS, -1));
   }
 
   uint32_t id;
@@ -414,7 +415,8 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
       .type = fuchsia_hardware_goldfish::wire::BufferHandleType::COLOR_BUFFER,
       .memory_property = create_params.memory_property()};
 
-  return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_OK, hw_address_page_offset));
+  return fit::ok(
+      fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_OK, hw_address_page_offset));
 }
 
 void Control::CreateColorBuffer2(

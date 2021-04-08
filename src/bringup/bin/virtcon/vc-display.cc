@@ -588,13 +588,14 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
    public:
     EventHandler() = default;
 
-    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
       handle_displays_changed(event->added, event->removed);
     }
 
-    void OnVsync(fhd::Controller::OnVsyncResponse* event) override {}
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {}
 
-    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+    void OnClientOwnershipChange(
+        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
       handle_ownership_change(event->has_ownership);
     }
 

@@ -159,7 +159,7 @@ zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_clie
   power_manager_client_.Bind(std::move(power_manager_client_channel), dispatcher_);
   auto result = power_manager_client_->Register(
       std::move(system_state_transition_client), std::move(devfs_handle),
-      [](power_manager_fidl::DriverManagerRegistration::RegisterResponse* response) {
+      [](fidl::WireResponse<power_manager_fidl::DriverManagerRegistration::Register>* response) {
         if (response->result.is_err()) {
           power_manager_fidl::wire::RegistrationError err = response->result.err();
           if (err == power_manager_fidl::wire::RegistrationError::INVALID_HANDLE) {

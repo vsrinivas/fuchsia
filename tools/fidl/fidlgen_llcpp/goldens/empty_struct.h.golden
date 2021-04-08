@@ -165,15 +165,6 @@ class EmptyProtocol final {
   class SendAndReceive final {
     SendAndReceive() = delete;
   };
-
-  using SendRequest =
-      ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>;
-  using ReceiveResponse =
-      ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>;
-  using SendAndReceiveResponse = ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
-  using SendAndReceiveRequest = ::fidl::WireRequest<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

@@ -137,7 +137,7 @@ zx::status<std::string> PackageResolver::GetDriverLibname(
   if (!dirent_result.ok() || dirent_result.status() != ZX_OK) {
     return zx::error(dirent_result.status());
   }
-  fio::Directory::ReadDirentsResponse* dirent_response = dirent_result.Unwrap();
+  fidl::WireResponse<fio::Directory::ReadDirents>* dirent_response = dirent_result.Unwrap();
   if (dirent_response->dirents.count() == 0) {
     return zx::error(ZX_ERR_INTERNAL);
   }

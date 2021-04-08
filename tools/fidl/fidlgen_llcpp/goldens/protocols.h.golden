@@ -908,15 +908,6 @@ class Transitional final {
   class Event final {
     Event() = delete;
   };
-
-  using RequestResponse =
-      ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>;
-  using RequestRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>;
-  using OneWayRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>;
-  using EventResponse =
-      ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -1913,23 +1904,6 @@ class ChannelProtocol final {
   class MutateSocket final {
     MutateSocket() = delete;
   };
-
-  using MethodARequest =
-      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>;
-  using EventAResponse =
-      ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>;
-  using MethodBResponse =
-      ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>;
-  using MethodBRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>;
-  using TakeHandleResponse =
-      ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>;
-  using TakeHandleRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>;
-  using MutateSocketResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::ChannelProtocol::MutateSocket>;
-  using MutateSocketRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -3939,41 +3913,6 @@ class WithAndWithoutRequestResponse final {
   class OnWithResponse final {
     OnWithResponse() = delete;
   };
-
-  using NoRequestNoResponseRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestNoResponse>;
-  using NoRequestEmptyResponseResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestEmptyResponse>;
-  using NoRequestEmptyResponseRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestEmptyResponse>;
-  using NoRequestWithResponseResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestWithResponse>;
-  using NoRequestWithResponseRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestWithResponse>;
-  using WithRequestNoResponseRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestNoResponse>;
-  using WithRequestEmptyResponseResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestEmptyResponse>;
-  using WithRequestEmptyResponseRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestEmptyResponse>;
-  using WithRequestWithResponseResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestWithResponse>;
-  using WithRequestWithResponseRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestWithResponse>;
-  using OnEmptyResponseResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
-  using OnWithResponseResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
@@ -6896,19 +6835,6 @@ class WithErrorSyntax final {
   class ErrorAsEnum final {
     ErrorAsEnum() = delete;
   };
-
-  using ResponseAsStructResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>;
-  using ResponseAsStructRequest = ::fidl::WireRequest<
-      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>;
-  using ErrorAsPrimitiveResponse = ::fidl::WireResponse<
-      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
-  using ErrorAsPrimitiveRequest = ::fidl::WireRequest<
-      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
-  using ErrorAsEnumResponse =
-      ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>;
-  using ErrorAsEnumRequest =
-      ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

@@ -49,8 +49,9 @@ class RewriteTransaction : public fidl::Transaction {
     ZX_ASSERT(txid_ != 0);
     ZX_ASSERT(indicator_msg->message()->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
     auto indicator_msg_bytes = indicator_msg->CopyBytes();
-    ZX_ASSERT(indicator_msg_bytes.size() >=
-              sizeof(test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse));
+    ZX_ASSERT(
+        indicator_msg_bytes.size() >=
+        sizeof(fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>));
 
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
     zx_handle_disposition_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
@@ -131,7 +132,7 @@ class RewriteTransaction : public fidl::Transaction {
       real_response->tag = kBadOrdinal;
 
       auto indicator_response = reinterpret_cast<
-          const test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse*>(
+          const fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>*>(
           indicator_msg_bytes.data());
       switch (indicator_response->xu.which()) {
         case test::wire::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
@@ -313,7 +314,7 @@ class FlexibleEnvelopeTest : public ::testing::Test {
 };
 
 static_assert(fidl::internal::ClampedMessageSize<
-                  test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreBytesResponse,
+                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreBytes>,
                   fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_BYTES,
               "Cannot assume any limit on byte size apart from the channel limit");
 
@@ -327,7 +328,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreBytes) {
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
-                  test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse,
+                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>,
                   fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_HANDLES,
               "Cannot assume any limit on handle count apart from the channel limit");
 
@@ -341,7 +342,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
 }
 
 static_assert(fidl::internal::ClampedMessageSize<
-                  test::ReceiveFlexibleEnvelope::GetUnknownTableMoreBytesResponse,
+                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownTableMoreBytes>,
                   fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_BYTES,
               "Cannot assume any limit on byte size apart from the channel limit");
 
@@ -356,7 +357,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreBytes) {
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
-                  test::ReceiveFlexibleEnvelope::GetUnknownTableMoreHandlesResponse,
+                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownTableMoreHandles>,
                   fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_HANDLES,
               "Cannot assume any limit on handle count apart from the channel limit");
 

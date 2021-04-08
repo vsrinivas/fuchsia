@@ -965,7 +965,7 @@ void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, c
   auto result = client->LoadFirmware(
       std::move(str_path),
       [callback, context, dev = std::move(device_ref)](
-          fuchsia_device_manager::Coordinator::LoadFirmwareResponse* response) {
+          fidl::WireResponse<fuchsia_device_manager::Coordinator::LoadFirmware>* response) {
         zx_status_t call_status = ZX_OK;
         size_t size = 0;
         zx::vmo vmo;

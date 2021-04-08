@@ -14,31 +14,32 @@ namespace print_input_report {
 zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
                                  fidl::Client<fuchsia_input_report::InputDevice> client,
                                  fit::closure callback) {
-  client->GetDescriptor([filename, printer, callback = std::move(callback), _ = client.Clone()](
-                            fuchsia_input_report::InputDevice::GetDescriptorResponse* result) {
-    printer->SetIndent(0);
-    printer->Print("Descriptor from file: %s\n", filename.c_str());
-    if (result->descriptor.has_mouse()) {
-      if (result->descriptor.mouse().has_input()) {
-        PrintMouseDesc(printer, result->descriptor.mouse().input());
-      }
-    }
-    if (result->descriptor.has_sensor()) {
-      if (result->descriptor.sensor().has_input()) {
-        PrintSensorDesc(printer, result->descriptor.sensor().input());
-      }
-    }
-    if (result->descriptor.has_touch()) {
-      PrintTouchDesc(printer, result->descriptor.touch().input());
-    }
-    if (result->descriptor.has_keyboard()) {
-      PrintKeyboardDesc(printer, result->descriptor.keyboard());
-    }
-    if (result->descriptor.has_consumer_control()) {
-      PrintConsumerControlDesc(printer, result->descriptor.consumer_control());
-    }
-    callback();
-  });
+  client->GetDescriptor(
+      [filename, printer, callback = std::move(callback), _ = client.Clone()](
+          fidl::WireResponse<fuchsia_input_report::InputDevice::GetDescriptor>* result) {
+        printer->SetIndent(0);
+        printer->Print("Descriptor from file: %s\n", filename.c_str());
+        if (result->descriptor.has_mouse()) {
+          if (result->descriptor.mouse().has_input()) {
+            PrintMouseDesc(printer, result->descriptor.mouse().input());
+          }
+        }
+        if (result->descriptor.has_sensor()) {
+          if (result->descriptor.sensor().has_input()) {
+            PrintSensorDesc(printer, result->descriptor.sensor().input());
+          }
+        }
+        if (result->descriptor.has_touch()) {
+          PrintTouchDesc(printer, result->descriptor.touch().input());
+        }
+        if (result->descriptor.has_keyboard()) {
+          PrintKeyboardDesc(printer, result->descriptor.keyboard());
+        }
+        if (result->descriptor.has_consumer_control()) {
+          PrintConsumerControlDesc(printer, result->descriptor.consumer_control());
+        }
+        callback();
+      });
   return ZX_OK;
 }
 
@@ -190,7 +191,8 @@ void PrintInputReports(std::string filename, Printer* printer,
   // moved into the next ReadInputReport's call.
   reader->ReadInputReports(
       [=, reader = reader.Clone(), callback = std::move(callback)](
-          fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* result) mutable {
+          fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
+              result) mutable {
         size_t reads_left = num_reads;
         if (result->result.is_err()) {
           callback();

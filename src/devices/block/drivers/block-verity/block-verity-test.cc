@@ -106,7 +106,8 @@ class BlockVerityTest : public zxtest::Test {
 
   IsolatedDevmgr devmgr_;
   std::unique_ptr<fvm::RamdiskRef> ramdisk_;
-  fidl::Buffer<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSealResponse>
+  fidl::Buffer<
+      fidl::WireResponse<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSeal>>
       seal_response_buffer_;
 
   std::unique_ptr<block_verity::VerifiedVolumeClient> vvc_;

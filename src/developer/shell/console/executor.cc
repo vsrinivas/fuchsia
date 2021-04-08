@@ -63,21 +63,22 @@ Err Executor::Execute(std::unique_ptr<Command> command,
 
     bool done() const { return done_; }
 
-    void OnTextResult(fuchsia_shell::Shell::OnTextResultResponse* event) override {
+    void OnTextResult(fidl::WireResponse<fuchsia_shell::Shell::OnTextResult>* event) override {
       out_callback_(event->result.data());
     }
 
-    void OnDumpDone(fuchsia_shell::Shell::OnDumpDoneResponse* event) override {}
+    void OnDumpDone(fidl::WireResponse<fuchsia_shell::Shell::OnDumpDone>* event) override {}
 
-    void OnExecutionDone(fuchsia_shell::Shell::OnExecutionDoneResponse* event) override {
+    void OnExecutionDone(
+        fidl::WireResponse<fuchsia_shell::Shell::OnExecutionDone>* event) override {
       done_ = true;
     }
 
-    void OnError(fuchsia_shell::Shell::OnErrorResponse* event) override {
+    void OnError(fidl::WireResponse<fuchsia_shell::Shell::OnError>* event) override {
       err_callback_(event->error_message.data());
     }
 
-    void OnResult(fuchsia_shell::Shell::OnResultResponse* event) override {
+    void OnResult(fidl::WireResponse<fuchsia_shell::Shell::OnResult>* event) override {
       if (event->partial_result) {
         err_callback_("Result too large: partial results not supported");
       } else {

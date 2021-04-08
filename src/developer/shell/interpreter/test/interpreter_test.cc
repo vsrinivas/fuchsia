@@ -113,7 +113,7 @@ void InterpreterTest::Run(FinishAction action) {
     bool done() const { return done_; }
     bool ok() const { return ok_; }
 
-    void OnError(fuchsia_shell::Shell::OnErrorResponse* event) override {
+    void OnError(fidl::WireResponse<fuchsia_shell::Shell::OnError>* event) override {
       if (action_ == kError) {
         done_ = true;
       }
@@ -139,7 +139,7 @@ void InterpreterTest::Run(FinishAction action) {
       }
     }
 
-    void OnDumpDone(fuchsia_shell::Shell::OnDumpDoneResponse* event) override {
+    void OnDumpDone(fidl::WireResponse<fuchsia_shell::Shell::OnDumpDone>* event) override {
       if (action_ == kDump) {
         done_ = true;
       }
@@ -150,7 +150,8 @@ void InterpreterTest::Run(FinishAction action) {
       }
     }
 
-    void OnExecutionDone(fuchsia_shell::Shell::OnExecutionDoneResponse* event) override {
+    void OnExecutionDone(
+        fidl::WireResponse<fuchsia_shell::Shell::OnExecutionDone>* event) override {
       if (action_ != kExecute) {
         msg_ = "Expected action: kExecute was: " + std::to_string(action_);
         ok_ = false;
@@ -167,7 +168,7 @@ void InterpreterTest::Run(FinishAction action) {
       context->result = event->result;
     }
 
-    void OnTextResult(fuchsia_shell::Shell::OnTextResultResponse* event) override {
+    void OnTextResult(fidl::WireResponse<fuchsia_shell::Shell::OnTextResult>* event) override {
       if (action_ == kTextResult) {
         done_ = true;
       }
@@ -191,7 +192,7 @@ void InterpreterTest::Run(FinishAction action) {
       test_->last_text_result_partial_ = event->partial_result;
     }
 
-    void OnResult(fuchsia_shell::Shell::OnResultResponse* event) override {
+    void OnResult(fidl::WireResponse<fuchsia_shell::Shell::OnResult>* event) override {
       InterpreterTestContext* context = test_->GetContext(event->context_id);
       if (context == nullptr) {
         msg_ = "context == nullptr in on_text_result";

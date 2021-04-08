@@ -71,17 +71,19 @@ void InstanceLifecycleTest::WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifec
 
     bool ok() const { return ok_; }
 
-    void OnOpen(Lifecycle::OnOpenResponse* event) override { ok_ = expected_event_ == Event::Open; }
+    void OnOpen(fidl::WireResponse<Lifecycle::OnOpen>* event) override {
+      ok_ = expected_event_ == Event::Open;
+    }
 
-    void OnClose(Lifecycle::OnCloseResponse* event) override {
+    void OnClose(fidl::WireResponse<Lifecycle::OnClose>* event) override {
       ok_ = expected_event_ == Event::Close;
     };
 
-    void OnUnbind(Lifecycle::OnUnbindResponse* event) override {
+    void OnUnbind(fidl::WireResponse<Lifecycle::OnUnbind>* event) override {
       ok_ = expected_event_ == Event::Unbind;
     }
 
-    void OnRelease(Lifecycle::OnReleaseResponse* event) override {
+    void OnRelease(fidl::WireResponse<Lifecycle::OnRelease>* event) override {
       ok_ = expected_event_ == Event::Release;
     }
 

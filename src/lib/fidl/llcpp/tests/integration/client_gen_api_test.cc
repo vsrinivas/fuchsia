@@ -50,11 +50,12 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
-  auto result = client->TwoWay(fidl::StringView(data), [&done](Example::TwoWayResponse* response) {
-    ASSERT_EQ(strlen(data), response->out.size());
-    EXPECT_EQ(0, strncmp(response->out.data(), data, strlen(data)));
-    sync_completion_signal(&done);
-  });
+  auto result = client->TwoWay(fidl::StringView(data),
+                               [&done](fidl::WireResponse<Example::TwoWay>* response) {
+                                 ASSERT_EQ(strlen(data), response->out.size());
+                                 EXPECT_EQ(0, strncmp(response->out.data(), data, strlen(data)));
+                                 sync_completion_signal(&done);
+                               });
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
@@ -72,7 +73,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
       FAIL();
     }
 
-    void OnReply(Example::TwoWayResponse* message) override {
+    void OnReply(fidl::WireResponse<Example::TwoWay>* message) override {
       auto& out = message->out;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
@@ -99,7 +100,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
-  fidl::Buffer<Example::TwoWayRequest> buffer;
+  fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
   ResponseContext context(&done, data, strlen(data));
   auto result = client->TwoWay(buffer.view(), fidl::StringView(data), &context);
   ASSERT_TRUE(result.ok());
@@ -123,7 +124,7 @@ TEST(GenAPITestCase, EventManaged) {
 
     sync_completion_t& done() { return done_; }
 
-    void OnEvent(Example::OnEventResponse* event) {
+    void OnEvent(fidl::WireResponse<Example::OnEvent>* event) {
       ASSERT_EQ(strlen(data), event->out.size());
       EXPECT_EQ(0, strncmp(event->out.data(), data, strlen(data)));
       sync_completion_signal(&done_);
@@ -240,7 +241,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
    public:
     EventHandler(sync_completion_t& done) : done_(done) {}
 
-    void OnEvent(Example::OnEventResponse* event) override {
+    void OnEvent(fidl::WireResponse<Example::OnEvent>* event) override {
       FAIL();
       sync_completion_signal(&done_);
     }
@@ -259,8 +260,8 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 
   // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.
-  Example::OnEventResponse resp{fidl::StringView("")};
-  fidl::OwnedEncodedMessage<Example::OnEventResponse> encoded(&resp);
+  fidl::WireResponse<Example::OnEvent> resp{fidl::StringView("")};
+  fidl::OwnedEncodedMessage<fidl::WireResponse<Example::OnEvent>> encoded(&resp);
   ASSERT_TRUE(encoded.ok());
   auto bytes = encoded.GetOutgoingMessage().CopyBytes();
   ASSERT_OK(remote.channel().write(0, bytes.data(), sizeof(fidl_message_header_t), nullptr, 0));

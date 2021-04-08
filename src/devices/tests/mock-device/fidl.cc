@@ -38,12 +38,14 @@ zx_status_t WaitForPerformActions(const zx::channel& c,
   }
 
   const char* err_out = nullptr;
-  status = request.Decode(device_mock::MockDeviceThread::PerformActionsRequest::Type, &err_out);
+  status = request.Decode(fidl::WireRequest<device_mock::MockDeviceThread::PerformActions>::Type,
+                          &err_out);
   if (status != ZX_OK) {
     printf("mock-device-thread: Failed to decode actions: %s\n", err_out);
     return status;
   }
-  auto payload = request.GetBytesAs<device_mock::MockDeviceThread::PerformActionsRequest>();
+  auto payload =
+      request.GetBytesAs<fidl::WireRequest<device_mock::MockDeviceThread::PerformActions>>();
   auto array = std::make_unique<device_mock::wire::Action[]>(payload->actions.count());
   memcpy(reinterpret_cast<void*>(array.get()),
          reinterpret_cast<const void*>(payload->actions.data()),

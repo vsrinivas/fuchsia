@@ -210,9 +210,8 @@ void Keyboard::InputCallback(
   }
 
   reader_client_->ReadInputReports(
-      [this](fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
-        InputCallback(std::move(response->result));
-      });
+      [this](fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
+                 response) { InputCallback(std::move(response->result)); });
 }
 
 zx_status_t Keyboard::StartReading() {
@@ -248,9 +247,8 @@ zx_status_t Keyboard::StartReading() {
 
   // Queue up the first read.
   reader_client_->ReadInputReports(
-      [this](fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
-        InputCallback(std::move(response->result));
-      });
+      [this](fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
+                 response) { InputCallback(std::move(response->result)); });
   return ZX_OK;
 };
 

@@ -52,9 +52,6 @@ class super final {
   class foo final {
     foo() = delete;
   };
-
-  using fooResponse = ::fidl::WireResponse<::fidl_test_inheritance::super::foo>;
-  using fooRequest = ::fidl::WireRequest<::fidl_test_inheritance::super::foo>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::super>|,
@@ -637,9 +634,6 @@ class sub final {
   class foo final {
     foo() = delete;
   };
-
-  using fooResponse = ::fidl::WireResponse<::fidl_test_inheritance::sub::foo>;
-  using fooRequest = ::fidl::WireRequest<::fidl_test_inheritance::sub::foo>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::sub>|,

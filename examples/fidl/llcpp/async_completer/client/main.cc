@@ -30,13 +30,14 @@ int main(int argc, const char** argv) {
   // Make |kNumEchoes| EchoString requests to the server, and print the result when
   // it is received.
   for (int i = 0; i < kNumEchoes; i++) {
-    client->EchoString("hello", [&](fuchsia_examples::Echo::EchoStringResponse* response) {
-      std::string reply(response->response.data(), response->response.size());
-      std::cout << "Got response after " << time(nullptr) - start << " seconds" << std::endl;
-      if (++num_responses == kNumEchoes) {
-        loop.Quit();
-      }
-    });
+    client->EchoString(
+        "hello", [&](fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
+          std::string reply(response->response.data(), response->response.size());
+          std::cout << "Got response after " << time(nullptr) - start << " seconds" << std::endl;
+          if (++num_responses == kNumEchoes) {
+            loop.Quit();
+          }
+        });
   }
 
   loop.Run();

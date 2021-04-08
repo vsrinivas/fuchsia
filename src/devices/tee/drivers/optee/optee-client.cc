@@ -140,7 +140,7 @@ static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> 
     bool call_was_successful() const { return call_was_successful_; }
     zx_status_t status() const { return status_; }
 
-    void OnOpen(fuchsia_io::Node::OnOpenResponse* event) override {
+    void OnOpen(fidl::WireResponse<fuchsia_io::Node::OnOpen>* event) override {
       call_was_successful_ = true;
       status_ = event->s;
     }
@@ -1428,8 +1428,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
   uint64_t offset = message->file_offset();
   size_t bytes_left = buffer_mem->size();
   size_t bytes_read = 0;
-  fidl::Buffer<fuchsia_io::File::ReadAtRequest> request_buffer;
-  fidl::Buffer<fuchsia_io::File::ReadAtResponse> response_buffer;
+  fidl::Buffer<fidl::WireRequest<fuchsia_io::File::ReadAt>> request_buffer;
+  fidl::Buffer<fidl::WireResponse<fuchsia_io::File::ReadAt>> response_buffer;
   while (bytes_left > 0) {
     uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::MAX_BUF);
     uint64_t read_chunk_actual = 0;

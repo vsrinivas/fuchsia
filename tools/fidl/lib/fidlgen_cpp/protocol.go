@@ -324,24 +324,19 @@ type wireMethod struct {
 	WireCompleter       Name
 	WireCompleterBase   Name
 	WireRequest         Name
-	WireRequestAlias    Name
 	WireResponse        Name
-	WireResponseAlias   Name
 	WireResponseContext Name
 	WireResult          Name
 	WireUnownedResult   Name
 }
 
 func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker Name, methodMarker Name) wireMethod {
-	m := protocolMarker.Nest(name)
 	i := wireTypes.WireInterface.Nest(name)
 	return wireMethod{
 		WireCompleter:       i.AppendName("Completer"),
 		WireCompleterBase:   i.AppendName("CompleterBase"),
 		WireRequest:         WireRequest.Template(methodMarker),
-		WireRequestAlias:    m.AppendName("Request"),
 		WireResponse:        WireResponse.Template(methodMarker),
-		WireResponseAlias:   m.AppendName("Response"),
 		WireResponseContext: WireResponseContext.Template(methodMarker),
 		WireResult:          WireResult.Template(methodMarker),
 		WireUnownedResult:   WireUnownedResult.Template(methodMarker),

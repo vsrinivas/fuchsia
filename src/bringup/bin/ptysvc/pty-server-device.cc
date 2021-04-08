@@ -11,35 +11,35 @@
 
 void PtyServerDevice::SetWindowSize(fuchsia_hardware_pty::wire::WindowSize size,
                                     SetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<fuchsia_hardware_pty::Device::SetWindowSizeResponse> buf;
+  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::SetWindowSize>> buf;
   server_->set_window_size({.width = size.width, .height = size.height});
   completer.Reply(buf.view(), ZX_OK);
 }
 void PtyServerDevice::OpenClient(uint32_t id, fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
                                  OpenClientCompleter::Sync& completer) {
-  fidl::Buffer<fuchsia_hardware_pty::Device::OpenClientResponse> buf;
+  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::OpenClient>> buf;
   completer.Reply(buf.view(), server_->CreateClient(id, std::move(client)));
 }
 
 void PtyServerDevice::ClrSetFeature(uint32_t clr, uint32_t set,
                                     ClrSetFeatureCompleter::Sync& completer) {
-  fidl::Buffer<fuchsia_hardware_pty::Device::ClrSetFeatureResponse> buf;
+  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ClrSetFeature>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
 void PtyServerDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<fuchsia_hardware_pty::Device::GetWindowSizeResponse> buf;
+  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::GetWindowSize>> buf;
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
 void PtyServerDevice::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) {
-  fidl::Buffer<fuchsia_hardware_pty::Device::MakeActiveResponse> buf;
+  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::MakeActive>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
 void PtyServerDevice::ReadEvents(ReadEventsCompleter::Sync& completer) {
-  fidl::Buffer<fuchsia_hardware_pty::Device::ReadEventsResponse> buf;
+  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ReadEvents>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 

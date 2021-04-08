@@ -127,7 +127,7 @@ struct FillRequestHandles {
 };
 
 void FillRequest(FillRequestHandles& handles,
-                 basictypes::TestInterface::ConsumeSimpleStructRequest& request) {
+                 fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct>& request) {
   request.arg.field = 123;
   // make sure array shape is as expected (5 by 4)
   static_assert(decltype(request.arg.arr)::size() == kNumRow);
@@ -156,21 +156,23 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  basictypes::TestInterface::ConsumeSimpleStructRequest request(0);
+  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request(0);
   FillRequestHandles handles;
   FillRequest(handles, request);
-  fidl::OwnedEncodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
-      &request);
+  fidl::OwnedEncodedMessage<fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct>>
+      encoded(&request);
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
-  encoded.GetOutgoingMessage().Call<basictypes::TestInterface::ConsumeSimpleStructResponse>(
-      client.get(), response_storage, sizeof(response_storage));
+  encoded.GetOutgoingMessage()
+      .Call<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
+          client.get(), response_storage, sizeof(response_storage));
 
   ASSERT_TRUE(encoded.ok());
 
   auto response =
-      reinterpret_cast<basictypes::TestInterface::ConsumeSimpleStructResponse*>(response_storage);
+      reinterpret_cast<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>*>(
+          response_storage);
   ASSERT_EQ(response->field, 123);
 
   TearDownAsyncCServerHelper(loop);
@@ -183,16 +185,17 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  basictypes::TestInterface::ConsumeSimpleStructRequest request(0);
+  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request(0);
   FillRequestHandles handles;
   FillRequest(handles, request);
-  fidl::OwnedEncodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
-      &request);
+  fidl::OwnedEncodedMessage<fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct>>
+      encoded(&request);
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
-  encoded.GetOutgoingMessage().Call<basictypes::TestInterface::ConsumeSimpleStructResponse>(
-      client.get(), response_storage, sizeof(response_storage), ZX_TIME_INFINITE_PAST);
+  encoded.GetOutgoingMessage()
+      .Call<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
+          client.get(), response_storage, sizeof(response_storage), ZX_TIME_INFINITE_PAST);
 
   ASSERT_EQ(encoded.status(), ZX_ERR_TIMED_OUT);
 

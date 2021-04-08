@@ -72,7 +72,7 @@ uint32_t fd_get_flags(fbl::unique_fd fd) {
   if (result.status() != ZX_OK) {
     return 0;
   }
-  fio::Node::NodeGetFlagsResponse* response = result.Unwrap();
+  fidl::WireResponse<fio::Node::NodeGetFlags>* response = result.Unwrap();
   if (response->s != ZX_OK) {
     return 0;
   }

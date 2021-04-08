@@ -137,8 +137,8 @@ TEST(Table, UnknownHandlesResource) {
     EXPECT_TRUE(table.has_x());
     EXPECT_EQ(table.x(), 0xab);
   };
-  llcpp_types_test_utils::CannotProxyUnknownEnvelope<test::MsgWrapper::TestResourceTableResponse>(
-      bytes, handles, std::move(check));
+  llcpp_types_test_utils::CannotProxyUnknownEnvelope<
+      fidl::WireResponse<test::MsgWrapper::TestResourceTable>>(bytes, handles, std::move(check));
 }
 
 TEST(Table, UnknownHandlesNonResource) {
@@ -167,6 +167,6 @@ TEST(Table, UnknownHandlesNonResource) {
     EXPECT_TRUE(table.has_x());
     EXPECT_EQ(table.x(), 0xab);
   };
-  llcpp_types_test_utils::CannotProxyUnknownEnvelope<test::MsgWrapper::TestTableResponse>(
-      bytes, handles, std::move(check));
+  llcpp_types_test_utils::CannotProxyUnknownEnvelope<
+      fidl::WireResponse<test::MsgWrapper::TestTable>>(bytes, handles, std::move(check));
 }

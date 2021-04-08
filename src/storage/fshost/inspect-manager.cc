@@ -75,7 +75,7 @@ void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
   auto result = fidl::WireCall(dir_admin).QueryFilesystem();
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
   if (result.status() == ZX_OK) {
-    fio::DirectoryAdmin::QueryFilesystemResponse* response = result.Unwrap();
+    fidl::WireResponse<fio::DirectoryAdmin::QueryFilesystem>* response = result.Unwrap();
     fio::wire::FilesystemInfo* info = response->info.get();
     if (info != nullptr) {
       stats.CreateUint("total_bytes", info->total_bytes + info->free_shared_pool_bytes, inspector);
@@ -203,7 +203,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
   if (result.status() != ZX_OK) {
     return std::nullopt;
   }
-  fio::Node::GetAttrResponse* response = result.Unwrap();
+  fidl::WireResponse<fio::Node::GetAttr>* response = result.Unwrap();
 
   bool is_dir = response->attributes.mode & fio::wire::MODE_TYPE_DIRECTORY;
   return std::optional<DirectoryEntry>{{
@@ -220,7 +220,7 @@ void DirectoryEntriesIterator::RefreshPendingEntries() {
   if (result.status() != ZX_OK) {
     return;
   }
-  fio::Directory::ReadDirentsResponse* response = result.Unwrap();
+  fidl::WireResponse<fio::Directory::ReadDirents>* response = result.Unwrap();
   if (response->dirents.count() == 0) {
     return;
   }

@@ -112,7 +112,7 @@ class DirentIteratorImpl {
     Boxed() = default;
 
     // Buffer used by the FIDL calls.
-    fidl::Buffer<fio2::DirectoryIterator::GetNextResponse> response_buffer;
+    fidl::Buffer<fidl::WireResponse<fio2::DirectoryIterator::GetNext>> response_buffer;
 
     // At each |zxio_dirent_iterator_next| call, we would extract the next
     // dirent segment from |response_buffer|, and populate |current_entry|

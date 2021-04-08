@@ -328,8 +328,8 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   }
 
   // Explicitly allocating message buffers to avoid heap allocation.
-  fidl::Buffer<fnet::NameLookup::LookupIpRequest> request_buffer;
-  fidl::Buffer<fnet::NameLookup::LookupIpResponse> response_buffer;
+  fidl::Buffer<fidl::WireRequest<fnet::NameLookup::LookupIp>> request_buffer;
+  fidl::Buffer<fidl::WireResponse<fnet::NameLookup::LookupIp>> response_buffer;
   auto result = name_lookup->LookupIp(request_buffer.view(), fidl::StringView::FromExternal(name),
                                       options, response_buffer.view());
   zx_status_t status = result.status();

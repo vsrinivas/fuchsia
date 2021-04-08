@@ -503,7 +503,7 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
       [this, name = driver_args.node->TopoName(), collection = DriverCollection(url)](
           DriverComponent* driver, auto, auto) {
         drivers_.erase(*driver);
-        auto destroy_callback = [name](fsys::Realm::DestroyChildResponse* response) {
+        auto destroy_callback = [name](fidl::WireResponse<fsys::Realm::DestroyChild>* response) {
           if (response->result.is_err()) {
             LOGF(ERROR, "Failed to destroy component '%s': %u", name.data(),
                  response->result.err());
@@ -550,8 +550,8 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
 
 void DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args,
                         fit::callback<void(zx::status<>)> callback) {
-  auto match_callback = [this, callback = callback.share(),
-                         node](fdf::DriverIndex::MatchDriverResponse* response) mutable {
+  auto match_callback = [this, callback = callback.share(), node](
+                            fidl::WireResponse<fdf::DriverIndex::MatchDriver>* response) mutable {
     if (response->result.is_err()) {
       LOGF(ERROR, "Failed to match driver %s: %s", node->name().data(),
            zx_status_get_string(response->result.err()));
@@ -606,14 +606,14 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto bind_callback = [name](fsys::Realm::BindChildResponse* response) {
+  auto bind_callback = [name](fidl::WireResponse<fsys::Realm::BindChild>* response) {
     if (response->result.is_err()) {
       LOGF(ERROR, "Failed to bind component '%s': %u", name.data(), response->result.err());
     }
   };
   auto create_callback = [this, name, collection, server_end = std::move(endpoints->server),
                           bind_callback = std::move(bind_callback)](
-                             fsys::Realm::CreateChildResponse* response) mutable {
+                             fidl::WireResponse<fsys::Realm::CreateChild>* response) mutable {
     if (response->result.is_err()) {
       LOGF(ERROR, "Failed to create component '%s': %u", name.data(), response->result.err());
       return;

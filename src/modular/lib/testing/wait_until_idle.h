@@ -27,7 +27,7 @@ void WaitUntilIdle(fidl::InterfacePtr<Interface>* debug_interface_ptr, async::Lo
   });
 
   // We can't just use a synchronous ptr or
-  // |fidl::InterfacePtr::WaitForResponse| because those don't run the message
+  // |fidl::WireResponse<fidl::InterfacePtr::WaitFor>| because those don't run the message
   // loop while they wait.
   (*debug_interface_ptr)->WaitUntilIdle([loop] { loop->Quit(); });
   loop->Run();

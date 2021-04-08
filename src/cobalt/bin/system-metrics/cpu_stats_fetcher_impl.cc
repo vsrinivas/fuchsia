@@ -94,9 +94,10 @@ void CpuStatsFetcherImpl::InitializeKernelStats() {
                    << "Cannot open fuchsia.kernel.Stats: " << zx_status_get_string(status);
     return;
   }
-  cpu_stats_buffer_ = std::make_unique<fidl::Buffer<fuchsia_kernel::Stats::GetCpuStatsResponse>>();
+  cpu_stats_buffer_ =
+      std::make_unique<fidl::Buffer<fidl::WireResponse<fuchsia_kernel::Stats::GetCpuStats>>>();
   last_cpu_stats_buffer_ =
-      std::make_unique<fidl::Buffer<fuchsia_kernel::Stats::GetCpuStatsResponse>>();
+      std::make_unique<fidl::Buffer<fidl::WireResponse<fuchsia_kernel::Stats::GetCpuStats>>>();
   stats_service_ = std::make_unique<fidl::WireSyncClient<fuchsia_kernel::Stats>>(std::move(local));
 }
 

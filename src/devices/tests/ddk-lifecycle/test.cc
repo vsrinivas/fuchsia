@@ -78,7 +78,7 @@ void LifecycleTest::WaitPreRelease(uint64_t child_id) {
     bool removed() const { return removed_; }
     uint64_t device_id() const { return device_id_; }
 
-    void OnChildPreRelease(Lifecycle::OnChildPreReleaseResponse* event) override {
+    void OnChildPreRelease(fidl::WireResponse<Lifecycle::OnChildPreRelease>* event) override {
       device_id_ = event->child_id;
       removed_ = true;
     }

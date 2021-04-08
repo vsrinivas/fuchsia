@@ -497,7 +497,7 @@ TEST(HidButtonsTest, Notify1) {
 
         bool ok() const { return ok_; }
 
-        void OnNotify(Buttons::OnNotifyResponse* event) override {
+        void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
           if (event->type == ButtonType::MUTE && event->pressed == true) {
             ok_ = true;
           }
@@ -521,7 +521,7 @@ TEST(HidButtonsTest, Notify1) {
 
         bool ok() const { return ok_; }
 
-        void OnNotify(Buttons::OnNotifyResponse* event) override {
+        void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
           if (event->type == ButtonType::MUTE && event->pressed == false) {
             ok_ = true;
           }
@@ -547,7 +547,7 @@ TEST(HidButtonsTest, Notify1) {
 
         bool ok() const { return ok_; }
 
-        void OnNotify(Buttons::OnNotifyResponse* event) override {
+        void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
           if (event->type == ButtonType::VOLUME_UP && event->pressed == true) {
             ok_ = true;
           }
@@ -647,7 +647,7 @@ TEST(HidButtonsTest, Notify2) {
 
           bool ok() const { return ok_; }
 
-          void OnNotify(Buttons::OnNotifyResponse* event) override {
+          void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
             if (event->type == ButtonType::MUTE && event->pressed == true) {
               ok_ = true;
             }
@@ -669,7 +669,7 @@ TEST(HidButtonsTest, Notify2) {
 
           bool ok() const { return ok_; }
 
-          void OnNotify(Buttons::OnNotifyResponse* event) override {
+          void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
             if (event->type == ButtonType::MUTE && event->pressed == true) {
               ok_ = true;
             }
@@ -693,7 +693,7 @@ TEST(HidButtonsTest, Notify2) {
 
           bool ok() const { return ok_; }
 
-          void OnNotify(Buttons::OnNotifyResponse* event) override {
+          void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
             if (event->type == ButtonType::MUTE && event->pressed == false) {
               ok_ = true;
             }
@@ -715,7 +715,7 @@ TEST(HidButtonsTest, Notify2) {
 
           bool ok() const { return ok_; }
 
-          void OnNotify(Buttons::OnNotifyResponse* event) override {
+          void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
             if (event->type == ButtonType::MUTE && event->pressed == false) {
               ok_ = true;
             }
@@ -744,7 +744,7 @@ TEST(HidButtonsTest, Notify2) {
 
           bool ok() const { return ok_; }
 
-          void OnNotify(Buttons::OnNotifyResponse* event) override {
+          void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
             if (event->type == ButtonType::MUTE && event->pressed == true) {
               ok_ = true;
             }
@@ -768,7 +768,7 @@ TEST(HidButtonsTest, Notify2) {
 
           bool ok() const { return ok_; }
 
-          void OnNotify(Buttons::OnNotifyResponse* event) override {
+          void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
             if (event->type == ButtonType::VOLUME_UP && event->pressed == false) {
               ok_ = true;
             }
@@ -790,7 +790,7 @@ TEST(HidButtonsTest, Notify2) {
 
           bool ok() const { return ok_; }
 
-          void OnNotify(Buttons::OnNotifyResponse* event) override {
+          void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
             if (event->type == ButtonType::VOLUME_UP && event->pressed == false) {
               ok_ = true;
             }
@@ -817,7 +817,7 @@ TEST(HidButtonsTest, Notify2) {
 
         bool ok() const { return ok_; }
 
-        void OnNotify(Buttons::OnNotifyResponse* event) override {
+        void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
           if (event->type == ButtonType::VOLUME_UP && event->pressed == true) {
             ok_ = true;
           }
@@ -1007,7 +1007,7 @@ TEST(HidButtonsTest, MicAndCamMute) {
     bool camera_pressed() const { return camera_pressed_; }
     bool mic_pressed() const { return mic_pressed_; }
 
-    void OnNotify(Buttons::OnNotifyResponse* event) override {
+    void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
       if (event->type == ButtonType::MUTE && event->pressed == true) {
         mic_pressed_ = true;
       }

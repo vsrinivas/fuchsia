@@ -292,7 +292,7 @@ void prepopulate_protocol_dirs() {
 
 void describe_error(zx::channel h, zx_status_t status) {
   fio::wire::NodeInfo invalid_node_info;
-  fio::Node::OnOpenResponse::OwnedEncodedMessage response(status, invalid_node_info);
+  fidl::WireResponse<fio::Node::OnOpen>::OwnedEncodedMessage response(status, invalid_node_info);
   response.Write(h.get());
 }
 
@@ -586,7 +586,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       fio::wire::DirectoryObject directory;
       node_info.set_directory(
           fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
-      fio::Node::OnOpenResponse::OwnedEncodedMessage response(ZX_OK, node_info);
+      fidl::WireResponse<fio::Node::OnOpen>::OwnedEncodedMessage response(ZX_OK, node_info);
 
       // Writing to unowned_ipc is safe because this is executing on the same
       // thread as the DcAsyncLoop(), so the handle can't be closed underneath us.

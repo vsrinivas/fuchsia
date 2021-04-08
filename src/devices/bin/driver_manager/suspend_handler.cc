@@ -193,7 +193,7 @@ void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callba
   auto callback_ptr = std::make_shared<fit::callback<void(zx_status_t)>>(std::move(callback));
 
   auto result = fshost_admin_client_->Shutdown(
-      [callback_ptr](fuchsia_fshost::Admin::ShutdownResponse* response) {
+      [callback_ptr](fidl::WireResponse<fuchsia_fshost::Admin::Shutdown>* response) {
         LOGF(INFO, "Successfully waited for VFS exit completion\n");
         if (*callback_ptr) {
           (*callback_ptr)(ZX_OK);

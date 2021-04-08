@@ -46,7 +46,7 @@ class Control : public ControlType,
   void FreeBufferHandle(uint64_t id);
 
   using CreateColorBuffer2Result =
-      fit::result<fuchsia_hardware_goldfish::ControlDevice::CreateColorBuffer2Response,
+      fit::result<fidl::WireResponse<fuchsia_hardware_goldfish::ControlDevice::CreateColorBuffer2>,
                   zx_status_t>;
 
   CreateColorBuffer2Result CreateColorBuffer2(

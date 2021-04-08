@@ -81,19 +81,6 @@ class Parent final {
   class TakeChildRequest final {
     TakeChildRequest() = delete;
   };
-
-  using GetChildResponse =
-      ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>;
-  using GetChildRequest =
-      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>;
-  using GetChildRequestResponse = ::fidl::WireResponse<
-      ::fidl_test_protocolrequest::Parent::GetChildRequest>;
-  using GetChildRequestRequest =
-      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>;
-  using TakeChildRequest =
-      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>;
-  using TakeChildRequestRequest = ::fidl::WireRequest<
-      ::fidl_test_protocolrequest::Parent::TakeChildRequest>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

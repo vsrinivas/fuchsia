@@ -54,11 +54,6 @@ class Top final {
   class GetFoo final {
     GetFoo() = delete;
   };
-
-  using GetFooResponse = ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
-  using GetFooRequest = ::fidl::WireRequest<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

@@ -98,7 +98,7 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
 
   if (const auto result = connection_->OnException(
           std::move(exception), exception_info,
-          [](fuchsia_exception::Handler::OnExceptionResponse* response) {});
+          [](fidl::WireResponse<fuchsia_exception::Handler::OnException>* response) {});
       result.status() != ZX_OK) {
     LogError("Failed to pass exception to handler", info, result.status());
   }

@@ -358,8 +358,8 @@ zx_status_t zxio_remote_v2_readv(zxio_t* io, const zx_iovec_t* vector, size_t ve
       rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::Buffer<fio2::File::ReadRequest> request_buffer;
-        fidl::Buffer<fio2::File::ReadResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio2::File::Read>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio2::File::Read>> response_buffer;
         auto result = fidl::WireCall<fio2::File>(std::move(control))
                           .Read(request_buffer.view(), capacity, response_buffer.view());
         zx_status_t status;
@@ -394,8 +394,8 @@ zx_status_t zxio_remote_v2_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
-        fidl::Buffer<fio2::File::ReadAtRequest> request_buffer;
-        fidl::Buffer<fio2::File::ReadAtResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio2::File::ReadAt>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio2::File::ReadAt>> response_buffer;
         auto result = fidl::WireCall<fio2::File>(std::move(control))
                           .ReadAt(request_buffer.view(), capacity, offset, response_buffer.view());
         zx_status_t status;
@@ -432,8 +432,8 @@ zx_status_t zxio_remote_v2_writev(zxio_t* io, const zx_iovec_t* vector, size_t v
       rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::Buffer<fio2::File::WriteRequest> request_buffer;
-        fidl::Buffer<fio2::File::WriteResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio2::File::Write>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio2::File::Write>> response_buffer;
         auto result = fidl::WireCall<fio2::File>(std::move(control))
                           .Write(request_buffer.view(),
                                  fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
@@ -469,8 +469,8 @@ zx_status_t zxio_remote_v2_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::Buffer<fio2::File::WriteAtRequest> request_buffer;
-        fidl::Buffer<fio2::File::WriteAtResponse> response_buffer;
+        fidl::Buffer<fidl::WireRequest<fio2::File::WriteAt>> request_buffer;
+        fidl::Buffer<fidl::WireResponse<fio2::File::WriteAt>> response_buffer;
         auto result = fidl::WireCall<fio2::File>(std::move(control))
                           .WriteAt(request_buffer.view(),
                                    fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),

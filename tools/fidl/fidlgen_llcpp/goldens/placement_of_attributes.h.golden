@@ -618,9 +618,6 @@ class ExampleProtocol final {
   class Method final {
     Method() = delete;
   };
-
-  using MethodRequest = ::fidl::WireRequest<
-      ::fidl_test_placementofattributes::ExampleProtocol::Method>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a

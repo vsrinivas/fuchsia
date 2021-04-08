@@ -872,11 +872,6 @@ class SimpleProtocol final {
   class Add final {
     Add() = delete;
   };
-
-  using AddResponse =
-      ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>;
-  using AddRequest =
-      ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>;
 #ifdef __Fuchsia__
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
