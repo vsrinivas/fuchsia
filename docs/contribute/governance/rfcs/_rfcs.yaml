@@ -405,6 +405,19 @@
   submitted: '2019-01-30'
   reviewed: '2019-01-30'
 
+- name: 'RFC-0031'
+  title: 'Typed Epitaphs'
+  short_description: 'Ability and syntax to indicate the type of an epitaph.'
+  authors: ['pascallouis@google.com']
+  file: '0031_typed_epitaphs.md'
+  area: ['FIDL']
+  issue: []
+  gerrit_change_id: ['486059']
+  status: 'Rejected'
+  reviewers: ['']
+  submitted: '2019-02-05'
+  reviewed: '2021-04-07'
+
 - name: 'RFC-0032'
   title: 'Efficient envelopes'
   short_description: 'This FTP proposes a more compact encoding for envelopes.'

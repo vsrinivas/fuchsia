@@ -75,6 +75,8 @@ toc:
   path: /docs/contribute/governance/rfcs/0029_increasing_method_ordinals.md
 - title: "RFC-0030: FIDL is little endian"
   path: /docs/contribute/governance/rfcs/0030_fidl_is_little_endian.md
+- title: "RFC-0031: Typed Epitaphs"
+  path: /docs/contribute/governance/rfcs/0031_typed_epitaphs.md
 - title: "RFC-0032: Efficient envelopes"
   path: /docs/contribute/governance/rfcs/0032_efficient_envelopes.md
 - title: "RFC-0033: Handling of unknown fields and strictness"

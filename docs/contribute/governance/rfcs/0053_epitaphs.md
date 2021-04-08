@@ -3,7 +3,7 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
-## Summary
+## Summary {#summary}
 
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-008.
 
@@ -124,7 +124,7 @@ The other bindings need to be updated, including Dart, Rust, and Go.
 The documentation will be updated as described in the previous section.
 
 
-### Guidance for Developers
+### Guidance for Developers {#guidance}
 
 The purpose of an epitaph is to enable a server to provide actionable
 information to the client regarding the disposition of the channel and requests

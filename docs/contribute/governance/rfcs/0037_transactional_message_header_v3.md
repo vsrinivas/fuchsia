@@ -107,7 +107,7 @@ The initial magic number will be `0x01`. We reserve funnier numbers for later.
 A magic number MUST be assigned to a new wire format when the wire format it is
 evolving or replacing cannot be reasonably phased out by the FIDL team.
 
-## Performance
+## Performance {#performance}
 
 Having epitaphs be `struct{int32}` payloads, rather than embedded in the
 transaction header, increases the minimal amount of bytes read from 16 bytes to
