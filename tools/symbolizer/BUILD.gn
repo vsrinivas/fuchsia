@@ -55,18 +55,52 @@ if (is_host) {
     ]
   }
 
-  host_test_data("e2e_test_data") {
+  host_test_data("e2e_test_cases") {
     sources = [
-      "//prebuilt/test_data/symbolizer/symbols",
-      "test_cases",
+      "test_cases/cpp_crasher_klog.in",
+      "test_cases/cpp_crasher_klog.out",
+      "test_cases/cpp_crasher_syslog.in",
+      "test_cases/cpp_crasher_syslog.out",
+      "test_cases/kernel_panic.in",
+      "test_cases/kernel_panic.out",
+      "test_cases/kernel_panic_x64.in",
+      "test_cases/kernel_panic_x64.out",
+      "test_cases/multithread.in",
+      "test_cases/multithread.out",
+      "test_cases/rust_crasher_stdout.in",
+      "test_cases/rust_crasher_stdout.out",
+      "test_cases/rust_crasher_syslog.in",
+      "test_cases/rust_crasher_syslog.out",
+      "test_cases/userboot.in",
+      "test_cases/userboot.out",
     ]
-    outputs = [ "$root_out_dir/test_data/symbolizer/{{source_file_part}}" ]
+    outputs =
+        [ "$root_out_dir/test_data/symbolizer/test_cases/{{source_file_part}}" ]
+  }
+
+  # Manually copy the symbol directory since host_test_data does not support copying directory
+  # any more (fxbug.dev/73250). It's not a big issue for us since the symbol directory seldom
+  # changes, and when it changes, we usually only add new files to it which will change the
+  # directory's mtime.
+  action("copy_e2e_test_symbols") {
+    hermetic_deps = false
+    script = "//build/copy_tree.py"
+    inputs = [ "//prebuilt/test_data/symbolizer/symbols" ]
+    outputs = [
+      "$root_out_dir/test_data/symbolizer/symbols",
+      "$root_out_dir/test_data/symbolizer/symbols.stamp",
+    ]
+    args = rebase_path(inputs + outputs)
+    metadata = {
+      test_runtime_deps = outputs
+    }
   }
 
   test("symbolizer_e2e_tests") {
     sources = [ "e2e_test.cc" ]
     deps = [
-      ":e2e_test_data",
+      ":copy_e2e_test_symbols",
+      ":e2e_test_cases",
       ":src",
       "//third_party/googletest:gtest",
     ]
