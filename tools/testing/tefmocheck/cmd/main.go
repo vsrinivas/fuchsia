@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tefmocheck"
 )
@@ -67,6 +68,7 @@ func main() {
 	var syslogPath = flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
 	var serialLogPath = flag.String("serial-log", "", "Path to a file containing the serial log. Optional.")
 	var outputsDir = flag.String("outputs-dir", "", "If set, will produce text output files for the produced tests in this dir. Optional.")
+	var jsonOutput = flag.String("json-output", "", "Output summary.json to this path.")
 	flag.Parse()
 
 	if *help || flag.NArg() > 0 || *swarmingSummaryPath == "" {
@@ -166,10 +168,19 @@ func main() {
 	}
 
 	inputSummary.Tests = append(inputSummary.Tests, checkTests...)
-	jsonOutput, err := json.MarshalIndent(inputSummary, "", "  ")
-	if err != nil {
-		log.Fatalf("failed to marshal output test summary: %v", err)
+	outFile := os.Stdout
+	if *jsonOutput != "" {
+		outFile, err = osmisc.CreateFile(*jsonOutput)
+		if err != nil {
+			log.Fatalf("failed to create output file: %s", err)
+		}
 	}
-	os.Stdout.Write(jsonOutput)
-	fmt.Println("") // Terminate output with new line.
+	summaryBytes, err := json.MarshalIndent(inputSummary, "", "  ")
+	if err != nil {
+		log.Fatalf("failed to marshal output test summary: %s", err)
+	}
+	summaryBytes = append(summaryBytes, []byte("\n")...) // Terminate output with new line.
+	if _, err := outFile.Write(summaryBytes); err != nil {
+		log.Fatalf("failed to write summary: %s", err)
+	}
 }
