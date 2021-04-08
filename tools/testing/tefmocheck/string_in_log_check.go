@@ -23,16 +23,23 @@ import (
 type stringInLogCheck struct {
 	// String that will be searched for.
 	String string
-	// OnlyOnStates will cause Check() to return false if the swarming task state doesn't match with one of these states.
+	// OnlyOnStates will cause Check() to return false if the swarming task
+	// state doesn't match with one of these states.
 	OnlyOnStates []string
 	// ExceptString will cause Check() to return false if present.
 	ExceptString string
-	// ExceptBlocks will cause Check() to return false if the string is only within these blocks.
+	// ExceptBlocks will cause Check() to return false if the string is only
+	// within these blocks.
 	ExceptBlocks []*logBlock
-	// ExceptSuccessfulSwarmingResult will cause Check() to return false if the Swarming task succeeded.
+	// ExceptSuccessfulSwarmingResult will cause Check() to return false if the
+	// Swarming task succeeded.
 	ExceptSuccessfulSwarmingResult bool
 	// Type of log that will be checked.
-	Type           logType
+	Type logType
+	// Whether to check the per-test Swarming output for this log and emit a
+	// check that's specific to the test during which the log appeared.
+	AttributeToTest bool
+
 	swarmingResult *SwarmingRpcsTaskResult
 	testName       string
 	outputFile     string
@@ -54,7 +61,7 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 		return false
 	}
 
-	if c.Type == swarmingOutputType {
+	if c.Type == swarmingOutputType && c.AttributeToTest {
 		for _, testLog := range to.SwarmingOutputPerTest {
 			if c.checkBytes(testLog.Bytes) {
 				c.testName = testLog.TestName
@@ -195,14 +202,14 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	for _, lt := range allLogTypes {
 		// For fxbug.dev/43355.
 		ret = append(ret, &stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: lt})
-		ret = append(ret, &stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt})
-		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt, ExceptBlocks: []*logBlock{
+		ret = append(ret, &stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt, AttributeToTest: true})
+		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt, AttributeToTest: true, ExceptBlocks: []*logBlock{
 			// startString and endString should match string in //zircon/system/ulib/c/test/sanitizer/lsan-test.cc.
 			{startString: "[===LSAN EXCEPT BLOCK START===]", endString: "[===LSAN EXCEPT BLOCK END===]"},
 			// Kernel out-of-memory test "OOMHard" may report false positive leaks.
 			{startString: "RUN   TestOOMHard", endString: "PASS: TestOOMHard"},
 		}})
-		ret = append(ret, &stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt})
+		ret = append(ret, &stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt, AttributeToTest: true})
 
 		oopsExceptBlocks := []*logBlock{
 			{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
@@ -212,10 +219,10 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
 		}
 		// Match specific OOPS types before finally matching the generic type.
-		ret = append(ret, &stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, ExceptBlocks: oopsExceptBlocks})
-		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL OOPS", Type: lt, ExceptBlocks: oopsExceptBlocks})
+		ret = append(ret, &stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks})
+		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL OOPS", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks})
 
-		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt, ExceptBlocks: []*logBlock{
+		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL PANIC", AttributeToTest: true, Type: lt, ExceptBlocks: []*logBlock{
 			// These tests intentionally trigger kernel panics.
 			{startString: "RUN   TestBasicCrash", endString: "PASS: TestBasicCrash"},
 			{startString: "RUN   TestSMAPViolation", endString: "PASS: TestSMAPViolation"},

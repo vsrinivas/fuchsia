@@ -37,6 +37,7 @@ func TestStringInLogCheck(t *testing.T) {
 
 	for _, tc := range []struct {
 		name                string
+		attributeToTest     bool
 		testingOutputs      TestingOutputs
 		states              []string
 		swarmingResultState string
@@ -99,7 +100,7 @@ func TestStringInLogCheck(t *testing.T) {
 			},
 			shouldMatch: true,
 		}, {
-			name: "should match if swaring task state is in expected states",
+			name: "should match if swarming task state is in expected states",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(killerString),
 			},
@@ -107,7 +108,7 @@ func TestStringInLogCheck(t *testing.T) {
 			swarmingResultState: "STATE_1",
 			shouldMatch:         true,
 		}, {
-			name: "should not match if swaring task state is not in expected states",
+			name: "should not match if swarming task state is not in expected states",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(killerString),
 			},
@@ -115,13 +116,15 @@ func TestStringInLogCheck(t *testing.T) {
 			swarmingResultState: "NO_STATE",
 		},
 		{
-			name: "should match per test swarming output",
+			name:            "should match per test swarming output",
+			attributeToTest: true,
 			testingOutputs: TestingOutputs{
-				SwarmingOutputPerTest: []TestLog{{
-					TestName: "foo-test",
-					Bytes:    []byte(killerString),
-					FilePath: "foo/log.txt",
-				},
+				SwarmingOutputPerTest: []TestLog{
+					{
+						TestName: "foo-test",
+						Bytes:    []byte(killerString),
+						FilePath: "foo/log.txt",
+					},
 				},
 			},
 			shouldMatch: true,
@@ -129,6 +132,8 @@ func TestStringInLogCheck(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			c := c // Make a copy to avoid modifying shared state.
+			c.AttributeToTest = tc.attributeToTest
 			// It accesses this field for DebugText().
 			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{Results: &SwarmingRpcsTaskResult{TaskId: "abc", State: tc.swarmingResultState}}
 			c.OnlyOnStates = tc.states
