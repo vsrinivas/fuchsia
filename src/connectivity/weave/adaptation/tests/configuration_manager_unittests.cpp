@@ -27,6 +27,7 @@
 
 #include "configuration_manager_delegate_impl.h"
 #include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
@@ -50,12 +51,13 @@ constexpr uint16_t kExpectedProductId = 60209;
 constexpr uint64_t kExpectedDeviceId = 65535;
 constexpr char kExpectedFirmwareRevision[] = "prerelease-1";
 constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
-constexpr char kExpectedPairingCode[] = "PAIRDUMMY123";
+constexpr char kExpectedPairingCode[] = "ABC123";
 constexpr uint16_t kMaxFirmwareRevisionSize = ConfigurationManager::kMaxFirmwareRevisionLength + 1;
 constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumberLength + 1;
 constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLength + 1;
 const std::string kPkgDataPath = "/pkg/data/";
 const std::string kDataPath = "/data/";
+const std::string kConfigDataPath = "/config/data/";
 
 constexpr uint32_t kTestKeyId = WeaveKeyId::kFabricSecret + 1u;
 constexpr uint8_t kWeaveAppGroupKeySize =
@@ -280,21 +282,33 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
     ConfigurationMgrImpl().SetDelegate(nullptr);
   }
 
-  bool CopyFileFromPkgToData(std::string filename) {
+  bool CopyFile(std::string src, std::string dst) {
     std::string data;
-    bool result = files::ReadFileToString(kPkgDataPath + filename, &data);
+    bool result = files::ReadFileToString(src, &data);
     int e = errno;
     if (!result) {
-      FX_LOGS(ERROR) << "readfile failed for " << filename << ": " << strerror(e);
+      FX_LOGS(ERROR) << "ReadFile failed for " << src << ": " << strerror(e);
       return result;
     }
-    result = files::WriteFile(kDataPath + filename, data);
+    result = files::WriteFile(dst, data);
     e = errno;
     if (!result) {
-      FX_LOGS(ERROR) << "writefile failed for  " << filename << ": " << strerror(e);
+      FX_LOGS(ERROR) << "WriteFile failed for  " << dst << ": " << strerror(e);
       return result;
     }
     return result;
+  }
+
+  bool CopyFileFromPkgToData(std::string filename) {
+    return CopyFile(kPkgDataPath + filename, kDataPath + filename);
+  }
+
+  bool CopyFileFromConfigToData(std::string filename) {
+    return CopyFile(kConfigDataPath + filename, kDataPath + filename);
+  }
+
+  bool CopyFileFromConfigToData(std::string src_filename, std::string dst_filename) {
+    return CopyFile(kConfigDataPath + src_filename, kDataPath + dst_filename);
   }
 
   void DisableHwInfoSerialNum() { fake_hwinfo_.DisableSerialNum(); }
@@ -595,6 +609,8 @@ TEST_F(ConfigurationManagerTest, GetPrivateKey) {
   EXPECT_TRUE(std::equal(signing_key.begin(), signing_key.end(), expected.begin(), expected.end()));
 
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+
+  files::DeletePath(kDataPath + filename, false);
 }
 
 TEST_F(ConfigurationManagerTest, GetTestCert) {
@@ -613,6 +629,7 @@ TEST_F(ConfigurationManagerTest, GetTestCert) {
   EXPECT_EQ(cert_len, testdata.size());
   EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
                          testdata.begin(), testdata.end()));
+  files::DeletePath(kDataPath + filename, false);
 }
 
 TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
@@ -686,6 +703,24 @@ TEST_F(ConfigurationManagerTest, FactoryResetIfFailSafeArmed) {
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
   EXPECT_EQ(group_key_store.RetrieveGroupKey(kTestKeyId, retrieved_key),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+}
+
+TEST_F(ConfigurationManagerTest, SetConfiguration) {
+  std::string from_filename("device_info_alt.json");
+  std::string to_filename("device_info.json");
+  uint16_t read_vendor_id, read_product_id;
+
+  CopyFileFromConfigToData(from_filename, to_filename);
+
+  ConfigurationMgrImpl().SetDelegate(nullptr);
+  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgrImpl().GetVendorId(read_vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(read_vendor_id, 1000);
+  EXPECT_EQ(ConfigurationMgrImpl().GetProductId(read_product_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(read_product_id, 2000);
+
+  files::DeletePath(kDataPath + to_filename, false);
 }
 
 }  // namespace testing

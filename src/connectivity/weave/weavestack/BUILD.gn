@@ -60,8 +60,11 @@ executable("bin") {
 }
 
 resource("default_environment_schema") {
-  sources = [ "data/default_environment_schema.json" ]
-  outputs = [ "data/default_environment_schema.json" ]
+  sources = [
+    "data/default_environment_schema.json",
+    "data/device_info_schema.json",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 # The default weavestack package contains no applets.

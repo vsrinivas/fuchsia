@@ -245,8 +245,9 @@ WEAVE_ERROR WeaveConfigManager::CommitKVPairs() {
              : WEAVE_ERROR_PERSISTED_STORAGE_FAIL;
 }
 
-WEAVE_ERROR WeaveConfigManager::SetDefaultConfiguration(const std::string& path,
-                                                        const std::string& schema_path) {
+WEAVE_ERROR WeaveConfigManager::SetConfiguration(const std::string& path,
+                                                 const std::string& schema_path,
+                                                 bool should_replace) {
   json::JSONParser json_parser;
   rapidjson::Document default_config;
   rapidjson::Document schema_config;
@@ -283,6 +284,9 @@ WEAVE_ERROR WeaveConfigManager::SetDefaultConfiguration(const std::string& path,
        it != default_config.MemberEnd(); ++it) {
     rapidjson::Value::MemberIterator config_it = config_.FindMember(it->name);
     if (config_it == config_.MemberEnd()) {
+      config_.AddMember(it->name, it->value, config_.GetAllocator());
+    } else if (should_replace) {
+      config_.RemoveMember(config_it->name);
       config_.AddMember(it->name, it->value, config_.GetAllocator());
     }
   }

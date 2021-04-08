@@ -56,8 +56,8 @@ WEAVE_ERROR EnvironmentConfig::Init() {
       !files::IsFile(kDefaultEnvironmentStoreSchemaPath)) {
     return WEAVE_NO_ERROR;
   }
-  return WeaveConfigMgr().SetDefaultConfiguration(kDefaultEnvironmentStorePath,
-                                                  kDefaultEnvironmentStoreSchemaPath);
+  return WeaveConfigMgr().SetConfiguration(
+      kDefaultEnvironmentStorePath, kDefaultEnvironmentStoreSchemaPath, /*should_replace*/ false);
 }
 
 WEAVE_ERROR EnvironmentConfig::ReadConfigValue(Key key, bool& val) {

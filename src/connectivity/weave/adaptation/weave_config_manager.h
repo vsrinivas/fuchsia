@@ -98,11 +98,13 @@ class WeaveConfigManager : public WeaveConfigReader, WeaveConfigWriter {
   WEAVE_ERROR ClearConfigValue(const std::string& key) override;
   WEAVE_ERROR FactoryResetConfig() override;
 
-  // Manager-only interface to set default values on this configuration.
-  WEAVE_ERROR SetDefaultConfiguration(const std::string& path, const std::string& schema_path);
+  // Manager-only interface to set the given values on this configuration. The values in the
+  // existing configuration will be overridden if should_replace is true.
+  WEAVE_ERROR SetConfiguration(const std::string& path, const std::string& schema_path,
+                               bool should_replace);
 
-  // Returns a read-only interface to this instance of WeaveConfigManager.
-  static std::unique_ptr<WeaveConfigReader> CreateReadOnlyInstance(const std::string& path) {
+  // Returns a read/write interface to this instance of WeaveConfigManager.
+  static std::unique_ptr<WeaveConfigManager> CreateInstance(const std::string& path) {
     return std::make_unique<WeaveConfigManager>(path);
   }
 

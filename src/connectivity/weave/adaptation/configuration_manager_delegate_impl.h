@@ -83,7 +83,7 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   fuchsia::factory::WeaveFactoryStoreProviderSyncPtr factory_store_provider_;
   fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;
 
-  std::unique_ptr<WeaveConfigReader> device_info_;
+  std::unique_ptr<Internal::WeaveConfigManager> device_info_;
 };
 
 }  // namespace DeviceLayer

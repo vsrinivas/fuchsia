@@ -38,6 +38,8 @@ using ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;
 
 // Store path and keys for static device information.
 constexpr char kDeviceInfoStorePath[] = "/config/data/device_info.json";
+constexpr char kDeviceInfoRuntimePath[] = "/data/device_info.json";
+constexpr char kDeviceInfoSchemaPath[] = "/pkg/data/device_info_schema.json";
 constexpr char kDeviceInfoConfigKey_BleDeviceNamePrefix[] = "ble-device-name-prefix";
 constexpr char kDeviceInfoConfigKey_DeviceId[] = "device-id";
 constexpr char kDeviceInfoConfigKey_DeviceIdPath[] = "device-id-path";
@@ -72,7 +74,7 @@ constexpr uint8_t kFakeMacAddress[kWiFiMacAddressBufSize] = {0xFF};
 }  // unnamed namespace
 
 ConfigurationManagerDelegateImpl::ConfigurationManagerDelegateImpl()
-    : device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
+    : device_info_(WeaveConfigManager::CreateInstance(kDeviceInfoStorePath)) {}
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
@@ -97,6 +99,16 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
     FX_LOGS(WARNING)
         << "Fail safe was not disarmed before weavestack was shutdown, erasing Weave data.";
     InitiateFactoryReset();
+  }
+
+  if (files::IsFile(kDeviceInfoRuntimePath)) {
+    err = device_info_->SetConfiguration(kDeviceInfoRuntimePath, kDeviceInfoSchemaPath,
+                                         /*should_replace*/ true);
+    // The runtime device info is primarily used for testing and is applied as best-effort.
+    // Failures are logged but proceed with the built-in configuration.
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(WARNING) << "Failed to apply runtime device info: " << ErrorStr(err);
+    }
   }
 
   err = static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)->_Init();

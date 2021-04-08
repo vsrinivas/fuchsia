@@ -22,6 +22,8 @@ constexpr char kWeaveConfigStoreAltTestPath[] = "/data/alt.config.json";
 constexpr char kWeaveConfigDefaultStorePath[] = "/pkg/data/default_store.json";
 constexpr char kWeaveConfigInvalidDefaultStorePath[] = "/pkg/data/invalid_default_store.json";
 constexpr char kWeaveConfigDefaultStoreSchemaPath[] = "/pkg/data/default_store_schema.json";
+constexpr char kDeviceInfoPath[] = "/config/data/device_info.json";
+constexpr char kDeviceInfoSchemaPath[] = "/pkg/data/device_info_schema.json";
 }  // namespace
 
 class WeaveConfigManagerTest : public ::gtest::TestLoopFixture {
@@ -341,7 +343,7 @@ TEST_F(WeaveConfigManagerTest, ReadOnly) {
   constexpr char kTestKeyBool[] = "test-key-bool";
   constexpr bool kTestValBool = true;
   std::unique_ptr<WeaveConfigReader> reader =
-      WeaveConfigManager::CreateReadOnlyInstance(kWeaveConfigStoreReadOnlyTestPath);
+      WeaveConfigManager::CreateInstance(kWeaveConfigStoreReadOnlyTestPath);
 
   bool read_value = false;
   EXPECT_EQ(reader->ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
@@ -351,12 +353,13 @@ TEST_F(WeaveConfigManagerTest, ReadOnly) {
 TEST_F(WeaveConfigManagerTest, SetDefaultConfiguration) {
   constexpr char kTestKeyBool[] = "test-key-bool";
   constexpr bool kTestValBool = true;
-  constexpr char kTestConfigStoreContents[] = "{\"test-key-bool\":true}";
+  constexpr char kTestConfigStoreContents[] = "{\"test-key-bool\":true,\"vendor-id\":1234}";
 
   // From the factory reset state, setting the default configuration should
   // reflect immediately after a read.
-  EXPECT_EQ(weave_config_manager_.SetDefaultConfiguration(kWeaveConfigDefaultStorePath,
-                                                          kWeaveConfigDefaultStoreSchemaPath),
+  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath,
+                                                   kWeaveConfigDefaultStoreSchemaPath,
+                                                   /*should_replace*/ false),
             WEAVE_NO_ERROR);
 
   bool read_value = true;
@@ -370,8 +373,9 @@ TEST_F(WeaveConfigManagerTest, SetDefaultConfiguration) {
 
   // If a value already exists in the configuration, setting the default
   // configuration does not modify it.
-  EXPECT_EQ(weave_config_manager_.SetDefaultConfiguration(kWeaveConfigDefaultStorePath,
-                                                          kWeaveConfigDefaultStoreSchemaPath),
+  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath,
+                                                   kWeaveConfigDefaultStoreSchemaPath,
+                                                   /*should_replace*/ false),
             WEAVE_NO_ERROR);
 
   read_value = false;
@@ -385,18 +389,62 @@ TEST_F(WeaveConfigManagerTest, SetDefaultConfiguration) {
 
 TEST_F(WeaveConfigManagerTest, SetDefaultConfigurationMissingFiles) {
   constexpr char kInvalidPath[] = "/pkg/data/missing_file.json";
-  EXPECT_EQ(weave_config_manager_.SetDefaultConfiguration(kInvalidPath,
-                                                          kWeaveConfigDefaultStoreSchemaPath),
+  EXPECT_EQ(weave_config_manager_.SetConfiguration(kInvalidPath, kWeaveConfigDefaultStoreSchemaPath,
+                                                   /*should_replace*/ false),
             WEAVE_ERROR_PERSISTED_STORAGE_FAIL);
-  EXPECT_EQ(
-      weave_config_manager_.SetDefaultConfiguration(kWeaveConfigDefaultStorePath, kInvalidPath),
-      WEAVE_ERROR_PERSISTED_STORAGE_FAIL);
+  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath, kInvalidPath,
+                                                   /*should_replace*/ false),
+            WEAVE_ERROR_PERSISTED_STORAGE_FAIL);
 }
 
 TEST_F(WeaveConfigManagerTest, SetDefaultConfigurationInvalidConfig) {
-  EXPECT_EQ(weave_config_manager_.SetDefaultConfiguration(kWeaveConfigInvalidDefaultStorePath,
-                                                          kWeaveConfigDefaultStoreSchemaPath),
+  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigInvalidDefaultStorePath,
+                                                   kWeaveConfigDefaultStoreSchemaPath,
+                                                   /*should_replace*/ false),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID);
+}
+
+TEST_F(WeaveConfigManagerTest, SetDefaultConfigurationReplace) {
+  constexpr char kTestKeyBool[] = "test-key-bool";
+  constexpr char kTestSerialNumber[] = "serial-number";
+  constexpr char kTestSerialNumberVal[] = "ABCD1234";
+  constexpr size_t kTestSerialNumberValSize = sizeof(kTestSerialNumberVal);
+  constexpr char kTestKeyVendorId[] = "vendor-id";
+  constexpr uint16_t kTestVendorIdVal1 = 1234;
+  constexpr uint16_t kTestVendorIdVal2 = 5050;
+
+  // From the factory reset state, setting the default configuration should
+  // reflect immediately after a read.
+  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath,
+                                                   kWeaveConfigDefaultStoreSchemaPath,
+                                                   /*should_replace*/ false),
+            WEAVE_NO_ERROR);
+
+  bool read_value = true;
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(read_value, false);
+
+  uint16_t vendor_id = 0;
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyVendorId, &vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(vendor_id, kTestVendorIdVal1);
+
+  // Replace the existing configuration.
+  EXPECT_EQ(weave_config_manager_.SetConfiguration(kDeviceInfoPath, kDeviceInfoSchemaPath,
+                                                   /*should_replace*/ true),
+            WEAVE_NO_ERROR);
+
+  char read_value_str[256] = {'\0'};
+  size_t read_value_size = 0;
+  read_value = true;
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(read_value, false);
+  EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestSerialNumber, read_value_str,
+                                                     kTestSerialNumberValSize, &read_value_size),
+            WEAVE_NO_ERROR);
+  EXPECT_STREQ(kTestSerialNumberVal, read_value_str);
+
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyVendorId, &vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(vendor_id, kTestVendorIdVal2);
 }
 
 TEST_F(WeaveConfigManagerTest, ReadArray) {

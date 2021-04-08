@@ -118,6 +118,7 @@ test("weave_config_manager_unittests") {
 resource("weavestack-adaptation-resources") {
   sources = [
     "../../weavestack/data/default_environment_schema.json",
+    "../../weavestack/data/device_info_schema.json",
     "testdata/config.json",
     "testdata/default_store.json",
     "testdata/default_store_schema.json",
@@ -133,6 +134,7 @@ config_data("weavestack-adaptation-config") {
   sources = [
     "testdata/default_environment.json",
     "testdata/device_info.json",
+    "testdata/device_info_alt.json",
   ]
 }
 

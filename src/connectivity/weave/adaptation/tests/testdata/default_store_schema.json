@@ -5,6 +5,10 @@
       "test-key-bool": {
         "description": "test-key-bool",
         "type": "boolean"
+      },
+      "vendor-id": {
+        "description": "Vendor ID",
+        "type": "integer"
       }
     },
     "additionalProperties": false
