@@ -44,6 +44,11 @@ pub struct VolumeController {
     modified_counters: ModifiedCounters,
 }
 
+enum UpdateFrom<'a> {
+    AudioInfo(AudioInfo),
+    NewStreams(&'a [AudioStream]),
+}
+
 impl VolumeController {
     async fn create(client: ClientProxy) -> VolumeControllerHandle {
         let handle = Arc::new(Mutex::new(Self {
@@ -67,8 +72,7 @@ impl VolumeController {
     /// [push_to_audio_core] is true.
     async fn restore_volume_state(&mut self, push_to_audio_core: bool) -> ControllerStateResult {
         let audio_info = self.client.read_setting::<AudioInfo>().await;
-        let stored_streams = audio_info.streams.iter().cloned().collect();
-        self.update_volume_streams(&stored_streams, push_to_audio_core).await?;
+        self.update_volume_streams(UpdateFrom::AudioInfo(audio_info), push_to_audio_core).await?;
         Ok(())
     }
 
@@ -86,7 +90,7 @@ impl VolumeController {
 
     async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingHandlerResult {
         // Update counters for changed streams.
-        for stream in volume.iter() {
+        for stream in &volume {
             // We don't care what the value of the counter is, just that it is different from the
             // previous value. We use wrapping_add to avoid eventual overflow of the counter.
             self.modified_counters.insert(
@@ -97,7 +101,7 @@ impl VolumeController {
             );
         }
 
-        if !(self.update_volume_streams(&volume, true).await?) {
+        if !(self.update_volume_streams(UpdateFrom::NewStreams(&volume[..]), true).await?) {
             let info = self.get_info().await?.into();
             self.client.notify(Event::Changed(info)).await;
         }
@@ -122,9 +126,13 @@ impl VolumeController {
     /// Returns whether the change triggered a notification.
     async fn update_volume_streams(
         &mut self,
-        new_streams: &Vec<AudioStream>,
+        update_from: UpdateFrom<'_>,
         push_to_audio_core: bool,
     ) -> Result<bool, ControllerError> {
+        let new_streams = match &update_from {
+            UpdateFrom::AudioInfo(audio_info) => &audio_info.streams[..],
+            UpdateFrom::NewStreams(streams) => streams,
+        };
         if push_to_audio_core {
             self.check_and_bind_volume_controls(&default_audio_info().streams.to_vec()).await?;
             for stream in new_streams {
@@ -138,7 +146,10 @@ impl VolumeController {
             self.check_and_bind_volume_controls(new_streams).await?;
         }
 
-        let mut stored_value = self.client.read_setting::<AudioInfo>().await;
+        let mut stored_value = match update_from {
+            UpdateFrom::AudioInfo(audio_info) => audio_info,
+            _ => self.client.read_setting::<AudioInfo>().await,
+        };
         stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
         stored_value.modified_counters = Some(self.modified_counters.clone());
 
@@ -148,7 +159,7 @@ impl VolumeController {
     /// Populates the local state with the given [streams] and binds it to the audio core service.
     async fn check_and_bind_volume_controls(
         &mut self,
-        streams: &Vec<AudioStream>,
+        streams: &[AudioStream],
     ) -> ControllerStateResult {
         if self.audio_service_connected {
             return Ok(());
@@ -169,11 +180,11 @@ impl VolumeController {
         })?;
         self.audio_service_connected = true;
 
-        for stream in streams.iter() {
+        for stream in streams {
             let client = self.client.clone();
             let stream_volume_control = StreamVolumeControl::create(
                 &audio_service,
-                stream.clone(),
+                *stream,
                 Some(Arc::new(move || {
                     // When the StreamVolumeControl exits early, inform the
                     // proxy we have exited. The proxy will then cleanup this
@@ -190,8 +201,11 @@ impl VolumeController {
                 })),
                 None,
             )
+            // TODO(fxbug.dev/73629) This could be bad. If this fails partway we would have
+            // inserted some of the volume controls but not all. The service would also think that
+            // the audio core service is fully connected since that setting is not reverted.
             .await?;
-            self.stream_volume_controls.insert(stream.stream_type.clone(), stream_volume_control);
+            self.stream_volume_controls.insert(stream.stream_type, stream_volume_control);
         }
 
         Ok(())
