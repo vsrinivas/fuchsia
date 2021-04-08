@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Encoding contains functions and traits for FIDL2 encoding and decoding.
+//! Encoding contains functions and traits for FIDL encoding and decoding.
 
 use {
     crate::handle::{
@@ -201,7 +201,7 @@ fn default_encode_context() -> Context {
 }
 
 impl<'a, 'b> Encoder<'a, 'b> {
-    /// FIDL2-encodes `x` into the provided data and handle buffers.
+    /// FIDL-encodes `x` into the provided data and handle buffers.
     #[inline]
     pub fn encode<T: Encodable + ?Sized>(
         buf: &'a mut Vec<u8>,
@@ -212,7 +212,7 @@ impl<'a, 'b> Encoder<'a, 'b> {
         Self::encode_with_context(&context, buf, handles, x)
     }
 
-    /// FIDL2-encodes `x` into the provided data and handle buffers, using the
+    /// FIDL-encodes `x` into the provided data and handle buffers, using the
     /// specified encoding context.
     ///
     /// WARNING: Do not call this directly unless you know what you're doing.
@@ -235,8 +235,8 @@ impl<'a, 'b> Encoder<'a, 'b> {
             // This if statement is needed to not break the padding write below.
             if ty_inline_size != 0 {
                 let aligned_inline_size = round_up_to_align(ty_inline_size, 8);
-                // Safety: The uninitialized elements are assigned in prepare_for_encoding and
-                // x.encode.
+                // Safety: The uninitialized elements are assigned in
+                // prepare_for_encoding and x.encode.
                 unsafe {
                     resize_vec_no_zeroing(buf, aligned_inline_size);
 
@@ -316,11 +316,11 @@ impl<'a, 'b> Encoder<'a, 'b> {
         let start = self.buf.len();
         let end = self.buf.len() + round_up_to_align(bytes.len(), 8);
 
-        // # Safety:
-        // - self.buf is initially uninitialized when resized, but it is then initialized by a
-        // later copy so it leaves this block initialized.
-        // - There is enough room for the 8 byte padding filler because end's alignment is
-        // rounded up to 8 bytes and bytes.len() != 0.
+        // Safety:
+        // - self.buf is initially uninitialized when resized, but it is then
+        //   initialized by a later copy so it leaves this block initialized.
+        // - There is enough room for the 8 byte padding filler because end's
+        //   alignment is rounded up to 8 bytes and bytes.len() != 0.
         unsafe {
             resize_vec_no_zeroing(self.buf, end);
 
@@ -424,7 +424,7 @@ pub struct Decoder<'a> {
 }
 
 impl<'a> Decoder<'a> {
-    /// FIDL2-decodes a value of type `T` from the provided data and handle
+    /// FIDL-decodes a value of type `T` from the provided data and handle
     /// buffers. Assumes the buffers came from inside a transaction message
     /// wrapped by `header`.
     #[inline]
@@ -468,7 +468,7 @@ impl<'a> Decoder<'a> {
         Ok(())
     }
 
-    /// FIDL2-decodes a value of type `T` from the provided data and handle
+    /// FIDL-decodes a value of type `T` from the provided data and handle
     /// buffers, using the specified context.
     ///
     /// WARNING: Do not call this directly unless you know what you're doing.
@@ -600,8 +600,7 @@ impl<'a> Decoder<'a> {
         }
 
         // Validate padding bytes at the end of the block.
-        // # Safety:
-        // self.next_out_of_line <= self.buf.len() based on if statement above.
+        // Safety: self.next_out_of_line <= self.buf.len() based on the if-statement above.
         let last_u64 = unsafe {
             let last_u64_ptr = self.buf.get_unchecked(self.next_out_of_line - 8);
             mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
@@ -760,7 +759,7 @@ impl<T: Layout> LayoutObject for T {
     }
 }
 
-/// A type which can be FIDL2-encoded into a buffer.
+/// A type which can be FIDL-encoded into a buffer.
 ///
 /// Often an `Encodable` type should also be `Decodable`, but this is not always
 /// the case. For example, both `String` and `&str` are encodable, but `&str` is
@@ -808,9 +807,10 @@ pub trait Encodable: LayoutObject {
     /// Unsafe version of encode that does not check the buffer boundaries.
     /// This exists for performance.
     ///
-    /// # Safety:
-    ///   The caller must check that a write to the buffer of this object's
-    ///   size will not exceed the buffer length.
+    /// # Safety
+    ///
+    /// The caller must check that a write to the buffer of this object's
+    /// size will not exceed the buffer length.
     #[inline(always)]
     unsafe fn unsafe_encode(
         &mut self,
@@ -824,7 +824,7 @@ pub trait Encodable: LayoutObject {
 
 assert_obj_safe!(Encodable);
 
-/// A type which can be FIDL2-decoded from a buffer.
+/// A type which can be FIDL-decoded from a buffer.
 ///
 /// This trait is not object-safe, since `new_empty` returns `Self`. This is not
 /// really a problem: there are not many use cases for `dyn Decodable`.
@@ -857,9 +857,10 @@ pub trait Decodable: Layout + Sized {
     /// Unsafe version of decode that does not check the buffer boundaries.
     /// This exists for performance.
     ///
-    /// # Safety:
-    ///   The caller must check that a read from the buffer of this object's
-    ///   size will not exceed the buffer length.
+    /// # Safety
+    ///
+    /// The caller must check that a read from the buffer of this object's
+    /// size will not exceed the buffer length.
     #[inline(always)]
     unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         self.decode(decoder, offset)
@@ -1443,8 +1444,7 @@ unsafe fn decode_vector<T: Decodable>(
         } else {
             vec.resize_with(len, T::new_empty);
         }
-        // Safety:
-        //   `vec` has `len` elements based on the above code.
+        // Safety: `vec` has `len` elements based on the above code.
         decode_array(vec, decoder, offset)?;
         Ok(true)
     })
@@ -3005,10 +3005,10 @@ macro_rules! fidl_table {
                             // Zero reserved fields.
                             _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
 
-                            // # Safety:
-                            // bytes_len is calculated to fit 16*max(member.ordinal).
-                            // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
-                            // always sufficient room.
+                            // Safety:
+                            // - bytes_len is calculated to fit 16*max(member.ordinal).
+                            // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
+                            //   16 bytes, there is always sufficient room.
                             unsafe {
                                 _unknown_encoder_func(*data, _encoder, _offset + cur_offset, _recursion_depth)?;
                             }
@@ -3030,10 +3030,10 @@ macro_rules! fidl_table {
                             _encoder.set_next_handle_subtype($member_handle_subtype);
                             _encoder.set_next_handle_rights($member_handle_rights);
                         )?
-                        // # Safety:
-                        // bytes_len is calculated to fit 16*max(member.ordinal).
-                        // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
-                        // always sufficient room.
+                        // Safety:
+                        // - bytes_len is calculated to fit 16*max(member.ordinal).
+                        // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
+                        //   16 bytes, there is always sufficient room.
                         unsafe {
                             let mut field = self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable);
                             $crate::encoding::encode_in_envelope(&mut field, _encoder, _offset + cur_offset, _recursion_depth)?;
@@ -3050,10 +3050,10 @@ macro_rules! fidl_table {
                         // Zero reserved fields.
                         _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
 
-                        // # Safety:
-                        // bytes_len is calculated to fit 16*max(member.ordinal).
-                        // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
-                        // always sufficient room.
+                        // Safety:
+                        // - bytes_len is calculated to fit 16*max(member.ordinal).
+                        // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
+                        //   16 bytes, there is always sufficient room.
                         unsafe {
                             _unknown_encoder_func(data, _encoder, _offset + cur_offset, _recursion_depth)?;
                         }
@@ -3245,10 +3245,12 @@ macro_rules! fidl_reverse_blocks {
     };
 }
 
-/// Decodes the inline portion of a xunion. Returns (ordinal, num_bytes, num_handles).
-/// # Safety:
-///   - Unsafe due to calls to unsafe_decode. See unsafe_decode documentation for a
-///   description of safety requirements.
+/// Decodes the inline portion of a xunion. Returns `(ordinal, num_bytes, num_handles)`.
+///
+/// # Safety
+///
+/// Unsafe due to calls to `unsafe_decode`. See the `unsafe_decode`
+/// documentation for a description of safety requirements.
 #[inline]
 pub unsafe fn unsafe_decode_xunion_inline_portion(
     decoder: &mut Decoder,
