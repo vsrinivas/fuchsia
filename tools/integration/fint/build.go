@@ -91,6 +91,21 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	} else {
 		artifacts.FailureSummary, ninjaErr = runNinja(ctx, runner, targets)
 	}
+
+	// As an optimization, we only bother collecting graph and compdb data if we
+	// have a way to return it to the caller. We want to collect this data even
+	// when the build failed.
+	if contextSpec.ArtifactDir != "" {
+		artifacts.NinjaGraphPath, err = ninjaGraph(ctx, runner, targets)
+		if err != nil {
+			return nil, err
+		}
+		artifacts.NinjaCompdbPath, err = ninjaCompdb(ctx, runner)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if ninjaErr != nil {
 		return artifacts, ninjaErr
 	}
@@ -115,19 +130,6 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 				summaryLines,
 				"\n",
 			)
-		}
-	}
-
-	// As an optimization, we only bother collecting graph and compdb data if we
-	// have a way to return it to the caller.
-	if contextSpec.ArtifactDir != "" {
-		artifacts.NinjaGraphPath, err = ninjaGraph(ctx, runner, targets)
-		if err != nil {
-			return nil, err
-		}
-		artifacts.NinjaCompdbPath, err = ninjaCompdb(ctx, runner)
-		if err != nil {
-			return nil, err
 		}
 	}
 
