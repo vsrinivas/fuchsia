@@ -561,8 +561,11 @@ function fx-cmd-locked {
     fx-error "fx internal error: attempt to run locked command before fx-config-read"
     exit 1
   fi
-  # Exit trap to clean up lock file
-  trap '[[ -n "${_FX_LOCK_FILE}" ]] && rm -f "${_FX_LOCK_FILE}"' EXIT
+  # Exit trap to clean up lock file. Intentionally use the current value of
+  # $_FX_LOCK_FILE rather than the value at the time that trap executes to
+  # ensure we delete the original file even if the value of $_FX_LOCK_FILE
+  # changes for whatever reason.
+  trap "[[ -n \"${_FX_LOCK_FILE}\" ]] && rm -f \"${_FX_LOCK_FILE}\"" EXIT
   fx-exit-on-failure "$@"
 }
 
