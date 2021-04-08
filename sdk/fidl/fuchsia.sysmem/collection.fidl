@@ -238,13 +238,7 @@ protocol BufferCollection {
 
     /// Provide BufferCollectionConstraints to the logical BufferCollection.
     ///
-    /// Participants with read but not write can only call SetConstraints() once.
-    ///
-    /// Participants with write can call SetConstraints() more than once.  The
-    /// initial buffer allocation will use the constraints in the first call to
-    /// SetConstraints().  Among other things, this allows a decoder to attempt
-    /// to allocate a new buffer that's larger to hold an output frame that's
-    /// larger.
+    /// A participant may only call SetConstraints() once.
     ///
     /// Sometimes the initiator is a participant only in the sense of wanting to
     /// keep an eye on success/failure to populate with buffers, and zx.status on
