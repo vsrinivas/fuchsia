@@ -150,6 +150,44 @@ compiled_action("test-minfs-image-gen") {
   deps = [ ":test-minfs-image-manifest" ]
 }
 
+test_fvm_sparse_image_label = ":test-fvm-sparse-image-gen($default_toolchain)"
+test_fvm_sparse_image_path =
+    get_label_info(test_fvm_sparse_image_label, "target_out_dir") +
+    "/test_fvm.sparse.blk"
+compiled_action("test-fvm-sparse-image-gen") {
+  testonly = true
+  visibility = [ ":*" ]
+  tool = "//src/storage/bin/fvm"
+  inputs = [
+    test_minfs_image_path,
+    test_blob_image_path,
+  ]
+  outputs = [ test_fvm_sparse_image_path ]
+  args = [
+    rebase_path(test_fvm_sparse_image_path, root_build_dir),
+    "sparse",
+    "--compress",
+    "lz4",
+    "--slice",
+    "8388608",
+    "--blob",
+    rebase_path(test_blob_image_path, root_build_dir),
+    "--data",
+    rebase_path(test_minfs_image_path, root_build_dir),
+    "--minimum-inodes",
+    "600000",
+    "--minimum-data-bytes",
+    "10M",
+    "--maximum-bytes",
+    "218103808",
+  ]
+
+  deps = [
+    ":test-blobfs-image-gen",
+    ":test-minfs-image-gen",
+  ]
+}
+
 config("test-image-path") {
   if (is_host) {
     output_path =
@@ -166,10 +204,12 @@ config("test-image-path") {
 host_test_data("host-test-images") {
   sources = [
     test_blob_image_path,
+    test_fvm_sparse_image_path,
     test_minfs_image_path,
   ]
   deps = [
     ":test-blobfs-image-gen($default_toolchain)",
+    ":test-fvm-sparse-image-gen($default_toolchain)",
     ":test-minfs-image-gen($default_toolchain)",
   ]
   outputs = [ "$root_out_dir/adapter_test_images/{{source_file_part}}" ]
@@ -179,11 +219,13 @@ resource("adapter-test-images") {
   testonly = true
   sources = [
     "$target_out_dir/test_blobfs.blk",
+    "$target_out_dir/test_fvm.sparse.blk",
     "$target_out_dir/test_minfs.blk",
   ]
   outputs = [ "data/test_images/{{source_file_part}}" ]
   deps = [
     ":test-blobfs-image-gen",
+    ":test-fvm-sparse-image-gen",
     ":test-minfs-image-gen",
   ]
 }
@@ -236,6 +278,7 @@ test("adapter-integration-test") {
     "//src/storage/fvm",
     "//src/storage/testing:storage_driver_test_support",
     "//src/storage/volume_image/fvm:fvm-descriptor",
+    "//src/storage/volume_image/fvm:fvm-sparse-image",
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:fd-io",
     "//third_party/googletest:gmock",

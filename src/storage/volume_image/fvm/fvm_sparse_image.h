@@ -80,8 +80,12 @@ fit::result<fvm::Metadata, std::string> ConvertToFvmMetadata(
 fvm::SparseImage GenerateHeader(const FvmDescriptor& descriptor);
 
 // Returns a |FvmSparsePartitionEntry| representation of |partition| on success.
+// If |extents_are_filled| is set to true, for each mapping in |partition| that has
+// |AddressMapOption::kFill| set, the extent length will match the size of the extent, since the
+// data will be expanded to include such values.
 fit::result<PartitionEntry, std::string> GeneratePartitionEntry(uint64_t slice_size,
-                                                                const Partition& partition);
+                                                                const Partition& partition,
+                                                                bool extents_are_filled = false);
 
 // Returns the size in bytes of the generated sparse image for |descriptor|.
 uint64_t CalculateUncompressedImageSize(const FvmDescriptor& descriptor);

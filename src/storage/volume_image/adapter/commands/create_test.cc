@@ -192,7 +192,6 @@ fit::result<void, std::string> Decompress(std::string_view path) {
     if (view_size > hint) {
       view_size = hint;
     }
-
     decompressor.ProvideSizeHint(view_size);
     auto read_view = fbl::Span<uint8_t>(read_buffer).subspan(0, view_size);
 

@@ -135,7 +135,6 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
   superblock_mapping.target = 0;
   superblock_mapping.count = sizeof(minfs::Superblock);
   superblock_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
-  address.mappings.push_back(superblock_mapping);
 
   AddressMap inode_bitmap_mapping;
   inode_bitmap_mapping.source = superblock.ibm_block * minfs::kMinfsBlockSize;
@@ -147,7 +146,6 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
                                                partition_options.min_inode_count.value_or(0))) *
                                                minfs::kMinfsBlockSize);
   inode_bitmap_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
-  address.mappings.push_back(inode_bitmap_mapping);
 
   AddressMap data_bitmap_mapping;
   data_bitmap_mapping.source = superblock.abm_block * minfs::kMinfsBlockSize;
@@ -160,7 +158,6 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
                    minfs::kFVMBlockDataBmStart * minfs::kMinfsBlockSize,
                    partition_options.min_data_bytes.value_or(0), minfs::kMinfsBlockSize))));
   data_bitmap_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
-  address.mappings.push_back(data_bitmap_mapping);
 
   AddressMap inode_mapping;
   inode_mapping.source = superblock.ino_block * minfs::kMinfsBlockSize;
@@ -168,23 +165,10 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
   inode_mapping.count =
       (superblock.integrity_start_block - superblock.ino_block) * minfs::kMinfsBlockSize;
   inode_mapping.size =
-      std::max(inode_bitmap_mapping.count, static_cast<uint64_t>(minfs::BlocksRequiredForInode(
-                                               partition_options.min_inode_count.value_or(0))) *
-                                               minfs::kMinfsBlockSize);
+      std::max(inode_mapping.count, static_cast<uint64_t>(minfs::BlocksRequiredForInode(
+                                        partition_options.min_inode_count.value_or(0))) *
+                                        minfs::kMinfsBlockSize);
   inode_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
-  address.mappings.push_back(inode_mapping);
-
-  minfs::TransactionLimits limits(superblock);
-
-  AddressMap integrity_mapping;
-  integrity_mapping.source = superblock.integrity_start_block * minfs::kMinfsBlockSize;
-  integrity_mapping.target = minfs::kFvmSuperblockBackup * minfs::kMinfsBlockSize;
-  integrity_mapping.count =
-      (superblock.dat_block - superblock.integrity_start_block) * minfs::kMinfsBlockSize;
-  integrity_mapping.size = std::max(
-      integrity_mapping.count,
-      static_cast<uint64_t>(limits.GetRecommendedIntegrityBlocks()) * minfs::kMinfsBlockSize);
-  address.mappings.push_back(integrity_mapping);
 
   AddressMap data_mapping;
   data_mapping.source = superblock.dat_block * minfs::kMinfsBlockSize;
@@ -195,6 +179,58 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
                GetBlockCount(superblock.dat_block, partition_options.min_data_bytes.value_or(0),
                              minfs::kMinfsBlockSize) *
                    minfs::kMinfsBlockSize);
+
+  AddressMap integrity_mapping;
+  integrity_mapping.source = superblock.integrity_start_block * minfs::kMinfsBlockSize;
+  integrity_mapping.target = minfs::kFvmSuperblockBackup * minfs::kMinfsBlockSize;
+  integrity_mapping.count =
+      (superblock.dat_block - superblock.integrity_start_block) * minfs::kMinfsBlockSize;
+
+  auto patched_superblock_reader =
+      std::make_unique<PatchedSuperblockReader>(std::move(source_image), 0);
+
+  auto& patched_superblock = patched_superblock_reader->superblock();
+  patched_superblock = superblock;
+
+  patched_superblock.slice_size = fvm_options.slice_size;
+  patched_superblock.flags |= minfs::kMinfsFlagFVM;
+
+  patched_superblock.ibm_slices = get_slice_count(inode_bitmap_mapping);
+  patched_superblock.abm_slices = get_slice_count(data_bitmap_mapping);
+  patched_superblock.ino_slices = get_slice_count(inode_mapping);
+  patched_superblock.dat_slices = get_slice_count(data_mapping);
+
+  patched_superblock.inode_count = safemath::checked_cast<uint32_t>(
+      get_slice_count(inode_mapping) * fvm_options.slice_size / minfs::kMinfsInodeSize);
+  patched_superblock.block_count = safemath::checked_cast<uint32_t>(
+      get_slice_count(data_mapping) * fvm_options.slice_size / minfs::kMinfsBlockSize);
+
+  patched_superblock.ibm_block = minfs::kFVMBlockInodeBmStart;
+  patched_superblock.abm_block = minfs::kFVMBlockDataBmStart;
+  patched_superblock.ino_block = minfs::kFVMBlockInodeStart;
+  patched_superblock.integrity_start_block = minfs::kFvmSuperblockBackup;
+  patched_superblock.dat_block = minfs::kFVMBlockDataStart;
+
+  // Calculate recommended journal slices based on the patched superblock.
+  minfs::TransactionLimits limits(patched_superblock);
+
+  integrity_mapping.size = std::max(
+      integrity_mapping.count,
+      static_cast<uint64_t>(limits.GetRecommendedIntegrityBlocks()) * minfs::kMinfsBlockSize);
+  patched_superblock.integrity_slices = get_slice_count(integrity_mapping);
+
+  minfs::UpdateChecksum(&patched_superblock);
+
+  auto patched_superblock_and_backup_superblock_reader = std::make_unique<PatchedSuperblockReader>(
+      std::move(patched_superblock_reader),
+      superblock.integrity_start_block * minfs::kMinfsBlockSize);
+  patched_superblock_and_backup_superblock_reader->superblock() = patched_superblock;
+
+  address.mappings.push_back(superblock_mapping);
+  address.mappings.push_back(inode_bitmap_mapping);
+  address.mappings.push_back(data_bitmap_mapping);
+  address.mappings.push_back(inode_mapping);
+  address.mappings.push_back(integrity_mapping);
   address.mappings.push_back(data_mapping);
 
   uint64_t accumulated_slices = 0;
@@ -210,40 +246,6 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
                       " bytes) exceeding provided upperbound |max_bytes|(" +
                       std::to_string(partition_options.max_bytes.value()) + ").");
   }
-
-  auto patched_superblock_reader =
-      std::make_unique<PatchedSuperblockReader>(std::move(source_image), 0);
-
-  auto& patched_superblock = patched_superblock_reader->superblock();
-  // Start with the original values.
-  patched_superblock = superblock;
-
-  patched_superblock.slice_size = fvm_options.slice_size;
-  patched_superblock.flags |= minfs::kMinfsFlagFVM;
-
-  patched_superblock.ibm_slices = get_slice_count(inode_bitmap_mapping);
-  patched_superblock.abm_slices = get_slice_count(data_bitmap_mapping);
-  patched_superblock.ino_slices = get_slice_count(inode_mapping);
-  patched_superblock.integrity_slices = get_slice_count(integrity_mapping);
-  patched_superblock.dat_slices = get_slice_count(data_mapping);
-
-  patched_superblock.inode_count = safemath::checked_cast<uint32_t>(
-      get_slice_count(inode_mapping) * fvm_options.slice_size / minfs::kMinfsInodeSize);
-  patched_superblock.block_count = safemath::checked_cast<uint32_t>(
-      get_slice_count(data_mapping) * fvm_options.slice_size / minfs::kMinfsBlockSize);
-
-  patched_superblock.ibm_block = minfs::kFVMBlockInodeBmStart;
-  patched_superblock.abm_block = minfs::kFVMBlockDataBmStart;
-  patched_superblock.ino_block = minfs::kFVMBlockInodeStart;
-  patched_superblock.integrity_start_block = minfs::kFvmSuperblockBackup;
-  patched_superblock.dat_block = minfs::kFVMBlockDataStart;
-
-  minfs::UpdateChecksum(&patched_superblock);
-
-  auto patched_superblock_and_backup_superblock_reader = std::make_unique<PatchedSuperblockReader>(
-      std::move(patched_superblock_reader),
-      superblock.integrity_start_block * minfs::kMinfsBlockSize);
-  patched_superblock_and_backup_superblock_reader->superblock() = patched_superblock;
 
   return fit::ok(
       Partition(volume, address, std::move(patched_superblock_and_backup_superblock_reader)));

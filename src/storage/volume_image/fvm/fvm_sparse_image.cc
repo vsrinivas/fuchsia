@@ -71,6 +71,8 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
 
   // Write the header.
   fvm::SparseImage header = fvm_sparse_internal::GenerateHeader(descriptor);
+  bool default_fill_extents = (header.flags & fvm::kSparseFlagZeroFillNotRequired) != 0;
+
   auto result = writer->Write(current_offset, FixedSizeStructToSpan(header));
   if (result.is_error()) {
     return result.take_error_result();
@@ -78,8 +80,8 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   current_offset += sizeof(fvm::SparseImage);
 
   for (const auto& partition : descriptor.partitions()) {
-    auto partition_entry_result =
-        fvm_sparse_internal::GeneratePartitionEntry(descriptor.options().slice_size, partition);
+    auto partition_entry_result = fvm_sparse_internal::GeneratePartitionEntry(
+        descriptor.options().slice_size, partition, default_fill_extents);
     if (partition_entry_result.is_error()) {
       return partition_entry_result.take_error_result();
     }
@@ -118,8 +120,20 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
     const auto* reader = partition.reader();
     for (const auto& mapping : partition.address().mappings) {
       uint64_t remaining_bytes = mapping.count;
+      uint64_t default_fill_remaining_bytes = 0;
 
-      memset(data.data(), 0, data.size());
+      auto default_fill_value_it = mapping.options.find(EnumAsString(AddressMapOption::kFill));
+      std::optional<uint8_t> default_fill_value;
+      if (default_fill_extents && default_fill_value_it != mapping.options.end()) {
+        uint64_t size = std::max(mapping.size.value_or(0), mapping.count);
+        uint64_t slice_count = GetBlockCount(mapping.target, size, descriptor.options().slice_size);
+        // Need to fill all the way up the slice boundary.
+        default_fill_remaining_bytes =
+            slice_count * descriptor.options().slice_size - mapping.count;
+        default_fill_value = static_cast<uint8_t>(default_fill_value_it->second);
+      }
+
+      memset(data.data(), default_fill_value.value_or(0), data.size());
 
       uint64_t read_offset = mapping.source;
       while (remaining_bytes > 0) {
@@ -132,6 +146,18 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
           return extent_data_read_result.take_error_result();
         }
         read_offset += bytes_to_read;
+
+        auto compress_result = compressor->Compress(buffer_view);
+        if (compress_result.is_error()) {
+          return fit::error(compress_result.take_error());
+        }
+      }
+
+      memset(data.data(), default_fill_value.value_or(0), data.size());
+      while (default_fill_remaining_bytes > 0) {
+        uint64_t bytes_to_write = std::min(kReadBufferSize, default_fill_remaining_bytes);
+        default_fill_remaining_bytes -= bytes_to_write;
+        auto buffer_view = fbl::Span(data.data(), bytes_to_write);
 
         auto compress_result = compressor->Compress(buffer_view);
         if (compress_result.is_error()) {
@@ -193,9 +219,11 @@ uint32_t GetImageFlags(const FvmOptions& options) {
   switch (options.compression.schema) {
     case CompressionSchema::kLz4:
       flags |= fvm::kSparseFlagLz4;
+      flags |= fvm::kSparseFlagZeroFillNotRequired;
       break;
     case CompressionSchema::kNone:
       flags &= ~fvm::kSparseFlagLz4;
+      flags &= ~fvm::kSparseFlagZeroFillNotRequired;
       break;
     default:
       break;
@@ -249,7 +277,8 @@ fvm::SparseImage GenerateHeader(const FvmDescriptor& descriptor) {
 }
 
 fit::result<PartitionEntry, std::string> GeneratePartitionEntry(uint64_t slice_size,
-                                                                const Partition& partition) {
+                                                                const Partition& partition,
+                                                                bool extents_are_filled) {
   PartitionEntry partition_entry = {};
 
   partition_entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
@@ -276,6 +305,10 @@ fit::result<PartitionEntry, std::string> GeneratePartitionEntry(uint64_t slice_s
     extent_entry.slice_start = slice_offset;
     extent_entry.slice_count = slice_count;
     extent_entry.extent_length = mapping.count;
+    if (extents_are_filled &&
+        (mapping.options.find(EnumAsString(AddressMapOption::kFill)) != mapping.options.end())) {
+      extent_entry.extent_length = slice_count * slice_size;
+    }
     partition_entry.extents.push_back(extent_entry);
   }
 
@@ -565,6 +598,7 @@ fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const R
   }
   // Remove the compression flag.
   header_or.value().flags ^= fvm::kSparseFlagLz4;
+  header_or.value().flags ^= fvm::kSparseFlagZeroFillNotRequired;
   memcpy(metadata_buffer.data(), &header_or.value(), sizeof(fvm::SparseImage));
 
   auto metadata_write_result = writer.Write(0, metadata_buffer);
@@ -613,6 +647,7 @@ fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const R
     }
 
     decompressor.ProvideSizeHint(compressed_view.size());
+
     auto read_or = reader.Read(read_offset, compressed_view);
     if (read_or.is_error()) {
       return read_or.take_error_result();
@@ -713,7 +748,7 @@ fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
       mapping.target = extent.slice_start * options.slice_size;
       mapping.size = extent.slice_count * options.slice_size;
 
-      if ((partition_entry.descriptor.flags & fvm::kSparseFlagZeroFillNotRequired) == 0) {
+      if ((header.flags & fvm::kSparseFlagZeroFillNotRequired) == 0) {
         mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
       }
       address_descriptor.mappings.push_back(mapping);

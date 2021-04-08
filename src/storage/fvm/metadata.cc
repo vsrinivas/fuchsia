@@ -200,8 +200,13 @@ zx::status<Metadata> Metadata::Create(size_t disk_size, size_t disk_block_size,
 zx::status<Metadata> Metadata::Synthesize(const fvm::Header& header,
                                           const VPartitionEntry* partitions, size_t num_partitions,
                                           const SliceEntry* slices, size_t num_slices) {
-  if (num_partitions > header.GetPartitionTableEntryCount() ||
-      num_slices > header.GetAllocationTableUsedEntryCount() || header.slice_size == 0) {
+  if (num_partitions > header.GetPartitionTableEntryCount()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (num_slices > header.GetAllocationTableUsedEntryCount()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (header.slice_size == 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 

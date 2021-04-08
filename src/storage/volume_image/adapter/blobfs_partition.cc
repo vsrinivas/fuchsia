@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -186,8 +187,9 @@ fit::result<Partition, std::string> CreateBlobfsFvmPartition(
   block_map_mapping.count =
       blobfs::BlocksRequiredForBits(superblock.data_block_count) * blobfs::kBlobfsBlockSize;
   block_map_mapping.size =
-      blobfs::BlocksRequiredForBits(std::max(block_map_mapping.count, min_data_blocks)) *
-      blobfs::kBlobfsBlockSize;
+      std::max(block_map_mapping.count,
+               static_cast<uint64_t>(blobfs::BlocksRequiredForBits(min_data_blocks) *
+                                     blobfs::kBlobfsBlockSize));
   block_map_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
   address.mappings.push_back(block_map_mapping);
   accumulated_slices += get_slice_count(block_map_mapping);

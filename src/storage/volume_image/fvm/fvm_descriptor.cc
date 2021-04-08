@@ -123,7 +123,8 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
         }
       }
       extents.insert(&mapping);
-      accumulated_slices_ += GetBlockCount(mapping.target, mapping.count, options_->slice_size);
+      uint64_t required_size = mapping.size.value_or(mapping.count);
+      accumulated_slices_ += GetBlockCount(mapping.target, required_size, options_->slice_size);
     }
 
     descriptor.partitions_.emplace(std::move(partition));

@@ -1765,11 +1765,10 @@ TEST(FvmSparseReadImageTest, ReturnsFvmDescriptorAndIsCorrect) {
 
       EXPECT_EQ(actual_mapping.size, expected_size);
 
-      ASSERT_EQ(actual_mapping.options.size(), expected_mapping.options.size());
-      for (auto& [k, v] : actual_mapping.options) {
-        ASSERT_NE(expected_mapping.options.find(k), expected_mapping.options.end());
-        EXPECT_EQ(v, expected_mapping.options.at(k));
-      }
+      // Non compressed images will require zero filling.
+      ASSERT_EQ(actual_mapping.options.size(), 1u);
+      EXPECT_NE(actual_mapping.options.find(EnumAsString(AddressMapOption::kFill)),
+                actual_mapping.options.end());
 
       actual_data.resize(actual_mapping.count, 0);
       expected_data.resize(expected_mapping.count, 0);

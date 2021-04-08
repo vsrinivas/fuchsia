@@ -149,7 +149,7 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
         .always_modify = false,
         .force = true,
     };
-    ASSERT_EQ(fsck(path, DISK_FORMAT_MINFS, &options, launch_stdio_sync), 0);
+    EXPECT_EQ(fsck(path, DISK_FORMAT_MINFS, &options, launch_stdio_sync), 0);
   }
 
   // Attempt to fsck blobfs.
@@ -167,7 +167,7 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
         .always_modify = false,
         .force = true,
     };
-    ASSERT_EQ(fsck(path, DISK_FORMAT_BLOBFS, &options, launch_stdio_sync), 0);
+    EXPECT_EQ(fsck(path, DISK_FORMAT_BLOBFS, &options, launch_stdio_sync), 0);
   }
 }
 

@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/volume_image/adapter/commands.h"
+#include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/guid.h"
 #include "zircon/hw/gpt.h"
@@ -260,6 +261,62 @@ TEST(ArgumentTest, ArgumentWithWrongTypeIsError) {
   FvmOptions options;
   options.slice_size = 8192;
   ASSERT_TRUE(PartitionParams::FromArguments(kArgs, options).is_error());
+}
+
+TEST(ArgumentTest, CreateParamsFromSparseRegressionCheck) {
+  std::array<std::string_view, 17> kArgs = {
+      "fvm",           "test_fvm.sparse.blk",
+      "sparse",        "--compress",
+      "lz4",           "--slice",
+      "8388608",       "--blob",
+      "test_blob.blk", "--data",
+      "test_data.blk", "--minimum-inodes",
+      "600000",        "--minimum-data-bytes",
+      "10M",           "--maximum-bytes",
+      "218103808",
+  };
+
+  auto create_params_or = CreateParams::FromArguments(kArgs);
+  ASSERT_TRUE(create_params_or.is_ok()) << create_params_or.error();
+  auto create_params = create_params_or.take_value();
+
+  EXPECT_EQ(create_params.output_path, kArgs[1]);
+  EXPECT_EQ(create_params.format, FvmImageFormat::kSparseImage);
+  EXPECT_EQ(create_params.trim_image, false);
+  EXPECT_EQ(create_params.is_output_embedded, false);
+  EXPECT_FALSE(create_params.offset.has_value());
+  EXPECT_EQ(create_params.fvm_options.slice_size, 8 * kMega);
+  EXPECT_EQ(create_params.fvm_options.compression.schema, CompressionSchema::kLz4);
+  EXPECT_FALSE(create_params.fvm_options.target_volume_size.has_value());
+  EXPECT_FALSE(create_params.fvm_options.max_volume_size.has_value());
+
+  ASSERT_EQ(create_params.partitions.size(), 2u);
+
+  auto blobfs_partition = create_params.partitions[0];
+  EXPECT_EQ(blobfs_partition.source_image_path, "test_blob.blk");
+  EXPECT_EQ(blobfs_partition.label, "");
+  EXPECT_EQ(blobfs_partition.encrypted, false);
+  EXPECT_EQ(blobfs_partition.format, PartitionImageFormat::kBlobfs);
+  EXPECT_FALSE(blobfs_partition.type_guid.has_value());
+
+  EXPECT_FALSE(blobfs_partition.options.max_bytes.has_value());
+  EXPECT_FALSE(blobfs_partition.options.min_data_bytes.has_value());
+  EXPECT_FALSE(blobfs_partition.options.min_inode_count.has_value());
+
+  auto minfs_partition = create_params.partitions[1];
+  EXPECT_EQ(minfs_partition.source_image_path, "test_data.blk");
+  EXPECT_EQ(minfs_partition.label, "data");
+  EXPECT_EQ(minfs_partition.encrypted, true);
+  EXPECT_EQ(minfs_partition.format, PartitionImageFormat::kMinfs);
+  EXPECT_FALSE(minfs_partition.type_guid.has_value());
+
+  ASSERT_TRUE(minfs_partition.options.max_bytes.has_value());
+  ASSERT_TRUE(minfs_partition.options.min_data_bytes.has_value());
+  ASSERT_TRUE(minfs_partition.options.min_inode_count.has_value());
+
+  EXPECT_EQ(minfs_partition.options.max_bytes.value(), 218103808u);
+  EXPECT_EQ(minfs_partition.options.min_data_bytes.value(), 10 * kMega);
+  EXPECT_EQ(minfs_partition.options.min_inode_count.value(), 600000u);
 }
 
 }  // namespace
