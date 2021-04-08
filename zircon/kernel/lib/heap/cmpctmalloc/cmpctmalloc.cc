@@ -479,8 +479,9 @@ NO_ASAN static void free_memory(void* address, void* left, size_t size) TA_REQ(T
 }
 
 NO_ASAN static void unlink_free(free_t* free_area, int bucket) TA_REQ(TheHeapLock::Get()) {
+  ZX_ASSERT_MSG(theheap.remaining >= free_area->header.size, "%zu >= %zu\n", theheap.remaining,
+                free_area->header.size);
   theheap.remaining -= free_area->header.size;
-  ZX_ASSERT(theheap.remaining < 4000000000u);
   free_t* next = free_area->next;
   free_t* prev = free_area->prev;
   if (theheap.free_lists[bucket] == free_area) {
