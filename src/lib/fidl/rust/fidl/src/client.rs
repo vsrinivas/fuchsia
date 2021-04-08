@@ -1044,10 +1044,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn client_with_response_receives_epitaph() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
-        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
         let client = Client::new(client_end, "test_service");
 
-        let server = fasync::Channel::from_channel(server_end).unwrap();
+        let server = AsyncChannel::from_channel(server_end).unwrap();
         let mut buffer = zx::MessageBufEtc::new();
         let receiver = async move {
             server.recv_etc_msg(&mut buffer).await.expect("failed to recv msg");
@@ -1241,11 +1241,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn event_incompatible_format() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
-        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
         let client = Client::new(client_end, "test_service");
 
         // Send the event from the server
-        let server = fasync::Channel::from_channel(server_end).unwrap();
+        let server = AsyncChannel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
         let header = TransactionHeader::new_full(0, 5, &crate::encoding::Context {}, 0);
         encode_transaction(header, bytes, handles);
@@ -1325,7 +1325,7 @@ mod tests {
         let mut executor = fasync::Executor::new().unwrap();
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
-        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
         let client = Client::new(client_end, "test_service");
 
         let mut event_receiver = client.take_event_receiver();
