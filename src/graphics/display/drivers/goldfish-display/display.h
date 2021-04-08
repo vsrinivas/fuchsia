@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -16,6 +17,7 @@
 #include <zircon/types.h>
 
 #include <map>
+#include <memory>
 
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
@@ -111,8 +113,9 @@ class Display : public DisplayType,
     uint32_t x = 0;
     uint32_t y = 0;
     uint32_t refresh_rate_hz = 60;
+    uint32_t host_display_id = 0;
     float scale = 1.0;
-    thrd_t flush_thread{};
+    zx::time expected_next_flush = zx::time::infinite_past();
   };
 
   zx_status_t WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
@@ -137,7 +140,10 @@ class Display : public DisplayType,
                                    uint32_t h, uint32_t* result) TA_REQ(lock_);
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
 
-  int FlushHandler(uint64_t id);
+  zx_status_t PresentColorBuffer(uint32_t display_id, ColorBuffer* color_buffer);
+  zx_status_t SetupDisplayLocked(uint64_t id) TA_REQ(lock_);
+  void TeardownDisplay(uint64_t id);
+  void FlushDisplay(async_dispatcher_t* dispatcher, uint64_t id);
 
   fbl::Mutex lock_;
   ddk::GoldfishControlProtocolClient control_ TA_GUARDED(lock_);
@@ -150,10 +156,11 @@ class Display : public DisplayType,
   std::map<uint64_t, Device> devices_;
   fbl::Mutex flush_lock_;
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
-  std::map<uint64_t, ColorBuffer*> current_cb_ TA_GUARDED(flush_lock_);
-  bool shutdown_ TA_GUARDED(flush_lock_) = false;
+  std::map<uint64_t, ColorBuffer*> current_cb_;
 
   zx::event pipe_event_;
+
+  async::Loop loop_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Display);
 };

@@ -6,6 +6,9 @@
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zircon-internal/align.h>
@@ -163,7 +166,8 @@ zx_status_t Display::Create(void* ctx, zx_device_t* device) {
   return status;
 }
 
-Display::Display(zx_device_t* parent) : DisplayType(parent) {
+Display::Display(zx_device_t* parent)
+    : DisplayType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {
   if (parent) {
     control_ = parent;
     pipe_ = parent;
@@ -171,13 +175,10 @@ Display::Display(zx_device_t* parent) : DisplayType(parent) {
 }
 
 Display::~Display() {
-  {
-    fbl::AutoLock lock(&flush_lock_);
-    shutdown_ = true;
-  }
+  loop_.Shutdown();
 
   for (auto& it : devices_) {
-    thrd_join(it.second.flush_thread, nullptr);
+    TeardownDisplay(it.first);
   }
 
   if (id_) {
@@ -342,22 +343,18 @@ zx_status_t Display::Bind() {
     devices_[kPrimaryDisplayId] = device;
   }
 
-  // Start flush thread for each device.
+  // Set up display and set up flush task for each device.
   for (auto& it : devices_) {
-    using DeviceCtx = std::pair<Display*, uint64_t>;
-    auto ctx = new DeviceCtx(this, it.first);
-    int rc = thrd_create_with_name(
-        &it.second.flush_thread,
-        [](void* arg) {
-          auto ctx = std::unique_ptr<DeviceCtx>(static_cast<DeviceCtx*>(arg));
-          return ctx->first->FlushHandler(ctx->second);
-        },
-        ctx, "goldfish_display_flush_thread");
-    if (rc != thrd_success) {
-      delete ctx;
-      return thrd_status_to_zx_status(rc);
-    }
+    zx_status_t status = SetupDisplayLocked(it.first);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+
+    async::PostTask(loop_.dispatcher(), [this, display_id = it.first] {
+      FlushDisplay(loop_.dispatcher(), display_id);
+    });
   }
+
+  // Start async event thread.
+  loop_.StartThread("goldfish_display_event_thread");
 
   return DdkAdd("goldfish-display");
 }
@@ -487,7 +484,17 @@ void Display::DisplayControllerImplReleaseImage(image_t* image) {
     CloseColorBufferLocked(color_buffer->id);
   }
 
-  delete color_buffer;
+  async::PostTask(loop_.dispatcher(), [this, color_buffer] {
+    const auto color_buffer_maps = {&current_cb_};
+    for (const auto map : color_buffer_maps) {
+      for (const auto& kv : *map) {
+        if (kv.second == color_buffer) {
+          map->at(kv.first) = nullptr;
+        }
+      }
+    }
+    delete color_buffer;
+  });
 }
 
 uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t** display_configs,
@@ -500,8 +507,6 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
   for (unsigned i = 0; i < display_count; i++) {
     const size_t layer_count = display_configs[i]->layer_count;
     if (layer_count > 0) {
-      fbl::AutoLock lock(&flush_lock_);
-
       ZX_DEBUG_ASSERT(devices_.find(display_configs[i]->display_id) != devices_.end());
       const Device& device = devices_[display_configs[i]->display_id];
 
@@ -571,6 +576,49 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
   return CONFIG_DISPLAY_OK;
 }
 
+zx_status_t Display::PresentColorBuffer(uint32_t display_id, ColorBuffer* color_buffer) {
+  if (!color_buffer) {
+    return ZX_HANDLE_INVALID;
+  }
+
+  // Update host-writeable display buffers before presenting.
+  if (color_buffer->paddr) {
+    fbl::AutoLock lock(&lock_);
+    uint32_t result;
+    zx_status_t status = UpdateColorBufferLocked(color_buffer->id, color_buffer->paddr,
+                                                 color_buffer->width, color_buffer->height,
+                                                 color_buffer->format, color_buffer->size, &result);
+    if (status != ZX_OK || result) {
+      zxlogf(ERROR, "%s : color buffer update failed: %d:%u", kTag, status, result);
+      return status;
+    }
+  }
+
+  // Present the buffer.
+  {
+    fbl::AutoLock lock(&lock_);
+
+    uint32_t host_display_id = devices_[display_id].host_display_id;
+    if (host_display_id) {
+      // Set color buffer for secondary displays.
+      uint32_t result;
+      zx_status_t status = SetDisplayColorBufferLocked(host_display_id, color_buffer->id, &result);
+      if (status != ZX_OK || result) {
+        zxlogf(ERROR, "%s: failed to set display color buffer", kTag);
+        return status;
+      }
+    } else {
+      zx_status_t status = FbPostLocked(color_buffer->id);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: FbPost failed: %d", kTag, status);
+        return status;
+      }
+    }
+  }
+
+  return ZX_OK;
+}
+
 void Display::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
                                                       size_t display_count) {
   for (auto it : devices_) {
@@ -612,9 +660,10 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
       }
     }
 
-    {
-      fbl::AutoLock lock(&flush_lock_);
-      current_cb_[it.first] = color_buffer;
+    if (color_buffer) {
+      async::PostTask(loop_.dispatcher(), [this, color_buffer, display_id = it.first] {
+        current_cb_[display_id] = color_buffer;
+      });
     }
   }
 }
@@ -958,104 +1007,83 @@ zx_status_t Display::SetDisplayPoseLocked(uint32_t display_id, int32_t x, int32_
   return ExecuteCommandLocked(kSize_rcSetDisplayPose, result);
 }
 
-int Display::FlushHandler(uint64_t display_id) {
-  const Device& device = devices_[display_id];
+zx_status_t Display::SetupDisplayLocked(uint64_t display_id) {
+  Device& device = devices_[display_id];
 
-  uint32_t host_display_id = 0;
-  {
-    fbl::AutoLock lock(&lock_);
-
-    // Create secondary displays.
-    if (display_id != kPrimaryDisplayId) {
-      uint32_t result[2] = {0, 1};
-      zx_status_t status = CreateDisplayLocked(result);
-      if (status != ZX_OK || result[1]) {
-        zxlogf(ERROR, "%s: failed to create display: %d %d", kTag, status, result[1]);
-        return 1;
-      }
-      host_display_id = result[0];
+  // Create secondary displays.
+  if (display_id != kPrimaryDisplayId) {
+    uint32_t result[2] = {0, 1};
+    zx_status_t status = CreateDisplayLocked(result);
+    if (status != ZX_OK || result[1]) {
+      zxlogf(ERROR, "%s: failed to create display: %d %d", kTag, status, result[1]);
+      return status != ZX_OK ? status : ZX_ERR_INTERNAL;
     }
-    uint32_t width = static_cast<uint32_t>(static_cast<float>(device.width) * device.scale);
-    uint32_t height = static_cast<uint32_t>(static_cast<float>(device.height) * device.scale);
-    uint32_t result = 1;
-    zx_status_t status =
-        SetDisplayPoseLocked(host_display_id, device.x, device.y, width, height, &result);
-    if (status != ZX_OK || result) {
-      zxlogf(ERROR, "%s: failed to set display pose: %d %d", kTag, status, result);
-      return 1;
-    }
+    device.host_display_id = result[0];
   }
-
-  zx_time_t next_deadline = zx_clock_get_monotonic();
-  zx_time_t period = ZX_SEC(1) / device.refresh_rate_hz;
-
-  while (1) {
-    zx_nanosleep(next_deadline);
-
-    ColorBuffer* displayed_cb;
-    {
-      fbl::AutoLock lock(&flush_lock_);
-
-      if (shutdown_)
-        break;
-
-      displayed_cb = current_cb_[display_id];
-    }
-
-    if (displayed_cb) {
-      fbl::AutoLock lock(&lock_);
-
-      if (displayed_cb->paddr) {
-        uint32_t result;
-        zx_status_t status = UpdateColorBufferLocked(
-            displayed_cb->id, displayed_cb->paddr, displayed_cb->width, displayed_cb->height,
-            displayed_cb->format, displayed_cb->size, &result);
-        if (status != ZX_OK || result) {
-          zxlogf(ERROR, "%s: color buffer update failed", kTag);
-          continue;
-        }
-      }
-
-      // Set color buffer for secondary displays.
-      if (host_display_id) {
-        uint32_t result;
-        zx_status_t status =
-            SetDisplayColorBufferLocked(host_display_id, displayed_cb->id, &result);
-        if (status != ZX_OK || result) {
-          zxlogf(ERROR, "%s: failed to set display color buffer", kTag);
-          continue;
-        }
-      } else {
-        // Primary display issues FB post. This will cause the frame buffer to
-        // be updated to reflect the state of all displays. Note: secondary
-        // displays can be running at different refresh rates than the primary
-        // display even if frame buffer updates are limited to the rate of the
-        // primary display.
-        FbPostLocked(displayed_cb->id);
-      }
-    }
-
-    {
-      fbl::AutoLock lock(&flush_lock_);
-
-      if (dc_intf_.is_valid()) {
-        uint64_t handles[] = {reinterpret_cast<uint64_t>(displayed_cb)};
-        dc_intf_.OnDisplayVsync(display_id, next_deadline, handles, displayed_cb ? 1 : 0);
-      }
-    }
-
-    next_deadline = zx_time_add_duration(next_deadline, period);
+  uint32_t width = static_cast<uint32_t>(static_cast<float>(device.width) * device.scale);
+  uint32_t height = static_cast<uint32_t>(static_cast<float>(device.height) * device.scale);
+  uint32_t result = 1;
+  zx_status_t status =
+      SetDisplayPoseLocked(device.host_display_id, device.x, device.y, width, height, &result);
+  if (status != ZX_OK || result) {
+    zxlogf(ERROR, "%s: failed to set display pose: %d %d", kTag, status, result);
+    return status != ZX_OK ? status : ZX_ERR_INTERNAL;
   }
+  device.expected_next_flush = async::Now(loop_.dispatcher());
 
-  if (host_display_id) {
+  return ZX_OK;
+}
+
+void Display::TeardownDisplay(uint64_t display_id) {
+  Device& device = devices_[display_id];
+
+  if (device.host_display_id) {
     fbl::AutoLock lock(&lock_);
     uint32_t result;
-    zx_status_t status = DestroyDisplayLocked(host_display_id, &result);
+    zx_status_t status = DestroyDisplayLocked(device.host_display_id, &result);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT(!result);
   }
+}
 
-  return 0;
+void Display::FlushDisplay(async_dispatcher_t* dispatcher, uint64_t display_id) {
+  Device& device = devices_[display_id];
+
+  zx::duration period = zx::sec(1) / device.refresh_rate_hz;
+  zx::time expected_next_flush = device.expected_next_flush + period;
+
+  ColorBuffer* displayed_cb = nullptr;
+  if (current_cb_.find(display_id) != current_cb_.end()) {
+    displayed_cb = current_cb_[display_id];
+  }
+
+  if (displayed_cb) {
+    zx_status_t status = PresentColorBuffer(display_id, displayed_cb);
+    ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_SHOULD_WAIT);
+  }
+
+  {
+    fbl::AutoLock lock(&flush_lock_);
+
+    if (dc_intf_.is_valid()) {
+      uint64_t handles[] = {reinterpret_cast<uint64_t>(displayed_cb)};
+      zx::time now = async::Now(dispatcher);
+      dc_intf_.OnDisplayVsync(display_id, now.get(), handles, displayed_cb ? 1 : 0);
+    }
+  }
+
+  // If we've already passed the |expected_next_flush| deadline, skip the
+  // Vsync and adjust the deadline to the earliest next available frame.
+  zx::time now = async::Now(dispatcher);
+  if (now > expected_next_flush) {
+    expected_next_flush +=
+        period * (((now - expected_next_flush + period).get() - 1L) / period.get());
+  }
+
+  device.expected_next_flush = expected_next_flush;
+  async::PostTaskForTime(
+      dispatcher, [this, dispatcher, display_id] { FlushDisplay(dispatcher, display_id); },
+      expected_next_flush);
 }
 
 }  // namespace goldfish
