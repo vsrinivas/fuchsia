@@ -38,6 +38,7 @@ pub struct MetricLogger {
     component_map: ComponentEventCodeMap,
     current_interval_errors: HashSet<LogIdentifierAndComponent>,
     next_interval_index: u64,
+    reached_capacity: bool,
 }
 
 type ComponentEventCodeMap = HashMap<String, u32>;
@@ -54,7 +55,7 @@ pub const INTERVAL_IN_MINUTES: u64 = 15;
 /// Maximum number of unique ERRORs reported in one interval. Once this limit is reached, we no
 /// longer log the interval count metric, but the error count metric is still logged. This is an
 /// arbitrary limit that ensures the set containing the errors doesn't get too large.
-pub const MAX_ERRORS_PER_INTERVAL: usize = 100;
+pub const MAX_ERRORS_PER_INTERVAL: usize = 150;
 
 /// What file path to use for the ping message.
 pub const PING_FILE_PATH: &str = "<Ping>";
@@ -83,6 +84,7 @@ impl MetricLogger {
             component_map,
             current_interval_errors: HashSet::new(),
             next_interval_index: 0,
+            reached_capacity: false,
         })
     }
 
@@ -111,7 +113,11 @@ impl MetricLogger {
             return Err(anyhow::format_err!("Cobalt returned error: {}", status as u8));
         }
         if self.current_interval_errors.len() >= MAX_ERRORS_PER_INTERVAL {
-            fx_log_warn!("Received too many ERRORs. Will temporarily halt logging the metric.");
+            // Only print this warning once per interval: the first time that we reached capacity.
+            if !self.reached_capacity {
+                fx_log_warn!("Received too many ERRORs. Will temporarily halt logging the metric.");
+                self.reached_capacity = true;
+            }
             return Ok(());
         }
         let identifier_and_component =
@@ -134,6 +140,7 @@ impl MetricLogger {
             fasync::Time::now().into_nanos() as u64 / 1_000_000_000 / 60 / INTERVAL_IN_MINUTES;
         if interval_index >= self.next_interval_index {
             self.current_interval_errors.clear();
+            self.reached_capacity = false;
             self.proxy
                 .log_string(
                     self.specs.granular_error_interval_count_metric_id,
