@@ -37,25 +37,22 @@ class TestConnection : public magma::TestDeviceBase {
     ASSERT_TRUE(connection_);
 
     uint32_t context_id;
-    magma_create_context(connection_, &context_id);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_context(connection_, &context_id));
 
-    magma_status_t status = magma_get_error(connection_);
-    ASSERT_EQ(MAGMA_STATUS_OK, status);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     uint64_t size;
     magma_buffer_t batch_buffer;
     magma_buffer_t result_buffer;
 
-    status = magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer);
-    ASSERT_EQ(MAGMA_STATUS_OK, status);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer));
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, PAGE_SIZE, &size, &result_buffer));
 
-    status = magma_create_buffer(connection_, PAGE_SIZE, &size, &result_buffer);
-    ASSERT_EQ(MAGMA_STATUS_OK, status);
-
-    magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0));
     gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
-    magma_map_buffer_gpu(connection_, result_buffer, 0, 1, gpu_addr_, 0);
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_map_buffer_gpu(connection_, result_buffer, 0, 1, gpu_addr_, 0));
 
     EXPECT_TRUE(InitBatchBuffer(batch_buffer, size, register_offset, gpu_addr_));
 
@@ -65,8 +62,9 @@ class TestConnection : public magma::TestDeviceBase {
     std::vector<magma_system_exec_resource> exec_resources;
     EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resources, batch_buffer, result_buffer));
 
-    magma_execute_command_buffer_with_resources(connection_, context_id, &command_buffer,
-                                                exec_resources.data(), nullptr);
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_execute_command_buffer_with_resources(connection_, context_id, &command_buffer,
+                                                          exec_resources.data(), nullptr));
 
     {
       magma::InflightList list;
@@ -85,8 +83,7 @@ class TestConnection : public magma::TestDeviceBase {
     magma_release_buffer(connection_, batch_buffer);
     magma_release_context(connection_, context_id);
 
-    status = magma_get_error(connection_);
-    ASSERT_EQ(MAGMA_STATUS_OK, status);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
   }
 
   bool ReadBufferAt(magma_buffer_t buffer, size_t size, uint32_t dword_offset,

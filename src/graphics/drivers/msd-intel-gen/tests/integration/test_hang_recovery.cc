@@ -59,11 +59,12 @@ class TestConnection : public magma::TestDeviceBase {
     uint64_t buffer_size;
     magma_buffer_t batch_buffer;
 
-    ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &buffer_size, &batch_buffer), 0);
+    ASSERT_EQ(MAGMA_STATUS_OK,
+              magma_create_buffer(connection_, PAGE_SIZE, &buffer_size, &batch_buffer));
     void* vaddr;
     ASSERT_TRUE(magma::MapCpuHelper(connection_, batch_buffer, 0 /*offset*/, buffer_size, &vaddr));
 
-    magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0));
 
     // Write to the last dword
     InitBatchBuffer(
@@ -76,8 +77,9 @@ class TestConnection : public magma::TestDeviceBase {
     magma_system_command_buffer command_buffer;
     magma_system_exec_resource exec_resource;
     EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, buffer_size));
-    magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
-                                                &exec_resource, nullptr);
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
+                                                          &exec_resource, nullptr));
 
     magma::InflightList list;
 
@@ -209,8 +211,9 @@ class TestConnection : public magma::TestDeviceBase {
     magma_system_command_buffer command_buffer;
     magma_system_exec_resource exec_resource;
     EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, size));
-    magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
-                                                &exec_resource, nullptr);
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
+                                                          &exec_resource, nullptr));
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 

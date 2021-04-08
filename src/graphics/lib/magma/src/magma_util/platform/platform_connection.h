@@ -42,22 +42,23 @@ class PlatformConnection {
   class Delegate {
    public:
     virtual ~Delegate() {}
-    virtual bool ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) = 0;
-    virtual bool ReleaseBuffer(uint64_t buffer_id) = 0;
+    virtual magma::Status ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) = 0;
+    virtual magma::Status ReleaseBuffer(uint64_t buffer_id) = 0;
 
-    virtual bool ImportObject(uint32_t handle, PlatformObject::Type object_type) = 0;
-    virtual bool ReleaseObject(uint64_t object_id, PlatformObject::Type object_type) = 0;
+    virtual magma::Status ImportObject(uint32_t handle, PlatformObject::Type object_type) = 0;
+    virtual magma::Status ReleaseObject(uint64_t object_id, PlatformObject::Type object_type) = 0;
 
-    virtual bool CreateContext(uint32_t context_id) = 0;
-    virtual bool DestroyContext(uint32_t context_id) = 0;
+    virtual magma::Status CreateContext(uint32_t context_id) = 0;
+    virtual magma::Status DestroyContext(uint32_t context_id) = 0;
 
     virtual magma::Status ExecuteCommandBufferWithResources(
         uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
         std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) = 0;
-    virtual bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
-                              uint64_t page_count, uint64_t flags) = 0;
-    virtual bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
-    virtual bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) = 0;
+    virtual magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                                       uint64_t page_count, uint64_t flags) = 0;
+    virtual magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
+    virtual magma::Status CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
+                                       uint64_t page_count) = 0;
     virtual magma::Status BufferRangeOp(uint64_t buffer_id, uint32_t op, uint64_t start,
                                         uint64_t length) = 0;
     ;

@@ -30,20 +30,24 @@ class TestConnection : public magma::TestDeviceBase {
       magma_release_connection(connection_);
   }
 
-  int32_t Test() {
+  magma_status_t Test() {
     DASSERT(connection_);
 
     uint32_t context_id;
-    magma_create_context(connection_, &context_id);
+    magma_status_t status = magma_create_context(connection_, &context_id);
+    if (status != MAGMA_STATUS_OK)
+      return DRET(status);
 
-    int32_t result = magma_get_error(connection_);
-    if (result != 0)
-      return DRET(result);
+    status = magma_get_error(connection_);
+    if (status != MAGMA_STATUS_OK)
+      return DRET(status);
 
-    magma_execute_immediate_commands2(connection_, context_id, 0, nullptr);
+    status = magma_execute_immediate_commands2(connection_, context_id, 0, nullptr);
+    if (status != MAGMA_STATUS_OK)
+      return DRET(status);
 
-    result = magma_get_error(connection_);
-    return DRET(result);
+    status = magma_get_error(connection_);
+    return DRET(status);
   }
 
  private:
@@ -65,11 +69,11 @@ static void looper_thread_entry() {
     test = std::make_unique<TestConnection>();
   }
   while (complete_count < kMaxCount) {
-    int32_t result = test->Test();
-    if (result == 0) {
+    magma_status_t status = test->Test();
+    if (status == MAGMA_STATUS_OK) {
       complete_count++;
     } else {
-      EXPECT_EQ(result, MAGMA_STATUS_CONNECTION_LOST) << " result: " << result;
+      EXPECT_EQ(status, MAGMA_STATUS_CONNECTION_LOST) << " status: " << status;
       test.reset();
       std::shared_lock lock(connection_create_mutex);
       test.reset(new TestConnection());

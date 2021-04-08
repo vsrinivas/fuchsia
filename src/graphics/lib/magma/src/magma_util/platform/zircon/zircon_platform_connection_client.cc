@@ -570,27 +570,25 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   }
 
   // Creates a context and returns the context id
-  void CreateContext(uint32_t* context_id_out) override {
+  magma_status_t CreateContext(uint32_t* context_id_out) override {
     DLOG("ZirconPlatformConnectionClient: CreateContext");
     auto context_id = next_context_id_++;
     *context_id_out = context_id;
     magma_status_t result = client_.CreateContext(context_id);
-    // TODO(fxbug.dev/12993): return result
-    (void)result;
+    return result;
   }
 
   // Destroys a context for the given id
-  void DestroyContext(uint32_t context_id) override {
+  magma_status_t DestroyContext(uint32_t context_id) override {
     DLOG("ZirconPlatformConnectionClient: DestroyContext");
     magma_status_t result = client_.DestroyContext(context_id);
-    // TODO(fxbug.dev/12993): return result
-    (void)result;
+    return result;
   }
 
-  void ExecuteCommandBufferWithResources(uint32_t context_id,
-                                         magma_system_command_buffer* command_buffer,
-                                         magma_system_exec_resource* resources,
-                                         uint64_t* semaphores) override {
+  magma_status_t ExecuteCommandBufferWithResources(uint32_t context_id,
+                                                   magma_system_command_buffer* command_buffer,
+                                                   magma_system_exec_resource* resources,
+                                                   uint64_t* semaphores) override {
     fuchsia_gpu_magma::wire::CommandBuffer fidl_command_buffer = {
         .batch_buffer_resource_index = command_buffer->batch_buffer_resource_index,
         .batch_start_offset = command_buffer->batch_start_offset};
@@ -614,8 +612,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
                                                  command_buffer->wait_semaphore_count),
         fidl::VectorView<uint64_t>::FromExternal(signal_semaphores,
                                                  command_buffer->signal_semaphore_count));
-    // TODO(fxbug.dev/12993): return result
-    (void)result;
+    return result;
   }
 
   // Returns the number of commands that will fit within |max_bytes|.
@@ -637,9 +634,9 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return buffer_count;
   }
 
-  void ExecuteImmediateCommands(uint32_t context_id, uint64_t num_buffers,
-                                magma_inline_command_buffer* buffers,
-                                uint64_t* messages_sent_out) override {
+  magma_status_t ExecuteImmediateCommands(uint32_t context_id, uint64_t num_buffers,
+                                          magma_inline_command_buffer* buffers,
+                                          uint64_t* messages_sent_out) override {
     DLOG("ZirconPlatformConnectionClient: ExecuteImmediateCommands");
     uint64_t buffers_sent = 0;
     uint64_t messages_sent = 0;
@@ -669,13 +666,15 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       magma_status_t result = client_.ExecuteImmediateCommands(
           context_id, fidl::VectorView<uint8_t>::FromExternal(command_vec),
           fidl::VectorView<uint64_t>::FromExternal(semaphore_vec));
-      // TODO(fxbug.dev/12993): return result
-      (void)result;
+      if (result != MAGMA_STATUS_OK) {
+        return result;
+      }
       buffers_sent += buffers_to_send;
       messages_sent += 1;
     }
 
     *messages_sent_out = messages_sent;
+    return MAGMA_STATUS_OK;
   }
 
   magma_status_t GetError() override {

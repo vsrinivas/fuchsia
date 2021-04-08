@@ -40,24 +40,28 @@ class TestConnection : public magma::TestDeviceBase {
 
   static constexpr int64_t kOneSecondInNs = 1000000000;
 
-  int32_t Test() {
+  magma_status_t Test() {
     DASSERT(connection_);
 
     uint32_t context_id;
-    magma_create_context(connection_, &context_id);
+    magma::Status status = magma_create_context(connection_, &context_id);
+    if (!status.ok())
+      return DRET(status.get());
 
-    int32_t result = magma_get_error(connection_);
-    if (result != 0)
-      return DRET(result);
+    status = magma_get_error(connection_);
+    if (!status.ok())
+      return DRET(status.get());
 
     uint64_t size;
     magma_buffer_t batch_buffer;
+    status = magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer);
+    if (!status.ok())
+      return DRET(status.get());
 
-    result = magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer);
-    if (result != 0)
-      return DRET(result);
+    status = magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
+    if (!status.ok())
+      return DRET(status.get());
 
-    magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
     gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
     EXPECT_TRUE(InitBatchBuffer(batch_buffer, size));
@@ -66,18 +70,20 @@ class TestConnection : public magma::TestDeviceBase {
     magma_system_exec_resource exec_resource;
     EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, size));
 
-    magma_execute_command_buffer_with_resources(connection_, context_id, &command_buffer,
-                                                &exec_resource, nullptr);
+    status = magma_execute_command_buffer_with_resources(connection_, context_id, &command_buffer,
+                                                         &exec_resource, nullptr);
+    if (!status.ok())
+      return DRET(status.get());
 
     magma::InflightList list;
-    magma::Status status = list.WaitForCompletion(connection_, kOneSecondInNs);
+    status = list.WaitForCompletion(connection_, kOneSecondInNs);
     EXPECT_TRUE(status.get() == MAGMA_STATUS_OK || status.get() == MAGMA_STATUS_CONNECTION_LOST);
 
     magma_release_context(connection_, context_id);
     magma_release_buffer(connection_, batch_buffer);
 
-    result = magma_get_error(connection_);
-    return DRET(result);
+    status = magma_get_error(connection_);
+    return DRET(status.get());
   }
 
   bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size) {
@@ -125,11 +131,11 @@ static std::atomic_uint complete_count;
 static void looper_thread_entry() {
   std::unique_ptr<TestConnection> test(new TestConnection());
   while (complete_count < kMaxCount) {
-    int32_t result = test->Test();
-    if (result == 0) {
+    magma_status_t status = test->Test();
+    if (status == MAGMA_STATUS_OK) {
       complete_count++;
     } else {
-      EXPECT_EQ(result, MAGMA_STATUS_CONNECTION_LOST);
+      EXPECT_EQ(status, MAGMA_STATUS_CONNECTION_LOST);
       test.reset(new TestConnection());
     }
   }

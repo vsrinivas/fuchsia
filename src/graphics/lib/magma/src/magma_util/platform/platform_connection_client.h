@@ -51,9 +51,9 @@ class PlatformConnectionClient : public magma_connection {
   virtual magma_status_t ReleaseObject(uint64_t object_id, PlatformObject::Type object_type) = 0;
 
   // Creates a context and returns the context id
-  virtual void CreateContext(uint32_t* context_id_out) = 0;
+  virtual magma_status_t CreateContext(uint32_t* context_id_out) = 0;
   // Destroys a context for the given id
-  virtual void DestroyContext(uint32_t context_id) = 0;
+  virtual magma_status_t DestroyContext(uint32_t context_id) = 0;
 
   virtual magma_status_t GetError() = 0;
   virtual magma_status_t Sync() = 0;
@@ -72,13 +72,12 @@ class PlatformConnectionClient : public magma_connection {
   virtual magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
                                                  size_t* buffer_size_out,
                                                  magma_bool_t* more_data_out) = 0;
-  virtual void ExecuteCommandBufferWithResources(uint32_t context_id,
-                                                 magma_system_command_buffer* command_buffer,
-                                                 magma_system_exec_resource* resources,
-                                                 uint64_t* semaphores) = 0;
-  virtual void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,
-                                        magma_inline_command_buffer* command_buffers,
-                                        uint64_t* messages_sent_out) = 0;
+  virtual magma_status_t ExecuteCommandBufferWithResources(
+      uint32_t context_id, magma_system_command_buffer* command_buffer,
+      magma_system_exec_resource* resources, uint64_t* semaphores) = 0;
+  virtual magma_status_t ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,
+                                                  magma_inline_command_buffer* command_buffers,
+                                                  uint64_t* messages_sent_out) = 0;
 
   virtual magma_status_t AccessPerformanceCounters(
       std::unique_ptr<magma::PlatformHandle> handle) = 0;

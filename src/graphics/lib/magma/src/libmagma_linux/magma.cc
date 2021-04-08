@@ -88,10 +88,10 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   return MAGMA_STATUS_OK;
 }
 
-void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,
-                                                 struct magma_system_command_buffer* command_buffer,
-                                                 struct magma_system_exec_resource* resources,
-                                                 uint64_t* semaphore_ids) {
+magma_status_t magma_execute_command_buffer_with_resources(
+    magma_connection_t connection, uint32_t context_id,
+    struct magma_system_command_buffer* command_buffer,
+    struct magma_system_exec_resource* resources, uint64_t* semaphore_ids) {
 #if VIRTMAGMA_DEBUG
   printf("%s\n", __PRETTY_FUNCTION__);
 #endif
@@ -125,6 +125,7 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
                               sizeof(response))) {
     assert(false);
   }
+  return static_cast<magma_status_t>(response.result_return);
 }
 
 magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer_t buffer,

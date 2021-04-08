@@ -83,11 +83,14 @@ class MagmaExecuteMsdVsi : public testing::Test {
     etna_buffer->gpu_address_ = next_gpu_addr_;
     next_gpu_addr_ += etna_buffer->size_;
 
-    magma_map_buffer_gpu(magma_vsi_.GetConnection(), etna_buffer->magma_buffer_,
-                         0,  // page offset
-                         page_count, etna_buffer->gpu_address_,
-                         0  // flags
-    );
+    magma_status_t status =
+        magma_map_buffer_gpu(magma_vsi_.GetConnection(), etna_buffer->magma_buffer_,
+                             0,  // page offset
+                             page_count, etna_buffer->gpu_address_,
+                             0  // flags
+        );
+    if (status != MAGMA_STATUS_OK)
+      return nullptr;
 
     etna_buffer->resource_.buffer_id = magma_get_buffer_id(etna_buffer->magma_buffer_);
     etna_buffer->resource_.offset = 0;
@@ -176,9 +179,9 @@ class MagmaExecuteMsdVsi : public testing::Test {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    magma_execute_command_buffer_with_resources(magma_vsi_.GetConnection(),
-                                                magma_vsi_.GetContextId(), &command_buffer,
-                                                resources.data(), &semaphore_id);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command_buffer_with_resources(
+                                   magma_vsi_.GetConnection(), magma_vsi_.GetContextId(),
+                                   &command_buffer, resources.data(), &semaphore_id));
     magma_poll_item_t item = {.semaphore = semaphore,
                               .type = MAGMA_POLL_TYPE_SEMAPHORE,
                               .condition = MAGMA_POLL_CONDITION_SIGNALED};

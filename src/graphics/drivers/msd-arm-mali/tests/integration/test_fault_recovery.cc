@@ -83,7 +83,8 @@ class TestConnection : public magma::TestDeviceBase {
     command_buffer.size = vaddr.size();
     command_buffer.semaphore_ids = nullptr;
     command_buffer.semaphore_count = 0;
-    magma_execute_immediate_commands2(connection_, context_id_, 1, &command_buffer);
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_execute_immediate_commands2(connection_, context_id_, 1, &command_buffer));
 
     constexpr uint64_t kOneSecondPerNs = 1000000000;
     magma_poll_item_t item = {.handle = magma_get_notification_channel_handle(connection_),

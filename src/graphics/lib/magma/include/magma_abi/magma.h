@@ -38,7 +38,7 @@ magma_status_t magma_get_error(
 /// \param connection An open connection.
 /// \param context_id_out The returned context id.
 ///
-void magma_create_context(
+magma_status_t magma_create_context(
     magma_connection_t connection,
     uint32_t* context_id_out);
 
@@ -132,7 +132,7 @@ magma_status_t magma_get_buffer_cache_policy(
 /// \param gpu_va Destination GPU virtual address for the mapping.
 /// \param map_flags A valid MAGMA_GPU_MAP_FLAGS value.
 ///
-void magma_map_buffer_gpu(
+magma_status_t magma_map_buffer_gpu(
     magma_connection_t connection,
     magma_buffer_t buffer,
     uint64_t page_offset,
@@ -200,7 +200,7 @@ magma_status_t magma_import(
 ///        |command_buffer->wait_semaphore_count| wait semaphores followed by
 ///        |command_buffer->signal_signal_semaphores| signal semaphores.
 ///
-void magma_execute_command_buffer_with_resources(
+magma_status_t magma_execute_command_buffer_with_resources(
     magma_connection_t connection,
     uint32_t context_id,
     struct magma_system_command_buffer* command_buffer,
@@ -214,7 +214,7 @@ void magma_execute_command_buffer_with_resources(
 /// \param command_count The number of commands in the provided buffer.
 /// \param command_buffers An array of command_count magma_inline_command_buffer structs.
 ///
-void magma_execute_immediate_commands2(
+magma_status_t magma_execute_immediate_commands2(
     magma_connection_t connection,
     uint32_t context_id,
     uint64_t command_count,

@@ -35,14 +35,14 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
 
   // Create a buffer from the handle and add it to the map,
   // on success |id_out| contains the id to be used to query the map
-  bool ImportBuffer(uint32_t handle, uint64_t* id_out) override;
+  magma::Status ImportBuffer(uint32_t handle, uint64_t* id_out) override;
   // This removes the reference to the shared_ptr in the map
   // other instances remain valid until deleted
   // Returns false if no buffer with the given |id| exists in the map
-  bool ReleaseBuffer(uint64_t id) override;
+  magma::Status ReleaseBuffer(uint64_t id) override;
 
-  bool ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override;
-  bool ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override;
+  magma::Status ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override;
+  magma::Status ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override;
 
   // Attempts to locate a buffer by |id| in the buffer map and return it.
   // Returns nullptr if the buffer is not found
@@ -55,14 +55,15 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
       uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
       std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) override;
 
-  bool CreateContext(uint32_t context_id) override;
-  bool DestroyContext(uint32_t context_id) override;
+  magma::Status CreateContext(uint32_t context_id) override;
+  magma::Status DestroyContext(uint32_t context_id) override;
   MagmaSystemContext* LookupContext(uint32_t context_id);
 
-  bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                    uint64_t flags) override;
-  bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override;
-  bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override;
+  magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                             uint64_t page_count, uint64_t flags) override;
+  magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override;
+  magma::Status CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
+                             uint64_t page_count) override;
   magma::Status BufferRangeOp(uint64_t buffer_id, uint32_t op, uint64_t start,
                               uint64_t length) override;
 

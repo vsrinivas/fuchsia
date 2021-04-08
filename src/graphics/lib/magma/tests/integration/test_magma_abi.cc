@@ -172,11 +172,10 @@ class TestConnection {
     ASSERT_TRUE(connection_);
 
     uint32_t context_id[2];
-
-    magma_create_context(connection_, &context_id[0]);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_create_context(connection_, &context_id[0]));
     EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
-    magma_create_context(connection_, &context_id[1]);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_create_context(connection_, &context_id[1]));
     EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_release_context(connection_, context_id[0]);
@@ -185,8 +184,9 @@ class TestConnection {
     magma_release_context(connection_, context_id[1]);
     EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
+    // Already released
     magma_release_context(connection_, context_id[1]);
-    EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection_));
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection_));
   }
 
   void NotificationChannelHandle() {
@@ -236,11 +236,28 @@ class TestConnection {
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &buffer));
     EXPECT_NE(buffer, 0u);
 
-    magma_map_buffer_gpu(connection_, buffer, 1024, 0, size / page_size(), MAGMA_GPU_MAP_FLAG_READ);
-    magma_unmap_buffer_gpu(connection_, buffer, 2048);
+    constexpr uint64_t kGpuAddress = 0x1000;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, buffer, 0, size / page_size(),
+                                                    kGpuAddress, MAGMA_GPU_MAP_FLAG_READ));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
+    {
+      uint64_t vendor_id;
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
+      // Unmap not implemented on Intel
+      if (vendor_id != 0x8086) {
+        magma_unmap_buffer_gpu(connection_, buffer, kGpuAddress);
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
+      }
+    }
+
+    // Invalid page offset, remote error
+    constexpr uint64_t kInvalidPageOffset = 1024;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, buffer, kInvalidPageOffset, 0,
+                                                    size / page_size(), MAGMA_GPU_MAP_FLAG_READ));
     EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection_));
 
+    // Invalid page offset, page count local error
     EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR, magma_commit_buffer(connection_, buffer, 100, 100));
 
     magma_release_buffer(connection_, buffer);
@@ -533,18 +550,22 @@ class TestConnection {
   }
 
   void ImmediateCommands() {
+    if (TestConnection::is_virtmagma())
+      GTEST_SKIP();
+
     ASSERT_TRUE(connection_);
 
     uint32_t context_id;
-    magma_create_context(connection_, &context_id);
-    EXPECT_EQ(magma_get_error(connection_), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_create_context(connection_, &context_id));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_inline_command_buffer inline_command_buffer{};
-    magma_execute_immediate_commands2(connection_, context_id, 0, &inline_command_buffer);
-    EXPECT_EQ(magma_get_error(connection_), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_immediate_commands2(connection_, context_id, 0,
+                                                                 &inline_command_buffer));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_release_context(connection_, context_id);
-    EXPECT_EQ(magma_get_error(connection_), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
   }
 
   void ImageFormat() {
@@ -851,7 +872,7 @@ class TestConnectionWithContext : public TestConnection {
  public:
   TestConnectionWithContext() {
     if (connection()) {
-      magma_create_context(connection(), &context_id_);
+      EXPECT_EQ(MAGMA_STATUS_OK, magma_create_context(connection(), &context_id_));
     }
   }
 
@@ -870,19 +891,27 @@ class TestConnectionWithContext : public TestConnection {
     magma_system_exec_resource resources[resource_count];
 
     memset(resources, 0, sizeof(magma_system_exec_resource) * resource_count);
-    magma_execute_command_buffer_with_resources(connection(), context_id(), &command_buffer,
-                                                resources, nullptr);
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_execute_command_buffer_with_resources(connection(), context_id(),
+                                                          &command_buffer, resources, nullptr));
 
     // Command buffer is mostly zeros, so we expect an error here
-    EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection()));
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection()));
   }
 
   void ExecuteCommandBufferNoResources() {
     ASSERT_TRUE(connection());
 
     magma_system_command_buffer command_buffer = {.resource_count = 0};
-    magma_execute_command_buffer_with_resources(connection(), context_id(), &command_buffer,
-                                                nullptr /* resources */, nullptr);
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_execute_command_buffer_with_resources(
+                  connection(), context_id(), &command_buffer, nullptr /* resources */, nullptr));
+
+    // Empty command buffers may or may not be valid.
+    magma_status_t status = magma_get_error(connection());
+    EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_INVALID_ARGS ||
+                status == MAGMA_STATUS_UNIMPLEMENTED)
+        << "status: " << status;
   }
 
  private:
@@ -1024,26 +1053,6 @@ TEST(MagmaAbi, FlowControl) {
   for (uint32_t i = 0; i < kIterations; i++) {
     test_connection.Buffer();
   }
-}
-
-TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
-  if (TestConnection::is_virtmagma())
-    GTEST_SKIP();
-
-  TestConnectionWithContext test;
-  ASSERT_TRUE(test.connection());
-
-  auto start = std::chrono::steady_clock::now();
-  constexpr uint32_t kTestIterations = 10000;
-  for (uint32_t test_iter = kTestIterations; test_iter; --test_iter) {
-    test.ExecuteCommandBufferWithResources(10);
-  }
-
-  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::steady_clock::now() - start);
-
-  printf("ExecuteCommandBufferWithResources: avg duration %lld ns\n",
-         duration.count() / kTestIterations);
 }
 
 TEST(MagmaAbi, EnablePerformanceCounters) { TestConnection().EnablePerformanceCounters(); }

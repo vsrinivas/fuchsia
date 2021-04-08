@@ -90,8 +90,8 @@ magma_status_t magma_sync(magma_connection_t connection) {
   return magma::PlatformConnectionClient::cast(connection)->Sync();
 }
 
-void magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
-  magma::PlatformConnectionClient::cast(connection)->CreateContext(context_id_out);
+magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
+  return magma::PlatformConnectionClient::cast(connection)->CreateContext(context_id_out);
 }
 
 void magma_release_context(magma_connection_t connection, uint32_t context_id) {
@@ -191,12 +191,12 @@ magma_status_t magma_export(magma_connection_t connection, magma_buffer_t buffer
   return MAGMA_STATUS_OK;
 }
 
-void magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
-                          uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
-                          uint64_t map_flags) {
+magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
+                                    uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
+                                    uint64_t map_flags) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
   uint64_t buffer_id = platform_buffer->id();
-  magma::PlatformConnectionClient::cast(connection)
+  return magma::PlatformConnectionClient::cast(connection)
       ->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, map_flags);
 }
 
@@ -264,25 +264,25 @@ magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer
   return MAGMA_STATUS_OK;
 }
 
-void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,
-                                                 struct magma_system_command_buffer* command_buffer,
-                                                 struct magma_system_exec_resource* resources,
-                                                 uint64_t* semaphore_ids) {
+magma_status_t magma_execute_command_buffer_with_resources(
+    magma_connection_t connection, uint32_t context_id,
+    struct magma_system_command_buffer* command_buffer,
+    struct magma_system_exec_resource* resources, uint64_t* semaphore_ids) {
   if (command_buffer->resource_count > 0) {
     DASSERT(command_buffer->batch_buffer_resource_index < command_buffer->resource_count);
 
     uint64_t ATTRIBUTE_UNUSED id = resources[command_buffer->batch_buffer_resource_index].buffer_id;
     TRACE_FLOW_BEGIN("magma", "command_buffer", id);
   }
-  magma::PlatformConnectionClient::cast(connection)
+  return magma::PlatformConnectionClient::cast(connection)
       ->ExecuteCommandBufferWithResources(context_id, command_buffer, resources, semaphore_ids);
 }
 
-void magma_execute_immediate_commands2(magma_connection_t connection, uint32_t context_id,
-                                       uint64_t command_count,
-                                       magma_inline_command_buffer* command_buffers) {
+magma_status_t magma_execute_immediate_commands2(magma_connection_t connection, uint32_t context_id,
+                                                 uint64_t command_count,
+                                                 magma_inline_command_buffer* command_buffers) {
   uint64_t messages_sent;
-  magma::PlatformConnectionClient::cast(connection)
+  return magma::PlatformConnectionClient::cast(connection)
       ->ExecuteImmediateCommands(context_id, command_count, command_buffers, &messages_sent);
 }
 

@@ -31,7 +31,7 @@
       {
         "ordinal": 6,
         "name": "magma_create_context",
-        "type": "void",
+        "type": "magma_status_t",
         "description": "Creates a context on the given connection.",
         "arguments": [
           {
@@ -203,7 +203,7 @@
       {
         "ordinal": 23,
         "name": "magma_map_buffer_gpu",
-        "type": "void",
+        "type": "magma_status_t",
         "description": "Maps a number of pages from the given buffer onto the GPU in the connection's address space at the given address. Depending on the MSD this may automatically commit and populate that range.",
         "arguments": [
           {
@@ -338,7 +338,7 @@
       {
         "ordinal": 31,
         "name": "magma_execute_command_buffer_with_resources",
-        "type": "void",
+        "type": "magma_status_t",
         "description": "Submits a command buffer for execution on the GPU, with associated resources.",
         "arguments": [
           {
@@ -371,7 +371,7 @@
       {
         "ordinal": 33,
         "name": "magma_execute_immediate_commands2",
-        "type": "void",
+        "type": "magma_status_t",
         "description": "Submits a series of commands for execution on the GPU without using a command buffer.",
         "arguments": [
           {

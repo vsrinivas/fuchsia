@@ -203,8 +203,9 @@ void ZirconPlatformConnection::CreateContext(uint32_t context_id,
   DLOG("ZirconPlatformConnection: CreateContext");
   FlowControl();
 
-  if (!delegate_->CreateContext(context_id))
-    SetError(&completer, MAGMA_STATUS_INTERNAL_ERROR);
+  magma::Status status = delegate_->CreateContext(context_id);
+  if (!status.ok())
+    SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::DestroyContext(uint32_t context_id,
@@ -212,8 +213,9 @@ void ZirconPlatformConnection::DestroyContext(uint32_t context_id,
   DLOG("ZirconPlatformConnection: DestroyContext");
   FlowControl();
 
-  if (!delegate_->DestroyContext(context_id))
-    SetError(&completer, MAGMA_STATUS_INTERNAL_ERROR);
+  magma::Status status = delegate_->DestroyContext(context_id);
+  if (!status.ok())
+    SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
@@ -294,8 +296,9 @@ void ZirconPlatformConnection::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
   DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");
   FlowControl();
 
-  if (!delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags))
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+  magma::Status status = delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags);
+  if (!status.ok())
+    SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
@@ -303,8 +306,9 @@ void ZirconPlatformConnection::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_v
   DLOG("ZirconPlatformConnection: UnmapBufferGpuFIDL");
   FlowControl();
 
-  if (!delegate_->UnmapBufferGpu(buffer_id, gpu_va))
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+  magma::Status status = delegate_->UnmapBufferGpu(buffer_id, gpu_va);
+  if (!status.ok())
+    SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
@@ -313,8 +317,9 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
   DLOG("ZirconPlatformConnection: CommitBufferFIDL");
   FlowControl();
 
-  if (!delegate_->CommitBuffer(buffer_id, page_offset, page_count))
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+  magma::Status status = delegate_->CommitBuffer(buffer_id, page_offset, page_count);
+  if (!status.ok())
+    SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,

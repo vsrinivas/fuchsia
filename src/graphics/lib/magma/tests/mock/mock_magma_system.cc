@@ -81,8 +81,9 @@ magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
   return MAGMA_STATUS_INVALID_ARGS;
 }
 
-void magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
+magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
   *context_id_out = static_cast<MockConnection*>(connection)->next_context_id();
+  return MAGMA_STATUS_OK;
 }
 
 void magma_release_context(magma_connection_t connection, uint32_t context_id) {}
@@ -126,16 +127,20 @@ void magma_submit_command_buffer(magma_connection_t connection, uint64_t command
   DLOG("magma_system submit command buffer - STUB");
 }
 
-void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,
-                                                 struct magma_system_command_buffer* command_buffer,
-                                                 struct magma_system_exec_resource* resources,
-                                                 uint64_t* semaphore_ids) {
+magma_status_t magma_execute_command_buffer_with_resources(
+    magma_connection_t connection, uint32_t context_id,
+    struct magma_system_command_buffer* command_buffer,
+    struct magma_system_exec_resource* resources, uint64_t* semaphore_ids) {
   DLOG("magma_execute_command_buffer_with_resources - STUB");
+  return MAGMA_STATUS_OK;
 }
 
-void magma_execute_immediate_commands2(magma_connection_t connection, uint32_t context_id,
-                                       uint64_t command_count,
-                                       struct magma_inline_command_buffer* command_buffers) {}
+magma_status_t magma_execute_immediate_commands2(
+    magma_connection_t connection, uint32_t context_id, uint64_t command_count,
+    struct magma_inline_command_buffer* command_buffers) {
+  DLOG("magma_execute_immediate_commands2 - STUB");
+  return MAGMA_STATUS_OK;
+}
 
 magma_status_t magma_export(magma_connection_t connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out) {
@@ -188,8 +193,11 @@ magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t se
   return MAGMA_STATUS_OK;
 }
 
-void magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va,
-                          uint64_t page_offset, uint64_t page_count, uint64_t map_flags) {}
+magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
+                                    uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
+                                    uint64_t map_flags) {
+  return MAGMA_STATUS_OK;
+}
 
 void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va) {
 }

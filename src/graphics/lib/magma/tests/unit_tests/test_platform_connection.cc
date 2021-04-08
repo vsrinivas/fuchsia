@@ -441,47 +441,50 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
  public:
   TestDelegate(std::shared_ptr<SharedData> shared_data) : shared_data_(shared_data) {}
 
-  bool ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) override {
+  magma::Status ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     auto buf = magma::PlatformBuffer::Import(handle);
     EXPECT_EQ(buf->id(), shared_data_->test_buffer_id);
     shared_data_->test_complete = true;
-    return true;
+    return MAGMA_STATUS_OK;
   }
-  bool ReleaseBuffer(uint64_t buffer_id) override {
+
+  magma::Status ReleaseBuffer(uint64_t buffer_id) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(buffer_id, shared_data_->test_buffer_id);
     shared_data_->test_complete = true;
-    return true;
+    return MAGMA_STATUS_OK;
   }
 
-  bool ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override {
+  magma::Status ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     auto semaphore = magma::PlatformSemaphore::Import(handle);
     if (!semaphore)
-      return false;
+      return MAGMA_STATUS_INVALID_ARGS;
     EXPECT_EQ(semaphore->id(), shared_data_->test_semaphore_id);
     shared_data_->test_complete = true;
-    return true;
+    return MAGMA_STATUS_OK;
   }
-  bool ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override {
+
+  magma::Status ReleaseObject(uint64_t object_id,
+                              magma::PlatformObject::Type object_type) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(object_id, shared_data_->test_semaphore_id);
     shared_data_->test_complete = true;
-    return true;
+    return MAGMA_STATUS_OK;
   }
 
-  bool CreateContext(uint32_t context_id) override {
+  magma::Status CreateContext(uint32_t context_id) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     shared_data_->test_context_id = context_id;
     shared_data_->test_complete = true;
-    return true;
+    return MAGMA_STATUS_OK;
   }
-  bool DestroyContext(uint32_t context_id) override {
+  magma::Status DestroyContext(uint32_t context_id) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(context_id, shared_data_->test_context_id);
     shared_data_->test_complete = true;
-    return true;
+    return MAGMA_STATUS_OK;
   }
 
   magma::Status ExecuteCommandBufferWithResources(
@@ -502,30 +505,31 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     return MAGMA_STATUS_OK;
   }
 
-  bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                    uint64_t flags) override {
+  magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                             uint64_t page_count, uint64_t flags) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(shared_data_->test_buffer_id, buffer_id);
     EXPECT_EQ(page_size() * 1000lu, gpu_va);
     EXPECT_EQ(1u, page_offset);
     EXPECT_EQ(2u, page_count);
     EXPECT_EQ(5u, flags);
-    return true;
+    return MAGMA_STATUS_OK;
   }
 
-  bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override {
+  magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(shared_data_->test_buffer_id, buffer_id);
     EXPECT_EQ(page_size() * 1000lu, gpu_va);
-    return true;
+    return MAGMA_STATUS_OK;
   }
 
-  bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override {
+  magma::Status CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
+                             uint64_t page_count) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(shared_data_->test_buffer_id, buffer_id);
     EXPECT_EQ(1000lu, page_offset);
     EXPECT_EQ(2000lu, page_count);
-    return true;
+    return MAGMA_STATUS_OK;
   }
 
   void SetNotificationCallback(msd_connection_notification_callback_t callback,
