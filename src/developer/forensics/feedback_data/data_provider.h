@@ -48,6 +48,8 @@ class DataProvider : public fuchsia::feedback::DataProvider {
                Datastore* datastore, InspectDataBudget* inspect_data_budget);
 
   // |fuchsia::feedback::DataProvider|
+  void GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
+                      GetAnnotationsCallback callback) override;
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
   void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,

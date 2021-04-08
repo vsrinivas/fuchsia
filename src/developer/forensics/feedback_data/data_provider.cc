@@ -62,6 +62,23 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       executor_(dispatcher_),
       inspect_data_budget_(inspect_data_budget) {}
 
+void DataProvider::GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
+                                  GetAnnotationsCallback callback) {
+  const zx::duration timeout = (params.has_collection_timeout_per_annotation())
+                                   ? zx::duration(params.collection_timeout_per_annotation())
+                                   : kDefaultDataTimeout;
+
+  auto promise = datastore_->GetAnnotations(timeout).and_then(
+      [callback = std::move(callback)](Annotations& annotations) {
+        callback(std::move(fuchsia::feedback::Annotations().set_annotations(
+            ToFeedbackAnnotationVector(annotations))));
+      });
+
+  // TODO(fxbug.dev/74102): Track how long GetAnnotations took via Cobalt.
+
+  executor_.schedule_task(std::move(promise));
+}
+
 void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                                GetSnapshotCallback callback) {
   const zx::duration timeout = (params.has_collection_timeout_per_data())

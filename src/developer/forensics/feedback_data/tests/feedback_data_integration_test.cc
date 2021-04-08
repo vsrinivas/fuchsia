@@ -39,10 +39,12 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
+using fuchsia::feedback::Annotations;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
+using fuchsia::feedback::GetAnnotationsParameters;
 using fuchsia::feedback::GetSnapshotParameters;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::LastReboot;
@@ -358,6 +360,49 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
     }
   }
   EXPECT_TRUE(has_entry_for_test_app);
+}
+
+TEST_F(FeedbackDataIntegrationTest, DataProvider_GetAnnotation_CheckKeys) {
+  // We make sure the components serving the services GetAnnotations() connects to are up and
+  // running.
+  WaitForChannelProvider();
+  WaitForBoardProvider();
+  WaitForProductProvider();
+
+  DataProviderSyncPtr data_provider;
+  environment_services_->Connect(data_provider.NewRequest());
+
+  Annotations annotations;
+  ASSERT_EQ(data_provider->GetAnnotations(GetAnnotationsParameters(), &annotations), ZX_OK);
+
+  // We cannot expect a particular value for each annotation because values might depend on which
+  // device the test runs (e.g., board name). But we should expect the keys to be present.
+  ASSERT_TRUE(annotations.has_annotations());
+  EXPECT_THAT(annotations.annotations(), testing::ElementsAreArray({
+                                             MatchesKey(kAnnotationBuildBoard),
+                                             MatchesKey(kAnnotationBuildIsDebug),
+                                             MatchesKey(kAnnotationBuildLatestCommitDate),
+                                             MatchesKey(kAnnotationBuildProduct),
+                                             MatchesKey(kAnnotationBuildVersion),
+                                             MatchesKey(kAnnotationDeviceBoardName),
+                                             MatchesKey(kAnnotationDeviceFeedbackId),
+                                             MatchesKey(kAnnotationDeviceUptime),
+                                             MatchesKey(kAnnotationDeviceUtcTime),
+                                             MatchesKey(kAnnotationHardwareBoardName),
+                                             MatchesKey(kAnnotationHardwareBoardRevision),
+                                             MatchesKey(kAnnotationHardwareProductLanguage),
+                                             MatchesKey(kAnnotationHardwareProductLocaleList),
+                                             MatchesKey(kAnnotationHardwareProductManufacturer),
+                                             MatchesKey(kAnnotationHardwareProductModel),
+                                             MatchesKey(kAnnotationHardwareProductName),
+                                             MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
+                                             MatchesKey(kAnnotationHardwareProductSKU),
+                                             MatchesKey(kAnnotationSystemBootIdCurrent),
+                                             MatchesKey(kAnnotationSystemLastRebootReason),
+                                             MatchesKey(kAnnotationSystemLastRebootUptime),
+                                             MatchesKey(kAnnotationSystemUpdateChannelCurrent),
+                                             MatchesKey(kAnnotationSystemUpdateChannelTarget),
+                                         }));
 }
 
 TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckCobalt) {

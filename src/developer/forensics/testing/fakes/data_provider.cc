@@ -71,6 +71,11 @@ std::unique_ptr<Screenshot> LoadPngScreenshot() {
 
 }  // namespace
 
+void DataProvider::GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
+                                  GetAnnotationsCallback callback) {
+  callback(std::move(Annotations().set_annotations(CreateAnnotations())));
+}
+
 void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters parms,
                                GetSnapshotCallback callback) {
   callback(

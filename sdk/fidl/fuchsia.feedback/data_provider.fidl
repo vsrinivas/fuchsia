@@ -26,9 +26,30 @@ protocol DataProvider {
     /// this call before changing the view while collecting a snapshot in the background is fine.
     /// There are also a lot of clients that are not interested in the screenshot.
     GetScreenshot(ImageEncoding encoding) -> (Screenshot? screenshot);
+
+    /// Returns a set of annotations about the device's state.
+    ///
+    /// `annotations` may be empty if there was an issue collecting them.
+    ///
+    /// These are the same annotations as provided through GetSnapshot() - some clients only want
+    /// the annotations while others want both the annotations and the snapshot and generating the
+    /// snapshot can take significantly more time than collecting the annotations, e.g., logs are
+    /// only part of the snapshot and not part of the annotations and can take some time.
+    GetAnnotations(GetAnnotationsParameters params) -> (Annotations annotations);
 };
 
 const uint32 MAX_NUM_ANNOTATIONS_PROVIDED = 64;
+
+/// Parameters for the DataProvider::GetAnnotations() method.
+table GetAnnotationsParameters {
+    /// Annotations are collected in parallel from various places in the platform, each with a
+    /// timeout.
+    ///
+    /// `collection_timeout_per_annotation` allows clients to control how much time is given to
+    /// each annotation collection. It enables clients to get a partial set of annotations under a
+    /// certain time.
+    1: zx.duration collection_timeout_per_annotation;
+};
 
 /// Parameters for the DataProvider::GetSnapshot() method.
 resource table GetSnapshotParameters {
@@ -50,7 +71,16 @@ resource table GetSnapshotParameters {
     2: zx.handle:CHANNEL response_channel;
 };
 
-/// Represents a snapshot.
+/// Annotations about the device's state.
+///
+/// Clients typically upload the data straight to servers. So the data comes in the form of
+/// arbitrary key-value pairs that clients can directly forward to the servers.
+table Annotations {
+    /// A vector of key-value string pairs. Keys are guaranteed to be unique.
+    1: vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED annotations;
+};
+
+/// Snapshot about the device's state.
 ///
 /// Clients typically upload the data straight to servers. So the data comes in the form of
 /// arbitrary key-value pairs that clients can directly forward to the servers.
