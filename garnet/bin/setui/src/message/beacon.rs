@@ -27,7 +27,7 @@ pub struct BeaconBuilder<P: Payload + 'static, A: Address + 'static, R: Role + '
 
 impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> BeaconBuilder<P, A, R> {
     pub fn new(messenger: Messenger<P, A, R>) -> Self {
-        Self { messenger: messenger, chained_fuses: vec![], timeout: None }
+        Self { messenger, chained_fuses: vec![], timeout: None }
     }
 
     pub fn add_fuse(mut self, fuse: ActionFuseHandle) -> Self {
@@ -94,7 +94,6 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
             ActionFuseBuilder::new()
                 .add_action(Box::new(move || {
                     let sentinel = sentinel.clone();
-                    let timeout_abort_client = timeout_abort_client.clone();
                     fasync::Task::spawn(async move {
                         timeout_abort_client.abort();
                         sentinel.lock().await.trigger().await;

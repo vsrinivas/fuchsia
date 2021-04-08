@@ -15,25 +15,26 @@ pub type ActionFuseHandle = Arc<Mutex<ActionFuse>>;
 /// ActionFuseBuilder allows creation of ActionFuses. Note that all parameters
 /// are completely optional to the builder. A fuse with no action or chained
 /// fuse is valid.
-pub struct ActionFuseBuilder {
+pub(crate) struct ActionFuseBuilder {
     actions: Vec<TriggeredAction>,
     chained_fuses: Vec<ActionFuseHandle>,
 }
 
 impl ActionFuseBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         ActionFuseBuilder { actions: vec![], chained_fuses: vec![] }
     }
 
     /// Chains supplied fuse to the built fuse. Multiple fuses can be added
     /// and all will be triggered upon this fuse being dropped.
-    pub fn chain_fuse(mut self, fuse: ActionFuseHandle) -> Self {
+    #[cfg(test)]
+    pub(crate) fn chain_fuse(mut self, fuse: ActionFuseHandle) -> Self {
         self.chained_fuses.push(fuse);
         self
     }
 
     /// Shortcut for chaining multiple fuses at once.
-    pub fn chain_fuses(mut self, fuses: Vec<ActionFuseHandle>) -> Self {
+    pub(crate) fn chain_fuses(mut self, fuses: Vec<ActionFuseHandle>) -> Self {
         for fuse in fuses {
             self.chained_fuses.push(fuse);
         }
@@ -41,13 +42,13 @@ impl ActionFuseBuilder {
     }
 
     /// Adds an action to be executed once dropped.
-    pub fn add_action(mut self, action: TriggeredAction) -> Self {
+    pub(crate) fn add_action(mut self, action: TriggeredAction) -> Self {
         self.actions.push(action);
         self
     }
 
     /// Generates fuse based on parameters.
-    pub fn build(self) -> ActionFuseHandle {
+    pub(crate) fn build(self) -> ActionFuseHandle {
         ActionFuse::create(self.actions, self.chained_fuses)
     }
 }
@@ -72,14 +73,13 @@ impl ActionFuse {
         actions: Vec<TriggeredAction>,
         chained_fuses: Vec<ActionFuseHandle>,
     ) -> ActionFuseHandle {
-        Arc::new(Mutex::new(ActionFuse { actions: actions, chained_fuses: chained_fuses }))
+        Arc::new(Mutex::new(ActionFuse { actions, chained_fuses }))
     }
 
     /// Suppresses the action from automatically executing.
     pub fn defuse(handle: ActionFuseHandle) {
-        let clone = handle.clone();
         fasync::Task::spawn(async move {
-            let mut fuse = clone.lock().await;
+            let mut fuse = handle.lock().await;
             fuse.actions.clear();
             for chained_fuse in &fuse.chained_fuses {
                 ActionFuse::defuse(chained_fuse.clone());

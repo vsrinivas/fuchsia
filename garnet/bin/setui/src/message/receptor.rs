@@ -48,7 +48,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
     /// Returns the signature associated the top level messenger associated with
     /// this receptor.
     pub fn get_signature(&self) -> Signature<A> {
-        self.signature.clone()
+        self.signature
     }
 
     /// Returns the next pending payload, returning an Error if the origin
@@ -95,8 +95,8 @@ pub fn extract_payload<P: Payload + 'static, A: Address + 'static, R: Role + 'st
     event: Option<MessageEvent<P, A, R>>,
 ) -> Option<P> {
     if let Some(MessageEvent::Message(payload, _)) = event {
-        return Some(payload);
+        Some(payload)
     } else {
-        return None;
+        None
     }
 }

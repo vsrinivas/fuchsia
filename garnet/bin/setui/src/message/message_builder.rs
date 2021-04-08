@@ -79,7 +79,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageBuild
             .transmit(MessageAction::Send(self.payload, self.attribution, now()), Some(beacon));
 
         if let Some(forwarder) = self.forwarder {
-            ActionFuse::defuse(forwarder.clone());
+            ActionFuse::defuse(forwarder);
         }
 
         receptor

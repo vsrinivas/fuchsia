@@ -84,8 +84,8 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerFac
 
         self.role_action_tx.unbounded_send(role::Action::Create(tx)).ok();
 
-        rx.await.unwrap_or(Err(role::Error::CommunicationError)).and_then(|result| match result {
-            role::Response::Role(signature) => Ok(signature),
+        rx.await.unwrap_or(Err(role::Error::CommunicationError)).map(|result| match result {
+            role::Response::Role(signature) => signature,
         })
     }
 

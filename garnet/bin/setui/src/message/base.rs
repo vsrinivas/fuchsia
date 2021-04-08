@@ -278,25 +278,27 @@ pub mod group {
                     }
                 }
             }
-            return false;
+            false
         }
     }
 
-    pub struct Builder<A: Address + 'static, R: Role + 'static> {
+    #[cfg(test)]
+    pub(crate) struct Builder<A: Address + 'static, R: Role + 'static> {
         audiences: Vec<Audience<A, R>>,
     }
 
+    #[cfg(test)]
     impl<A: Address + 'static, R: Role + 'static> Builder<A, R> {
-        pub fn new() -> Self {
+        pub(crate) fn new() -> Self {
             Self { audiences: vec![] }
         }
 
-        pub fn add(mut self, audience: Audience<A, R>) -> Self {
+        pub(crate) fn add(mut self, audience: Audience<A, R>) -> Self {
             self.audiences.push(audience);
             self
         }
 
-        pub fn build(self) -> Group<A, R> {
+        pub(crate) fn build(self) -> Group<A, R> {
             Group { audiences: self.audiences }
         }
     }
@@ -440,7 +442,7 @@ pub mod filter {
                 }
             }
 
-            return self.conjugation == Conjugation::All;
+            self.conjugation == Conjugation::All
         }
     }
 }

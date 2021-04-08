@@ -269,8 +269,8 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 // acknowledged.
                 source.report_status(Status::Received).await;
             } else {
-                for index in 0..last_index {
-                    if return_path[index].get_messenger_id() == sender_id {
+                for (index, beacon) in return_path.iter().enumerate().take(last_index) {
+                    if beacon.get_messenger_id() == sender_id {
                         target_index = Some(index + 1);
                     }
                 }
@@ -484,7 +484,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
                 // Track roles
                 for role in &messenger_descriptor.roles {
-                    self.roles.entry(*role).or_insert_with(|| HashSet::new()).insert(id);
+                    self.roles.entry(*role).or_insert_with(HashSet::new).insert(id);
                 }
 
                 // Update descriptor mapping and role records
