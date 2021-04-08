@@ -259,19 +259,19 @@ necessarily point to the exact problem. Assigning callback functions with
 mismatching argument types are an example of this. For example, if we look at:
 
 ```
-../../zircon/system/ulib/fit/include/lib/fit/function_internal.h:70:19: error: implicit conversion changes signedness: 'long' to 'uint64_t' (aka 'unsigned long') [-Werror,-Wsign-conversion]
+../../sdk/lib/fit/include/lib/fit/function_internal.h:70:19: error: implicit conversion changes signedness: 'long' to 'uint64_t' (aka 'unsigned long') [-Werror,-Wsign-conversion]
     return target(std::forward<Args>(args)...);
            ~~~~~~ ^~~~~~~~~~~~~~~~~~~~~~~~
-../../zircon/system/ulib/fit/include/lib/fit/function_internal.h:91:60: note: in instantiation of member function 'fit::internal::target<(lambda at ../../examples/fidl/test/launcher.cc:67:7), true, false, void, long, fuchsia::sys::TerminationReason>::invoke' requested here
+../../sdk/lib/fit/include/lib/fit/function_internal.h:91:60: note: in instantiation of member function 'fit::internal::target<(lambda at ../../examples/fidl/test/launcher.cc:67:7), true, false, void, long, fuchsia::sys::TerminationReason>::invoke' requested here
     &unshared_target_type_id, &inline_target_get, &target::invoke, &target::move, &target::destroy};
                                                            ^
-../../zircon/system/ulib/fit/include/lib/fit/function_internal.h:370:45: note: in instantiation of static data member 'fit::internal::target<(lambda at ../../examples/fidl/test/launcher.cc:67:7), true, false, void, long, fuchsia::sys::TerminationReason>::ops' requested here
+../../sdk/lib/fit/include/lib/fit/function_internal.h:370:45: note: in instantiation of static data member 'fit::internal::target<(lambda at ../../examples/fidl/test/launcher.cc:67:7), true, false, void, long, fuchsia::sys::TerminationReason>::ops' requested here
       ops_ = &target_type<DecayedCallable>::ops;
                                             ^
-../../zircon/system/ulib/fit/include/lib/fit/function_internal.h:297:5: note: in instantiation of function template specialization 'fit::internal::function_base<16, false, void (long, fuchsia::sys::TerminationReason)>::initialize_target<(lambda at ../../examples/fidl/test/launcher.cc:67:7)>' requested here
+../../sdk/lib/fit/include/lib/fit/function_internal.h:297:5: note: in instantiation of function template specialization 'fit::internal::function_base<16, false, void (long, fuchsia::sys::TerminationReason)>::initialize_target<(lambda at ../../examples/fidl/test/launcher.cc:67:7)>' requested here
     initialize_target(std::forward<Callable>(target));
     ^
-../../zircon/system/ulib/fit/include/lib/fit/function.h:253:11: note: in instantiation of function template specialization 'fit::internal::function_base<16, false, void (long, fuchsia::sys::TerminationReason)>::assign<(lambda at ../../examples/fidl/test/launcher.cc:67:7), void>' requested here
+../../sdk/lib/fit/include/lib/fit/function.h:253:11: note: in instantiation of function template specialization 'fit::internal::function_base<16, false, void (long, fuchsia::sys::TerminationReason)>::assign<(lambda at ../../examples/fidl/test/launcher.cc:67:7), void>' requested here
     base::assign(std::forward<Callable>(target));
           ^
 ../../examples/fidl/test/launcher.cc:66:43: note: in instantiation of function template specialization 'fit::function_impl<16, false, void (long, fuchsia::sys::TerminationReason)>::operator=<(lambda at ../../examples/fidl/test/launcher.cc:67:7)>' requested here
@@ -280,7 +280,7 @@ mismatching argument types are an example of this. For example, if we look at:
 ```
 
 One might think to look at the code in
-zircon/system/ulib/fit/include/lib/fit/function_internal.h:70, but the
+sdk/lib/fit/include/lib/fit/function_internal.h:70, but the
 underlying issue is in examples/fidl/test/launcher.cc:67
 
 ```cpp

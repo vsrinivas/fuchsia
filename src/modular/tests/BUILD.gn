@@ -391,12 +391,12 @@ executable("annotations_test") {
   deps = [
     ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.element",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//zircon/public/lib/fit",
   ]
 }
 

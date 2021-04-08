@@ -16,10 +16,10 @@ source_set("blobfs-partition") {
   public = [ "blobfs_partition.h" ]
   public_deps = [
     ":options",
+    "//sdk/lib/fit",
     "//src/storage/volume_image:partition",
     "//src/storage/volume_image/fvm:options",
     "//src/storage/volume_image/utils:io-interfaces",
-    "//zircon/public/lib/fit",
   ]
   deps = [
     "//src/storage/blobfs",
@@ -33,10 +33,10 @@ source_set("minfs-partition") {
   public = [ "minfs_partition.h" ]
   public_deps = [
     ":options",
+    "//sdk/lib/fit",
     "//src/storage/volume_image:partition",
     "//src/storage/volume_image/fvm:options",
     "//src/storage/volume_image/utils:io-interfaces",
-    "//zircon/public/lib/fit",
   ]
   deps = [
     "//src/storage/fvm",
@@ -50,10 +50,10 @@ source_set("empty-partition") {
   public = [ "empty_partition.h" ]
   public_deps = [
     ":options",
+    "//sdk/lib/fit",
     "//src/storage/volume_image:partition",
     "//src/storage/volume_image/fvm:options",
     "//src/storage/volume_image/utils:io-interfaces",
-    "//zircon/public/lib/fit",
   ]
   deps = [ "//src/storage/fvm" ]
 }
@@ -67,8 +67,8 @@ source_set("commands") {
 
   public_deps = [
     ":options",
+    "//sdk/lib/fit",
     "//src/storage/volume_image/fvm:options",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [
