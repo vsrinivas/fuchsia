@@ -21,7 +21,8 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.sysinfo.SysInfo",
-            "fuchsia.ui.activity.Provider"
+            "fuchsia.ui.activity.Provider",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
