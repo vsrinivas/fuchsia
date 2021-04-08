@@ -14,7 +14,7 @@
 
 namespace {
 
-TEST(Resource, GoodValid) {
+TEST(ResourceTests, GoodValid) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -29,7 +29,7 @@ resource_definition SomeResource : uint32 {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto resource = library.LookupResource("SomeResource");
   ASSERT_NOT_NULL(resource);
@@ -42,7 +42,21 @@ resource_definition SomeResource : uint32 {
   EXPECT_EQ(resource->subtype_ctor->name.span()->data(), "uint32");
 }
 
-TEST(Resource, BadEmpty) {
+TEST(ResourceTests, BadEmpty) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition SomeResource : uint32 {
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
+}
+
+TEST(ResourceTests, BadEmptyOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -53,7 +67,23 @@ resource_definition SomeResource : uint32 {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
-TEST(Resource, BadNoProperties) {
+TEST(ResourceTests, BadNoProperties) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition SomeResource : uint32 {
+  properties {
+  };
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneProperty);
+}
+
+TEST(ResourceTests, BadNoPropertiesOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -66,7 +96,29 @@ resource_definition SomeResource : uint32 {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneProperty);
 }
 
-TEST(Resource, BadDuplicateProperty) {
+TEST(ResourceTests, BadDuplicateProperty) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyEnum = enum {
+  X = 0;
+};
+
+resource_definition SomeResource : uint32 {
+  properties {
+    stuff MyEnum;
+    stuff MyEnum;
+  };
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateResourcePropertyName);
+}
+
+TEST(ResourceTests, BadDuplicatePropertyOld) {
   TestLibrary library(R"FIDL(
 library example;
 
