@@ -1187,18 +1187,18 @@ declare_args() {
     },
 
     {
-      configs = [ "//build/config/profile" ]
+      configs = [ "//build/config/profile:coverage-rust" ]
       tags = [
         "instrumented",
-        "profile",
+        "coverage",
       ]
     },
 
     {
-      configs = [ "//build/config/profile:rustcoverage" ]
+      configs = [ "//build/config/profile" ]
       tags = [
         "instrumented",
-        "coverage",
+        "profile",
       ]
     },
 
@@ -1397,11 +1397,11 @@ declare_args() {
     },
 
     {
-      name = "host_rustcoverage"
+      name = "host_coverage-rust"
       select_variant = []
       select_variant = [
         {
-          variant = "rustcoverage"
+          variant = "coverage-rust"
           host = true
         },
       ]
@@ -1566,15 +1566,15 @@ declare_args() {
 # Whether profile instrumentation is enabled for collecting coverage.
 is_coverage = select_variant + [
                 "coverage",
+                "coverage-rust",
                 "coverage-sdk",
                 "profile",
-                "rustcoverage",
               ] -
               [
                 "coverage",
+                "coverage-rust",
                 "coverage-sdk",
                 "profile",
-                "rustcoverage",
               ] != select_variant
 
 # Very unfortunately, GN nevers sets `current_toolchain` when executing
