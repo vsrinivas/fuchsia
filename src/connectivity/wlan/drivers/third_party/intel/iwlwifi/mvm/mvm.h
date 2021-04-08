@@ -71,8 +71,10 @@
 #endif
 
 #ifdef __cplusplus
+extern "C++" {
 #include <atomic>
 using std::atomic_int;
+}
 #endif  // __cplusplus
 
 #define IWL_MVM_MAX_ADDRESSES 5

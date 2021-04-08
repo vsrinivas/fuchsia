@@ -4,12 +4,6 @@
 
 // To test PHY and MAC device callback functions.
 
-#include <zircon/syscalls.h>
-
-extern "C" {
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
-}
-
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
 #include <stdio.h>
@@ -26,6 +20,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
 namespace wlan::testing {
 namespace {

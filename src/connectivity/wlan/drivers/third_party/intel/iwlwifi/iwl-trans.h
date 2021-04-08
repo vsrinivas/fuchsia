@@ -55,6 +55,10 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-tlv.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
+
 /**
  * DOC: Transport layer - what is it ?
  *
@@ -1178,5 +1182,9 @@ void iwl_trans_unref(struct iwl_trans* trans);
 /* PCI */
 int __must_check iwl_pci_register_driver(void);
 void iwl_pci_unregister_driver(void);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_

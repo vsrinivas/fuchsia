@@ -13,6 +13,10 @@
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
+
 extern wlanmac_protocol_ops_t wlanmac_ops;
 extern zx_protocol_device_t device_mac_ops;  // for testing only
 extern wlanphy_impl_protocol_ops_t wlanphy_ops;
@@ -50,5 +54,9 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_add
 zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config);
 void mac_unbind(void* ctx);
 void mac_release(void* ctx);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_

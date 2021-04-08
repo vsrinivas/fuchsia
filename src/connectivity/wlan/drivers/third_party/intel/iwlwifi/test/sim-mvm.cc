@@ -4,13 +4,10 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
-extern "C" {
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/inspect.h"
-}  // extern "C"
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/datapath.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/sta.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/inspect.h"
 
 namespace wlan {
 namespace testing {

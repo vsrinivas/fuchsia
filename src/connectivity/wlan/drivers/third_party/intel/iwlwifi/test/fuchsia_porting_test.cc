@@ -3,14 +3,12 @@
 //
 // Unittest code for the functions in fuchsia_porting.h.
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 #include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 
 #include <zxtest/zxtest.h>
-
-extern "C" {
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
-}
 
 namespace {
 

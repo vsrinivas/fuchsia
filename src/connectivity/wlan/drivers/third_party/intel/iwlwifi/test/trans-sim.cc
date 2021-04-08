@@ -29,12 +29,13 @@
 #include <wlan/protocol/mac.h>
 
 extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+}
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
-}
 
 using wlan::testing::IWL_TRANS_GET_TRANS_SIM;
 using wlan::testing::SimMvm;

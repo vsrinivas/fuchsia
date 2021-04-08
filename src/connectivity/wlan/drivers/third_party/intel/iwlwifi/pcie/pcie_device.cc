@@ -11,7 +11,7 @@
 #include <fbl/alloc_checker.h>
 
 extern "C" {
-#include "internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
 
 namespace wlan {

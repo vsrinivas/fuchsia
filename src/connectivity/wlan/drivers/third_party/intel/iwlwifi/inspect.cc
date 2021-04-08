@@ -4,14 +4,11 @@
 
 // Util functions to dump info/data for debug.
 
-#include <zircon/syscalls.h>
-
-extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/inspect.h"
-}  // extern "C"
 
 #include <stdint.h>
 #include <stdio.h>
+#include <zircon/syscalls.h>
 
 #include <sstream>
 #include <string>

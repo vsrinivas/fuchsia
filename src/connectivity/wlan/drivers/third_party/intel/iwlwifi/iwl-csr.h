@@ -37,6 +37,10 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
+
 /*
  * CSR (control and status registers)
  *
@@ -584,5 +588,9 @@ enum msix_hw_int_causes {
 #define CSR_MAC_ADDR1_OTP (CSR_ADDR_BASE + 4)
 #define CSR_MAC_ADDR0_STRAP (CSR_ADDR_BASE + 8)
 #define CSR_MAC_ADDR1_STRAP (CSR_ADDR_BASE + 0xC)
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CSR_H_

@@ -30,6 +30,10 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
+
 typedef uint32_t __be32;
 typedef uint16_t __be16;
 typedef uint64_t __le64;
@@ -383,5 +387,9 @@ void hex_dump(const char* prefix, const void* ptr, size_t len);
 // for testing
 #define HEX_DUMP_BUF_SIZE 70
 char* hex_dump_str(char* output, size_t output_size, const void* ptr, size_t len);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

@@ -7,9 +7,7 @@
 
 #include <ddktl/device.h>
 
-extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-}
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_

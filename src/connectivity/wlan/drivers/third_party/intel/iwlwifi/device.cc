@@ -12,10 +12,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mac-device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
-
-extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
-}
 
 namespace wlan::iwlwifi {
 

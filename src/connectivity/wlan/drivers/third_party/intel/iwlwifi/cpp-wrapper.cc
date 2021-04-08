@@ -8,8 +8,6 @@
 
 using wlan::common::GetCenterFreq;
 
-extern "C" {
-
 uint16_t get_center_freq(uint8_t ch_num) {
   wlan_channel_t chan = {
       .primary = ch_num,
@@ -19,5 +17,3 @@ uint16_t get_center_freq(uint8_t ch_num) {
 
   return GetCenterFreq(chan);
 }
-
-}  // extern "C"

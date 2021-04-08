@@ -53,10 +53,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
-#ifdef __cplusplus
-using std::atomic_int;
-#endif  // __cplusplus
-
 /* We need 2 entries for the TX command and header, and another one might
  * be needed for potential data in the SKB's head. The remaining ones can
  * be used for frags.

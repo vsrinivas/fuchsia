@@ -10,9 +10,7 @@
 
 #include <fbl/alloc_checker.h>
 
-extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
-}
 
 namespace wlan::iwlwifi {
 

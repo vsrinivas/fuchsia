@@ -8,9 +8,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-}
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim.h"
 
 using std::vector;
