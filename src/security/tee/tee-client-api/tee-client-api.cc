@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <arpa/inet.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
 #include <fuchsia/tee/llcpp/fidl.h>
