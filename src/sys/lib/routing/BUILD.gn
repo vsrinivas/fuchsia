@@ -33,6 +33,7 @@ rustc_library("routing") {
     "//src/sys/lib/moniker",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
@@ -46,6 +47,7 @@ rustc_library("routing") {
     "src/environment.rs",
     "src/error.rs",
     "src/lib.rs",
+    "src/policy.rs",
     "src/router.rs",
   ]
 }

@@ -8,6 +8,7 @@ pub mod component_instance;
 pub mod config;
 pub mod environment;
 pub mod error;
+pub mod policy;
 pub mod router;
 
 use {

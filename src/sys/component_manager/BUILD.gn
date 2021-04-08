@@ -217,6 +217,7 @@ template("component_manager") {
         "//src/lib/process_builder:test-util-fidl-rustc",
         "//src/sys/lib/directory_broker",
         "//src/sys/lib/library_loader",
+        "//src/sys/lib/routing/testing:routing_test_helpers",
       ]
     }
   } else {

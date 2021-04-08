@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::policy::PolicyError,
     clonable_error::ClonableError,
     cm_rust::{CapabilityName, EventMode},
     fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
@@ -333,6 +334,9 @@ pub enum RoutingError {
 
     #[error(transparent)]
     RightsRoutingError(#[from] RightsRoutingError),
+
+    #[error(transparent)]
+    PolicyError(#[from] PolicyError),
 }
 
 impl RoutingError {
