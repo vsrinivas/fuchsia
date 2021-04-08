@@ -409,15 +409,6 @@ impl fmt::Display for CapabilityId {
     }
 }
 
-/// A list of offer targets.
-#[derive(CheckedVec, Debug, PartialEq)]
-#[checked_vec(
-    expected = "a nonempty array of offer targets, with unique elements",
-    min_length = 1,
-    unique_items = true
-)]
-pub struct OfferTo(pub Vec<OfferToRef>);
-
 /// A list of rights.
 #[derive(CheckedVec, Debug, PartialEq)]
 #[checked_vec(
@@ -465,6 +456,16 @@ pub struct OneOrManyPaths;
     unique_items = true
 )]
 pub struct OneOrManyExposeFromRefs;
+
+/// Generates deserializer for `OneOrMany<OfferToRef>`.
+#[derive(OneOrMany, Debug, Clone)]
+#[one_or_many(
+    expected = "one or an array of \"#<child-name>\" or \"#<collection-name>\", with unique elements",
+    inner_type = "OfferToRef",
+    min_length = 1,
+    unique_items = true
+)]
+pub struct OneOrManyOfferToRefs;
 
 /// Generates deserializer for `OneOrMany<OfferFromRef>`.
 #[derive(OneOrMany, Debug, Clone)]
@@ -1199,7 +1200,7 @@ pub struct Offer {
     pub resolver: Option<Name>,
     pub event: Option<OneOrMany<Name>>,
     pub from: OneOrMany<OfferFromRef>,
-    pub to: OfferTo,
+    pub to: OneOrMany<OfferToRef>,
     pub r#as: Option<Name>,
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
@@ -1909,7 +1910,7 @@ mod tests {
             resolver: None,
             event: None,
             from: OneOrMany::One(OfferFromRef::Self_),
-            to: OfferTo(vec![]),
+            to: OneOrMany::Many(vec![]),
             r#as: None,
             rights: None,
             subdir: None,

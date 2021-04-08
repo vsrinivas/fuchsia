@@ -946,7 +946,7 @@ fn extract_all_targets_for_each_child(
         .ok_or_else(|| Error::internal("no capability".to_string()))?;
 
     // Validate the "to" references.
-    for to in &in_obj.to.0 {
+    for to in &in_obj.to {
         for target_name in &target_names {
             let target =
                 translate_child_or_collection_ref(to.into(), all_children, all_collections)?;
@@ -2032,13 +2032,13 @@ mod tests {
                     {
                         "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
-                        "to": [ "#netstack" ],
+                        "to": "#netstack", // Verifies compilation of singleton "to:".
                         "dependency": "weak_for_migration"
                     },
                     {
                         "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
-                        "to": [ "#modular" ],
+                        "to": [ "#modular" ], // Verifies compilation of "to:" as array of one element.
                         "as": "fuchsia.logger.LegacySysLog",
                         "dependency": "strong"
                     },

@@ -760,7 +760,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate every target of this offer.
         let target_cap_ids = cml::CapabilityId::from_offer_expose(offer)?;
-        for to in &offer.to.0 {
+        for to in &offer.to {
             // Ensure the "to" value is a child.
             let to_target = match to {
                 cml::OfferToRef::Named(ref name) => name,
@@ -2272,6 +2272,25 @@ mod tests {
             }),
             Ok(())
         ),
+        test_cml_offer_singleton_to (
+            json!({
+                "offer": [
+                    {
+                        "protocol": "fuchsia.fonts.LegacyProvider",
+                        "from": "parent",
+                        "to": "#echo_server",
+                        "dependency": "weak_for_migration"
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                    },
+                ],
+            }),
+            Ok(())
+        ),
         test_cml_offer_missing_props(
             json!({
                 "offer": [ {} ]
@@ -2480,7 +2499,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a nonempty array of offer targets, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected one or an array of \"#<child-name>\" or \"#<collection-name>\", with unique elements"
         ),
         test_cml_offer_duplicate_targets(
             json!({
@@ -2490,7 +2509,7 @@ mod tests {
                     "to": ["#a", "#a"]
                 } ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: array with duplicate element, expected a nonempty array of offer targets, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: array with duplicate element, expected one or an array of \"#<child-name>\" or \"#<collection-name>\", with unique elements"
         ),
         test_cml_offer_target_missing_props(
             json!({
