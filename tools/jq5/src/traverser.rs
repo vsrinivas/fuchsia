@@ -37,8 +37,8 @@ fn fill_comments_helper(json5_val: &Value, jq_output_val: &mut Value) -> Result<
                             .position(|p_output| p_output.name() == property.name());
                         if let Some(i) = index {
                             //Using two nested conditionals due to compiler bug when using if-let syntax
-                            if discriminant(&property.value())
-                                == discriminant(&out_properties[i].value())
+                            if discriminant(&*property.value())
+                                == discriminant(&*out_properties[i].value())
                             {
                                 fill_comments_helper(
                                     &property.value(),
@@ -115,6 +115,77 @@ pub(crate) fn fill_comments(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fill_comments_handles_changed_field_type() {
+        let json5_original = String::from(
+            r##"{
+    // Foo
+    "offer": [
+        {
+            // Bar
+            "directory": "input",
+            "from": "self",
+            // Baz
+            "to": [ "#pwrbtn-monitor" ]
+        },
+        {
+            "protocol": "fuchsia.hardware.power.statecontrol.Admin",
+            "from": "self",
+            "to": [ "#pwrbtn-monitor" ]
+        }
+    ]
+}"##,
+        );
+        let json5_target = String::from(
+            r##"{
+    "offer": [
+        {
+            "directory": "input",
+            "from": "self",
+            "to": "#pwrbtn-monitor"
+        },
+        {
+            "protocol": "fuchsia.hardware.power.statecontrol.Admin",
+            "from": "self",
+            "to": "#pwrbtn-monitor"
+        }
+    ]
+}"##,
+        );
+        let expected_outcome = String::from(
+            r##"{
+    // Foo
+    "offer": [
+        {
+            // Bar
+            "directory": "input",
+            "from": "self",
+            "to": "#pwrbtn-monitor"
+        },
+        {
+            "protocol": "fuchsia.hardware.power.statecontrol.Admin",
+            "from": "self",
+            "to": "#pwrbtn-monitor"
+        }
+    ]
+}"##,
+        );
+        let parsed_json5_original =
+            json5format::ParsedDocument::from_str(&json5_original[..], None).unwrap();
+        let mut parsed_json5_target =
+            json5format::ParsedDocument::from_str(&json5_target[..], None).unwrap();
+        let parsed_expected_outcome =
+            json5format::ParsedDocument::from_str(&expected_outcome[..], None).unwrap();
+        fill_comments(&parsed_json5_original.content, &mut parsed_json5_target.content).unwrap();
+
+        let format = json5format::Json5Format::new().unwrap();
+
+        assert_eq!(
+            format.to_string(&parsed_expected_outcome).unwrap(),
+            format.to_string(&parsed_json5_target).unwrap()
+        );
+    }
     #[test]
     fn simple_transfer_object1() {
         let json5_original = String::from(
