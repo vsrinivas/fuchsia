@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -106,6 +107,9 @@ class Display : public DisplayType,
     uint32_t format = 0;
     zx::vmo vmo;
     zx::pmt pmt;
+
+    zx::eventpair sync_event;
+    std::unique_ptr<async::WaitOnce> async_wait;
   };
   struct Device {
     uint32_t width = 0;
@@ -157,6 +161,7 @@ class Display : public DisplayType,
   fbl::Mutex flush_lock_;
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
   std::map<uint64_t, ColorBuffer*> current_cb_;
+  std::map<uint64_t, ColorBuffer*> pending_cb_;
 
   zx::event pipe_event_;
 

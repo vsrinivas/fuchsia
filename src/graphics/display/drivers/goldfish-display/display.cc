@@ -485,7 +485,7 @@ void Display::DisplayControllerImplReleaseImage(image_t* image) {
   }
 
   async::PostTask(loop_.dispatcher(), [this, color_buffer] {
-    const auto color_buffer_maps = {&current_cb_};
+    const auto color_buffer_maps = {&current_cb_, &pending_cb_};
     for (const auto map : color_buffer_maps) {
       for (const auto& kv : *map) {
         if (kv.second == color_buffer) {
@@ -580,6 +580,36 @@ zx_status_t Display::PresentColorBuffer(uint32_t display_id, ColorBuffer* color_
   if (!color_buffer) {
     return ZX_HANDLE_INVALID;
   }
+  if (color_buffer->sync_event.is_valid()) {
+    return ZX_ERR_SHOULD_WAIT;
+  }
+
+  zx::eventpair event_display, event_sync_device;
+  zx_status_t status = zx::eventpair::create(0u, &event_display, &event_sync_device);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_eventpair_create failed: %d", kTag, status);
+    return status;
+  }
+  color_buffer->sync_event = std::move(event_display);
+
+  // Set up async wait.
+  color_buffer->async_wait =
+      std::make_unique<async::WaitOnce>(color_buffer->sync_event.get(), ZX_EVENTPAIR_SIGNALED, 0u);
+  color_buffer->async_wait->Begin(
+      loop_.dispatcher(),
+      [this, color_buffer, display_id](async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                       zx_status_t status, const zx_packet_signal_t* signal) {
+        TRACE_DURATION("gfx", "Display::SyncEventHandler", "color_buffer", color_buffer->id);
+        if (status == ZX_ERR_CANCELED) {
+          zxlogf(INFO, "Wait cancelled.\n");
+          return;
+        }
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "Invalid wait status: %d\n", status);
+
+        color_buffer->async_wait.reset();
+        color_buffer->sync_event.reset();
+        current_cb_[display_id] = color_buffer;
+      });
 
   // Update host-writeable display buffers before presenting.
   if (color_buffer->paddr) {
@@ -602,17 +632,23 @@ zx_status_t Display::PresentColorBuffer(uint32_t display_id, ColorBuffer* color_
     if (host_display_id) {
       // Set color buffer for secondary displays.
       uint32_t result;
-      zx_status_t status = SetDisplayColorBufferLocked(host_display_id, color_buffer->id, &result);
+      status = SetDisplayColorBufferLocked(host_display_id, color_buffer->id, &result);
       if (status != ZX_OK || result) {
         zxlogf(ERROR, "%s: failed to set display color buffer", kTag);
         return status;
       }
     } else {
-      zx_status_t status = FbPostLocked(color_buffer->id);
+      status = FbPostLocked(color_buffer->id);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s: FbPost failed: %d", kTag, status);
         return status;
       }
+    }
+
+    status = control_.CreateSyncFence(std::move(event_sync_device));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: CreateSyncFence failed: %d", kTag, status);
+      return status;
     }
   }
 
@@ -662,7 +698,7 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
 
     if (color_buffer) {
       async::PostTask(loop_.dispatcher(), [this, color_buffer, display_id = it.first] {
-        current_cb_[display_id] = color_buffer;
+        pending_cb_[display_id] = color_buffer;
       });
     }
   }
@@ -1052,13 +1088,13 @@ void Display::FlushDisplay(async_dispatcher_t* dispatcher, uint64_t display_id) 
   zx::duration period = zx::sec(1) / device.refresh_rate_hz;
   zx::time expected_next_flush = device.expected_next_flush + period;
 
-  ColorBuffer* displayed_cb = nullptr;
-  if (current_cb_.find(display_id) != current_cb_.end()) {
-    displayed_cb = current_cb_[display_id];
+  ColorBuffer* pending_cb = nullptr;
+  if (pending_cb_.find(display_id) != pending_cb_.end()) {
+    pending_cb = pending_cb_[display_id];
   }
 
-  if (displayed_cb) {
-    zx_status_t status = PresentColorBuffer(display_id, displayed_cb);
+  if (pending_cb) {
+    zx_status_t status = PresentColorBuffer(display_id, pending_cb);
     ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_SHOULD_WAIT);
   }
 
@@ -1066,9 +1102,13 @@ void Display::FlushDisplay(async_dispatcher_t* dispatcher, uint64_t display_id) 
     fbl::AutoLock lock(&flush_lock_);
 
     if (dc_intf_.is_valid()) {
-      uint64_t handles[] = {reinterpret_cast<uint64_t>(displayed_cb)};
+      ColorBuffer* current_cb = nullptr;
+      if (current_cb_.find(display_id) != current_cb_.end()) {
+        current_cb = current_cb_[display_id];
+      }
+      uint64_t handles[] = {reinterpret_cast<uint64_t>(current_cb)};
       zx::time now = async::Now(dispatcher);
-      dc_intf_.OnDisplayVsync(display_id, now.get(), handles, displayed_cb ? 1 : 0);
+      dc_intf_.OnDisplayVsync(display_id, now.get(), handles, current_cb ? 1 : 0);
     }
   }
 
