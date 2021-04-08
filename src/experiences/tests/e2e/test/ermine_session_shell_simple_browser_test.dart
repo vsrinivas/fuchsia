@@ -232,6 +232,7 @@ void main() {
     // Opens red.html in the second tab leaving the first tab as an empty tab.
     await input.text(redUrl);
     await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
     await browser.waitFor(redTabFinder, timeout: _timeout);
     print('Opened red.html');
 
@@ -241,15 +242,17 @@ void main() {
 
     await input.text(greenUrl);
     await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
     await browser.waitFor(greenTabFinder, timeout: _timeout);
     print('Opened green.html');
 
     // Opens blue.html in the forth tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
+
     await input.text(blueUrl);
     await input.keyPress(kEnterKey);
-
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
     await browser.waitFor(blueTabFinder, timeout: _timeout);
     print('Opened blue.html');
 
@@ -318,13 +321,64 @@ void main() {
 
     // TODO(fxb/70265): Test closing an unfocused tab once fxb/68689 is done.
 
-    print('Closed the browser');
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     await browser.close();
+    print('Closed the browser');
   }, skip: true);
 
-  // TODO(fxb/68720): Test web editing
+  test('Should be able enter text into web text fields', () async {
+    FlutterDriver browser;
+    browser = await ermine.launchAndWaitForSimpleBrowser();
+
+    const testInputPage = 'http://127.0.0.1:8080/input.html';
+    final textInputTabFinder = find.text('Text Input');
+
+    // Access to the website.
+    await input.text(testInputPage);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(textInputTabFinder, timeout: _timeout);
+    print('Opened $testInputPage');
+
+    final webdriver =
+        (await webDriverConnector.webDriversForHost('127.0.0.1')).single;
+
+    WebElement textField;
+
+    await ermine.waitFor(() async {
+      try {
+        textField = webdriver.findElement(By.id('text-input'));
+        return true;
+      } on NoSuchElementException {
+        return false;
+      }
+    }, timeout: _timeout);
+    print('The textfield is found.');
+
+    expect(textField, isNotNull);
+
+    textField.click();
+    await ermine.waitFor(() async {
+      return webdriver.activeElement.equals(textField);
+    }, timeout: _timeout);
+    print('The textfield is now focused.');
+
+    // TODO(fxb/74070): Sl4f.Input currently does not work for web elements.
+    // Replace the following line with Sl4f.Input once that is fixed.
+    const testText = 'hello fuchsia';
+    textField.sendKeys(testText);
+    await ermine.waitFor(() async {
+      return textField.properties['value'] == testText;
+    }, timeout: _timeout);
+    print('Text is entered into the textfield.');
+
+    await browser.close();
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    print('Closed the browser');
+  }, skip: true);
   // TODO(fxb/68716): Test audio playing
 }
