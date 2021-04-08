@@ -7,23 +7,19 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
-#include <shared_mutex>
-#include <thread>
-
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
 #include "lib/fidl/llcpp/client_end.h"
 #include "magma.h"
 #include "magma_util/macros.h"
-#include "magma_vendor_queries.h"
+#include "msd_intel_gen_query.h"
 
 namespace {
 
-TEST(Mali, IcdList) {
-  magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_MALI);
-  auto rsp = fidl::WireCall<fuchsia_gpu_magma::Device>(test_device.channel()).GetIcdList();
+TEST(Intel, IcdList) {
+  magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_INTEL);
+  auto rsp = fuchsia_gpu_magma::Device::Call::GetIcdList(test_device.channel());
   EXPECT_TRUE(rsp.ok());
   EXPECT_EQ(rsp->icd_list.count(), 2u);
   auto& icd_item = rsp->icd_list[0];
@@ -31,8 +27,8 @@ TEST(Mali, IcdList) {
   EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::SUPPORTS_VULKAN);
   std::string res_string(icd_item.component_url().get());
   EXPECT_EQ(res_string.length(), icd_item.component_url().size());
-  EXPECT_EQ(0u, res_string.find("fuchsia-pkg://fuchsia.com/libvulkan_arm_mali_"));
-  EXPECT_THAT(res_string, testing::EndsWith("_test#meta/vulkan.cm"));
+  EXPECT_EQ(std::string("fuchsia-pkg://fuchsia.com/libvulkan_intel_gen_test#meta/vulkan.cm"),
+            res_string);
 }
 
 }  // namespace

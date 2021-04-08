@@ -15,6 +15,7 @@ executable("msd_intel_gen_integration_tests") {
 
   sources = [
     "test_hang_recovery.cc",
+    "test_icd_list.cc",
     "test_shutdown.cc",
     "test_workarounds.cc",
   ]

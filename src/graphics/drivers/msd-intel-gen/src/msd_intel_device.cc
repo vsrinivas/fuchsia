@@ -696,7 +696,7 @@ magma_status_t msd_device_get_icd_list(struct msd_device_t* abi_device, uint64_t
   if (icd_info_out) {
     for (uint32_t i = 0; i < std::size(kSuffixes); i++) {
       strcpy(icd_info_out[i].component_url,
-             fbl::StringPrintf("fuchsia-pkg://fuchsia.com/libvulkan_intel_gen%s#meta/vulkan.cmx",
+             fbl::StringPrintf("fuchsia-pkg://fuchsia.com/libvulkan_intel_gen%s#meta/vulkan.cm",
                                kSuffixes[i])
                  .c_str());
       icd_info_out[i].support_flags = ICD_SUPPORT_FLAG_VULKAN;
