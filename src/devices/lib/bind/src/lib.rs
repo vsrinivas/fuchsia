@@ -7,7 +7,7 @@
 
 pub mod bind_library;
 mod bind_program;
-mod bind_program_v2_constants;
+pub mod bind_program_v2_constants;
 mod bytecode_common;
 pub mod compiler;
 pub mod ddk_bind_constants;

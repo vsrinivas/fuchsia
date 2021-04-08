@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_staticlib.gni")
 import("//src/sys/build/components.gni")
@@ -95,6 +96,32 @@ rustc_library("lib") {
   inputs = [ "tests_schema.json" ]
 }
 
+rustc_fuzzer("bind_rules_bytecode_fuzzer") {
+  source_root = "src/bytecode_fuzzer.rs"
+  sources = [ "src/bytecode_fuzzer.rs" ]
+  deps = [ ":lib" ]
+}
+
+rustc_fuzzer("instruction_section_fuzzer") {
+  source_root = "src/bytecode_section_fuzzer.rs"
+  sources = [ "src/bytecode_section_fuzzer.rs" ]
+  deps = [ ":lib" ]
+}
+
+rustc_fuzzer("symbol_table_section_fuzzer") {
+  source_root = "src/bytecode_section_fuzzer.rs"
+  sources = [ "src/bytecode_section_fuzzer.rs" ]
+  deps = [ ":lib" ]
+}
+
+fuzzers_package("bind-fuzzers") {
+  rust_fuzzers = [
+    ":bind_rules_bytecode_fuzzer",
+    ":instruction_section_fuzzer",
+    ":symbol_table_section_fuzzer",
+  ]
+}
+
 fuchsia_unittest_package("bind_tests") {
   manifest = "meta/bind_tests.cmx"
   deps = [ ":lib_test" ]
@@ -105,7 +132,10 @@ fuchsia_unittest_package("bind_tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":bind_tests" ]
+  deps = [
+    ":bind-fuzzers",
+    ":bind_tests",
+  ]
 }
 
 fuchsia_package_with_single_component("bind_debugger") {
