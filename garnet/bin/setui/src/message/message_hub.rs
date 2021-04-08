@@ -64,9 +64,9 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static, R: Role + 'sta
     /// Address mapping for looking up messengers. Used for sending messages
     /// to an addressable recipient.
     addresses: HashMap<A, MessengerId>,
-    /// MessengerId mapping to descriptors. This mapping allows the `MessageHub`
+    /// MessengerId mapping to roles. This mapping allows the `MessageHub`
     /// to remove a messenger from role memberships upon removal.
-    messengers: HashMap<MessengerId, messenger::Descriptor<P, A, R>>,
+    messengers: HashMap<MessengerId, messenger::Roles<R>>,
     /// Role mapping for looking up which messengers belong to a particular
     /// role.
     roles: HashMap<role::Signature<R>, HashSet<MessengerId>>,
@@ -130,10 +130,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                     _ = exit_rx.next() => {
                         break;
                     }
-                    message_action = action_rx.next() => {
-                        if let Some((fingerprint, action, beacon)) = message_action {
-                            hub.process_request(fingerprint, action, beacon).await;
-                        }
+                    message_action = action_rx.select_next_some() => {
+                        let (fingerprint, action, beacon) = message_action;
+                        hub.process_request(fingerprint, action, beacon).await;
                     }
                     messenger_action = messenger_rx.next() => {
                         match messenger_action {
@@ -185,19 +184,19 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
     /// return path of the source message. The provided sender id represents the
     /// id of the current messenger possessing the message and not necessarily
     /// the original author.
-    async fn send_to_next(&mut self, sender_id: MessengerId, mut message: Message<P, A, R>) {
+    async fn send_to_next(&mut self, sender_id: MessengerId, message: Message<P, A, R>) {
         let mut recipients = vec![];
 
-        let message_type = message.get_type().clone();
+        let message_type = message.get_type();
 
         let mut require_delivery = false;
 
         // Replies have a predetermined return path.
-        if let MessageType::Reply(mut source) = message_type {
+        if let MessageType::Reply(source) = message_type {
             // The original author of the reply will be the first participant after brokers in
             // the reply's return path. Otherwise, identify current sender in the source return path
             // and forward to next participant.
-            let mut source_return_path = source.get_return_path();
+            let source_return_path = source.get_return_path();
             let mut target_index = None;
 
             let source_return_path_messenger_ids: HashSet<MessengerId> =
@@ -207,25 +206,29 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             // 1. Not be already participating in the return path (with a spawned observer)
             // 2. Not be the author of the reply.
             // 3. Have a matching filter.
-            let mut brokers = self.brokers.clone();
-            brokers.retain(|broker| {
-                !source_return_path_messenger_ids.contains(&broker.messenger_id)
-                    && self
-                        .resolve_messenger_id(&message.get_author())
-                        .map_or(true, |id| id != broker.messenger_id)
-                    && broker.filter.as_ref().map_or(true, |filter| filter.matches(&message))
-            });
-
-            let mut return_path: Vec<Beacon<P, A, R>> = brokers
+            let broker_ids: Vec<_> = self
+                .brokers
                 .iter()
-                .map(|broker| {
-                    self.beacons.get(&broker.messenger_id).expect("beacon should resolve").clone()
+                .filter(|broker| {
+                    !source_return_path_messenger_ids.contains(&broker.messenger_id)
+                        && self
+                            .resolve_messenger_id(&message.get_author())
+                            .map_or(true, |id| id != broker.messenger_id)
+                        && broker.filter.as_ref().map_or(true, |filter| filter.matches(&message))
+                })
+                .map(|broker| broker.messenger_id)
+                .collect();
+
+            let mut return_path: Vec<Beacon<P, A, R>> = broker_ids
+                .iter()
+                .map(|broker_id| {
+                    self.beacons.get(&broker_id).expect("beacon should resolve").clone()
                 })
                 .collect();
 
             // The return path places the participating brokers before the participants from the
             // source message's reply path.
-            return_path.append(&mut source_return_path);
+            return_path.extend(source_return_path.iter().cloned());
             let last_index = return_path.len() - 1;
 
             if self.is_broker(sender_id) && !source_return_path_messenger_ids.contains(&sender_id) {
@@ -241,9 +244,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 // A candidate broker is one that is after the sending broker, has a filter
                 // matching the current message, and is not in the return path already.
                 while candidate_index < self.brokers.len() && target_index.is_none() {
-                    target_index = brokers.iter().position(|broker| {
-                        *broker == self.brokers[candidate_index]
-                            && !source_return_path_messenger_ids.contains(&broker.messenger_id)
+                    target_index = broker_ids.iter().position(|broker_id| {
+                        *broker_id == self.brokers[candidate_index].messenger_id
+                            && !source_return_path_messenger_ids.contains(&broker_id)
                     });
 
                     candidate_index += 1;
@@ -251,7 +254,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
                 // If we can't find a next broker, we should skip over those considered.
                 if target_index.is_none() {
-                    target_index = Some(brokers.len());
+                    target_index = Some(broker_ids.len());
                 }
             } else if sender_id == message.get_return_path()[0].get_messenger_id()
                 && !matches!(message.get_attribution(), Attribution::Derived(..))
@@ -435,16 +438,12 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         match action {
             MessengerAction::Create(messenger_descriptor, responder, messenger_tx) => {
                 let mut optional_address = None;
-                if let MessengerType::Addressable(address) =
-                    messenger_descriptor.messenger_type.clone()
-                {
-                    optional_address = Some(address.clone());
+                if let MessengerType::Addressable(address) = messenger_descriptor.messenger_type {
                     if self.addresses.contains_key(&address) {
-                        responder
-                            .send(Err(MessageError::AddressConflict { address: address }))
-                            .ok();
+                        responder.send(Err(MessageError::AddressConflict { address })).ok();
                         return;
                     }
+                    optional_address = Some(address);
                 }
 
                 let id = self.next_id;
@@ -457,23 +456,21 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 let messenger =
                     Messenger::new(Fingerprint { id, signature }, self.action_tx.clone());
 
-                let messenger_clone = messenger.clone();
-
                 // Create fuse to delete Messenger.
                 let fuse = ActionFuseBuilder::new()
                     .add_action(Box::new(move || {
                         messenger_tx
-                            .unbounded_send(MessengerAction::Delete(messenger_clone.clone()))
+                            .unbounded_send(MessengerAction::DeleteBySignature(signature))
                             .ok();
                     }))
                     .build();
 
                 self.next_id += 1;
                 let (beacon, receptor) =
-                    BeaconBuilder::new(messenger.clone()).add_fuse(fuse.clone()).build();
+                    BeaconBuilder::new(messenger.clone()).add_fuse(Arc::clone(&fuse)).build();
                 self.beacons.insert(id, beacon);
 
-                match messenger_descriptor.messenger_type.clone() {
+                match messenger_descriptor.messenger_type {
                     MessengerType::Broker(filter) => {
                         self.brokers.push(Broker { messenger_id: id, filter });
                     }
@@ -487,19 +484,16 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
                 // Track roles
                 for role in &messenger_descriptor.roles {
-                    self.roles.entry(role.clone()).or_insert_with(|| HashSet::new()).insert(id);
+                    self.roles.entry(*role).or_insert_with(|| HashSet::new()).insert(id);
                 }
 
                 // Update descriptor mapping and role records
-                self.messengers.insert(id, messenger_descriptor);
+                self.messengers.insert(id, messenger_descriptor.roles);
 
-                responder.send(Ok((MessengerClient::new(messenger, fuse.clone()), receptor))).ok();
+                responder.send(Ok((MessengerClient::new(messenger, fuse), receptor))).ok();
             }
             MessengerAction::CheckPresence(signature, responder) => {
                 responder.send(Ok(self.resolve_messenger_id(&signature).is_ok())).ok();
-            }
-            MessengerAction::Delete(messenger) => {
-                self.delete_by_signature(messenger.get_signature())
             }
             MessengerAction::DeleteBySignature(signature) => self.delete_by_signature(signature),
         }
@@ -509,8 +503,8 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         let id = self.resolve_messenger_id(&signature).expect("messenger should be present");
 
         // Clean up roles
-        if let Some(descriptor) = self.messengers.remove(&id) {
-            for role in descriptor.roles {
+        if let Some(roles) = self.messengers.remove(&id) {
+            for role in roles {
                 // Remove messenger from each role it belongs to. Remove the
                 // role as well if it no longer has any members.
                 if let Some(messengers) = self.roles.get_mut(&role) {
@@ -540,16 +534,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         action: MessageAction<P, A, R>,
         beacon: Option<Beacon<P, A, R>>,
     ) {
-        let message;
-
-        match action {
+        let mut outgoing_message = match action {
             MessageAction::Send(payload, message_type, timestamp) => {
-                message = Some(Message::new(fingerprint.clone(), timestamp, payload, message_type));
+                Message::new(fingerprint, timestamp, payload, message_type)
             }
-            MessageAction::Forward(mut forwarded_message) => {
-                message = Some(forwarded_message.clone());
+            MessageAction::Forward(forwarded_message) => {
                 if let Some(beacon) = self.beacons.get(&fingerprint.id) {
-                    match forwarded_message.clone().get_type() {
+                    match forwarded_message.get_type() {
                         MessageType::Origin(audience) => {
                             // Can't forward messages meant for forwarder
                             if Audience::Messenger(fingerprint.signature) == *audience {
@@ -577,16 +568,15 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                     forwarded_message.report_status(Status::Undeliverable).await;
                     return;
                 }
+                forwarded_message
             }
+        };
+
+        if let Some(handle) = beacon {
+            outgoing_message.add_participant(handle);
         }
 
-        if let Some(mut outgoing_message) = message {
-            if let Some(handle) = beacon {
-                outgoing_message.add_participant(handle);
-            }
-
-            self.send_to_next(fingerprint.id, outgoing_message).await;
-        }
+        self.send_to_next(fingerprint.id, outgoing_message).await;
     }
 
     fn process_role_request(&mut self, action: role::Action<R>) -> Result<(), Error> {

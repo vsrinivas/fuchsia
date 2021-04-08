@@ -5,7 +5,7 @@
 use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::beacon::Beacon;
 use crate::message::message_client::MessageClient;
-use crate::message::messenger::{Messenger, MessengerClient};
+use crate::message::messenger::MessengerClient;
 use crate::message::receptor::Receptor;
 use crate::message::Timestamp;
 use futures::channel::mpsc::UnboundedSender;
@@ -22,13 +22,13 @@ impl<T: Clone + Debug + Send + Sync> Payload for T {}
 
 /// Trait alias for types of data that can be used as an address in a
 /// MessageHub.
-pub trait Address: Clone + Debug + Eq + Hash + Unpin + Send + Sync {}
-impl<T: Clone + Debug + Eq + Hash + Unpin + Send + Sync> Address for T {}
+pub trait Address: Copy + Debug + Eq + Hash + Unpin + Send + Sync {}
+impl<T: Copy + Debug + Eq + Hash + Unpin + Send + Sync> Address for T {}
 
 /// Trait alias for types of data that can be used as a role in a
 /// MessageHub.
-pub trait Role: Clone + Debug + Eq + Hash + Send + Sync {}
-impl<T: Clone + Debug + Eq + Hash + Send + Sync> Role for T {}
+pub trait Role: Copy + Debug + Eq + Hash + Send + Sync {}
+impl<T: Copy + Debug + Eq + Hash + Send + Sync> Role for T {}
 
 /// A mod for housing common definitions for messengers. Messengers are
 /// MessageHub participants, which are capable of sending and receiving
@@ -36,6 +36,8 @@ impl<T: Clone + Debug + Eq + Hash + Send + Sync> Role for T {}
 pub(super) mod messenger {
     use super::{role, Address, MessengerType, Payload, Role};
     use std::collections::HashSet;
+
+    pub type Roles<R> = HashSet<role::Signature<R>>;
 
     /// `Descriptor` is a blueprint for creating a messenger. It is sent to the
     /// MessageHub by clients, which interprets the information to build the
@@ -50,7 +52,7 @@ pub(super) mod messenger {
         /// The roles to associate with this messenger. When a messenger
         /// is associated with a given [`Role`], any message directed to that
         /// [`Role`] will be delivered to the messenger.
-        pub roles: HashSet<role::Signature<R>>,
+        pub roles: Roles<R>,
     }
 }
 
@@ -195,7 +197,7 @@ pub enum MessageError<A: Address + 'static> {
 }
 
 /// The types of results possible from sending or replying.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Status {
     // Sent to some audience, potentially no one.
     Broadcasted,
@@ -249,7 +251,11 @@ impl<A: Address + 'static, R: Role + 'static> Audience<A, R> {
             Audience::Group(group) => {
                 group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
             }
-            _ => [self.clone()].iter().cloned().collect(),
+            _ => {
+                let mut hash_set = HashSet::new();
+                hash_set.insert(self.clone());
+                hash_set
+            }
         }
     }
 }
@@ -495,7 +501,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
 
         // A derived message adopts the return path of the original message.
         if let Attribution::Derived(message, _) = &attribution {
-            return_path.append(&mut message.get_return_path());
+            return_path.extend(message.get_return_path().iter().cloned());
         }
 
         Message { author, timestamp, payload, attribution, return_path }
@@ -507,7 +513,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     }
 
     pub fn get_timestamp(&self) -> Timestamp {
-        self.timestamp.clone()
+        self.timestamp
     }
 
     /// Returns the Signatures of messengers who have modified this message
@@ -516,7 +522,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
         let mut modifiers = vec![];
 
         if let Attribution::Derived(origin, signature) = &self.attribution {
-            modifiers.push(signature.clone());
+            modifiers.push(*signature);
             modifiers.extend(origin.get_modifiers());
         }
 
@@ -525,7 +531,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
 
     pub fn get_author(&self) -> Signature<A> {
         match &self.attribution {
-            Attribution::Source(_) => self.author.signature.clone(),
+            Attribution::Source(_) => self.author.signature,
             Attribution::Derived(message, _) => message.get_author(),
         }
     }
@@ -539,8 +545,8 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     }
 
     /// Returns the list of participants for the reply return path.
-    pub(super) fn get_return_path(&self) -> Vec<Beacon<P, A, R>> {
-        return self.return_path.clone();
+    pub(super) fn get_return_path(&self) -> &Vec<Beacon<P, A, R>> {
+        &self.return_path
     }
 
     /// Returns the message's attribution, which identifies whether it has been modified by a source
@@ -563,9 +569,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     }
 
     /// Delivers the supplied status to all participants in the return path.
-    pub(super) async fn report_status(&mut self, status: Status) {
-        for beacon in self.return_path.clone() {
-            beacon.status(status.clone()).await.ok();
+    pub(super) async fn report_status(&self, status: Status) {
+        for beacon in &self.return_path {
+            beacon.status(status).await.ok();
         }
     }
 }
@@ -605,8 +611,6 @@ pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static, R: R
     ),
     /// Check whether a messenger exists for the given [`Signature`]
     CheckPresence(Signature<A>, MessengerPresenceSender<A>),
-    /// Deletes a given messenger
-    Delete(Messenger<P, A, R>),
     /// Deletes a messenger by its [`Signature`]
     DeleteBySignature(Signature<A>),
 }
