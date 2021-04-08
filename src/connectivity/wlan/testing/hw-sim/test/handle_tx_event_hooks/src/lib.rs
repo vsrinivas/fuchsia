@@ -6,8 +6,8 @@ use {
     anyhow::format_err,
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
+    fuchsia_async::futures::{channel::oneshot, join},
     fuchsia_zircon::prelude::*,
-    futures::channel::oneshot,
     pin_utils::pin_mut,
     wlan_common::{
         assert_variant,
@@ -102,10 +102,6 @@ async fn handle_tx_event_hooks() {
 
     let phy = helper.proxy();
 
-    let connect_to_network_fut =
-        save_network_and_wait_until_connected(SSID, fidl_policy::SecurityType::Wpa2, passphrase);
-    pin_mut!(connect_to_network_fut);
-
     // Validate the connect request.
     let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, SSID, p));
     let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
@@ -114,6 +110,24 @@ async fn handle_tx_event_hooks() {
     let (esssa_established_sender, esssa_established_receiver) = oneshot::channel();
     let mut esssa_established_sender_ptr = Some(esssa_established_sender);
     let mut all_auth_updates: Vec<SecAssocUpdate> = vec![];
+
+    // Wait for policy to indicate client connected AND the authenticator to indicate
+    // EssSa established.
+    let connect_to_network_fut = async {
+        join!(
+            save_network_and_wait_until_connected(
+                SSID,
+                fidl_policy::SecurityType::Wpa2,
+                passphrase
+            ),
+            async {
+                esssa_established_receiver
+                    .await
+                    .expect("waiting for confirmation of EssSa established for authenticator")
+            }
+        )
+    };
+    pin_mut!(connect_to_network_fut);
 
     helper
         .run_until_complete_or_timeout(
@@ -135,10 +149,6 @@ async fn handle_tx_event_hooks() {
             connect_to_network_fut,
         )
         .await;
-
-    esssa_established_receiver
-        .await
-        .expect("waiting for confirmation of EssSa established for authenticator");
 
     // The process_auth_update hook for this test collects all of the updates that appear
     // in an update_sink while connecting to a WPA2 AP.
