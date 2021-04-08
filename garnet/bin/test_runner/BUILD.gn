@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 # TODO(fxbug.dev/16147): all of the following should be moved to components. In the
 # future, only run-integration-tests should remain as a shell=true binary.
@@ -20,52 +20,18 @@ group("test_runner") {
   ]
 }
 
-package("run_integration_tests") {
+fuchsia_shell_package("run_integration_tests") {
   deps = [
     "report_result",
     "run_integration_tests",
   ]
-
-  binaries = [
-    {
-      name = "report_result"
-      shell = true
-    },
-    {
-      name = "run_integration_tests"
-      shell = true
-    },
-  ]
 }
 
-package("run_test") {
+fuchsia_shell_package("run_test") {
   deps = [ "run_test" ]
-
-  binaries = [
-    {
-      name = "run_test"
-      shell = true
-    },
-  ]
 }
 
-package("test_runner_tests") {
+fuchsia_shell_package("test_runner_tests") {
   testonly = true
-
   deps = [ "test" ]
-
-  binaries = [
-    {
-      name = "fake_command"
-      shell = true
-    },
-    {
-      name = "fake_failing_test"
-      shell = true
-    },
-    {
-      name = "fake_passing_test"
-      shell = true
-    },
-  ]
 }
