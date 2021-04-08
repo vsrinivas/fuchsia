@@ -14,16 +14,15 @@ namespace internal {
 // TODO(madhaviyengar): Move this constant to zircon/fidl.h
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
-zx_status_t ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
-                             async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound) {
+void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
+                      async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
   channel_tracker_.Init(std::move(channel));
   auto binding = AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
                                             std::move(on_unbound));
-  auto status = binding->BeginWait();
   binding_ = binding;
-  return status;
+  binding->BeginWait();
 }
 
 void ClientBase::Unbind() {

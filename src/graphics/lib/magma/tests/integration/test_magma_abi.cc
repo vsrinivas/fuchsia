@@ -783,9 +783,7 @@ class TestConnection {
 
     zx::channel server_endpoint, client_endpoint;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &server_endpoint, &client_endpoint));
-    auto result = fidl::BindServer(loop.dispatcher(), std::move(server_endpoint), &server);
-
-    ASSERT_TRUE(result.is_ok());
+    fidl::BindServer(loop.dispatcher(), std::move(server_endpoint), &server);
 
     EXPECT_EQ(expected_result,
               magma_connection_access_performance_counters(connection_, client_endpoint.release()));

@@ -239,11 +239,7 @@ zx_status_t Keyboard::StartReading() {
     Keyboard* const keyboard_;
   };
 
-  auto status =
-      reader_client_.Bind(std::move(client), dispatcher_, std::make_shared<EventHandler>(this));
-  if (status != ZX_OK) {
-    return status;
-  }
+  reader_client_.Bind(std::move(client), dispatcher_, std::make_shared<EventHandler>(this));
 
   // Queue up the first read.
   reader_client_->ReadInputReports(

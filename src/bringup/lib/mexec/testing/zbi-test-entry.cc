@@ -57,12 +57,7 @@ int main() {
     return ZX_ERR_INTERNAL;
   }
   FakeDeviceAdmin admin;
-  if (auto result = fidl::BindServer(loop.dispatcher(), std::move(remote), &admin);
-      result.is_error()) {
-    printf("failed to start server implementing %s: %s\n", devmgr::Administrator::Name,
-           zx_status_get_string(result.error()));
-    return ZX_ERR_INTERNAL;
-  }
+  fidl::BindServer(loop.dispatcher(), std::move(remote), &admin);
 
   fbl::unique_fd fd{open(kMexecZbi, O_RDONLY)};
   if (!fd) {

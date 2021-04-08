@@ -344,11 +344,8 @@ class VcDisplayTest : public zxtest::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     loop_->StartThread();
 
-    auto result =
+    server_binding_ =
         fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server), controller_.get());
-    ASSERT_TRUE(result.is_ok());
-
-    server_binding_ = result.take_value();
   }
   void SendAddDisplay(fhd::wire::Info* display) {
     server_binding_.value()->OnDisplaysChanged(

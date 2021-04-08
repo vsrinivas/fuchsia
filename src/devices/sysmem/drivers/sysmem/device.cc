@@ -556,11 +556,9 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
 
         auto heap_client = std::make_unique<fidl::Client<fuchsia_sysmem2::Heap>>();
         auto heap_client_ptr = heap_client.get();
-        status =
-            heap_client_ptr->Bind(std::move(heap_connection), loop_.dispatcher(),
-                                  std::make_shared<EventHandler>(this, std::move(heap_client), heap,
-                                                                 std::move(wait_for_close)));
-        ZX_ASSERT(status == ZX_OK);
+        heap_client_ptr->Bind(std::move(heap_connection), loop_.dispatcher(),
+                              std::make_shared<EventHandler>(this, std::move(heap_client), heap,
+                                                             std::move(wait_for_close)));
       });
 }
 

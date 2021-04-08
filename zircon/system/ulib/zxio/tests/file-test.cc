@@ -123,12 +123,8 @@ class File : public zxtest::Test {
     if (status != ZX_OK) {
       return fit::error(status);
     }
-    auto bind_result = fidl::BindServer(loop_->dispatcher(), std::move(server_end), server_.get());
-    EXPECT_TRUE(bind_result.is_ok());
-    if (bind_result.is_error()) {
-      return bind_result.take_error_result();
-    }
-    binding_ = std::make_unique<fidl::ServerBindingRef<fio::File>>(std::move(bind_result.value()));
+    auto binding = fidl::BindServer(loop_->dispatcher(), std::move(server_end), server_.get());
+    binding_ = std::make_unique<fidl::ServerBindingRef<fio::File>>(std::move(binding));
     return fit::ok(std::move(client_end));
   }
 

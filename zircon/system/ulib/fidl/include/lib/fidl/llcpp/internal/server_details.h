@@ -74,16 +74,19 @@ struct MethodEntry {
 // the user pointer type, possibly at an offset, before invoking the
 // user-provided on-unbound handler.
 template <typename Protocol>
-fit::result<ServerBindingRef<Protocol>, zx_status_t> BindServerTypeErased(
-    async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol> server_end,
-    IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound) {
+ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
+                                                fidl::ServerEnd<Protocol> server_end,
+                                                IncomingMessageDispatcher* interface,
+                                                internal::AnyOnUnboundFn on_unbound) {
   auto internal_binding = internal::AsyncServerBinding<Protocol>::Create(
       dispatcher, std::move(server_end), interface, std::move(on_unbound));
-  auto status = internal_binding->BeginWait();
-  if (status != ZX_OK) {
-    return fit::error(status);
-  }
-  return fit::ok(fidl::ServerBindingRef<Protocol>(std::move(internal_binding)));
+  auto binding_ref = fidl::ServerBindingRef<Protocol>(internal_binding);
+  auto* binding_ptr = internal_binding.get();
+  // The binding object keeps itself alive until unbinding, so dropping the
+  // shared pointer here is fine.
+  internal_binding.reset();
+  binding_ptr->BeginWait();
+  return binding_ref;
 }
 
 // All overloads of |BindServer| calls into this function.
@@ -94,7 +97,7 @@ fit::result<ServerBindingRef<Protocol>, zx_status_t> BindServerTypeErased(
 // Note: if you see a compiler error that ends up in this function, that is
 // probably because you passed in an incompatible |on_unbound| handler.
 template <typename ServerImpl, typename OnUnbound>
-fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServerImpl(
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
     async_dispatcher_t* dispatcher,
     fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
     OnUnbound&& on_unbound) {

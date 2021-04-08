@@ -76,23 +76,15 @@ class ServerTest : public zxtest::Test {
 
     auto add_foo_result =
         my_service.add_foo([this, foo_impl](fidl::ServerEnd<Echo> request_channel) -> zx::status<> {
-          // TODO(fxbug.dev/67062): |fidl::BindServer| should return a |zx::status|,
-          // which would simplify this code.
-          auto result = fidl::BindServer(loop_.dispatcher(), std::move(request_channel), foo_impl);
-          if (result.is_ok())
-            return zx::ok();
-          return zx::make_status(result.take_error());
+          fidl::BindServer(loop_.dispatcher(), std::move(request_channel), foo_impl);
+          return zx::ok();
         });
     ZX_ASSERT(add_foo_result.is_ok());
 
     auto add_bar_result =
         my_service.add_bar([this, bar_impl](fidl::ServerEnd<Echo> request_channel) -> zx::status<> {
-          // TODO(fxbug.dev/67062): |fidl::BindServer| should return a |zx::status|,
-          // which would simplify this code.
-          auto result = fidl::BindServer(loop_.dispatcher(), std::move(request_channel), bar_impl);
-          if (result.is_ok())
-            return zx::ok();
-          return zx::make_status(result.take_error());
+          fidl::BindServer(loop_.dispatcher(), std::move(request_channel), bar_impl);
+          return zx::ok();
         });
     ZX_ASSERT(add_bar_result.is_ok());
 

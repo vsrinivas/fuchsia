@@ -65,19 +65,45 @@ class AsyncBinding : private async_wait_t {
  public:
   ~AsyncBinding() __TA_EXCLUDES(lock_) = default;
 
-  zx_status_t BeginWait() __TA_EXCLUDES(lock_);
+  void BeginWait() __TA_EXCLUDES(lock_);
 
   zx_status_t EnableNextDispatch() __TA_EXCLUDES(lock_);
+
+  // |UnbindInternal| attempts to post exactly one task to drive the unbinding process.
+  // This enum reflects the result of posting the task.
+  enum class UnboundNotificationPostingResult {
+    kOk,
+
+    // The unbind task is already running, so we should not post another.
+    kRacedWithInProgressUnbind,
+
+    // Failed to post the task to the dispatcher. This is usually due to
+    // the dispatcher already shutting down.
+    //
+    // If the user shuts down the dispatcher when the binding is already
+    // established and monitoring incoming messages, then whichever thread
+    // that was monitoring incoming messages would drive the unbinding
+    // process.
+    //
+    // If the user calls |BindServer| on a shut-down dispatcher, there is
+    // no available thread to drive the unbinding process and report errors.
+    // We consider it a programming error, and panic right away. Note that
+    // this is inherently racy i.e. shutting down dispatchers while trying
+    // to also bind new channels to the same dispatcher, so we may want to
+    // reevaluate whether shutting down the dispatcher is an error whenever
+    // there is any active binding (fxbug.dev/NNNNN).
+    kDispatcherError,
+  };
 
   void Unbind(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(lock_) {
     UnbindInternal(std::move(calling_ref), {UnbindInfo::kUnbind, ZX_OK});
   }
 
-  void InternalError(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo error)
-      __TA_EXCLUDES(lock_) {
+  UnboundNotificationPostingResult InternalError(std::shared_ptr<AsyncBinding>&& calling_ref,
+                                                 UnbindInfo error) __TA_EXCLUDES(lock_) {
     if (error.status == ZX_ERR_PEER_CLOSED)
       error.reason = UnbindInfo::kPeerClosed;
-    UnbindInternal(std::move(calling_ref), error);
+    return UnbindInternal(std::move(calling_ref), error);
   }
 
   zx::unowned_channel channel() const { return zx::unowned_channel(handle()); }
@@ -117,8 +143,8 @@ class AsyncBinding : private async_wait_t {
   virtual std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) = 0;
 
   // Used by both Close() and Unbind().
-  void UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
-      __TA_EXCLUDES(lock_);
+  UnboundNotificationPostingResult UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
+                                                  UnbindInfo info) __TA_EXCLUDES(lock_);
 
   // Triggered by explicit Unbind(), channel peer closed, or other channel/dispatcher error in the
   // context of a dispatcher thread with exclusive ownership of the internal binding reference. If

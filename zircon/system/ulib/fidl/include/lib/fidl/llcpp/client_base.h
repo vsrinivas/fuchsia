@@ -133,8 +133,8 @@ class ClientBase {
 
   // Bind the channel to the dispatcher. Invoke on_unbound on error or unbinding.
   // NOTE: This is not thread-safe and must be called exactly once, before any other APIs.
-  zx_status_t Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
-                   async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound);
+  void Bind(std::shared_ptr<ClientBase> client, zx::channel channel, async_dispatcher_t* dispatcher,
+            OnClientUnboundFn on_unbound);
 
   // Asynchronously unbind the client from the dispatcher. on_unbound will be invoked on a
   // dispatcher thread if provided.

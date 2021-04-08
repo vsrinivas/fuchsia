@@ -32,7 +32,7 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
 
   // Bind and Connect create a new connection to the loader service. Connect is identical to
   // Bind but creates the channel for the caller.
-  zx::status<> Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel);
+  void Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel);
   zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Connect();
 
  protected:

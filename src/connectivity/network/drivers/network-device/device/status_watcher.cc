@@ -31,9 +31,8 @@ zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher,
                                 fit::callback<void(StatusWatcher*)> closed_callback) {
   fbl::AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(!binding_.has_value());
-  auto result =
+  binding_ =
       fidl::BindServer(dispatcher, std::move(channel), this,
-
                        [](StatusWatcher* closed, fidl::UnbindInfo info,
                           fidl::ServerEnd<fuchsia_hardware_network::StatusWatcher> /*unused*/) {
                          LOGF_TRACE("network-device: watcher closed, reason=%d", info.reason);
@@ -48,10 +47,6 @@ zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher,
                            closed->closed_cb_(closed);
                          }
                        });
-  if (result.is_error()) {
-    return result.error();
-  }
-  binding_ = result.take_value();
   closed_cb_ = std::move(closed_callback);
   return ZX_OK;
 }

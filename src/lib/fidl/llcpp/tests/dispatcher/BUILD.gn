@@ -19,6 +19,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
   sources = [
     "bind_server_overloads_test.cc",
     "client_test.cc",
+    "server_test.cc",
     "transaction_tests.cc",
   ]
   deps = [

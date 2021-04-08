@@ -41,7 +41,7 @@ void AsyncBinding::OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindI
     if (is_unbind_task) {
       // If the async_cancel_wait() in UnbindInternal() failed, another dispatcher thread has
       // access to keep_alive_ and may already be waiting on other references to be released.
-      if (!canceled_)
+      if (begun_ && !canceled_)
         return;
       // No other thread will touch the internal reference.
       keep_alive_ = nullptr;
@@ -122,17 +122,54 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
   }
 }
 
-zx_status_t AsyncBinding::BeginWait() {
-  std::scoped_lock lock(lock_);
-  ZX_ASSERT(!begun_);
-  auto status = async_begin_wait(dispatcher_, this);
-  // On error, release the internal reference so it can be destroyed.
-  if (status != ZX_OK) {
-    keep_alive_ = nullptr;
-    return status;
+void AsyncBinding::BeginWait() {
+  zx_status_t status;
+  {
+    std::scoped_lock lock(lock_);
+    ZX_ASSERT(!begun_);
+    status = async_begin_wait(dispatcher_, this);
+    if (status == ZX_OK) {
+      begun_ = true;
+      return;
+    }
   }
-  begun_ = true;
-  return ZX_OK;
+
+  // If the first |async_begin_wait| failed, attempt to report the error through
+  // the |on_unbound| handler - the interface was effectively unbound
+  // immediately on first dispatch.
+  //
+  // There are two possible error cases:
+  //
+  // - The server endpoint does not have the |ZX_RIGHT_WAIT| right. Since the
+  //   server endpoint may be of foreign origin, asynchronously report the error
+  //   through the |on_unbound| handler.
+  //
+  // - The dispatcher does not support waiting on a port, or was shutdown. This
+  //   is a programming error. The user code should either switch to a
+  //   supporting dispatcher, or properly implement teardown by not shutting
+  //   down the event loop until all current incoming events have been
+  //   processed.
+  //
+  using Result = AsyncBinding::UnboundNotificationPostingResult;
+  Result result =
+      InternalError(std::shared_ptr(keep_alive_), UnbindInfo{
+                                                      .reason = UnbindInfo::kDispatcherError,
+                                                      .status = status,
+                                                  });
+  switch (result) {
+    case Result::kDispatcherError:
+      // We are crashing the process anyways, but clearing |keep_alive_| helps
+      // death-tests pass the leak-sanitizer.
+      keep_alive_ = nullptr;
+      ZX_PANIC(
+          "When binding FIDL connection: "
+          "dispatcher was shutdown, or unsupported dispatcher.");
+    case Result::kRacedWithInProgressUnbind:
+      // Should never happen - the binding was only just created.
+      __builtin_unreachable();
+    case Result::kOk:
+      return;
+  }
 }
 
 zx_status_t AsyncBinding::EnableNextDispatch() {
@@ -145,7 +182,8 @@ zx_status_t AsyncBinding::EnableNextDispatch() {
   return status;
 }
 
-void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) {
+auto AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
+    -> UnboundNotificationPostingResult {
   ZX_ASSERT(calling_ref);
   // Move the calling reference into this scope.
   auto binding = std::move(calling_ref);
@@ -154,24 +192,25 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, U
   // Another thread has entered this critical section already via Unbind(), Close(), or
   // OnUnbind(). Release our reference and return to unblock that caller.
   if (unbind_)
-    return;
+    return UnboundNotificationPostingResult::kRacedWithInProgressUnbind;
   unbind_ = true;       // Indicate that waits should no longer be added to the dispatcher.
   unbind_info_ = info;  // Store the reason for unbinding.
 
-  // Attempt to add a task to unbind the channel. On failure, the dispatcher was shutdown,
-  // and another thread will do the unbinding.
+  // Attempt to add a task to unbind the channel. On failure, the dispatcher was shutdown;
+  // if another thread was monitoring incoming messages, that thread would do the unbinding.
   auto* unbind_task = new UnbindTask{
       .task = {{ASYNC_STATE_INIT}, &AsyncBinding::OnUnbindTask, async_now(dispatcher_)},
       .binding = binding,
   };
   if (async_post_task(dispatcher_, &unbind_task->task) != ZX_OK) {
     delete unbind_task;
-    return;
+    return UnboundNotificationPostingResult::kDispatcherError;
   }
 
   // Attempt to cancel the current wait. On failure, a dispatcher thread (possibly this thread)
   // will invoke OnUnbind() before returning to the dispatcher.
   canceled_ = async_cancel_wait(dispatcher_, this) == ZX_OK;
+  return UnboundNotificationPostingResult::kOk;
 }
 
 std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl_incoming_msg_t* msg,

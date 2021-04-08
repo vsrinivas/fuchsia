@@ -344,13 +344,7 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
 
   auto bind_controller = fidl::BindServer<fidl::WireInterface<fdf::NodeController>>(
       dispatcher_, std::move(controller), child.get());
-  if (bind_controller.is_error()) {
-    LOGF(ERROR, "Failed to bind channel to NodeController '%.*s': %s", name.size(), name.data(),
-         zx_status_get_string(bind_controller.error()));
-    completer.Close(bind_controller.error());
-    return;
-  }
-  child->set_controller_ref(bind_controller.take_value());
+  child->set_controller_ref(std::move(bind_controller));
 
   if (node.is_valid()) {
     auto bind_node = fidl::BindServer<fidl::WireInterface<fdf::Node>>(
@@ -358,13 +352,7 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
         [](fidl::WireInterface<fdf::Node>* node, auto, auto) {
           static_cast<Node*>(node)->Remove();
         });
-    if (bind_node.is_error()) {
-      LOGF(ERROR, "Failed to bind channel to Node '%.*s': %s", name.size(), name.data(),
-           zx_status_get_string(bind_node.error()));
-      completer.Close(bind_node.error());
-      return;
-    }
-    child->set_node_ref(bind_node.take_value());
+    child->set_node_ref(std::move(bind_node));
     children_.push_back(std::move(child));
     completer.ReplySuccess();
   } else {
@@ -404,12 +392,7 @@ fit::promise<inspect::Inspector> DriverRunner::Inspect() {
 
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {
-    auto result = fidl::BindServer(dispatcher_, std::move(request), this);
-    if (result.is_error()) {
-      LOGF(ERROR, "Failed to bind channel to '%s': %s", frunner::ComponentRunner::Name,
-           zx_status_get_string(result.error()));
-      return result.error();
-    }
+    fidl::BindServer(dispatcher_, std::move(request), this);
     return ZX_OK;
   };
   zx_status_t status =
@@ -517,14 +500,8 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
           LOGF(ERROR, "Failed to destroy component '%s': %s", name.data(), destroy.error());
         }
       });
-  if (bind_driver.is_error()) {
-    LOGF(ERROR, "Failed to bind channel to ComponentController for driver '%.*s': %s", url.size(),
-         url.data(), zx_status_get_string(bind_driver.error()));
-    completer.Close(bind_driver.error());
-    return;
-  }
-  driver_args.node->set_driver_ref(bind_driver.value());
-  driver->set_driver_ref(bind_driver.take_value());
+  driver_args.node->set_driver_ref(bind_driver);
+  driver->set_driver_ref(std::move(bind_driver));
   auto watch = driver->WatchDriver(dispatcher_);
   if (watch.is_error()) {
     LOGF(ERROR, "Failed to watch channel for driver '%.*s': %s", url.size(), url.data(),
@@ -537,14 +514,8 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
   auto bind_node = fidl::BindServer<fidl::WireInterface<fdf::Node>>(
       dispatcher_, std::move(endpoints->server), driver_args.node,
       [](fidl::WireInterface<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
-  if (bind_node.is_error()) {
-    LOGF(ERROR, "Failed to bind channel to Node for driver '%.*s': %s", url.size(), url.data(),
-         zx_status_get_string(bind_node.error()));
-    completer.Close(bind_node.error());
-    return;
-  }
-  driver_args.node->set_node_ref(bind_node.value());
-  driver->set_node_ref(bind_node.take_value());
+  driver_args.node->set_node_ref(bind_node);
+  driver->set_node_ref(std::move(bind_node));
   drivers_.push_back(std::move(driver));
 }
 

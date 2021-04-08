@@ -1802,15 +1802,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   if (config_.enable_ephemeral) {
     const auto driver_registrar = [this](zx::channel request) {
-      auto result =
+      driver_registrar_binding_ =
           fidl::BindServer<fidl::WireInterface<fuchsia_driver_registrar::DriverRegistrar>>(
               dispatcher_, std::move(request), this);
-      if (!result.is_ok()) {
-        LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-             fuchsia_driver_registrar::DriverRegistrar::Name, zx_status_get_string(result.error()));
-        return result.error();
-      }
-      driver_registrar_binding_ = result.take_value();
       return ZX_OK;
     };
     status = svc_dir->AddEntry(fuchsia_driver_registrar::DriverRegistrar::Name,

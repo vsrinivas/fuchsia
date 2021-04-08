@@ -11,14 +11,7 @@
 namespace component {
 
 zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, zx::channel channel) {
-  auto result = fidl::BindServer(dispatcher, std::move(channel), this);
-  if (result.is_error()) {
-    zx_status_t status = result.take_error();
-    FX_PLOGS(ERROR, status) << "Failed to connect to Lifecycle Service.";
-    return status;
-  }
-
-  lifecycle_ = result.take_value();
+  lifecycle_ = fidl::BindServer(dispatcher, std::move(channel), this);
   return ZX_OK;
 }
 

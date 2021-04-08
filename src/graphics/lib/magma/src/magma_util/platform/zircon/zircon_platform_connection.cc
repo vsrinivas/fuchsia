@@ -66,15 +66,9 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
         self->async_loop()->Quit();
       };
 
-  fit::result<fidl::ServerBindingRef<fuchsia_gpu_magma::Primary>, zx_status_t> result =
-      fidl::BindServer(async_loop()->dispatcher(), std::move(server_endpoint), this,
-                       std::move(unbind_callback));
-
-  if (!result.is_ok())
-    return DRETF(false, "fidl::BindServer failed: %d", result.take_error());
-
   // Note: the async loop should not be started until we assign |server_binding_|.
-  server_binding_ = result.take_value();
+  server_binding_ = fidl::BindServer(async_loop()->dispatcher(), std::move(server_endpoint), this,
+                                     std::move(unbind_callback));
   return true;
 }
 

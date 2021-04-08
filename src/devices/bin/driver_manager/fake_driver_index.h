@@ -27,10 +27,7 @@ class FakeDriverIndex final : public fidl::WireInterface<fuchsia_driver_framewor
     if (endpoints.is_error()) {
       return zx::error(endpoints.status_value());
     }
-    auto result = fidl::BindServer(dispatcher_, std::move(endpoints->server), this);
-    if (!result.is_ok()) {
-      return zx::error(result.error());
-    }
+    fidl::BindServer(dispatcher_, std::move(endpoints->server), this);
     return zx::ok(std::move(endpoints->client));
   }
 

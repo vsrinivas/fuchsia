@@ -104,11 +104,8 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Direct
     svc_dir_->AddEntry(
         "fuchsia.fshost.Loader",
         fbl::MakeRefCounted<fs::Service>([loader](fidl::ServerEnd<fuchsia_ldsvc::Loader> chan) {
-          auto status = loader->Bind(std::move(chan));
-          if (status.is_error()) {
-            FX_LOGS(ERROR) << "failed to attach loader service: " << status.status_string();
-          }
-          return status.status_value();
+          loader->Bind(std::move(chan));
+          return ZX_OK;
         }));
   }
   svc_dir_->AddEntry(fuchsia_fshost::Admin::Name,

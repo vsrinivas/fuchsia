@@ -901,29 +901,24 @@ zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface,
     return ZX_ERR_NO_MEMORY;
   }
   auto* binding_ptr = binding.get();
-  auto result = fidl::BindServer(
-      interface->dispatcher_, std::move(channel), interface,
-      fidl::OnUnboundFn<DeviceInterface>(
-          [binding_ptr](DeviceInterface* interface, fidl::UnbindInfo /*unused*/,
-                        fidl::ServerEnd<fuchsia_hardware_network::Device> /*unused*/) {
-            bool bindings_empty;
-            interface->teardown_lock_.Acquire();
-            {
-              fbl::AutoLock lock(&interface->bindings_lock_);
-              interface->bindings_.erase(*binding_ptr);
-              bindings_empty = interface->bindings_.is_empty();
-            }
+  binding->binding_ =
+      fidl::BindServer(interface->dispatcher_, std::move(channel), interface,
+                       [binding_ptr](DeviceInterface* interface, fidl::UnbindInfo /*unused*/,
+                                     fidl::ServerEnd<fuchsia_hardware_network::Device> /*unused*/) {
+                         bool bindings_empty;
+                         interface->teardown_lock_.Acquire();
+                         {
+                           fbl::AutoLock lock(&interface->bindings_lock_);
+                           interface->bindings_.erase(*binding_ptr);
+                           bindings_empty = interface->bindings_.is_empty();
+                         }
 
-            if (bindings_empty) {
-              interface->ContinueTeardown(TeardownState::BINDINGS);
-            } else {
-              interface->teardown_lock_.Release();
-            }
-          }));
-  if (result.is_error()) {
-    return result.error();
-  }
-  binding->binding_ = result.take_value();
+                         if (bindings_empty) {
+                           interface->ContinueTeardown(TeardownState::BINDINGS);
+                         } else {
+                           interface->teardown_lock_.Release();
+                         }
+                       });
   fbl::AutoLock lock(&interface->bindings_lock_);
   interface->bindings_.push_front(std::move(binding));
   return ZX_OK;

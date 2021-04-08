@@ -47,7 +47,6 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   static constexpr char data[] = "TwoWay() sync managed";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, strlen(data)));
-  ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
   auto result = client->TwoWay(fidl::StringView(data),
@@ -59,7 +58,7 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
-  server_binding.value().Unbind();
+  server_binding.Unbind();
 }
 
 TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
@@ -97,7 +96,6 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   static constexpr char data[] = "TwoWay() sync caller-allocated";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, strlen(data)));
-  ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
   fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
@@ -106,7 +104,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
-  server_binding.value().Unbind();
+  server_binding.Unbind();
 }
 
 TEST(GenAPITestCase, EventManaged) {
@@ -139,13 +137,12 @@ TEST(GenAPITestCase, EventManaged) {
 
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, strlen(data)));
-  ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
-  ASSERT_OK(server_binding.value()->OnEvent(fidl::StringView(data)));
+  ASSERT_OK(server_binding->OnEvent(fidl::StringView(data)));
   ASSERT_OK(sync_completion_wait(&event_handler->done(), ZX_TIME_INFINITE));
 
-  server_binding.value().Unbind();
+  server_binding.Unbind();
 }
 
 // This is test is almost identical to ClientBindingTestCase.Epitaph in llcpp_client_test.cc but
@@ -217,7 +214,6 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
   auto server = std::make_unique<ErrorServer>();
   auto server_binding =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
-  ASSERT_TRUE(server_binding.is_ok());
 
   // Make a synchronous call which should fail as a result of the server end closing.
   auto result = client->TwoWay_Sync(fidl::StringView(""));
@@ -297,7 +293,6 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   auto* server_ptr = server.get();
   auto server_binding =
       fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), std::move(server));
-  ASSERT_TRUE(server_binding.is_ok());
 
   ASSERT_OK(loop.RunUntilIdle());
   EXPECT_EQ(0, server_ptr->num_one_way());

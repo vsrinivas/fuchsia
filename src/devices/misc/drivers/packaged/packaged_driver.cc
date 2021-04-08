@@ -20,10 +20,7 @@ class PackagedDriver {
       : dispatcher_(dispatcher), outgoing_(dispatcher) {}
 
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
-    zx_status_t status = node_.Bind(std::move(start_args->node()), dispatcher_);
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
+    node_.Bind(std::move(start_args->node()), dispatcher_);
 
     auto ns = Namespace::Create(start_args->ns());
     if (ns.is_error()) {
@@ -47,7 +44,7 @@ class PackagedDriver {
     FDF_LOG(INFO, "Hello world");
     auto& root = inspector_.GetRoot();
     root.CreateString("hello", "world", &inspector_);
-    status = outgoing_.Serve(std::move(start_args->outgoing_dir()));
+    zx_status_t status = outgoing_.Serve(std::move(start_args->outgoing_dir()));
     return zx::make_status(status);
   }
 

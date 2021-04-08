@@ -5,7 +5,6 @@
 #include "spi.h"
 
 #include <lib/ddk/debug.h>
-
 #include <lib/ddk/metadata.h>
 
 #include "src/devices/spi/drivers/spi/spi_bind.h"
@@ -138,10 +137,7 @@ void SpiDevice::ConnectServer(zx::channel server, SpiChild* const child) {
     }
   }
 
-  fit::result status = fidl::BindServer(loop_.dispatcher(), std::move(server), child);
-  if (status.is_error()) {
-    zxlogf(ERROR, "Failed to bind server: %d", status.error());
-  }
+  fidl::BindServer(loop_.dispatcher(), std::move(server), child);
 }
 
 static zx_driver_ops_t driver_ops = []() {

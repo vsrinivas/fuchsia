@@ -139,11 +139,8 @@ int main(int argc, const char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-  auto result = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), console.get());
-  if (result.is_error()) {
-    printf("console: fidl::BindServer() = %s\n", zx_status_get_string(result.error()));
-    return result.error();
-  }
+
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), console.get());
 
   svc::Outgoing outgoing(loop.dispatcher());
   status = outgoing.ServeFromStartupInfo();

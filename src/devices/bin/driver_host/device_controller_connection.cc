@@ -225,15 +225,16 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync&
 }
 
 DeviceControllerConnection::DeviceControllerConnection(
-    DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+    DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+    fidl::ServerEnd<fuchsia_device_manager::DeviceController> rpc,
     fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client)
     : driver_host_context_(ctx),
       dev_(std::move(dev)),
       coordinator_client_(std::move(coordinator_client)) {
-  dev_->rpc = zx::unowned_channel(rpc);
+  dev_->rpc = zx::unowned_channel(rpc.channel());
   dev_->coordinator_client = coordinator_client_.Clone();
   dev_->conn.store(this);
-  set_channel(std::move(rpc));
+  set_channel(std::move(rpc.channel()));
 }
 
 DeviceControllerConnection::~DeviceControllerConnection() {

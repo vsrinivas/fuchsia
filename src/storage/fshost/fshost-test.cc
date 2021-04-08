@@ -86,7 +86,6 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   auto fshost_vn = std::make_unique<fshost::RegistryVnode>(loop.dispatcher(), dir);
   auto server_binding =
       fidl::BindServer(loop.dispatcher(), std::move(registry_server), std::move(fshost_vn));
-  ASSERT_TRUE(server_binding.is_ok());
 
   // make a new "vfs" "client" that doesn't really point anywhere.
   auto vfs_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -139,8 +138,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   FakeDriverManagerAdmin driver_admin;
   auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
   ASSERT_TRUE(admin_endpoints.is_ok());
-  ASSERT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin)
-                  .is_ok());
+  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
 
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
@@ -184,8 +182,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   FakeDriverManagerAdmin driver_admin;
   auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
   ASSERT_TRUE(admin_endpoints.is_ok());
-  ASSERT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin)
-                  .is_ok());
+  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
 
   FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
   Config config;
@@ -279,10 +276,8 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
   auto admin = fidl::CreateEndpoints<fio::DirectoryAdmin>();
   ASSERT_OK(admin.status_value());
 
-  auto server_ptr = std::make_unique<MockDirectoryAdminOpener>();
-  auto& server = *server_ptr;
-  ASSERT_TRUE(
-      fidl::BindServer(loop.dispatcher(), std::move(admin->server), std::move(server_ptr)).is_ok());
+  auto server = std::make_shared<MockDirectoryAdminOpener>();
+  fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
 
   fdio_ns_bind(ns, "/fs", admin->client.channel().release());
 
@@ -296,11 +291,11 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
   int fd;
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, fdio_fd_create(blobexec.release(), &fd));
 
-  EXPECT_EQ(1, server.saved_open_count);
+  EXPECT_EQ(1, server->saved_open_count);
   uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE |
                             ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
-  EXPECT_EQ(expected_flags, server.saved_open_flags);
-  EXPECT_STR_EQ("blob", server.saved_path);
+  EXPECT_EQ(expected_flags, server->saved_open_flags);
+  EXPECT_STR_EQ("blob", server->saved_path);
 
   // Tear down.
   ASSERT_OK(fdio_ns_unbind(ns, "/fs"));

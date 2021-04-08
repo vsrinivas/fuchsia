@@ -151,8 +151,7 @@ TEST(ClientBindingTestCase, AsyncTxn) {
     Client<TestProtocol>& client_;
   };
 
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
-                        std::make_shared<EventHandler>(unbound, client)));
+  client.Bind(std::move(local), loop.dispatcher(), std::make_shared<EventHandler>(unbound, client));
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
@@ -196,8 +195,7 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
     Client<TestProtocol>& client_;
   };
 
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
-                        std::make_shared<EventHandler>(unbound, client)));
+  client.Bind(std::move(local), loop.dispatcher(), std::make_shared<EventHandler>(unbound, client));
 
   // In parallel, simulate 10 async transactions and send "response" messages from the remote end of
   // the channel.
@@ -269,8 +267,7 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
     Client<TestProtocol>& client_;
   };
 
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
-                        std::make_shared<EventHandler>(unbound, client)));
+  client.Bind(std::move(local), loop.dispatcher(), std::make_shared<EventHandler>(unbound, client));
 
   // Send a "response" message for which there was no outgoing request.
   ASSERT_EQ(0, client->GetTxidCount());
@@ -310,8 +307,7 @@ TEST(ClientBindingTestCase, Events) {
     Client<TestProtocol>& client_;
   };
 
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
-                        std::make_shared<EventHandler>(unbound, client)));
+  client.Bind(std::move(local), loop.dispatcher(), std::make_shared<EventHandler>(unbound, client));
 
   // In parallel, send 10 event messages from the remote end of the channel.
   std::thread threads[10];
@@ -462,8 +458,8 @@ TEST(ClientBindingTestCase, Clone) {
     Client<TestProtocol>& client_;
   };
 
-  ASSERT_OK(client.Bind(std::move(endpoints->client), loop.dispatcher(),
-                        std::make_shared<EventHandler>(unbound, client)));
+  client.Bind(std::move(endpoints->client), loop.dispatcher(),
+              std::make_shared<EventHandler>(unbound, client));
 
   // Create 20 clones of the client, and verify that they can all send messages
   // through the same internal |ClientImpl|.

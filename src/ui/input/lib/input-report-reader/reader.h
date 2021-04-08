@@ -151,13 +151,7 @@ std::unique_ptr<InputReportReader<Report>> InputReportReader<Report>::Create(
       });
 
   auto reader = std::make_unique<InputReportReader<Report>>(manager, reader_id);
-
-  auto binding =
-      fidl::BindServer(dispatcher, std::move(server), reader.get(), std::move(unbound_fn));
-  if (binding.is_error()) {
-    return nullptr;
-  }
-
+  fidl::BindServer(dispatcher, std::move(server), reader.get(), std::move(unbound_fn));
   return reader;
 }
 

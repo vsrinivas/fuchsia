@@ -106,12 +106,7 @@ fit::promise<inspect::Inspector> DriverHost::Inspect() {
 
 zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {
-    auto result = fidl::BindServer(loop_->dispatcher(), std::move(request), this);
-    if (result.is_error()) {
-      LOGF(ERROR, "Failed to bind channel to '%s': %s", fdf::DriverHost::Name,
-           zx_status_get_string(result.error()));
-      return result.error();
-    }
+    fidl::BindServer(loop_->dispatcher(), std::move(request), this);
     return ZX_OK;
   };
   zx_status_t status =
@@ -212,15 +207,7 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
                                              loop_->Quit();
                                            }
                                          });
-    if (bind.is_error()) {
-      LOGF(ERROR,
-           "Failed to start driver '/pkg/%s', could not bind channel to "
-           "'fuchsia.driver.framework.DriverHost': %s",
-           binary.data(), zx_status_get_string(bind.error()));
-      completer.Close(bind.error());
-      return;
-    }
-    driver->set_binding(bind.take_value());
+    driver->set_binding(std::move(bind));
     drivers_.push_back(std::move(driver.value()));
 
     auto start = driver_ptr->Start(message->GetOutgoingMessage(), loop_->dispatcher());

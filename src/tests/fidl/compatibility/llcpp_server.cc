@@ -364,11 +364,10 @@ int main(int argc, const char** argv) {
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>([&](zx::channel request, async_dispatcher_t* dispatcher) {
         auto conn = std::make_unique<EchoConnection>();
-        auto result = ::fidl::BindServer(
+        auto binding = ::fidl::BindServer(
             dispatcher, ::fidl::ServerEnd<fidl_test_compatibility::Echo>(std::move(request)),
             conn.get());
-        ZX_ASSERT(result.is_ok());
-        conn->set_server_binding(result.take_value());
+        conn->set_server_binding(std::move(binding));
         connections.push_back(std::move(conn));
       }),
       kEchoInterfaceName);

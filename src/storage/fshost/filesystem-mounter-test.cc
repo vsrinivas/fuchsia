@@ -122,14 +122,8 @@ class TestMounter : public FilesystemMounter {
     EXPECT_EQ(ids[0], PA_DIRECTORY_REQUEST);
     EXPECT_EQ(ids[1], FS_HANDLE_BLOCK_DEVICE_ID);
 
-    fit::result result =
-        fidl::BindServer(dispatcher_, fidl::ServerEnd<fuchsia_io::Node>(zx::channel(hnd[0])),
-                         std::make_unique<FakeNodeImpl>());
-
-    EXPECT_TRUE(result.is_ok()) << zx_status_get_string(result.error());
-    if (result.is_error()) {
-      return result.error();
-    }
+    fidl::BindServer(dispatcher_, fidl::ServerEnd<fuchsia_io::Node>(zx::channel(hnd[0])),
+                     std::make_unique<FakeNodeImpl>());
 
     // Close all other handles.
     for (size_t i = 1; i < len; i++) {

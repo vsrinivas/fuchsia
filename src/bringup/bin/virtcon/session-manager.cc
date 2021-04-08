@@ -134,12 +134,8 @@ zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> se
   return zx::ok(vc);
 }
 
-zx_status_t SessionManager::Bind(fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request) {
-  auto result = fidl::BindServer(dispatcher_, std::move(request), this);
-  if (!result.is_ok()) {
-    return result.error();
-  }
-  return ZX_OK;
+void SessionManager::Bind(fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request) {
+  fidl::BindServer(dispatcher_, std::move(request), this);
 }
 
 void SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> session,

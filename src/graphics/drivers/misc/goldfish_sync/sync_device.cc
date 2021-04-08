@@ -316,18 +316,11 @@ zx_status_t SyncTimeline::Bind(zx::channel request) {
   zx_handle_t server_handle = request.release();
   return async::PostTask(dispatcher_, [server_handle, this]() mutable {
     using SyncTimelineProtocol = fuchsia_hardware_goldfish::SyncTimeline;
-    auto result = fidl::BindServer(dispatcher_, zx::channel(server_handle), this,
-                                   [](SyncTimeline* self, fidl::UnbindInfo info,
-                                      fidl::ServerEnd<SyncTimelineProtocol> server_end) {
-                                     self->OnClose(info, server_end.TakeChannel());
-                                   });
-    if (!result.is_ok()) {
-      zxlogf(ERROR, "Cannot bind to channel: status: %d", result.error());
-      if (InContainer()) {
-        RemoveFromContainer();
-      }
-      return;
-    }
+    fidl::BindServer(dispatcher_, zx::channel(server_handle), this,
+                     [](SyncTimeline* self, fidl::UnbindInfo info,
+                        fidl::ServerEnd<SyncTimelineProtocol> server_end) {
+                       self->OnClose(info, server_end.TakeChannel());
+                     });
   });
   return ZX_OK;
 }

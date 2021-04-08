@@ -167,11 +167,7 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
 class StubExceptionHandler final : public fidl::WireInterface<fuchsia_exception::Handler> {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    auto binding = fidl::BindServer(dispatcher, std::move(request), this);
-    if (binding.is_error()) {
-      return binding.error();
-    }
-    binding_ = binding.take_value();
+    binding_ = fidl::BindServer(dispatcher, std::move(request), this);
     return ZX_OK;
   }
 

@@ -81,13 +81,29 @@ class ControlBlock final {
 // |WaitForChannel| is another way to trigger unbinding, with the bonus of recovering
 // the channel as the return value. Care must be taken when using this function,
 // as it will be waiting for any synchronous calls to finish, and will forget about
-// any in-progress asynchronous calls. TODO(fxbug.dev/68742): We may want to also
-// wait for asynchronous calls, or panic when there are in-flight asynchronous calls.
+// any in-progress asynchronous calls.
+//
+// TODO(fxbug.dev/68742): We may want to also wait for asynchronous calls, or panic
+// when there are in-flight asynchronous calls.
 template <typename Protocol>
 class Client final {
   using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
 
  public:
+  // Create an initialized Client which manages the binding of the client end of
+  // a channel to a dispatcher.
+  //
+  // It is a logic error to use a dispatcher that is shutting down or already
+  // shut down. Doing so will result in a panic.
+  //
+  // If any other error occurs during initialization, the |event_handler->Unbound|
+  // handler will be invoked asynchronously with the reason, if specified.
+  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
+  Client(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+         std::shared_ptr<AsyncEventHandler> event_handler = nullptr) {
+    Bind(std::move(client_end), dispatcher, std::move(event_handler));
+  }
+
   // Create an uninitialized Client.
   //
   // Prefer using the constructor overload that binds the client to a channel
@@ -95,15 +111,6 @@ class Client final {
   // the client must be constructed first before a channel could be obtained
   // (for example, if the client is an instance variable).
   Client() = default;
-
-  // Create an initialized Client which manages the binding of the client end of
-  // a channel to a dispatcher.
-  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
-  Client(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
-         std::shared_ptr<AsyncEventHandler> event_handler = nullptr) {
-    auto status = Bind(std::move(client_end), dispatcher, std::move(event_handler));
-    ZX_ASSERT_MSG(status == ZX_OK, "%s: Failed Bind() with status %d.", __func__, status);
-  }
 
   // Returns if the |Client| is initialized.
   bool is_valid() const { return static_cast<bool>(client_); }
@@ -133,13 +140,19 @@ class Client final {
   Client(const Client& other) = delete;
   Client& operator=(const Client& other) = delete;
 
-  // Bind the channel to the dispatcher. If Client is already initialized, destroys the previous
-  // binding, releasing its channel.
+  // Bind the |client_end| endpoint to the dispatcher. If Client is already
+  // initialized, destroys the previous binding, releasing its channel.
+  //
+  // It is a logic error to invoke |Bind| on a dispatcher that is
+  // shutting down or already shut down. Doing so will result in a panic.
+  //
+  // When other error occurs during binding, the |event_handler->Unbound| handler
+  // will be asynchronously invoked with the reason, if specified.
   //
   // Re-binding a |Client| to a different channel is equivalent to replacing
   // the |Client| with a new instance.
-  zx_status_t Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
-                   std::shared_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler = nullptr) {
+  void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+            std::shared_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler = nullptr) {
     if (client_) {
       // This way, the current |Client| will effectively start from a clean slate.
       // If this |Client| were the only instance for that particular channel,
@@ -150,15 +163,13 @@ class Client final {
 
     // Cannot use |std::make_shared| because the |ClientImpl| constructor is private.
     client_.reset(new ClientImpl(event_handler));
-    zx_status_t status = client_->Bind(std::reinterpret_pointer_cast<internal::ClientBase>(client_),
-                                       client_end.TakeChannel(), dispatcher,
-                                       [event_handler](UnbindInfo unbind_info) {
-                                         if (event_handler != nullptr) {
-                                           event_handler->Unbound(unbind_info);
-                                         }
-                                       });
+    client_->Bind(std::reinterpret_pointer_cast<internal::ClientBase>(client_),
+                  client_end.TakeChannel(), dispatcher, [event_handler](UnbindInfo unbind_info) {
+                    if (event_handler != nullptr) {
+                      event_handler->Unbound(unbind_info);
+                    }
+                  });
     control_ = std::make_shared<internal::ControlBlock<Protocol>>(client_);
-    return status;
   }
 
   // Begins to unbind the channel from the dispatcher. May be called from any

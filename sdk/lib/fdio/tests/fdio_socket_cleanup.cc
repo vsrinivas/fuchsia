@@ -51,9 +51,7 @@ void ServeAndExerciseFileDescriptionTeardown(fuchsia_io::wire::NodeInfo node_inf
   Server server(std::move(node_info));
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  fit::result bind_result =
-      fidl::BindServer(loop.dispatcher(), std::move(endpoints.server), &server);
-  ASSERT_TRUE(bind_result.is_ok(), "%s", zx_status_get_string(bind_result.error()));
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints.server), &server);
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 
   {

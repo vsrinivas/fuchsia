@@ -48,8 +48,7 @@ TEST_F(LoaderServiceTest, ConnectBindDone) {
     auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
     ASSERT_TRUE(endpoints.is_ok());
     auto [client_end, server_end] = *std::move(endpoints);
-    auto status = loader->Bind(std::move(server_end));
-    ASSERT_TRUE(status.is_ok());
+    loader->Bind(std::move(server_end));
     fidl::WireSyncClient<fldsvc::Loader> client(std::move(client_end));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("science")));
   }

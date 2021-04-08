@@ -133,7 +133,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   };
 
   auto event_handler = std::make_shared<EventHandler>(conn_ref);
-  ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher(), event_handler));
+  client.Bind(std::move(device_local), ctx.loop().dispatcher(), event_handler);
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
@@ -191,21 +191,22 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
 
-  zx::channel device_local, device_remote;
-  ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+  zx::status device_ends = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
+  ASSERT_OK(device_ends.status_value());
 
-  zx::channel device_local2, device_remote2;
-  ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
+  zx::status coordinator_ends = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
+  ASSERT_OK(coordinator_ends.status_value());
 
   class DeviceControllerConnectionTest : public DeviceControllerConnection {
    public:
     DeviceControllerConnectionTest(
-        DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+        DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+        fidl::ServerEnd<fuchsia_device_manager::DeviceController> rpc,
         fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client)
         : DeviceControllerConnection(ctx, std::move(dev), std::move(rpc),
                                      std::move(coordinator_client)) {}
 
-    void Unbind(UnbindCompleter::Sync& completer) {
+    void Unbind(UnbindCompleter::Sync& completer) final {
       fbl::RefPtr<zx_device> dev = this->dev();
       // Set dev->flags() so that we can check that the unbind hook is called in
       // the test.
@@ -214,17 +215,15 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
     }
   };
 
-  fidl::Client<fuchsia_device_manager::Coordinator> coordinator;
-  coordinator.Bind(std::move(device_remote2), ctx.loop().dispatcher());
+  fidl::Client coordinator(std::move(coordinator_ends->client), ctx.loop().dispatcher());
   std::unique_ptr<DeviceControllerConnectionTest> conn;
   conn = std::make_unique<DeviceControllerConnectionTest>(
-      &ctx, std::move(dev), std::move(device_remote), std::move(coordinator));
+      &ctx, std::move(dev), std::move(device_ends->server), std::move(coordinator));
   fbl::RefPtr<zx_device> my_dev = conn->dev();
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  fidl::Client<fuchsia_device_manager::DeviceController> client;
-  ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher()));
+  fidl::Client client(std::move(device_ends->client), ctx.loop().dispatcher());
 
   bool unbind_successful = false;
   auto result = client->Unbind(

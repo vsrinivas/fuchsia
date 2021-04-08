@@ -131,16 +131,10 @@ void Pipe::Bind(zx::channel server_request) {
     }
   };
 
-  auto result =
+  auto binding =
       fidl::BindServer(dispatcher_, std::move(server_request), this, std::move(on_unbound));
-  if (!result.is_ok()) {
-    if (on_close_) {
-      on_close_(this);
-    }
-  } else {
-    binding_ref_ = std::make_unique<fidl::ServerBindingRef<fuchsia_hardware_goldfish::Pipe>>(
-        result.take_value());
-  }
+  binding_ref_ =
+      std::make_unique<fidl::ServerBindingRef<fuchsia_hardware_goldfish::Pipe>>(std::move(binding));
 }
 
 void Pipe::SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync& completer) {

@@ -94,11 +94,8 @@ int main(int argc, char** argv) {
       fbl::MakeRefCounted<fs::Service>(
           [&virtcon_server](
               fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request) mutable {
-            zx_status_t status = virtcon_server.Bind(std::move(request));
-            if (status != ZX_OK) {
-              printf("vc: error binding new server: %d\n", status);
-            }
-            return status;
+            virtcon_server.Bind(std::move(request));
+            return ZX_OK;
           }));
 
   {

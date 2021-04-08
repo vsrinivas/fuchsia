@@ -82,30 +82,24 @@ void BufferCollection::Bind(zx::channel channel) {
   if (status == ZX_OK) {
     inspect_node_.CreateUint("channel_koid", info.koid, &properties_);
   }
-  auto res = fidl::BindServer(
+  server_binding_ = fidl::BindServer(
       logical_buffer_collection().parent_device()->dispatcher(), std::move(channel), this,
-      fidl::OnUnboundFn<BufferCollection>(
-          [this, this_ref = fbl::RefPtr<BufferCollection>(this)](
-              BufferCollection* collection, fidl::UnbindInfo info,
-              fidl::ServerEnd<fuchsia_sysmem::BufferCollection> channel) {
-            // We need to keep a refptr to this class, since the unbind happens asynchronously and
-            // can run after the parent closes a handle to this class.
-            if (error_handler_) {
-              zx_status_t status = info.status;
-              if (async_failure_result_ && info.reason == fidl::UnbindInfo::kClose) {
-                // On kClose the error is always ZX_OK, so report the real error to
-                // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
-                status = *async_failure_result_;
-              }
-              error_handler_(status);
-            }
-            // *this can be destroyed by ~this_ref here
-          }));
-  if (res.is_error()) {
-    return;
-  }
-  server_binding_ = res.take_value();
-  return;
+      [this, this_ref = fbl::RefPtr<BufferCollection>(this)](
+          BufferCollection* collection, fidl::UnbindInfo info,
+          fidl::ServerEnd<fuchsia_sysmem::BufferCollection> channel) {
+        // We need to keep a refptr to this class, since the unbind happens asynchronously and
+        // can run after the parent closes a handle to this class.
+        if (error_handler_) {
+          zx_status_t status = info.status;
+          if (async_failure_result_ && info.reason == fidl::UnbindInfo::kClose) {
+            // On kClose the error is always ZX_OK, so report the real error to
+            // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
+            status = *async_failure_result_;
+          }
+          error_handler_(status);
+        }
+        // *this can be destroyed by ~this_ref here
+      });
 }
 
 void BufferCollection::SetEventSink(
@@ -185,9 +179,9 @@ void BufferCollection::SetConstraintsAuxBuffers(
   // SetConstraints(), so done for now.
 }
 
-void BufferCollection::SetConstraints(bool has_constraints_param,
-                                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints_param,
-                                      SetConstraintsCompleter::Sync& completer) {
+void BufferCollection::SetConstraints(
+    bool has_constraints_param, fuchsia_sysmem::wire::BufferCollectionConstraints constraints_param,
+    SetConstraintsCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
   table_set_.MitigateChurn();
@@ -332,7 +326,8 @@ void BufferCollection::AttachToken(
   }
 
   if (rights_attenuation_mask == 0) {
-    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS, "rights_attenuation_mask of 0 is forbidden");
+    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
+             "rights_attenuation_mask of 0 is forbidden");
     return;
   }
 

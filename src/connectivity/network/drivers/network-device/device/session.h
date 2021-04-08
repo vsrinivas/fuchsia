@@ -120,7 +120,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info, fidl::StringView name,
           DeviceInterface* parent);
   zx_status_t Init(netdev::wire::Fifos* out);
-  zx_status_t Bind(fidl::ServerEnd<netdev::Session> channel);
+  void Bind(fidl::ServerEnd<netdev::Session> channel);
   void StopTxThread();
   void OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel);
   int Thread();

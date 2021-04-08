@@ -82,11 +82,7 @@ void SerialDevice::GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice
       fidl::BindServer(loop_->dispatcher(), std::move(req),
                        static_cast<fidl::WireInterface<fuchsia_hardware_serial::NewDevice>*>(this),
                        std::move(unbound_fn));
-  if (binding.is_error()) {
-    loop_.reset();
-    return;
-  }
-  binding_.emplace(std::move(binding.value()));
+  binding_.emplace(std::move(binding));
 }
 
 void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {

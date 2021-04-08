@@ -34,12 +34,7 @@ std::unique_ptr<InputReportsReader> InputReportsReader::Create(InputReportBase* 
   auto reader = std::make_unique<InputReportsReader>(base, reader_id);
   auto binding = fidl::BindServer(dispatcher, std::move(req), reader.get(), std::move(unbound_fn));
   fbl::AutoLock lock(&reader->readers_lock_);
-  if (binding.is_error()) {
-    zxlogf(ERROR, "InputReportsReader::Create: Failed to BindServer %d\n", binding.error());
-    return nullptr;
-  }
-
-  reader->binding_.emplace(std::move(binding.value()));
+  reader->binding_.emplace(std::move(binding));
   return reader;
 }
 

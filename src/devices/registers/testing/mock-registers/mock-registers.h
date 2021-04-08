@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVICES_REGISTERS_TESTING_MOCK_REGISTERS_MOCK_REGISTERS_H_
+#define SRC_DEVICES_REGISTERS_TESTING_MOCK_REGISTERS_MOCK_REGISTERS_H_
+
 #include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
 
@@ -17,10 +20,7 @@ class MockRegisters : public fidl::WireInterface<fuchsia_hardware_registers::Dev
   ~MockRegisters() {}
 
   // Manage the Fake FIDL Message Loop
-  zx_status_t Init(zx::channel remote) {
-    auto result = fidl::BindServer(dispatcher_, std::move(remote), this);
-    return result.is_ok() ? ZX_OK : result.error();
-  }
+  void Init(zx::channel remote) { fidl::BindServer(dispatcher_, std::move(remote), this); }
 
   template <typename T>
   void ExpectRead(uint64_t offset, T mask, T value) {
@@ -204,3 +204,5 @@ zx_status_t MockRegisters::VerifyAll() {
 }
 
 }  // namespace mock_registers
+
+#endif  // SRC_DEVICES_REGISTERS_TESTING_MOCK_REGISTERS_MOCK_REGISTERS_H_

@@ -287,14 +287,14 @@ TEST(SpiDevice, SpiFidlVmoTest) {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ddk.children_[0]->SpiConnectServer(std::move(server));
-    ASSERT_OK(cs0_client.Bind(std::move(client), loop.dispatcher()));
+    cs0_client.Bind(std::move(client), loop.dispatcher());
   }
 
   {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ddk.children_[1]->SpiConnectServer(std::move(server));
-    ASSERT_OK(cs1_client.Bind(std::move(client), loop.dispatcher()));
+    cs1_client.Bind(std::move(client), loop.dispatcher());
   }
 
   zx::vmo cs0_vmo, cs1_vmo;
@@ -398,14 +398,14 @@ TEST(SpiDevice, SpiFidlVectorTest) {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ddk.children_[0]->SpiConnectServer(std::move(server));
-    ASSERT_OK(cs0_client.Bind(std::move(client), loop.dispatcher()));
+    cs0_client.Bind(std::move(client), loop.dispatcher());
   }
 
   {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ddk.children_[1]->SpiConnectServer(std::move(server));
-    ASSERT_OK(cs1_client.Bind(std::move(client), loop.dispatcher()));
+    cs1_client.Bind(std::move(client), loop.dispatcher());
   }
 
   uint8_t test_data[] = {1, 2, 3, 4, 5, 6, 7};
@@ -461,14 +461,14 @@ TEST(SpiDevice, SpiFidlVectorErrorTest) {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ddk.children_[0]->SpiConnectServer(std::move(server));
-    ASSERT_OK(cs0_client.Bind(std::move(client), loop.dispatcher()));
+    cs0_client.Bind(std::move(client), loop.dispatcher());
   }
 
   {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ddk.children_[1]->SpiConnectServer(std::move(server));
-    ASSERT_OK(cs1_client.Bind(std::move(client), loop.dispatcher()));
+    cs1_client.Bind(std::move(client), loop.dispatcher());
   }
 
   ddk.corrupt_rx_actual_ = true;

@@ -23,7 +23,8 @@ class DeviceControllerConnection
       public fidl::WireRawChannelInterface<fuchsia_io::Directory> {
  public:
   // |ctx| must outlive this connection
-  DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+  DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+                             fidl::ServerEnd<fuchsia_device_manager::DeviceController> rpc,
                              fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client);
 
   // |ctx| must outlive this connection

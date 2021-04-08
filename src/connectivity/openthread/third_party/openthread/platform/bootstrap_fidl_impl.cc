@@ -42,11 +42,7 @@ zx_status_t BootstrapThreadImpl::Bind(fidl::ServerEnd<fuchsia_lowpan_bootstrap::
     return ZX_OK;
   }
 
-  auto result = fidl::BindServer(dispatcher, std::move(request), this);
-  if (!result.is_ok()) {
-    return result.error();
-  }
-  binding_ = result.take_value();
+  binding_ = fidl::BindServer(dispatcher, std::move(request), this);
 
   // Note the svc_dir_ with which AddEntry was done, so that RemoveEntry can
   // be done when we want to stop serving this FIDL:

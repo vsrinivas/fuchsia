@@ -58,29 +58,26 @@ void BufferCollectionToken::Bind(
   if (status == ZX_OK) {
     inspect_node_.CreateUint("channel_koid", info.koid, &properties_);
   }
-  auto res = fidl::BindServer(
-      parent_device_->dispatcher(), std::move(token_request), this,
-      fidl::OnUnboundFn<BufferCollectionToken>(
-          [this, this_ref = fbl::RefPtr<BufferCollectionToken>(this)](
-              BufferCollectionToken* token, fidl::UnbindInfo info,
-              fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> channel) {
-            // We need to keep a refptr to this class, since the unbind happens asynchronously and
-            // can run after the parent closes a handle to this class.
-            if (error_handler_) {
-              zx_status_t status = info.status;
-              if (async_failure_result_ && info.reason == fidl::UnbindInfo::kClose) {
-                // On kClose the error is always ZX_OK, so report the real error to
-                // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
-                status = *async_failure_result_;
-              }
-              error_handler_(status);
-            }
-            // *this can be destroyed by ~this_ref here
-          }));
-  if (res.is_error()) {
-    return;
-  }
-  server_binding_ = res.take_value();
+  server_binding_ =
+      fidl::BindServer(parent_device_->dispatcher(), std::move(token_request), this,
+                       [this, this_ref = fbl::RefPtr<BufferCollectionToken>(this)](
+                           BufferCollectionToken* token, fidl::UnbindInfo info,
+                           fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> channel) {
+                         // We need to keep a refptr to this class, since the unbind happens
+                         // asynchronously and can run after the parent closes a handle to this
+                         // class.
+                         if (error_handler_) {
+                           zx_status_t status = info.status;
+                           if (async_failure_result_ && info.reason == fidl::UnbindInfo::kClose) {
+                             // On kClose the error is always ZX_OK, so report the real error to
+                             // LogicalBufferCollection if the close was caused by FailAsync or
+                             // FailSync.
+                             status = *async_failure_result_;
+                           }
+                           error_handler_(status);
+                         }
+                         // *this can be destroyed by ~this_ref here
+                       });
 }
 
 void BufferCollectionToken::Duplicate(
@@ -99,7 +96,9 @@ void BufferCollectionToken::Duplicate(
   }
   NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
   if (rights_attenuation_mask == 0) {
-    logical_buffer_collection().LogClientError(FROM_HERE, &node_properties(), "rights_attenuation_mask of 0 is DEPRECATED - use ZX_RIGHT_SAME_RIGHTS instead.");
+    logical_buffer_collection().LogClientError(
+        FROM_HERE, &node_properties(),
+        "rights_attenuation_mask of 0 is DEPRECATED - use ZX_RIGHT_SAME_RIGHTS instead.");
     rights_attenuation_mask = ZX_RIGHT_SAME_RIGHTS;
   }
   if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {

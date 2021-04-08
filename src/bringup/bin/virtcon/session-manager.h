@@ -26,7 +26,7 @@ class SessionManager final : public fidl::WireInterface<fuchsia_virtualconsole::
                  const color_scheme_t* color_scheme)
       : dispatcher_(dispatcher), keep_log_visible_(keep_log_visible), color_scheme_(color_scheme) {}
 
-  zx_status_t Bind(fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request);
+  void Bind(fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request);
 
   // FIDL functions.
   void CreateSession(::fidl::ServerEnd<fuchsia_hardware_pty::Device> session,

@@ -271,7 +271,7 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     input_device_.GetInputReportsReader(std::move(server));
-    ASSERT_OK(reader.Bind(std::move(client), loop.dispatcher()));
+    reader.Bind(std::move(client), loop.dispatcher());
     mouse_.WaitForNextReader(zx::duration::infinite());
   }
 
@@ -316,7 +316,7 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
     input_device_.GetInputReportsReader(std::move(server));
-    ASSERT_OK(reader.Bind(std::move(client), loop.dispatcher()));
+    reader.Bind(std::move(client), loop.dispatcher());
     mouse_.WaitForNextReader(zx::duration::infinite());
   }
 

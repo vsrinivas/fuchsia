@@ -71,8 +71,8 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   class LowpanSpinelDeviceFidlImpl : public fidl::WireInterface<fuchsia_lowpan_spinel::Device> {
    public:
     explicit LowpanSpinelDeviceFidlImpl(FakeOtRadioDevice& ot_radio);
-    zx_status_t Bind(async_dispatcher_t* dispatcher,
-                     fidl::ServerEnd<fuchsia_lowpan_spinel::Device> channel);
+    void Bind(async_dispatcher_t* dispatcher,
+              fidl::ServerEnd<fuchsia_lowpan_spinel::Device> channel);
 
    private:
     // FIDL request handlers

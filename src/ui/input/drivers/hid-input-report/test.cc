@@ -265,7 +265,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    ASSERT_OK(reader.Bind(std::move(token_client), loop.dispatcher()));
+    reader.Bind(std::move(token_client), loop.dispatcher());
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -317,7 +317,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    ASSERT_OK(reader.Bind(std::move(token_client), loop.dispatcher()));
+    reader.Bind(std::move(token_client), loop.dispatcher());
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 

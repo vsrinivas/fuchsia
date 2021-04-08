@@ -101,9 +101,7 @@ class InotifyAddFilter : public zxtest::Test {
     // client-server channel logic
     zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_OK(endpoints.status_value());
-    fit::result result =
-        fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &server_);
-    ASSERT_TRUE(result.is_ok(), "%s", zx_status_get_string(result.error()));
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &server_);
 
     // install namespace for local-filesystem.
     ASSERT_OK(fdio_ns_get_installed(&namespace_));

@@ -1509,14 +1509,10 @@ fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_sta
     }
   };
 
-  auto res = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
-                              std::move(cb));
-  if (!res.is_ok()) {
-    zxlogf(ERROR, "%s: Failed to bind to FIDL Server (%d)", __func__, res.error());
-    return res;
-  }
+  auto binding = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
+                                  std::move(cb));
   // Keep a copy of fidl binding so we can safely unbind from it during shutdown
-  binding_state_.SetBound(res.value());
+  binding_state_.SetBound(binding);
 
   zx::channel sysmem_allocator_request, sysmem_allocator_client;
   zx::channel::create(0, &sysmem_allocator_request, &sysmem_allocator_client);
@@ -1531,7 +1527,7 @@ fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_sta
         fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
   }
 
-  return res;
+  return fit::ok(binding);
 }
 
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id)

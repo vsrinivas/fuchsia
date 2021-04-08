@@ -39,8 +39,12 @@ namespace fidl {
 // where it will continue listening for messages until an error occurs or if the
 // user tears down the connection using a |Completer|.
 //
-// If an error occurs when creating the binding, |BindServer| returns a
-// |fit::error| and |server_end| is closed.
+// It is a logic error to invoke |BindServer| on a dispatcher that is
+// shutting down or already shut down. Doing so will result in a panic.
+//
+// If any other error occurs when creating the binding, the |on_unbound| handler
+// will be invoked asynchronously with the reason. See the "Unbind" section
+// for details on |on_unbound|.
 //
 // ## Stopping message dispatch
 //
@@ -119,7 +123,7 @@ namespace fidl {
 // The connection will also be automatically closed by the dispatching logic in
 // certain conditions:
 //
-// - If the client-end of the channel is closed (PEER_CLOSED).
+// - If the client-end of the channel is closed (ZX_ERR_PEER_CLOSED).
 // - If an error occurs when waiting on, reading from, or writing to the
 //   channel.
 // - If decoding an incoming message fails or encoding an outgoing message
@@ -159,11 +163,10 @@ namespace fidl {
 //     fidl::BindServer(dispatcher, std::move(server_end), this,
 //                      [](Foo*, fidl::UnbindInfo, fidl::ServerEnd<Bar>) { ... });
 //
-// TODO(fxbug.dev/67062): |fidl::BindServer| and associated API should return a
-// |zx::status|. TODO(fxbug.dev/66343): Consider using a "DidUnbind" virtual
-// function in the server interface to replace the |on_unbound| handler lambda.
+// TODO(fxbug.dev/66343): Consider using a "DidUnbind" virtual function
+// in the server interface to replace the |on_unbound| handler lambda.
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
     fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
     OnUnbound&& on_unbound = nullptr) {
@@ -176,7 +179,7 @@ fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status
 // The pointer is destroyed on the same thread as the one calling |on_unbound|,
 // and happens right after |on_unbound|. See |BindServer| for details.
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
     fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
     std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
@@ -190,7 +193,7 @@ fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status
 // The pointer is destroyed on the same thread as the one calling |on_unbound|,
 // and happens right after |on_unbound|. See |BindServer| for details.
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
     fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
     std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
@@ -250,11 +253,9 @@ class ServerBindingRef {
  private:
   // This is so that only |BindServerTypeErased| will be able to construct a
   // new instance of |ServerBindingRef|.
-  friend fit::result<ServerBindingRef<Protocol>, zx_status_t>
-  internal::BindServerTypeErased<Protocol>(async_dispatcher_t* dispatcher,
-                                           fidl::ServerEnd<Protocol> server_end,
-                                           internal::IncomingMessageDispatcher* interface,
-                                           internal::AnyOnUnboundFn on_unbound);
+  friend ServerBindingRef<Protocol> internal::BindServerTypeErased<Protocol>(
+      async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol> server_end,
+      internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
   explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding<Protocol>> internal_binding)
       : event_sender_(std::move(internal_binding)) {}

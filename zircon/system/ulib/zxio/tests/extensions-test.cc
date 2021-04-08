@@ -70,14 +70,9 @@ class ExtensionNode : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    auto result =
+    auto binding =
         fidl::BindServer(loop_->dispatcher(), std::move(control_server_end_), server_.get());
-    EXPECT_TRUE(result.is_ok());
-    if (result.is_error()) {
-      return nullptr;
-    }
-    binding_ =
-        std::make_unique<fidl::ServerBindingRef<fuchsia_io::Node>>(std::move(result.value()));
+    binding_ = std::make_unique<fidl::ServerBindingRef<fuchsia_io::Node>>(std::move(binding));
     return static_cast<ServerImpl*>(server_.get());
   }
 

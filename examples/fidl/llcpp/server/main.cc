@@ -23,27 +23,34 @@
 class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
  public:
   // Bind this implementation to a channel.
-  zx_status_t Bind(async_dispatcher_t* dispatcher,
-                   fidl::ServerEnd<fuchsia_examples::Echo> request) {
-    auto result = fidl::BindServer(dispatcher, std::move(request), this);
-    if (!result.is_ok()) {
-      return result.error();
-    }
-    binding_ = result.take_value();
-    return ZX_OK;
+  void Bind(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_examples::Echo> request) {
+    fidl::OnUnboundFn<EchoImpl> unbound_handler =
+        [](EchoImpl* self, fidl::UnbindInfo info,
+           fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
+          switch (info.reason) {
+            case fidl::UnbindInfo::kClose:
+            case fidl::UnbindInfo::kUnbind:
+              // These are initiated by ourself.
+              break;
+            default:
+              std::cerr << "server error: " << info.reason << ", status: " << info.status
+                        << std::endl;
+          }
+        };
+    binding_ = fidl::BindServer(dispatcher, std::move(request), this, std::move(unbound_handler));
   }
 
   // Handle a SendString request by sending on OnString event with the request value. For
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
   void SendString(fidl::StringView value, SendStringCompleter::Sync& completer) override {
     if (binding_) {
-      binding_.value()->OnString(std::move(value));
+      binding_.value()->OnString(value);
     }
   }
   // Handle an EchoString request by responding with the request value. For two-way
   // methods, the completer is also used to send a response.
   void EchoString(fidl::StringView value, EchoStringCompleter::Sync& completer) override {
-    completer.Reply(std::move(value));
+    completer.Reply(value);
   }
 
   // A reference back to the Binding that this class is bound to, which is used
@@ -77,11 +84,8 @@ int main(int argc, char** argv) {
       fbl::MakeRefCounted<fs::Service>(
           [&server, dispatcher](fidl::ServerEnd<fuchsia_examples::Echo> request) mutable {
             std::cout << "Incoming connection for " << fuchsia_examples::Echo::Name << std::endl;
-            zx_status_t status = server.Bind(dispatcher, std::move(request));
-            if (status != ZX_OK) {
-              std::cerr << "error binding new server: " << status << std::endl;
-            }
-            return status;
+            server.Bind(dispatcher, std::move(request));
+            return ZX_OK;
           }));
 
   std::cout << "Running echo server" << std::endl;

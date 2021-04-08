@@ -33,25 +33,18 @@ zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> LoaderServiceBase::Connect() 
     return endpoints.take_error();
   }
   auto [client, server] = *std::move(endpoints);
-  auto status = Bind(std::move(server));
-  if (status.is_error()) {
-    return status.take_error();
-  }
+  Bind(std::move(server));
   return zx::ok(std::move(client));
 }
 
-zx::status<> LoaderServiceBase::Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel) {
+void LoaderServiceBase::Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel) {
   // Each connection gets a strong (shared_ptr) reference to the server, which keeps the overall
   // service alive as long as there is one open connection even if the original reference is
   // dropped.
   auto conn = std::make_unique<LoaderConnection>(shared_from_this());
-  // This returns a ServerBindingRef on success, but we don't need it since we don't currently need
-  // a way to unbind connections from the server side. Dropping it does not automatically unbind.
-  auto status = fidl::BindServer(dispatcher_, std::move(channel), std::move(conn));
-  if (status.is_error()) {
-    return zx::error(status.take_error());
-  }
-  return zx::ok();
+  // This returns a ServerBindingRef, but we don't need it since we don't currently need a way
+  // to unbind connections from the server side. Dropping it does not automatically unbind.
+  auto _ = fidl::BindServer(dispatcher_, std::move(channel), std::move(conn));
 }
 
 void LoaderConnection::Done(DoneCompleter::Sync& completer) { completer.Close(ZX_OK); }
@@ -127,7 +120,8 @@ void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync& co
 
 void LoaderConnection::Clone(fidl::ServerEnd<fuchsia_ldsvc::Loader> loader,
                              CloneCompleter::Sync& completer) {
-  completer.Reply(server_->Bind(std::move(loader)).status_value());
+  server_->Bind(std::move(loader));
+  completer.Reply(ZX_OK);
 }
 
 // static

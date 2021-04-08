@@ -326,19 +326,13 @@ zx_status_t OtStackApp::SetupFidlService() {
           FX_LOGS(ERROR) << "FIDL connect request rejected: already bound";
           return ZX_ERR_ALREADY_BOUND;
         }
-        auto binding = fidl::BindServer(
+        binding_ = fidl::BindServer(
             loop_.dispatcher(), std::move(request), fidl_request_handler_ptr_.get(),
             [](LowpanSpinelDeviceFidlImpl* /*unused*/, fidl::UnbindInfo info,
                fidl::ServerEnd<fuchsia_lowpan_spinel::Device> /*unused*/) {
               FX_LOGS(INFO) << "channel handle unbound with reason: "
                             << static_cast<uint32_t>(info.reason);
             });
-
-        if (binding.is_error()) {
-          FX_LOGS(ERROR) << "Failed to bind FIDL server with status: " << binding.error();
-          return binding.error();
-        }
-        binding_ = binding.take_value();
         return ZX_OK;
       }));
 

@@ -35,18 +35,15 @@ namespace lowpan_spinel_fidl = fuchsia_lowpan_spinel;
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}
 
-zx_status_t OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
+void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
     async_dispatcher_t* dispatcher, fidl::ServerEnd<lowpan_spinel_fidl::Device> channel) {
   fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound =
       [](LowpanSpinelDeviceFidlImpl* server, fidl::UnbindInfo /*unused*/,
          fidl::ServerEnd<lowpan_spinel_fidl::Device> /*unused*/) {
         server->ot_radio_obj_.fidl_impl_obj_.release();
       };
-  auto res = fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
-  if (res.is_error())
-    return res.error();
-  ot_radio_obj_.fidl_binding_ = res.take_value();
-  return ZX_OK;
+  ot_radio_obj_.fidl_binding_ =
+      fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
 }
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
@@ -150,13 +147,8 @@ void OtRadioDevice::SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> re
     return;
   }
   fidl_impl_obj_ = std::make_unique<LowpanSpinelDeviceFidlImpl>(*this);
-  auto status = fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(request));
-  if (status == ZX_OK) {
-    completer.ReplySuccess();
-  } else {
-    fidl_impl_obj_ = nullptr;
-    completer.ReplyError(status);
-  }
+  fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(request));
+  completer.ReplySuccess();
 }
 
 zx_status_t OtRadioDevice::StartLoopThread() {

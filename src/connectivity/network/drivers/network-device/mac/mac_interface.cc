@@ -250,17 +250,12 @@ MacClientInstance::MacClientInstance(MacInterface* parent, mode_t default_mode)
 
 zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher,
                                     fidl::ServerEnd<netdev::MacAddressing> req) {
-  auto result =
+  binding_ =
       fidl::BindServer(dispatcher, std::move(req), this,
-
                        [](MacClientInstance* client_instance, fidl::UnbindInfo /*unused*/,
                           fidl::ServerEnd<fuchsia_hardware_network::MacAddressing> /*unused*/) {
                          client_instance->parent_->CloseClient(client_instance);
                        });
-  if (result.is_error()) {
-    return result.error();
-  }
-  binding_ = result.take_value();
   return ZX_OK;
 }
 

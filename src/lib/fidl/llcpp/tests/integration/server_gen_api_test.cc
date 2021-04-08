@@ -553,10 +553,9 @@ TEST(BindServerTestCase, ExplicitUnbind) {
   };
   auto binding_ref =
       fidl::BindServer(main.dispatcher(), std::move(remote), server, std::move(on_unbound));
-  ASSERT_TRUE(binding_ref.is_ok());
 
   // Unbind() and wait for the hook.
-  binding_ref.value().Unbind();
+  binding_ref.Unbind();
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 }
 
@@ -603,13 +602,12 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
   };
   auto binding_ref =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
-  ASSERT_TRUE(binding_ref.is_ok());
 
   // Wait until worker_start so we have an in-flight transaction.
   ASSERT_OK(sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
 
   // Unbind the server end of the channel.
-  binding_ref.value().Unbind();
+  binding_ref.Unbind();
 
   // The unbound hook will not run until the thread inside Echo() returns.
   sync_completion_signal(&worker_done);
@@ -646,7 +644,6 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
     ASSERT_OK(loop.StartThread());
 
     auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), &server);
-    ASSERT_TRUE(server_binding.is_ok());
 
     // Start sending events from multiple threads.
     constexpr size_t kNumEventsPerThread = 170;
@@ -661,7 +658,7 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
           std::thread([&worker_start, &worker_running, &server_binding, &num_failures]() {
             ZX_ASSERT(ZX_OK == sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
             for (size_t i = 0; i < kNumEventsPerThread; i++) {
-              zx_status_t status = server_binding.value()->OnEvent(fidl::StringView("a"));
+              zx_status_t status = server_binding->OnEvent(fidl::StringView("a"));
               if (status != ZX_OK) {
                 // |ZX_ERR_CANCELED| indicates unbinding has happened.
                 ZX_ASSERT_MSG(status == ZX_ERR_CANCELED, "Unexpected status: %d", status);
@@ -679,7 +676,7 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
 
     // Unbinds the server before all the threads have been able to send all
     // their events.
-    server_binding.value().Unbind();
+    server_binding.Unbind();
 
     for (auto& t : sender_threads) {
       t.join();
@@ -748,8 +745,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
 
   // Bind the server.
   auto res = fidl::BindServer(server_loop.dispatcher(), std::move(remote), server.get());
-  ASSERT_TRUE(res.is_ok());
-  fidl::ServerBindingRef<Simple> binding(std::move(res.value()));
+  fidl::ServerBindingRef<Simple> binding(std::move(res));
 
   // Launch 10 client threads to make two-way Echo() calls.
   std::vector<std::thread> threads;
@@ -845,15 +841,14 @@ TEST(BindServerTestCase, ServerUnbind) {
   };
   auto binding_ref =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
-  ASSERT_TRUE(binding_ref.is_ok());
 
   // The binding should be destroyed without waiting for the Server to be destroyed.
-  binding_ref.value().Unbind();
+  binding_ref.Unbind();
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 
   // Unbind()/Close() may still be called from the Server.
-  binding_ref.value().Unbind();
-  binding_ref.value().Close(ZX_OK);
+  binding_ref.Unbind();
+  binding_ref.Close(ZX_OK);
 
   // The channel should still be valid.
   EXPECT_EQ(remote.channel().get(), remote_handle);
@@ -883,16 +878,15 @@ TEST(BindServerTestCase, ServerClose) {
   };
   auto binding_ref =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
-  ASSERT_TRUE(binding_ref.is_ok());
 
   // The binding should be destroyed without waiting for the Server to be destroyed.
-  binding_ref.value().Close(ZX_OK);
+  binding_ref.Close(ZX_OK);
   ASSERT_OK(local.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 
   // Unbind()/Close() may still be called from the Server.
-  binding_ref.value().Unbind();
-  binding_ref.value().Close(ZX_OK);
+  binding_ref.Unbind();
+  binding_ref.Close(ZX_OK);
 
   // Verify the epitaph from Close().
   fidl_epitaph_t epitaph;
@@ -960,7 +954,6 @@ TEST(BindServerTestCase, UnbindInfoDispatcherError) {
   };
   auto binding_ref =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
-  ASSERT_TRUE(binding_ref.is_ok());
 
   // This should destroy the binding, running the error handler before returning.
   loop.Shutdown();
@@ -1006,7 +999,6 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
   };
   auto binding_ref =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
-  ASSERT_TRUE(binding_ref.is_ok());
 
   // Start another thread to make the outgoing call.
   std::thread([local = std::move(local)]() mutable {
@@ -1018,7 +1010,7 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
   ASSERT_OK(sync_completion_wait(&ready, ZX_TIME_INFINITE));
 
   // Unbind the server.
-  binding_ref.value().Unbind();
+  binding_ref.Unbind();
 
   // Wait for the OnUnboundFn.
   ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));

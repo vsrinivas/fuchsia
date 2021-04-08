@@ -107,7 +107,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     };
     ASSERT_OK(messenger_.SetMessageOp(&ddk_, message_op));
     ASSERT_OK(loop_.StartThread("rpmb-client-thread"));
-    ASSERT_OK(rpmb_fidl_.Bind(std::move(messenger_.local()), loop_.dispatcher()));
+    rpmb_fidl_.Bind(std::move(messenger_.local()), loop_.dispatcher());
   }
 
   void MakeBlockOp(uint32_t command, uint32_t length, uint64_t offset,
@@ -1476,12 +1476,11 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
 
   ASSERT_TRUE(rpmb_.is_valid());
 
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-  rpmb_.ConnectServer(std::move(server));
+  zx::status rpmb_ends = fidl::CreateEndpoints<fuchsia_hardware_rpmb::Rpmb>();
+  ASSERT_OK(rpmb_ends.status_value());
+  rpmb_.ConnectServer(rpmb_ends->server.TakeChannel());
 
-  fidl::Client<fuchsia_hardware_rpmb::Rpmb> rpmb_client;
-  ASSERT_OK(rpmb_client.Bind(std::move(client), loop_.dispatcher()));
+  fidl::Client rpmb_client(std::move(rpmb_ends->client), loop_.dispatcher());
 
   sync_completion_t completion;
   rpmb_client->GetDeviceInfo(

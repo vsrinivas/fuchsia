@@ -81,11 +81,7 @@ zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::wire::Sessio
     return status;
   }
 
-  if ((status = session->Bind(std::move(control))) != ZX_OK) {
-    LOGF_ERROR("network-device: Failed to bind session %s: %s", session->name(),
-               zx_status_get_string(status));
-    return status;
-  }
+  session->Bind(std::move(control));
 
   if ((status = parent->RegisterDataVmo(std::move(info.data), &session->vmo_id_,
                                         &session->data_vmo_)) != ZX_OK) {
@@ -196,18 +192,12 @@ zx_status_t Session::Init(netdev::wire::Fifos* out) {
   return ZX_OK;
 }
 
-zx_status_t Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
-  auto result = fidl::BindServer(
-      dispatcher_, std::move(channel), this,
-      fidl::OnUnboundFn<Session>([](Session* self, fidl::UnbindInfo info,
-                                    fidl::ServerEnd<fuchsia_hardware_network::Session> server_end) {
-        self->OnUnbind(info.reason, std::move(server_end));
-      }));
-  if (result.is_error()) {
-    return result.error();
-  }
-  binding_ = result.take_value();
-  return ZX_OK;
+void Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
+  binding_ = fidl::BindServer(dispatcher_, std::move(channel), this,
+                              [](Session* self, fidl::UnbindInfo info,
+                                 fidl::ServerEnd<fuchsia_hardware_network::Session> server_end) {
+                                self->OnUnbind(info.reason, std::move(server_end));
+                              });
 }
 
 void Session::OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel) {

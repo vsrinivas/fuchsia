@@ -30,13 +30,8 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
         dev_coord->set_power_manager_registered(false);
       });
   auto mgr = std::make_unique<SystemStateManager>(dev_coord);
-  auto result = fidl::BindServer(dispatcher, std::move(system_state_transition_server), mgr.get(),
-                                 std::move(unbound_fn));
-  if (!result.is_ok()) {
-    LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-         device_manager_fidl::SystemStateTransition::Name, zx_status_get_string(result.error()));
-    return result.error();
-  }
+  fidl::BindServer(dispatcher, std::move(system_state_transition_server), mgr.get(),
+                   std::move(unbound_fn));
   *state_mgr = std::move(mgr);
   return ZX_OK;
 }

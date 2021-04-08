@@ -3876,15 +3876,13 @@ TEST(Sysmem, EventSink) {
                                                         event_channel_client.release()));
   EventSinkServer server(loop);
   bool was_unbound = false;
-  EXPECT_TRUE(fidl::BindServer(
-                  loop.dispatcher(), std::move(event_channel_server), &server,
-                  [&was_unbound, &loop](EventSinkServer* server, fidl::UnbindInfo info,
-                                        fidl::ServerEnd<fuchsia_sysmem::BufferCollectionEvents>) {
-                    was_unbound = true;
-                    EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
-                    loop.Quit();
-                  })
-                  .is_ok());
+  fidl::BindServer(loop.dispatcher(), std::move(event_channel_server), &server,
+                   [&was_unbound, &loop](EventSinkServer* server, fidl::UnbindInfo info,
+                                         fidl::ServerEnd<fuchsia_sysmem::BufferCollectionEvents>) {
+                     was_unbound = true;
+                     EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
+                     loop.Quit();
+                   });
   loop.Run();
   EXPECT_TRUE(server.got_tokens_known());
   loop.ResetQuit();

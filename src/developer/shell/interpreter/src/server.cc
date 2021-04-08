@@ -678,13 +678,10 @@ bool Server::Listen() {
 zx_status_t Server::IncomingConnection(fidl::ServerEnd<fuchsia_shell::Shell> service_request) {
   auto service = std::make_unique<Service>(this);
   auto* service_ptr = service.get();
-  auto result =
+  auto binding =
       fidl::BindServer(loop()->dispatcher(), std::move(service_request), std::move(service));
-  if (result.is_error()) {
-    return result.error();
-  }
   // Register the connection.
-  service_ptr->set_binding(result.take_value());
+  service_ptr->set_binding(std::move(binding));
   services_.emplace_back(service_ptr);
   return ZX_OK;
 }
