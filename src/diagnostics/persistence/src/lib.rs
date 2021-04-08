@@ -18,7 +18,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_zircon::Duration,
-    futures::StreamExt,
+    futures::{future::join, FutureExt, StreamExt},
     log::*,
     persist_server::PersistServer,
 };
@@ -55,40 +55,46 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
 
     let startup_delay_duration = Duration::from_seconds(args.startup_delay_seconds);
 
-    // Before doing anything else, wait the arg-provided seconds for the /cache directory to stabilize.
-    info!(
-        "Diagnostics Persistence Service delaying startup for {} seconds...",
-        args.startup_delay_seconds
-    );
-    fasync::Timer::new(fasync::Time::after(startup_delay_duration)).await;
-    info!("...done delay, continuing startup");
-
     info!("Rotating directories");
     file_handler::shuffle_at_boot();
 
     let mut fs = ServiceFs::new();
 
+    let inspector = component::inspector();
+    component::health().set_starting_up();
+
     // Add a persistence fidl service for each service defined in the config files.
     spawn_persist_services(config, &mut fs);
     fs.take_and_serve_directory_handle()?;
-
-    // Start serving previous boot data
-    info!("Publishing previous boot data");
-    let inspector = component::inspector();
-    component::health().set_starting_up();
     on_error!(inspector.serve(&mut fs), "Error initializing Inspect: {}")?;
-    inspector.root().record_child(PERSIST_NODE_NAME, |node| {
-        inspect_server::serve_persisted_data(node).unwrap_or_else(|e| {
-            error!(
+
+    // Before serving previous data, wait the arg-provided seconds for the /cache directory to
+    // stabilize. Note: We're already accepting persist requess. If we receive a request, store
+    // some data, and then cache is cleared after data is persisted, that data will be lost. This
+    // is correct behavior - we don't want to remember anything from before the cache was cleared.
+    info!(
+        "Diagnostics Persistence Service delaying startup for {} seconds...",
+        args.startup_delay_seconds
+    );
+    let publish_fut = fasync::Timer::new(fasync::Time::after(startup_delay_duration)).then(|_| {
+        async move {
+            // Start serving previous boot data
+            info!("...done delay, publishing previous boot data");
+            inspector.root().record_child(PERSIST_NODE_NAME, |node| {
+                inspect_server::serve_persisted_data(node).unwrap_or_else(|e| {
+                    error!(
                 "Serving persisted data experienced critical failure. No data available: {:?}",
                 e
             )
-        })
+                });
+                component::health().set_ok();
+                info!("Diagnostics Persistence Service ready");
+            });
+        }
     });
 
-    component::health().set_ok();
-    info!("Diagnostics Persistence Service ready");
-    Ok(fs.collect::<()>().await)
+    join(fs.collect::<()>(), publish_fut).await;
+    Ok(())
 }
 
 // Takes a config and adds all the persist services defined in those configs to the servicefs of
