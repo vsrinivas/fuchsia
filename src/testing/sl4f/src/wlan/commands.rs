@@ -129,11 +129,13 @@ impl Facade for WlanFacade {
                     _ => vec![0; 0],
                 };
 
-                let target_bss_desc = args
-                    .get("target_bss_desc")
-                    .map(BssDescriptionDef::deserialize)
-                    .transpose()?
-                    .ok_or_else(|| format_err!("Please provide a BSS description"))?;
+                let target_bss_desc = match args.get("target_bss_desc") {
+                    Some(bss_desc_json) => {
+                        let bss_desc = BssDescriptionDef::deserialize(bss_desc_json)?;
+                        Some(Box::new(bss_desc))
+                    }
+                    None => None,
+                };
 
                 fx_log_info!(tag: "WlanFacade", "performing wlan connect to SSID: {:?}", target_ssid);
                 let results = self.connect(target_ssid, target_pwd, target_bss_desc).await?;

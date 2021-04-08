@@ -46,7 +46,7 @@ pub async fn connect(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
     target_ssid: Vec<u8>,
     target_pwd: Vec<u8>,
-    target_bss_desc: fidl_internal::BssDescription,
+    target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
 ) -> Result<bool, Error> {
     let (connection_proxy, connection_remote) = endpoints::create_proxy()?;
     let target_ssid_clone = target_ssid.clone();
@@ -269,12 +269,12 @@ mod tests {
         pin_utils::pin_mut,
         rand::Rng as _,
         std::convert::TryInto as _,
-        wlan_common::{assert_variant, fake_fidl_bss},
+        wlan_common::assert_variant,
     };
 
-    fn generate_random_bss_desc() -> fidl_fuchsia_wlan_internal::BssDescription {
+    fn generate_random_bss_desc() -> Option<Box<fidl_fuchsia_wlan_internal::BssDescription>> {
         let mut rng = rand::thread_rng();
-        fidl_fuchsia_wlan_internal::BssDescription {
+        Some(Box::new(fidl_fuchsia_wlan_internal::BssDescription {
             bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
             bss_type: fidl_fuchsia_wlan_internal::BssTypes::Personal,
             beacon_period: rng.gen::<u16>(),
@@ -297,7 +297,7 @@ mod tests {
                 secondary80: rng.gen::<u8>(),
             },
             snr_db: rng.gen::<i8>(),
-        }
+        }))
     }
 
     fn extract_sme_server_from_get_client_sme_req_and_respond(
@@ -916,7 +916,7 @@ mod tests {
         server: &mut StreamFuture<ClientSmeRequestStream>,
         expected_ssid: &[u8],
         expected_credential: fidl_sme::Credential,
-        expected_bss_desc: fidl_internal::BssDescription,
+        expected_bss_desc: Option<Box<fidl_internal::BssDescription>>,
     ) {
         match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, .. }) => {
@@ -1049,26 +1049,26 @@ mod tests {
     }
 
     fn create_bssinfo_using_ssid(ssid: Vec<u8>) -> Option<Box<BssInfo>> {
-        (!ssid.is_empty()).then(|| {
-            Box::new(fidl_sme::BssInfo {
-                bssid: [0, 1, 2, 3, 4, 5],
-                ssid: ssid.clone(),
-                rssi_dbm: -30,
-                snr_db: 10,
-                channel: fidl_common::WlanChan {
-                    primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
-                    secondary80: 0,
-                },
-                protection: Protection::Wpa2Personal,
-                compatible: true,
-                bss_desc: fake_fidl_bss!(
-                    Wpa2,
-                    ssid: ssid,
+        match ssid.is_empty() {
+            true => None,
+            _ => {
+                let bss_info: fidl_sme::BssInfo = fidl_sme::BssInfo {
                     bssid: [0, 1, 2, 3, 4, 5],
-                ),
-            })
-        })
+                    ssid: ssid,
+                    rssi_dbm: -30,
+                    snr_db: 10,
+                    channel: fidl_common::WlanChan {
+                        primary: 1,
+                        cbw: fidl_common::Cbw::Cbw20,
+                        secondary80: 0,
+                    },
+                    protection: Protection::Wpa2Personal,
+                    compatible: true,
+                    bss_desc: None,
+                };
+                Some(Box::new(bss_info))
+            }
+        }
     }
 
     fn send_status_response(
@@ -1242,20 +1242,13 @@ mod tests {
     ) -> fidl_sme::BssInfo {
         fidl_sme::BssInfo {
             bssid,
-            ssid: ssid.clone(),
+            ssid,
             rssi_dbm,
             snr_db,
             channel,
             protection,
             compatible,
-            bss_desc: fake_fidl_bss!(
-                protection => protection,
-                bssid: bssid,
-                ssid: ssid,
-                rssi_dbm: rssi_dbm,
-                snr_db: snr_db,
-                chan: channel,
-            ),
+            bss_desc: None,
         }
     }
 

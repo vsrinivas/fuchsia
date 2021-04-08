@@ -450,7 +450,7 @@ fn select_best_connection_candidate<'a>(
                     network: bss.network_info.network_id,
                     credential: bss.network_info.credential,
                     observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
-                    bss: Some(bss.bss_info.bss_desc.clone()),
+                    bss: bss.bss_info.bss_desc.clone(),
                     multiple_bss_candidates: Some(bss.multiple_bss_candidates),
                 },
                 bss.bss_info.channel,
@@ -474,7 +474,7 @@ async fn augment_bss_with_active_scan(
         channel: types::WlanChan,
         bssid: types::Bssid,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    ) -> Result<fidl_internal::BssDescription, ()> {
+    ) -> Result<Option<Box<fidl_internal::BssDescription>>, ()> {
         // Make sure the scan is needed
         match selected_network.observed_in_passive_scan {
             Some(true) => info!("Performing directed active scan on selected network"),
@@ -527,9 +527,7 @@ async fn augment_bss_with_active_scan(
     }
 
     match get_enhanced_bss_description(&selected_network, channel, bssid, iface_manager).await {
-        Ok(new_bss_desc) => {
-            types::ConnectionCandidate { bss: Some(new_bss_desc), ..selected_network }
-        }
+        Ok(new_bss_desc) => types::ConnectionCandidate { bss: new_bss_desc, ..selected_network },
         Err(()) => selected_network,
     }
 }
@@ -1185,7 +1183,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
+                    bss: bss_info1.bss_desc.clone(),
                     observed_in_passive_scan: Some(bss_info1.observed_in_passive_scan),
                     multiple_bss_candidates: Some(true),
                 },
@@ -1212,7 +1210,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(networks[2].bss_info.bss_desc.clone()),
+                    bss: networks[2].bss_info.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(false),
                 },
@@ -1283,7 +1281,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
+                    bss: bss_info1.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(false),
                 },
@@ -1310,7 +1308,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(bss_info2.bss_desc.clone()),
+                    bss: bss_info2.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(false),
                 },
@@ -1334,7 +1332,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
+                    bss: bss_info1.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(false),
                 },
@@ -1422,7 +1420,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(bss_info3.bss_desc.clone()),
+                    bss: bss_info3.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(false),
                 },
@@ -1449,7 +1447,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(networks[0].bss_info.bss_desc.clone()),
+                    bss: networks[0].bss_info.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(true),
                 },
@@ -1510,7 +1508,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(bss_info2.bss_desc.clone()),
+                    bss: bss_info2.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(false),
                 },
@@ -1530,7 +1528,7 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
+                    bss: bss_info1.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
                     multiple_bss_candidates: Some(false),
                 },
@@ -1643,7 +1641,7 @@ mod tests {
         let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            bss: Some(bss_info1.bss_desc.clone()),
+            bss: bss_info1.bss_desc.clone(),
             observed_in_passive_scan: Some(false), // was actively scanned
             multiple_bss_candidates: Some(false),
         };
@@ -1681,7 +1679,7 @@ mod tests {
         let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            bss: Some(bss_info1.bss_desc.clone()),
+            bss: bss_info1.bss_desc.clone(),
             observed_in_passive_scan: Some(true), // was passively scanned
             multiple_bss_candidates: Some(true),
         };
@@ -1744,7 +1742,7 @@ mod tests {
         assert_eq!(
             exec.run_singlethreaded(fut),
             types::ConnectionCandidate {
-                bss: Some(new_bss_desc),
+                bss: new_bss_desc,
                 // observed_in_passive_scan should still be true, since the network was found in a
                 // passive scan prior to the directed active scan augmentation.
                 observed_in_passive_scan: Some(true),
@@ -1887,7 +1885,7 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                bss: Some(bss_desc1_active.clone()),
+                bss: bss_desc1_active.clone(),
                 observed_in_passive_scan: Some(true),
                 multiple_bss_candidates: Some(false)
             })
@@ -1954,7 +1952,7 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
-                bss: Some(bss_desc2_active.clone()),
+                bss: bss_desc2_active.clone(),
                 observed_in_passive_scan: Some(true),
                 multiple_bss_candidates: Some(false)
             })
@@ -2039,7 +2037,7 @@ mod tests {
                     // The network ID should match network config for recording connect results.
                     network: wpa_network_id.clone(),
                     credential,
-                    bss: Some(mixed_scan_results[0].entries[0].bss_desc.clone()),
+                    bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
                     observed_in_passive_scan: Some(
                         mixed_scan_results[0].entries[0].observed_in_passive_scan
                     ),
@@ -2141,7 +2139,7 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                bss: Some(bss_desc_1),
+                bss: bss_desc_1,
                 // This code path can't know if the network would have been observed in a passive
                 // scan, since it never performs a passive scan.
                 observed_in_passive_scan: None,
