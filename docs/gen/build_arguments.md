@@ -1748,11 +1748,11 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/profile:coverage"]
   tags = ["instrumented", "coverage"]
 }, {
+  configs = ["//build/config/profile:coverage-rust"]
+  tags = ["instrumented", "coverage"]
+}, {
   configs = ["//build/config/profile"]
   tags = ["instrumented", "profile"]
-}, {
-  configs = ["//build/config/profile:rustcoverage"]
-  tags = ["instrumented", "coverage"]
 }, {
   configs = ["//build/config/profile:coverage-sdk"]
   tags = ["instrumented", "coverage"]
@@ -3216,10 +3216,10 @@ a list that can be spliced into [`select_variant`](#select_variant).
   variant = "coverage"
 }]
 }, {
-  name = "host_rustcoverage"
+  name = "host_coverage-rust"
   select_variant = [{
   host = true
-  variant = "rustcoverage"
+  variant = "coverage-rust"
 }]
 }, {
   name = "host_profile"
@@ -4020,7 +4020,7 @@ Path to the amlogic decoder firmware file. Overrides the default in the build.
 
 **Current value (from the default):** `""`
 
-From //src/media/drivers/amlogic_decoder/BUILD.gn:13
+From //src/media/drivers/amlogic_decoder/BUILD.gn:12
 
 ### arm_float_abi
 The ARM floating point mode. This is either the string "hard", "soft", or
