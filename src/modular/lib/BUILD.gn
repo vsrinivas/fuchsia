@@ -15,7 +15,6 @@ group("lib") {
     "base64url",
     "common",
     "fidl",
-    "integration_testing",
     "lifecycle",
     "pseudo_dir",
     "scoped_tmpfs",

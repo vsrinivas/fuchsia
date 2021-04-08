@@ -8,8 +8,6 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 #include "src/modular/lib/testing/component_main.h"
-#include "src/modular/public/src/modular/lib/integration_testing/cpp/reporting.h"
-#include "src/modular/public/src/modular/lib/integration_testing/cpp/testing.h"
 
 namespace modular_testing {
 

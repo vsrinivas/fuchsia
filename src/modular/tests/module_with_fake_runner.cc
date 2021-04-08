@@ -9,7 +9,6 @@
 #include <sdk/lib/sys/cpp/component_context.h>
 
 #include "src/modular/lib/app_driver/cpp/module_driver.h"
-#include "src/modular/lib/integration_testing/cpp/testing.h"
 
 namespace {
 

@@ -25,7 +25,6 @@ source_set("component_base") {
     ":component_main",
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/fidl:single_service_app",
-    "//src/modular/lib/integration_testing/cpp",
   ]
 }
 
@@ -66,7 +65,6 @@ source_set("session_shell_impl") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/modular/lib/integration_testing/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
