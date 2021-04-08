@@ -91,15 +91,25 @@ zx_status_t ClearPersistedConfig(async::Loop* loop) {
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   zx_status_t channel_close_status;
+  int64_t basemgr_terminate_code = -1;
+  fuchsia::sys::TerminationReason basemgr_terminate_reason;
+  controller.events().OnTerminated = [&basemgr_terminate_code, &basemgr_terminate_reason](
+                                         int64_t exit_code,
+                                         fuchsia::sys::TerminationReason reason) {
+    basemgr_terminate_reason = reason;
+    basemgr_terminate_code = exit_code;
+  };
   controller.set_error_handler([&channel_close_status, loop](zx_status_t status) {
     channel_close_status = status;
     loop->Quit();
   });
   loop->Run();
   loop->ResetQuit();
-  if (channel_close_status != ZX_OK) {
-    std::cerr << "basemgr delete_peristent_config did not exit cleanly. Expected ZX_OK, got "
-              << zx_status_get_string(channel_close_status);
+  if (basemgr_terminate_reason != fuchsia::sys::TerminationReason::EXITED ||
+      basemgr_terminate_code != 0) {
+    std::cerr << "basemgr delete_peristent_config did not exit cleanly: reason = "
+              << static_cast<int>(basemgr_terminate_reason)
+              << ", exit code = " << basemgr_terminate_code;
   }
   return ZX_OK;
 }
