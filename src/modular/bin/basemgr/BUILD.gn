@@ -59,27 +59,16 @@ executable("basemgr_bin") {
   ]
 }
 
-resource("icudtl") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/icudtl.dat" ]
-}
-
 fuchsia_component("component_v1") {
   component_name = "basemgr"
   manifest = "meta/basemgr.cmx"
-  deps = [
-    ":basemgr_bin",
-    ":icudtl",
-  ]
+  deps = [ ":basemgr_bin" ]
 }
 
 fuchsia_component("component_v2") {
   component_name = "basemgr"
   manifest = "meta/basemgr.cml"
-  deps = [
-    ":basemgr_bin",
-    ":icudtl",
-  ]
+  deps = [ ":basemgr_bin" ]
 }
 
 fuchsia_package("basemgr") {
