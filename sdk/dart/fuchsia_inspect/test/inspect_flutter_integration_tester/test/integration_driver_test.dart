@@ -59,6 +59,9 @@ Future<void> _startTestHarness() async {
   }
 
   final testHarnessSpec = TestHarnessSpec(
+      envServicesToInherit: [
+        'fuchsia.vulkan.loader.Loader',
+      ],
       envServices: EnvironmentServicesSpec(
           servicesFromComponents: _toComponentServices({
             'fuchsia.identity.account.AccountManager':
@@ -77,8 +80,6 @@ Future<void> _startTestHarness() async {
                 'fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx',
             'fuchsia.ui.scenic.Scenic':
                 'fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx',
-            'fuchsia.vulkan.loader.Loader':
-                'fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx'
           }),
           serviceDir: Channel.fromFile('/svc')));
   // run the test harness which will create an encapsulated test env

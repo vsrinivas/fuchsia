@@ -58,7 +58,8 @@ Future<void> _startTestHarness() async {
   final testHarnessSpec = TestHarnessSpec(
       envServicesToInherit: [
         'fuchsia.net.NameLookup',
-        'fuchsia.posix.socket.Provider'
+        'fuchsia.posix.socket.Provider',
+        'fuchsia.vulkan.loader.Loader',
       ],
       envServices: EnvironmentServicesSpec(
           servicesFromComponents: _toComponentServices({
@@ -78,8 +79,6 @@ Future<void> _startTestHarness() async {
             'fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx',
         'fuchsia.ui.scenic.Scenic':
             'fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx',
-        'fuchsia.vulkan.loader.Loader':
-            'fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx'
       })));
 
   // run the test harness which will create an encapsulated test env
