@@ -52,11 +52,6 @@ source_set("optee_lib") {
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fidl-utils",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 driver_module("optee") {
@@ -103,11 +98,6 @@ test("optee-controller-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("optee-client-test-bin") {
@@ -124,11 +114,6 @@ test("optee-client-test-bin") {
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("optee-uuid-test-bin") {

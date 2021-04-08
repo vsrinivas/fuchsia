@@ -70,7 +70,6 @@ var rawChannelInterfaceAllowed = map[string]bool{
 	"::fuchsia_hardware_input::Device":                   true,
 	"::fuchsia_hardware_pty::Device":                     true,
 	"::fuchsia_hardware_serial::NewDeviceProxy":          true,
-	"::fuchsia_hardware_tee::DeviceConnector":            true,
 	"::fuchsia_hardware_usb_peripheral::Device":          true,
 	"::fuchsia_hardware_virtioconsole::Device":           true,
 	"::fuchsia_input_report::InputDevice":                true,

@@ -375,12 +375,14 @@ zx_status_t OpteeController::TeeConnectToApplication(const uuid_t* application_u
                                                      zx::channel service_provider) {
   ZX_DEBUG_ASSERT(application_uuid);
   ZX_DEBUG_ASSERT(tee_app_request.is_valid());
-  return ConnectToApplicationInternal(Uuid(*application_uuid), std::move(service_provider),
-                                      std::move(tee_app_request));
+  return ConnectToApplicationInternal(
+      Uuid(*application_uuid),
+      fidl::ClientEnd<fuchsia_tee_manager::Provider>(std::move(service_provider)),
+      fidl::ServerEnd<fuchsia_tee::Application>(std::move(tee_app_request)));
 }
 
 void OpteeController::ConnectToDeviceInfo(
-    zx::channel device_info_request,
+    fidl::ServerEnd<fuchsia_tee::DeviceInfo> device_info_request,
     [[maybe_unused]] ConnectToDeviceInfoCompleter::Sync& _completer) {
   ZX_DEBUG_ASSERT(device_info_request.is_valid());
 
@@ -389,9 +391,10 @@ void OpteeController::ConnectToDeviceInfo(
 
   // Add a child `OpteeDeviceInfo` instance device and have it immediately start serving
   // `device_info_request`.
-  zx_status_t status = device_info->DdkAdd(ddk::DeviceAddArgs("optee-client")
-                                               .set_flags(DEVICE_ADD_INSTANCE)
-                                               .set_client_remote(std::move(device_info_request)));
+  zx_status_t status =
+      device_info->DdkAdd(ddk::DeviceAddArgs("optee-client")
+                              .set_flags(DEVICE_ADD_INSTANCE)
+                              .set_client_remote(device_info_request.TakeChannel()));
   if (status != ZX_OK) {
     LOG(ERROR, "failed to create device info child");
     return;
@@ -402,16 +405,17 @@ void OpteeController::ConnectToDeviceInfo(
 }
 
 void OpteeController::ConnectToApplication(
-    fuchsia_tee::wire::Uuid application_uuid, zx::channel service_provider,
-    zx::channel application_request,
+    fuchsia_tee::wire::Uuid application_uuid,
+    fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
+    fidl::ServerEnd<fuchsia_tee::Application> application_request,
     [[maybe_unused]] ConnectToApplicationCompleter::Sync& _completer) {
   ConnectToApplicationInternal(Uuid(application_uuid), std::move(service_provider),
                                std::move(application_request));
 }
 
-zx_status_t OpteeController::ConnectToApplicationInternal(Uuid application_uuid,
-                                                          zx::channel service_provider,
-                                                          zx::channel application_request) {
+zx_status_t OpteeController::ConnectToApplicationInternal(
+    Uuid application_uuid, fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
+    fidl::ServerEnd<fuchsia_tee::Application> application_request) {
   ZX_DEBUG_ASSERT(application_request.is_valid());
 
   // Create a new `OpteeClient` device and hand off client communication to it.
@@ -421,7 +425,7 @@ zx_status_t OpteeController::ConnectToApplicationInternal(Uuid application_uuid,
   // `device_request`
   zx_status_t status = client->DdkAdd(ddk::DeviceAddArgs("optee-client")
                                           .set_flags(DEVICE_ADD_INSTANCE)
-                                          .set_client_remote(std::move(application_request)));
+                                          .set_client_remote(application_request.TakeChannel()));
   if (status != ZX_OK) {
     LOG(ERROR, "failed to create device info child (status: %d)", status);
     return status;

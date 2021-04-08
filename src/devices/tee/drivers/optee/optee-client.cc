@@ -12,6 +12,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -131,7 +132,7 @@ static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
 // `fuchsia.io.OPEN_FLAG_DESCRIBE` flag and returns the status contained in the event.
 //
 // This is useful for synchronously awaiting the result of an `Open` request.
-static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
+static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
   class EventHandler : public fidl::WireSyncEventHandler<fuchsia_io::Node> {
    public:
     EventHandler() = default;
@@ -152,7 +153,7 @@ static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
 
   EventHandler event_handler;
   // TODO(godtamit): check for an epitaph here once `fuchsia.io` (and LLCPP) supports it.
-  auto status = event_handler.HandleOneEvent(zx::unowned_channel(channel)).status();
+  auto status = event_handler.HandleOneEvent(std::move(node)).status();
   if (status == ZX_OK) {
     status = event_handler.status();
   }
@@ -163,39 +164,34 @@ static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
 }
 
 // Calls `fuchsia.io.Directory/Open` on a channel and awaits the result.
-static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint32_t flags,
-                                         uint32_t mode, std::string path,
-                                         zx::channel* out_channel_node) {
-  ZX_DEBUG_ASSERT(out_channel_node != nullptr);
-
+static zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, uint32_t flags, uint32_t mode,
+    std::string path) {
   // Ensure `OPEN_FLAG_DESCRIBE` is passed
   flags |= fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
 
   // Create temporary channel ends to make FIDL call
-  zx::channel channel_client_end;
-  zx::channel channel_server_end;
-  zx_status_t status = zx::channel::create(0, &channel_client_end, &channel_server_end);
-  if (status != ZX_OK) {
-    LOG(ERROR, "failed to create channel pair (status: %d)", status);
-    return status;
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  if (endpoints.is_error()) {
+    LOG(ERROR, "failed to create channel pair (status: %s)", endpoints.status_string());
+    return endpoints.take_error();
   }
 
-  auto result =
-      fidl::WireCall<fuchsia_io::Directory>(std::move(root_channel))
-          .Open(flags, mode, fidl::StringView::FromExternal(path), std::move(channel_server_end));
-  status = result.status();
-  if (status != ZX_OK) {
-    LOG(ERROR, "could not call fuchsia.io.Directory/Open (status: %d)", status);
-    return status;
+  auto [client_end, server_end] = std::move(endpoints.value());
+
+  auto result = fidl::WireCall(root).Open(flags, mode, fidl::StringView::FromExternal(path),
+                                          std::move(server_end));
+  if (!result.ok()) {
+    LOG(ERROR, "could not call fuchsia.io.Directory/Open (status: %s)", result.status_string());
+    return zx::error(result.status());
   }
 
-  status = AwaitIoOnOpenStatus(zx::unowned_channel(channel_client_end));
+  zx_status_t status = AwaitIoOnOpenStatus(client_end.borrow());
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  *out_channel_node = std::move(channel_client_end);
-  return ZX_OK;
+  return zx::ok(std::move(client_end));
 }
 
 // Recursively walks down a multi-part path, opening and outputting the final destination.
@@ -204,70 +200,65 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
 //  * kOpenFlags: The flags to call `fuchsia.io.Directory/Open` with. This must not contain
 //               `OPEN_FLAG_NOT_DIRECTORY`.
 // Parameters:
-//  * root_channel:     The channel to the directory to start the walk from.
-//  * path:             The path relative to `root_channel` to open.
-//  * out_node_channel: Where to store the resulting `fuchsia.io.Node` channel opened.
+//  * root: The channel to the directory to start the walk from.
+//  * path: The path relative to `root` to open.
 template <uint32_t kOpenFlags>
-static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
-                                       std::filesystem::path path, zx::channel* out_node_channel) {
+static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
   static_assert((kOpenFlags & fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY) == 0,
                 "kOpenFlags must not include fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY");
-  ZX_DEBUG_ASSERT(root_channel->is_valid());
-  ZX_DEBUG_ASSERT(out_node_channel != nullptr);
+  ZX_DEBUG_ASSERT(root.is_valid());
 
-  zx_status_t status;
-  zx::channel result_channel;
-
+  // If the path is lexicographically equivalent to the (relative) root directory, clone the root
+  // channel instead of opening the path. An empty path is considered equivalent to the relative
+  // root directory.
   if (path.empty() || path == std::filesystem::path(".")) {
-    // If the path is lexicographically equivalent to the (relative) root directory, clone the
-    // root channel instead of opening the path. An empty path is considered equivalent to
-    // the relative root directory.
-    zx::channel server_channel;
-    status = zx::channel::create(0, &result_channel, &server_channel);
-    if (status != ZX_OK) {
-      return status;
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
     }
 
-    auto result = fidl::WireCall<fuchsia_io::Directory>(zx::unowned_channel(*root_channel))
-                      .Clone(fuchsia_io::wire::CLONE_FLAG_SAME_RIGHTS, std::move(server_channel));
-    status = result.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-  } else {
-    zx::unowned_channel current_channel(root_channel);
-    for (const auto& fragment : path) {
-      zx::channel temporary_channel;
-      static constexpr uint32_t kOpenMode = fuchsia_io::wire::MODE_TYPE_DIRECTORY;
-      status = OpenObjectInDirectory(std::move(current_channel), kOpenFlags, kOpenMode,
-                                     fragment.string(), &temporary_channel);
-      if (status != ZX_OK) {
-        return status;
-      }
+    auto [client_end, server_end] = std::move(endpoints.value());
 
-      result_channel = std::move(temporary_channel);
-      current_channel = zx::unowned(result_channel);
+    auto result =
+        fidl::WireCall(root).Clone(fuchsia_io::wire::CLONE_FLAG_SAME_RIGHTS, std::move(server_end));
+    if (!result.ok()) {
+      return zx::error(result.status());
     }
+
+    return zx::ok(fidl::ClientEnd<fuchsia_io::Directory>(client_end.TakeChannel()));
   }
 
-  *out_node_channel = std::move(result_channel);
-  return ZX_OK;
+  // If the path is more than just the root, then we need to walk the path.
+  fidl::ClientEnd<fuchsia_io::Directory> current_dir{};
+  for (const auto& fragment : path) {
+    static constexpr uint32_t kOpenMode = fuchsia_io::wire::MODE_TYPE_DIRECTORY;
+    auto new_client_end =
+        OpenObjectInDirectory(current_dir.is_valid() ? current_dir.borrow() : root, kOpenFlags,
+                              kOpenMode, fragment.string());
+    if (new_client_end.is_error()) {
+      return new_client_end.take_error();
+    }
+
+    current_dir = fidl::ClientEnd<fuchsia_io::Directory>(new_client_end.value().TakeChannel());
+  }
+  return zx::ok(std::move(current_dir));
 }
 
-template <typename... Args>
-static inline zx_status_t CreateDirectory(Args&&... args) {
+static inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
   static constexpr uint32_t kCreateFlags =
       fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
       fuchsia_io::wire::OPEN_FLAG_CREATE | fuchsia_io::wire::OPEN_FLAG_DIRECTORY;
-  return RecursivelyWalkPath<kCreateFlags>(std::forward<Args>(args)...);
+  return RecursivelyWalkPath<kCreateFlags>(std::move(root), std::move(path));
 }
 
-template <typename... Args>
-static inline zx_status_t OpenDirectory(Args&&... args) {
+static inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
   static constexpr uint32_t kOpenFlags = fuchsia_io::wire::OPEN_RIGHT_READABLE |
                                          fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
                                          fuchsia_io::wire::OPEN_FLAG_DIRECTORY;
-  return RecursivelyWalkPath<kOpenFlags>(std::forward<Args>(args)...);
+  return RecursivelyWalkPath<kOpenFlags>(std::move(root), std::move(path));
 }
 
 }  // namespace
@@ -550,35 +541,27 @@ std::optional<SharedMemoryView> OpteeClient::GetMemoryReference(SharedMemoryList
   return result;
 }
 
-zx_status_t OpteeClient::GetRootStorageChannel(zx::unowned_channel* out_root_channel) {
-  ZX_DEBUG_ASSERT(out_root_channel != nullptr);
-
-  if (!provider_channel_.is_valid()) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-  if (root_storage_channel_.is_valid()) {
-    *out_root_channel = zx::unowned_channel(root_storage_channel_);
-    return ZX_OK;
+zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> OpteeClient::GetRootStorage() {
+  if (!provider_.channel().is_valid()) {
+    return zx::error(ZX_ERR_UNAVAILABLE);
   }
 
-  zx::channel client_channel;
-  zx::channel server_channel;
-  zx_status_t status = zx::channel::create(0, &client_channel, &server_channel);
-  if (status != ZX_OK) {
-    return status;
+  if (root_storage_.is_valid()) {
+    return zx::ok(root_storage_.borrow());
   }
 
-  auto result =
-      fidl::WireCall<fuchsia_tee_manager::Provider>(zx::unowned_channel(provider_channel_))
-          .RequestPersistentStorage(std::move(server_channel));
-  status = result.status();
-  if (status != ZX_OK) {
-    return status;
+  auto server_end = fidl::CreateEndpoints(&root_storage_);
+  if (!server_end.is_ok()) {
+    return server_end.take_error();
   }
 
-  root_storage_channel_ = std::move(client_channel);
-  *out_root_channel = zx::unowned_channel(root_storage_channel_);
-  return ZX_OK;
+  auto result = provider_.RequestPersistentStorage(std::move(server_end.value()));
+  if (!result.ok()) {
+    root_storage_.reset();
+    return zx::error(result.status());
+  }
+
+  return zx::ok(root_storage_.borrow());
 }
 
 zx_status_t OpteeClient::InitRpmbClient(void) {
@@ -586,62 +569,55 @@ zx_status_t OpteeClient::InitRpmbClient(void) {
     return ZX_OK;
   }
 
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    LOG(ERROR, "failed to create channel pair (status: %d)", status);
-    return status;
-  }
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_rpmb::Rpmb>();
 
-  status = controller_->RpmbConnectServer(std::move(server));
+  if (endpoints.is_error()) {
+    LOG(ERROR, "failed to create channel pair (status: %s)", endpoints.status_string());
+    return endpoints.status_value();
+  }
+  auto [client_end, server_end] = std::move(endpoints.value());
+
+  zx_status_t status = controller_->RpmbConnectServer(std::move(server_end));
   if (status != ZX_OK) {
     LOG(ERROR, "failed to connect to RPMB server (status: %d)", status);
     return status;
   }
 
-  rpmb_client_ = fidl::WireSyncClient<fuchsia_hardware_rpmb::Rpmb>(std::move(client));
+  rpmb_client_ = fidl::WireSyncClient<fuchsia_hardware_rpmb::Rpmb>(std::move(client_end));
 
   return ZX_OK;
 }
 
-zx_status_t OpteeClient::GetStorageDirectory(std::filesystem::path path, bool create,
-                                             zx::channel* out_storage_channel) {
-  ZX_DEBUG_ASSERT(out_storage_channel != nullptr);
-
-  zx::unowned_channel root_channel;
-  zx_status_t status = GetRootStorageChannel(&root_channel);
-  if (status != ZX_OK) {
-    return status;
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpteeClient::GetStorageDirectory(
+    std::filesystem::path path, bool create) {
+  auto root = GetRootStorage();
+  if (root.is_error()) {
+    return root.take_error();
   }
 
-  zx::channel storage_channel;
+  auto storage = create ? CreateDirectory(root.value(), path) : OpenDirectory(root.value(), path);
 
-  if (create) {
-    status = CreateDirectory(root_channel, path, &storage_channel);
-  } else {
-    status = OpenDirectory(root_channel, path, &storage_channel);
-  }
-  if (status != ZX_OK) {
-    return status;
+  if (storage.is_error()) {
+    return storage.take_error();
   }
 
-  *out_storage_channel = std::move(storage_channel);
-  return ZX_OK;
+  return zx::ok(std::move(storage.value()));
 }
 
-uint64_t OpteeClient::TrackFileSystemObject(zx::channel io_node_channel) {
+uint64_t OpteeClient::TrackFileSystemObject(fidl::ClientEnd<fuchsia_io::File> file) {
   uint64_t object_id = next_file_system_object_id_.fetch_add(1, std::memory_order_relaxed);
-  open_file_system_objects_.insert({object_id, std::move(io_node_channel)});
+  open_file_system_objects_.insert({object_id, std::move(file)});
 
   return object_id;
 }
 
-std::optional<zx::unowned_channel> OpteeClient::GetFileSystemObjectChannel(uint64_t identifier) {
+std::optional<fidl::UnownedClientEnd<fuchsia_io::File>> OpteeClient::GetFileSystemObject(
+    uint64_t identifier) {
   auto iter = open_file_system_objects_.find(identifier);
   if (iter == open_file_system_objects_.end()) {
     return std::nullopt;
   }
-  return zx::unowned_channel(iter->second);
+  return iter->second.borrow();
 }
 
 bool OpteeClient::UntrackFileSystemObject(uint64_t identifier) {
@@ -1228,8 +1204,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
   // Mark that the return code will originate from driver
   message.set_return_origin(TEEC_ORIGIN_COMMS);
 
-  if (!provider_channel_.is_valid()) {
-    LOG(ERROR, "Filesystem RPC received with !provider_channel_.is_valid()");
+  if (!provider_.channel().is_valid()) {
+    LOG(ERROR, "Filesystem RPC received with !provider_.is_valid()");
     // Client did not connect with a Provider so none of these RPCs can be serviced
     message.set_return_code(TEEC_ERROR_BAD_STATE);
     return ZX_ERR_UNAVAILABLE;
@@ -1309,7 +1285,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
 
 zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
-  ZX_DEBUG_ASSERT(provider_channel_.is_valid());
+  ZX_DEBUG_ASSERT(provider_.channel().is_valid());
 
   LOG(TRACE, "received RPC to open file");
 
@@ -1324,37 +1300,38 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   std::filesystem::path path =
       GetPathFromRawMemory(reinterpret_cast<void*>(path_mem->vaddr()), message->path_memory_size());
 
-  zx::channel storage_channel;
   constexpr bool kNoCreate = false;
-  zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
-  if (status == ZX_ERR_NOT_FOUND) {
-    LOG(DEBUG, "parent path not found (status: %d)", status);
+  auto storage_dir = GetStorageDirectory(path.parent_path(), kNoCreate);
+
+  if (storage_dir.status_value() == ZX_ERR_NOT_FOUND) {
+    LOG(DEBUG, "parent path not found (status: %d)", storage_dir.status_value());
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
-    return status;
-  } else if (status != ZX_OK) {
-    LOG(DEBUG, "unable to get parent directory (status: %d)", status);
+    return storage_dir.status_value();
+  } else if (storage_dir.is_error()) {
+    LOG(DEBUG, "unable to get parent directory (status: %s)", storage_dir.status_string());
     message->set_return_code(TEEC_ERROR_BAD_STATE);
-    return status;
+    return storage_dir.status_value();
   }
 
-  zx::channel file_channel;
   static constexpr uint32_t kOpenFlags =
       fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
       fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
   static constexpr uint32_t kOpenMode = fuchsia_io::wire::MODE_TYPE_FILE;
-  status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kOpenFlags, kOpenMode,
-                                 path.filename().string(), &file_channel);
-  if (status == ZX_ERR_NOT_FOUND) {
-    LOG(DEBUG, "file not found (status: %d)", status);
+  auto node = OpenObjectInDirectory(storage_dir.value().borrow(), kOpenFlags, kOpenMode,
+                                    path.filename().string());
+  if (node.status_value() == ZX_ERR_NOT_FOUND) {
+    LOG(DEBUG, "file not found (status: %s)", node.status_string());
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
-    return status;
-  } else if (status != ZX_OK) {
-    LOG(DEBUG, "unable to open file (status: %d)", status);
+    return node.status_value();
+  } else if (node.is_error()) {
+    LOG(DEBUG, "unable to open file (status: %s)", node.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return status;
+    return node.status_value();
   }
 
-  uint64_t object_id = TrackFileSystemObject(std::move(file_channel));
+  // By the open mode this node is a file.
+  uint64_t object_id =
+      TrackFileSystemObject(fidl::ClientEnd<fuchsia_io::File>(node.value().TakeChannel()));
 
   message->set_output_file_system_object_identifier(object_id);
   message->set_return_code(TEEC_SUCCESS);
@@ -1378,29 +1355,30 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
   std::filesystem::path path =
       GetPathFromRawMemory(reinterpret_cast<void*>(path_mem->vaddr()), message->path_memory_size());
 
-  zx::channel storage_channel;
   constexpr bool kCreate = true;
-  zx_status_t status = GetStorageDirectory(path.parent_path(), kCreate, &storage_channel);
-  if (status != ZX_OK) {
+  auto storage_dir = GetStorageDirectory(path.parent_path(), kCreate);
+  if (storage_dir.is_error()) {
     message->set_return_code(TEEC_ERROR_BAD_STATE);
-    return status;
+    return storage_dir.status_value();
   }
 
-  zx::channel file_channel;
   static constexpr uint32_t kCreateFlags =
       fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
       fuchsia_io::wire::OPEN_FLAG_CREATE | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
   static constexpr uint32_t kCreateMode = fuchsia_io::wire::MODE_TYPE_FILE;
-  status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kCreateFlags, kCreateMode,
-                                 path.filename().string(), &file_channel);
-  if (status != ZX_OK) {
-    LOG(DEBUG, "unable to create file (status: %d)", status);
-    message->set_return_code(status == ZX_ERR_ALREADY_EXISTS ? TEEC_ERROR_ACCESS_CONFLICT
-                                                             : TEEC_ERROR_GENERIC);
-    return status;
+  auto node = OpenObjectInDirectory(storage_dir.value().borrow(), kCreateFlags, kCreateMode,
+                                    path.filename().string());
+  if (node.is_error()) {
+    LOG(DEBUG, "unable to create file (status: %s)", node.status_string());
+    message->set_return_code(node.status_value() == ZX_ERR_ALREADY_EXISTS
+                                 ? TEEC_ERROR_ACCESS_CONFLICT
+                                 : TEEC_ERROR_GENERIC);
+    return node.status_value();
   }
 
-  uint64_t object_id = TrackFileSystemObject(std::move(file_channel));
+  // By the open mode this node is a file.
+  uint64_t object_id =
+      TrackFileSystemObject(fidl::ClientEnd<fuchsia_io::File>(node.value().TakeChannel()));
 
   message->set_output_file_system_object_identifier(object_id);
   message->set_return_code(TEEC_SUCCESS);
@@ -1428,13 +1406,13 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
 
   LOG(TRACE, "received RPC to read from file");
 
-  auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
-  if (!maybe_file_channel.has_value()) {
+  auto maybe_file = GetFileSystemObject(message->file_system_object_identifier());
+  if (!maybe_file) {
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx::unowned_channel file_channel(std::move(*maybe_file_channel));
+  auto file = std::move(maybe_file.value());
 
   std::optional<SharedMemoryView> buffer_mem = GetMemoryReference(
       FindSharedMemory(message->file_contents_memory_identifier()),
@@ -1456,9 +1434,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
     uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::MAX_BUF);
     uint64_t read_chunk_actual = 0;
 
-    auto result =
-        fidl::WireCall<fuchsia_io::File>(zx::unowned_channel(file_channel))
-            .ReadAt(request_buffer.view(), read_chunk_request, offset, response_buffer.view());
+    auto result = fidl::WireCall(file).ReadAt(request_buffer.view(), read_chunk_request, offset,
+                                              response_buffer.view());
     io_status = result->s;
     if (status != ZX_OK || io_status != ZX_OK) {
       LOG(ERROR, "failed to read from file (FIDL status: %d, IO status: %d)", status, io_status);
@@ -1490,13 +1467,13 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
 
   LOG(TRACE, "received RPC to write file");
 
-  auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
-  if (!maybe_file_channel.has_value()) {
+  auto maybe_file = GetFileSystemObject(message->file_system_object_identifier());
+  if (!maybe_file) {
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx::unowned_channel file_channel(std::move(*maybe_file_channel));
+  auto file = std::move(maybe_file.value());
 
   std::optional<SharedMemoryView> buffer_mem = GetMemoryReference(
       FindSharedMemory(message->file_contents_memory_identifier()),
@@ -1514,9 +1491,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
   while (bytes_left > 0) {
     uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::wire::MAX_BUF);
 
-    auto result =
-        fidl::WireCall<fuchsia_io::File>(zx::unowned_channel(file_channel))
-            .WriteAt(fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
+    auto result = fidl::WireCall(file).WriteAt(
+        fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
     status = result.status();
     io_status = result->s;
     buffer += result->actual;
@@ -1540,16 +1516,13 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
 
   LOG(TRACE, "received RPC to truncate file");
 
-  auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
-  if (!maybe_file_channel.has_value()) {
+  auto maybe_file = GetFileSystemObject(message->file_system_object_identifier());
+  if (!maybe_file) {
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx::unowned_channel file_channel(std::move(*maybe_file_channel));
-
-  auto result = fidl::WireCall<fuchsia_io::File>(zx::unowned_channel(file_channel))
-                    .Truncate(message->target_file_size());
+  auto result = fidl::WireCall(maybe_file.value()).Truncate(message->target_file_size());
   zx_status_t status = result.status();
   zx_status_t io_status = result->s;
   if (status != ZX_OK || io_status != ZX_OK) {
@@ -1579,24 +1552,26 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
   std::filesystem::path path =
       GetPathFromRawMemory(reinterpret_cast<void*>(path_mem->vaddr()), message->path_memory_size());
 
-  zx::channel storage_channel;
   constexpr bool kNoCreate = false;
-  zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
-  if (status != ZX_OK) {
-    LOG(ERROR, "failed to get storage directory (status %d)", status);
+  auto storage_dir = GetStorageDirectory(path.parent_path(), kNoCreate);
+  if (storage_dir.is_error()) {
+    LOG(ERROR, "failed to get storage directory (status %s)", storage_dir.status_string());
     message->set_return_code(TEEC_ERROR_BAD_STATE);
-    return status;
+    return storage_dir.status_value();
   }
 
   std::string filename = path.filename().string();
-  auto result = fidl::WireCall<fuchsia_io::Directory>(zx::unowned_channel(storage_channel))
-                    .Unlink(fidl::StringView::FromExternal(filename));
-  status = result.status();
-  zx_status_t io_status = result->s;
-  if (status != ZX_OK || io_status != ZX_OK) {
-    LOG(ERROR, "failed to remove file (FIDL status: %d, IO status: %d)", status, io_status);
+  auto result =
+      fidl::WireCall(storage_dir.value().borrow()).Unlink(fidl::StringView::FromExternal(filename));
+  if (!result.ok()) {
+    LOG(ERROR, "failed to remove file (FIDL status: %s)", result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return status;
+    return result.status();
+  }
+  if (result->s != ZX_OK) {
+    LOG(ERROR, "failed to remove file (IO status: %d)", result->s);
+    message->set_return_code(TEEC_ERROR_GENERIC);
+    return result->s;
   }
 
   message->set_return_code(TEEC_SUCCESS);
@@ -1633,63 +1608,67 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
       reinterpret_cast<void*>(new_path_mem->vaddr()), message->new_file_name_memory_size());
   std::string new_name = new_path.filename().string();
 
-  zx::channel new_storage_channel;
   constexpr bool kNoCreate = false;
-  zx_status_t status = GetStorageDirectory(new_path.parent_path(), kNoCreate, &new_storage_channel);
-  if (status != ZX_OK) {
+  auto new_storage = GetStorageDirectory(new_path.parent_path(), kNoCreate);
+
+  if (new_storage.is_error()) {
     message->set_return_code(TEEC_ERROR_BAD_STATE);
-    return status;
+    return new_storage.status_value();
   }
 
   if (!message->should_overwrite()) {
-    zx::channel destination_channel;
     static constexpr uint32_t kCheckRenameFlags =
         fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
     static constexpr uint32_t kCheckRenameMode =
         fuchsia_io::wire::MODE_TYPE_FILE | fuchsia_io::wire::MODE_TYPE_DIRECTORY;
-    status = OpenObjectInDirectory(zx::unowned_channel(new_storage_channel), kCheckRenameFlags,
-                                   kCheckRenameMode, new_name, &destination_channel);
-    if (status == ZX_OK) {
+    auto destination = OpenObjectInDirectory(new_storage.value().borrow(), kCheckRenameFlags,
+                                             kCheckRenameMode, new_name);
+    if (destination.is_ok()) {
       // The file exists but shouldn't be overwritten
       LOG(INFO, "refusing to rename file to path that already exists with overwrite set to false");
       message->set_return_code(TEEC_ERROR_ACCESS_CONFLICT);
       return ZX_OK;
-    } else if (status != ZX_ERR_NOT_FOUND) {
-      LOG(ERROR, "could not check file existence before renaming (status %d)", status);
+    } else if (destination.status_value() != ZX_ERR_NOT_FOUND) {
+      LOG(ERROR, "could not check file existence before renaming (status %s)",
+          destination.status_string());
       message->set_return_code(TEEC_ERROR_GENERIC);
-      return status;
+      return destination.status_value();
     }
   }
 
-  zx::channel old_storage_channel;
-  status = GetStorageDirectory(old_path.parent_path(), kNoCreate, &old_storage_channel);
-  if (status != ZX_OK) {
+  auto old_storage = GetStorageDirectory(old_path.parent_path(), kNoCreate);
+  if (old_storage.is_error()) {
     message->set_return_code(TEEC_ERROR_BAD_STATE);
-    return status;
+    return old_storage.status_value();
   }
 
-  auto token_result =
-      fidl::WireCall<fuchsia_io::Directory>(zx::unowned_channel(new_storage_channel)).GetToken();
-  status = token_result.status();
-  auto io_status = token_result->s;
-  if (status != ZX_OK || io_status != ZX_OK) {
-    LOG(ERROR,
-        "could not get destination directory's storage token (FIDL status: %d, IO status: %d)",
-        status, io_status);
+  auto token_result = fidl::WireCall(new_storage.value().borrow()).GetToken();
+  if (!token_result.ok()) {
+    LOG(ERROR, "could not get destination directory's storage token (FIDL status: %s)",
+        token_result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return status;
+    return token_result.status();
+  }
+  if (token_result->s != ZX_OK) {
+    LOG(ERROR, "could not get destination directory's storage token (IO status: %d)",
+        token_result->s);
+    message->set_return_code(TEEC_ERROR_GENERIC);
+    return token_result->s;
   }
 
   auto rename_result =
-      fidl::WireCall<fuchsia_io::Directory>(zx::unowned_channel(old_storage_channel))
+      fidl::WireCall(old_storage.value().borrow())
           .Rename(fidl::StringView::FromExternal(old_name), std::move(token_result->token),
                   fidl::StringView::FromExternal(new_name));
-  status = rename_result.status();
-  io_status = rename_result->s;
-  if (status != ZX_OK || io_status != ZX_OK) {
-    LOG(ERROR, "failed to rename file (FIDL status: %d, IO status: %d)", status, io_status);
+  if (!rename_result.ok()) {
+    LOG(ERROR, "failed to rename file (FIDL status: %s)", rename_result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return status;
+    return rename_result.status();
+  }
+  if (rename_result->s != ZX_OK) {
+    LOG(ERROR, "failed to rename file (IO status: %d)", rename_result->s);
+    message->set_return_code(TEEC_ERROR_GENERIC);
+    return rename_result->s;
   }
 
   message->set_return_code(TEEC_SUCCESS);

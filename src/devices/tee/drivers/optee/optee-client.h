@@ -6,7 +6,9 @@
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
 
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/tee/llcpp/fidl.h>
+#include <fuchsia/tee/manager/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include <atomic>
@@ -46,11 +48,12 @@ class OpteeClient : public OpteeClientBase,
                     public fbl::DoublyLinkedListable<OpteeClient*>,
                     public fidl::WireInterface<fuchsia_tee::Application> {
  public:
-  explicit OpteeClient(OpteeControllerBase* controller, zx::channel provider_channel,
+  explicit OpteeClient(OpteeControllerBase* controller,
+                       fidl::ClientEnd<fuchsia_tee_manager::Provider> provider,
                        Uuid application_uuid)
       : OpteeClientBase(controller->GetDevice()),
         controller_(controller),
-        provider_channel_(std::move(provider_channel)),
+        provider_(std::move(provider)),
         application_uuid_(std::move(application_uuid)) {}
 
   OpteeClient(const OpteeClient&) = delete;
@@ -131,7 +134,7 @@ class OpteeClient : public OpteeClientBase,
   std::optional<SharedMemoryView> GetMemoryReference(SharedMemoryList::iterator mem_iter,
                                                      zx_paddr_t base_paddr, size_t size);
 
-  // Requests the root storage channel from the `Provider` and caches it in `root_storage_channel_`.
+  // Requests the root storage channel from the `Provider` and caches it in `root_storage_`.
   //
   // Subsequent calls to the function will return the cached channel.
   //
@@ -140,16 +143,15 @@ class OpteeClient : public OpteeClientBase,
   //  * ZX_ERR_UNAVAILABLE:   The current client does not have access to a `Provider`.
   //  * `zx_status_t` codes from `zx::channel::create` or requesting the `Provider` over
   //    FIDL.
-  zx_status_t GetRootStorageChannel(zx::unowned_channel* out_root_channel);
+  zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> GetRootStorage();
 
   // Requests a connection to the storage directory pointed to by the path.
   //
   // Parameters:
   //  * path:                 The path of the directory, relative to the root storage directory.
   //  * create:               Flag specifying whether to create directories if they don't exist.
-  //  * out_storage_channel:  Where to output the `fuchsia.io.Directory` client end channel.
-  zx_status_t GetStorageDirectory(std::filesystem::path path, bool create,
-                                  zx::channel* out_storage_channel);
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetStorageDirectory(std::filesystem::path path,
+                                                                         bool create);
 
   // Inits the Rpmb client from `OpteeController` and caches it in `rpmb_client_`.
   //
@@ -164,11 +166,11 @@ class OpteeClient : public OpteeClientBase,
   // This occurs when the trusted world creates or opens a file system object.
   //
   // Parameters:
-  //  * io_node_channel:  The channel to the `fuchsia.io.Node` file system object.
+  //  * file:  A client end to the `fuchsia.io.File` file system object.
   //
   // Returns:
   //  * The identifier for the trusted world to refer to the object.
-  __WARN_UNUSED_RESULT uint64_t TrackFileSystemObject(zx::channel io_node_channel);
+  [[nodiscard]] uint64_t TrackFileSystemObject(fidl::ClientEnd<fuchsia_io::File> file);
 
   // Gets the channel to the file system object associated with the given identifier.
   //
@@ -176,8 +178,8 @@ class OpteeClient : public OpteeClientBase,
   //  * identifier: The identifier to find the file system object by.
   //
   // Returns:
-  //  * A `std::optional` containing a reference to the `zx::channel`, if it was found.
-  std::optional<zx::unowned_channel> GetFileSystemObjectChannel(uint64_t identifier);
+  //  * A `std::optional` containing an unowned fuchsia.io.File if it was found.
+  std::optional<fidl::UnownedClientEnd<fuchsia_io::File>> GetFileSystemObject(uint64_t identifier);
 
   // Untracks a file system object associated with the current client.
   //
@@ -257,22 +259,24 @@ class OpteeClient : public OpteeClientBase,
   SharedMemoryList allocated_shared_memory_;
   std::atomic<uint64_t> next_file_system_object_id_{1};
 
-  std::unordered_map<uint64_t, zx::channel> open_file_system_objects_;
+  // Currently the only supported filesystem objects are files. In the future when support for
+  // directories is added, this data structure will need to be generalized.
+  std::unordered_map<uint64_t, fidl::ClientEnd<fuchsia_io::File>> open_file_system_objects_;
   std::unordered_set<uint32_t> open_sessions_;
 
-  // The client end of a channel to the `fuchsia.tee.manager.Provider` protocol.
-  // This may be an invalid channel, which indicates the client has no provider support.
-  zx::channel provider_channel_;
+  // A client implementing the `fuchsia.tee.manager.Provider` protocol. The underlying channel may
+  // be invalid which indicates the optee client has no provider support.
+  fidl::WireSyncClient<fuchsia_tee_manager::Provider> provider_;
 
   // A lazily-initialized, cached channel to the root storage channel.
   // This may be an invalid channel, which indicates it has not been initialized yet.
-  zx::channel root_storage_channel_;
+  fidl::ClientEnd<fuchsia_io::Directory> root_storage_;
 
   // A lazily-initialized, cached the Rpmb client.
   std::optional<fidl::WireSyncClient<fuchsia_hardware_rpmb::Rpmb>> rpmb_client_;
 
   // The (only) trusted application UUID this client is allowed to use.
-  Uuid application_uuid_;
+  const Uuid application_uuid_;
 };
 
 }  // namespace optee

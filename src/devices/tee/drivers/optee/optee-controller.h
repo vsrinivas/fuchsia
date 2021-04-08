@@ -6,11 +6,14 @@
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
 
 #include <fuchsia/hardware/rpmb/cpp/banjo.h>
+#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
+#include <fuchsia/tee/manager/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
@@ -53,7 +56,8 @@ class OpteeControllerBase {
   virtual CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
   virtual SharedMemoryManager::DriverMemoryPool* driver_pool() const = 0;
   virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
-  virtual zx_status_t RpmbConnectServer(::zx::channel server) const = 0;
+  virtual zx_status_t RpmbConnectServer(
+      fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> server) const = 0;
   virtual const GetOsRevisionResult& os_revision() const = 0;
   virtual zx_device_t* GetDevice() const = 0;
 };
@@ -61,11 +65,10 @@ class OpteeControllerBase {
 class OpteeController;
 using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::Suspendable,
                                ddk::Unbindable>;
-class OpteeController
-    : public OpteeControllerBase,
-      public DeviceType,
-      public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
-      public fidl::WireRawChannelInterface<fuchsia_hardware_tee::DeviceConnector> {
+class OpteeController : public OpteeControllerBase,
+                        public DeviceType,
+                        public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
+                        public fidl::WireInterface<fuchsia_hardware_tee::DeviceConnector> {
  public:
   explicit OpteeController(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -86,10 +89,11 @@ class OpteeController
                                       zx::channel service_provider);
 
   // `DeviceConnector` FIDL protocol
-  void ConnectToDeviceInfo(::zx::channel device_info_request,
+  void ConnectToDeviceInfo(fidl::ServerEnd<fuchsia_tee::DeviceInfo> device_info_request,
                            ConnectToDeviceInfoCompleter::Sync& _completer) override;
-  void ConnectToApplication(fuchsia_tee::wire::Uuid application_uuid, zx::channel service_provider,
-                            zx::channel application_request,
+  void ConnectToApplication(fuchsia_tee::wire::Uuid application_uuid,
+                            fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
+                            fidl::ServerEnd<fuchsia_tee::Application> application_request,
                             ConnectToApplicationCompleter::Sync& _completer) override;
 
   CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
@@ -104,7 +108,8 @@ class OpteeController
 
   zx_device_t* GetDevice() const override { return zxdev(); }
 
-  zx_status_t RpmbConnectServer(::zx::channel server) const override {
+  zx_status_t RpmbConnectServer(
+      fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> server) const override {
     if (!server.is_valid()) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -113,7 +118,7 @@ class OpteeController
       return ZX_ERR_UNAVAILABLE;
     }
 
-    rpmb_protocol_client_.ConnectServer(std::move(server));
+    rpmb_protocol_client_.ConnectServer(server.TakeChannel());
     return ZX_OK;
   }
 
@@ -130,8 +135,9 @@ class OpteeController
   zx_status_t InitializeSharedMemory();
   zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
 
-  zx_status_t ConnectToApplicationInternal(Uuid application_uuid, zx::channel service_provider,
-                                           zx::channel application_request);
+  zx_status_t ConnectToApplicationInternal(
+      Uuid application_uuid, fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
+      fidl::ServerEnd<fuchsia_tee::Application> application_request);
 
   ddk::PDev pdev_;
   ddk::SysmemProtocolClient sysmem_;

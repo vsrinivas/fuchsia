@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/tee/llcpp/fidl.h>
+#include <fuchsia/tee/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/mmio-buffer.h>
@@ -60,14 +61,14 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     EXPECT_OK(SharedMemoryManager::Create(ddk::MmioBuffer(mmio), shared_memory_paddr_,
                                           &shared_memory_manager_));
 
-    zx::channel service_provider;
-    zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
-    optee_client_.reset(
-        new OpteeClient(this, std::move(service_provider), optee::Uuid{kOpteeOsUuid}));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_tee::Application>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client_end, server_end] = std::move(endpoints.value());
+    optee_client_.reset(new OpteeClient(this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(),
+                                        optee::Uuid{kOpteeOsUuid}));
     fidl::BindServer<fidl::WireInterface<fuchsia_tee::Application>>(
-        loop_.dispatcher(), std::move(server), optee_client_.get());
-    optee_client_fidl_ = fidl::WireSyncClient<fuchsia_tee::Application>(std::move(client));
+        loop_.dispatcher(), std::move(server_end), optee_client_.get());
+    optee_client_fidl_ = fidl::WireSyncClient<fuchsia_tee::Application>(std::move(client_end));
   }
 
   SharedMemoryManager::DriverMemoryPool *driver_pool() const override {
@@ -78,7 +79,9 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     return shared_memory_manager_->client_pool();
   }
 
-  zx_status_t RpmbConnectServer(::zx::channel server) const override { return ZX_ERR_UNAVAILABLE; };
+  zx_status_t RpmbConnectServer(fidl::ServerEnd<frpmb::Rpmb> server) const override {
+    return ZX_ERR_UNAVAILABLE;
+  };
 
   const GetOsRevisionResult &os_revision() const override { return os_revision_; };
 
@@ -223,7 +226,7 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
     return CallResult{.return_code = kReturnOk};
   };
 
-  zx_status_t RpmbConnectServer(::zx::channel server) const override {
+  zx_status_t RpmbConnectServer(fidl::ServerEnd<frpmb::Rpmb> server) const override {
     fidl::BindServer(rpmb_loop_.dispatcher(), std::move(server), fake_rpmb_.get());
     return ZX_OK;
   };

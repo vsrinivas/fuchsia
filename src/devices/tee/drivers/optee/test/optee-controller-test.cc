@@ -5,6 +5,7 @@
 #include "../optee-controller.h"
 
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
@@ -205,12 +206,16 @@ TEST_F(FakeDdkOptee, RpmbTest) {
 
   rpmb_.reset();
 
-  zx::channel client, server;
-  EXPECT_EQ(optee_.RpmbConnectServer(std::move(server)), ZX_ERR_INVALID_ARGS);
+  using Rpmb = fuchsia_hardware_rpmb::Rpmb;
+
+  EXPECT_EQ(optee_.RpmbConnectServer(fidl::ServerEnd<Rpmb>()), ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(rpmb_.get_call_count(), 0);
 
-  EXPECT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  EXPECT_EQ(optee_.RpmbConnectServer(std::move(server)), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<Rpmb>();
+  ASSERT_TRUE(endpoints.is_ok());
+  auto [client_end, server_end] = std::move(endpoints.value());
+
+  EXPECT_EQ(optee_.RpmbConnectServer(std::move(server_end)), ZX_OK);
   EXPECT_EQ(rpmb_.get_call_count(), 1);
 }
 
