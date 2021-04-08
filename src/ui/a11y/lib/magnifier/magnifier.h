@@ -37,7 +37,7 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
   static constexpr zx::duration kTransitionPeriod = zx::msec(200);
   static constexpr float kTransitionRate = 1 / (kTransitionPeriod.to_msecs() * .060f);
   static constexpr float kDragThreshold = 1.f / 16;  // NDC
-  static constexpr float kMinScale = 1, kMaxScale = 20;
+  static constexpr float kMinScale = 2, kMaxScale = 20;
   static constexpr float kDefaultScale = 4;
 
   explicit Magnifier(FocusHighlightManager* focus_highlight_manager);
