@@ -60,12 +60,14 @@ void main() {
     FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
     const stopUrl = 'http://127.0.0.1:8080/stop';
     await browser.requestData(stopUrl);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
     await browser.waitFor(find.text(stopUrl), timeout: _timeout);
     expect(await ermine.isStopped(testserverUrl), isTrue);
     print('Stopped the test server');
     await browser.close();
 
     await ermine.driver.requestData('close');
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeout);
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
