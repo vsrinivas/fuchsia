@@ -368,9 +368,11 @@ zx_status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr)
     // if it wasn't already mapped, use some sort of strict default
     arch_mmu_flags = ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ;
   }
-
   if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0) {
-    vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
+    status = vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // map it, creating a new region

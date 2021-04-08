@@ -319,7 +319,9 @@ void reserve_periph_ranges() {
       break;
     }
 
-    VmAspace::kernel_aspace()->ReserveSpace("periph", range.length, range.base_virt);
+    zx_status_t status =
+        VmAspace::kernel_aspace()->ReserveSpace("periph", range.length, range.base_virt);
+    ASSERT_MSG(status == ZX_OK, "status %d\n", status);
 
 #if __has_feature(address_sanitizer)
     asan_map_shadow_for(range.base_virt, range.length);
