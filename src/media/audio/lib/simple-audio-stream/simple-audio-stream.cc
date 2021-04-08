@@ -39,7 +39,13 @@ SimpleAudioStream::SimpleAudioStream(zx_device_t* parent, bool is_input)
 }
 
 void SimpleAudioStream::Shutdown() {
-  if (!shutting_down_.exchange(true)) {
+  bool already_shutting_down;
+  {
+    fbl::AutoLock channel_lock(&channel_lock_);
+    already_shutting_down = shutting_down_;
+    shutting_down_ = true;
+  }
+  if (!already_shutting_down) {
     loop_.Shutdown();
 
     // We have shutdown our loop, it is now safe to assert we are holding the domain token.
@@ -201,6 +207,10 @@ void SimpleAudioStream::DdkSuspend(ddk::SuspendTxn txn) {
 
 void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
+  if (shutting_down_) {
+    return completer.Close(ZX_ERR_BAD_STATE);
+  }
+
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
   // already have an stream_channel_, flag this channel is the privileged
   // connection (The connection which is allowed to do things like change
@@ -387,6 +397,10 @@ void SimpleAudioStream::CreateRingBuffer(
 
   {
     fbl::AutoLock channel_lock(&channel_lock_);
+    if (shutting_down_) {
+      return completer.Close(ZX_ERR_BAD_STATE);
+    }
+
     rb_channel_ = Channel::Create<Channel>();
 
     fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::RingBuffer>> on_unbound =

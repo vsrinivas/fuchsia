@@ -429,7 +429,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // State used for protocol enforcement.
   bool rb_started_ __TA_GUARDED(domain_token()) = false;
   bool rb_fetched_ __TA_GUARDED(domain_token()) = false;
-  std::atomic_bool shutting_down_ = false;
+
+  // |shutting_down_| is a boolean indicating whether |loop_| is about to be shut down.
+  bool shutting_down_ __TA_GUARDED(channel_lock_) = false;
 
   // The server implementation is single threaded, however NotifyPosition() can be called from any
   // thread. Hence to use expected_notifications_per_ring_ and position_completer_ within
@@ -439,6 +441,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   fbl::Mutex position_lock_;
   std::optional<WatchClockRecoveryPositionInfoCompleter::Async> position_completer_
       __TA_GUARDED(position_lock_);
+
   async::Loop loop_;
   Token domain_token_;
 

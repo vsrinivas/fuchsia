@@ -220,6 +220,9 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
 
 void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
+  if (shutting_down_) {
+    return completer.Close(ZX_ERR_BAD_STATE);
+  }
 
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
   // already have an stream_channel_, flag this channel is the privileged
@@ -260,6 +263,10 @@ void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
 }
 
 void UsbAudioStream::DdkUnbind(ddk::UnbindTxn txn) {
+  {
+    fbl::AutoLock lock(&lock_);
+    shutting_down_ = true;
+  }
   // We stop the loop so we can safely deactivate channels via RAII via DdkRelease.
   loop_.Shutdown();
 
@@ -463,6 +470,10 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   }
 
   fbl::AutoLock req_lock(&lock_);
+  if (shutting_down_) {
+    return completer.Close(ZX_ERR_BAD_STATE);
+  }
+
   // Looks like we are going ahead with this format change.  Tear down any
   // exiting ring buffer interface before proceeding.
   if (rb_channel_ != nullptr) {
