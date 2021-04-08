@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::portpicker::{pick_unused_port, Port};
-use crate::types::{get_sdk_data_dir, read_env_path, HostTools, ImageFiles, SSHKeys, VDLArgs};
+use crate::types::{
+    get_sdk_data_dir, read_env_path, HostTools, ImageFiles, InTreePaths, SSHKeys, VDLArgs,
+};
 use crate::vdl_proto_parser::get_emu_pid;
 use ansi_term::Colour::*;
 use anyhow::Result;
@@ -57,8 +59,8 @@ impl VDLFiles {
         } else {
             let mut vdl_files = VDLFiles {
                 image_files: ImageFiles::from_tree_env()?,
-                host_tools: HostTools::from_tree_env()?,
-                ssh_files: SSHKeys::from_tree_env()?,
+                host_tools: HostTools::from_tree_env(&InTreePaths {})?,
+                ssh_files: SSHKeys::from_tree_env(&InTreePaths {})?,
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
@@ -548,9 +550,7 @@ impl VDLFiles {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::anyhow;
     use serial_test::serial;
-    use std::io::Write;
 
     pub fn setup() {
         env::set_var("HOST_OUT_DIR", "/host/out");
@@ -558,23 +558,6 @@ mod tests {
         env::set_var("IMAGE_FVM_RAW", "fvm");
         env::set_var("IMAGE_QEMU_KERNEL_RAW", "kernel");
         env::set_var("IMAGE_ZIRCONA_ZBI", "zircona");
-        env::remove_var("PREBUILT_AEMU_DIR");
-        env::remove_var("PREBUILT_VDL_DIR");
-        env::remove_var("PREBUILT_GRPCWEBPROXY_DIR");
-    }
-
-    pub fn create_fake_ssh() -> Result<()> {
-        let data = format!(
-            "/usr/local/home/foo/.ssh/fuchsia_ed25519
-/usr/local/home/foo/.ssh/fuchsia_authorized_keys
-",
-        );
-        let current_parent = std::env::current_exe()?
-            .parent()
-            .ok_or(anyhow!("Cannot get parent path"))?
-            .to_path_buf();
-        File::create(current_parent.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
-        Ok(())
     }
 
     pub fn create_start_command() -> StartCommand {
@@ -619,24 +602,16 @@ mod tests {
     #[serial]
     fn test_choosing_prebuild_with_path_specified() -> Result<()> {
         setup();
-        create_fake_ssh()?;
         let start_command = &create_start_command();
 
         // --sdk
-        let mut aemu = VDLFiles::new(true)?.resolve_aemu_path(start_command)?;
+        let aemu = VDLFiles::new(true)?.resolve_aemu_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/aemu"), aemu);
-        let mut vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
+        let vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/device_launcher"), vdl);
-        let mut grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
+        let grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/grpcwebproxy"), grpcwebproxy);
 
-        // in-tree
-        aemu = VDLFiles::new(false)?.resolve_aemu_path(start_command)?;
-        assert_eq!(PathBuf::from("/path/to/aemu"), aemu);
-        vdl = VDLFiles::new(false)?.resolve_vdl_path(start_command)?;
-        assert_eq!(PathBuf::from("/path/to/device_launcher"), vdl);
-        grpcwebproxy = VDLFiles::new(false)?.resolve_grpcwebproxy_path(start_command)?;
-        assert_eq!(PathBuf::from("/path/to/grpcwebproxy"), grpcwebproxy);
         Ok(())
     }
 
@@ -644,27 +619,16 @@ mod tests {
     #[serial]
     fn test_choosing_prebuild_with_cipd_label_specified() -> Result<()> {
         setup();
-        create_fake_ssh()?;
 
         let tmp_dir = Builder::new().prefix("fvdl_test_cipd_label_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
-        env::set_var("PREBUILT_VDL_DIR", "/host/out/vdl");
-        env::set_var("PREBUILT_AEMU_DIR", "/host/out/aemu");
-        env::set_var("PREBUILT_GRPCWEBPROXY_DIR", "/host/out/grpcwebproxy");
 
         let mut start_command = &mut create_start_command();
         start_command.vdl_path = None;
         start_command.vdl_version = Some("g3-revision:vdl_fuchsia_20210113_RC00".to_string());
 
         // --sdk
-        let mut vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
-        assert_eq!(
-            tmp_dir.path().join("vdl-g3-revision-vdl_fuchsia_20210113_RC00/device_launcher"),
-            vdl
-        );
-
-        // in-tree
-        vdl = VDLFiles::new(false)?.resolve_vdl_path(start_command)?;
+        let vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
         assert_eq!(
             tmp_dir.path().join("vdl-g3-revision-vdl_fuchsia_20210113_RC00/device_launcher"),
             vdl
@@ -676,13 +640,9 @@ mod tests {
     #[serial]
     fn test_choosing_prebuild_default() -> Result<()> {
         setup();
-        create_fake_ssh()?;
 
         let tmp_dir = Builder::new().prefix("fvdl_test_default_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
-        env::set_var("PREBUILT_VDL_DIR", "/host/out/vdl");
-        env::set_var("PREBUILT_AEMU_DIR", "/host/out/aemu");
-        env::set_var("PREBUILT_GRPCWEBPROXY_DIR", "/host/out/grpcwebproxy");
 
         let mut start_command = &mut create_start_command();
         start_command.aemu_path = None;
@@ -693,16 +653,13 @@ mod tests {
         start_command.grpcwebproxy_version = None;
 
         // --sdk
-        let mut vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
+        let vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
         assert_eq!(tmp_dir.path().join("vdl-latest/device_launcher"), vdl);
+        let aemu = VDLFiles::new(true)?.resolve_aemu_path(start_command)?;
+        assert_eq!(tmp_dir.path().join("aemu-integration/emulator"), aemu);
+        let grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
+        assert_eq!(tmp_dir.path().join("grpcwebproxy-latest/grpcwebproxy"), grpcwebproxy);
 
-        // in-tree
-        vdl = VDLFiles::new(false)?.resolve_vdl_path(start_command)?;
-        assert_eq!(PathBuf::from("/host/out/vdl/device_launcher"), vdl);
-        let aemu = VDLFiles::new(false)?.resolve_aemu_path(start_command)?;
-        assert_eq!(PathBuf::from("/host/out/aemu/emulator"), aemu);
-        let grpcwebproxy = VDLFiles::new(false)?.resolve_grpcwebproxy_path(start_command)?;
-        assert_eq!(PathBuf::from("/host/out/grpcwebproxy/grpcwebproxy"), grpcwebproxy);
         Ok(())
     }
 

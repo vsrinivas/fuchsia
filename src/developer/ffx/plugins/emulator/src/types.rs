@@ -12,6 +12,7 @@ use ffx_emulator_args::StartCommand;
 use fuchsia_async::Executor;
 use home::home_dir;
 use hyper::{StatusCode, Uri};
+use mockall::automock;
 use std::convert::From;
 use std::env;
 use std::fs::{
@@ -20,6 +21,7 @@ use std::fs::{
 use std::io::{BufRead, BufReader};
 use std::os::unix;
 use std::path::PathBuf;
+use walkdir::WalkDir;
 
 pub fn read_env_path(var: &str) -> Result<PathBuf> {
     env::var_os(var)
@@ -27,23 +29,31 @@ pub fn read_env_path(var: &str) -> Result<PathBuf> {
         .ok_or(anyhow!("{} is not a valid environment variable", var))
 }
 
-/// Walks the current execution path and its parent directories to find
-/// .fx-ssh-path file.
-pub fn get_fuchsia_ssh_path() -> Result<PathBuf> {
-    for ancester in std::env::current_exe()?.ancestors() {
-        if let Ok(entries) = read_dir(ancester) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    if entry.file_name() == ".fx-ssh-path" {
-                        return Ok(entry.path());
+#[automock]
+pub trait FuchsiaPaths {
+    fn find_fuchsia_root(&self) -> Result<PathBuf>;
+}
+pub struct InTreePaths {}
+
+impl FuchsiaPaths for InTreePaths {
+    /// Walks the current execution path and its parent directories to find the path
+    /// that contains .jiri_manifest directory.
+    fn find_fuchsia_root(&self) -> Result<PathBuf> {
+        for ancester in std::env::current_exe()?.ancestors() {
+            if let Ok(entries) = read_dir(ancester) {
+                for entry in entries {
+                    if let Ok(entry) = entry {
+                        if entry.path().ends_with(".jiri_manifest") {
+                            return Ok(ancester.to_path_buf());
+                        }
                     }
                 }
             }
         }
+        ffx_bail!(
+            "Cannot find fuchsia repo root from current execution location and its parent directories"
+        );
     }
-    ffx_bail!(
-        "Cannot find .fx-ssh-path from current execution location and its parent directories"
-    );
 }
 
 /// Returns GN SDK tools directory. This assumes that fvdl is located in
@@ -111,21 +121,45 @@ impl HostTools {
     /// Requires the environment variable HOST_OUT_DIR to be specified
     /// PREBUILT_AEMU_DIR, PREBUILT_GRPCWEBPROXY_DIR, PREBUILT_VDL_DIR are optional.
     /// See: //tools/devshell/vdl
-    pub fn from_tree_env() -> Result<HostTools> {
+    pub fn from_tree_env(f: &impl FuchsiaPaths) -> Result<HostTools> {
         let host_out_dir = read_env_path("HOST_OUT_DIR")?;
         Ok(HostTools {
             // prebuilt binaries that can be optionally fetched from cipd.
             aemu: match read_env_path("PREBUILT_AEMU_DIR") {
                 Ok(val) => val.join("emulator"),
-                _ => PathBuf::new(),
+                _ => {
+                    let fuchsia_root = f.find_fuchsia_root()?;
+                    WalkDir::new(fuchsia_root.join("prebuilt/third_party/aemu"))
+                        .into_iter()
+                        .filter_map(|e| e.ok())
+                        .find(|e| e.file_name() == "emulator")
+                        .ok_or(anyhow!(
+                            "Cannot find find emulator executable from {:?}",
+                            fuchsia_root.join("prebuilt/third_party/aemu").display()
+                        ))?
+                        .path()
+                        .to_path_buf()
+                }
             },
             grpcwebproxy: match read_env_path("PREBUILT_GRPCWEBPROXY_DIR") {
                 Ok(val) => val.join("grpcwebproxy"),
-                _ => PathBuf::new(),
+                _ => {
+                    let fuchsia_root = f.find_fuchsia_root()?;
+                    WalkDir::new(fuchsia_root.join("prebuilt/third_party/grpcwebproxy"))
+                        .into_iter()
+                        .filter_map(|e| e.ok())
+                        .find(|e| e.file_name() == "grpcwebproxy")
+                        .ok_or(anyhow!(
+                            "Cannot find find grpcwebproxy executable from {:?}",
+                            fuchsia_root.join("prebuilt/third_party/grpcwebproxy").display()
+                        ))?
+                        .path()
+                        .to_path_buf()
+                }
             },
             vdl: match read_env_path("PREBUILT_VDL_DIR") {
                 Ok(val) => val.join("device_launcher"),
-                _ => PathBuf::new(),
+                _ => f.find_fuchsia_root()?.join("prebuilt/vdl/device_launcher"),
             },
             device_finder: host_out_dir.join("device-finder"),
             far: host_out_dir.join("far"),
@@ -377,8 +411,8 @@ impl SSHKeys {
     /// Initialize SSH key files for in-tree usage.
     ///
     /// Requires the environment variable FUCHSIA_BUILD_DIR to be specified.
-    pub fn from_tree_env() -> Result<SSHKeys> {
-        let ssh_file = File::open(get_fuchsia_ssh_path()?)?;
+    pub fn from_tree_env(f: &impl FuchsiaPaths) -> Result<SSHKeys> {
+        let ssh_file = File::open(f.find_fuchsia_root()?.join(".fx-ssh-path"))?;
         let ssh_file = BufReader::new(ssh_file);
         let mut lines = ssh_file.lines();
 
@@ -573,7 +607,7 @@ mod tests {
         env::set_var("PREBUILT_VDL_DIR", "/host/out/vdl");
         env::set_var("PREBUILT_GRPCWEBPROXY_DIR", "/host/out/grpcwebproxy");
 
-        let host_tools = HostTools::from_tree_env()?;
+        let host_tools = HostTools::from_tree_env(&InTreePaths {})?;
         assert_eq!(host_tools.aemu.to_str().unwrap(), "/host/out/aemu/emulator");
         assert_eq!(host_tools.vdl.to_str().unwrap(), "/host/out/vdl/device_launcher");
         assert_eq!(host_tools.far.to_str().unwrap(), "/host/out/far");
@@ -592,10 +626,27 @@ mod tests {
         env::remove_var("PREBUILT_VDL_DIR");
         env::remove_var("PREBUILT_GRPCWEBPROXY_DIR");
 
-        let host_tools = HostTools::from_tree_env()?;
-        assert!(host_tools.aemu.as_os_str().is_empty());
-        assert!(host_tools.vdl.as_os_str().is_empty());
-        assert!(host_tools.grpcwebproxy.as_os_str().is_empty());
+        let mut mock = MockFuchsiaPaths::new();
+        let tmp_dir = Builder::new().tempdir()?;
+        let a = tmp_dir.into_path();
+
+        create_dir_all(a.join("prebuilt/third_party/aemu"))?;
+        File::create(a.join("prebuilt/third_party/aemu/emulator"))?
+            .write_all("foo bar".as_bytes())?;
+
+        create_dir_all(a.join("prebuilt/third_party/grpcwebproxy"))?;
+        File::create(a.join("prebuilt/third_party/grpcwebproxy/grpcwebproxy"))?
+            .write_all("apple banana".as_bytes())?;
+
+        create_dir_all(a.join("prebuilt/vdl"))?;
+        File::create(a.join("prebuilt/vdl/device_launcher"))?.write_all("deadbeef".as_bytes())?;
+
+        mock.expect_find_fuchsia_root().returning(move || Ok(a.clone()));
+
+        let host_tools = HostTools::from_tree_env(&mock)?;
+        assert!(!host_tools.aemu.as_os_str().is_empty());
+        assert!(!host_tools.vdl.as_os_str().is_empty());
+        assert!(!host_tools.grpcwebproxy.as_os_str().is_empty());
         assert_eq!(host_tools.far.to_str().unwrap(), "/host/out/far");
         assert_eq!(host_tools.fvm.to_str().unwrap(), "/host/out/fvm");
         assert_eq!(host_tools.pm.to_str().unwrap(), "/host/out/pm");
@@ -619,7 +670,7 @@ mod tests {
         assert_eq!(image_files.build_args.to_str().unwrap(), "/build/out/args.gn");
         assert_eq!(image_files.amber_files.to_str().unwrap(), "/build/out/amber-files");
 
-        let tmp_dir = Builder::new().prefix("fvdl_test_images_").tempdir()?;
+        let tmp_dir = Builder::new().prefix("fvdl_tests_").tempdir()?;
 
         image_files.stage_files(&tmp_dir.path().to_owned())?;
         assert_eq!(image_files.kernel.to_str(), tmp_dir.path().join("femu_kernel").to_str());
@@ -629,19 +680,18 @@ mod tests {
     #[test]
     #[serial]
     fn test_ssh_files() -> Result<()> {
+        let mut mock = MockFuchsiaPaths::new();
         let data = format!(
             "/usr/local/home/foo/.ssh/fuchsia_ed25519
 /usr/local/home/foo/.ssh/fuchsia_authorized_keys
 ",
         );
-        let current_parent = std::env::current_exe()?
-            .parent()
-            .ok_or(anyhow!("Cannot get parent path"))?
-            .to_path_buf();
-        File::create(current_parent.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
-
+        let tmp_dir = Builder::new().prefix("fvdl_tests_").tempdir()?;
+        let a = tmp_dir.into_path();
+        File::create(a.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
+        mock.expect_find_fuchsia_root().returning(move || Ok(a.clone()));
         env::set_var("FUCHSIA_BUILD_DIR", "/build/out");
-        let mut ssh_files = SSHKeys::from_tree_env()?;
+        let mut ssh_files = SSHKeys::from_tree_env(&mock)?;
         assert_eq!(
             ssh_files.private_key.to_str().unwrap(),
             "/usr/local/home/foo/.ssh/fuchsia_ed25519"

@@ -9,9 +9,6 @@ DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "${DEVSHELL_DIR}"/lib/image_build_vars.sh || exit $?
 
 export HOST_OUT_DIR
-export PREBUILT_AEMU_DIR
-export PREBUILT_VDL_DIR
-export PREBUILT_GRPCWEBPROXY_DIR
 export IMAGE_FVM_RAW
 export IMAGE_QEMU_KERNEL_RAW
 export IMAGE_ZIRCONA_ZBI

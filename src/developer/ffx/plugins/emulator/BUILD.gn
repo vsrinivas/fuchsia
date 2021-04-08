@@ -27,9 +27,11 @@ ffx_plugin("ffx_emulator") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:home",
     "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:mockall",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serial_test",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:walkdir",
     "//third_party/rust_crates:zip",
   ]
 }
