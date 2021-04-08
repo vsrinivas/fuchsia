@@ -1228,7 +1228,7 @@ this section to migrate directory access:
 | `factory-data` | Read-only factory partition data | `factory` |`/factory` |
 | `durable-data` | Persistent data that survives factory reset | `durable` |`/durable` |
 | `shell-commands` | Executable directory of shell binaries | `bin` | `/bin` |
-| `root-ssl-certificates` | Read-only root certificate data | `config-ssl` | `/config/ssl` |
+| `root-ssl-certificates` | Read-only root certificate data | `root-ssl-certificates` | `/config/ssl` |
 
 These features are supported in v2 components using
 [directory capabilities][directory-capabilities].
