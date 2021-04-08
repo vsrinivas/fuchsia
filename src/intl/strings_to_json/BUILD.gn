@@ -24,7 +24,7 @@ install_host_tools("install") {
   outputs = [ "strings_to_json" ]
 }
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_binary("strings_to_json_bin") {
     name = "strings_to_json"
     with_unit_tests = true

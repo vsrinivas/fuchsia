@@ -27,7 +27,7 @@ install_host_tools("install") {
   outputs = [ "strings_to_fidl" ]
 }
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_binary("strings_to_fidl_bin") {
     name = "strings_to_fidl"
     with_unit_tests = true

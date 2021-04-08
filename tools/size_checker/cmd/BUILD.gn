@@ -87,7 +87,7 @@ go_binary("size_checker") {
   non_go_deps = [ ":size_checker_json" ]
 }
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   go_test("size_checker_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/size_checker/cmd" ]
     deps = [ ":size_checker_lib" ]

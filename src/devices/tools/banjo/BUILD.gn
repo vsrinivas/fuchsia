@@ -135,7 +135,7 @@ rustc_library("banjo_lib") {
   ]
 }
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_test("banjo_unittests") {
     edition = "2018"
 

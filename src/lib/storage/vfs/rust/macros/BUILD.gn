@@ -20,7 +20,7 @@ rustc_macro("macros") {
   sources = [ "src/lib.rs" ]
 }
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_test("vfs_macro_test") {
     name = "vfs_macro_test"
     edition = "2018"

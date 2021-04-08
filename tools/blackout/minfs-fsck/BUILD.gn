@@ -5,7 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_binary("minfs-fsck-host") {
     output_name = "minfs_fsck_host"
     testonly = true

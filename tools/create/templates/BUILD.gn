@@ -4,7 +4,7 @@
 
 import("//build/host.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   # Copies templates to the specified output directory and generates a file
   # containing all copied paths.
   copy("templates") {

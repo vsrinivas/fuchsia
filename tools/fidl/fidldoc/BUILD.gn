@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   common_sources = [
     "src/fidljson.rs",
     "src/main.rs",

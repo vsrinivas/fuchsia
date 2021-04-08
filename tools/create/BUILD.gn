@@ -5,7 +5,7 @@
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_binary("create_bin") {
     name = "create"
     deps = [

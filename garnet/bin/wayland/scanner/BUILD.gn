@@ -23,7 +23,7 @@ rustc_library("lib") {
   ]
 }
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_binary("scanner") {
     edition = "2018"
     deps = [
