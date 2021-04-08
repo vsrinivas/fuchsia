@@ -45,7 +45,6 @@ using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 class OpteeClient : public OpteeClientBase,
                     public OpteeClientProtocol,
-                    public fbl::DoublyLinkedListable<OpteeClient*>,
                     public fidl::WireInterface<fuchsia_tee::Application> {
  public:
   explicit OpteeClient(OpteeControllerBase* controller,

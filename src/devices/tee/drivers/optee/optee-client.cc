@@ -1422,8 +1422,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = ZX_OK;
-  zx_status_t io_status = ZX_OK;
   uint8_t* buffer = reinterpret_cast<uint8_t*>(buffer_mem->vaddr());
   uint64_t offset = message->file_offset();
   size_t bytes_left = buffer_mem->size();
@@ -1436,11 +1434,18 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
 
     auto result = fidl::WireCall(file).ReadAt(request_buffer.view(), read_chunk_request, offset,
                                               response_buffer.view());
-    io_status = result->s;
-    if (status != ZX_OK || io_status != ZX_OK) {
-      LOG(ERROR, "failed to read from file (FIDL status: %d, IO status: %d)", status, io_status);
+    if (!result.ok()) {
+      LOG(ERROR, "failed to read from file (FIDL status: %s, FIDL error: %s)",
+          result.status_string(), result.error());
       message->set_return_code(TEEC_ERROR_GENERIC);
-      return status;
+      return result.status();
+    }
+
+    zx_status_t io_status = result->s;
+    if (io_status != ZX_OK) {
+      LOG(ERROR, "failed to read from file (IO status: %d)", io_status);
+      message->set_return_code(TEEC_ERROR_GENERIC);
+      return io_status;
     }
 
     const auto& data = result->data;
@@ -1483,8 +1488,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = ZX_OK;
-  zx_status_t io_status = ZX_OK;
   uint8_t* buffer = reinterpret_cast<uint8_t*>(buffer_mem->vaddr());
   uint64_t offset = message->file_offset();
   size_t bytes_left = message->file_contents_memory_size();
@@ -1493,17 +1496,23 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
 
     auto result = fidl::WireCall(file).WriteAt(
         fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
-    status = result.status();
-    io_status = result->s;
+    if (!result.ok()) {
+      LOG(ERROR, "failed to write to file (FIDL status: %s, FIDL error: %s)",
+          result.status_string(), result.error());
+      message->set_return_code(TEEC_ERROR_GENERIC);
+      return result.status();
+    }
+
+    zx_status_t io_status = result->s;
+    if (io_status != ZX_OK) {
+      LOG(ERROR, "failed to write to file (IO status: %d)", io_status);
+      message->set_return_code(TEEC_ERROR_GENERIC);
+      return io_status;
+    }
+
     buffer += result->actual;
     offset += result->actual;
     bytes_left -= result->actual;
-
-    if (status != ZX_OK || io_status != ZX_OK) {
-      LOG(ERROR, "failed to write to file (FIDL status: %d, IO status: %d)", status, io_status);
-      message->set_return_code(TEEC_ERROR_GENERIC);
-      return status;
-    }
   }
 
   message->set_return_code(TEEC_SUCCESS);
@@ -1523,12 +1532,18 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
   }
 
   auto result = fidl::WireCall(maybe_file.value()).Truncate(message->target_file_size());
-  zx_status_t status = result.status();
-  zx_status_t io_status = result->s;
-  if (status != ZX_OK || io_status != ZX_OK) {
-    LOG(ERROR, "failed to truncate file (FIDL status: %d, IO status: %d)", status, io_status);
+  if (!result.ok()) {
+    LOG(ERROR, "failed to truncate file (FIDL status: %s, FIDL error: %s)", result.status_string(),
+        result.error());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return status;
+    return result.status();
+  }
+
+  zx_status_t io_status = result->s;
+  if (io_status != ZX_OK) {
+    LOG(ERROR, "failed to truncate file (IO status: %d)", io_status);
+    message->set_return_code(TEEC_ERROR_GENERIC);
+    return io_status;
   }
 
   message->set_return_code(TEEC_SUCCESS);
