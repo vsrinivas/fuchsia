@@ -294,6 +294,8 @@ template("_fidl_banjo_rust") {
       "//third_party/rust_crates:futures",
     ]
 
+    configs -= [ "//build/config/rust:allow_unused_results" ]
+
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {
         _name = get_label_info(dep, "name")
