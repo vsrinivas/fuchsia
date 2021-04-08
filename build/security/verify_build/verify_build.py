@@ -65,6 +65,12 @@ def main(input_args):
         help=('The type of the ZBI item to verify'),
         choices=SUPPORTED_TYPES,
         required=True)
+    parser.add_argument(
+        '--depfile',
+        help=(
+            'Optional generated depfile listing dynamic deps for the script' +
+            ', required for "static_pkgs"'),
+        required=False)
     args = parser.parse_args(input_args)
 
     if len(args.golden_files) > 2:
@@ -132,7 +138,7 @@ def verify_kernel_cmdline(kernel_cmdline_golden_file, scrutiny_out):
         with open(kernel_cmdline_golden_file, 'r') as f:
             golden_file_content = f.read().strip()
     except IOError as e:
-        raise VerificationError('Failed to open golden file: {0}'.format(e))
+        raise VerificationError(f'Failed to open golden file: {e}')
     if not os.path.exists(os.path.join(scrutiny_out, 'sections',
                                        'cmdline.blk')):
         # We find no kernel cmdline. Check whether the golden file is empty.
@@ -151,13 +157,13 @@ def verify_kernel_cmdline(kernel_cmdline_golden_file, scrutiny_out):
             # The cmdline.blk contains a trailing \x00.
             cmdline = f.read().strip().rstrip('\x00')
     except IOError as e:
-        raise VerificationError('Failed to read cmdline.blk: {0}'.format(e))
+        raise VerificationError(f'Failed to read cmdline.blk: {e}')
 
     try:
         compare_cmdline(
             cmdline, golden_file_content, kernel_cmdline_golden_file)
     except CmdlineFormatError as e:
-        raise VerificationError('Invalid cmdline format: {0}'.format(e))
+        raise VerificationError(f'Invalid cmdline format: {e}')
     return
 
 
@@ -171,7 +177,7 @@ def verify_bootfs_filelist(bootfs_filelist_golden_file, scrutiny_out):
         with open(bootfs_filelist_golden_file, 'r') as f:
             golden_file_content = f.read().strip()
     except IOError as e:
-        raise VerificationError('Failed to read golden file: {0}').format(e)
+        raise VerificationError(f'Failed to read golden file: {e}')
     bootfs_folder = os.path.join(scrutiny_out, 'bootfs')
     bootfs_files = []
     try:
@@ -180,7 +186,7 @@ def verify_bootfs_filelist(bootfs_filelist_golden_file, scrutiny_out):
                 bootfs_files.append(
                     os.path.relpath(os.path.join(root, file), bootfs_folder))
     except IOError as e:
-        raise VerificationError('Failed to walk bootfs folder: {0}').format(e)
+        raise VerificationError(f'Failed to walk bootfs folder: {e}')
     got_content = '\n'.join(sorted(bootfs_files))
 
     if golden_file_content == got_content:
@@ -217,36 +223,42 @@ def verify_static_pkgs(
     Raises:
       VerificationError: If verification fails.
     """
+    deps = []
     if not args.blobfs_manifest:
         raise VerificationError(
             '"blobfs-manifest" must be specified for "static_pkgs" check')
     if not args.far:
         raise VerificationError(
             '"far" must be specified for "static_pkgs" check')
+    if not args.depfile:
+        raise VerificationError(
+            '"depfile" must be specified for "static_pkgs" check')
     try:
         system_image_hash = get_system_image_hash(scrutiny_out)
     except IOError as e:
-        raise VerificationError('Failed to get devmgr config: {0}'.format(e))
+        raise VerificationError(f'Failed to get devmgr config: {e}')
     except KeyError as e:
-        raise VerificationError('Invalid devmgr config: {0}'.format(e))
+        raise VerificationError(f'Invalid devmgr config: {e}')
 
     try:
         blob_manifest = parse_key_value_file(args.blobfs_manifest)
     except IOError as e:
-        raise VerificationError('Failed to open blob manifest: {0}'.format(e))
+        raise VerificationError(f'Failed to open blob manifest: {e}')
 
     try:
         system_image_blob = os.path.join(
             os.path.dirname(args.blobfs_manifest),
             blob_manifest[system_image_hash])
+        # Add system_image_blob as dynamic dependency.
+        deps.append(system_image_blob)
     except KeyError as e:
-        raise VerificationError('System image blob not found: {0}'.format(e))
+        raise VerificationError(f'System image blob not found: {e}')
     system_image_folder = os.path.join(scrutiny_out, 'system_image')
     try:
         extract_package(args.far, system_image_blob, system_image_folder)
     except subprocess.CalledProcessError as e:
         raise VerificationError(
-            'Failed to extract system_image package: {0}'.format(e.stderr))
+            f'Failed to extract system_image package: {e.stderr}')
 
     try:
         static_packages_hash = parse_key_value_file(
@@ -257,19 +269,28 @@ def verify_static_pkgs(
             'No "data/static_packages" found in "system_image"')
     except IOError as e:
         raise VerificationError(
-            'Failed to read system_image/meta/contents file: {0}'.format(e))
+            f'Failed to read system_image/meta/contents file: {e}')
     try:
         static_packages_blob = os.path.join(
             os.path.dirname(args.blobfs_manifest),
             blob_manifest[static_packages_hash])
+
+        # Add static_packages_blob as dynamic dependency.
+        deps.append(static_packages_blob)
     except KeyError as e:
-        raise VerificationError('Static pkgs blob not found: {0}'.format(e))
+        raise VerificationError(f'Static pkgs blob not found: {e}')
     try:
         with open(static_packages_blob, 'r') as f:
             static_packages_content = f.read().strip()
     except IOError as e:
-        raise VerificationError(
-            'Failed to read static packages blob: {0}'.format(e))
+        raise VerificationError(f'Failed to read static packages blob: {e}')
+
+    # Write depfile.
+    try:
+        with open(args.depfile, 'w') as f:
+            f.write(args.stamp + ': ' + ' '.join(deps) + '\n')
+    except IOError as e:
+        raise VerificationError(f'Failed to write depfile: {e}')
 
     pkgs = []
     for pkg in static_packages_content.splitlines():
@@ -280,7 +301,7 @@ def verify_static_pkgs(
         with open(golden_file, 'r') as f:
             golden_file_content = f.read().strip()
     except IOError as e:
-        raise VerificationError('Failed to read golden file: {0}'.format(e))
+        raise VerificationError(f'Failed to read golden file: {e}')
 
     if golden_file_content == got_content:
         return
@@ -337,14 +358,13 @@ def run_scrutiny_command(scrutiny_path, command):
             [scrutiny_path, '-c', command], capture_output=True,
             check=True).stdout
     except subprocess.CalledProcessError as e:
-        raise VerificationError('Failed to run scrutiny: {}'.format(e.stderr))
+        raise VerificationError(f'Failed to run scrutiny: {e.stederr}')
 
     try:
         if json.loads(output)['status'] != 'ok':
-            raise VerificationError(
-                'Unexpected scrutiny output: {}'.format(output))
+            raise VerificationError(f'Unexpected scrutiny output: {output}')
     except (KeyError, json.JSONDecodeError) as e:
-        raise VerificationError('Unexpected scrutiny output: {}'.format(e))
+        raise VerificationError(f'Unexpected scrutiny output: {e}')
 
 
 def extract_package(far_path, package_path, output_dir):

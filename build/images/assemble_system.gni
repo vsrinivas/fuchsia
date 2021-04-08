@@ -281,7 +281,7 @@ template("assemble_system") {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     outputs = [ blob_manifest ]
-    deps = [
+    public_deps = [
       ":${image_name}_base_packages",
       ":${image_name}_system_image.meta",
       pkgfs_package_label,

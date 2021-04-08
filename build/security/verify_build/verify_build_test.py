@@ -101,6 +101,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as test_folder:
             golden_file = os.path.join(test_folder, 'golden')
             stamp_file = os.path.join(test_folder, 'stamp')
+            depfile = os.path.join(test_folder, 'depfile')
             fuchsia_folder = os.path.join(test_folder, 'fuchsia')
             os.mkdir(fuchsia_folder)
             test_zbi = os.path.join(test_folder, 'test.zbi')
@@ -137,16 +138,30 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 mock_run.side_effect = fake_subprocess.run
 
                 args = [
-                    '--type', 'static_pkgs', '--zbi-file', test_zbi,
-                    '--blobfs-manifest', blobfs_manifest, '--scrutiny',
-                    fake_scrutiny, '--far', fake_far, '--golden-files',
-                    golden_file, '--stamp', stamp_file
+                    '--type',
+                    'static_pkgs',
+                    '--zbi-file',
+                    test_zbi,
+                    '--blobfs-manifest',
+                    blobfs_manifest,
+                    '--scrutiny',
+                    fake_scrutiny,
+                    '--far',
+                    fake_far,
+                    '--golden-files',
+                    golden_file,
+                    '--stamp',
+                    stamp_file,
+                    '--depfile',
+                    depfile,
                 ]
                 result = verify_build.main(args)
 
             if result == 0:
                 # Verify stamp file is created.
                 self.assertTrue(os.path.isfile(stamp_file))
+                # Verify depfile is created.
+                self.assertTrue(os.path.isfile(depfile))
         return result
 
     def test_verify_kernel_cmdline_sucess_normal_case(self):
