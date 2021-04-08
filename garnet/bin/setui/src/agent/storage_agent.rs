@@ -172,7 +172,6 @@ where
                 store
                     .write::<S::Storable>(storable_value, flush)
                     .await
-                    .map(|_| UpdateState::Updated)
                     .map_err(|e| Error { message: format!("{:?}", e) })
             }
         };

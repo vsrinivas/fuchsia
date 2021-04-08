@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::handler::setting_handler::persist::UpdateState;
 use anyhow::{format_err, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
@@ -309,7 +310,7 @@ impl DeviceStorage {
 
     /// Write `new_value` to storage. If `flush` is true then then changes will immediately be
     /// persisted to disk, otherwise the write will be persisted to disk at a set interval.
-    pub async fn write<T>(&self, new_value: &T, flush: bool) -> Result<(), Error>
+    pub async fn write<T>(&self, new_value: &T, flush: bool) -> Result<UpdateState, Error>
     where
         T: DeviceStorageCompatible,
     {
@@ -318,20 +319,37 @@ impl DeviceStorage {
             .get(T::KEY)
             .ok_or_else(|| format_err!("Invalid data keyed by {}", T::KEY))?;
         let mut cached_storage = typed_storage.cached_storage.lock().await;
-        let cached_value = cached_storage
-            .current_data
-            // Get the data as a shared reference so we don't move out of the option.
-            .as_ref()
-            .map(|any| {
-                // Attempt to downcast the `dyn Any` to its original type. If `T` was not its
-                // original type, then we want to panic because there's a compile-time issue with
-                // overlapping keys.
-                any.downcast_ref::<T>().expect(
-                    "Type mismatch even though keys match. Two different\
+        let maybe_init;
+        let cached_value = {
+            let mut cached_value = cached_storage
+                .current_data
+                .as_ref()
+                // Get the data as a shared reference so we don't move out of the option.
+                .map(|any| {
+                    // Attempt to downcast the `dyn Any` to its original type. If `T` was not its
+                    // original type, then we want to panic because there's a compile-time issue
+                    // with overlapping keys.
+                    any.downcast_ref::<T>().expect(
+                        "Type mismatch even though keys match. Two different\
                                                 types have the same key value",
-                )
-            });
-        if cached_value != Some(new_value) {
+                    )
+                });
+            if cached_value.is_none() {
+                if let Some(stash_value) =
+                    cached_storage.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
+                {
+                    if let Value::Stringval(string_value) = &*stash_value {
+                        maybe_init = Some(T::deserialize_from(&string_value));
+                        cached_value = maybe_init.as_ref();
+                    } else {
+                        panic!("Unexpected type for key found in stash");
+                    }
+                }
+            }
+            cached_value
+        };
+
+        Ok(if cached_value != Some(new_value) {
             let mut serialized = Value::Stringval(new_value.serialize_to());
             cached_storage.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
             if !self.debounce_writes {
@@ -342,8 +360,10 @@ impl DeviceStorage {
             }
             cached_storage.current_data =
                 Some(Box::new(new_value.clone()) as Box<dyn Any + Send + Sync>);
-        }
-        Ok(())
+            UpdateState::Updated
+        } else {
+            UpdateState::Unchanged
+        })
     }
 
     #[cfg(test)]
@@ -712,6 +732,8 @@ mod tests {
         value: i32,
     }
 
+    const STORE_KEY: &'static str = "settings_testkey";
+
     impl DeviceStorageCompatible for TestStruct {
         const KEY: &'static str = "testkey";
 
@@ -739,13 +761,29 @@ mod tests {
     async fn verify_stash_set(stash_stream: &mut StoreAccessorRequestStream, expected_value: i32) {
         match stash_stream.next().await.unwrap() {
             Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
-                assert_eq!(key, "settings_testkey");
+                assert_eq!(key, STORE_KEY);
                 if let Value::Stringval(string_value) = val {
                     let input_value = TestStruct::deserialize_from(&string_value);
                     assert_eq!(input_value.value, expected_value);
                 } else {
                     panic!("Unexpected type for key found in stash");
                 }
+            }
+            request => panic!("Unexpected request: {:?}", request),
+        }
+    }
+
+    /// Verifies that a SetValue call was sent to stash with the given value.
+    async fn validate_stash_get_and_respond(
+        stash_stream: &mut StoreAccessorRequestStream,
+        response: String,
+    ) {
+        match stash_stream.next().await.unwrap() {
+            Ok(StoreAccessorRequest::GetValue { key, responder }) => {
+                assert_eq!(key, STORE_KEY);
+                responder
+                    .send(Some(&mut Value::Stringval(response)))
+                    .expect("unable to send response");
             }
             request => panic!("Unexpected request: {:?}", request),
         }
@@ -781,7 +819,7 @@ mod tests {
                 #[allow(unreachable_patterns)]
                 match req {
                     StoreAccessorRequest::GetValue { key, responder } => {
-                        assert_eq!(key, "settings_testkey");
+                        assert_eq!(key, STORE_KEY);
                         let mut response = Value::Stringval(value_to_get.serialize_to());
 
                         responder.send(Some(&mut response)).unwrap();
@@ -870,8 +908,20 @@ mod tests {
         let write_future = storage.write(&value_to_write, false);
         futures::pin_mut!(write_future);
 
+        // Initial cache check is done if no read was ever performed.
+        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Pending);
+
+        {
+            let respond_future = validate_stash_get_and_respond(
+                &mut stash_stream,
+                serde_json::to_string(&TestStruct::default_value()).unwrap(),
+            );
+            futures::pin_mut!(respond_future);
+            advance_executor(&mut executor, &mut respond_future);
+        }
+
         // Write request finishes immediately.
-        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Ok(_)));
 
         // Set request is received immediately on write.
         {
@@ -903,8 +953,27 @@ mod tests {
     // without any wait.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_with_mismatch_type_returns_error() {
-        let (stash_proxy, _stream) =
+        let (stash_proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
+
+        let spawned = fasync::Task::spawn(async move {
+            while let Some(request) = stream.next().await {
+                match request {
+                    Ok(StoreAccessorRequest::GetValue { key, responder }) => {
+                        assert_eq!(key, STORE_KEY);
+                        responder
+                            .send(Some(&mut Value::Stringval(
+                                serde_json::to_string(&TestStruct { value: VALUE2 }).unwrap(),
+                            )))
+                            .ok();
+                    }
+                    Ok(StoreAccessorRequest::SetValue { key, .. }) => {
+                        assert_eq!(key, STORE_KEY);
+                    }
+                    _ => panic!("Unexpected request {:?}", request),
+                }
+            }
+        });
 
         let storage =
             DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
@@ -917,6 +986,9 @@ mod tests {
         // be changed.
         let result = storage.write(&WrongStruct, false).await;
         assert_matches!(result, Err(e) if e.to_string() == "Invalid data keyed by WRONG_STRUCT");
+
+        drop(storage);
+        spawned.await;
     }
 
     // Test that multiple writes to DeviceStorage will cause a SetValue each time, but will only
@@ -942,7 +1014,23 @@ mod tests {
             let value_to_write = TestStruct { value: first_value };
             let write_future = storage.write(&value_to_write, false);
             futures::pin_mut!(write_future);
-            matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+
+            // Initial cache check is done if no read was ever performed.
+            assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Pending);
+
+            {
+                let respond_future = validate_stash_get_and_respond(
+                    &mut stash_stream,
+                    serde_json::to_string(&TestStruct::default_value()).unwrap(),
+                );
+                futures::pin_mut!(respond_future);
+                advance_executor(&mut executor, &mut respond_future);
+            }
+
+            assert_matches!(
+                executor.run_until_stalled(&mut write_future),
+                Poll::Ready(Result::Ok(_))
+            );
         }
 
         // First set request is received immediately on write.
@@ -967,7 +1055,10 @@ mod tests {
             let value_to_write = TestStruct { value: second_value };
             let write_future = storage.write(&value_to_write, false);
             futures::pin_mut!(write_future);
-            matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+            assert_matches!(
+                executor.run_until_stalled(&mut write_future),
+                Poll::Ready(Result::Ok(_))
+            );
         }
 
         // Second set request finishes immediately on write.
@@ -982,7 +1073,7 @@ mod tests {
         futures::pin_mut!(commit_future);
 
         // Executor stalls due to waiting on timer to finish.
-        matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
+        assert_matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
 
         // Advance time to 1ms before the commit triggers.
         executor.set_fake_time(Time::from_nanos(
@@ -990,7 +1081,7 @@ mod tests {
         ));
 
         // Executor is still waiting on the time to finish.
-        matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
+        assert_matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
 
         // Advance time so that the commit will trigger.
         executor.set_fake_time(Time::from_nanos(
@@ -1017,7 +1108,20 @@ mod tests {
         let value_to_write = TestStruct { value: written_value };
         let write_future = storage.write(&value_to_write, true);
         futures::pin_mut!(write_future);
-        matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+
+        // Initial cache check is done if no read was ever performed.
+        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Pending);
+
+        {
+            let respond_future = validate_stash_get_and_respond(
+                &mut stash_stream,
+                serde_json::to_string(&TestStruct::default_value()).unwrap(),
+            );
+            futures::pin_mut!(respond_future);
+            advance_executor(&mut executor, &mut respond_future);
+        }
+
+        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
 
         // Stash receives a set request.
         {
