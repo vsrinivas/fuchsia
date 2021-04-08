@@ -112,7 +112,7 @@ bool PathWalkUp(const fbl::String& op_name, const fbl::Function<int(const char*)
                 perftest::RepeatState* state, Fixture* fixture,
                 fbl::StringBuffer<fs_test_utils::kPathSize>* path) {
   BEGIN_HELPER;
-  while (state->KeepRunning() && *path != fixture->fs_path()) {
+  while (state->KeepRunning() && path->ToString() != fixture->fs_path()) {
     ASSERT_EQ(op(path->c_str()), 0, path->c_str());
     uint32_t new_size = static_cast<uint32_t>(path->length() - kBaseComponent.size());
     path->Resize(new_size);

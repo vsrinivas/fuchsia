@@ -218,11 +218,7 @@ zx_status_t Device::CreateProxy() {
     const char* begin = driver_path.data();
     const char* end = strstr(begin, ".so");
     std::string_view prefix(begin, end == nullptr ? driver_path.size() : end - begin);
-    fbl::AllocChecker ac;
-    driver_path = fbl::String::Concat({prefix, ".proxy.so"}, &ac);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
+    driver_path = fbl::String::Concat({prefix, ".proxy.so"});
   }
 
   auto dev =

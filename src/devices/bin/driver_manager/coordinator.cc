@@ -515,19 +515,9 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     };
   }
 
-  fbl::AllocChecker ac;
-  fbl::String name_str(name, &ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  fbl::String driver_path_str(driver_path, &ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  fbl::String args_str(args, &ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  fbl::String name_str(name);
+  fbl::String driver_path_str(driver_path);
+  fbl::String args_str(args);
 
   // TODO(fxbug.dev/43370): remove this check once init tasks can be enabled for all devices.
   bool want_init_task = has_init || always_init;

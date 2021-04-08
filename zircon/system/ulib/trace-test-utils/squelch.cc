@@ -44,7 +44,7 @@ fbl::String Squelcher::Squelch(const char* str) {
     }
   }
 
-  return buf;
+  return buf.ToString();
 }
 
 }  // namespace trace_testing

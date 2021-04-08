@@ -80,12 +80,6 @@ void String::Set(const char* data, size_t length) {
   ReleaseRef(temp_data);  // release after init in case data is within data_
 }
 
-void String::Set(const char* data, size_t length, fbl::AllocChecker* ac) {
-  char* temp_data = data_;
-  Init(data, length, ac);
-  ReleaseRef(temp_data);  // release after init in case data is within data_
-}
-
 String String::Concat(std::initializer_list<String> strings) {
   const String* last_non_empty_string = nullptr;
   size_t total_length = SumLengths(strings.begin(), strings.end(), &last_non_empty_string);
@@ -102,27 +96,6 @@ String String::Concat(std::initializer_list<String> strings) {
   return String(data, nullptr);
 }
 
-String String::Concat(std::initializer_list<String> strings, AllocChecker* ac) {
-  const String* last_non_empty_string = nullptr;
-  size_t total_length = SumLengths(strings.begin(), strings.end(), &last_non_empty_string);
-  if (last_non_empty_string == nullptr) {
-    ac->arm(0U, true);
-    return String();
-  }
-  if (total_length == last_non_empty_string->length()) {
-    ac->arm(0U, true);
-    return *last_non_empty_string;
-  }
-
-  char* data = AllocData(total_length, ac);
-  if (!data) {
-    return String();
-  }
-
-  fbl::Concat(data, strings.begin(), last_non_empty_string + 1);
-  return String(data, nullptr);
-}
-
 void String::Init(const char* data, size_t length) {
   if (length == 0U) {
     InitWithEmpty();
@@ -130,22 +103,6 @@ void String::Init(const char* data, size_t length) {
   }
 
   data_ = AllocData(length);
-  memcpy(data_, data, length);
-  data_[length] = 0U;
-}
-
-void String::Init(const char* data, size_t length, AllocChecker* ac) {
-  if (length == 0U) {
-    ac->arm(0U, true);
-    InitWithEmpty();
-    return;
-  }
-
-  data_ = AllocData(length, ac);
-  if (!data_) {
-    InitWithEmpty();
-    return;
-  }
   memcpy(data_, data, length);
   data_[length] = 0U;
 }
@@ -161,22 +118,6 @@ void String::Init(size_t count, char ch) {
   data_[count] = 0U;
 }
 
-void String::Init(size_t count, char ch, AllocChecker* ac) {
-  if (count == 0U) {
-    ac->arm(0U, true);
-    InitWithEmpty();
-    return;
-  }
-
-  data_ = AllocData(count, ac);
-  if (!data_) {
-    InitWithEmpty();
-    return;
-  }
-  memset(data_, ch, count);
-  data_[count] = 0U;
-}
-
 void String::InitWithEmpty() {
   gEmpty.ref_count.fetch_add(1U, std::memory_order_relaxed);
   data_ = &gEmpty.nul;
@@ -184,13 +125,6 @@ void String::InitWithEmpty() {
 
 char* String::AllocData(size_t length) {
   void* buffer = operator new(buffer_size(length));
-  return InitData(buffer, length);
-}
-
-char* String::AllocData(size_t length, AllocChecker* ac) {
-  void* buffer = operator new(buffer_size(length), ac);
-  if (!buffer)
-    return nullptr;
   return InitData(buffer, length);
 }
 

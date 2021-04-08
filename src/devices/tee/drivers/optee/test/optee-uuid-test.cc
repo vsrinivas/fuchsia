@@ -70,7 +70,7 @@ TEST(UuidTest, ToOctets) {
 TEST(UuidTest, ToString) {
   Uuid uuid{0x01234567, 0x89AB, 0xCDEF, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}};
 
-  EXPECT_EQ(uuid.ToString(), "01234567-89ab-cdef-0102-030405060708");
+  EXPECT_STR_EQ(uuid.ToString(), "01234567-89ab-cdef-0102-030405060708");
 }
 
 }  // namespace test

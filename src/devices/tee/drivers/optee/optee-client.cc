@@ -74,8 +74,7 @@ static constexpr
 // specification.
 static fbl::StringBuffer<kTaPathLength> BuildTaPath(const optee::Uuid& ta_uuid) {
   fbl::StringBuffer<kTaPathLength> buf;
-  const fbl::String str = ta_uuid.ToString();
-  buf.Append(str);
+  buf.Append(ta_uuid.ToString());
   buf.Append(kTaFileExtension);
 
   return buf;

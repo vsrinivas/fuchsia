@@ -499,11 +499,7 @@ TEST(RamdiskTests, RamdiskTestFilesystem) {
         // Found a device under /dev/class/block/XYZ with the name of the
         // ramdisk we originally created.
         strncat(args->blockpath, fn, sizeof(blockpath) - (strlen(args->blockpath) + 1));
-        fbl::AllocChecker ac;
-        args->filename = fbl::String(fn, &ac);
-        if (!ac.check()) {
-          return ZX_ERR_NO_MEMORY;
-        }
+        args->filename = fbl::String(fn);
         args->found = true;
         return ZX_ERR_STOP;
       }

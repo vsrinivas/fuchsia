@@ -9,11 +9,9 @@
 
 #include <atomic>
 #include <initializer_list>
+#include <string>
 #include <string_view>
 #include <type_traits>
-
-#include <fbl/alloc_checker.h>
-#include <fbl/string_traits.h>
 
 namespace fbl {
 namespace tests {
@@ -53,46 +51,22 @@ class __OWNER(char) String {
   // |data| must not be null.
   String(const char* data) { Init(data, std::string_view(data).size()); }
 
-  // Creates a string from the contents of a null-terminated C string.
-  // Allocates heap memory only if |data| is non-empty.
-  // |data| and |ac| must not be null.
-  String(const char* data, AllocChecker* ac) { Init(data, std::string_view(data).size(), ac); }
-
   // Creates a string from the contents of a character array of given length.
   // Allocates heap memory only if |length| is non-zero.
   // |data| must not be null.
   String(const char* data, size_t length) { Init(data, length); }
 
-  // Creates a string from the contents of a character array of given length.
-  // Allocates heap memory only if |length| is non-zero.
-  // |data| and |ac| must not be null.
-  String(const char* data, size_t length, AllocChecker* ac) { Init(data, length, ac); }
-
   // Creates a string with |count| copies of |ch|.
   // Allocates heap memory only if |count| is non-zero.
   String(size_t count, char ch) { Init(count, ch); }
-
-  // Creates a string with |count| copies of |ch|.
-  // Allocates heap memory only if |count| is non-zero.
-  // |ac| must not be null.
-  String(size_t count, char ch, AllocChecker* ac) { Init(count, ch, ac); }
 
   // Creates a string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
   String(std::string_view piece) : String(piece.data(), piece.length()) {}
 
-  // Creates a string from the contents of a string piece.
-  // Allocates heap memory only if |piece.length()| is non-zero.
-  // |ac| must not be null.
-  String(std::string_view piece, AllocChecker* ac) : String(piece.data(), piece.length(), ac) {}
-
-  // Creates a string from a string-like object.
-  // Allocates heap memory only if the length of |value| is non-zero.
-  //
-  // Works with various string types including fbl::String, fbl::StringView,
-  // std::string, and std::string_view.
-  template <typename T, typename = typename std::enable_if<is_string_like<T>::value>::type>
-  constexpr String(const T& value) : String(GetStringData(value), GetStringLength(value)) {}
+  // Creates a string from the contents of a string.
+  // Allocates heap memory only if |str.length()| is non-zero.
+  String(const std::string& str) : String(str.data(), str.length()) {}
 
   // Destroys the string.
   ~String() { ReleaseRef(data_); }
@@ -145,71 +119,23 @@ class __OWNER(char) String {
   // Allocates heap memory only if |data| is non-empty.
   // |data| must not be null.
   String& operator=(const char* data) {
-    Set(data);
+    Set(data, std::string_view(data).size());
     return *this;
   }
 
   // Assigns this string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
-  String& operator=(std::string_view piece) {
-    Set(piece);
+  String& operator=(std::string_view sv) {
+    Set(sv.data(), sv.length());
     return *this;
-  }
-
-  // Assigns this string from the contents of a string-like object.
-  // Allocates heap memory only if the length of |value| is non-zero.
-  //
-  // Works with various string types including fbl::String, fbl::StringView,
-  // std::string, and std::string_view.
-  template <typename T, typename = typename std::enable_if<is_string_like<T>::value>::type>
-  String& operator=(const T& value) {
-    Set(GetStringData(value), GetStringLength(value));
-    return *this;
-  }
-
-  // Assigns this string from the contents of a null-terminated C string.
-  // Allocates heap memory only if |data| is non-empty.
-  // |data| must not be null.
-  void Set(const char* data) { Set(data, std::string_view(data).size()); }
-
-  // Assigns this string from the contents of a null-terminated C string.
-  // Allocates heap memory only if |data| is non-empty.
-  // |data| and |ac| must not be null.
-  void Set(const char* data, AllocChecker* ac) { Set(data, std::string_view(data).size(), ac); }
-
-  // Assigns this string from the contents of a character array of given length.
-  // Allocates heap memory only if |length| is non-zero.
-  // |data| must not be null.
-  void Set(const char* data, size_t length);
-
-  // Assigns this string from the contents of a character array of given length.
-  // Allocates heap memory only if |length| is non-zero.
-  // |data| and |ac| must not be null.
-  void Set(const char* data, size_t length, AllocChecker* ac);
-
-  // Assigns this string with |count| copies of |ch|.
-  // Allocates heap memory only if |count| is non-zero.
-  void Set(size_t count, char ch) {
-    ReleaseRef(data_);
-    Init(count, ch);
-  }
-
-  // Assigns this string with |count| copies of |ch|.
-  // Allocates heap memory only if |count| is non-zero.
-  // |ac| must not be null.
-  void Set(size_t count, char ch, AllocChecker* ac) {
-    ReleaseRef(data_);
-    Init(count, ch, ac);
   }
 
   // Assigns this string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
-  void Set(std::string_view piece) { Set(piece.data(), piece.length()); }
-
-  // Assigns this string from the contents of a string piece.
-  // Allocates heap memory only if |piece.length()| is non-zero.
-  // |ac| must not be null.
-  void Set(std::string_view piece, AllocChecker* ac) { Set(piece.data(), piece.length(), ac); }
+  String& operator=(const std::string& str) {
+    Set(str.data(), str.length());
+    return *this;
+  }
 
   // Create a std::string_view backed by the string.
   // The view does not take ownership of the data so the string
@@ -219,14 +145,15 @@ class __OWNER(char) String {
   // Concatenates the specified strings.
   static String Concat(std::initializer_list<String> strings);
 
-  // Concatenates the specified strings.
-  // |ac| must not be null.
-  static String Concat(std::initializer_list<String> strings, AllocChecker* ac);
-
  private:
   friend struct fbl::tests::StringTestHelper;
 
   explicit String(char* data, decltype(nullptr) /*overload disambiguation*/) : data_(data) {}
+
+  // Assigns this string from the contents of a character array of given length.
+  // Allocates heap memory only if |length| is non-zero.
+  // |data| must not be null.
+  void Set(const char* data, size_t length);
 
   // A string buffer consists of a length followed by a reference count
   // followed by a null-terminated string.  To make access faster, we offset
@@ -262,13 +189,10 @@ class __OWNER(char) String {
   static EmptyBuffer gEmpty;
 
   void Init(const char* data, size_t length);
-  void Init(const char* data, size_t length, AllocChecker* ac);
   void Init(size_t count, char ch);
-  void Init(size_t count, char ch, AllocChecker* ac);
   void InitWithEmpty();
 
   static char* AllocData(size_t length);
-  static char* AllocData(size_t length, AllocChecker* ac);
   static char* InitData(void* buffer, size_t length);
   static void AcquireRef(char* data);
   static void ReleaseRef(char* data);

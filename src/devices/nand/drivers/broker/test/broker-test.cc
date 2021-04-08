@@ -43,11 +43,7 @@ fbl::unique_fd OpenBroker(const char* path, fbl::String* out_filename) {
     }
     BrokerData* broker_data = reinterpret_cast<BrokerData*>(cookie);
     broker_data->fd.reset(openat(dir_fd, filename, O_RDWR));
-    fbl::AllocChecker ac;
-    broker_data->filename = fbl::String(filename, &ac);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
+    broker_data->filename = fbl::String(filename);
     return ZX_ERR_STOP;
   };
 
