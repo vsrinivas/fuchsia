@@ -113,19 +113,8 @@ group("e2e_tests") {
 
   deps = []
 
-  # TODO(fxbug.dev/63992): Temporarily disable bootserver_old tests on profile builders.
-  if (select_variant + [
-        "coverage",
-        "coverage-sdk",
-        "profile",
-        "rustcoverage",
-      ] -
-      [
-        "coverage",
-        "coverage-sdk",
-        "profile",
-        "rustcoverage",
-      ] == select_variant) {
+  # TODO(fxbug.dev/63992): Temporarily disable bootserver_old tests on coverage builders.
+  if (!is_coverage) {
     deps += [ "//tools/bootserver_old/tests($host_toolchain)" ]
   }
 }

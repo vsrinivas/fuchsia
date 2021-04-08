@@ -9,18 +9,7 @@ group("tests") {
 
   # TODO(fxbug.dev/67539): remove this check when we can better distinguish e2e
   # tests.
-  if (select_variant + [
-        "coverage",
-        "coverage-sdk",
-        "profile",
-        "rustcoverage",
-      ] -
-      [
-        "coverage",
-        "coverage-sdk",
-        "profile",
-        "rustcoverage",
-      ] == select_variant) {
+  if (!is_coverage) {
     # WARNING: Only tests that are NOT end to end (E2E) product tests must be
     # added to this target.
     #

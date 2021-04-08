@@ -238,20 +238,9 @@ fuchsia_test_package("minfs-tests") {
     ":minfs-micro-benchmark-test",
   ]
 
-  # TODO(https://fxbug.dev/73218): Re-enable minfs-integration-test in profile build
+  # TODO(https://fxbug.dev/73218): Re-enable minfs-integration-test in coverage build
   # when it stops flaking.
-  if (select_variant + [
-        "coverage",
-        "coverage-sdk",
-        "profile",
-        "rustcoverage",
-      ] -
-      [
-        "coverage",
-        "coverage-sdk",
-        "profile",
-        "rustcoverage",
-      ] == select_variant) {
+  if (!is_coverage) {
     test_components += [ ":minfs-integration-test" ]
   }
 

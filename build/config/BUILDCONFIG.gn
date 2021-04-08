@@ -1563,6 +1563,20 @@ declare_args() {
   all_toolchain_variants = []
 }
 
+# Whether profile instrumentation is enabled for collecting coverage.
+is_coverage = select_variant + [
+                "coverage",
+                "coverage-sdk",
+                "profile",
+                "rustcoverage",
+              ] -
+              [
+                "coverage",
+                "coverage-sdk",
+                "profile",
+                "rustcoverage",
+              ] != select_variant
+
 # Very unfortunately, GN nevers sets `current_toolchain` when executing
 # BUILDCONFIG.gn, so the logic below is used to detect when this file
 # is executed in the context of the default toolchain.
