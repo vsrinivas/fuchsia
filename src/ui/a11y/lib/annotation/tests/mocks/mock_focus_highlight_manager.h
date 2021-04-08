@@ -41,12 +41,8 @@ class MockFocusHighlightManager : public a11y::FocusHighlightManager {
   // |FocusHighlightManager|
   void UpdateMagnificationHighlights(zx_koid_t koid) override;
 
-  // Returns currently highlight info.
+  // Returns currently highlighted node.
   std::optional<SemanticNodeIdentifier> GetHighlightedNode() const;
-  std::optional<zx_koid_t> GetMagnificationHighlightKoid() const;
-  std::optional<float> GetMagnificationHighlightScale() const;
-  std::optional<float> GetMagnificationHighlightTranslationY() const;
-  std::optional<float> GetMagnificationHighlightTranslationX() const;
 
  private:
   bool annotations_enabled_ = false;

@@ -13,7 +13,6 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/ui/a11y/lib/annotation/tests/mocks/mock_focus_highlight_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
@@ -39,17 +38,9 @@ static_assert(kFramePeriod > kFrameEpsilon);
 
 class MagnifierTest : public gtest::TestLoopFixture {
  public:
-  MagnifierTest()
-      : mock_focus_highlight_manager_(std::make_unique<MockFocusHighlightManager>()),
-        magnifier_(std::make_unique<a11y::Magnifier>(mock_focus_highlight_manager_.get())) {
-    arena_.Add(magnifier_.get());
-  }
+  MagnifierTest() { arena_.Add(&magnifier_); }
 
-  a11y::Magnifier* magnifier() { return magnifier_.get(); }
-
-  MockFocusHighlightManager* focus_highlight_manager() {
-    return mock_focus_highlight_manager_.get();
-  }
+  a11y::Magnifier* magnifier() { return &magnifier_; }
 
   void SendPointerEvents(const std::vector<PointerParams>& events) {
     for (const auto& params : events) {
@@ -69,8 +60,7 @@ class MagnifierTest : public gtest::TestLoopFixture {
   }
 
   a11y::GestureArena arena_;
-  std::unique_ptr<MockFocusHighlightManager> mock_focus_highlight_manager_;
-  std::unique_ptr<a11y::Magnifier> magnifier_;
+  a11y::Magnifier magnifier_;
 
   // We don't actually use these times. If we did, we'd want to more closely correlate them with
   // fake time.
@@ -579,32 +569,10 @@ TEST_F(MagnifierTest, InputFrameThrottling) {
   EXPECT_EQ(handler.update_count(), 3u);
 }
 
-// Ensure that highlight is drawn and cleared correctly.
-TEST_F(MagnifierTest, Trigger3x1AndObserveHighlight) {
-  MockMagnificationHandler handler;
-  magnifier()->RegisterHandler(handler.NewBinding());
-
-  SendPointerEvents(3 * TapEvents(1, {0.3f, 0.4f}));
-  RunLoopFor(kTestTransitionPeriod);
-  EXPECT_EQ(focus_highlight_manager()->GetMagnificationHighlightScale().value(),
-            a11y::Magnifier::kDefaultScale);
-  EXPECT_EQ(focus_highlight_manager()->GetMagnificationHighlightTranslationX().value(),
-            (-.3f * (a11y::Magnifier::kDefaultScale - 1)));
-  EXPECT_EQ(focus_highlight_manager()->GetMagnificationHighlightTranslationY().value(),
-            (-.4f * (a11y::Magnifier::kDefaultScale - 1)));
-
-  SendPointerEvents(3 * TapEvents(1, {}));
-  RunLoopFor(kTestTransitionPeriod);
-  EXPECT_FALSE(focus_highlight_manager()->GetMagnificationHighlightScale().has_value());
-}
-
 class MagnifierRecognizerTest : public gtest::TestLoopFixture {
  public:
-  MagnifierRecognizerTest()
-      : mock_focus_highlight_manager_(std::make_unique<MockFocusHighlightManager>()),
-        magnifier_(std::make_unique<a11y::Magnifier>(mock_focus_highlight_manager_.get())) {}
   MockContestMember* member() { return &member_; }
-  a11y::Magnifier* magnifier() { return magnifier_.get(); }
+  a11y::Magnifier* magnifier() { return &magnifier_; }
 
   void SendPointerEvents(const std::vector<PointerParams>& events) {
     for (const auto& params : events) {
@@ -615,7 +583,7 @@ class MagnifierRecognizerTest : public gtest::TestLoopFixture {
  private:
   void SendPointerEvent(const PointerParams& params) {
     if (member_.is_held()) {
-      magnifier_->HandleEvent(ToPointerEvent(params, input_event_time_));
+      magnifier_.HandleEvent(ToPointerEvent(params, input_event_time_));
     }
 
     // Run the loop to simulate a trivial passage of time. (This is realistic for everything but ADD
@@ -628,8 +596,7 @@ class MagnifierRecognizerTest : public gtest::TestLoopFixture {
   }
 
   MockContestMember member_;
-  std::unique_ptr<MockFocusHighlightManager> mock_focus_highlight_manager_;
-  std::unique_ptr<a11y::Magnifier> magnifier_;
+  a11y::Magnifier magnifier_;
 
   // We don't actually use these times. If we did, we'd want to more closely correlate them with
   // fake time.

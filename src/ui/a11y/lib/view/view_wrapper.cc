@@ -63,9 +63,7 @@ void ViewWrapper::HighlightMagnificationViewport(float magnification_scale,
   // node.
   auto root_node = tree_weak_ptr->GetNode(0u);
 
-  if (!root_node) {
-    return;
-  }
+  FX_DCHECK(root_node);
 
   auto root_node_bounding_box = root_node->location();
 
