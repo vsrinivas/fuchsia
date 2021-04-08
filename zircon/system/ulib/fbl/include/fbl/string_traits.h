@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 // This header provides functions which make it easier to work generically
-// with string-like objects such as fbl::StringPiece, fbl::String, std::string,
-// and std::string_view.
+// with string-like objects such as fbl::String, std::string, and
+// std::string_view.
 
 #ifndef FBL_STRING_TRAITS_H_
 #define FBL_STRING_TRAITS_H_

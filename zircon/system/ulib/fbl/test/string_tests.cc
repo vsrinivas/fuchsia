@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <iterator>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -95,7 +96,7 @@ TEST(StringTest, Empty) {
   }
 
   {
-    fbl::String empty(fbl::StringPiece("abcde", 0u));
+    fbl::String empty(std::string_view("abcde", 0u));
 
     EXPECT_STR_EQ("", empty.data());
     EXPECT_STR_EQ("", empty.c_str());
@@ -166,7 +167,7 @@ TEST(StringTest, NonEmpty) {
   }
 
   {
-    fbl::String str(fbl::StringPiece("abcdef", 2u));
+    fbl::String str(std::string_view("abcdef", 2u));
 
     EXPECT_STR_EQ("ab", str.data());
 
@@ -269,11 +270,11 @@ TEST(StringTest, SetClear) {
   EXPECT_STR_EQ("xxxxxxxxxx", str.data());
   EXPECT_EQ(10u, str.length());
 
-  str.Set(fbl::StringPiece("abcdef", 0u));
+  str.Set(std::string_view("abcdef", 0u));
   EXPECT_STR_EQ("", str.data());
   EXPECT_EQ(0u, str.length());
 
-  str.Set(fbl::StringPiece("abc", 2u));
+  str.Set(std::string_view("abc", 2u));
   EXPECT_STR_EQ("ab", str.data());
   EXPECT_EQ(2u, str.length());
 
@@ -437,7 +438,7 @@ TEST(StringTest, AllocChecker) {
 
   {
     fbl::AllocChecker ac;
-    fbl::String empty(fbl::StringPiece("abcdef", 0u), &ac);
+    fbl::String empty(std::string_view("abcdef", 0u), &ac);
     EXPECT_TRUE(ac.check());
     EXPECT_STR_EQ("", empty.data());
     EXPECT_EQ(0u, empty.length());
@@ -475,7 +476,7 @@ TEST(StringTest, AllocChecker) {
   {
     fbl::AllocChecker ac;
     fbl::String empty("?");
-    empty.Set(fbl::StringPiece("abcdef", 0u), &ac);
+    empty.Set(std::string_view("abcdef", 0u), &ac);
     EXPECT_TRUE(ac.check());
     EXPECT_STR_EQ("", empty.data());
     EXPECT_EQ(0u, empty.length());
@@ -509,7 +510,7 @@ TEST(StringTest, AllocChecker) {
 
   {
     fbl::AllocChecker ac;
-    fbl::String str(fbl::StringPiece("abcdef", 5u), &ac);
+    fbl::String str(std::string_view("abcdef", 5u), &ac);
     EXPECT_TRUE(ac.check());
     EXPECT_STR_EQ("abcde", str.data());
     EXPECT_EQ(5u, str.length());
@@ -547,7 +548,7 @@ TEST(StringTest, AllocChecker) {
   {
     fbl::AllocChecker ac;
     fbl::String str;
-    str.Set(fbl::StringPiece("abcdef", 5u), &ac);
+    str.Set(std::string_view("abcdef", 5u), &ac);
     EXPECT_TRUE(ac.check());
     EXPECT_STR_EQ("abcde", str.data());
     EXPECT_EQ(5u, str.length());
@@ -575,14 +576,14 @@ TEST(StringTest, AllocChecker) {
 TEST(StringTest, ToString) {
   {
     fbl::String empty;
-    fbl::StringPiece piece(empty);
+    std::string_view piece(empty);
     EXPECT_EQ(empty.data(), piece.data());
     EXPECT_EQ(0u, piece.length());
   }
 
   {
     fbl::String str("abc");
-    fbl::StringPiece piece(str);
+    std::string_view piece(str);
     EXPECT_EQ(str.data(), piece.data());
     EXPECT_EQ(3u, piece.length());
   }

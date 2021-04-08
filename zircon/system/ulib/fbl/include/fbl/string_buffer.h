@@ -12,7 +12,6 @@
 #include <string_view>
 
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 
 #include "string.h"
 
@@ -111,7 +110,7 @@ class __OWNER(char) StringBuffer final {
 
   // Appends content to the string buffer from a string piece.
   // The result is truncated if the appended content does not fit completely.
-  StringBuffer& Append(const std::string_view& piece) {
+  StringBuffer& Append(std::string_view piece) {
     AppendInternal(piece.data(), piece.length());
     return *this;
   }

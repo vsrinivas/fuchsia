@@ -13,7 +13,6 @@
 #include <type_traits>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/string_piece.h>
 #include <fbl/string_traits.h>
 
 namespace fbl {
@@ -80,12 +79,12 @@ class __OWNER(char) String {
 
   // Creates a string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
-  String(const StringPiece& piece) : String(piece.data(), piece.length()) {}
+  String(std::string_view piece) : String(piece.data(), piece.length()) {}
 
   // Creates a string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
   // |ac| must not be null.
-  String(const StringPiece& piece, AllocChecker* ac) : String(piece.data(), piece.length(), ac) {}
+  String(std::string_view piece, AllocChecker* ac) : String(piece.data(), piece.length(), ac) {}
 
   // Creates a string from a string-like object.
   // Allocates heap memory only if the length of |value| is non-zero.
@@ -152,7 +151,7 @@ class __OWNER(char) String {
 
   // Assigns this string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
-  String& operator=(const StringPiece& piece) {
+  String& operator=(std::string_view piece) {
     Set(piece);
     return *this;
   }
@@ -205,12 +204,12 @@ class __OWNER(char) String {
 
   // Assigns this string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
-  void Set(const StringPiece& piece) { Set(piece.data(), piece.length()); }
+  void Set(std::string_view piece) { Set(piece.data(), piece.length()); }
 
   // Assigns this string from the contents of a string piece.
   // Allocates heap memory only if |piece.length()| is non-zero.
   // |ac| must not be null.
-  void Set(const StringPiece& piece, AllocChecker* ac) { Set(piece.data(), piece.length(), ac); }
+  void Set(std::string_view piece, AllocChecker* ac) { Set(piece.data(), piece.length(), ac); }
 
   // Create a std::string_view backed by the string.
   // The view does not take ownership of the data so the string

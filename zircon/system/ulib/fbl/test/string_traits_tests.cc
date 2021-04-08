@@ -6,7 +6,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <fbl/string_traits.h>
 #include <zxtest/zxtest.h>
 
@@ -51,7 +50,7 @@ struct WrongLengthTypeBadString {
 };
 
 static_assert(fbl::is_string_like_v<fbl::String>, "ok - string");
-static_assert(fbl::is_string_like_v<fbl::StringPiece>, "ok - string piece");
+static_assert(fbl::is_string_like_v<std::string_view>, "ok - string piece");
 static_assert(fbl::is_string_like_v<SimpleFakeString>, "ok - simple");
 static_assert(fbl::is_string_like_v<OverloadedFakeString>, "ok - overloaded");
 static_assert(!fbl::is_string_like_v<decltype(nullptr)>, "bad - null");

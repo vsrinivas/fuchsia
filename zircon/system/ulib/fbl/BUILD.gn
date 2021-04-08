@@ -45,7 +45,6 @@ zx_library("fbl") {
     "fbl/span.h",
     "fbl/string_buffer.h",
     "fbl/string.h",
-    "fbl/string_piece.h",
     "fbl/string_printf.h",
     "fbl/string_traits.h",
     "fbl/type_info.h",

@@ -5,6 +5,8 @@
 #include <fbl/string_buffer.h>
 #include <zxtest/zxtest.h>
 
+#include <string_view>
+
 #define EXPECT_DATA_AND_LENGTH(expected, actual)  \
   do {                                            \
     EXPECT_STR_EQ(expected, actual.data());       \
@@ -82,12 +84,12 @@ TEST(StringBufferTest, Append) {
         .Append('b')
         .Append("cd")
         .Append("efghi", 3u)
-        .Append(fbl::StringPiece("hijkl", 3u))
+        .Append(std::string_view("hijkl", 3u))
         .Append(fbl::String("klmnopqrstuvwxyz"))
         .Append('z')  // these will be truncated away
         .Append("zz")
         .Append("zzzzzz", 3u)
-        .Append(fbl::StringPiece("zzzzz", 3u))
+        .Append(std::string_view("zzzzz", 3u))
         .Append(fbl::String("zzzzz"));
 
     EXPECT_STR_EQ("abcdefghijklmnop", str.data());
@@ -140,11 +142,11 @@ TEST(StringBufferTest, Append) {
 
   {
     fbl::StringBuffer<3u> str;
-    str.Append(fbl::StringPiece("abcdef", 2u));
+    str.Append(std::string_view("abcdef", 2u));
     EXPECT_DATA_AND_LENGTH("ab", str);
-    str.Append(fbl::StringPiece("zzzz", 0u));
+    str.Append(std::string_view("zzzz", 0u));
     EXPECT_DATA_AND_LENGTH("ab", str);
-    str.Append(fbl::StringPiece("cdefghijk", 5u));
+    str.Append(std::string_view("cdefghijk", 5u));
     EXPECT_DATA_AND_LENGTH("abc", str);
   }
 
@@ -236,7 +238,7 @@ TEST(StringBufferTest, ToStringPiece) {
   fbl::StringBuffer<16u> buf;
   buf.Append("abcdef");
 
-  fbl::StringPiece piece = buf;
+  std::string_view piece = buf;
   EXPECT_EQ(buf.data(), piece.data());
   EXPECT_EQ(buf.length(), piece.length());
 }
