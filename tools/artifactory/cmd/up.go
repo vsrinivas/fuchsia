@@ -272,7 +272,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	}
 	files = append(files, tools...)
 
-	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName, buildidDirName)
+	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(ctx, m, debugDirName, buildidDirName)
 	if err != nil {
 		return err
 	}

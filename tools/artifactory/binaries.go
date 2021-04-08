@@ -5,11 +5,13 @@
 package artifactory
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
@@ -21,11 +23,11 @@ const (
 // DebugBinaryUploads parses the binary manifest associated to a build and
 // returns a list of Uploads of debug binaries and a list of associated fuchsia
 // build IDs.
-func DebugBinaryUploads(mods *build.Modules, debugNamespace, buildidNamespace string) ([]Upload, []string, error) {
-	return debugBinaryUploads(mods, debugNamespace, buildidNamespace)
+func DebugBinaryUploads(ctx context.Context, mods *build.Modules, debugNamespace, buildidNamespace string) ([]Upload, []string, error) {
+	return debugBinaryUploads(ctx, mods, debugNamespace, buildidNamespace)
 }
 
-func debugBinaryUploads(mods binModules, debugNamespace, buildidNamespace string) ([]Upload, []string, error) {
+func debugBinaryUploads(ctx context.Context, mods binModules, debugNamespace, buildidNamespace string) ([]Upload, []string, error) {
 	bins := mods.Binaries()
 	for _, pb := range mods.PrebuiltBinarySets() {
 		if pb.Manifest == "" {
@@ -62,6 +64,7 @@ func debugBinaryUploads(mods binModules, debugNamespace, buildidNamespace string
 		} else if err != nil {
 			return nil, nil, err
 		}
+		logger.Debugf(ctx, "%s -> %s, %s\n", id, bin.Debug, bin.Label)
 
 		// Skip duplicate build IDs.
 		if _, ok := buildIDSet[id]; ok {

@@ -5,6 +5,7 @@
 package artifactory
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -197,7 +198,7 @@ func TestDebugBinaryUploads(t *testing.T) {
 
 	expectedIDs := []string{"first", "prebuiltA"}
 
-	actualUploads, actualIDs, err := debugBinaryUploads(m, "DEBUG_NAMESPACE", "BUILDID_NAMESPACE")
+	actualUploads, actualIDs, err := debugBinaryUploads(context.Background(), m, "DEBUG_NAMESPACE", "BUILDID_NAMESPACE")
 	if err != nil {
 		t.Fatalf("failed to generate debug binary uploads: %v", err)
 	}
