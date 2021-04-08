@@ -4,6 +4,8 @@
 
 #include "src/cobalt/bin/testapp/tests.h"
 
+#include <ctime>
+
 #include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/test_constants.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
@@ -192,7 +194,9 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogCustomEvent";
   bool success =
-      logger->LogCustomMetricsTestProto(cobalt_registry::kQueryResponseMetricId, "test", 100, 1);
+      logger->LogCustomMetricsTestProto(cobalt_registry::kQueryResponseMetricId,
+                                        "test " + std::to_string(std::time(0)),
+                                        100, 1);
 
   FX_LOGS(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
 
