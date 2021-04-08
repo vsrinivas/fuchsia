@@ -142,7 +142,6 @@ config("allow_unused_results") {
     "//src/connectivity/location/*",
     "//src/connectivity/lowpan/*",
     "//src/connectivity/management/*",
-    "//src/connectivity/network/dhcp/*",
     "//src/connectivity/network/dhcpd-cli/*",
     "//src/connectivity/network/dhcpv6/*",
     "//src/connectivity/network/http-client/*",

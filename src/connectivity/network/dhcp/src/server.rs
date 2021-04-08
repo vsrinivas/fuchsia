@@ -309,11 +309,10 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                     // This should NEVER return an `Err`. If it does it indicates
                     // the server's notion of client bindings is wrong.
                     // Its non-recoverable and we therefore panic.
-                    if let Err(AddressPoolError::UnallocatedIpv4AddrRelease(addr)) =
-                        self.pool.release_addr(client_addr)
-                    {
-                        panic!("server tried to release unallocated ip {}", addr)
-                    }
+                    let () = match self.pool.release_addr(client_addr) {
+                        Ok(()) => (),
+                        Err(e) => panic!("fatal server release address failure: {}", e),
+                    };
                     return Ok(client_addr);
                 } else {
                     if self.pool.addr_is_available(client_addr) {
@@ -338,11 +337,10 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     ) -> Result<(), Error> {
         let lease_length_seconds = client_opts
             .iter()
-            .filter_map(|opt| match opt {
+            .find_map(|opt| match opt {
                 DhcpOption::IpAddressLeaseTime(v) => Some(*v),
                 _ => None,
             })
-            .next()
             .ok_or(ServerError::MissingRequiredDhcpOption(OptionCode::IpAddressLeaseTime))?;
         let options = client_opts
             .iter()
@@ -363,15 +361,14 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                 .store_client_config(&client_id, &config)
                 .context("failed to store client in stash")?;
         }
-        self.cache.insert(client_id, config);
+        let _: Option<_> = self.cache.insert(client_id, config);
         // This should NEVER return an `Err`. If it does it indicates
         // server's state has changed in the middle of request handling.
         // This is non-recoverable and we therefore panic.
-        if let Err(AddressPoolError::UnavailableIpv4AddrAllocation(addr)) =
-            self.pool.allocate_addr(client_addr)
-        {
-            panic!("server tried to allocate unavailable ip {}", addr)
-        }
+        let () = match self.pool.allocate_addr(client_addr) {
+            Ok(()) => (),
+            Err(e) => panic!("fatal server address allocation failure: {}", e),
+        };
         Ok(())
     }
 
@@ -518,8 +515,17 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         // marked allocated. Attempt to allocate the declined address, but treat the address
         // already being allocated as success.
         let () = self.pool.allocate_addr(declined_ip).or_else(|e| match e {
-            AddressPoolError::UnavailableIpv4AddrAllocation(ip) if ip == declined_ip => Ok(()),
-            e => Err(e),
+            AddressPoolError::UnavailableIpv4AddrAllocation(ip)
+            | AddressPoolError::AlreadyAllocatedAddr(ip)
+                if ip == declined_ip =>
+            {
+                Ok(())
+            }
+            e @ AddressPoolError::UnavailableIpv4AddrAllocation(Ipv4Addr { .. })
+            | e @ AddressPoolError::AlreadyAllocatedAddr(Ipv4Addr { .. })
+            | e @ AddressPoolError::UnallocatedIpv4AddrRelease(Ipv4Addr { .. })
+            | e @ AddressPoolError::AlreadyAvailableAddr(Ipv4Addr { .. })
+            | e @ AddressPoolError::Ipv4AddrExhaustion => Err(e),
         })?;
         let (id, _config) = entry.remove_entry();
         if let Some(store) = &mut self.store {
@@ -728,9 +734,11 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             if let Some(ip) = ip {
                 // We ignore the `Result` here since a failed release of the `ip`
                 // in this iteration will be reattempted in the next.
-                let _release_result = self.pool.release_addr(ip);
+                let _: Result<_, _> = self.pool.release_addr(ip);
             }
-            self.cache.remove(&id);
+            if let None = self.cache.remove(&id) {
+                log::warn!("expired configuration for client={} is not in cache", &id);
+            };
             if let Some(store) = self.store.as_mut() {
                 // The call to delete will immediately be committed to the Stash. Since DHCP lease
                 // acquisitions occur on a human timescale, e.g. a cellphone is brought in range of
@@ -1028,11 +1036,11 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
     fn dispatch_clear_leases(&mut self) -> Result<(), Status> {
         for (id, config) in &self.cache {
             if let Some(client_addr) = config.client_addr {
-                let () = self.pool.release_addr(client_addr).unwrap_or_else(|e| {
-                    // Log and panic because server has irrecoverable inconsistent state.
-                    log::error!("release_addr({}) failed: {:?}", client_addr, e);
-                    panic!("server tried to release unallocated addr {}", client_addr);
-                });
+                let () = match self.pool.release_addr(client_addr) {
+                    Ok(()) => (),
+                    // Panic on failure because server has irrecoverable inconsistent state.
+                    Err(e) => panic!("fatal server release address failure: {}", e),
+                };
             }
             if let Some(store) = self.store.as_mut() {
                 let () = store.delete(&id).map_err(|e| {
@@ -1144,8 +1152,14 @@ pub enum AddressPoolError {
     #[error("attempted to allocate unavailable ip: {}", _0)]
     UnavailableIpv4AddrAllocation(Ipv4Addr),
 
-    #[error(" attempted to release unallocated ip: {}", _0)]
+    #[error("attempted to release unallocated ip: {}", _0)]
     UnallocatedIpv4AddrRelease(Ipv4Addr),
+
+    #[error("attempted to allocate already allocated ip: {}", _0)]
+    AlreadyAllocatedAddr(Ipv4Addr),
+
+    #[error("attempted to mark available already available ip: {}", _0)]
+    AlreadyAvailableAddr(Ipv4Addr),
 }
 
 impl AddressPool {
@@ -1171,20 +1185,26 @@ impl AddressPool {
     }
 
     fn allocate_addr(&mut self, addr: Ipv4Addr) -> Result<(), AddressPoolError> {
-        if self.available_addrs.remove(&addr) {
-            self.allocated_addrs.insert(addr);
-            Ok(())
-        } else {
+        if !self.available_addrs.remove(&addr) {
             Err(AddressPoolError::UnavailableIpv4AddrAllocation(addr))
+        } else {
+            if !self.allocated_addrs.insert(addr) {
+                Err(AddressPoolError::AlreadyAllocatedAddr(addr))
+            } else {
+                Ok(())
+            }
         }
     }
 
     fn release_addr(&mut self, addr: Ipv4Addr) -> Result<(), AddressPoolError> {
-        if self.allocated_addrs.remove(&addr) {
-            self.available_addrs.insert(addr);
-            Ok(())
-        } else {
+        if !self.allocated_addrs.remove(&addr) {
             Err(AddressPoolError::UnallocatedIpv4AddrRelease(addr))
+        } else {
+            if !self.available_addrs.insert(addr) {
+                Err(AddressPoolError::AlreadyAvailableAddr(addr))
+            } else {
+                Ok(())
+            }
         }
     }
 
@@ -1766,7 +1786,7 @@ pub mod tests {
 
         let offer_ip = random_ipv4_generator();
 
-        server.pool.available_addrs.insert(offer_ip);
+        assert!(server.pool.available_addrs.insert(offer_ip));
 
         let mut expected_offer = new_test_offer(&disc, &server);
         expected_offer.yiaddr = offer_ip;
@@ -1796,7 +1816,7 @@ pub mod tests {
         let client_id = ClientIdentifier::from(&disc);
 
         let offer_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(offer_ip);
+        assert!(server.pool.available_addrs.insert(offer_ip));
         let expected_offer = {
             let mut expected_offer = new_test_offer(&disc, &server);
             expected_offer.yiaddr = offer_ip;
@@ -1827,7 +1847,7 @@ pub mod tests {
         let client_id = ClientIdentifier::from(&disc);
 
         let offer_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(offer_ip);
+        assert!(server.pool.available_addrs.insert(offer_ip));
         let expected_offer = {
             let mut expected_offer = new_test_offer(&disc, &server);
             expected_offer.yiaddr = offer_ip;
@@ -1861,7 +1881,7 @@ pub mod tests {
         let client_id = ClientIdentifier::from(&disc);
 
         let offer_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(offer_ip);
+        assert!(server.pool.available_addrs.insert(offer_ip));
 
         let expected_offer = {
             let mut expected_offer = new_test_offer(&disc, &server);
@@ -1892,7 +1912,7 @@ pub mod tests {
             disc
         };
 
-        server.pool.available_addrs.insert(random_ipv4_generator());
+        assert!(server.pool.available_addrs.insert(random_ipv4_generator()));
 
         assert_eq!(
             server.dispatch(disc),
@@ -1913,7 +1933,7 @@ pub mod tests {
         let offer_ip = random_ipv4_generator();
         let client_id = ClientIdentifier::from(&disc);
 
-        server.pool.available_addrs.insert(offer_ip);
+        assert!(server.pool.available_addrs.insert(offer_ip));
 
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server)?;
@@ -1956,7 +1976,7 @@ pub mod tests {
 
         let client_id = ClientIdentifier::from(&disc);
 
-        server.pool.available_addrs.insert(random_ipv4_generator());
+        assert!(server.pool.available_addrs.insert(random_ipv4_generator()));
 
         let server_action = server.dispatch(disc);
         assert!(server_action.is_ok());
@@ -1996,11 +2016,19 @@ pub mod tests {
 
         let bound_client_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(bound_client_ip);
+        assert!(server.pool.allocated_addrs.insert(bound_client_ip));
 
-        server.cache.insert(
-            ClientIdentifier::from(&disc),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&disc),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX
+                )?,
+            ),
+            None
         );
 
         let response = server.dispatch(disc).unwrap();
@@ -2014,7 +2042,7 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    #[should_panic(expected = "tried to release unallocated ip")]
+    #[should_panic(expected = "attempted to release unallocated ip")]
     async fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated()
     {
         let (mut server, time_source) = new_test_minimal_server_with_time_source().unwrap();
@@ -2022,10 +2050,18 @@ pub mod tests {
 
         let bound_client_ip = random_ipv4_generator();
 
-        server.cache.insert(
-            ClientIdentifier::from(&disc),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MAX)
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&disc),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX
+                )
                 .unwrap(),
+            ),
+            None
         );
 
         let _ = server.dispatch(disc);
@@ -2040,11 +2076,19 @@ pub mod tests {
 
         let bound_client_ip = random_ipv4_generator();
 
-        server.pool.available_addrs.insert(bound_client_ip);
+        assert!(server.pool.available_addrs.insert(bound_client_ip));
 
-        server.cache.insert(
-            ClientIdentifier::from(&disc),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&disc),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MIN
+                )?,
+            ),
+            None
         );
 
         let response = server.dispatch(disc).unwrap();
@@ -2067,12 +2111,20 @@ pub mod tests {
         let bound_client_ip = random_ipv4_generator();
         let free_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(bound_client_ip);
-        server.pool.available_addrs.insert(free_ip);
+        assert!(server.pool.allocated_addrs.insert(bound_client_ip));
+        assert!(server.pool.available_addrs.insert(free_ip));
 
-        server.cache.insert(
-            ClientIdentifier::from(&disc),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&disc),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MIN
+                )?,
+            ),
+            None
         );
 
         let response = server.dispatch(disc).unwrap();
@@ -2095,14 +2147,22 @@ pub mod tests {
         let bound_client_ip = random_ipv4_generator();
         let requested_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(bound_client_ip);
-        server.pool.available_addrs.insert(requested_ip);
+        assert!(server.pool.allocated_addrs.insert(bound_client_ip));
+        assert!(server.pool.available_addrs.insert(requested_ip));
 
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
-        server.cache.insert(
-            ClientIdentifier::from(&disc),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&disc),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MIN
+                )?,
+            ),
+            None
         );
 
         let response = server.dispatch(disc).unwrap();
@@ -2126,15 +2186,23 @@ pub mod tests {
         let requested_ip = random_ipv4_generator();
         let free_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(bound_client_ip);
-        server.pool.allocated_addrs.insert(requested_ip);
-        server.pool.available_addrs.insert(free_ip);
+        assert!(server.pool.allocated_addrs.insert(bound_client_ip));
+        assert!(server.pool.allocated_addrs.insert(requested_ip));
+        assert!(server.pool.available_addrs.insert(free_ip));
 
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
-        server.cache.insert(
-            ClientIdentifier::from(&disc),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&disc),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MIN
+                )?,
+            ),
+            None
         );
 
         let response = server.dispatch(disc).unwrap();
@@ -2158,9 +2226,9 @@ pub mod tests {
         let free_ip_1 = random_ipv4_generator();
         let free_ip_2 = random_ipv4_generator();
 
-        server.pool.available_addrs.insert(free_ip_1);
-        server.pool.available_addrs.insert(requested_ip);
-        server.pool.available_addrs.insert(free_ip_2);
+        assert!(server.pool.available_addrs.insert(free_ip_1));
+        assert!(server.pool.available_addrs.insert(requested_ip));
+        assert!(server.pool.available_addrs.insert(free_ip_2));
 
         // Update discover message to request for a specific ip
         // which is available in server pool.
@@ -2186,8 +2254,8 @@ pub mod tests {
         let requested_ip = random_ipv4_generator();
         let free_ip_1 = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(requested_ip);
-        server.pool.available_addrs.insert(free_ip_1);
+        assert!(server.pool.allocated_addrs.insert(requested_ip));
+        assert!(server.pool.available_addrs.insert(free_ip_1));
 
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
@@ -2209,7 +2277,7 @@ pub mod tests {
 
         let requested_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(requested_ip);
+        assert!(server.pool.allocated_addrs.insert(requested_ip));
 
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
@@ -2295,29 +2363,34 @@ pub mod tests {
             req
         };
 
-        server.pool.allocated_addrs.insert(requested_ip);
+        assert!(server.pool.allocated_addrs.insert(requested_ip));
 
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server)?;
         let dns_server = get_dns_server(&server)?;
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(
-                Some(requested_ip),
-                vec![
-                    DhcpOption::ServerIdentifier(*server_id),
-                    DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
-                    DhcpOption::RenewalTimeValue(server.params.lease_length.default_seconds / 2),
-                    DhcpOption::RebindingTimeValue(
-                        (server.params.lease_length.default_seconds * 3) / 4,
-                    ),
-                    DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
-                    DhcpOption::Router(router),
-                    DhcpOption::DomainNameServer(dns_server),
-                ],
-                time_source.now(),
-                std::u32::MAX,
-            )?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(requested_ip),
+                    vec![
+                        DhcpOption::ServerIdentifier(*server_id),
+                        DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
+                        DhcpOption::RenewalTimeValue(
+                            server.params.lease_length.default_seconds / 2
+                        ),
+                        DhcpOption::RebindingTimeValue(
+                            (server.params.lease_length.default_seconds * 3) / 4,
+                        ),
+                        DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
+                        DhcpOption::Router(router),
+                        DhcpOption::DomainNameServer(dns_server),
+                    ],
+                    time_source.now(),
+                    std::u32::MAX,
+                )?,
+            ),
+            None
         );
 
         let mut expected_ack = new_test_ack(&req, &server);
@@ -2343,10 +2416,18 @@ pub mod tests {
 
         let client_id = ClientIdentifier::from(&req);
 
-        server.pool.allocated_addrs.insert(requested_ip);
-        server.cache.insert(
-            client_id.clone(),
-            CachedConfig::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        assert!(server.pool.allocated_addrs.insert(requested_ip));
+        matches::assert_matches!(
+            server.cache.insert(
+                client_id.clone(),
+                CachedConfig::new(
+                    Some(requested_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX
+                )?,
+            ),
+            None
         );
         let _response = server.dispatch(req).unwrap();
         assert!(server.cache.contains_key(&client_id));
@@ -2361,7 +2442,10 @@ pub mod tests {
         let mut req = new_test_request_selecting_state(&server, random_ipv4_generator());
 
         // Update request to have a server ip different from actual server ip.
-        req.options.remove(req.options.len() - 1);
+        matches::assert_matches!(
+            req.options.remove(req.options.len() - 1),
+            DhcpOption::ServerIdentifier { .. }
+        );
         req.options.push(DhcpOption::ServerIdentifier(random_ipv4_generator()));
 
         let server_ip =
@@ -2402,16 +2486,19 @@ pub mod tests {
 
         let server_offered_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(server_offered_ip);
+        assert!(server.pool.allocated_addrs.insert(server_offered_ip));
 
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(
-                Some(server_offered_ip),
-                Vec::new(),
-                time_source.now(),
-                std::u32::MAX,
-            )?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(server_offered_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX,
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2436,11 +2523,19 @@ pub mod tests {
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
-        server.pool.allocated_addrs.insert(requested_ip);
+        assert!(server.pool.allocated_addrs.insert(requested_ip));
 
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(requested_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MIN
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2462,9 +2557,17 @@ pub mod tests {
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(requested_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2500,7 +2603,7 @@ pub mod tests {
         let init_reboot_client_ip = std_ip_v4!("192.168.1.60");
         server.params.server_ips = vec![std_ip_v4!("192.168.1.1")];
 
-        server.pool.allocated_addrs.insert(init_reboot_client_ip);
+        assert!(server.pool.allocated_addrs.insert(init_reboot_client_ip));
 
         // Update request to have the test requested ip.
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
@@ -2508,24 +2611,29 @@ pub mod tests {
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server)?;
         let dns_server = get_dns_server(&server)?;
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(
-                Some(init_reboot_client_ip),
-                vec![
-                    DhcpOption::ServerIdentifier(*server_id),
-                    DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
-                    DhcpOption::RenewalTimeValue(server.params.lease_length.default_seconds / 2),
-                    DhcpOption::RebindingTimeValue(
-                        (server.params.lease_length.default_seconds * 3) / 4,
-                    ),
-                    DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
-                    DhcpOption::Router(router),
-                    DhcpOption::DomainNameServer(dns_server),
-                ],
-                time_source.now(),
-                std::u32::MAX,
-            )?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(init_reboot_client_ip),
+                    vec![
+                        DhcpOption::ServerIdentifier(*server_id),
+                        DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
+                        DhcpOption::RenewalTimeValue(
+                            server.params.lease_length.default_seconds / 2
+                        ),
+                        DhcpOption::RebindingTimeValue(
+                            (server.params.lease_length.default_seconds * 3) / 4,
+                        ),
+                        DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
+                        DhcpOption::Router(router),
+                        DhcpOption::DomainNameServer(dns_server),
+                    ],
+                    time_source.now(),
+                    std::u32::MAX,
+                )?,
+            ),
+            None
         );
 
         let mut expected_ack = new_test_ack(&req, &server);
@@ -2606,15 +2714,18 @@ pub mod tests {
         server.params.server_ips = vec![std_ip_v4!("192.165.25.1")];
 
         let server_cached_ip = std_ip_v4!("192.165.25.10");
-        server.pool.allocated_addrs.insert(server_cached_ip);
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(
-                Some(server_cached_ip),
-                Vec::new(),
-                time_source.now(),
-                std::u32::MAX,
-            )?,
+        assert!(server.pool.allocated_addrs.insert(server_cached_ip));
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(server_cached_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX,
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2642,16 +2753,19 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
         server.params.server_ips = vec![std_ip_v4!("192.165.25.1")];
 
-        server.pool.allocated_addrs.insert(init_reboot_client_ip);
+        assert!(server.pool.allocated_addrs.insert(init_reboot_client_ip));
         // Expire client binding to make it invalid.
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(
-                Some(init_reboot_client_ip),
-                Vec::new(),
-                time_source.now(),
-                std::u32::MIN,
-            )?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(init_reboot_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MIN,
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2677,14 +2791,17 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
         server.params.server_ips = vec![std_ip_v4!("192.165.25.1")];
 
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(
-                Some(init_reboot_client_ip),
-                Vec::new(),
-                time_source.now(),
-                std::u32::MAX,
-            )?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(init_reboot_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX,
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2709,30 +2826,35 @@ pub mod tests {
 
         let bound_client_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(bound_client_ip);
+        assert!(server.pool.allocated_addrs.insert(bound_client_ip));
         req.ciaddr = bound_client_ip;
 
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server)?;
         let dns_server = get_dns_server(&server)?;
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(
-                Some(bound_client_ip),
-                vec![
-                    DhcpOption::ServerIdentifier(*server_id),
-                    DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
-                    DhcpOption::RenewalTimeValue(server.params.lease_length.default_seconds / 2),
-                    DhcpOption::RebindingTimeValue(
-                        (server.params.lease_length.default_seconds * 3) / 4,
-                    ),
-                    DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
-                    DhcpOption::Router(router),
-                    DhcpOption::DomainNameServer(dns_server),
-                ],
-                time_source.now(),
-                std::u32::MAX,
-            )?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    vec![
+                        DhcpOption::ServerIdentifier(*server_id),
+                        DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
+                        DhcpOption::RenewalTimeValue(
+                            server.params.lease_length.default_seconds / 2
+                        ),
+                        DhcpOption::RebindingTimeValue(
+                            (server.params.lease_length.default_seconds * 3) / 4,
+                        ),
+                        DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
+                        DhcpOption::Router(router),
+                        DhcpOption::DomainNameServer(dns_server),
+                    ],
+                    time_source.now(),
+                    std::u32::MAX,
+                )?,
+            ),
+            None
         );
 
         let mut expected_ack = new_test_ack(&req, &server);
@@ -2783,12 +2905,20 @@ pub mod tests {
         let client_renewal_ip = random_ipv4_generator();
         let bound_client_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(bound_client_ip);
+        assert!(server.pool.allocated_addrs.insert(bound_client_ip));
         req.ciaddr = client_renewal_ip;
 
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2814,12 +2944,20 @@ pub mod tests {
 
         let bound_client_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(bound_client_ip);
+        assert!(server.pool.allocated_addrs.insert(bound_client_ip));
         req.ciaddr = bound_client_ip;
 
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MIN
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2843,9 +2981,17 @@ pub mod tests {
         let bound_client_ip = random_ipv4_generator();
         req.ciaddr = bound_client_ip;
 
-        server.cache.insert(
-            ClientIdentifier::from(&req),
-            CachedConfig::new(Some(bound_client_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(&req),
+                CachedConfig::new(
+                    Some(bound_client_ip),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX
+                )?,
+            ),
+            None
         );
 
         let expected_nak = new_test_nak(
@@ -2939,19 +3085,19 @@ pub mod tests {
         let client_1_ip = random_ipv4_generator();
         let client_1_id = ClientIdentifier::from(random_mac_generator());
         let client_opts = [DhcpOption::IpAddressLeaseTime(std::u32::MAX)];
-        server.pool.available_addrs.insert(client_1_ip);
+        assert!(server.pool.available_addrs.insert(client_1_ip));
         server.store_client_config(client_1_ip, client_1_id.clone(), &client_opts)?;
 
         // Insert client 2 bindings.
         let client_2_ip = random_ipv4_generator();
         let client_2_id = ClientIdentifier::from(random_mac_generator());
-        server.pool.available_addrs.insert(client_2_ip);
+        assert!(server.pool.available_addrs.insert(client_2_ip));
         server.store_client_config(client_2_ip, client_2_id.clone(), &client_opts)?;
 
         // Insert client 3 bindings.
         let client_3_ip = random_ipv4_generator();
         let client_3_id = ClientIdentifier::from(random_mac_generator());
-        server.pool.available_addrs.insert(client_3_ip);
+        assert!(server.pool.available_addrs.insert(client_3_ip));
         server.store_client_config(client_3_ip, client_3_id.clone(), &client_opts)?;
 
         let () = time_source.move_forward(Duration::from_secs(1));
@@ -2988,7 +3134,7 @@ pub mod tests {
         server.pool.available_addrs.clear();
 
         let client_1_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(client_1_ip);
+        assert!(server.pool.available_addrs.insert(client_1_ip));
         let client_1_id = ClientIdentifier::from(random_mac_generator());
         let () = server.store_client_config(
             client_1_ip,
@@ -2997,7 +3143,7 @@ pub mod tests {
         )?;
 
         let client_2_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(client_2_ip);
+        assert!(server.pool.available_addrs.insert(client_2_ip));
         let client_2_id = ClientIdentifier::from(random_mac_generator());
         let () = server.store_client_config(
             client_2_ip,
@@ -3006,7 +3152,7 @@ pub mod tests {
         )?;
 
         let client_3_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(client_3_ip);
+        assert!(server.pool.available_addrs.insert(client_3_ip));
         let client_3_id = ClientIdentifier::from(random_mac_generator());
         let () = server.store_client_config(
             client_3_ip,
@@ -3048,7 +3194,7 @@ pub mod tests {
         server.pool.available_addrs.clear();
 
         let client_1_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(client_1_ip);
+        assert!(server.pool.available_addrs.insert(client_1_ip));
         let client_1_id = ClientIdentifier::from(random_mac_generator());
         let () = server.store_client_config(
             client_1_ip,
@@ -3057,7 +3203,7 @@ pub mod tests {
         )?;
 
         let client_2_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(client_2_ip);
+        assert!(server.pool.available_addrs.insert(client_2_ip));
         let client_2_id = ClientIdentifier::from(random_mac_generator());
         let () = server.store_client_config(
             client_2_ip,
@@ -3066,7 +3212,7 @@ pub mod tests {
         )?;
 
         let client_3_ip = random_ipv4_generator();
-        server.pool.available_addrs.insert(client_3_ip);
+        assert!(server.pool.available_addrs.insert(client_3_ip));
         let client_3_id = ClientIdentifier::from(random_mac_generator());
         let () = server.store_client_config(
             client_3_ip,
@@ -3110,7 +3256,7 @@ pub mod tests {
         let release_ip = random_ipv4_generator();
         let client_id = ClientIdentifier::from(&release);
 
-        server.pool.allocated_addrs.insert(release_ip);
+        assert!(server.pool.allocated_addrs.insert(release_ip));
         release.ciaddr = release_ip;
 
         let test_client_config = |client_addr: Option<Ipv4Addr>, dns: Ipv4Addr| {
@@ -3124,7 +3270,10 @@ pub mod tests {
         };
 
         let dns = random_ipv4_generator();
-        server.cache.insert(client_id.clone(), test_client_config(Some(release_ip), dns));
+        matches::assert_matches!(
+            server.cache.insert(client_id.clone(), test_client_config(Some(release_ip), dns)),
+            None
+        );
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
         matches::assert_matches!(
@@ -3154,7 +3303,7 @@ pub mod tests {
         let release_ip = random_ipv4_generator();
         let client_id = ClientIdentifier::from(&release);
 
-        server.pool.allocated_addrs.insert(release_ip);
+        assert!(server.pool.allocated_addrs.insert(release_ip));
         release.ciaddr = release_ip;
 
         assert_eq!(server.dispatch(release), Err(ServerError::UnknownClientId(client_id)));
@@ -3198,11 +3347,14 @@ pub mod tests {
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
-        server.pool.allocated_addrs.insert(declined_ip);
+        assert!(server.pool.allocated_addrs.insert(declined_ip));
 
-        server.cache.insert(
-            client_id.clone(),
-            CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                client_id.clone(),
+                CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+            ),
+            None
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
@@ -3225,11 +3377,14 @@ pub mod tests {
         let client_id = ClientIdentifier::from(&decline);
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
-        server.cache.insert(
-            client_id.clone(),
-            CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                client_id.clone(),
+                CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+            ),
+            None
         );
-        server.pool.available_addrs.insert(declined_ip);
+        assert!(server.pool.available_addrs.insert(declined_ip));
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
@@ -3253,19 +3408,22 @@ pub mod tests {
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         let client_ip_according_to_server = random_ipv4_generator();
-        server.pool.allocated_addrs.insert(client_ip_according_to_server);
-        server.pool.available_addrs.insert(declined_ip);
+        assert!(server.pool.allocated_addrs.insert(client_ip_according_to_server));
+        assert!(server.pool.available_addrs.insert(declined_ip));
 
         // Server contains client bindings which reflect a different address
         // than the one being declined.
-        server.cache.insert(
-            client_id.clone(),
-            CachedConfig::new(
-                Some(client_ip_according_to_server),
-                Vec::new(),
-                time_source.now(),
-                std::u32::MAX,
-            )?,
+        matches::assert_matches!(
+            server.cache.insert(
+                client_id.clone(),
+                CachedConfig::new(
+                    Some(client_ip_according_to_server),
+                    Vec::new(),
+                    time_source.now(),
+                    std::u32::MAX,
+                )?,
+            ),
+            None
         );
 
         assert_eq!(
@@ -3291,11 +3449,14 @@ pub mod tests {
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
-        server.pool.available_addrs.insert(declined_ip);
+        assert!(server.pool.available_addrs.insert(declined_ip));
 
-        server.cache.insert(
-            client_id.clone(),
-            CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+        matches::assert_matches!(
+            server.cache.insert(
+                client_id.clone(),
+                CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+            ),
+            None
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
@@ -3319,7 +3480,7 @@ pub mod tests {
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
-        server.pool.available_addrs.insert(declined_ip);
+        assert!(server.pool.available_addrs.insert(declined_ip));
 
         assert_eq!(
             server.dispatch(decline),
@@ -3344,10 +3505,13 @@ pub mod tests {
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
-        server.pool.allocated_addrs.insert(declined_ip);
-        server.cache.insert(
-            client_id.clone(),
-            CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        assert!(server.pool.allocated_addrs.insert(declined_ip));
+        matches::assert_matches!(
+            server.cache.insert(
+                client_id.clone(),
+                CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+            ),
+            None
         );
 
         assert_eq!(server.dispatch(decline), Err(ServerError::IncorrectDHCPServer(server_id)));
@@ -3376,7 +3540,7 @@ pub mod tests {
         disc.options.push(DhcpOption::IpAddressLeaseTime(client_requested_time));
 
         let mut server = new_test_minimal_server()?;
-        server.pool.available_addrs.insert(random_ipv4_generator());
+        assert!(server.pool.available_addrs.insert(random_ipv4_generator()));
 
         let response = server.dispatch(disc).unwrap();
         assert_eq!(
@@ -3417,7 +3581,7 @@ pub mod tests {
         disc.options.push(DhcpOption::IpAddressLeaseTime(client_requested_time));
 
         let mut server = new_test_minimal_server()?;
-        server.pool.available_addrs.insert(std_ip_v4!("195.168.1.45"));
+        assert!(server.pool.available_addrs.insert(std_ip_v4!("195.168.1.45")));
         let ll = LeaseLength { default_seconds: 60 * 60 * 24, max_seconds: server_max_lease_time };
         server.params.lease_length = ll;
 
@@ -3463,7 +3627,12 @@ pub mod tests {
     {
         let mut server = new_test_minimal_server()?;
         let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
-        server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(option())?);
+        matches::assert_matches!(
+            server
+                .options_repo
+                .insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(option())?),
+            None
+        );
         let result = server.dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask)?;
         assert_eq!(result, option());
         Ok(())
@@ -3611,8 +3780,16 @@ pub mod tests {
         let mut server = new_test_minimal_server()?;
         let mask = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
         let hostname = || fidl_fuchsia_net_dhcp::Option_::HostName(String::from("testhostname"));
-        server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(mask())?);
-        server.options_repo.insert(OptionCode::HostName, DhcpOption::try_from_fidl(hostname())?);
+        matches::assert_matches!(
+            server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(mask())?),
+            None
+        );
+        matches::assert_matches!(
+            server
+                .options_repo
+                .insert(OptionCode::HostName, DhcpOption::try_from_fidl(hostname())?),
+            None
+        );
         let result = server.dispatch_list_options()?;
         assert_eq!(result.len(), server.options_repo.len());
         assert!(result.contains(&mask()));
@@ -3727,9 +3904,12 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_set_address_pool_fails_if_leases_present() -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
-        server.cache.insert(
-            ClientIdentifier::from(MacAddr::new([1, 2, 3, 4, 5, 6])),
-            CachedConfig::default(),
+        matches::assert_matches!(
+            server.cache.insert(
+                ClientIdentifier::from(MacAddr::new([1, 2, 3, 4, 5, 6])),
+                CachedConfig::default(),
+            ),
+            None
         );
         assert_eq!(
             server.dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(

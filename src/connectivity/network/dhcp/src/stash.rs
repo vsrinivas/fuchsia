@@ -140,41 +140,47 @@ impl Stash {
             fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()?;
         let () = self.proxy.get_prefix(&self.prefix, server)?;
         let mut cache = std::collections::HashMap::new();
-        for kv in iter.get_next().await? {
-            let key = match kv.key.split("-").last() {
-                Some(v) => v,
-                None => {
-                    // Invalid key-value pair: remove the invalid pair and try the next one.
-                    log::warn!("failed to parse key string: {}", kv.key);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            let key = match ClientIdentifier::from_str(key) {
-                Ok(v) => v,
-                Err(e) => {
-                    log::warn!("client id from string conversion failed: {}", e);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            let val = match kv.val {
-                fidl_fuchsia_stash::Value::Stringval(v) => v,
-                v => {
-                    log::warn!("invalid value variant stored in stash: {:?}", v);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            let val: CachedConfig = match serde_json::from_str(&val) {
-                Ok(v) => v,
-                Err(e) => {
-                    log::warn!("failed to parse JSON from string: {}", e);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            cache.insert(key, val);
+        loop {
+            let kvs = iter.get_next().await?;
+            if kvs.is_empty() {
+                break;
+            }
+            for kv in kvs {
+                let key = match kv.key.split("-").last() {
+                    Some(v) => v,
+                    None => {
+                        // Invalid key-value pair: remove the invalid pair and try the next one.
+                        log::warn!("failed to parse key string: {}", kv.key);
+                        let () = self.rm_key(&kv.key)?;
+                        continue;
+                    }
+                };
+                let key = match ClientIdentifier::from_str(key) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        log::warn!("client id from string conversion failed: {}", e);
+                        let () = self.rm_key(&kv.key)?;
+                        continue;
+                    }
+                };
+                let val = match kv.val {
+                    fidl_fuchsia_stash::Value::Stringval(v) => v,
+                    v => {
+                        log::warn!("invalid value variant stored in stash: {:?}", v);
+                        let () = self.rm_key(&kv.key)?;
+                        continue;
+                    }
+                };
+                let val: CachedConfig = match serde_json::from_str(&val) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        log::warn!("failed to parse JSON from string: {}", e);
+                        let () = self.rm_key(&kv.key)?;
+                        continue;
+                    }
+                };
+                let _: Option<_> = cache.insert(key, val);
+            }
         }
         Ok(cache)
     }
@@ -409,8 +415,7 @@ mod tests {
             .await
             .with_context(|| format!("failed to load map from stash in {}", id))?;
 
-        let mut cached_clients = HashMap::new();
-        cached_clients.insert(client_id, client_config);
+        let cached_clients = std::iter::once((client_id, client_config)).collect();
         assert_eq!(loaded_cache, cached_clients);
 
         Ok(())

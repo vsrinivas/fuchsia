@@ -16,7 +16,7 @@ use {
         stash::Stash,
     },
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_zircon::DurationNum,
     futures::{Future, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
     net_types::ethernet::Mac,
@@ -119,8 +119,10 @@ async fn run<DS: DataStore>(server: Server<DS>) -> Result<(), Error> {
     let server = RefCell::new(ServerDispatcherRuntime::new(server));
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_fidl_service(IncomingService::Server);
-    fs.take_and_serve_directory_handle()?;
+    let _: &mut ServiceFsDir<'_, _> = fs.dir("svc").add_fidl_service(IncomingService::Server);
+    let _: &mut ServiceFs<_> = fs
+        .take_and_serve_directory_handle()
+        .context("service fs failed to take and serve directory handle")?;
 
     let (mut socket_sink, socket_stream) =
         futures::channel::mpsc::channel::<ServerSocketCollection<UdpSocket>>(1);

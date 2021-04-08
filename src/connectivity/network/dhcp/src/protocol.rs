@@ -2267,12 +2267,11 @@ mod tests {
         let mut buf = msg().serialize();
         // introduce invalid option code in first option
         buf[OPTIONS_START_IDX + 4] = 99;
-        let result = Message::from_buffer(&buf).unwrap();
 
         // Expect that everything but the invalid option deserializes.
         let mut expected_msg = msg();
-        expected_msg.options.remove(0);
-        assert_eq!(expected_msg, result);
+        assert_eq!(expected_msg.options.remove(0), DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
+        assert_eq!(Message::from_buffer(&buf), Ok(expected_msg));
     }
 
     #[test]

@@ -47,6 +47,8 @@ rustc_library("lib") {
     "src/server.rs",
     "src/stash.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("dhcp_lib_test") {
@@ -97,6 +99,8 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("dhcpd_bin_test") {
