@@ -11,12 +11,6 @@
 
 namespace modular {
 
-// Tests that |use_random_session_id| is false with the default Modular configuration.
-TEST(ModularConfigAccessor, UseRandomSessionIdDefault) {
-  auto accessor = ModularConfigAccessor(modular::DefaultConfig());
-  EXPECT_FALSE(accessor.use_random_session_id());
-}
-
 // Tests that |session_shell_app_config| returns the first configured session shell.
 TEST(ModularConfigAccessor, SessionShellAppConfigUsesFirstShell) {
   static constexpr auto kFirstSessionShellUrl =

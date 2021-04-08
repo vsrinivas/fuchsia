@@ -14,7 +14,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.lifecycle.LifecycleController",

@@ -42,11 +42,6 @@ class ModularConfigAccessor {
     return sessionmgr_config().has_enable_cobalt() && sessionmgr_config().enable_cobalt();
   }
 
-  void set_use_random_session_id(bool use_random_session_id) {
-    use_random_session_id_ = use_random_session_id;
-  }
-  bool use_random_session_id() const { return use_random_session_id_; }
-
   const fuchsia::modular::session::AppConfig& session_shell_app_config() const;
 
   // Returns the ModularConfig serialized as a JSON string.
@@ -56,7 +51,6 @@ class ModularConfigAccessor {
 
  private:
   fuchsia::modular::session::ModularConfig config_;
-  bool use_random_session_id_ = false;
 };
 
 }  // namespace modular

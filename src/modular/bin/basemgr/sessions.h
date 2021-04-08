@@ -4,31 +4,18 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include <string>
-#include <string_view>
-#include <vector>
-
 namespace modular::sessions {
 
-// Returns a fully qualified session directory path for |session_id|.
-std::string GetSessionDirectory(std::string_view session_id);
+// A fixed session ID that is used for all sessions.
+constexpr char kSessionId[] = "0";
 
-// Returns the session IDs encoded in all existing session directories.
-std::vector<std::string> GetExistingSessionIds();
-
-// Returns a randomly generated session ID.
-std::string GetRandomSessionId();
-
-// Returns a fixed, stable session ID.
-std::string GetStableSessionId();
-
-// Reports that a new session with the given |session_id| was created to Cobalt.
-void ReportNewSessionToCobalt(std::string_view session_id);
-
-// Erases all existing sessions that use the legacy random ID.
-// The stable session is never deleted.
+// The path containing persistent storage for a single session with a fixed ID.
 //
-// TODO(fxbug.dev/51752): Remove once there are no sessions with random IDs in use
-void DeleteSessionsWithRandomIds(fuchsia::sys::Environment* base_environment);
+// Note: This is named "USER_" for legacy reasons. SESSION_ may have been more
+// appropriate but a change would require a data migration.
+constexpr char kSessionDirectoryPath[] = "/data/modular/USER_0";
+
+// Reports that a new session was created to Cobalt.
+void ReportNewSessionToCobalt();
 
 }  // namespace modular::sessions

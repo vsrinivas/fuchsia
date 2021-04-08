@@ -3,13 +3,6 @@
 # found in the LICENSE file.
 
 import("//src/sys/build/components.gni")
-import("//third_party/flatbuffers/flatbuffer.gni")
-
-declare_args() {
-  # Whether basemgr should use a random identifier for sessions, leading to
-  # a different persistent data location for every session.
-  auto_login_to_guest = false
-}
 
 executable("basemgr_bin") {
   output_name = "basemgr"
@@ -119,10 +112,6 @@ source_set("lib") {
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-reorder-init-list" ]
-
-  if (auto_login_to_guest) {
-    configs += [ ":auto_login_to_guest" ]
-  }
 }
 
 executable("session_context_impl_unittest") {
@@ -140,7 +129,6 @@ executable("session_context_impl_unittest") {
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/fidl:environment",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/modular_config:modular_config_accessor",
   ]
@@ -159,18 +147,14 @@ executable("basemgr_impl_unittest") {
   deps = [
     ":basemgr_bin",
     "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/fidl/fuchsia.devicesettings",
-    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_config",
-    "//src/sys/appmgr:appmgr_for_test",
     "//src/ui/scenic/lib/scenic:scenic",
     "//third_party/googletest:gtest",
   ]
@@ -192,8 +176,4 @@ fuchsia_test_package("basemgr_unittests") {
       max_severity = "ERROR"
     }
   }
-}
-
-config("auto_login_to_guest") {
-  defines = [ "AUTO_LOGIN_TO_GUEST" ]
 }

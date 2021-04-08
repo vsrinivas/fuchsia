@@ -47,7 +47,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   using GetPresentationCallback =
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
 
-  SessionContextImpl(fuchsia::sys::Launcher* launcher, fuchsia::sys::Environment* base_environment,
+  SessionContextImpl(fuchsia::sys::Launcher* launcher,
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
                      fuchsia::ui::views::ViewToken view_token,

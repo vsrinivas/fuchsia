@@ -109,9 +109,6 @@ configuration file.
   "basemgr": {
     "enable_cobalt": false,
     "use_session_shell_for_story_shell_factory": true,
-    "base_shell": {
-      "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-    },
     "session_shells": [
       {
         "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
@@ -150,9 +147,7 @@ configuration file.
 ## Basemgr fields
 
 - `base_shell` **object** _(optional)_
-  - **WARNING:** Basemgr no longer launches base shells. This configuration is
-    used only to start sessions with either a persistent or random session ID.
-  - TODO(fxbug.dev/51752): Replace `base_shell` with `use_random_session_id` flag
+  - **WARNING:** Basemgr no longer launches base shells. This section is unused.
   - `url`: **string** _(optional)_
     - **This field is unused.**
     - **default**: `fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx`
@@ -160,9 +155,7 @@ configuration file.
     - **This field is unused.**
     - **default**: `false`
   - `args` **string[]** _(optional)_
-    - If this list contains the string `--persist_user`, the session will be
-      started with a persistent session ID. Otherwise, it will be started
-      with a random ID.
+    - **This field is unused.**
     - **default**: []
 - `session_shells` **array** _(optional)_
   - List of exactly one session shell containing the following

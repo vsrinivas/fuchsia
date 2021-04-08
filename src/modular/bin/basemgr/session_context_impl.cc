@@ -15,7 +15,6 @@
 namespace modular {
 
 SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
-                                       fuchsia::sys::Environment* const base_environment,
                                        fuchsia::modular::session::AppConfig sessionmgr_app_config,
                                        const modular::ModularConfigAccessor* const config_accessor,
                                        fuchsia::ui::views::ViewToken view_token,
@@ -29,26 +28,7 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
   FX_CHECK(get_presentation_);
   FX_CHECK(on_session_shutdown_);
 
-  // Delete all existing sessions that have been created with a random ID.
-  // TODO(fxbug.dev/51752): Remove once there are no sessions with random IDs in use
-  sessions::DeleteSessionsWithRandomIds(base_environment);
-
-  // Determine an ID for the new session and report that it was created to Cobalt.
-  const auto use_random_id = config_accessor->use_random_session_id();
-
-  if (use_random_id) {
-    FX_LOGS(WARNING) << "DEPRECATED! Starting session with random session ID.";
-  } else {
-    FX_LOGS(INFO) << "Starting session with stable session ID.";
-  }
-
-  std::string session_id =
-      use_random_id ? sessions::GetRandomSessionId() : sessions::GetStableSessionId();
-
-  sessions::ReportNewSessionToCobalt(session_id);
-
-  // Generate the path to map '/data' for the sessionmgr we are starting
-  auto data_origin = sessions::GetSessionDirectory(session_id);
+  sessions::ReportNewSessionToCobalt();
 
   // Create a PseudoDir containing startup.config. This directory will be injected into
   // sessionmgr's namespace and sessionmgr will read its configurations from there.
@@ -56,12 +36,12 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
 
   // Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(sessionmgr_app_config), data_origin,
+      launcher, std::move(sessionmgr_app_config), sessions::kSessionDirectoryPath,
       /*additional_services=*/nullptr, std::move(config_namespace));
 
   // Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(session_id, session_context_binding_.NewBinding(),
+  sessionmgr_->Initialize(sessions::kSessionId, session_context_binding_.NewBinding(),
                           std::move(additional_services_for_agents), std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
