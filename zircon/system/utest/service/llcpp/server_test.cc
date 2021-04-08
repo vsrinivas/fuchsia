@@ -70,7 +70,7 @@ class ServerTest : public zxtest::Test {
   ServerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), outgoing_(loop_.dispatcher()) {}
 
   llcpp::sys::ServiceHandler SetUpInstance(fidl::WireInterface<Echo>* foo_impl,
-                                           Echo::Interface* bar_impl) {
+                                           fidl::WireInterface<Echo>* bar_impl) {
     llcpp::sys::ServiceHandler handler;
     EchoService::Handler my_service(&handler);
 

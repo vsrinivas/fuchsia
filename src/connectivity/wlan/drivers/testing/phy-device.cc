@@ -90,7 +90,7 @@ zx_status_t PhyDevice::Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   DeviceConnector connector(this);
 
-  fuchsia_wlan_device::Connector::Dispatch(&connector, msg, &transaction);
+  fidl::WireDispatch<fuchsia_wlan_device::Connector>(&connector, msg, &transaction);
   return transaction.Status();
 }
 

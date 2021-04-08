@@ -170,7 +170,7 @@ zx_status_t BlockDevice::Init() {
 zx_status_t BlockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   FidlService service(this);
   DdkTransaction transaction(txn);
-  block_fidl::Ftl::Dispatch(&service, msg, &transaction);
+  fidl::WireDispatch<block_fidl::Ftl>(&service, msg, &transaction);
 
   return transaction.Status();
 }
