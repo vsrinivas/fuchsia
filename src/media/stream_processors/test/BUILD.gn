@@ -16,7 +16,6 @@ group("test") {
     ":h264-stream-test",
     ":h264_decoder_test",
     ":h264_encoder_test",
-    ":h265-encoder-test",
     ":stream_processor_lib_test",
     ":video-frame-stream-test",
     ":video_frame_hasher_test",
