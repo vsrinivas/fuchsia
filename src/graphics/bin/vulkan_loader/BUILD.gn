@@ -24,7 +24,7 @@ executable("bin") {
 fuchsia_component("vulkan_loader_cmp") {
   component_name = "vulkan_loader"
   deps = [ ":bin" ]
-  manifest = "meta/vulkan_loader.cml"
+  manifest = "meta/vulkan_loader.cmx"
 }
 
 fuchsia_package("vulkan_loader") {
