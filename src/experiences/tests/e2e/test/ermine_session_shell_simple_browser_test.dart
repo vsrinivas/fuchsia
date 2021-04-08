@@ -181,7 +181,7 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  });
+  }, skip: true);
 
   test('Should be able to play videos on web pages.', () async {
     FlutterDriver browser;
