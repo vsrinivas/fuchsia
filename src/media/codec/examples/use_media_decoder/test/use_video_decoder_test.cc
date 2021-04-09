@@ -102,15 +102,39 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   uint32_t frame_index = 0;
   bool got_output_data = false;
   bool emit_frame_failure_seen = false;
+  uint32_t seen_stream_lifetime_ordinal = 0;
+  uint32_t hash_success_count = 0;
+  uint32_t hash_failure_count = 0;
   // default 2
   const uint64_t keep_stream_modulo = test_params->keep_stream_modulo;
+  auto on_reset_hash = [test_params, &sha256_ctx, &hash_failure_count, &hash_success_count,
+                        &emit_frame_failure_seen, &frame_index] {
+    std::string actual_sha256 = GetSha256SoFar(&sha256_ctx);
+    printf("Previous iteration's computed sha256 is: %s\n", actual_sha256.c_str());
+    if (test_params->golden_sha256 != UseVideoDecoderTestParams::kDefaultGoldenSha256) {
+      if (strcmp(actual_sha256.c_str(), test_params->golden_sha256)) {
+        printf("The sha256 doesn't match this iteration - expected: %s actual: %s\n",
+               test_params->golden_sha256, actual_sha256.c_str());
+        ++hash_failure_count;
+      } else {
+        printf("The computed sha256 matches golden sha256 for previous iteration.\n");
+        ++hash_success_count;
+      }
+    }
+    printf("hash_success_count: %u hash_failure_count: %u\n", hash_success_count,
+           hash_failure_count);
+    SHA256_Init(&sha256_ctx);
+    emit_frame_failure_seen = false;
+    frame_index = 0;
+  };
   EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, &got_output_data,
                           keep_stream_modulo, test_params, input_file_path, expected_frame_count,
                           use_video_decoder, is_secure_output, is_secure_input,
-                          min_output_buffer_count, &emit_frame_failure_seen](
-                             uint64_t stream_lifetime_ordinal, uint8_t* i420_data, uint32_t width,
-                             uint32_t height, uint32_t stride, bool has_timestamp_ish,
-                             uint64_t timestamp_ish) {
+                          min_output_buffer_count, &emit_frame_failure_seen,
+                          &seen_stream_lifetime_ordinal,
+                          &on_reset_hash](uint64_t stream_lifetime_ordinal, uint8_t* i420_data,
+                                          uint32_t width, uint32_t height, uint32_t stride,
+                                          bool has_timestamp_ish, uint64_t timestamp_ish) {
     VLOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
           " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
           stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
@@ -119,6 +143,14 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
       LOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
            " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
            stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
+    }
+    if (stream_lifetime_ordinal > seen_stream_lifetime_ordinal) {
+      seen_stream_lifetime_ordinal = stream_lifetime_ordinal;
+      if (test_params->reset_hash_each_iteration) {
+        if (stream_lifetime_ordinal != 1) {
+          on_reset_hash();
+        }
+      }
     }
     ZX_DEBUG_ASSERT(stream_lifetime_ordinal % 2 == 1);
     ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
@@ -154,6 +186,8 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
 
             sw_decode_test_params.compare_to_sw_decode = false;
             sw_decode_test_params.require_sw = true;
+            sw_decode_test_params.loop_stream_count =
+                UseVideoDecoderTestParams::kDefaultLoopStreamCount;
 
             FrameToCompare frame_to_compare{
                 .data = i420_data,
@@ -283,6 +317,14 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     printf("decode_video_stream_test() failed. (%s)\n",
            test_params->frame_to_compare ? "inner" : "outer");
     return -1;
+  }
+
+  if (test_params->reset_hash_each_iteration) {
+    on_reset_hash();
+    if (hash_failure_count != 0) {
+      printf("hash_failure_count != 0 -- failing\n");
+      return -1;
+    }
   }
 
   if (emit_frame_failure_seen) {

@@ -78,6 +78,10 @@ struct UseVideoDecoderTestParams final {
     }
     ZX_ASSERT(loop_stream_count != 0);
 
+    if (reset_hash_each_iteration != kDefaultResetHashEachIteration) {
+      printf("reset_hash_each_iteration: %u\n", reset_hash_each_iteration);
+    }
+
     if (skip_frame_ordinal != kDefaultSkipFrameOrdinal) {
       printf("skip_frame_ordinal: %" PRId64 "\n", skip_frame_ordinal);
     }
@@ -183,6 +187,11 @@ struct UseVideoDecoderTestParams final {
   // By default, there's only one stream.
   static constexpr uint32_t kDefaultLoopStreamCount = 1;
   uint32_t loop_stream_count = kDefaultLoopStreamCount;
+
+  // Reset sha256 context each iteration.  This allows looping faster to get a flake to repro more
+  // often, and avoids the hash being dependent on loop_stream_count.
+  static constexpr bool kDefaultResetHashEachIteration = false;
+  bool reset_hash_each_iteration = kDefaultResetHashEachIteration;
 
   // If >= 0, skips any input NAL with PTS == skip_frame_ordinal.
   //

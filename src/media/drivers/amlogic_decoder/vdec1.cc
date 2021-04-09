@@ -151,16 +151,20 @@ void Vdec1::PowerOn() {
   //
   // At 24 MHz on sherlock we don't see any decode correctness glitches.
   //
+  // All flake rates below are using use-h264-multi-decoder-flake-repro-test, which uses bear.h264.
+  //
   // Sherlock (one particular sherlock - the one on my desk, in the particular environment, etc):
-  // 800 MHz sherlock   - ~1/12 bear.h264 incorrect decode (213/2529)
-  // 666 MHz sherlock   - ~1/25 bear.h264 incorrect decode (63/1525)
-  // 500 MHz sherlock   - ~1/3054 bear.h264 incorrect decode (6/18322)
-  // 285.7 MHz sherlock - ~1/2436 bear.h264 incorrect decode (27/65763)
-  // 24 MHz sherlcok    - ~0/3156 bear.h264 incorrect decode (0 failures observed in 3156)
+  // 800 MHz sherlock   - ~1/12 incorrect decode (213/2529)
+  // 666 MHz sherlock   - ~1/25 incorrect decode (63/1525)
+  // 500 MHz sherlock   - ~1/3054 incorrect decode (6/18322)
+  // 285.7 MHz sherlock - ~1/2436 incorrect decode (27/65763)
+  // 24 MHz sherlock    - ~0/3156 incorrect decode (0 failures observed in 3156)
   //
   // Astro (the astro on my desk):
-  // 400 MHz astro   - decode flakes seen
-  // 285.7 MHz astro - decode flakes not seen
+  // 666 MHz astro   - ~1/43 incorrect decode (50/2133)
+  // 500 MHz astro   - ~1/165 incorrect decode (494/81403)
+  // 400 MHz astro   - ~1/645 incorrect decode (12/7734)
+  // 285.7 MHz astro - ~0/53199 incorrect decode (0/53199)
   uint32_t clock_sel;
   switch (owner_->device_type()) {
     case DeviceType::kG12A:
