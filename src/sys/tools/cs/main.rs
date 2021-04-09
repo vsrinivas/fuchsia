@@ -11,7 +11,7 @@ mod log_stats;
 
 use {
     anyhow::{format_err, Error},
-    cs::{io::Directory, v2::V2Component, ComponentType, Subcommand, CS_INFO_HELP, CS_TREE_HELP},
+    cs::{io::Directory, v2::V2Component, Only, Subcommand, CS_INFO_HELP, CS_TREE_HELP},
     freq::BlobFrequencies,
     fuchsia_async as fasync,
     log_stats::{LogSeverity, LogStats},
@@ -28,10 +28,11 @@ enum Opt {
     /// Output the component tree.
     #[structopt(name = "tree")]
     Tree {
-        // Output only cmx/cml components depending on the flag.
+        // Output only cmx/cml/running/stopped components depending on the flag.
         #[structopt(short = "o", long = "only")]
-        component_type: Option<String>,
-        // whether or not to display a column showing component type
+        only: Option<String>,
+        // whether or not to display a column showing component type and a column
+        // showing running/stopped.
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
@@ -105,24 +106,23 @@ async fn main() -> Result<(), Error> {
                 component.print_components_exposing_capability(&capability);
             }
         }
-        Opt::Tree { component_type, verbose } => {
+        Opt::Tree { only, verbose } => {
             println!("'cs tree' is deprecated. Please use 'ffx component list' instead!");
             if let Some(hub_dir) = validate_hub_directory() {
                 let component = V2Component::explore(hub_dir, Subcommand::List).await;
-                if let Some(component_type) = component_type {
-                    let component_type =
-                        ComponentType::from_string(&component_type).map_err(|e| {
-                            format_err!(
-                                "Invalid argument '{}' for '--only': {}\n{}",
-                                component_type,
-                                e,
-                                CS_TREE_HELP
-                            )
-                        })?;
-                    component.print_tree(component_type, verbose);
+                if let Some(only) = only {
+                    let only = Only::from_string(&only).map_err(|e| {
+                        format_err!(
+                            "Invalid argument '{}' for '--only': {}\n{}",
+                            only,
+                            e,
+                            CS_TREE_HELP
+                        )
+                    })?;
+                    component.print_tree(only, verbose);
                 } else {
-                    // Default option is printing both components
-                    component.print_tree(ComponentType::Both, verbose);
+                    // Default option is printing all components
+                    component.print_tree(Only::All, verbose);
                 }
             }
         }

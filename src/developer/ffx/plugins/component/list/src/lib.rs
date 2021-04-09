@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    cs::{io::Directory, v2::V2Component, ComponentType, Subcommand},
+    cs::{io::Directory, v2::V2Component, Only, Subcommand},
     ffx_component::COMPONENT_LIST_HELP,
     ffx_component_list_args::ComponentListCommand,
     ffx_core::{ffx_error, ffx_plugin},
@@ -14,12 +14,12 @@ use {
 
 #[ffx_plugin()]
 pub async fn list(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentListCommand) -> Result<()> {
-    list_impl(rcs_proxy, cmd.component_type, cmd.verbose).await
+    list_impl(rcs_proxy, cmd.only, cmd.verbose).await
 }
 
 async fn list_impl(
     rcs_proxy: rc::RemoteControlProxy,
-    component_type: Option<String>,
+    only: Option<String>,
     verbose: bool,
 ) -> Result<()> {
     let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
@@ -31,19 +31,14 @@ async fn list_impl(
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
     let component = V2Component::explore(hub_dir, Subcommand::List).await;
-    if let Some(component_type) = component_type {
-        let component_type = ComponentType::from_string(&component_type).map_err(|e| {
-            ffx_error!(
-                "Invalid argument '{}' for '--only': {}\n{}",
-                component_type,
-                e,
-                COMPONENT_LIST_HELP
-            )
+    if let Some(only) = only {
+        let only = Only::from_string(&only).map_err(|e| {
+            ffx_error!("Invalid argument '{}' for '--only': {}\n{}", only, e, COMPONENT_LIST_HELP)
         })?;
-        component.print_tree(component_type, verbose);
+        component.print_tree(only, verbose);
     } else {
-        // Default option is printing both components
-        component.print_tree(ComponentType::Both, verbose);
+        // Default option is printing all components
+        component.print_tree(Only::All, verbose);
     }
     Ok(())
 }

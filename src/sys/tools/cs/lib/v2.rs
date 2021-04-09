@@ -5,7 +5,7 @@
 use {
     crate::io::Directory,
     crate::v1::V1Realm,
-    crate::{get_capabilities, get_capabilities_timeout, ComponentType, Subcommand, WIDTH_CS_TREE},
+    crate::{get_capabilities, get_capabilities_timeout, Only, Subcommand, WIDTH_CS_TREE},
     anyhow::{format_err, Error},
     futures::future::{join_all, BoxFuture, FutureExt},
 };
@@ -61,9 +61,7 @@ fn explore(
         };
 
         // Get the execution state
-        let execution = if (subcommand == Subcommand::Show || subcommand == Subcommand::Select)
-            && hub_dir.exists("exec").await
-        {
+        let execution = if hub_dir.exists("exec").await {
             let exec_dir = hub_dir.open_dir("exec").expect("open_dir(`exec`) failed!");
             Some(Execution::new(exec_dir).await)
         } else {
@@ -211,29 +209,107 @@ impl V2Component {
         explore(".".to_string(), hub_dir, subcommand.clone()).await
     }
 
-    pub fn print_tree(&self, component_type: ComponentType, verbose: bool) {
+    pub fn print_tree(&self, only: Only, verbose: bool) {
         if verbose {
-            println!("{:<width$}Component Name", "Component Type", width = WIDTH_CS_TREE);
+            if only == Only::CML || only == Only::CMX {
+                println!("{:<width$}Component Name", "Component Type", width = WIDTH_CS_TREE);
+            }
+            if only == Only::Running || only == Only::Stopped {
+                println!("{:<width$}Component Name", "Running/Stopped", width = WIDTH_CS_TREE);
+            }
+            if only == Only::All {
+                println!(
+                    "{:<width_type$}{:<width_running_stopped$}Component Name",
+                    "Component Type",
+                    "Running/Stopped",
+                    width_type = WIDTH_CS_TREE,
+                    width_running_stopped = WIDTH_CS_TREE
+                );
+            }
         }
-        self.print_tree_recursive(1, component_type, verbose);
+        self.print_tree_recursive(1, only, verbose);
     }
 
-    fn print_tree_recursive(&self, level: usize, component_type: ComponentType, verbose: bool) {
+    fn print_tree_recursive(&self, level: usize, only: Only, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        if component_type == ComponentType::CML || component_type == ComponentType::Both {
-            if verbose {
-                println!("{:<width$}{}{}", "CML", space, self.name, width = WIDTH_CS_TREE);
-            } else {
-                println!("{}{}", space, self.name);
+        match only {
+            Only::CMX => {}
+            Only::CML => {
+                if verbose {
+                    println!("{:<width$}{}{}", "CML", space, self.name, width = WIDTH_CS_TREE);
+                } else {
+                    println!("{}{}", space, self.name);
+                }
+            }
+            Only::Running => {
+                if self.execution.is_some() {
+                    if verbose {
+                        println!(
+                            "{:<width$}{}{}",
+                            "Running",
+                            space,
+                            self.name,
+                            width = WIDTH_CS_TREE
+                        );
+                    } else {
+                        println!("{}{}", space, self.name);
+                    }
+                }
+            }
+            Only::Stopped => {
+                if self.execution == None {
+                    if verbose {
+                        println!(
+                            "{:<width$}{}{}",
+                            "Stopped",
+                            space,
+                            self.name,
+                            width = WIDTH_CS_TREE
+                        );
+                    } else {
+                        println!("{}{}", space, self.name);
+                    }
+                }
+            }
+            Only::All => {
+                if self.execution.is_some() {
+                    if verbose {
+                        println!(
+                            "{:<width_cml$}{:<width_running$}{}{}",
+                            "CML",
+                            "Running",
+                            space,
+                            self.name,
+                            width_cml = WIDTH_CS_TREE,
+                            width_running = WIDTH_CS_TREE
+                        );
+                    } else {
+                        println!("{}{}", space, self.name);
+                    }
+                } else {
+                    if verbose {
+                        println!(
+                            "{:<width_cml$}{:<width_stopped$}{}{}",
+                            "CML",
+                            "Stopped",
+                            space,
+                            self.name,
+                            width_cml = WIDTH_CS_TREE,
+                            width_stopped = WIDTH_CS_TREE
+                        );
+                    } else {
+                        println!("{}{}", space, self.name);
+                    }
+                }
             }
         }
         for child in &self.children {
-            child.print_tree_recursive(level + 1, component_type, verbose);
+            child.print_tree_recursive(level + 1, only, verbose);
         }
 
         // If this component is appmgr, generate tree for all v1 components
         if let Some(v1_realm) = &self.appmgr_root_v1_realm {
-            v1_realm.print_tree_recursive(level + 1, component_type, verbose);
+            v1_realm.print_tree_recursive(level + 1, only, verbose);
         }
     }
 
@@ -717,7 +793,13 @@ mod tests {
                 children: vec![],
                 appmgr_root_v1_realm: Some(V1Realm::create(v1_hub_dir, Subcommand::List).await),
                 details: None,
-                execution: None,
+                execution: Some(Execution {
+                    elf_runtime: None,
+                    merkle_root: None,
+                    incoming_capabilities: vec![],
+                    outgoing_capabilities: Some(vec!["hub".to_string()]),
+                    exposed_capabilities: vec![],
+                }),
             }],
         );
 
@@ -921,7 +1003,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn explore_without_subcommand_select_does_not_load_execution() {
+    async fn explore_with_subcommand_list_loads_execution() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -964,11 +1046,14 @@ mod tests {
             .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir, Subcommand::List).await;
 
-        assert!(v2_component.execution.is_none());
+        assert_eq!(
+            v2_component.execution.unwrap().elf_runtime.unwrap(),
+            ElfRuntime { job_id: 12345, process_id: 67890 }
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn explore_with_subcommand_select_load_execution() {
+    async fn explore_with_subcommand_select_loads_execution() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 

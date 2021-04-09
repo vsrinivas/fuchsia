@@ -4,7 +4,7 @@
 
 use {
     crate::io::Directory,
-    crate::{get_capabilities, get_capabilities_timeout, ComponentType, Subcommand, WIDTH_CS_TREE},
+    crate::{get_capabilities, get_capabilities_timeout, Only, Subcommand, WIDTH_CS_TREE},
     futures::future::{join_all, BoxFuture, FutureExt},
     std::sync::Arc,
 };
@@ -131,20 +131,46 @@ impl V1Realm {
         V1Realm { name, job_id, child_realms, child_components }
     }
 
-    pub fn print_tree_recursive(&self, level: usize, component_type: ComponentType, verbose: bool) {
+    pub fn print_tree_recursive(&self, level: usize, only: Only, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        if component_type == ComponentType::CMX || component_type == ComponentType::Both {
-            if verbose {
-                println!("{:<width$}{}{}", "Realm", space, self.name, width = WIDTH_CS_TREE);
-            } else {
-                println!("{}{}", space, self.name);
+        match only {
+            Only::CML => {}
+            Only::Stopped => {}
+            Only::CMX => {
+                if verbose {
+                    println!("{:<width$}{}{}", "Realm", space, self.name, width = WIDTH_CS_TREE);
+                } else {
+                    println!("{}{}", space, self.name);
+                }
+            }
+            Only::Running => {
+                if verbose {
+                    println!("{:<width$}{}{}", "Running", space, self.name, width = WIDTH_CS_TREE);
+                } else {
+                    println!("{}{}", space, self.name);
+                }
+            }
+            Only::All => {
+                if verbose {
+                    println!(
+                        "{:<width_realm$}{:<width_running$}{}{}",
+                        "Realm",
+                        "Running",
+                        space,
+                        self.name,
+                        width_realm = WIDTH_CS_TREE,
+                        width_running = WIDTH_CS_TREE
+                    );
+                } else {
+                    println!("{}{}", space, self.name);
+                }
             }
         }
         for child in &self.child_components {
-            child.print_tree_recursive(level + 1, component_type, verbose);
+            child.print_tree_recursive(level + 1, only, verbose);
         }
         for child in &self.child_realms {
-            child.print_tree_recursive(level + 1, component_type, verbose);
+            child.print_tree_recursive(level + 1, only, verbose);
         }
     }
 
@@ -271,17 +297,43 @@ impl V1Component {
         V1Component { name, child_components, details }
     }
 
-    fn print_tree_recursive(&self, level: usize, component_type: ComponentType, verbose: bool) {
+    fn print_tree_recursive(&self, level: usize, only: Only, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        if component_type == ComponentType::CMX || component_type == ComponentType::Both {
-            if verbose {
-                println!("{:<width$}{}{}", "CMX", space, self.name, width = WIDTH_CS_TREE);
-            } else {
-                println!("{}{}", space, self.name);
+        match only {
+            Only::CML => {}
+            Only::Stopped => {}
+            Only::CMX => {
+                if verbose {
+                    println!("{:<width$}{}{}", "CMX", space, self.name, width = WIDTH_CS_TREE);
+                } else {
+                    println!("{}{}", space, self.name);
+                }
+            }
+            Only::Running => {
+                if verbose {
+                    println!("{:<width$}{}{}", "Running", space, self.name, width = WIDTH_CS_TREE);
+                } else {
+                    println!("{}{}", space, self.name);
+                }
+            }
+            Only::All => {
+                if verbose {
+                    println!(
+                        "{:<width_cmx$}{:<width_running$}{}{}",
+                        "CMX",
+                        "Running",
+                        space,
+                        self.name,
+                        width_cmx = WIDTH_CS_TREE,
+                        width_running = WIDTH_CS_TREE
+                    );
+                } else {
+                    println!("{}{}", space, self.name);
+                }
             }
         }
         for child in &self.child_components {
-            child.print_tree_recursive(level + 1, component_type, verbose);
+            child.print_tree_recursive(level + 1, only, verbose);
         }
     }
 

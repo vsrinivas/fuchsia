@@ -14,20 +14,24 @@ use {
 };
 
 #[derive(Copy, Debug, Eq, PartialEq, Clone)]
-pub enum ComponentType {
+pub enum Only {
     CMX,
     CML,
-    Both,
+    Running,
+    Stopped,
+    All,
 }
 
-// TODO(66157): Implement FromArgValue for ComponentType after cs is formally deprecated
+// TODO(66157): Implement FromArgValue for Only after cs is formally deprecated
 // and move this to args.rs in ffx component list.
-impl ComponentType {
-    pub fn from_string(component_type: &str) -> Result<ComponentType, Error> {
-        match component_type {
-            "cmx" => Ok(ComponentType::CMX),
-            "cml" => Ok(ComponentType::CML),
-            _ => Err(format_err!("component_type should be 'cmx' or 'cml'.",)),
+impl Only {
+    pub fn from_string(only: &str) -> Result<Only, Error> {
+        match only {
+            "cmx" => Ok(Only::CMX),
+            "cml" => Ok(Only::CML),
+            "running" => Ok(Only::Running),
+            "stopped" => Ok(Only::Stopped),
+            _ => Err(format_err!("only should be 'cmx', 'cml', 'running', or 'stopped'.",)),
         }
     }
 }
@@ -39,8 +43,8 @@ pub enum Subcommand {
     Select,
 }
 
-pub const CS_TREE_HELP: &str = "component_type format: 'cmx' / 'cml'.
-Default option is displaying both cmx and cml components if no argument is entered.";
+pub const CS_TREE_HELP: &str = "only format: 'cmx' / 'cml' / 'running' / 'stopped'.
+Default option is displaying all components if no argument is entered.";
 
 pub const CS_INFO_HELP: &str = "Filter format: component_name / url / partial url.
 

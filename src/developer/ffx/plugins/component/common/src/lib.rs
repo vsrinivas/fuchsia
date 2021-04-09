@@ -13,8 +13,8 @@ Note that moniker wildcards are not recursive: 'a/*/c' will only match
 components named 'c' running in some sub-realm directly below 'a', and
 no further.";
 
-pub const COMPONENT_LIST_HELP: &str = "component_type format: 'cmx' / 'cml'.
-Default option is displaying both cmx and cml components if no argument is entered.";
+pub const COMPONENT_LIST_HELP: &str = "only format: 'cmx' / 'cml' / 'running' / 'stopped'.
+Default option is displaying all components if no argument is entered.";
 
 pub const COMPONENT_SHOW_HELP: &str = "Filter format: component_name / url / partial url.
 
