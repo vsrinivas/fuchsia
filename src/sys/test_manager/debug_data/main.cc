@@ -32,11 +32,9 @@ int main(int argc, const char** argv) {
   std::unique_ptr<EventStreamImpl> event_stream_impl;
   auto dispatcher = loop.dispatcher();
 
-  FX_CHECK(files::CreateDirectory("/data/debug_data"));
-
   int fd;
-  if ((fd = open("/data/debug_data", O_DIRECTORY | O_RDWR)) == -1) {
-    FX_LOGS(ERROR) << "error opening /data/debug_data: " << strerror(errno);
+  if ((fd = open("/data", O_DIRECTORY | O_RDWR)) == -1) {
+    FX_LOGS(ERROR) << "error opening /data: " << strerror(errno);
     return -1;
   }
 

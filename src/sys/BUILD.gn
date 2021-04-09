@@ -23,7 +23,6 @@ group("tests") {
     "build:tests",
     "component_index:tests",
     "component_manager:tests",
-    "component_manager_for_test:tests",
     "component_test_runner:tests",
     "device_settings:tests",
     "installer:tests",

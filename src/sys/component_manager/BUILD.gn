@@ -233,7 +233,6 @@ template("component_manager") {
       visibility = [
         "//src/session/*",
         "//src/sys/component_manager/*",
-        "//src/sys/component_manager_for_test/*",
       ]
     }
   }

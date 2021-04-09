@@ -136,6 +136,5 @@ group("tests") {
     ":log_ansi_test_pkg",
     ":run_test_suite_integration_tests",
     "//examples/tests",
-    "//src/sys/component_manager_for_test",
   ]
 }

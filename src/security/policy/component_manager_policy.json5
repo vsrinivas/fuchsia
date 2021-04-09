@@ -283,5 +283,14 @@
                 ],
             },
         ],
+        debug_registration_policy: [
+            {
+                debug: "protocol",
+                environment_name: "test-env",
+                source_moniker: "/core/test_manager/debug_data",
+                source_name: "fuchsia.debugdata.DebugData",
+                target_moniker: "/core/test_manager",
+            },
+        ],
     },
 }

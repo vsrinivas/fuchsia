@@ -18,6 +18,7 @@
 #include <fuchsia/sys/test/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/test/manager/cpp/fidl.h>
 #include <fuchsia/time/cpp/fidl.h>
 #include <fuchsia/tracing/kernel/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
@@ -89,6 +90,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::ui::policy::Presenter::Name_,
     fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::vulkan::loader::Loader::Name_,
+    fuchsia::test::manager::Harness::Name_,
 };
 // [END allowed_system_services]
 

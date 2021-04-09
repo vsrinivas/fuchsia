@@ -43,7 +43,7 @@
             ],
         },
         {
-            directory: "data",
+            storage: "tmp",
             rights: [ "rw*" ],
             path: "/data",
         },

@@ -92,7 +92,7 @@ group("run_test_suite") {
   testonly = true
   deps = [
     ":run_test_suite_pkg",
-    "//src/sys/component_manager_for_test",
+    "//src/sys/test_manager",
   ]
 }
 

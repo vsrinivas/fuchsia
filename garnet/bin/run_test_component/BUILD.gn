@@ -41,6 +41,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.test.manager",
     "//sdk/fidl/fuchsia.time",
     "//sdk/fidl/fuchsia.tracing.kernel",
     "//sdk/fidl/fuchsia.tracing.provider",

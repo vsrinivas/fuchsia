@@ -30,9 +30,20 @@
             modes: [ "async" ],
         },
         {
-            event: [ "capability_routed" ],
+            event: "capability_requested",
             from: "framework",
-            modes: [ "sync" ],
+            as: "components_trigger_requested",
+            filter: { name: "fidl.test.components.Trigger" },
+            modes: [ "async" ],
+        },
+        {
+            event_stream: "EventStream",
+            subscriptions: [
+                {
+                    event: "components_trigger_requested",
+                    mode: "async",
+                },
+            ],
         },
     ],
     offer: [

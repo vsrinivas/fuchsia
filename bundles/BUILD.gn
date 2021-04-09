@@ -36,7 +36,6 @@ group("tools") {
     "//src/media/bundles:tools",
     "//src/recovery/factory_reset:tools",
     "//src/security/scrutiny",
-    "//src/sys/component_manager_for_test",
     "//src/sys/locate",
     "//src/sys/pkg/bin/pm",
     "//src/sys/pkg/bin/pm:host",

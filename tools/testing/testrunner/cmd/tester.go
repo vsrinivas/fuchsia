@@ -34,8 +34,10 @@ import (
 const (
 	// A test output directory within persistent storage.
 	dataOutputDir = "/data/infra/testrunner"
+
+	// TODO(fxb/73171): Fix this path.
 	// The output data directory for component v2 tests.
-	dataOutputDirV2 = "/tmp/r/sys/fuchsia.com:component_manager_for_test:0#meta:component_manager_for_test.cmx/debug_data"
+	dataOutputDirV2 = "/tmp/test_manager:0/children/debug_data:0/data"
 
 	// Various tools for running tests.
 	runtestsName         = "runtests"

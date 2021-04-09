@@ -4,14 +4,15 @@
 
 use {
     anyhow::Error,
-    async_trait::async_trait,
     component_events::{
-        events::{self as events, Event, EventMode, EventSource, EventSubscription},
-        injectors::*,
+        events::{
+            self as events, CapabilityRequested, Event, EventMode, EventSource, EventStream,
+            EventStreamError, EventSubscription,
+        },
         matcher::EventMatcher,
         sequence::EventSequence,
     },
-    fidl_fidl_test_components as test_protocol,
+    fidl_fidl_test_components as test_protocol, fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_syslog::fx_log_info,
     futures_util::stream::TryStreamExt,
@@ -52,12 +53,16 @@ async fn test_exit_after_rendezvous() {
     // Get the event source, install our service injector, and then start the
     // component tree.
     let event_source = EventSource::new().unwrap();
-    let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
-    rendezvous_service.inject(&event_source, EventMatcher::ok()).await;
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
+
+    // tests don't have access to output directory so using capability requested event to offer a
+    // protocol.
+    let capability_requested_event_stream =
+        event_source.take_static_event_stream("EventStream").await.unwrap();
+    let rendezvous_service = RendezvousService::new(capability_requested_event_stream);
     event_source.start_component_tree().await;
 
     // Launch the component under test.
@@ -87,9 +92,31 @@ struct RendezvousService {
     call_count: Mutex<u32>,
 }
 
-#[async_trait]
-impl ProtocolInjector for RendezvousService {
-    type Marker = test_protocol::TriggerMarker;
+impl RendezvousService {
+    // Right now we are using simple event stream. If this is used by multiple tests cases,
+    // this struct should use mock component from RealmBuilder.
+    fn new(mut event_stream: EventStream) -> Arc<Self> {
+        let obj = Arc::new(RendezvousService { call_count: Mutex::new(0) });
+        let obj_clone = obj.clone();
+        fasync::Task::spawn(async move {
+            loop {
+                let mut event =
+                    match EventMatcher::ok().wait::<CapabilityRequested>(&mut event_stream).await {
+                        Ok(e) => e,
+                        Err(e) => match e.downcast::<EventStreamError>() {
+                            Ok(EventStreamError::StreamClosed) => return,
+                            Err(e) => panic!("Unknown error! {:?}", e),
+                        },
+                    };
+
+                let stream: test_protocol::TriggerRequestStream =
+                    event.take_capability::<test_protocol::TriggerMarker>().unwrap();
+                obj_clone.clone().serve(stream).await.expect("error serving trigger");
+            }
+        })
+        .detach();
+        obj
+    }
 
     async fn serve(
         self: Arc<Self>,

@@ -1,9 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.test.manager.Harness": "fuchsia-pkg://fuchsia.com/component_manager_for_test#meta/component_manager_for_test.cmx"
-            }
+            "system-services": [
+                "fuchsia.test.manager.Harness"
+            ]
         }
     },
     "include": [

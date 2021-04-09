@@ -415,6 +415,11 @@
             to: "#test_manager",
         },
         {
+            storage: "tmp",
+            from: "self",
+            to: [ "#test_manager" ],
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: "#test_manager",
@@ -511,6 +516,11 @@
             to: "#appmgr",
         },
         {
+            protocol: "fuchsia.test.manager.Harness",
+            from: "#test_manager",
+            to: [ "#appmgr" ],
+        },
+        {
             protocol: "fuchsia.kernel.Stats",
             from: "parent",
             to: "#system-metrics-logger",
@@ -564,7 +574,10 @@
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: "#http-client",
+            to: [
+                "#http-client",
+                "#test_manager",
+            ],
         },
         {
             directory: "config-data",
@@ -698,7 +711,10 @@
             directory: "dev",
             from: "parent",
             as: "dev-input-report",
-            to: "#session-manager",
+            to: [
+                "#session-manager",
+                "#test_manager",
+            ],
             subdir: "class/input-report",
         },
         {
