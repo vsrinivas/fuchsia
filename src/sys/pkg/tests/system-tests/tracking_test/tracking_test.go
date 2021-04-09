@@ -160,7 +160,7 @@ func testTrackingOTAAttempt(
 		return fmt.Errorf("failed to get repo for build: %w", err)
 	}
 
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get repo system image merkle: %w", err)
 	}
@@ -216,7 +216,7 @@ func paveDevice(ctx context.Context, device *device.Client, downgradeBuild artif
 
 	logger.Infof(ctx, "starting pave")
 
-	expectedSystemImageMerkle, err := downgradeRepo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := downgradeRepo.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
@@ -253,7 +253,7 @@ func paveDevice(ctx context.Context, device *device.Client, downgradeBuild artif
 }
 
 func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}

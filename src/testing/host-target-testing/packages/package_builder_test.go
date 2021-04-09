@@ -75,14 +75,16 @@ func createTestPackage(t *testing.T, dir string) (*Repository, string) {
 
 // expandPackage expands the given merkle from the given repository into the given directory.
 func expandPackage(t *testing.T, pkgRepo *Repository, merkle string, dir string) {
+	ctx := context.Background()
+
 	// Parse the package we want.
-	pkg, err := newPackage(pkgRepo, merkle)
+	pkg, err := newPackage(ctx, pkgRepo, merkle)
 	if err != nil {
 		t.Fatalf("failed to read package: %s", err)
 	}
 
 	// Expand to the given directory.
-	if err = pkg.Expand(dir); err != nil {
+	if err = pkg.Expand(ctx, dir); err != nil {
 		t.Fatalf("failed to expand to dir: %s", err)
 	}
 }
@@ -160,6 +162,7 @@ func TestAddResource(t *testing.T) {
 
 func TestPublish(t *testing.T) {
 	ctx := context.Background()
+
 	parentDir := t.TempDir()
 	pkgRepo, expandDir := createAndExpandPackage(t, parentDir)
 	pkgBuilder, err := NewPackageBuilderFromDir(expandDir, "testpackage", "0")
@@ -172,11 +175,11 @@ func TestPublish(t *testing.T) {
 	newResource := "blah/z"
 
 	// Confirm package in repo is as expected.
-	pkg, err := pkgRepo.OpenPackage(fullPkgName)
+	pkg, err := pkgRepo.OpenPackage(ctx, fullPkgName)
 	if err != nil {
 		t.Fatalf("Repo does not contain '%s'. %s", fullPkgName, err)
 	}
-	if _, err := pkg.ReadFile(newResource); err == nil {
+	if _, err := pkg.ReadFile(ctx, newResource); err == nil {
 		t.Fatalf("%s should not be found in package", newResource)
 	}
 
@@ -196,11 +199,11 @@ func TestPublish(t *testing.T) {
 	pkgRepo, err = NewRepository(ctx, path.Dir(pkgRepo.Dir), pkgRepo.BlobsDir)
 
 	// Confirm that the package is published and updated.
-	pkg, err = pkgRepo.OpenPackage(fullPkgName)
+	pkg, err = pkgRepo.OpenPackage(ctx, fullPkgName)
 	if err != nil {
 		t.Fatalf("Repo does not contain '%s'. %s", fullPkgName, err)
 	}
-	if data, err := pkg.ReadFile(newResource); err != nil {
+	if data, err := pkg.ReadFile(ctx, newResource); err != nil {
 		t.Fatalf("%s should be in package.", newResource)
 	} else {
 		if string(data) != newResource {

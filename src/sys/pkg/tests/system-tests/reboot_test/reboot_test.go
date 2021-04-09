@@ -149,7 +149,7 @@ func doTestReboot(
 	}
 
 	// Install version N on the device if it is not already on that version.
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
@@ -220,7 +220,7 @@ func initializeDevice(
 		return nil, fmt.Errorf("failed to run before-init-script: %w", err)
 	}
 
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}

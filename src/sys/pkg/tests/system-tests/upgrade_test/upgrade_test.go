@@ -173,7 +173,7 @@ func doTestOTAs(
 	}
 
 	// Install version N on the device if it is not already on that version.
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
@@ -228,7 +228,7 @@ func initializeDevice(
 			return nil, fmt.Errorf("error getting downgrade repository: %w", err)
 		}
 
-		expectedSystemImageMerkle, err = repo.LookupUpdateSystemImageMerkle()
+		expectedSystemImageMerkle, err = repo.LookupUpdateSystemImageMerkle(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 		}
@@ -297,7 +297,7 @@ func initializeDevice(
 }
 
 func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
@@ -314,7 +314,7 @@ func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Clie
 }
 
 func systemPrimeOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
-	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle(ctx)
 	if err != nil {
 		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}

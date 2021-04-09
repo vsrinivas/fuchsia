@@ -78,7 +78,7 @@ func NewRepositoryFromTar(ctx context.Context, dst string, src string) (*Reposit
 }
 
 // OpenPackage opens a package from the repository.
-func (r *Repository) OpenPackage(path string) (Package, error) {
+func (r *Repository) OpenPackage(ctx context.Context, path string) (Package, error) {
 	// Parse the targets file so we can access packages locally.
 	f, err := os.Open(filepath.Join(r.Dir, "targets.json"))
 	if err != nil {
@@ -92,14 +92,14 @@ func (r *Repository) OpenPackage(path string) (Package, error) {
 	}
 
 	if target, ok := s.Signed.Targets[path]; ok {
-		return newPackage(r, target.Custom.Merkle)
+		return newPackage(ctx, r, target.Custom.Merkle)
 	}
 
 	return Package{}, fmt.Errorf("could not find package: %q", path)
 
 }
 
-func (r *Repository) OpenBlob(merkle string) (*os.File, error) {
+func (r *Repository) OpenBlob(ctx context.Context, merkle string) (*os.File, error) {
 	return os.Open(filepath.Join(r.BlobsDir, merkle))
 }
 
@@ -107,16 +107,16 @@ func (r *Repository) Serve(ctx context.Context, localHostname string, repoName s
 	return newServer(ctx, r.Dir, r.BlobsDir, localHostname, repoName)
 }
 
-func (r *Repository) LookupUpdateSystemImageMerkle() (string, error) {
-	return r.lookupUpdateContentPackageMerkle("update/0", "system_image/0")
+func (r *Repository) LookupUpdateSystemImageMerkle(ctx context.Context) (string, error) {
+	return r.lookupUpdateContentPackageMerkle(ctx, "update/0", "system_image/0")
 }
 
-func (r *Repository) LookupUpdatePrimeSystemImageMerkle() (string, error) {
-	return r.lookupUpdateContentPackageMerkle("update_prime/0", "system_image_prime/0")
+func (r *Repository) LookupUpdatePrimeSystemImageMerkle(ctx context.Context) (string, error) {
+	return r.lookupUpdateContentPackageMerkle(ctx, "update_prime/0", "system_image_prime/0")
 }
 
-func (r *Repository) VerifyMatchesAnyUpdateSystemImageMerkle(merkle string) error {
-	systemImageMerkle, err := r.LookupUpdateSystemImageMerkle()
+func (r *Repository) VerifyMatchesAnyUpdateSystemImageMerkle(ctx context.Context, merkle string) error {
+	systemImageMerkle, err := r.LookupUpdateSystemImageMerkle(ctx)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (r *Repository) VerifyMatchesAnyUpdateSystemImageMerkle(merkle string) erro
 		return nil
 	}
 
-	systemPrimeImageMerkle, err := r.LookupUpdatePrimeSystemImageMerkle()
+	systemPrimeImageMerkle, err := r.LookupUpdatePrimeSystemImageMerkle(ctx)
 	if err != nil {
 		return err
 	}
@@ -136,13 +136,13 @@ func (r *Repository) VerifyMatchesAnyUpdateSystemImageMerkle(merkle string) erro
 		systemImageMerkle, systemPrimeImageMerkle, merkle)
 }
 
-func (r *Repository) lookupUpdateContentPackageMerkle(updatePackageName string, contentPackageName string) (string, error) {
+func (r *Repository) lookupUpdateContentPackageMerkle(ctx context.Context, updatePackageName string, contentPackageName string) (string, error) {
 	// Extract the "packages" file from the "update" package.
-	p, err := r.OpenPackage(updatePackageName)
+	p, err := r.OpenPackage(ctx, updatePackageName)
 	if err != nil {
 		return "", err
 	}
-	f, err := p.Open("packages.json")
+	f, err := p.Open(ctx, "packages.json")
 	if err != nil {
 		return "", err
 	}

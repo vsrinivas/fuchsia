@@ -457,7 +457,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get system image merkle: %w", err)
 	}
-	if err := repo.VerifyMatchesAnyUpdateSystemImageMerkle(currentSystemImageMerkle); err != nil {
+	if err := repo.VerifyMatchesAnyUpdateSystemImageMerkle(ctx, currentSystemImageMerkle); err != nil {
 		return nil, fmt.Errorf("repo does not match system version: %w", err)
 	}
 

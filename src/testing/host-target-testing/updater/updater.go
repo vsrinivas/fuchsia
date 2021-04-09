@@ -211,7 +211,7 @@ func NewOmahaUpdater(
 func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	logger.Infof(ctx, "injecting omaha_url into %q", u.updatePackageURL)
 
-	pkg, err := u.repo.OpenPackage(u.updatePackageURL.Path[1:])
+	pkg, err := u.repo.OpenPackage(ctx, u.updatePackageURL.Path[1:])
 	if err != nil {
 		return fmt.Errorf("failed to open url %q: %w", u.updatePackageURL, err)
 	}
@@ -224,7 +224,7 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	}
 	defer os.RemoveAll(tempDir)
 
-	if err := pkg.Expand(tempDir); err != nil {
+	if err := pkg.Expand(ctx, tempDir); err != nil {
 		return fmt.Errorf("failed to expand pkg to %s: %w", tempDir, err)
 	}
 
