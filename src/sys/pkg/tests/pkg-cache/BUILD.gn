@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/testing/environments.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
@@ -72,6 +73,10 @@ fuchsia_component("pkg-cache-integration-test") {
   ]
 }
 
+isolated_devmgr_v2_component("isolated-devmgr-component") {
+  package_name = "pkg-cache-integration-tests"
+}
+
 fuchsia_component("test-root") {
   testonly = true
   manifest = "meta/test-root.cml"
@@ -85,9 +90,10 @@ fuchsia_test_package("pkg-cache-integration-tests") {
   }
   test_components = [ ":test-root" ]
   deps = [
+    ":isolated-devmgr-component",
     ":pkg-cache-integration-test",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
-    "//src/storage/testing:isolated-devmgr-component",
+    "//src/storage/testing:storage_drivers",
     "//src/sys/pkg/bin/pkg-cache:component",
     "//src/sys/pkg/bin/system-update-committer:component",
   ]
