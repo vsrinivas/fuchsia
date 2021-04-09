@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.starnix.developer;
+
+using zx;
+
+resource table ShellParams {
+    1: zx.handle:SOCKET stdin;
+    2: zx.handle:SOCKET stdout;
+    3: zx.handle:SOCKET stderr;
+};
+
+protocol ShellController {
+    -> OnTerminated(int32 return_code);
+};
+
+[Discoverable]
+protocol Manager {
+    StartShell(ShellParams params, request<ShellController> controller);
+};
