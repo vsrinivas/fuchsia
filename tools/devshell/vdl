@@ -12,7 +12,6 @@ export HOST_OUT_DIR
 export IMAGE_FVM_RAW
 export IMAGE_QEMU_KERNEL_RAW
 export IMAGE_ZIRCONA_ZBI
-export FUCHSIA_BUILD_DIR
 export FUCHSIA_ZBI_COMPRESSION
 
 function main {

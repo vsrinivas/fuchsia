@@ -58,7 +58,7 @@ impl VDLFiles {
             Ok(vdl_files)
         } else {
             let mut vdl_files = VDLFiles {
-                image_files: ImageFiles::from_tree_env()?,
+                image_files: ImageFiles::from_tree_env(&InTreePaths {})?,
                 host_tools: HostTools::from_tree_env(&InTreePaths {})?,
                 ssh_files: SSHKeys::from_tree_env(&InTreePaths {})?,
                 output_proto: staging_dir_path.join("vdl_proto"),

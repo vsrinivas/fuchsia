@@ -308,9 +308,24 @@ pub struct ImageFiles {
 impl ImageFiles {
     /// Initialize fuchsia image and package files for in-tree usage.
     ///
-    /// Requires the environment variable FUCHSIA_BUILD_DIR to be specified.
-    pub fn from_tree_env() -> Result<ImageFiles> {
-        let fuchsia_build_dir = read_env_path("FUCHSIA_BUILD_DIR")?;
+    /// First checks for environment variable FUCHSIA_BUILD_DIR. If not specify looks into
+    /// <repo_root>/.fx-build-dir. For example ~/fuchsia/.fx-build-dir
+    pub fn from_tree_env(f: &impl FuchsiaPaths) -> Result<ImageFiles> {
+        let fuchsia_build_dir = match read_env_path("FUCHSIA_BUILD_DIR") {
+            Ok(val) => val,
+            _ => {
+                let root = f.find_fuchsia_root()?;
+                let build_dir = File::open(root.join(".fx-build-dir"))?;
+                let build_dir_file = BufReader::new(build_dir);
+                let dir = build_dir_file
+                    .lines()
+                    .nth(0)
+                    .ok_or(anyhow!("cannot read file {:?}", root.join(".fx-build-dir")))?;
+                root.join(dir?)
+            }
+        };
+        println!("[fvdl] Using fuchsia build dir: {:?}", fuchsia_build_dir.display());
+
         Ok(ImageFiles {
             amber_files: fuchsia_build_dir.join("amber-files"),
             build_args: fuchsia_build_dir.join("args.gn"),
@@ -502,10 +517,7 @@ impl From<&StartCommand> for VDLArgs {
             Some(version) => version.to_string(),
             None => match get_sdk_version_from_manifest() {
                 Ok(version) => version,
-                Err(e) => {
-                    println!("Reading sdk version errored: {:?}", e);
-                    String::from("")
-                }
+                Err(_) => String::from(""),
             },
         };
         let mut cache_path = PathBuf::new();
@@ -658,12 +670,20 @@ mod tests {
     #[test]
     #[serial]
     fn test_image_files() -> Result<()> {
-        env::set_var("FUCHSIA_BUILD_DIR", "/build/out");
+        env::remove_var("FUCHSIA_BUILD_DIR");
         env::set_var("IMAGE_ZIRCONA_ZBI", "zircona");
         env::set_var("IMAGE_QEMU_KERNEL_RAW", "kernel");
         env::set_var("IMAGE_FVM_RAW", "fvm");
-
-        let mut image_files = ImageFiles::from_tree_env()?;
+        let mut mock = MockFuchsiaPaths::new();
+        let data = format!(
+            "/build/out
+",
+        );
+        let tmp_dir = Builder::new().prefix("fvdl_tests_").tempdir()?;
+        let a = tmp_dir.into_path();
+        File::create(a.join(".fx-build-dir"))?.write_all(data.as_bytes())?;
+        mock.expect_find_fuchsia_root().returning(move || Ok(a.clone()));
+        let mut image_files = ImageFiles::from_tree_env(&mock)?;
         assert_eq!(image_files.zbi.to_str().unwrap(), "/build/out/zircona");
         assert_eq!(image_files.kernel.to_str().unwrap(), "/build/out/kernel");
         assert_eq!(image_files.fvm.to_str().unwrap(), "/build/out/fvm");
@@ -690,7 +710,6 @@ mod tests {
         let a = tmp_dir.into_path();
         File::create(a.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
         mock.expect_find_fuchsia_root().returning(move || Ok(a.clone()));
-        env::set_var("FUCHSIA_BUILD_DIR", "/build/out");
         let mut ssh_files = SSHKeys::from_tree_env(&mock)?;
         assert_eq!(
             ssh_files.private_key.to_str().unwrap(),
