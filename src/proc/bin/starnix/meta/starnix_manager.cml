@@ -1,8 +1,8 @@
 {
     children: [
         {
-            name: "starnix",
-            url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix.cm",
+            name: "starnix_runner",
+            url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_runner.cm",
         },
         {
             name: "hello_starnix",
@@ -15,7 +15,13 @@
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: "#starnix",
+            to: "#starnix_runner",
+        },
+    ],
+    expose: [
+        {
+            runner: "starnix",
+            from: "#starnix_runner",
         },
     ],
     environments: [
@@ -25,7 +31,7 @@
             runners: [
                 {
                     runner: "starnix",
-                    from: "#starnix",
+                    from: "#starnix_runner",
                 },
             ],
         },

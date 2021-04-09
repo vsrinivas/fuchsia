@@ -15,8 +15,8 @@ group("starnix") {
 }
 
 if (target_cpu == "x64") {
-  rustc_binary("starnix_bin") {
-    name = "starnix"
+  rustc_binary("starnix_runner_bin") {
+    name = "starnix_runner"
     edition = "2018"
     with_unit_tests = true
 
@@ -55,15 +55,15 @@ if (target_cpu == "x64") {
     ]
   }
 
-  fuchsia_component("starnix_component") {
-    component_name = "starnix"
-    deps = [ ":starnix_bin" ]
-    manifest = "meta/starnix.cml"
+  fuchsia_component("starnix_runner_component") {
+    component_name = "starnix_runner"
+    deps = [ ":starnix_runner_bin" ]
+    manifest = "meta/starnix_runner.cml"
   }
 
   fuchsia_unittest_package("starnix-tests") {
     manifest = "meta/starnix-tests.cml"
-    deps = [ ":starnix_bin_test" ]
+    deps = [ ":starnix_runner_bin_test" ]
   }
 }
 
@@ -99,7 +99,7 @@ fuchsia_package("pkg") {
   deps = [ ":starnix_manager" ]
 
   if (target_cpu == "x64") {
-    deps += [ ":starnix_component" ]
+    deps += [ ":starnix_runner_component" ]
   }
 }
 
