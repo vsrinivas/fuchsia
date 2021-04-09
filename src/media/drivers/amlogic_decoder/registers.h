@@ -206,7 +206,7 @@ DEFINE_REGISTER(McStatus0, DosRegisterIo, 0x0909)
 DEFINE_REGISTER(McCtrl1, DosRegisterIo, 0x090b)
 DEFINE_REGISTER(DblkCtrl, DosRegisterIo, 0x0951)
 DEFINE_REGISTER(DblkStatus, DosRegisterIo, 0x0953)
-REGISTER_NAME(MdecPicDcMuxCtrl, DosRegisterIo, 0x098e)
+REGISTER_NAME(MdecPicDcMuxCtrl, DosRegisterIo, 0x098d)
     DEF_BIT(31, bit31); // 1 for mmu enabled
 };
 REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
