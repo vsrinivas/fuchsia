@@ -5,7 +5,7 @@
 use {
     crate::{
         capability_source::NamespaceCapabilities, environment::EnvironmentInterface,
-        error::ComponentInstanceError,
+        error::ComponentInstanceError, policy::GlobalPolicyChecker,
     },
     async_trait::async_trait,
     cm_rust::ComponentDecl,
@@ -38,6 +38,9 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
 
     /// Returns a representation of this `ComponentInstanceInterface`'s environment.
     fn environment(&self) -> &dyn EnvironmentInterface<Self>;
+
+    /// Returns the `GlobalPolicyChecker` for this component instance, if it is still available.
+    fn try_get_policy_checker(&self) -> Result<GlobalPolicyChecker, ComponentInstanceError>;
 
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
     fn try_get_parent(&self) -> Result<ExtendedInstanceInterface<Self>, ComponentInstanceError>;

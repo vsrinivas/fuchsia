@@ -287,7 +287,7 @@ pub async fn open_capability_at_source(
     target: &Arc<ComponentInstance>,
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
-    target.try_get_context()?.policy().can_route_capability(&source, &target.abs_moniker)?;
+    target.try_get_policy_checker()?.can_route_capability(&source, &target.abs_moniker)?;
 
     // When serving a collection, routing hasn't reached the source. The CapabilityRouted event
     // should not fire, nor should hooks be able to modify the provider (which is hosted by
@@ -493,7 +493,7 @@ pub async fn route_protocol(
             )
             .await?;
 
-        target.try_get_context()?.policy().can_route_debug_capability(
+        target.try_get_policy_checker()?.can_route_debug_capability(
             &source,
             &env_moniker,
             &env_name,
@@ -761,10 +761,7 @@ async fn route_storage(
         .offer::<OfferStorageDecl>()
         .route(use_decl, target.clone(), allowed_sources, &mut StorageVisitor)
         .await?;
-    target
-        .try_get_context()?
-        .policy()
-        .can_route_capability(&storage_source, &target.abs_moniker)?;
+    target.try_get_policy_checker()?.can_route_capability(&storage_source, &target.abs_moniker)?;
     let (storage_decl, storage_component_instance) = match storage_source {
         CapabilitySource::Component {
             capability: ComponentCapability::Storage(storage_decl),
@@ -936,6 +933,6 @@ pub async fn route_event(
         .offer::<OfferEventDecl>()
         .route(use_decl, target.clone(), allowed_sources, &mut state)
         .await?;
-    target.try_get_context()?.policy().can_route_capability(&source, &target.abs_moniker)?;
+    target.try_get_policy_checker()?.can_route_capability(&source, &target.abs_moniker)?;
     Ok(source)
 }

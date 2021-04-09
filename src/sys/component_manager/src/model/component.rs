@@ -21,6 +21,7 @@ use {
             hooks::{Event, EventPayload, Hooks},
             logging::LOGGER as MODEL_LOGGER,
             namespace::IncomingNamespace,
+            policy::GlobalPolicyChecker,
             resolver::ResolvedComponent,
             routing::{self, OpenResourceError, RoutingError},
             runner::{NullRunner, RemoteRunner, Runner},
@@ -661,6 +662,13 @@ impl ComponentInstanceInterface for ComponentInstance {
 
     fn environment(&self) -> &dyn EnvironmentInterface<Self> {
         self.environment.as_ref()
+    }
+
+    fn try_get_policy_checker(&self) -> Result<GlobalPolicyChecker, ComponentInstanceError> {
+        let context = self.try_get_context().map_err(|_| {
+            ComponentInstanceError::PolicyCheckerNotFound { moniker: self.abs_moniker().clone() }
+        })?;
+        Ok(context.policy().clone())
     }
 
     fn try_get_parent(&self) -> Result<ExtendedInstance, ComponentInstanceError> {

@@ -18,6 +18,8 @@ pub enum ComponentInstanceError {
     InstanceNotFound { moniker: AbsoluteMoniker },
     #[error("component manager instance unavailable")]
     ComponentManagerInstanceUnavailable {},
+    #[error("policy checker not found for component instance {}", moniker)]
+    PolicyCheckerNotFound { moniker: AbsoluteMoniker },
     #[error("Failed to resolve `{}`: {}", moniker, err)]
     ResolveFailed {
         moniker: AbsoluteMoniker,
