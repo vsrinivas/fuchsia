@@ -65,19 +65,7 @@ func (a *Archive) GetBuildByID(
 		srcsMap[src] = struct{}{}
 	}
 
-	// TODO(fxbug.dev/60451): While we are still looking up artifacts from builds
-	// that have expired artifacts or do not include all_blobs.json, we must
-	// retrieve the archives instead. Remove when we no longer need to fetch from
-	// old builds that don't have the proper artifacts present in the artifacts
-	// bucket.
-	backupArchiveBuild := &ArchiveBuild{
-		id:      id,
-		archive: a,
-		dir:     dir,
-	}
-
 	return &ArtifactsBuild{
-		backupArchiveBuild: backupArchiveBuild,
 		id:                 id,
 		archive:            a,
 		dir:                dir,
