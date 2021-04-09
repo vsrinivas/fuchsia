@@ -29,8 +29,9 @@ lazy_static! {
 
     // Regex to match supported graphics cards on MacOS. Examples:
     // Intel UHD Graphics 630
+    // Intel Iris Plus Graphics 655
     // Radeon Pro 555X
-    static ref MACOS_SUPPORTED_CARDS_RE: Regex = Regex::new(r"^(?:Intel U?HD|Radeon Pro).+$").unwrap();
+    static ref MACOS_SUPPORTED_CARDS_RE: Regex = Regex::new(r"^(?:Intel (?:U?HD|Iris)|Radeon Pro).+$").unwrap();
 }
 
 static NVIDIA_REQ_DRIVER_VERSION: (u32, u32) = (440, 100);
@@ -207,8 +208,22 @@ Intel UHD Graphics 630:
   Metal: Supported, feature set macOS GPUFamily2 v1
 ";
 
-    // Contains another supported Mac OS graphics chipset (Radeon Pro)
+    // Contains another supported Mac OS graphics chipset (Intel Iris)
     static SYSTEM_PROFILER_OUTPUT_GOOD2: &str = "Graphics/Displays:
+Intel Iris Plus Graphics 655:
+
+  Chipset Model: Intel Iris Plus Graphics 655
+  Type: GPU
+  Bus: Built-In
+  VRAM (Dynamic, Max): 1536 MB
+  Vendor: Intel
+  Device ID: 0x3ea5
+  Revision ID: 0x0001
+  Metal Family: Supported, Metal GPUFamily macOS 2
+";
+
+    // Contains another supported Mac OS graphics chipset (Radeon Pro)
+    static SYSTEM_PROFILER_OUTPUT_GOOD3: &str = "Graphics/Displays:
 
 Radeon Pro 555X:
 
@@ -225,16 +240,19 @@ Radeon Pro 555X:
     // Contains an unsupported graphics chipset.
     static SYSTEM_PROFILER_OUTPUT_BAD: &str = "Graphics/Displays:
 
-Intel Iris Plus Graphics 650:
+NVIDIA Quadro K1200:
 
-  Chipset Model: Intel Iris Plus Graphics 650
+  Chipset Model: NVIDIA Quadro K1200
   Type: GPU
-  Bus: Built-In
-  VRAM (Dynamic, Max): 1536 MB
-  Vendor: Intel
-  Device ID: 0x5927
-  Revision ID: 0x0006
-  Metal: Supported, feature set macOS GPUFamily2 v1
+  Bus: PCIe
+  Slot: Slot-2
+  PCIe Lane Width: x16
+  VRAM (Total): 4095 MB
+  Vendor: NVIDIA (0x10de)
+  Device ID: 0x13bc
+  Revision ID: 0x00a2
+  ROM Revision: VBIOS 82.07.7f.00.14
+  Metal: Supported
 ";
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -367,10 +385,23 @@ Intel Iris Plus Graphics 650:
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_macos_success_radeon_pro_found() -> Result<()> {
+    async fn test_macos_success_intel_iris_found() -> Result<()> {
         let run_command: CommandRunner = |args| {
             assert_eq!(args.to_vec(), vec!["system_profiler", "SPDisplaysDataType"]);
             Ok((ExitStatus(0), SYSTEM_PROFILER_OUTPUT_GOOD2.to_string(), "".to_string()))
+        };
+
+        let check = FemuGraphics::new(&run_command);
+        let response = check.run(&PreflightConfig { system: OperatingSystem::MacOS(10, 15) }).await;
+        assert!(matches!(response?, PreflightCheckResult::Success(..)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_macos_success_radeon_pro_found() -> Result<()> {
+        let run_command: CommandRunner = |args| {
+            assert_eq!(args.to_vec(), vec!["system_profiler", "SPDisplaysDataType"]);
+            Ok((ExitStatus(0), SYSTEM_PROFILER_OUTPUT_GOOD3.to_string(), "".to_string()))
         };
 
         let check = FemuGraphics::new(&run_command);
