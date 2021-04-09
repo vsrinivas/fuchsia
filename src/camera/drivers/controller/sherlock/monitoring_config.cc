@@ -29,15 +29,6 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   stream.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                         kOutputStreamMlFRPixelFormat);
-  // Some initial frames are being produced at a higher resolution than we
-  // expect. This format increases our buffer sizes to prevent that from
-  // happening.
-  //
-  // TODO(68843): Remove this format once the ISP is obeying our requested
-  // resolution.
-  stream.AddImageFormat(kOutputStreamMlNativeWidth, kOutputStreamMlNativeHeight,
-                        kOutputStreamMlNativePixelFormat);
-
   stream.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlFRFrameRate);

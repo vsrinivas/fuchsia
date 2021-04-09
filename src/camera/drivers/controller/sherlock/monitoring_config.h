@@ -23,11 +23,6 @@ namespace camera {
 
 namespace {
 
-constexpr uint32_t kOutputStreamMlNativeWidth = 2304;
-constexpr uint32_t kOutputStreamMlNativeHeight = 2720;
-constexpr fuchsia::sysmem::PixelFormatType kOutputStreamMlNativePixelFormat =
-    fuchsia::sysmem::PixelFormatType::NV12;
-
 // OutputStreamMLFR Parameters
 constexpr uint32_t kOutputStreamMlFRMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMlFRWidth = 2176;
