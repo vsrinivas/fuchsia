@@ -4,15 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_ARCH_X86_BITS_H_
-#define ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_ARCH_X86_BITS_H_
+#ifndef ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_INTERNAL_BITS_H_
+#define ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_INTERNAL_BITS_H_
 
 #include <lib/page-table/types.h>
 #include <limits.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-namespace page_table::x86 {
+namespace page_table::internal {
 
 // Generate a mask with the low number of bits set.
 //
@@ -85,6 +85,6 @@ constexpr uint64_t SignExtend(uint64_t word, uint64_t n) {
   return static_cast<uint64_t>(static_cast<int64_t>(shifted) >> (64 - n));
 }
 
-}  // namespace page_table::x86
+}  // namespace page_table::internal
 
-#endif  // ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_ARCH_X86_BITS_H_
+#endif  // ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_INTERNAL_BITS_H_

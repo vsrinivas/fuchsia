@@ -44,7 +44,7 @@ std::optional<LookupResult> LookupPage(MemoryManager& allocator, PageTableNode* 
 
     // If this is a page, we have found the page.
     if (entry.is_page(level)) {
-      uint64_t page_offset = virt_addr.value() & Mask(PageLevelBits(level));
+      uint64_t page_offset = virt_addr.value() & internal::Mask(PageLevelBits(level));
       return LookupResult{
           .phys_addr = Paddr(entry.page_paddr(level) | page_offset),
           .entry = entry,

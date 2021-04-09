@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_ARCH_X86_MMU_H_
 #define ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_ARCH_X86_MMU_H_
 
+#include <lib/page-table/internal/bits.h>
 #include <lib/page-table/types.h>
 #include <zircon/types.h>
 
@@ -15,8 +16,6 @@
 
 #include <fbl/atomic_ref.h>
 #include <hwreg/bitfields.h>
-
-#include "bits.h"
 
 namespace page_table::x86 {
 
@@ -85,7 +84,7 @@ constexpr uint64_t PageBytes(PageSize size) { return static_cast<uint64_t>(size)
 //
 // [intel/vol1]: Section 3.3.7.1: Canonical Addressing
 constexpr bool IsCanonicalVaddr(Vaddr addr) {
-  return SignExtend(addr.value(), kVirtAddressBits) == addr.value();
+  return internal::SignExtend(addr.value(), kVirtAddressBits) == addr.value();
 }
 
 // x86-64 page table base entry.
