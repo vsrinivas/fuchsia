@@ -783,3 +783,37 @@ func TestNDPServersInfiniteLifetime(t *testing.T) {
 		break
 	}
 }
+
+func TestTimerCleanup(t *testing.T) {
+	const nicID = 1
+
+	clock := faketime.NewManualClock()
+	d := dns.MakeServersConfig(clock)
+
+	addr := addr1
+	addr.NIC = nicID
+
+	d.UpdateNdpServers([]tcpip.FullAddress{addr}, shortLifetime)
+
+	// Removing all servers from a NIC should stop the timers associated with the
+	// servers.
+	d.RemoveAllServersWithNIC(nicID)
+
+	// Re-add the server and make sure it continues to exist after the initial
+	// (shorter) lifetime to make sure the first timer was cleaned up.
+	d.UpdateNdpServers([]tcpip.FullAddress{addr}, longLifetime)
+	clock.Advance(shortLifetime)
+	if diff := cmp.Diff([]dns.Server{
+		{
+			Address: addr,
+			Source: name.DnsServerSourceWithNdp(
+				name.NdpDnsServerSource{
+					SourceInterface:        nicID,
+					SourceInterfacePresent: true,
+				},
+			),
+		},
+	}, d.GetServersCache()); diff != "" {
+		t.Errorf("d.GetServersCache() mismatch (-want +got):\n%s", diff)
+	}
+}

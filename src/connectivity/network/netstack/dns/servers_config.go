@@ -323,9 +323,10 @@ func (d *ServersConfig) RemoveAllServersWithNIC(nicID tcpip.NICID) {
 
 	d.mu.Lock()
 
-	for k := range d.mu.ndpServers {
-		if k.NIC == nicID {
-			delete(d.mu.ndpServers, k)
+	for server, state := range d.mu.ndpServers {
+		if server.NIC == nicID {
+			state.job.Cancel()
+			delete(d.mu.ndpServers, server)
 		}
 	}
 
