@@ -221,17 +221,6 @@ template("assemble_system") {
            [ rebase_path(depfile, root_build_dir) ]
   }
 
-  system_image_manifest_args =
-      "$target_out_dir/${image_name}_system_image.manifest_args"
-  generated_file("${image_name}_system_image.manifest_args") {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    outputs = [ system_image_manifest_args ]
-    data_keys = [ "system_image_rsps" ]
-    walk_keys = [ "system_image_barrier" ]
-    deps = system_image_deps
-  }
-
   system_image_fuchsia_system_packages("${image_name}_fuchsia_packages") {
     forward_variables_from(invoker, [ "testonly" ])
     deps = system_image_deps
@@ -245,7 +234,6 @@ template("assemble_system") {
     deps = [
       ":${image_name}_fuchsia_packages",
       ":${image_name}_pkgsvr_index",
-      ":${image_name}_system_image.manifest_args",
     ]
     json = "//build/images/system_meta_package.json"
     pkgsvr_index = get_target_outputs(":${image_name}_pkgsvr_index")
@@ -258,10 +246,8 @@ template("assemble_system") {
       json,
       pkgsvr_index[0],
       system_image_fuchsia_packages_manifest,
-      system_image_manifest_args,
     ]
     args = [
-      "@" + rebase_path(system_image_manifest_args, root_build_dir),
       "@" + rebase_path(system_image_fuchsia_packages_manifest, root_build_dir),
       "--entry=meta/package=" + rebase_path(json, root_build_dir),
       "--entry=data/static_packages=" +

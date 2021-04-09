@@ -210,23 +210,6 @@ action("cache_index") {
   ]
 }
 
-# Generate a response file that lists the content of all package()
-# instances that the system image depends on.
-system_image_manifest_args = "system_image.manifest_args"
-system_image_manifest_args_path = target_gen_dir + "/system_image.manifest_args"
-
-generated_file(system_image_manifest_args) {
-  testonly = fuchsia_zbi_testonly
-  outputs = [ system_image_manifest_args_path ]
-  data_keys = [ "system_image_rsps" ]
-  walk_keys = [ "system_image_barrier" ]
-  deps = [
-    ":base_packages",
-    ":meta_packages",
-  ]
-  deps += [ "//build/input:system_image" ]
-}
-
 # Generate a response file that lists the content of all
 # fuchsia_system_package() instances that the system image directly
 # depends on. This excludes anything reachable from :base_packages
@@ -268,18 +251,16 @@ generate_manifest("system_image.manifest") {
   # For system_image packages, these contain binaries that need their
   # references resolved from the auxiliary manifests or /boot (above).
   deps = [
-    ":" + system_image_manifest_args,
-    ":system_image_fuchsia_packages",
     ":system_image_extra_driver_packages",
+    ":system_image_fuchsia_packages",
   ]
-  sources = [ system_image_manifest_args_path ]
+  sources = []
+  sources += get_target_outputs(deps[0])
   sources += get_target_outputs(deps[1])
-  sources += get_target_outputs(deps[2])
 
   args = [
     "@" + rebase_path(sources[0], root_build_dir),
     "@" + rebase_path(sources[1], root_build_dir),
-    "@" + rebase_path(sources[2], root_build_dir),
   ]
 
   args += [ "--entry-manifest=" +
@@ -2771,7 +2752,6 @@ group("images") {
   deps = [
     ":build_args_metadata",
     ":default-images",
-    "system",
   ]
 
   if (!bootfs_only) {

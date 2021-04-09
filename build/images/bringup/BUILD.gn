@@ -14,27 +14,10 @@ assert(current_toolchain == target_toolchain)
 
 # XXX: Temporary solution: we grab every package in the build and ensure that
 # these are contributing to the bootfs_manifest that we generate.
-generated_file("system_package.manifest_args") {
-  testonly = true
-  outputs = [ target_gen_dir + "/system_package.manifest_args" ]
-  data_keys = [ "system_image_rsps" ]
-  walk_keys = [ "system_image_barrier" ]
-  deps = [ "//build/images:packages" ]
-  deps += [ "//build/input:system_image" ]
-}
-
-generate_manifest("boot.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  output_name = "boot.manifest"
-
-  deps = [ ":system_package.manifest_args" ]
-  system_package_manifest_args =
-      get_target_outputs(":system_package.manifest_args")
-  sources = system_package_manifest_args
-  args = [ "@" + rebase_path(system_package_manifest_args[0], root_build_dir) ]
-}
+_system_image_deps = [
+  "//build/images:packages",
+  "//build/input:system_image",
+]
 
 action("devmgr_config.txt") {
   testonly = true
@@ -42,7 +25,7 @@ action("devmgr_config.txt") {
   script = "../manifest.py"
   outputs = [ "$target_out_dir/devmgr_config.txt" ]
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  deps = [ ":boot.manifest" ]
+  deps = _system_image_deps
 
   foreach(entry, devmgr_config) {
     args += [ "--entry=$entry" ]
@@ -61,10 +44,10 @@ zbi("bringup") {
 
   deps = [
     ":devmgr_config",
-    ":system_package.manifest_args",
     "//build/input:bootfs",
     "//zircon/kernel",
   ]
+  deps += _system_image_deps
 
   metadata = {
     images = [
