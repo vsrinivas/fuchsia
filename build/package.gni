@@ -196,7 +196,6 @@ template("package") {
                              [
                                "binaries",
                                "data_deps",
-                               "__deprecated_system_image",
                                "deps",
                                "public_deps",
                                "drivers",
@@ -212,9 +211,6 @@ template("package") {
                              ])
       if (!defined(binaries)) {
         binaries = []
-      }
-      if (!defined(__deprecated_system_image)) {
-        __deprecated_system_image = false
       }
       if (!defined(deps)) {
         deps = []
@@ -260,24 +256,12 @@ template("package") {
 
     pkg_label = get_label_info(":$pkg_target_name", "label_no_toolchain")
     pkg_desc = "Package ${pkg_label} (${pkg.package_name}):"
-    if (pkg.__deprecated_system_image) {
-      assert(
-          pkg.meta == [],
-          "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with meta")
-
-      # No package should contribute to /system/bin.
-      assert(pkg.binaries == [],
-             "no new packages are allowed to add binaries to /system/bin")
-
-      assert(pkg.tests == [], "tests are not allowed in /system")
-    } else {
-      if (!defined(pkg.testonly) || !pkg.testonly) {
-        assert(pkg.drivers == [],
-               "$pkg_desc drivers requires __deprecated_system_image")
-      }
-      assert(pkg.libraries == [],
-             "$pkg_desc libraries requires __deprecated_system_image")
+    if (!defined(pkg.testonly) || !pkg.testonly) {
+      assert(pkg.drivers == [],
+             "$pkg_desc drivers requires __deprecated_system_image")
     }
+    assert(pkg.libraries == [],
+           "$pkg_desc libraries requires __deprecated_system_image")
 
     foreach(meta, pkg.meta) {
       manifest_target = pkg_target_name + "_" + get_path_info(meta.dest, "file")
@@ -577,40 +561,6 @@ template("package") {
       ]
     }
 
-    # An empty package() target doesn't actually generate a package at all.
-    # Conveniently, an empty system_image package has exactly that effect.
-    if (manifest_sources == []) {
-      pkg.__deprecated_system_image = true
-    }
-
-    if (pkg.__deprecated_system_image) {
-      system_rsp_label = pkg_target_name + ".system.rsp"
-
-      # System image packages just donate manifest arguments
-      generate_response_file(system_rsp_label) {
-        forward_variables_from(pkg,
-                               [
-                                 "testonly",
-                                 "visibility",
-                               ])
-        deps = pkg.deps
-        data_deps = pkg.data_deps
-        public_deps = pkg.public_deps
-        output_name = "${pkg_target_name}.system.rsp"
-        response_file_contents = manifest_args
-        metadata = {
-          forward_variables_from(pkg.metadata, "*")
-
-          system_image_rsps = [ "@" +
-                                rebase_path(target_out_dir + "/" + output_name,
-                                            root_build_dir) ]
-
-          system_image_barrier = []
-        }
-      }
-      not_needed([ "component_indices" ])
-    }
-
     # Synthesize the meta/package file.
     pkg_meta_generated = "${pkg_target_name}_meta_package.json"
     generate_meta_package(pkg_meta_generated) {
@@ -682,22 +632,12 @@ template("package") {
       data_deps = pkg.data_deps
       public_deps = pkg.public_deps
 
-      if (pkg.__deprecated_system_image) {
-        public_deps += [ ":" + system_rsp_label ]
-      }
+      # Prevent the contents of this package from getting picked up in a zbi.
+      # See fxbug.dev/45680 for more information.
+      metadata.distribution_entries_barrier = []
 
-      if (!pkg.__deprecated_system_image) {
-        # Prevent the contents of this package from getting picked up in a zbi.
-        # See fxbug.dev/45680 for more information.
-        metadata.distribution_entries_barrier = []
-      }
-
-      # A solution for deprecated_system_image is not yet available.
-      #
       # See https://fuchsia.dev/fuchsia-src/development/components/build#other_unsupported_features.
-      if (!defined(invoker.__deprecated_system_image)) {
-        deps += [ "//build:deprecated_package" ]
-      }
+      deps += [ "//build:deprecated_package" ]
     }
   } else {
     # A reference from a different toolchain, e.g. a variant toolchain, is
