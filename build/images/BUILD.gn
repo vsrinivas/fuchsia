@@ -2222,11 +2222,16 @@ action("update_packages.manifest.json") {
   deps = [ ":update_meta_far_merkle_index" ]
   inputs = [ update_meta_far_merkle_index ]
 
-  hermetic_deps = false
+  depfile = "${target_gen_dir}/${target_name}.d"
+
   script = "generate_packages_json.py"
   args = [
+    "--input_file",
     rebase_path(update_meta_far_merkle_index, root_build_dir),
+    "--output_file",
     rebase_path(outputs[0], root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
   ]
 }
 
@@ -2386,11 +2391,17 @@ action("update_prime_packages.manifest.json") {
   deps = [ ":update_prime_meta_far_merkle_index" ]
   inputs = [ update_prime_meta_far_merkle_index ]
 
-  hermetic_deps = false
+  depfile = "${target_gen_dir}/${target_name}.d"
+
   script = "generate_packages_json.py"
+
   args = [
+    "--input_file",
     rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
+    "--output_file",
     rebase_path(outputs[0], root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
   ]
 }
 
