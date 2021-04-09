@@ -62,8 +62,22 @@ static inline uint arch_max_num_cpus(void) {
 
 void arch_register_hart(uint cpu_num, uint64_t hart_id);
 
-#define READ_PERCPU_FIELD32(field) riscv64_get_percpu()->field
-#define WRITE_PERCPU_FIELD32(field, value) riscv64_get_percpu()->field = value
+static inline uint32_t riscv64_read_percpu_u32(size_t offset) {
+  uint32_t val;
+
+  // mark as volatile to force a read of the field to make sure
+  // the compiler always emits a read when asked and does not cache
+  // a copy between
+  __asm__ volatile("lw %[val], %[offset](x31)" : [val] "=r"(val) : [offset] "Ir"(offset));
+  return val;
+}
+
+static inline void riscv64_write_percpu_u32(size_t offset, uint32_t val) {
+  __asm__("sw %[val], %[offset](x31)" ::[val] "r"(val), [offset] "Ir"(offset) : "memory");
+}
+
+#define READ_PERCPU_FIELD32(field) riscv64_read_percpu_u32(offsetof(struct riscv64_percpu, field))
+#define WRITE_PERCPU_FIELD32(field, value) riscv64_write_percpu_u32(offsetof(struct riscv64_percpu, field), (value))
 
 __END_CDECLS
 
