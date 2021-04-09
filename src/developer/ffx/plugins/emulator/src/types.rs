@@ -4,6 +4,7 @@
 
 use crate::cipd;
 use crate::graphic_utils::get_default_graphics;
+use crate::images::Images;
 use ansi_term::Colour::*;
 use anyhow::{anyhow, format_err, Result};
 use ffx_config::sdk::{Sdk, SdkVersion};
@@ -329,9 +330,27 @@ impl ImageFiles {
         Ok(ImageFiles {
             amber_files: fuchsia_build_dir.join("amber-files"),
             build_args: fuchsia_build_dir.join("args.gn"),
-            fvm: fuchsia_build_dir.join(read_env_path("IMAGE_FVM_RAW")?),
-            kernel: fuchsia_build_dir.join(read_env_path("IMAGE_QEMU_KERNEL_RAW")?),
-            zbi: fuchsia_build_dir.join(read_env_path("IMAGE_ZIRCONA_ZBI")?),
+            fvm: match read_env_path("IMAGE_FVM_RAW") {
+                Ok(val) => fuchsia_build_dir.join(val),
+                _ => fuchsia_build_dir.join(
+                    Images::from_build_dir(fuchsia_build_dir.clone())?
+                        .find_path("storage-full", "blk")?,
+                ),
+            },
+            kernel: match read_env_path("IMAGE_QEMU_KERNEL_RAW") {
+                Ok(val) => fuchsia_build_dir.join(val),
+                _ => fuchsia_build_dir.join(
+                    Images::from_build_dir(fuchsia_build_dir.clone())?
+                        .find_path("qemu-kernel", "kernel")?,
+                ),
+            },
+            zbi: match read_env_path("IMAGE_ZIRCONA_ZBI") {
+                Ok(val) => fuchsia_build_dir.join(val),
+                _ => fuchsia_build_dir.join(
+                    Images::from_build_dir(fuchsia_build_dir.clone())?
+                        .find_path("zircon-a", "zbi")?,
+                ),
+            },
         })
     }
 
