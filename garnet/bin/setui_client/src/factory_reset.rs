@@ -14,11 +14,9 @@ pub async fn command(
     settings.is_local_reset_allowed = is_local_reset_allowed;
 
     Ok(if settings != FactoryResetSettings::EMPTY {
-        Either::Set(if let Err(err) = proxy.set(settings).await? {
+        Either::Set(if let Err(err) = proxy.set(settings.clone()).await? {
             format!("{:?}", err)
         } else {
-            let mut settings = FactoryResetSettings::EMPTY;
-            settings.is_local_reset_allowed = is_local_reset_allowed;
             format!("Successfully set factory_reset to {:?}", settings)
         })
     } else {

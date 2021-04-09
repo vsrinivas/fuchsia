@@ -15,6 +15,7 @@
             "fuchsia.settings.Device",
             "fuchsia.settings.Display",
             "fuchsia.settings.DoNotDisturb",
+            "fuchsia.settings.FactoryReset",
             "fuchsia.settings.Input",
             "fuchsia.settings.Intl",
             "fuchsia.settings.Light",
