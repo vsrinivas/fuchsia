@@ -91,9 +91,6 @@ int Instance::ClientThread() {
   // Run until Quit() is called in dtor.
   client_loop_.Run();
 
-  // Cleanup pipes that are still open.
-  pipes_.clear();
-
   return 0;
 }
 

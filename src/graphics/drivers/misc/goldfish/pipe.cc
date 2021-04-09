@@ -48,6 +48,10 @@ Pipe::~Pipe() {
     }
     pipe_.Destroy(id_);
   }
+
+  if (binding_ref_) {
+    binding_ref_->Unbind();
+  }
 }
 
 void Pipe::Init() {

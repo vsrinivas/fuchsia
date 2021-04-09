@@ -68,6 +68,7 @@ test("goldfish-pipe-device-test") {
   output_name = "goldfish-pipe-device-test"
   sources = [
     "instance.cc",
+    "instance_test.cc",
     "pipe.cc",
     "pipe_device.cc",
     "pipe_device_test.cc",
@@ -75,9 +76,11 @@ test("goldfish-pipe-device-test") {
   deps = common_deps + [
            "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
            "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp_mock",
+           "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_mock",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake_ddk",
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+           "//zircon/system/ulib/fidl-async:fidl-async-cpp",
            "//zircon/public/lib/mock-function",
            "//zircon/public/lib/sync",
            "//zircon/public/lib/zircon-internal",
