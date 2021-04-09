@@ -5,7 +5,9 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_PAVER_H_
 #define SRC_BRINGUP_BIN_NETSVC_PAVER_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -53,7 +55,8 @@ class Paver : public PaverInterface {
   void Close() final;
 
   // Visible for testing.
-  explicit Paver(zx::channel svc_root, fbl::unique_fd devfs_root)
+  explicit Paver(fidl::ClientEnd<fuchsia_io::Directory> svc_root,
+                 fidl::ClientEnd<fuchsia_io::Directory> devfs_root)
       : svc_root_(std::move(svc_root)), devfs_root_(std::move(devfs_root)) {}
 
   void set_timeout(zx::duration timeout) { timeout_ = timeout; }
@@ -103,10 +106,10 @@ class Paver : public PaverInterface {
   Command command_;
 
   // Channel to svc.
-  zx::channel svc_root_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root_;
 
-  // File descriptor to dev.
-  fbl::unique_fd devfs_root_;
+  // Channel to dev.
+  fidl::ClientEnd<fuchsia_io::Directory> devfs_root_;
 
   std::optional<fidl::WireSyncClient<fuchsia_paver::Paver>> paver_svc_;
 

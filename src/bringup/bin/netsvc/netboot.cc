@@ -13,6 +13,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,29 +60,12 @@ static nbfile* active;
 
 namespace {
 
-bool ConnectToService(const char* service, zx::channel& channel) {
-  zx::channel remote;
-  if (zx_status_t status = zx::channel::create(0, &channel, &remote); status != ZX_OK) {
-    printf("failed to create a channel: %s\n", zx_status_get_string(status));
-    return false;
-  }
-  std::string svc = "/svc/" + std::string(service);
-  if (zx_status_t status = fdio_service_connect(svc.c_str(), remote.release()); status != ZX_OK) {
-    printf("failed to connect to %s: %s\n", service, zx_status_get_string(status));
-    return false;
-  }
-  return true;
-};
-
 bool GetMexecResource(zx::resource* resource) {
-  using Resource = fuchsia_boot::RootResource;
-
-  zx::channel local;
-  if (!ConnectToService(Resource::Name, local)) {
+  auto root_resource = service::Connect<fuchsia_boot::RootResource>();
+  if (root_resource.is_error()) {
     return false;
   }
-  fidl::WireSyncClient<Resource> client(std::move(local));
-  if (auto result = client.Get(); !result.ok()) {
+  if (auto result = WireCall(*root_resource).Get(); !result.ok()) {
     printf("failed to get root resource %s\n", result.status_string());
     return false;
   } else {
@@ -300,12 +284,12 @@ static zx_status_t do_dmctl_mexec() {
   if (!GetMexecResource(&resource)) {
     return ZX_ERR_INTERNAL;
   }
-  zx::channel devmgr_channel;
-  if (!ConnectToService(fuchsia_device_manager::Administrator::Name, devmgr_channel)) {
+  auto devmgr = service::Connect<fuchsia_device_manager::Administrator>();
+  if (devmgr.is_error()) {
     return ZX_ERR_INTERNAL;
   }
 
-  status = mexec::Boot(std::move(resource), std::move(devmgr_channel), std::move(kernel_zbi),
+  status = mexec::Boot(std::move(resource), std::move(*devmgr).TakeChannel(), std::move(kernel_zbi),
                        std::move(data_zbi));
   if (status != ZX_OK) {
     return ZX_ERR_INTERNAL;
@@ -319,12 +303,12 @@ static zx_status_t do_dmctl_mexec() {
 static zx_status_t reboot() {
   namespace statecontrol = fuchsia_hardware_power_statecontrol;
 
-  zx::channel local;
-  if (!ConnectToService(statecontrol::Admin::Name, local)) {
+  auto admin = service::Connect<statecontrol::Admin>();
+  if (admin.is_error()) {
     return ZX_ERR_INTERNAL;
   }
-  auto response = fidl::WireCall<statecontrol::Admin>(local.borrow())
-                      .Reboot(statecontrol::wire::RebootReason::USER_REQUEST);
+
+  auto response = WireCall(*admin).Reboot(statecontrol::wire::RebootReason::USER_REQUEST);
   if (response.status() != ZX_OK) {
     return response.status();
   }

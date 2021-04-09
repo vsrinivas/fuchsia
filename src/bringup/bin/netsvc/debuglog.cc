@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/debuglog.h>
 #include <stdio.h>
@@ -69,16 +70,12 @@ static size_t get_log_line(char* out) {
 }
 
 int debuglog_init() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
+  auto client_end = service::Connect<fuchsia_boot::ReadOnlyLog>();
+  if (client_end.is_error()) {
+    return client_end.error_value();
   }
-  status = fdio_service_connect("/svc/fuchsia.boot.ReadOnlyLog", remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  fidl::WireSyncClient<fuchsia_boot::ReadOnlyLog> read_only_log(std::move(local));
+
+  fidl::WireSyncClient<fuchsia_boot::ReadOnlyLog> read_only_log(std::move(*client_end));
   auto result = read_only_log.Get();
   if (result.status() != ZX_OK) {
     return result.status();

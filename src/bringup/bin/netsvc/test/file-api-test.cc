@@ -69,9 +69,9 @@ class FakeNetCopy : public netsvc::NetCopyInterface {
 class FakeSysinfo : public fidl::WireInterface<fuchsia_sysinfo::SysInfo> {
  public:
   FakeSysinfo(async_dispatcher_t* dispatcher) {
-    zx::channel remote;
-    ASSERT_OK(zx::channel::create(0, &remote, &svc_chan_));
-    fidl::BindSingleInFlightOnly(dispatcher, std::move(remote), this);
+    auto remote = fidl::CreateEndpoints(&svc_chan_);
+    ASSERT_OK(remote.status_value());
+    fidl::BindSingleInFlightOnly(dispatcher, std::move(*remote), this);
   }
 
   void GetBoardName(GetBoardNameCompleter::Sync& completer) {
@@ -88,13 +88,13 @@ class FakeSysinfo : public fidl::WireInterface<fuchsia_sysinfo::SysInfo> {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   }
 
-  zx::channel& svc_chan() { return svc_chan_; }
+  fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> svc() { return svc_chan_; }
 
   void set_board_name(const char* board) { strlcpy(board_, board, sizeof(board_)); }
   void set_bootloader_vendor(const char* vendor) { strlcpy(vendor_, vendor, sizeof(vendor_)); }
 
  private:
-  zx::channel svc_chan_;
+  fidl::ClientEnd<fuchsia_sysinfo::SysInfo> svc_chan_;
 
   char board_[32] = {};
   char vendor_[32] = {};
@@ -107,8 +107,7 @@ class FileApiTest : public zxtest::Test {
   FileApiTest()
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         fake_sysinfo_(loop_.dispatcher()),
-        file_api_(true, std::make_unique<FakeNetCopy>(), std::move(fake_sysinfo_.svc_chan()),
-                  &fake_paver_) {
+        file_api_(true, std::make_unique<FakeNetCopy>(), fake_sysinfo_.svc(), &fake_paver_) {
     loop_.StartThread("file-api-test-loop");
   }
 

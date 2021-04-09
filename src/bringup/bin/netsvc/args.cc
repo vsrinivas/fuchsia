@@ -5,7 +5,10 @@
 #include "args.h"
 
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/client_end.h>
+#include <lib/service/llcpp/service.h>
 #include <stdlib.h>
 
 #include <cstring>
@@ -29,26 +32,18 @@ int ParseCommonArgs(int argc, char** argv, const char** error, std::string* inte
 }
 }  // namespace
 
-int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** error,
-              NetsvcArgs* out) {
+int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
+              const char** error, NetsvcArgs* out) {
   // Reset the args.
   *out = NetsvcArgs();
 
-  // First parse from kernel args, then use use cmdline args as overrides.
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    *error = "netsvc: unable to create channel";
-    return -1;
-  }
-
-  status = fdio_service_connect_at(svc_root.get(), fuchsia_boot::Arguments::Name, remote.release());
-  if (status != ZX_OK) {
+  auto client_end = service::ConnectAt<fuchsia_boot::Arguments>(svc_root);
+  if (client_end.is_error()) {
     *error = "netsvc: unable to connect to fuchsia.boot.Arguments";
     return -1;
   }
 
-  fidl::WireSyncClient<fuchsia_boot::Arguments> client(std::move(local));
+  fidl::WireSyncClient<fuchsia_boot::Arguments> client(std::move(*client_end));
   auto string_resp = client.GetString(fidl::StringView{"netsvc.interface"});
   if (string_resp.ok()) {
     auto& value = string_resp->value;
