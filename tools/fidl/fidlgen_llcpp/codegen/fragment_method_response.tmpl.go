@@ -17,7 +17,7 @@ struct {{ .WireResponse }} final {
     {{- end }}
 
   {{- if .ResponseArgs }}
-  explicit {{ .WireResponse.Self }}({{ .ResponseArgs | MessagePrototype }})
+  explicit {{ .WireResponse.Self }}({{ .ResponseArgs | CalleeParams }})
   {{ .ResponseArgs | InitMessage }} {
   _InitHeader();
   }
@@ -47,7 +47,7 @@ struct {{ .WireResponse }} final {
   class UnownedEncodedMessage final {
    public:
   UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size
-    {{- .ResponseArgs | CommaMessagePrototype }})
+    {{- .ResponseArgs | CalleeCommaParams }})
     : message_(_bytes, _byte_size, sizeof({{ .WireResponse.Self }}),
   {{- if gt .Response.MaxHandles 0 }}
     handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
@@ -56,7 +56,7 @@ struct {{ .WireResponse }} final {
   {{- end }}
     ) {
     FIDL_ALIGNDECL {{ .WireResponse.Self }} _response{
-    {{- .ResponseArgs | ParamNames -}}
+    {{- .ResponseArgs | ForwardParams -}}
     };
     message_.Encode<{{ .WireResponse }}>(&_response);
   }
@@ -98,9 +98,9 @@ struct {{ .WireResponse }} final {
 
   class OwnedEncodedMessage final {
    public:
-  explicit OwnedEncodedMessage({{ .ResponseArgs | MessagePrototype }})
+  explicit OwnedEncodedMessage({{ .ResponseArgs | CalleeParams }})
     : message_(bytes_.data(), bytes_.size()
-    {{- .ResponseArgs | CommaParamNames }}) {}
+    {{- .ResponseArgs | ForwardCommaParams }}) {}
   explicit OwnedEncodedMessage({{ .WireResponse }}* response)
     : message_(bytes_.data(), bytes_.size(), response) {}
   OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;

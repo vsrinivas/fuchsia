@@ -53,6 +53,8 @@ class Example_foo_Result {
       : ordinal_(::fidl_test_error::wire::Example_foo_Result::Ordinal::Invalid),
         envelope_{} {}
 
+  Example_foo_Result(const Example_foo_Result&) = default;
+  Example_foo_Result& operator=(const Example_foo_Result&) = default;
   Example_foo_Result(Example_foo_Result&&) = default;
   Example_foo_Result& operator=(Example_foo_Result&&) = default;
 
@@ -326,7 +328,7 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::StringView s;
-  explicit WireRequest(zx_txid_t _txid, const ::fidl::StringView& s) : s(s) {
+  explicit WireRequest(zx_txid_t _txid, ::fidl::StringView s) : s(s) {
     _InitHeader(_txid);
   }
   explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
@@ -347,7 +349,7 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::foo> final {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-                          const ::fidl::StringView& s)
+                          ::fidl::StringView s)
         : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireRequest _request(_txid, s);
       message_.Encode<WireRequest>(&_request);
@@ -382,7 +384,7 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::foo> final {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(zx_txid_t _txid, const ::fidl::StringView& s)
+    explicit OwnedEncodedMessage(zx_txid_t _txid, ::fidl::StringView s)
         : message_(bytes_.data(), bytes_.size(), _txid, s) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(bytes_.data(), bytes_.size(), request) {}
@@ -450,8 +452,8 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_error::wire::Example_foo_Result result;
-  explicit WireResponse(::fidl_test_error::wire::Example_foo_Result& result)
-      : result(std::move(result)) {
+  explicit WireResponse(::fidl_test_error::wire::Example_foo_Result result)
+      : result(result) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
@@ -469,7 +471,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                          ::fidl_test_error::wire::Example_foo_Result& result)
+                          ::fidl_test_error::wire::Example_foo_Result result)
         : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireResponse _response{result};
       message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::foo>>(
@@ -507,7 +509,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_error::wire::Example_foo_Result& result)
+        ::fidl_test_error::wire::Example_foo_Result result)
         : message_(bytes_.data(), bytes_.size(), result) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_error::Example::foo>* response)
@@ -578,9 +580,9 @@ class ::fidl::WireResult<::fidl_test_error::Example::foo> final
  public:
   explicit WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-      const ::fidl::StringView& s);
+      ::fidl::StringView s);
   WireResult(::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-             const ::fidl::StringView& s, zx_time_t _deadline);
+             ::fidl::StringView s, zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -633,7 +635,7 @@ class ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> final
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      const ::fidl::StringView& s, uint8_t* _response_bytes,
+      ::fidl::StringView s, uint8_t* _response_bytes,
       uint32_t _response_byte_capacity);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}

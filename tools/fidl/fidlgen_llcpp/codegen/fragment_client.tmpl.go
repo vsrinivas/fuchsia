@@ -43,7 +43,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
     {{- end }}
   // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{- template "ClientAllocationComment" . }}
-  {{ .WireResult }} {{ .Name }}_Sync({{ .RequestArgs | Params }});
+  {{ .WireResult }} {{ .Name }}_Sync({{ .RequestArgs | CalleeParams }});
 
     {{- /* Sync caller-allocate flavor */}}
     {{- if or .RequestArgs .ResponseArgs }}
@@ -69,7 +69,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   //
     {{- end }}
   // {{- template "ClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}({{ .RequestArgs | Params }});
+  ::fidl::Result {{ .Name }}({{ .RequestArgs | CalleeParams }});
 
     {{- /* Caller-allocate flavor */}}
     {{- if .RequestArgs }}

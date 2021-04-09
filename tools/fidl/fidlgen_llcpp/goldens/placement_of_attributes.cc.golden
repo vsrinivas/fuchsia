@@ -52,7 +52,7 @@ extern "C" const fidl_type_t
     WireResult(::fidl::UnownedClientEnd<
                    ::fidl_test_placementofattributes::ExampleProtocol>
                    _client,
-               ::exampleusing::wire::Empty& arg) {
+               const ::exampleusing::wire::Empty& arg) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(zx_txid_t(0), arg);
@@ -71,7 +71,7 @@ namespace fidl_test_placementofattributes {
                           ::fidl_test_placementofattributes::ExampleProtocol>
                           _client,
                       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-                      ::exampleusing::wire::Empty& arg) {
+                      const ::exampleusing::wire::Empty& arg) {
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(_request_bytes, _request_byte_capacity, 0, arg);
@@ -86,7 +86,7 @@ namespace fidl_test_placementofattributes {
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
-        ::exampleusing::wire::Empty arg) {
+        const ::exampleusing::wire::Empty& arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ::fidl::WireResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
@@ -103,7 +103,8 @@ namespace fidl_test_placementofattributes {
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
-        ::fidl::BufferSpan _request_buffer, ::exampleusing::wire::Empty arg) {
+        ::fidl::BufferSpan _request_buffer,
+        const ::exampleusing::wire::Empty& arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(

@@ -72,6 +72,8 @@ public:
   explicit {{ .Name }}(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~{{ .Name }}() = default;
+  {{ .Name }}(const {{ .Name }}& other) noexcept = default;
+  {{ .Name }}& operator=(const {{ .Name }}& other) noexcept = default;
   {{ .Name }}({{ .Name }}&& other) noexcept = default;
   {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
 

@@ -24,7 +24,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 }  // namespace fidl_test_error
 ::fidl::WireResult<::fidl_test_error::Example::foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-    const ::fidl::StringView& s) {
+    ::fidl::StringView s) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::foo>>
       _request(zx_txid_t(0), s);
@@ -37,7 +37,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 ::fidl::WireResult<::fidl_test_error::Example::foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-    const ::fidl::StringView& s, zx_time_t _deadline) {
+    ::fidl::StringView s, zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::foo>>
       _request(zx_txid_t(0), s);
@@ -55,7 +55,7 @@ namespace fidl_test_error {
 ::fidl::WireUnownedResult<::fidl_test_error::Example::foo>::WireUnownedResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
     uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-    const ::fidl::StringView& s, uint8_t* _response_bytes,
+    ::fidl::StringView s, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::UnownedEncodedMessage<

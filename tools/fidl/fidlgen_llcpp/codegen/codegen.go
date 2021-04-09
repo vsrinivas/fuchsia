@@ -48,6 +48,36 @@ func formatParams(params []cpp.Parameter, prefixIfNonempty string, format format
 	return ""
 }
 
+func calleeParam(t cpp.Type, n string) string {
+	if t.Kind == cpp.TypeKinds.Array || t.Kind == cpp.TypeKinds.Struct {
+		if !t.Nullable {
+			if t.IsResource {
+				return fmt.Sprintf("%s&& %s", t.String(), n)
+			}
+			return fmt.Sprintf("const %s& %s", t.String(), n)
+		}
+	}
+	if t.Kind == cpp.TypeKinds.Handle || t.Kind == cpp.TypeKinds.Request || t.Kind == cpp.TypeKinds.Protocol {
+		return fmt.Sprintf("%s&& %s", t.String(), n)
+	}
+	return fmt.Sprintf("%s %s", t.String(), n)
+}
+
+func forwardParam(t cpp.Type, n string) string {
+	if t.Kind == cpp.TypeKinds.Array || t.Kind == cpp.TypeKinds.Struct {
+		if t.IsResource && !t.Nullable {
+			return fmt.Sprintf("std::move(%s)", n)
+		}
+	} else if t.Kind == cpp.TypeKinds.Handle || t.Kind == cpp.TypeKinds.Request || t.Kind == cpp.TypeKinds.Protocol {
+		return fmt.Sprintf("std::move(%s)", n)
+	}
+	return n
+}
+
+func initParam(t cpp.Type, n string) string {
+	return n + "(" + forwardParam(t, n) + ")"
+}
+
 func closeHandles(argumentName string, argumentValue string, argumentType cpp.Type, pointer bool, nullable bool, access bool, mutableAccess bool) string {
 	if !argumentType.IsResource {
 		return ""
@@ -127,20 +157,17 @@ var utilityFuncs = template.FuncMap{
 			return fmt.Sprintf("%s %s", t.String(), n)
 		})
 	},
-	"CommaParams": func(params []cpp.Parameter) string {
-		return formatParams(params, ", ", func(t cpp.Type, n string) string {
-			return fmt.Sprintf("%s %s", t.String(), n)
-		})
+	"CalleeParams": func(params []cpp.Parameter) string {
+		return formatParams(params, "", calleeParam)
 	},
-	"ParamNames": func(params []cpp.Parameter) string {
-		return formatParams(params, "", func(t cpp.Type, n string) string {
-			return n
-		})
+	"CalleeCommaParams": func(params []cpp.Parameter) string {
+		return formatParams(params, ", ", calleeParam)
 	},
-	"CommaParamNames": func(params []cpp.Parameter) string {
-		return formatParams(params, ", ", func(t cpp.Type, n string) string {
-			return n
-		})
+	"ForwardParams": func(params []cpp.Parameter) string {
+		return formatParams(params, "", forwardParam)
+	},
+	"ForwardCommaParams": func(params []cpp.Parameter) string {
+		return formatParams(params, ",", forwardParam)
 	},
 	"ParamsNoTypedChannels": func(params []cpp.Parameter) string {
 		return formatParams(params, "", func(t cpp.Type, n string) string {
@@ -152,20 +179,8 @@ var utilityFuncs = template.FuncMap{
 			return fmt.Sprintf("std::move(%s)", n)
 		})
 	},
-	"MessagePrototype": func(params []cpp.Parameter) string {
-		return formatParams(params, "", func(t cpp.Type, n string) string {
-			return t.WireArgumentDeclaration(n)
-		})
-	},
-	"CommaMessagePrototype": func(params []cpp.Parameter) string {
-		return formatParams(params, ", ", func(t cpp.Type, n string) string {
-			return t.WireArgumentDeclaration(n)
-		})
-	},
 	"InitMessage": func(params []cpp.Parameter) string {
-		return formatParams(params, ": ", func(t cpp.Type, n string) string {
-			return t.WireInitMessage(n)
-		})
+		return formatParams(params, ": ", initParam)
 	},
 }
 

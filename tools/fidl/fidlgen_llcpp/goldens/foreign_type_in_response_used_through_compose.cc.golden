@@ -273,7 +273,7 @@ fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
-    GetFooCompleterBase::Reply(::bottom::wire::Foo foo) {
+    GetFooCompleterBase::Reply(const ::bottom::wire::Foo& foo) {
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       _response{foo};
@@ -287,7 +287,7 @@ fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
 ::fidl::Result
 fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFooCompleterBase::Reply(::fidl::BufferSpan _buffer,
-                               ::bottom::wire::Foo foo) {
+                               const ::bottom::wire::Foo& foo) {
   ::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, foo);

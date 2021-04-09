@@ -6,7 +6,7 @@ package codegen
 
 const fragmentReplyManagedTmpl = `
 {{- define "ReplyManagedMethodSignature" -}}
-Reply({{ .ResponseArgs | Params }})
+Reply({{ .ResponseArgs | CalleeParams }})
 {{- end }}
 
 {{- define "ReplyManagedMethodDefinition" }}
@@ -16,7 +16,7 @@ Reply({{ .ResponseArgs | Params }})
 {{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedMethodSignature" . }} {
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-    {{- .ResponseArgs | ParamNames -}}
+    {{- .ResponseArgs | ForwardParams -}}
   };
   return {{ .WireCompleterBase }}::SendReply(&_response.GetOutgoingMessage());
 }
@@ -24,7 +24,7 @@ Reply({{ .ResponseArgs | Params }})
 {{- end }}
 
 {{- define "ReplyManagedResultSuccessMethodSignature" -}}
-ReplySuccess({{ .Result.ValueMembers | Params }})
+ReplySuccess({{ .Result.ValueMembers | CalleeParams }})
 {{- end }}
 
 {{- define "ReplyManagedResultSuccessMethodDefinition" }}

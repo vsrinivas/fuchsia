@@ -23,6 +23,8 @@ class {{ .Name }} {
   public:
   {{ .Name }}() : ordinal_({{ .WireInvalidOrdinal }}), envelope_{} {}
 
+  {{ .Name }}(const {{ .Name }}&) = default;
+  {{ .Name }}& operator=(const {{ .Name }}&) = default;
   {{ .Name }}({{ .Name }}&&) = default;
   {{ .Name }}& operator=({{ .Name }}&&) = default;
 

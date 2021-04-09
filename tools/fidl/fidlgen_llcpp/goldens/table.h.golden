@@ -128,6 +128,8 @@ class SimpleTable final {
   explicit SimpleTable(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~SimpleTable() = default;
+  SimpleTable(const SimpleTable& other) noexcept = default;
+  SimpleTable& operator=(const SimpleTable& other) noexcept = default;
   SimpleTable(SimpleTable&& other) noexcept = default;
   SimpleTable& operator=(SimpleTable&& other) noexcept = default;
 
@@ -368,6 +370,9 @@ class ReverseOrdinalTable final {
   explicit ReverseOrdinalTable(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~ReverseOrdinalTable() = default;
+  ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept = default;
+  ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept =
+      default;
   ReverseOrdinalTable(ReverseOrdinalTable&& other) noexcept = default;
   ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept =
       default;
@@ -547,6 +552,8 @@ class OlderSimpleTable final {
   explicit OlderSimpleTable(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~OlderSimpleTable() = default;
+  OlderSimpleTable(const OlderSimpleTable& other) noexcept = default;
+  OlderSimpleTable& operator=(const OlderSimpleTable& other) noexcept = default;
   OlderSimpleTable(OlderSimpleTable&& other) noexcept = default;
   OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
 
@@ -784,6 +791,8 @@ class NewerSimpleTable final {
   explicit NewerSimpleTable(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~NewerSimpleTable() = default;
+  NewerSimpleTable(const NewerSimpleTable& other) noexcept = default;
+  NewerSimpleTable& operator=(const NewerSimpleTable& other) noexcept = default;
   NewerSimpleTable(NewerSimpleTable&& other) noexcept = default;
   NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
 
@@ -933,6 +942,8 @@ class EmptyTable final {
   explicit EmptyTable(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~EmptyTable() = default;
+  EmptyTable(const EmptyTable& other) noexcept = default;
+  EmptyTable& operator=(const EmptyTable& other) noexcept = default;
   EmptyTable(EmptyTable&& other) noexcept = default;
   EmptyTable& operator=(EmptyTable&& other) noexcept = default;
 

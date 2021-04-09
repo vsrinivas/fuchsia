@@ -223,7 +223,7 @@ struct ::fidl::WireResponse<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::bottom::wire::Foo foo;
-  explicit WireResponse(::bottom::wire::Foo& foo) : foo(std::move(foo)) {
+  explicit WireResponse(const ::bottom::wire::Foo& foo) : foo(foo) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
@@ -242,7 +242,7 @@ struct ::fidl::WireResponse<
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                          ::bottom::wire::Foo& foo)
+                          const ::bottom::wire::Foo& foo)
         : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireResponse _response{foo};
       message_.Encode<::fidl::WireResponse<
@@ -279,7 +279,7 @@ struct ::fidl::WireResponse<
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(::bottom::wire::Foo& foo)
+    explicit OwnedEncodedMessage(const ::bottom::wire::Foo& foo)
         : message_(bytes_.data(), bytes_.size(), foo) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<
@@ -655,8 +655,9 @@ class ::fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>
     //
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
-    ::fidl::Result Reply(::bottom::wire::Foo foo);
-    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::bottom::wire::Foo foo);
+    ::fidl::Result Reply(const ::bottom::wire::Foo& foo);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                         const ::bottom::wire::Foo& foo);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;

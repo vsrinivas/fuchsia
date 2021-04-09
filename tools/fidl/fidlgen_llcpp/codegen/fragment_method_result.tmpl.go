@@ -12,11 +12,11 @@ class {{ .WireResult }} final : public ::fidl::Result {
 	public:
 	 explicit {{ .WireResult.Self }}(
 		 ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-		 {{- .RequestArgs | CommaMessagePrototype }});
+		 {{- .RequestArgs | CalleeCommaParams }});
    {{- if .HasResponse }}
 	 {{ .WireResult.Self }}(
 		 ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-		 {{- .RequestArgs | CommaMessagePrototype }},
+		 {{- .RequestArgs | CalleeCommaParams }},
 		 zx_time_t _deadline);
    {{- end }}
 	 explicit {{ .WireResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -71,10 +71,10 @@ class {{ .WireResult }} final : public ::fidl::Result {
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(
     ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-    {{- .RequestArgs | CommaMessagePrototype }})
+    {{- .RequestArgs | CalleeCommaParams }})
    {
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
-    {{- .RequestArgs | CommaParamNames -}});
+    {{- .RequestArgs | ForwardCommaParams -}});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
       _client,
@@ -90,11 +90,11 @@ class {{ .WireResult }} final : public ::fidl::Result {
 
 {{ .WireResult }}::{{ .WireResult.Self }}(
     ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-    {{- .RequestArgs | CommaMessagePrototype -}}
+    {{- .RequestArgs | CalleeCommaParams -}}
     , zx_time_t _deadline)
    {
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
-    {{- .RequestArgs | CommaParamNames -}});
+    {{- .RequestArgs | ForwardCommaParams -}});
   _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
       _client,
       bytes_.data(),

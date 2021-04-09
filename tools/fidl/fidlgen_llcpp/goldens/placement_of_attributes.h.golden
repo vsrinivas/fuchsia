@@ -165,6 +165,8 @@ class ExampleXUnion {
                      Ordinal::Invalid),
         envelope_{} {}
 
+  ExampleXUnion(const ExampleXUnion&) = default;
+  ExampleXUnion& operator=(const ExampleXUnion&) = default;
   ExampleXUnion(ExampleXUnion&&) = default;
   ExampleXUnion& operator=(ExampleXUnion&&) = default;
 
@@ -253,6 +255,8 @@ class ExampleUnion {
                      Ordinal::Invalid),
         envelope_{} {}
 
+  ExampleUnion(const ExampleUnion&) = default;
+  ExampleUnion& operator=(const ExampleUnion&) = default;
   ExampleUnion(ExampleUnion&&) = default;
   ExampleUnion& operator=(ExampleUnion&&) = default;
 
@@ -385,6 +389,8 @@ class ExampleTable final {
   explicit ExampleTable(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~ExampleTable() = default;
+  ExampleTable(const ExampleTable& other) noexcept = default;
+  ExampleTable& operator=(const ExampleTable& other) noexcept = default;
   ExampleTable(ExampleTable&& other) noexcept = default;
   ExampleTable& operator=(ExampleTable&& other) noexcept = default;
 
@@ -665,8 +671,8 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::exampleusing::wire::Empty arg;
-  explicit WireRequest(zx_txid_t _txid, ::exampleusing::wire::Empty& arg)
-      : arg(std::move(arg)) {
+  explicit WireRequest(zx_txid_t _txid, const ::exampleusing::wire::Empty& arg)
+      : arg(arg) {
     _InitHeader(_txid);
   }
   explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
@@ -687,7 +693,7 @@ struct ::fidl::WireRequest<
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-                          ::exampleusing::wire::Empty& arg)
+                          const ::exampleusing::wire::Empty& arg)
         : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireRequest _request(_txid, arg);
       message_.Encode<WireRequest>(&_request);
@@ -723,7 +729,7 @@ struct ::fidl::WireRequest<
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(zx_txid_t _txid,
-                                 ::exampleusing::wire::Empty& arg)
+                                 const ::exampleusing::wire::Empty& arg)
         : message_(bytes_.data(), bytes_.size(), _txid, arg) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(bytes_.data(), bytes_.size(), request) {}
@@ -794,7 +800,7 @@ class ::fidl::WireResult<
   explicit WireResult(::fidl::UnownedClientEnd<
                           ::fidl_test_placementofattributes::ExampleProtocol>
                           _client,
-                      ::exampleusing::wire::Empty& arg);
+                      const ::exampleusing::wire::Empty& arg);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -814,7 +820,7 @@ class ::fidl::WireUnownedResult<
           ::fidl_test_placementofattributes::ExampleProtocol>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::exampleusing::wire::Empty& arg);
+      const ::exampleusing::wire::Empty& arg);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -845,7 +851,7 @@ class ::fidl::internal::WireCaller<
   Method(::fidl::UnownedClientEnd<
              ::fidl_test_placementofattributes::ExampleProtocol>
              _client_end,
-         ::exampleusing::wire::Empty arg) {
+         const ::exampleusing::wire::Empty& arg) {
     return ::fidl::WireResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(_client_end,
                                                                     arg);
@@ -853,7 +859,7 @@ class ::fidl::internal::WireCaller<
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>
-  Method(::exampleusing::wire::Empty arg) && {
+  Method(const ::exampleusing::wire::Empty& arg) && {
     return ::fidl::WireResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(client_end_,
                                                                     arg);
@@ -866,7 +872,8 @@ class ::fidl::internal::WireCaller<
   Method(::fidl::UnownedClientEnd<
              ::fidl_test_placementofattributes::ExampleProtocol>
              _client_end,
-         ::fidl::BufferSpan _request_buffer, ::exampleusing::wire::Empty arg) {
+         ::fidl::BufferSpan _request_buffer,
+         const ::exampleusing::wire::Empty& arg) {
     return ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
         _client_end, _request_buffer.data, _request_buffer.capacity, arg);
@@ -876,7 +883,7 @@ class ::fidl::internal::WireCaller<
   ::fidl::WireUnownedResult<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
   Method(::fidl::BufferSpan _request_buffer,
-         ::exampleusing::wire::Empty arg) && {
+         const ::exampleusing::wire::Empty& arg) && {
     return ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
         client_end_, _request_buffer.data, _request_buffer.capacity, arg);
@@ -959,7 +966,7 @@ class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>
-  Method(::exampleusing::wire::Empty arg) {
+  Method(const ::exampleusing::wire::Empty& arg) {
     return ::fidl::WireResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
         this->client_end(), arg);
@@ -969,7 +976,8 @@ class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
-  Method(::fidl::BufferSpan _request_buffer, ::exampleusing::wire::Empty arg) {
+  Method(::fidl::BufferSpan _request_buffer,
+         const ::exampleusing::wire::Empty& arg) {
     return ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -1087,11 +1095,11 @@ class ::fidl::internal::WireClientImpl<
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Method(::exampleusing::wire::Empty arg);
+  ::fidl::Result Method(const ::exampleusing::wire::Empty& arg);
 
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result Method(::fidl::BufferSpan _request_buffer,
-                        ::exampleusing::wire::Empty arg);
+                        const ::exampleusing::wire::Empty& arg);
 
   ::fidl::WireAsyncEventHandler<
       ::fidl_test_placementofattributes::ExampleProtocol>*

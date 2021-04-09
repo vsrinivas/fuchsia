@@ -17,7 +17,7 @@ struct {{ .WireRequest }} final {
     {{- end }}
 
   {{- if .RequestArgs }}
-  explicit {{ .WireRequest.Self }}(zx_txid_t _txid {{- .RequestArgs | CommaMessagePrototype }})
+  explicit {{ .WireRequest.Self }}(zx_txid_t _txid {{- .RequestArgs | CalleeCommaParams }})
   {{ .RequestArgs | InitMessage }} {
     _InitHeader(_txid);
   }
@@ -53,7 +53,7 @@ struct {{ .WireRequest }} final {
   class UnownedEncodedMessage final {
   public:
   UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid
-    {{- .RequestArgs | CommaMessagePrototype }})
+    {{- .RequestArgs | CalleeCommaParams }})
     : message_(_bytes, _byte_size, sizeof({{ .WireRequest.Self }}),
   {{- if gt .Request.MaxHandles 0 }}
     handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
@@ -62,7 +62,7 @@ struct {{ .WireRequest }} final {
   {{- end }}
     ) {
     FIDL_ALIGNDECL {{ .WireRequest.Self }} _request(_txid
-      {{- .RequestArgs | CommaParamNames -}}
+      {{- .RequestArgs | ForwardCommaParams -}}
     );
     message_.Encode<{{ .WireRequest.Self }}>(&_request);
   }
@@ -105,9 +105,9 @@ struct {{ .WireRequest }} final {
   class OwnedEncodedMessage final {
   public:
     explicit OwnedEncodedMessage(zx_txid_t _txid
-      {{- .RequestArgs | CommaMessagePrototype }})
+      {{- .RequestArgs | CalleeCommaParams }})
       : message_(bytes_.data(), bytes_.size(), _txid
-      {{- .RequestArgs | CommaParamNames }}) {}
+      {{- .RequestArgs | ForwardCommaParams }}) {}
     explicit OwnedEncodedMessage({{ .WireRequest.Self }}* request)
       : message_(bytes_.data(), bytes_.size(), request) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;

@@ -113,17 +113,17 @@ class {{ .WireCaller }} final {
     //{{ template "ClientAllocationComment" . }}
     static {{ .WireResult }} {{ .Name }}(
         ::fidl::UnownedClientEnd<{{ .Protocol }}> _client_end
-        {{- .RequestArgs | CommaParams }}) {
+        {{- .RequestArgs | CalleeCommaParams }}) {
       return {{ .WireResult }}(_client_end
-        {{- .RequestArgs | CommaParamNames -}}
+        {{- .RequestArgs | ForwardCommaParams -}}
       );
     }
 
     {{- .Docs }}
     //{{ template "ClientAllocationComment" . }}
-    {{ .WireResult }} {{ .Name }}({{- .RequestArgs | Params }}) && {
+    {{ .WireResult }} {{ .Name }}({{- .RequestArgs | CalleeParams }}) && {
       return {{ .WireResult }}(client_end_
-        {{- .RequestArgs | CommaParamNames -}}
+        {{- .RequestArgs | ForwardCommaParams -}}
       );
     }
 {{ "" }}
@@ -135,7 +135,7 @@ class {{ .WireCaller }} final {
           {{- if .RequestArgs -}}
             , _request_buffer.data, _request_buffer.capacity
           {{- end -}}
-            {{- .RequestArgs | CommaParamNames -}}
+            {{- .RequestArgs | ForwardCommaParams -}}
           {{- if .HasResponse -}}
             , _response_buffer.data, _response_buffer.capacity
           {{- end -}});
@@ -148,7 +148,7 @@ class {{ .WireCaller }} final {
           {{- if .RequestArgs -}}
             , _request_buffer.data, _request_buffer.capacity
           {{- end -}}
-            {{- .RequestArgs | CommaParamNames -}}
+            {{- .RequestArgs | ForwardCommaParams -}}
           {{- if .HasResponse -}}
             , _response_buffer.data, _response_buffer.capacity
           {{- end -}});
@@ -185,9 +185,9 @@ class {{ .WireSyncClient }} final {
    {{- range .ClientMethods -}}
    {{- .Docs }}
    //{{ template "ClientAllocationComment" . }}
-   {{ .WireResult }} {{ .Name }}({{ .RequestArgs | Params }}) {
+   {{ .WireResult }} {{ .Name }}({{ .RequestArgs | CalleeParams }}) {
      return {{ .WireResult }}(this->client_end()
-       {{- .RequestArgs | CommaParamNames -}});
+       {{- .RequestArgs | ForwardCommaParams -}});
    }
 {{ "" }}
      {{- if or .RequestArgs .ResponseArgs }}
@@ -198,7 +198,7 @@ class {{ .WireSyncClient }} final {
        {{- if .RequestArgs -}}
          , _request_buffer.data, _request_buffer.capacity
        {{- end -}}
-         {{- .RequestArgs | CommaParamNames -}}
+         {{- .RequestArgs | ForwardCommaParams -}}
        {{- if .HasResponse -}}
          , _response_buffer.data, _response_buffer.capacity
        {{- end -}});

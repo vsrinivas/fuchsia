@@ -57,6 +57,8 @@ class UnionSmallArray {
       : ordinal_(::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
         envelope_{} {}
 
+  UnionSmallArray(const UnionSmallArray&) = default;
+  UnionSmallArray& operator=(const UnionSmallArray&) = default;
   UnionSmallArray(UnionSmallArray&&) = default;
   UnionSmallArray& operator=(UnionSmallArray&&) = default;
 
@@ -145,6 +147,8 @@ class UnionLargeArray {
       : ordinal_(::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
         envelope_{} {}
 
+  UnionLargeArray(const UnionLargeArray&) = default;
+  UnionLargeArray& operator=(const UnionLargeArray&) = default;
   UnionLargeArray(UnionLargeArray&&) = default;
   UnionLargeArray& operator=(UnionLargeArray&&) = default;
 
@@ -275,6 +279,8 @@ class TableSmallArray final {
   explicit TableSmallArray(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableSmallArray() = default;
+  TableSmallArray(const TableSmallArray& other) noexcept = default;
+  TableSmallArray& operator=(const TableSmallArray& other) noexcept = default;
   TableSmallArray(TableSmallArray&& other) noexcept = default;
   TableSmallArray& operator=(TableSmallArray&& other) noexcept = default;
 
@@ -451,6 +457,8 @@ class TableLargeArray final {
   explicit TableLargeArray(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableLargeArray() = default;
+  TableLargeArray(const TableLargeArray& other) noexcept = default;
+  TableLargeArray& operator=(const TableLargeArray& other) noexcept = default;
   TableLargeArray(TableLargeArray&& other) noexcept = default;
   TableLargeArray& operator=(TableLargeArray&& other) noexcept = default;
 

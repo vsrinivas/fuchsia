@@ -63,6 +63,8 @@ class UnionWithHandle {
                      Invalid),
         envelope_{} {}
 
+  UnionWithHandle(const UnionWithHandle&) = default;
+  UnionWithHandle& operator=(const UnionWithHandle&) = default;
   UnionWithHandle(UnionWithHandle&&) = default;
   UnionWithHandle& operator=(UnionWithHandle&&) = default;
 
@@ -195,6 +197,8 @@ class TableWithHandle final {
   explicit TableWithHandle(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableWithHandle() = default;
+  TableWithHandle(const TableWithHandle& other) noexcept = default;
+  TableWithHandle& operator=(const TableWithHandle& other) noexcept = default;
   TableWithHandle(TableWithHandle&& other) noexcept = default;
   TableWithHandle& operator=(TableWithHandle&& other) noexcept = default;
 

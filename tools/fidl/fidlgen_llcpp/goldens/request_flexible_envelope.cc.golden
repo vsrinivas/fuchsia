@@ -60,7 +60,7 @@ extern "C" const fidl_type_t
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s) {
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>>
@@ -78,7 +78,7 @@ extern "C" const fidl_type_t
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s,
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
         zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
@@ -102,7 +102,7 @@ namespace fidl_test_requestflexibleenvelope {
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s,
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::UnownedEncodedMessage<
@@ -126,7 +126,7 @@ namespace fidl_test_requestflexibleenvelope {
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s) {
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>>
@@ -144,7 +144,7 @@ namespace fidl_test_requestflexibleenvelope {
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s,
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
         zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
@@ -168,7 +168,7 @@ namespace fidl_test_requestflexibleenvelope {
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s,
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::UnownedEncodedMessage<

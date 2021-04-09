@@ -19,7 +19,8 @@ The request and callback are allocated on the heap.
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodArguments" -}}
-{{ .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end }} {{- template "ClientAsyncRequestManagedCallbackSignature" . }} _cb
+{{ .RequestArgs | CalleeParams }}{{ if .RequestArgs }}, {{ end }}
+{{- template "ClientAsyncRequestManagedCallbackSignature" . }} _cb
 {{- end }}
 
 {{- define "ClientAsyncRequestCallerAllocateMethodArguments" -}}
@@ -55,7 +56,7 @@ The request and callback are allocated on the heap.
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ .WireRequest }}::OwnedEncodedMessage _request(_context->Txid()
-  {{- .RequestArgs | CommaParamNames -}}
+  {{- .RequestArgs | ForwardCommaParams -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -67,7 +68,7 @@ The request and callback are allocated on the heap.
   {{- else }}
   {{ .WireRequest }}::OwnedEncodedMessage _request(_context->Txid()
   {{- end }}
-  {{- .RequestArgs | CommaParamNames -}}
+  {{- .RequestArgs | ForwardCommaParams -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }

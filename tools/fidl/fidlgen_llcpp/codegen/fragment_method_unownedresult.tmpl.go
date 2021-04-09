@@ -15,7 +15,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 	   {{- if .RequestArgs -}}
 		 , uint8_t* _request_bytes, uint32_t _request_byte_capacity
 	   {{- end -}}
-	   {{- .RequestArgs | CommaMessagePrototype }}
+	   {{- .RequestArgs | CalleeCommaParams }}
 	   {{- if .HasResponse -}}
 		 , uint8_t* _response_bytes, uint32_t _response_byte_capacity
 	   {{- end -}});
@@ -70,7 +70,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   {{- if .RequestArgs -}}
   , uint8_t* _request_bytes, uint32_t _request_byte_capacity
   {{- end -}}
-  {{- .RequestArgs | CommaMessagePrototype }}
+  {{- .RequestArgs | CalleeCommaParams }}
   {{- if .HasResponse }}
   , uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
@@ -83,7 +83,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   {{- else -}}
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
   {{- end -}}
-    {{- .RequestArgs | CommaParamNames -}});
+    {{- .RequestArgs | ForwardCommaParams -}});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(_client, _response_bytes,
                                                           _response_byte_capacity);

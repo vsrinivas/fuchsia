@@ -6,11 +6,11 @@ package codegen
 
 const fragmentEventSenderTmpl = `
 {{- define "SendEventManagedMethodSignature" -}}
-{{ .Name }}({{ .ResponseArgs | Params }}) const
+{{ .Name }}({{ .ResponseArgs | CalleeParams }}) const
 {{- end }}
 
 {{- define "SendEventCallerAllocateMethodSignature" -}}
-{{ .Name }}(::fidl::BufferSpan _buffer, {{ .ResponseArgs | Params }}) const
+{{ .Name }}(::fidl::BufferSpan _buffer, {{ .ResponseArgs | CalleeParams }}) const
 {{- end }}
 
 {{- define "EventSenderDeclaration" }}
@@ -99,7 +99,7 @@ class {{ .WireWeakEventSender }} {
 zx_status_t {{ $.WireEventSender.NoLeading }}::
 {{- template "SendEventManagedMethodSignature" . }} {
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-      {{- .ResponseArgs | ParamNames -}}
+      {{- .ResponseArgs | ForwardParams -}}
   };
   _response.Write(server_end_);
   return _response.status();
@@ -111,7 +111,7 @@ zx_status_t {{ $.WireEventSender.NoLeading }}::
 {{- template "SendEventCallerAllocateMethodSignature" . }} {
   ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response(
       _buffer.data, _buffer.capacity
-      {{- .ResponseArgs | CommaParamNames -}}
+      {{- .ResponseArgs | ForwardCommaParams -}}
   );
   _response.Write(server_end_);
   return _response.status();

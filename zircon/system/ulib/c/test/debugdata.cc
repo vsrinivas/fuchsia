@@ -194,7 +194,7 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal, for_ordinal._hdr.ordinal);
 
   fidl::ServerEnd<fio::Node> empty;
-  fidl::WireRequest<fio::Directory::Open>::OwnedEncodedMessage msg(0, 0, 0, "", empty);
+  fidl::WireRequest<fio::Directory::Open>::OwnedEncodedMessage msg(0, 0, 0, "", std::move(empty));
   ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().CopyBytes().size());
 }
 

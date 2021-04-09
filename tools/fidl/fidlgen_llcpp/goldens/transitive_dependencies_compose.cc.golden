@@ -244,7 +244,7 @@ fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>::
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>::
-    GetFooCompleterBase::Reply(::bottom::wire::Foo foo) {
+    GetFooCompleterBase::Reply(const ::bottom::wire::Foo& foo) {
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>>
       _response{foo};
@@ -257,7 +257,7 @@ fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>::
 ::fidl::Result
 fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>::
     GetFooCompleterBase::Reply(::fidl::BufferSpan _buffer,
-                               ::bottom::wire::Foo foo) {
+                               const ::bottom::wire::Foo& foo) {
   ::fidl::WireResponse<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

@@ -54,6 +54,8 @@ class StrictFoo {
                      Invalid),
         envelope_{} {}
 
+  StrictFoo(const StrictFoo&) = default;
+  StrictFoo& operator=(const StrictFoo&) = default;
   StrictFoo(StrictFoo&&) = default;
   StrictFoo& operator=(StrictFoo&&) = default;
 
@@ -194,6 +196,8 @@ class FlexibleFoo {
                      Ordinal::Invalid),
         envelope_{} {}
 
+  FlexibleFoo(const FlexibleFoo&) = default;
+  FlexibleFoo& operator=(const FlexibleFoo&) = default;
   FlexibleFoo(FlexibleFoo&&) = default;
   FlexibleFoo& operator=(FlexibleFoo&&) = default;
 
@@ -393,8 +397,8 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::StrictFoo s;
   explicit WireRequest(zx_txid_t _txid,
-                       ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
-      : s(std::move(s)) {
+                       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
+      : s(s) {
     _InitHeader(_txid);
   }
   explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
@@ -419,7 +423,7 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     UnownedEncodedMessage(
         uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
         : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireRequest _request(_txid, s);
       message_.Encode<WireRequest>(&_request);
@@ -455,8 +459,7 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        zx_txid_t _txid,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
+        zx_txid_t _txid, ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
         : message_(bytes_.data(), bytes_.size(), _txid, s) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(bytes_.data(), bytes_.size(), request) {}
@@ -527,8 +530,8 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f;
   explicit WireResponse(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
-      : f(std::move(f)) {
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
+      : f(f) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
@@ -548,7 +551,7 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     UnownedEncodedMessage(
         uint8_t* _bytes, uint32_t _byte_size,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
         : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireResponse _response{f};
       message_.Encode<
@@ -588,7 +591,7 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
         : message_(bytes_.data(), bytes_.size(), f) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
@@ -666,10 +669,9 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s;
-  explicit WireRequest(
-      zx_txid_t _txid,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
-      : s(std::move(s)) {
+  explicit WireRequest(zx_txid_t _txid,
+                       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
+      : s(s) {
     _InitHeader(_txid);
   }
   explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
@@ -694,7 +696,7 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     UnownedEncodedMessage(
         uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
         : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireRequest _request(_txid, s);
       message_.Encode<WireRequest>(&_request);
@@ -731,7 +733,7 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     explicit OwnedEncodedMessage(
         zx_txid_t _txid,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
         : message_(bytes_.data(), bytes_.size(), _txid, s) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(bytes_.data(), bytes_.size(), request) {}
@@ -801,8 +803,8 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::StrictFoo f;
-  explicit WireResponse(::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
-      : f(std::move(f)) {
+  explicit WireResponse(::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
+      : f(f) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
@@ -822,7 +824,7 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     UnownedEncodedMessage(
         uint8_t* _bytes, uint32_t _byte_size,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
         : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireResponse _response{f};
       message_.Encode<
@@ -862,7 +864,7 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
         : message_(bytes_.data(), bytes_.size(), f) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
@@ -941,11 +943,11 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
   explicit WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s);
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s);
   WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s,
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -1017,7 +1019,7 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s,
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
@@ -1088,11 +1090,11 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
   explicit WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s);
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s);
   WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s,
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -1164,7 +1166,7 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s,
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}

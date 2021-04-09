@@ -18,7 +18,7 @@ const fragmentClientSyncMethodsTmpl = `
     {{- if .RequestArgs -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end -}}
-      {{- .RequestArgs | CommaParamNames -}},
+      {{- .RequestArgs | ForwardCommaParams -}},
       _response_buffer.data, _response_buffer.capacity);
   }
   return {{ .WireUnownedResult }}(
@@ -35,7 +35,7 @@ const fragmentClientSyncMethodsTmpl = `
     {{- if .RequestArgs -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end }}
-      {{- .RequestArgs | CommaParamNames -}});
+      {{- .RequestArgs | ForwardCommaParams -}});
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -50,11 +50,11 @@ const fragmentClientSyncMethodsTmpl = `
   {{- if .HasResponse }}
 {{- IfdefFuchsia -}}
 {{ .WireResult }}
-{{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ .RequestArgs | Params }}) {
+{{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ .RequestArgs | CalleeParams }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return {{ .WireResult }}(
       ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
-      {{- .RequestArgs | CommaParamNames -}}
+      {{- .RequestArgs | ForwardCommaParams -}}
     );
   }
   return {{ .WireResult }}(
@@ -63,11 +63,12 @@ const fragmentClientSyncMethodsTmpl = `
 {{- EndifFuchsia -}}
   {{- else }}
 {{- IfdefFuchsia -}}
-::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ .RequestArgs | Params }}) {
+::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+    {{ .RequestArgs | CalleeParams }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = {{ .WireResult }}(
       ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
-      {{- .RequestArgs | CommaParamNames -}}
+      {{- .RequestArgs | ForwardCommaParams -}}
     );
     return ::fidl::Result(_res.status(), _res.error());
   }

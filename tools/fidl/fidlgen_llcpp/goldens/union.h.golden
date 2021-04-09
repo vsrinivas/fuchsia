@@ -98,6 +98,8 @@ class Union {
       : ordinal_(::fidl_test_union::wire::Union::Ordinal::Invalid),
         envelope_{} {}
 
+  Union(const Union&) = default;
+  Union& operator=(const Union&) = default;
   Union(Union&&) = default;
   Union& operator=(Union&&) = default;
 
@@ -284,6 +286,8 @@ class StrictUnion {
       : ordinal_(::fidl_test_union::wire::StrictUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  StrictUnion(const StrictUnion&) = default;
+  StrictUnion& operator=(const StrictUnion&) = default;
   StrictUnion(StrictUnion&&) = default;
   StrictUnion& operator=(StrictUnion&&) = default;
 
@@ -478,6 +482,8 @@ class StrictSimpleXUnion {
       : ordinal_(::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  StrictSimpleXUnion(const StrictSimpleXUnion&) = default;
+  StrictSimpleXUnion& operator=(const StrictSimpleXUnion&) = default;
   StrictSimpleXUnion(StrictSimpleXUnion&&) = default;
   StrictSimpleXUnion& operator=(StrictSimpleXUnion&&) = default;
 
@@ -653,6 +659,8 @@ class StrictFoo {
       : ordinal_(::fidl_test_union::wire::StrictFoo::Ordinal::Invalid),
         envelope_{} {}
 
+  StrictFoo(const StrictFoo&) = default;
+  StrictFoo& operator=(const StrictFoo&) = default;
   StrictFoo(StrictFoo&&) = default;
   StrictFoo& operator=(StrictFoo&&) = default;
 
@@ -776,6 +784,8 @@ class StrictBoundedXUnion {
             ::fidl_test_union::wire::StrictBoundedXUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  StrictBoundedXUnion(const StrictBoundedXUnion&) = default;
+  StrictBoundedXUnion& operator=(const StrictBoundedXUnion&) = default;
   StrictBoundedXUnion(StrictBoundedXUnion&&) = default;
   StrictBoundedXUnion& operator=(StrictBoundedXUnion&&) = default;
 
@@ -866,6 +876,8 @@ class ReverseOrdinalUnion {
             ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  ReverseOrdinalUnion(const ReverseOrdinalUnion&) = default;
+  ReverseOrdinalUnion& operator=(const ReverseOrdinalUnion&) = default;
   ReverseOrdinalUnion(ReverseOrdinalUnion&&) = default;
   ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&) = default;
 
@@ -1000,6 +1012,8 @@ class StrictPizzaOrPasta {
       : ordinal_(::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::Invalid),
         envelope_{} {}
 
+  StrictPizzaOrPasta(const StrictPizzaOrPasta&) = default;
+  StrictPizzaOrPasta& operator=(const StrictPizzaOrPasta&) = default;
   StrictPizzaOrPasta(StrictPizzaOrPasta&&) = default;
   StrictPizzaOrPasta& operator=(StrictPizzaOrPasta&&) = default;
 
@@ -1136,6 +1150,8 @@ class PizzaOrPasta {
       : ordinal_(::fidl_test_union::wire::PizzaOrPasta::Ordinal::Invalid),
         envelope_{} {}
 
+  PizzaOrPasta(const PizzaOrPasta&) = default;
+  PizzaOrPasta& operator=(const PizzaOrPasta&) = default;
   PizzaOrPasta(PizzaOrPasta&&) = default;
   PizzaOrPasta& operator=(PizzaOrPasta&&) = default;
 
@@ -1268,6 +1284,8 @@ class FlexiblePizzaOrPasta {
             ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::Invalid),
         envelope_{} {}
 
+  FlexiblePizzaOrPasta(const FlexiblePizzaOrPasta&) = default;
+  FlexiblePizzaOrPasta& operator=(const FlexiblePizzaOrPasta&) = default;
   FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&&) = default;
   FlexiblePizzaOrPasta& operator=(FlexiblePizzaOrPasta&&) = default;
 
@@ -1402,6 +1420,8 @@ class ExplicitPizzaOrPasta {
             ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::Invalid),
         envelope_{} {}
 
+  ExplicitPizzaOrPasta(const ExplicitPizzaOrPasta&) = default;
+  ExplicitPizzaOrPasta& operator=(const ExplicitPizzaOrPasta&) = default;
   ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&&) = default;
   ExplicitPizzaOrPasta& operator=(ExplicitPizzaOrPasta&&) = default;
 
@@ -1538,6 +1558,8 @@ class OlderSimpleUnion {
       : ordinal_(::fidl_test_union::wire::OlderSimpleUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  OlderSimpleUnion(const OlderSimpleUnion&) = default;
+  OlderSimpleUnion& operator=(const OlderSimpleUnion&) = default;
   OlderSimpleUnion(OlderSimpleUnion&&) = default;
   OlderSimpleUnion& operator=(OlderSimpleUnion&&) = default;
 
@@ -1665,6 +1687,8 @@ class NewerSimpleUnion {
       : ordinal_(::fidl_test_union::wire::NewerSimpleUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  NewerSimpleUnion(const NewerSimpleUnion&) = default;
+  NewerSimpleUnion& operator=(const NewerSimpleUnion&) = default;
   NewerSimpleUnion(NewerSimpleUnion&&) = default;
   NewerSimpleUnion& operator=(NewerSimpleUnion&&) = default;
 
@@ -1841,6 +1865,8 @@ class FlexibleUnion {
       : ordinal_(::fidl_test_union::wire::FlexibleUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  FlexibleUnion(const FlexibleUnion&) = default;
+  FlexibleUnion& operator=(const FlexibleUnion&) = default;
   FlexibleUnion(FlexibleUnion&&) = default;
   FlexibleUnion& operator=(FlexibleUnion&&) = default;
 
@@ -2032,6 +2058,8 @@ class FlexibleFoo {
       : ordinal_(::fidl_test_union::wire::FlexibleFoo::Ordinal::Invalid),
         envelope_{} {}
 
+  FlexibleFoo(const FlexibleFoo&) = default;
+  FlexibleFoo& operator=(const FlexibleFoo&) = default;
   FlexibleFoo(FlexibleFoo&&) = default;
   FlexibleFoo& operator=(FlexibleFoo&&) = default;
 
@@ -2152,6 +2180,8 @@ class FieldCollision {
       : ordinal_(::fidl_test_union::wire::FieldCollision::Ordinal::Invalid),
         envelope_{} {}
 
+  FieldCollision(const FieldCollision&) = default;
+  FieldCollision& operator=(const FieldCollision&) = default;
   FieldCollision(FieldCollision&&) = default;
   FieldCollision& operator=(FieldCollision&&) = default;
 
@@ -2244,6 +2274,8 @@ class ExplicitXUnion {
       : ordinal_(::fidl_test_union::wire::ExplicitXUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  ExplicitXUnion(const ExplicitXUnion&) = default;
+  ExplicitXUnion& operator=(const ExplicitXUnion&) = default;
   ExplicitXUnion(ExplicitXUnion&&) = default;
   ExplicitXUnion& operator=(ExplicitXUnion&&) = default;
 
@@ -2365,6 +2397,8 @@ class ExplicitUnion {
       : ordinal_(::fidl_test_union::wire::ExplicitUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  ExplicitUnion(const ExplicitUnion&) = default;
+  ExplicitUnion& operator=(const ExplicitUnion&) = default;
   ExplicitUnion(ExplicitUnion&&) = default;
   ExplicitUnion& operator=(ExplicitUnion&&) = default;
 
@@ -2501,6 +2535,8 @@ class ExplicitStrictFoo {
       : ordinal_(::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::Invalid),
         envelope_{} {}
 
+  ExplicitStrictFoo(const ExplicitStrictFoo&) = default;
+  ExplicitStrictFoo& operator=(const ExplicitStrictFoo&) = default;
   ExplicitStrictFoo(ExplicitStrictFoo&&) = default;
   ExplicitStrictFoo& operator=(ExplicitStrictFoo&&) = default;
 
@@ -2632,6 +2668,8 @@ class ExplicitFoo {
       : ordinal_(::fidl_test_union::wire::ExplicitFoo::Ordinal::Invalid),
         envelope_{} {}
 
+  ExplicitFoo(const ExplicitFoo&) = default;
+  ExplicitFoo& operator=(const ExplicitFoo&) = default;
   ExplicitFoo(ExplicitFoo&&) = default;
   ExplicitFoo& operator=(ExplicitFoo&&) = default;
 
@@ -2753,6 +2791,9 @@ class XUnionContainingEmptyStruct {
                      Invalid),
         envelope_{} {}
 
+  XUnionContainingEmptyStruct(const XUnionContainingEmptyStruct&) = default;
+  XUnionContainingEmptyStruct& operator=(const XUnionContainingEmptyStruct&) =
+      default;
   XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&&) = default;
   XUnionContainingEmptyStruct& operator=(XUnionContainingEmptyStruct&&) =
       default;
@@ -3293,8 +3334,8 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_union::wire::StrictBoundedXUnion xu;
-  explicit WireResponse(::fidl_test_union::wire::StrictBoundedXUnion& xu)
-      : xu(std::move(xu)) {
+  explicit WireResponse(::fidl_test_union::wire::StrictBoundedXUnion xu)
+      : xu(xu) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
@@ -3313,7 +3354,7 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                          ::fidl_test_union::wire::StrictBoundedXUnion& xu)
+                          ::fidl_test_union::wire::StrictBoundedXUnion xu)
         : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireResponse _response{xu};
       message_.Encode<::fidl::WireResponse<
@@ -3353,7 +3394,7 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_union::wire::StrictBoundedXUnion& xu)
+        ::fidl_test_union::wire::StrictBoundedXUnion xu)
         : message_(bytes_.data(), bytes_.size(), xu) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_union::TestProtocol::
@@ -3555,8 +3596,7 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_union::wire::OlderSimpleUnion xu;
-  explicit WireResponse(::fidl_test_union::wire::OlderSimpleUnion& xu)
-      : xu(std::move(xu)) {
+  explicit WireResponse(::fidl_test_union::wire::OlderSimpleUnion xu) : xu(xu) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
@@ -3575,7 +3615,7 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                          ::fidl_test_union::wire::OlderSimpleUnion& xu)
+                          ::fidl_test_union::wire::OlderSimpleUnion xu)
         : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
       FIDL_ALIGNDECL WireResponse _response{xu};
       message_.Encode<::fidl::WireResponse<
@@ -3614,7 +3654,7 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(::fidl_test_union::wire::OlderSimpleUnion& xu)
+    explicit OwnedEncodedMessage(::fidl_test_union::wire::OlderSimpleUnion xu)
         : message_(bytes_.data(), bytes_.size(), xu) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<

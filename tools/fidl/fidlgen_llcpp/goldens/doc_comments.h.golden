@@ -386,6 +386,8 @@ class Table final {
   explicit Table(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~Table() = default;
+  Table(const Table& other) noexcept = default;
+  Table& operator=(const Table& other) noexcept = default;
   Table(Table&& other) noexcept = default;
   Table& operator=(Table&& other) noexcept = default;
 
@@ -520,6 +522,8 @@ class StrictUnion {
       : ordinal_(::fidl_test_doccomments::wire::StrictUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  StrictUnion(const StrictUnion&) = default;
+  StrictUnion& operator=(const StrictUnion&) = default;
   StrictUnion(StrictUnion&&) = default;
   StrictUnion& operator=(StrictUnion&&) = default;
 
@@ -618,6 +622,8 @@ class FlexibleUnion {
             ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::Invalid),
         envelope_{} {}
 
+  FlexibleUnion(const FlexibleUnion&) = default;
+  FlexibleUnion& operator=(const FlexibleUnion&) = default;
   FlexibleUnion(FlexibleUnion&&) = default;
   FlexibleUnion& operator=(FlexibleUnion&&) = default;
 

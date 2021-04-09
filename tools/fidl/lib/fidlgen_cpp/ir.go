@@ -110,6 +110,7 @@ type Type struct {
 	Kind typeKind
 
 	IsResource bool
+	Nullable   bool
 
 	DeclarationName fidlgen.EncodedCompoundIdentifier
 
@@ -363,6 +364,7 @@ func (c *compiler) compileCodingTableType(eci fidlgen.EncodedCompoundIdentifier)
 
 func (c *compiler) compileType(val fidlgen.Type) Type {
 	r := Type{}
+	r.Nullable = val.Nullable
 	switch val.Kind {
 	case fidlgen.ArrayType:
 		t := c.compileType(*val.ElementType)
