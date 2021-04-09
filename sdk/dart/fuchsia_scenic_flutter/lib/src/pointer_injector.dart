@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // ignore_for_file: avoid_as, unnecessary_null_comparison
+// ignore_for_file: avoid_catches_without_on_clauses
 
 import 'dart:typed_data';
 import 'dart:ui';
@@ -130,7 +131,7 @@ class PointerInjector {
 
     try {
       return _device.inject(events);
-    } on Exception catch (e) {
+    } catch (e) {
       log.warning('Failed to dispatch pointer events: $e');
     }
   }
@@ -150,7 +151,7 @@ class PointerInjector {
 
     try {
       return _viewRefInstalled.watch(ViewRef(reference: eventPair));
-    } on Exception catch (e) {
+    } catch (e) {
       log.warning('Failed to watch viewRefInstalled: $e');
     }
   }
