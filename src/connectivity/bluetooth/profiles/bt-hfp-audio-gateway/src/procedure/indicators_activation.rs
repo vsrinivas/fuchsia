@@ -53,7 +53,7 @@ impl Procedure for IndicatorsActivationProcedure {
             (false, at::Command::Bia { indrep }) => {
                 self.terminated = true;
                 if let Ok(flags) = to_flags(indrep) {
-                    state.indicator_events_reporting.update_from_flags(flags);
+                    state.ag_indicator_events_reporting.update_from_flags(flags);
                     AgUpdate::Ok.into()
                 } else {
                     // Per HFP v1.8 Section 4.35, if the command is incorrectly formatted,
@@ -73,7 +73,7 @@ impl Procedure for IndicatorsActivationProcedure {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::indicators::IndicatorsReporting;
+    use crate::protocol::indicators::AgIndicatorsReporting;
     use matches::assert_matches;
 
     #[test]
@@ -164,10 +164,10 @@ mod tests {
         // The SlcState's indicators should be updated with the new indicator values.
         // Note: The request to change Call & Call Setup were ignored since those must be enabled
         // at all times per HFP v1.8 Section 4.35.
-        let mut expected_indicators = IndicatorsReporting::default();
+        let mut expected_indicators = AgIndicatorsReporting::default();
         expected_indicators.set_service(false);
         expected_indicators.set_signal(true);
-        assert_eq!(state.indicator_events_reporting, expected_indicators);
+        assert_eq!(state.ag_indicator_events_reporting, expected_indicators);
 
         // Trying to send a request after procedure is terminated will fail.
         assert_matches!(

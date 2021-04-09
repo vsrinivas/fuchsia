@@ -36,7 +36,7 @@ use crate::{
     error::Error,
     procedure::{AgUpdate, InformationRequest, ProcedureMarker},
     profile::ProfileEvent,
-    protocol::indicators::{Indicator, Indicators},
+    protocol::indicators::{AgIndicator, AgIndicators},
 };
 
 pub(super) struct PeerTask {
@@ -195,7 +195,7 @@ impl PeerTask {
             }
             InformationRequest::GetAgIndicatorStatus { response } => {
                 let call_ind = self.calls.indicators();
-                let status = Indicators {
+                let status = AgIndicators {
                     service: self.network.service_available.unwrap_or(false),
                     call: call_ind.call,
                     callsetup: call_ind.callsetup,
@@ -331,22 +331,22 @@ impl PeerTask {
 
     /// Request to send the phone `status` by initiating the Phone Status Indicator
     /// procedure.
-    async fn phone_status_update(&mut self, status: Indicator) {
+    async fn phone_status_update(&mut self, status: AgIndicator) {
         self.connection.receive_ag_request(ProcedureMarker::PhoneStatus, status.into()).await;
     }
 
     /// Update the network information with the provided `update` value.
     async fn handle_network_update(&mut self, update: NetworkInformation) {
         if update_table_entry(&mut self.network.service_available, &update.service_available) {
-            let status = Indicator::Service(self.network.service_available.unwrap() as u8);
+            let status = AgIndicator::Service(self.network.service_available.unwrap() as u8);
             self.phone_status_update(status).await;
         }
         if update_table_entry(&mut self.network.signal_strength, &update.signal_strength) {
-            let status = Indicator::Signal(self.network.signal_strength.unwrap() as u8);
+            let status = AgIndicator::Signal(self.network.signal_strength.unwrap() as u8);
             self.phone_status_update(status).await;
         }
         if update_table_entry(&mut self.network.roaming, &update.roaming) {
-            let status = Indicator::Roam(self.network.roaming.unwrap() as u8);
+            let status = AgIndicator::Roam(self.network.roaming.unwrap() as u8);
             self.phone_status_update(status).await;
         }
     }
@@ -406,7 +406,7 @@ mod tests {
             tests::{create_and_initialize_slc, expect_data_received_by_peer},
             SlcState,
         },
-        protocol::{features::HfFeatures, indicators::IndicatorsReporting},
+        protocol::{features::HfFeatures, indicators::AgIndicatorsReporting},
     };
 
     fn arb_signal() -> impl Strategy<Value = Option<SignalStrength>> {
@@ -579,7 +579,7 @@ mod tests {
             ..NetworkInformation::EMPTY
         };
         // Expect to send the Signal and Roam indicators to the peer.
-        let expected_data1 = vec![Indicator::Signal(3).into(), Indicator::Roam(0).into()];
+        let expected_data1 = vec![AgIndicator::Signal(3).into(), AgIndicator::Roam(0).into()];
 
         let network_update_2 = NetworkInformation {
             service_available: Some(true),
@@ -587,7 +587,7 @@ mod tests {
             ..NetworkInformation::EMPTY
         };
         // Expect to send the Service and Roam indicators to the peer.
-        let expected_data2 = vec![Indicator::Service(1).into(), Indicator::Roam(1).into()];
+        let expected_data2 = vec![AgIndicator::Service(1).into(), AgIndicator::Roam(1).into()];
 
         // The value after the updates are applied is expected to be the following
         let expected_network = NetworkInformation {
@@ -600,7 +600,7 @@ mod tests {
         // Set up the executor, peer, and background call manager task
         let mut exec = fasync::Executor::new().unwrap();
         let state = SlcState {
-            indicator_events_reporting: IndicatorsReporting::new_enabled(),
+            ag_indicator_events_reporting: AgIndicatorsReporting::new_enabled(),
             ..SlcState::default()
         };
         let (connection, mut remote) = create_and_initialize_slc(state);
@@ -707,7 +707,7 @@ mod tests {
 
         // Setup the peer task with the specified SlcState to enable indicator events.
         let state = SlcState {
-            indicator_events_reporting: IndicatorsReporting::new_enabled(),
+            ag_indicator_events_reporting: AgIndicatorsReporting::new_enabled(),
             ..SlcState::default()
         };
         let (connection, mut remote) = create_and_initialize_slc(state);
@@ -751,7 +751,7 @@ mod tests {
                 .expect("Successfully send call information");
 
             // Expect to send the Call Setup indicator to the peer.
-            let expected_data1 = vec![Indicator::CallSetup(1).into()];
+            let expected_data1 = vec![AgIndicator::CallSetup(1).into()];
             expect_data_received_by_peer(&mut remote, expected_data1).await;
 
             // Call manager should collect all further requests, without responding.

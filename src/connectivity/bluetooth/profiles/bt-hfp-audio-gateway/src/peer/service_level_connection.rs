@@ -26,7 +26,7 @@ use crate::{
     },
     protocol::{
         features::{AgFeatures, HfFeatures},
-        indicators::{Indicators, IndicatorsReporting},
+        indicators::{AgIndicators, AgIndicatorsReporting, HfIndicators},
     },
 };
 
@@ -67,10 +67,12 @@ pub struct SlcState {
     pub hf_features: HfFeatures,
     /// The codecs supported by the HF.
     pub hf_supported_codecs: Option<Vec<u32>>,
-    /// The current indicator events reporting state.
-    pub indicator_events_reporting: IndicatorsReporting,
+    /// The indicators supported by the HF and its current status.
+    pub hf_indicators: HfIndicators,
+    /// The current AG indicator events reporting state.
+    pub ag_indicator_events_reporting: AgIndicatorsReporting,
     /// The current indicator status of the AG.
-    pub ag_indicator_status: Indicators,
+    pub ag_indicator_status: AgIndicators,
     /// The format used when representing the network operator name on the AG.
     pub ag_network_operator_name_format: Option<at::NetworkOperatorNameFormat>,
     /// Use AG Extended Error Codes.
@@ -631,7 +633,7 @@ pub(crate) mod tests {
             protocol::{
                 features::{AgFeatures, HfFeatures},
                 indicators::{
-                    Indicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX,
+                    AgIndicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX,
                     CALL_INDICATOR_INDEX,
                 },
             },
@@ -859,7 +861,7 @@ pub(crate) mod tests {
         };
 
         // Simulate local response with the AG indicators status - expect this to go to the peer.
-        do_ag_update(&mut exec, &mut slc, slci_marker, response_fn2(Indicators::default()));
+        do_ag_update(&mut exec, &mut slc, slci_marker, response_fn2(AgIndicators::default()));
         expect_peer_ready(&mut exec, &mut remote, None);
         // No further requests - waiting on peer response.
         assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
@@ -903,14 +905,14 @@ pub(crate) mod tests {
         // Bypass the SLCI procedure by setting the channel to initialized and enable indicator
         // reporting.
         let state = SlcState {
-            indicator_events_reporting: IndicatorsReporting::new_enabled(),
+            ag_indicator_events_reporting: AgIndicatorsReporting::new_enabled(),
             ..SlcState::default()
         };
         let (mut slc, mut remote) = create_and_initialize_slc(state);
 
         // Local device wants to initiate a phone status update.
         let expected_marker = ProcedureMarker::PhoneStatus;
-        let status = Indicator::BatteryLevel(2);
+        let status = AgIndicator::BatteryLevel(2);
         slc.receive_ag_request(expected_marker, status.into()).await;
         // We expect the PhoneStatus Procedure to be initiated and an outgoing message to the peer
         // with the status update.
@@ -933,7 +935,7 @@ pub(crate) mod tests {
 
         // Receiving a Ag request to send the phone status update should result in no action
         // because the SLC is not initialized yet.
-        let status1 = Indicator::Call(0);
+        let status1 = AgIndicator::Call(0);
         let expected1 = at::Response::Success(at::Success::Ciev {
             ind: CALL_INDICATOR_INDEX as i64,
             value: 0i64,
@@ -961,7 +963,7 @@ pub(crate) mod tests {
         expect_peer_ready(&mut exec, &mut remote, None);
 
         // Receiving another phone status amidst the SLCI procedure should be saved for later.
-        let status2 = Indicator::CallHeld(1);
+        let status2 = AgIndicator::CallHeld(1);
         let expected2 = at::Response::Success(at::Success::Ciev {
             ind: CALL_HELD_INDICATOR_INDEX as i64,
             value: 1i64,
@@ -980,7 +982,7 @@ pub(crate) mod tests {
         let ag_indicators = {
             match exec.run_until_stalled(&mut slc.next()) {
                 Poll::Ready(Some(Ok(InformationRequest::GetAgIndicatorStatus { response }))) => {
-                    response(Indicators::default())
+                    response(AgIndicators::default())
                 }
                 x => panic!("Expected GetAgFeatures but got: {:?}", x),
             }
@@ -1003,7 +1005,7 @@ pub(crate) mod tests {
 
         // A third request to send a PhoneStatus update _after_ SLCI completes is OK. This should
         // only be processed after any queued requests so that the peer gets the updates in order.
-        let status3 = Indicator::CallHeld(0);
+        let status3 = AgIndicator::CallHeld(0);
         let expected3 = at::Response::Success(at::Success::Ciev {
             ind: CALL_HELD_INDICATOR_INDEX as i64,
             value: 0i64,

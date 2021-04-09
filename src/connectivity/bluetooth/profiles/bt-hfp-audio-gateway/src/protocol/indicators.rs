@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {at_commands as at, fidl_fuchsia_bluetooth_hfp::CallState};
+use {at_commands as at, core::fmt::Debug, fidl_fuchsia_bluetooth_hfp::CallState};
 
 use crate::procedure::AgUpdate;
 
@@ -16,8 +16,63 @@ pub(crate) const SIGNAL_INDICATOR_INDEX: usize = 5;
 pub(crate) const ROAM_INDICATOR_INDEX: usize = 6;
 pub(crate) const BATT_CHG_INDICATOR_INDEX: usize = 7;
 
+/// A single HF Indicator status + value.
+#[derive(Clone, Copy, Debug)]
+pub struct HfIndicator<T: Clone + Copy + Debug> {
+    /// Whether this indicator is enabled or not.
+    enabled: bool,
+    /// The value of the indicator.
+    value: Option<T>,
+}
+
+impl<T: Clone + Copy + Debug> Default for HfIndicator<T> {
+    fn default() -> Self {
+        Self { enabled: false, value: None }
+    }
+}
+
+/// The supported HF indicators and their enabled/disabled status & values.
+/// Defined in HFP v1.8 Section 4.36.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct HfIndicators {
+    /// The Enhanced Safety HF indicator. There are only two potential values (enabled, disabled).
+    enhanced_safety: HfIndicator<bool>,
+    /// The Battery Level HF indicator. Can be any integer value between [0, 100].
+    battery_level: HfIndicator<u8>,
+}
+
+impl HfIndicators {
+    /// Sets the HF indicators based on the provided AT `indicators`.
+    pub fn set(&mut self, indicators: Vec<at::BluetoothHFIndicator>) {
+        for ind in indicators {
+            if ind == at::BluetoothHFIndicator::EnhancedSafety {
+                self.enhanced_safety.enabled = true;
+            }
+            if ind == at::BluetoothHFIndicator::BatteryLevel {
+                self.battery_level.enabled = true;
+            }
+        }
+    }
+
+    /// Returns the +BIND response for the current HF indicator status.
+    pub fn bind_response(&self) -> Vec<at::Response> {
+        vec![
+            at::success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::EnhancedSafety,
+                state: self.enhanced_safety.enabled,
+            }),
+            at::success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::BatteryLevel,
+                state: self.battery_level.enabled,
+            }),
+            at::Response::Ok,
+        ]
+    }
+}
+
+/// A collection of indicators supported by the AG.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct Indicators {
+pub struct AgIndicators {
     pub service: bool,
     pub call: Call,
     pub callsetup: CallSetup,
@@ -29,7 +84,7 @@ pub struct Indicators {
 
 /// The supported phone status update indicators.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Indicator {
+pub enum AgIndicator {
     Service(u8),
     Call(u8),
     CallSetup(u8),
@@ -39,34 +94,34 @@ pub enum Indicator {
     BatteryLevel(u8),
 }
 
-impl From<Indicator> for at::Response {
-    fn from(src: Indicator) -> at::Response {
+impl From<AgIndicator> for at::Response {
+    fn from(src: AgIndicator) -> at::Response {
         match src {
-            Indicator::Service(v) => at::Response::Success(at::Success::Ciev {
+            AgIndicator::Service(v) => at::Response::Success(at::Success::Ciev {
                 ind: SERVICE_INDICATOR_INDEX as i64,
                 value: v as i64,
             }),
-            Indicator::Call(v) => at::Response::Success(at::Success::Ciev {
+            AgIndicator::Call(v) => at::Response::Success(at::Success::Ciev {
                 ind: CALL_INDICATOR_INDEX as i64,
                 value: v as i64,
             }),
-            Indicator::CallSetup(v) => at::Response::Success(at::Success::Ciev {
+            AgIndicator::CallSetup(v) => at::Response::Success(at::Success::Ciev {
                 ind: CALL_SETUP_INDICATOR_INDEX as i64,
                 value: v as i64,
             }),
-            Indicator::CallHeld(v) => at::Response::Success(at::Success::Ciev {
+            AgIndicator::CallHeld(v) => at::Response::Success(at::Success::Ciev {
                 ind: CALL_HELD_INDICATOR_INDEX as i64,
                 value: v as i64,
             }),
-            Indicator::Signal(v) => at::Response::Success(at::Success::Ciev {
+            AgIndicator::Signal(v) => at::Response::Success(at::Success::Ciev {
                 ind: SIGNAL_INDICATOR_INDEX as i64,
                 value: v as i64,
             }),
-            Indicator::Roam(v) => at::Response::Success(at::Success::Ciev {
+            AgIndicator::Roam(v) => at::Response::Success(at::Success::Ciev {
                 ind: ROAM_INDICATOR_INDEX as i64,
                 value: v as i64,
             }),
-            Indicator::BatteryLevel(v) => at::Response::Success(at::Success::Ciev {
+            AgIndicator::BatteryLevel(v) => at::Response::Success(at::Success::Ciev {
                 ind: BATT_CHG_INDICATOR_INDEX as i64,
                 value: v as i64,
             }),
@@ -74,43 +129,43 @@ impl From<Indicator> for at::Response {
     }
 }
 
-impl From<Call> for Indicator {
+impl From<Call> for AgIndicator {
     fn from(src: Call) -> Self {
-        Indicator::Call(src as u8)
+        Self::Call(src as u8)
     }
 }
 
-impl From<CallSetup> for Indicator {
+impl From<CallSetup> for AgIndicator {
     fn from(src: CallSetup) -> Self {
-        Indicator::CallSetup(src as u8)
+        Self::CallSetup(src as u8)
     }
 }
 
-impl From<CallHeld> for Indicator {
+impl From<CallHeld> for AgIndicator {
     fn from(src: CallHeld) -> Self {
-        Indicator::CallHeld(src as u8)
+        Self::CallHeld(src as u8)
     }
 }
 
-impl From<Indicator> for AgUpdate {
-    fn from(src: Indicator) -> Self {
+impl From<AgIndicator> for AgUpdate {
+    fn from(src: AgIndicator) -> Self {
         Self::PhoneStatusIndicator(src)
     }
 }
 
-/// The current Indicators Reporting status with the active/inactive status of each
+/// The current AG Indicators Reporting status with the active/inactive status of each
 /// supported indicator.
 ///
 /// Per HFP v1.8 Section 4.35, the Call, Call Setup, and Call Held indicators
 /// must always be activated; these fields are read-only and will always
-/// be set and therefore are omitted from the `IndicatorsReporting` object.
+/// be set and therefore are omitted from the `AgIndicatorsReporting` object.
 ///
 /// It is valid to toggle the activeness of specific event even if Indicators Reporting is
 /// disabled.
 ///
 /// By default, all indicators are set to enabled.
 #[derive(Clone, Debug, PartialEq)]
-pub struct IndicatorsReporting {
+pub struct AgIndicatorsReporting {
     is_enabled: bool,
 
     /// The event indicators.
@@ -120,7 +175,7 @@ pub struct IndicatorsReporting {
     batt_chg: bool,
 }
 
-impl IndicatorsReporting {
+impl AgIndicatorsReporting {
     #[cfg(test)]
     pub fn set_signal(&mut self, toggle: bool) {
         self.signal = toggle;
@@ -178,19 +233,19 @@ impl IndicatorsReporting {
 
     /// Returns true if indicators reporting is enabled and the provided `status` indicator should
     /// be sent to the peer.
-    pub fn indicator_enabled(&self, status: &Indicator) -> bool {
+    pub fn indicator_enabled(&self, status: &AgIndicator) -> bool {
         self.is_enabled
             && match status {
-                Indicator::Service(_) => self.service,
-                Indicator::Call(_) | Indicator::CallSetup(_) | Indicator::CallHeld(_) => true,
-                Indicator::Signal(_) => self.signal,
-                Indicator::Roam(_) => self.roam,
-                Indicator::BatteryLevel(_) => self.batt_chg,
+                AgIndicator::Service(_) => self.service,
+                AgIndicator::Call(_) | AgIndicator::CallSetup(_) | AgIndicator::CallHeld(_) => true,
+                AgIndicator::Signal(_) => self.signal,
+                AgIndicator::Roam(_) => self.roam,
+                AgIndicator::BatteryLevel(_) => self.batt_chg,
             }
     }
 }
 
-impl Default for IndicatorsReporting {
+impl Default for AgIndicatorsReporting {
     /// The default indicators reporting state is disabled.
     /// Per HFP v1.8 Section 4.2.1.3, the HF will _always_ request to enable indicators
     /// reporting in the SLCI procedure (See +CMER AT command).
@@ -364,11 +419,11 @@ impl CallIndicatorsUpdates {
     }
 
     /// Returns a Vec of all updated indicators. This vec is ordered by Indicator index.
-    pub fn to_vec(&self) -> Vec<Indicator> {
+    pub fn to_vec(&self) -> Vec<AgIndicator> {
         let mut v = vec![];
-        v.extend(self.call.map(|i| Indicator::Call(i as u8)));
-        v.extend(self.callsetup.map(|i| Indicator::CallSetup(i as u8)));
-        v.extend(self.callheld.map(|i| Indicator::CallHeld(i as u8)));
+        v.extend(self.call.map(|i| AgIndicator::Call(i as u8)));
+        v.extend(self.callsetup.map(|i| AgIndicator::CallSetup(i as u8)));
+        v.extend(self.callheld.map(|i| AgIndicator::CallHeld(i as u8)));
         v
     }
 }
@@ -379,7 +434,7 @@ mod tests {
 
     #[test]
     fn default_indicators_reporting_is_disabled_with_all_indicators_enabled() {
-        let default = IndicatorsReporting::default();
+        let default = AgIndicatorsReporting::default();
         assert!(!default.is_enabled);
         assert!(default.service);
         assert!(default.signal);
@@ -390,7 +445,7 @@ mod tests {
     #[test]
     fn indicator_flags_are_updated_from_bool_flags() {
         // No flags is OK, no updates.
-        let mut status = IndicatorsReporting::default();
+        let mut status = AgIndicatorsReporting::default();
         let empty = vec![];
         let expected = status.clone();
         status.update_from_flags(empty);
@@ -398,9 +453,9 @@ mod tests {
 
         // An incomplete set of flags is OK (5 out of 7 supplied). The Call, Call Held, Call Setup
         // flags will not be overridden.
-        let mut status = IndicatorsReporting::default();
+        let mut status = AgIndicatorsReporting::default();
         let incomplete = vec![Some(false), None, Some(false), Some(true)];
-        let expected = IndicatorsReporting {
+        let expected = AgIndicatorsReporting {
             is_enabled: false,
             service: false,
             signal: true,
@@ -411,10 +466,10 @@ mod tests {
         assert_eq!(status, expected);
 
         // A typical set of flags (all 7) is OK.
-        let mut status = IndicatorsReporting::default();
+        let mut status = AgIndicatorsReporting::default();
         let flags =
             vec![None, Some(false), Some(false), Some(true), Some(false), Some(false), None];
-        let expected = IndicatorsReporting {
+        let expected = AgIndicatorsReporting {
             is_enabled: false,
             service: true,
             signal: false,
@@ -426,10 +481,10 @@ mod tests {
 
         // Too many flags provided is also OK. Per the spec, this can happen, and the excess flags
         // are gracefully ignored.
-        let mut status = IndicatorsReporting::default();
+        let mut status = AgIndicatorsReporting::default();
         let too_many =
             vec![None, None, None, None, Some(true), Some(false), None, Some(true), Some(false)];
-        let expected = IndicatorsReporting {
+        let expected = AgIndicatorsReporting {
             is_enabled: false,
             service: true,
             signal: true,
@@ -442,48 +497,48 @@ mod tests {
 
     #[test]
     fn toggling_indicators_reporting_maintains_same_indicators() {
-        let mut status = IndicatorsReporting::default();
+        let mut status = AgIndicatorsReporting::default();
         assert!(!status.is_enabled);
 
         // Unset a specific indicator.
         status.set_batt_chg(false);
 
         // Toggling indicators reporting should preserve indicator values.
-        let expected1 = IndicatorsReporting { is_enabled: false, ..status.clone() };
+        let expected1 = AgIndicatorsReporting { is_enabled: false, ..status.clone() };
         status.disable();
         assert_eq!(status, expected1);
         status.disable();
         assert_eq!(status, expected1);
 
         status.enable();
-        let expected2 = IndicatorsReporting { is_enabled: true, ..expected1.clone() };
+        let expected2 = AgIndicatorsReporting { is_enabled: true, ..expected1.clone() };
         assert_eq!(status, expected2);
         assert!(status.is_enabled);
     }
 
     #[test]
     fn indicator_enabled_is_false_when_indicators_reporting_disabled() {
-        let status = IndicatorsReporting::new_disabled();
+        let status = AgIndicatorsReporting::new_disabled();
 
         // Even though all the individual indicator values are toggled on, we expect
         // `indicator_enabled` to return false because indicators reporting is disabled.
-        assert!(!status.indicator_enabled(&Indicator::Service(0)));
-        assert!(!status.indicator_enabled(&Indicator::Call(0)));
+        assert!(!status.indicator_enabled(&AgIndicator::Service(0)));
+        assert!(!status.indicator_enabled(&AgIndicator::Call(0)));
     }
 
     #[test]
     fn indicator_enabled_check_returns_expected_result() {
-        let mut status = IndicatorsReporting::new_enabled();
+        let mut status = AgIndicatorsReporting::new_enabled();
         status.batt_chg = false;
         status.roam = false;
 
-        assert!(status.indicator_enabled(&Indicator::Service(0)));
-        assert!(status.indicator_enabled(&Indicator::Signal(0)));
-        assert!(status.indicator_enabled(&Indicator::Call(0)));
-        assert!(status.indicator_enabled(&Indicator::CallSetup(0)));
-        assert!(status.indicator_enabled(&Indicator::CallHeld(0)));
-        assert!(!status.indicator_enabled(&Indicator::Roam(0)));
-        assert!(!status.indicator_enabled(&Indicator::BatteryLevel(0)));
+        assert!(status.indicator_enabled(&AgIndicator::Service(0)));
+        assert!(status.indicator_enabled(&AgIndicator::Signal(0)));
+        assert!(status.indicator_enabled(&AgIndicator::Call(0)));
+        assert!(status.indicator_enabled(&AgIndicator::CallSetup(0)));
+        assert!(status.indicator_enabled(&AgIndicator::CallHeld(0)));
+        assert!(!status.indicator_enabled(&AgIndicator::Roam(0)));
+        assert!(!status.indicator_enabled(&AgIndicator::BatteryLevel(0)));
     }
 
     #[test]
@@ -651,19 +706,19 @@ mod tests {
 
         let call = Call::Some;
         updates.call = Some(call);
-        assert_eq!(updates.to_vec(), vec![Indicator::Call(call as u8)]);
+        assert_eq!(updates.to_vec(), vec![AgIndicator::Call(call as u8)]);
 
         let callsetup = CallSetup::Incoming;
         updates.callsetup = Some(callsetup);
-        let expected = vec![Indicator::Call(call as u8), Indicator::CallSetup(callsetup as u8)];
+        let expected = vec![AgIndicator::Call(call as u8), AgIndicator::CallSetup(callsetup as u8)];
         assert_eq!(updates.to_vec(), expected);
 
         let callheld = CallHeld::Held;
         updates.callheld = Some(callheld);
         let expected = vec![
-            Indicator::Call(call as u8),
-            Indicator::CallSetup(callsetup as u8),
-            Indicator::CallHeld(callheld as u8),
+            AgIndicator::Call(call as u8),
+            AgIndicator::CallSetup(callsetup as u8),
+            AgIndicator::CallHeld(callheld as u8),
         ];
         assert_eq!(updates.to_vec(), expected);
     }

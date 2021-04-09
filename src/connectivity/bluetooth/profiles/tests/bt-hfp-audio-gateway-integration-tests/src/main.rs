@@ -365,7 +365,7 @@ async fn test_hfp_full_slc_init_procedure() {
     .await;
 
     let peer_request_indicators_cmd = at::Command::BindTest {};
-    let expected8 = at::success(at::Success::Bind { indicators: vec![] });
+    let expected8 = at::success(at::Success::BindList { indicators: vec![] });
     send_command_and_expect_response(
         &mut remote,
         peer_request_indicators_cmd,
@@ -374,7 +374,10 @@ async fn test_hfp_full_slc_init_procedure() {
     .await;
 
     let peer_request_ind_status_cmd = at::Command::BindRead {};
-    let expected9 = at::success(at::Success::Bind { indicators: vec![] });
+    let expected9 = at::success(at::Success::BindStatus {
+        anum: at::BluetoothHFIndicator::BatteryLevel,
+        state: true,
+    });
     send_command_and_expect_response(
         &mut remote,
         peer_request_ind_status_cmd,

@@ -16,7 +16,7 @@ use crate::{
     },
     protocol::{
         features::AgFeatures,
-        indicators::{Indicator, Indicators},
+        indicators::{AgIndicator, AgIndicators, HfIndicators},
     },
 };
 
@@ -219,7 +219,7 @@ impl ProcedureMarker {
 pub enum InformationRequest {
     GetAgFeatures { response: Box<dyn FnOnce(AgFeatures) -> AgUpdate> },
 
-    GetAgIndicatorStatus { response: Box<dyn FnOnce(Indicators) -> AgUpdate> },
+    GetAgIndicatorStatus { response: Box<dyn FnOnce(AgIndicators) -> AgUpdate> },
 
     GetNetworkOperatorName { response: Box<dyn FnOnce(Option<String>) -> AgUpdate> },
 
@@ -378,19 +378,21 @@ pub enum AgUpdate {
     /// Three Way Calling support
     ThreeWaySupport,
     /// Current status of all AG Indicators
-    IndicatorStatus(Indicators),
+    IndicatorStatus(AgIndicators),
     /// An Update that contains no additional information
     Ok,
     /// An error occurred and should be communicated to the HF
     Error,
     /// Supported AG Indicators
-    SupportedIndicators,
-    /// Support on the AG for HF Indicators
-    SupportedHfIndicatorResponses { safety: bool, battery: bool },
+    SupportedAgIndicators,
+    /// The AG's supported HF indicators.
+    SupportedHfIndicators { safety: bool, battery: bool },
+    /// The current status (enabled/disabled) of the AG's supported HF indicators.
+    SupportedHfIndicatorStatus(HfIndicators),
     /// The name of the network operator
     NetworkOperatorName(at::NetworkOperatorNameFormat, String),
     /// Phone status indicator
-    PhoneStatusIndicator(Indicator),
+    PhoneStatusIndicator(AgIndicator),
     /// The AG's network subscriber number(s).
     SubscriberNumbers(Vec<String>),
     /// The list of ongoing calls.
@@ -424,19 +426,20 @@ impl From<AgUpdate> for ProcedureRequest {
             ],
             AgUpdate::Ok => vec![at::Response::Ok],
             AgUpdate::Error => vec![at::Response::Error],
-            AgUpdate::SupportedIndicators => {
+            AgUpdate::SupportedAgIndicators => {
                 vec![at::Response::RawBytes(CIND_TEST_RESPONSE_BYTES.to_vec()), at::Response::Ok]
             }
-            AgUpdate::SupportedHfIndicatorResponses { safety, battery } => {
+            AgUpdate::SupportedHfIndicators { safety, battery } => {
                 let mut indicators = vec![];
-                if battery {
-                    indicators.push(at::BluetoothHFIndicator::BatteryLevel);
-                }
                 if safety {
                     indicators.push(at::BluetoothHFIndicator::EnhancedSafety);
                 }
-                vec![at::success(at::Success::Bind { indicators }), at::Response::Ok]
+                if battery {
+                    indicators.push(at::BluetoothHFIndicator::BatteryLevel);
+                }
+                vec![at::success(at::Success::BindList { indicators }), at::Response::Ok]
             }
+            AgUpdate::SupportedHfIndicatorStatus(hf_indicators) => hf_indicators.bind_response(),
             AgUpdate::NetworkOperatorName(format, name) => vec![
                 at::success(at::Success::Cops {
                     format,

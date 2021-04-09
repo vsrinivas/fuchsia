@@ -59,21 +59,27 @@ enum BluetoothHFIndicator {
     BatteryLevel = 2,
 }
 
-# Bluetooth Indicators Feature set command
+# Bluetooth HF Indicators Feature list command
 # HFP 1.8 4.35.1
 command { AT+BIND=indicators: List<BluetoothHFIndicator> }
 
-# Bluetooth Indicators Feature read command
+# Bluetooth HF Indicators Feature read command
 # HFP 1.8 4.35.1
 command { AT+BIND=? }
 
-# Bluetooth Indicators Feature test command
+# Bluetooth HF Indicators Feature read response
+# Lists the supported HF indicators.
+# HFP 1.8 4.35.1
+response BindList { +BIND: (indicators: List<BluetoothHFIndicator>) }
+
+# Bluetooth HF Indicators Feature test command
 # HFP 1.8 4.35.1
 command { AT+BIND? }
 
-# Bluetooth Indicators Feature read response
-# HFP 1.8 4.35.1
-response { +BIND: (indicators: List<BluetoothHFIndicator>) }
+# Bluetooth HF Indicators Feature test response
+# Lists the enabled/disabled status of the supported HF indicators.
+# HFP 1.8 4.36.1.3
+response BindStatus { +BIND:anum:BluetoothHFIndicator,state:BoolAsInt }
 
 # Standard Call hold read command.
 # HFP 1.8 4.34.2

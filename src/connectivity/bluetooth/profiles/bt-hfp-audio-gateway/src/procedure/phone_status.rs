@@ -44,7 +44,7 @@ impl Procedure for PhoneStatusProcedure {
                 self.responded = true;
                 // Only send the update if indicator event reporting is enabled for the SLC and
                 // the specific indicator is activated.
-                if state.indicator_events_reporting.indicator_enabled(&status) {
+                if state.ag_indicator_events_reporting.indicator_enabled(&status) {
                     AgUpdate::PhoneStatusIndicator(status).into()
                 } else {
                     ProcedureRequest::None
@@ -64,7 +64,7 @@ impl Procedure for PhoneStatusProcedure {
 mod tests {
     use super::*;
     use crate::protocol::indicators::{
-        Indicator, IndicatorsReporting, CALL_HELD_INDICATOR_INDEX, SIGNAL_INDICATOR_INDEX,
+        AgIndicator, AgIndicatorsReporting, CALL_HELD_INDICATOR_INDEX, SIGNAL_INDICATOR_INDEX,
     };
     use matches::assert_matches;
 
@@ -102,13 +102,13 @@ mod tests {
     fn update_with_ind_reporting_enabled_produces_expected_request() {
         let mut procedure = PhoneStatusProcedure::new();
         let mut state = SlcState {
-            indicator_events_reporting: IndicatorsReporting::new_enabled(),
+            ag_indicator_events_reporting: AgIndicatorsReporting::new_enabled(),
             ..SlcState::default()
         };
 
         assert!(!procedure.is_terminated());
 
-        let status = Indicator::Signal(4);
+        let status = AgIndicator::Signal(4);
         let update = AgUpdate::PhoneStatusIndicator(status);
         let expected_messages = vec![at::Response::Success(at::Success::Ciev {
             ind: SIGNAL_INDICATOR_INDEX as i64,
@@ -122,12 +122,12 @@ mod tests {
     fn update_with_ind_reporting_disabled_produces_no_request() {
         let mut procedure = PhoneStatusProcedure::new();
         let mut state = SlcState {
-            indicator_events_reporting: IndicatorsReporting::new_disabled(),
+            ag_indicator_events_reporting: AgIndicatorsReporting::new_disabled(),
             ..SlcState::default()
         };
         assert!(!procedure.is_terminated());
 
-        let status = AgUpdate::PhoneStatusIndicator(Indicator::Signal(4));
+        let status = AgUpdate::PhoneStatusIndicator(AgIndicator::Signal(4));
         // Because indicator events reporting is disabled, we expect the procedure to not
         // request to send anything.
         assert_matches!(procedure.ag_update(status, &mut state), ProcedureRequest::None);
@@ -137,12 +137,12 @@ mod tests {
     #[test]
     fn update_with_specific_indicator_disabled_produces_no_request() {
         // Explicitly disable the Battery Level indicator.
-        let mut indicator_events_reporting = IndicatorsReporting::new_enabled();
-        indicator_events_reporting.set_batt_chg(false);
-        let mut state = SlcState { indicator_events_reporting, ..SlcState::default() };
+        let mut ag_indicator_events_reporting = AgIndicatorsReporting::new_enabled();
+        ag_indicator_events_reporting.set_batt_chg(false);
+        let mut state = SlcState { ag_indicator_events_reporting, ..SlcState::default() };
 
         let mut procedure = PhoneStatusProcedure::new();
-        let status = AgUpdate::PhoneStatusIndicator(Indicator::BatteryLevel(1));
+        let status = AgUpdate::PhoneStatusIndicator(AgIndicator::BatteryLevel(1));
         // Because specifically the battery level indicator is disabled, we expect the procedure
         // to not request to send anything.
         assert_matches!(procedure.ag_update(status, &mut state), ProcedureRequest::None);
@@ -150,7 +150,7 @@ mod tests {
 
         // However, sending a different indicator is OK.
         let mut procedure = PhoneStatusProcedure::new();
-        let status = AgUpdate::PhoneStatusIndicator(Indicator::CallHeld(1));
+        let status = AgUpdate::PhoneStatusIndicator(AgIndicator::CallHeld(1));
         let expected_messages = vec![at::Response::Success(at::Success::Ciev {
             ind: CALL_HELD_INDICATOR_INDEX as i64,
             value: 1,

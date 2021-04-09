@@ -11,7 +11,7 @@ use crate::{
     peer::service_level_connection::SlcState,
     protocol::{
         features::{AgFeatures, HfFeatures},
-        indicators::Indicators,
+        indicators::AgIndicators,
     },
 };
 
@@ -207,7 +207,7 @@ struct AgSupportedIndicatorsRequested;
 
 impl SlcProcedureState for AgSupportedIndicatorsRequested {
     fn request(&self) -> ProcedureRequest {
-        AgUpdate::SupportedIndicators.into()
+        AgUpdate::SupportedAgIndicators.into()
     }
 
     fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
@@ -226,7 +226,7 @@ struct AgIndicatorStatusRequestReceived;
 impl SlcProcedureState for AgIndicatorStatusRequestReceived {
     fn request(&self) -> ProcedureRequest {
         InformationRequest::GetAgIndicatorStatus {
-            response: Box::new(|status: Indicators| AgUpdate::IndicatorStatus(status)),
+            response: Box::new(|status: AgIndicators| AgUpdate::IndicatorStatus(status)),
         }
         .into()
     }
@@ -263,9 +263,9 @@ impl SlcProcedureState for AgIndicatorStatusReceived {
                     return SlcErrorState::invalid_hf_argument(update.clone());
                 }
                 if ind != 0 {
-                    state.indicator_events_reporting.enable();
+                    state.ag_indicator_events_reporting.enable();
                 } else {
-                    state.indicator_events_reporting.disable();
+                    state.ag_indicator_events_reporting.disable();
                 }
 
                 Box::new(AgIndicatorStatusEnableReceived { state: state.clone() })
@@ -326,13 +326,16 @@ impl SlcProcedureState for ThreeWaySupportReceived {
         AgUpdate::ThreeWaySupport.into()
     }
 
-    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         if self.is_terminal() {
             return SlcErrorState::already_terminated();
         }
 
         match update {
-            at::Command::Bind { .. } => Box::new(HfSupportedIndicatorsReceived),
+            at::Command::Bind { indicators } => {
+                state.hf_indicators.set(indicators);
+                Box::new(HfSupportedIndicatorsReceived)
+            }
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -362,29 +365,27 @@ struct AgSupportedIndicatorsReceived;
 
 impl SlcProcedureState for AgSupportedIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
-        // TODO(fxb/71668) Stop using raw bytes.
-        let bind_test_resp = format!(
-            "+BIND:({},{})",
-            at::BluetoothHFIndicator::BatteryLevel as i64,
-            at::BluetoothHFIndicator::EnhancedSafety as i64
-        )
-        .into_bytes();
-        vec![at::Response::RawBytes(bind_test_resp), at::Response::Ok].into()
+        // By default, we support both indicators defined in the spec.
+        AgUpdate::SupportedHfIndicators { safety: true, battery: true }.into()
     }
 
-    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         match update {
-            at::Command::BindRead {} => Box::new(ListSupportedGenericIndicatorsReceived),
+            at::Command::BindRead {} => {
+                Box::new(ListSupportedGenericIndicatorsReceived { state: state.clone() })
+            }
             m => SlcErrorState::unexpected_hf(m),
         }
     }
 }
 
-struct ListSupportedGenericIndicatorsReceived;
+struct ListSupportedGenericIndicatorsReceived {
+    state: SlcState,
+}
 
 impl SlcProcedureState for ListSupportedGenericIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
-        AgUpdate::SupportedHfIndicatorResponses { safety: true, battery: true }.into()
+        AgUpdate::SupportedHfIndicatorStatus(self.state.hf_indicators).into()
     }
 
     fn ag_update(&self, _update: AgUpdate, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
@@ -590,7 +591,7 @@ mod tests {
             slc_proc.hf_update(update4, &mut state),
             ProcedureRequest::Info(InformationRequest::GetAgIndicatorStatus { .. })
         );
-        let update5 = AgUpdate::IndicatorStatus(Indicators::default());
+        let update5 = AgUpdate::IndicatorStatus(AgIndicators::default());
         assert_matches!(slc_proc.ag_update(update5, &mut state), ProcedureRequest::SendMessages(_));
 
         // Lastly, the HF should request to enable the indicator status update on the AG.
@@ -635,7 +636,7 @@ mod tests {
         );
 
         // Indicator status should be updated.
-        let update6 = AgUpdate::IndicatorStatus(Indicators::default());
+        let update6 = AgUpdate::IndicatorStatus(AgIndicators::default());
         assert_matches!(slc_proc.ag_update(update6, &mut state), ProcedureRequest::SendMessages(_));
 
         let update7 = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
@@ -644,25 +645,38 @@ mod tests {
         // Optional
         let update8 = at::Command::ChldTest {};
         assert_matches!(slc_proc.hf_update(update8, &mut state), ProcedureRequest::SendMessages(_));
-        // Optional
-        let update9 = at::Command::Bind {
-            indicators: vec![
-                at::BluetoothHFIndicator::BatteryLevel,
-                at::BluetoothHFIndicator::EnhancedSafety,
-            ],
-        };
-        assert_matches!(slc_proc.hf_update(update9, &mut state), ProcedureRequest::SendMessages(_));
-        // Optional
+        // Optional - HF sends its supported HF indicators.
+        let inds =
+            vec![at::BluetoothHFIndicator::EnhancedSafety, at::BluetoothHFIndicator::BatteryLevel];
+        let update9 = at::Command::Bind { indicators: inds.clone() };
+        let expected_messages9 = vec![at::Response::Ok];
+        assert_matches!(slc_proc.hf_update(update9, &mut state),
+            ProcedureRequest::SendMessages(m) if m == expected_messages9
+        );
+        // Optional - HF asks for AG's supported HF indicators.
         let update10 = at::Command::BindTest {};
+        let expected_messages10 =
+            vec![at::success(at::Success::BindList { indicators: inds.clone() }), at::Response::Ok];
         assert_matches!(
             slc_proc.hf_update(update10, &mut state),
-            ProcedureRequest::SendMessages(_)
+            ProcedureRequest::SendMessages(m) if m == expected_messages10
         );
-        // Optional
+        // Optional - HF asks for AG's status of supported HF indicators.
         let update11 = at::Command::BindRead {};
+        let expected_messages11 = vec![
+            at::success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::EnhancedSafety,
+                state: true,
+            }),
+            at::success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::BatteryLevel,
+                state: true,
+            }),
+            at::Response::Ok,
+        ];
         assert_matches!(
             slc_proc.hf_update(update11, &mut state),
-            ProcedureRequest::SendMessages(_)
+            ProcedureRequest::SendMessages(m) if m == expected_messages11
         );
 
         assert!(slc_proc.is_terminated());
