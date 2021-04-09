@@ -136,20 +136,22 @@ void Vdec1::PowerOn() {
 
   // "DECODE_CORRECTNESS_COMMENTS" (are here):
   //
-  // We'd like to pick 500 MHz, but on astro we need to run at 285.7 to avoid decode flakes at 500
-  // MHz.
-  //
   // The maximum frequency used in linux is 648 MHz, but that requires using GP0, which is already
   // being used by the GPU. The linux driver also uses 200MHz in some circumstances for videos <=
   // 1080p30.
   //
+  // We'd like to pick 500 MHz, but on astro we need to run at 285.7 to avoid decode flakes at 400
+  // and 500 MHz.
+  //
   // However, using the h264 multi decoder, we got a few intermittent decode correctness glitches
   // when we ran at 500 MHz on astro, and still a few though less frequent at 400 MHz on astro.  At
   // 285.7 on astro we don't see those, but we do still see some on sherlock at 285.7 MHz. It's
-  // possible we have something else misconfigured, or have a timing-dependent SW bug.  Running at
-  // 285.7 is very likely to be fast enough (for now) assuming linear performance per clock rate.
+  // possible we have something else misconfigured, or have a timing-dependent SW bug.
   //
-  // At 24 MHz on sherlock we don't see any decode correctness glitches.
+  // For astro, running at 285.7 is very likely to be fast enough (for now) assuming linear
+  // performance per clock rate.
+  //
+  // At 24 MHz on sherlock we don't see any decode correctness glitches, but at 285.7 and up we do.
   //
   // All flake rates below are using use-h264-multi-decoder-flake-repro-test, which uses bear.h264.
   //
