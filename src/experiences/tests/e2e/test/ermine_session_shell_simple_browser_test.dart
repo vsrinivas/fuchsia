@@ -270,10 +270,14 @@ void main() {
 
     // Takes another screenshot after 3 seconds.
     await Future.delayed(Duration(seconds: 3));
-    final lateScreenshot = await ermine.screenshot(_sampleViewRect);
 
-    final diff = ermine.screenshotsDiff(earlyScreenshot, lateScreenshot);
-    expect(diff, 1, reason: 'The screenshots are more similar than expected.');
+    final isVideoPlayed = await ermine.waitFor(() async {
+      final lateScreenshot = await ermine.screenshot(_sampleViewRect);
+      final diff = ermine.screenshotsDiff(earlyScreenshot, lateScreenshot);
+      return diff == 1;
+    }, timeout: _timeoutTenSec);
+
+    expect(isVideoPlayed, isTrue);
     print('The video was played');
 
     await browser.close();
