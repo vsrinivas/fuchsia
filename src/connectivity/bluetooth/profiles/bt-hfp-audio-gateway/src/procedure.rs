@@ -50,6 +50,9 @@ pub mod indicators_activation;
 /// Defines the implementation of the Query Operator Selection Procedure.
 pub mod query_operator_selection;
 
+/// Defines the implementation of the Ring Procedure.
+pub mod ring;
+
 /// Defines the implementation of the Phone Status Procedures.
 pub mod phone_status;
 
@@ -65,6 +68,7 @@ use nrec::NrecProcedure;
 use phone_status::PhoneStatusProcedure;
 use query_current_calls::{build_clcc_response, QueryCurrentCallsProcedure};
 use query_operator_selection::QueryOperatorProcedure;
+use ring::RingProcedure;
 use slc_initialization::SlcInitProcedure;
 use subscriber_number_information::{build_cnum_response, SubscriberNumberInformationProcedure};
 use volume_synchronization::VolumeSynchronizationProcedure;
@@ -80,6 +84,9 @@ const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
 (\"roam\",(0,1)),\
 (\"battchg\",(0,5)\
 )";
+
+// TODO (fxbug.dev/72873): Replace with defined AT RING repsonse.
+const RING_BYTES: &[u8] = b"RING";
 
 /// Errors that can occur during the operation of an HFP Procedure.
 #[derive(Clone, Error, Debug)]
@@ -151,6 +158,8 @@ pub enum ProcedureMarker {
     QueryCurrentCalls,
     /// The Indicators Activation and Deactivation procedure as defined in HFP v1.8 Section 4.35.
     Indicators,
+    /// The Ring procedure as defined in HFP v1.8 Section 4.13
+    Ring,
 }
 
 impl ProcedureMarker {
@@ -173,6 +182,7 @@ impl ProcedureMarker {
             Self::VolumeSynchronization => Box::new(VolumeSynchronizationProcedure::new()),
             Self::QueryCurrentCalls => Box::new(QueryCurrentCallsProcedure::new()),
             Self::Indicators => Box::new(IndicatorsActivationProcedure::new()),
+            Self::Ring => Box::new(RingProcedure::new()),
         }
     }
 
@@ -385,6 +395,8 @@ pub enum AgUpdate {
     SubscriberNumbers(Vec<String>),
     /// The list of ongoing calls.
     CurrentCalls(Vec<Call>),
+    /// The information of an IncomingRinging call.
+    Ring(Call),
 }
 
 impl From<AgUpdate> for ProcedureRequest {
@@ -445,6 +457,15 @@ impl From<AgUpdate> for ProcedureRequest {
                 .filter_map(build_clcc_response)
                 .chain(once(at::Response::Ok))
                 .collect(),
+            AgUpdate::Ring(call) => {
+                vec![
+                    at::Response::RawBytes(RING_BYTES.to_vec()),
+                    at::success(at::Success::Clip {
+                        ty: call.number.type_(),
+                        number: call.number.into(),
+                    }),
+                ]
+            }
         }
         .into()
     }

@@ -340,6 +340,19 @@ impl Calls {
         self.current_calls.remove(index);
     }
 
+    /// Operations that act on calls in a particular state should act on the call that was put into
+    /// that state first. `oldest_by_state` allows querying for a call that meets that criteria.
+    fn oldest_by_state(&self, state: CallState) -> Option<(CallIdx, &CallEntry)> {
+        self.calls().filter(|c| c.1.state == state).min_by_key(|c| c.1.state_updated_at)
+    }
+
+    /// Return the Call that has been in the IncomingRinging call state the longest if at least one
+    /// exists.
+    pub fn ringing(&self) -> Option<Call> {
+        self.oldest_by_state(CallState::IncomingRinging)
+            .map(|(idx, call)| Call::new(idx, call.number.clone(), call.state, call.direction))
+    }
+
     /// Returns true if the state of any calls requires ringing.
     pub fn should_ring(&self) -> bool {
         self.calls().any(|c| c.1.state == CallState::IncomingRinging)

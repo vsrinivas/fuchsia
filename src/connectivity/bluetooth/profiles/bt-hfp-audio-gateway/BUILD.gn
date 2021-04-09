@@ -61,6 +61,7 @@ rustc_binary("bin") {
     "src/procedure/phone_status.rs",
     "src/procedure/query_current_calls.rs",
     "src/procedure/query_operator_selection.rs",
+    "src/procedure/ring.rs",
     "src/procedure/slc_initialization.rs",
     "src/procedure/subscriber_number_information.rs",
     "src/procedure/volume_synchronization.rs",

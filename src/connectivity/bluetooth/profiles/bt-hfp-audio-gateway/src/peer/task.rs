@@ -24,13 +24,17 @@ use {
 };
 
 use super::{
-    calls::Calls, gain_control::GainControl, ringer::Ringer,
-    service_level_connection::ServiceLevelConnection, PeerRequest,
+    calls::{Call, Calls},
+    gain_control::GainControl,
+    ringer::Ringer,
+    service_level_connection::ServiceLevelConnection,
+    PeerRequest,
 };
+
 use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
-    procedure::{InformationRequest, ProcedureMarker},
+    procedure::{AgUpdate, InformationRequest, ProcedureMarker},
     profile::ProfileEvent,
     protocol::indicators::{Indicator, Indicators},
 };
@@ -304,9 +308,11 @@ impl PeerTask {
                     }
                 }
                 _ = self.ringer.select_next_some() => {
-                    // TODO (fxbug.dev/64550):
-                    // Send RING and CLIP information via the ServiceLevelConnection to
-                    // the procedure handling the incoming call.
+                    if let Some(call) = self.calls.ringing() {
+                        self.ring_update(call).await;
+                    } else {
+                        self.ringer.ring(false);
+                    }
                 }
                 complete => break,
             }
@@ -315,6 +321,12 @@ impl PeerTask {
         debug!("Stopping task for peer {}", self.id);
 
         self
+    }
+
+    /// Request to send the phone `status` by initiating the Phone Status Indicator
+    /// procedure.
+    async fn ring_update(&mut self, call: Call) {
+        self.connection.receive_ag_request(ProcedureMarker::Ring, AgUpdate::Ring(call)).await;
     }
 
     /// Request to send the phone `status` by initiating the Phone Status Indicator

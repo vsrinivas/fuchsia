@@ -124,6 +124,10 @@ command { AT+CCWA=enable: BoolAsInt }
 # HFP 1.8 4.34.2
 command { AT+CLIP=enable: BoolAsInt }
 
+# Call Line Identification Notification
+# HFP 1.8 4.34.2
+response { +CLIP: number: String, ty: Integer }
+
 # Subscriber Number Information
 # HFP 1.8 4.34.2
 command { AT+CNUM }
