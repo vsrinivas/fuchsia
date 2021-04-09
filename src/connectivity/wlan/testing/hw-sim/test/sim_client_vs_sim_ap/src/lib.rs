@@ -155,8 +155,10 @@ async fn send_then_receive(
     // it will be retried on the next iteration. Once Steps 1 through 3 are complete, the
     // loop terminates.
     while sender_to_peer_ptr.is_some() || receiver_from_peer_ptr.is_some() {
-        info!("{} sending payload to {}", me.name, peer.name);
-        send_fake_eth_frame(peer.addr, me.addr, me.payload, eth).await;
+        if receiver_from_peer_ptr.is_some() {
+            info!("{} sending payload to {}", me.name, peer.name);
+            send_fake_eth_frame(peer.addr, me.addr, me.payload, eth).await;
+        }
 
         match sender_to_peer_ptr.take() {
             None => info!(
@@ -194,13 +196,13 @@ async fn send_then_receive(
 
         // Peer packets cannot be received unless the incoming packet_forwarder is running, so this
         // function must wait until the peer receives the payload.
-        info!("{} awaiting acknowledgement of payload receipt from {}", me.name, peer.name);
         match receiver_from_peer_ptr.take() {
             None => info!(
                 "{} already received acknowledgement from {}. Skipping wait for acknowledgement.",
                 me.name, peer.name
             ),
             Some(mut receiver_from_peer) => {
+                info!("{} awaiting acknowledgement of payload receipt from {}", me.name, peer.name);
                 match test_utils::timeout_after(
                     WAIT_FOR_ACK_INTERVAL.millis(),
                     &mut receiver_from_peer,
@@ -219,15 +221,13 @@ async fn send_then_receive(
                             "{} waiting for {} acknowledgement",
                             me.name, peer.name
                         ));
-                        info!(
-                            "{} received acknowledgement from {}. Ending send_to_receive.",
-                            me.name, peer.name
-                        );
+                        info!("{} received acknowledgement from {}", me.name, peer.name,);
                     }
                 }
             }
         }
     }
+    info!("{} exiting send_then_receive.", me.name);
 }
 
 /// At this stage the client communicates with an imaginary peer that is connected to the same AP.
