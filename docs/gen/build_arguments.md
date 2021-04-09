@@ -86,14 +86,6 @@ injected that way can override that option's setting in this list.
 
 From //build/config/sanitizers/sanitizer_default_options.gni:16
 
-### auto_login_to_guest
-Whether basemgr should use a random identifier for sessions, leading to
-a different persistent data location for every session.
-
-**Current value (from the default):** `false`
-
-From //src/modular/bin/basemgr/BUILD.gn:11
-
 ### auto_update_packages
 Controls the behavior of sysmgr's PackageUpdatingLoader (v1) and the
 universe-resolver (v2). If true, when resolving a component an attempt to
@@ -3688,7 +3680,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:37
+From //src/media/lib/ffmpeg/BUILD.gn:39
 
 ### use_swiftshader_vulkan_icd_on_host
 
