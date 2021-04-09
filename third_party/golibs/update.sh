@@ -37,7 +37,7 @@ GO=$GOROOTBIN/go
 GOFMT=$GOROOTBIN/gofmt
 
 IMPORTS=()
-for dir in $FUCHSIA_DIR $FUCHSIA_DIR/cobalt; do
+for dir in $FUCHSIA_DIR $FUCHSIA_DIR/cobalt $FUCHSIA_DIR/third_party/syzkaller/sys/syz-sysgen; do
   while IFS='' read -r line; do IMPORTS+=("$line"); done < <(cd "$dir" && git ls-files -- \
     '*.go' ':!third_party/golibs/vendor' |
     xargs dirname |
@@ -52,6 +52,7 @@ for dir in $FUCHSIA_DIR $FUCHSIA_DIR/cobalt; do
     sort | uniq |
     xargs "$GO" list -mod=readonly -e -f \
       '{{if not .Goroot}}_ "{{.ImportPath}}"{{end}}' |
+    grep -vF github.com/google/syzkaller/ |
     sort | uniq)
 done
 
