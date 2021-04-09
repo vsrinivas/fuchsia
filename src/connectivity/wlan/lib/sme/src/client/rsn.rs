@@ -42,6 +42,7 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
         update_sink: &mut UpdateSink,
         result: EapolResultCode,
     ) -> Result<(), Error>;
+    fn on_eapol_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error>;
     fn on_pmk_available(
         &mut self,
         update_sink: &mut UpdateSink,
@@ -82,6 +83,10 @@ impl Supplicant for wlan_rsn::Supplicant {
         result: EapolResultCode,
     ) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_eapol_conf(self, update_sink, result)
+    }
+
+    fn on_eapol_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        wlan_rsn::Supplicant::on_eapol_key_frame_timeout(self, update_sink)
     }
 
     fn on_pmk_available(

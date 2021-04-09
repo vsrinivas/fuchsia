@@ -10,7 +10,6 @@ use crate::MacAddr;
 
 pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
-pub const KEY_FRAME_EXCHANGE_MAX_ATTEMPTS: u32 = 3;
 pub const CONNECTION_PING_TIMEOUT_MINUTES: i64 = 1;
 pub const INSPECT_PULSE_CHECK_MINUTES: i64 = 1;
 pub const SAE_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 200;
@@ -56,8 +55,6 @@ impl TimeoutDuration for EstablishingRsnaTimeout {
 pub struct KeyFrameExchangeTimeout {
     pub bssid: MacAddr,
     pub sta_addr: MacAddr,
-    pub frame: eapol::KeyFrameBuf,
-    pub attempt: u32,
 }
 impl TimeoutDuration for KeyFrameExchangeTimeout {
     fn timeout_duration(&self) -> zx::Duration {

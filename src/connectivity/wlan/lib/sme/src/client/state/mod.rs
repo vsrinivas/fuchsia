@@ -2004,17 +2004,21 @@ mod tests {
             frame: test_utils::eapol_key_frame(),
             expect_response: true,
         };
-        let mut state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+        let mut state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update.clone()]);
 
         for i in 1..=3 {
-            println!("send eapol attempt: {}", i);
             expect_eapol_req(&mut h.mlme_stream, bssid);
             expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
 
             let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-            assert_variant!(timed_event.event, Event::KeyFrameExchangeTimeout(ref event) => {
-                assert_eq!(event.attempt, i)
-            });
+            assert_variant!(timed_event.event, Event::KeyFrameExchangeTimeout(_));
+            if i == 3 {
+                suppl_mock.set_on_eapol_key_frame_timeout_failure(format_err!(
+                    "Too many key frame timeouts"
+                ));
+            } else {
+                suppl_mock.set_on_eapol_key_frame_timeout_updates(vec![update.clone()]);
+            }
             state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
         }
 

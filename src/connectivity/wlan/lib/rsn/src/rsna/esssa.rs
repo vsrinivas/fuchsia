@@ -19,6 +19,8 @@ use std::collections::HashSet;
 use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
+const MAX_KEY_FRAME_RETRIES: u32 = 3;
+
 #[derive(Debug)]
 enum Pmksa {
     Initialized { pmk: Option<Vec<u8>> },
@@ -164,6 +166,8 @@ pub(crate) struct EssSa {
     // The last valid key replay counter. Messages with a key replay counter lower than this counter
     // value will be dropped.
     key_replay_counter: u64,
+    // A retry counter and key frame to resend if a timeout is received while waiting for a response.
+    last_key_frame_buf: Option<(u32, eapol::KeyFrameBuf)>,
 
     // Individual Security Associations.
     pmksa: StateMachine<Pmksa>,
@@ -187,6 +191,7 @@ impl EssSa {
             role,
             negotiated_protection,
             key_replay_counter: 0,
+            last_key_frame_buf: None,
             pmksa: StateMachine::new(Pmksa::Initialized { pmk }),
             ptksa: StateMachine::new(Ptksa::Uninitialized { cfg: ptk_exch_cfg }),
             gtksa: StateMachine::new(Gtksa::Uninitialized { cfg: gtk_exch_cfg }),
@@ -214,7 +219,10 @@ impl EssSa {
             _ => None,
         };
         if let Some(pmk) = pmk {
-            self.on_key_confirmed(update_sink, Key::Pmk(pmk.clone()))
+            let mut new_updates = UpdateSink::default();
+            let result = self.on_key_confirmed(&mut new_updates, Key::Pmk(pmk.clone()));
+            self.push_updates(update_sink, new_updates);
+            result
         } else {
             Ok(())
         }
@@ -348,7 +356,28 @@ impl EssSa {
         update_sink: &mut UpdateSink,
         pmk: Vec<u8>,
     ) -> Result<(), Error> {
-        self.on_key_confirmed(update_sink, Key::Pmk(pmk))
+        let mut new_updates = UpdateSink::default();
+        let result = self.on_key_confirmed(&mut new_updates, Key::Pmk(pmk));
+        self.push_updates(update_sink, new_updates);
+        result
+    }
+
+    // Do any necessary final processing before passing updates to the higher layer.
+    fn push_updates(&mut self, update_sink: &mut UpdateSink, new_updates: UpdateSink) {
+        for update in new_updates {
+            match &update {
+                SecAssocUpdate::TxEapolKeyFrame { frame, expect_response } => {
+                    if *expect_response {
+                        self.last_key_frame_buf = Some((1, frame.clone()));
+                    } else {
+                        // We don't expect a response, so we don't need to keep the frame around.
+                        self.last_key_frame_buf = None;
+                    }
+                }
+                _ => (),
+            };
+            update_sink.push(update);
+        }
     }
 
     pub fn on_eapol_conf(
@@ -360,16 +389,34 @@ impl EssSa {
         Ok(())
     }
 
+    pub fn on_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        // Resend the last key frame if appropriate
+        if let Some((attempt, key_frame)) = self.last_key_frame_buf.as_mut() {
+            *attempt += 1;
+            if *attempt > MAX_KEY_FRAME_RETRIES {
+                return Err(Error::TooManyKeyFrameRetries);
+            }
+            update_sink.push(SecAssocUpdate::TxEapolKeyFrame {
+                frame: key_frame.clone(),
+                expect_response: true,
+            });
+        }
+        Ok(())
+    }
+
     pub fn on_eapol_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<B>,
     ) -> Result<(), Error> {
+        let mut new_updates = UpdateSink::default();
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let updates = match frame {
             eapol::Frame::Key(key_frame) => {
                 let mut updates = UpdateSink::default();
                 self.on_eapol_key_frame(&mut updates, key_frame)?;
+                // We've received a new key frame, so don't retransmit our last one.
+                self.last_key_frame_buf.take();
 
                 // Authenticator updates its key replay counter with every outbound EAPOL frame.
                 if let Role::Authenticator = self.role {
@@ -398,20 +445,22 @@ impl EssSa {
             match update {
                 // Process Key updates ourselves to correctly track security associations.
                 SecAssocUpdate::Key(key) => {
-                    if let Err(e) = self.on_key_confirmed(update_sink, key) {
+                    if let Err(e) = self.on_key_confirmed(&mut new_updates, key) {
                         error!("error while processing key: {}", e);
                     };
                 }
                 // Forward all other updates.
-                _ => update_sink.push(update),
+                _ => new_updates.push(update),
             }
         }
 
         // Report once ESSSA is established.
         if !was_esssa_established && self.is_established() {
             info!("established ESSSA");
-            update_sink.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
+            new_updates.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
         }
+
+        self.push_updates(update_sink, new_updates);
 
         Ok(())
     }
@@ -500,6 +549,7 @@ mod tests {
     use crate::rsna::test_util::expect_eapol_resp;
     use crate::rsna::AuthStatus;
     use crate::{Authenticator, Supplicant};
+    use wlan_common::assert_variant;
     use wlan_common::ie::{get_rsn_ie_bytes, rsn::fake_wpa2_s_rsne};
 
     const ANONCE: [u8; 32] = [0x1A; 32];
@@ -1061,6 +1111,34 @@ mod tests {
         let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, GTK_REKEY, 3, 5);
         assert!(result.is_ok());
         assert_eq!(test_util::get_reported_gtk(&updates[..]), None);
+    }
+
+    #[test]
+    fn test_key_frame_timeout() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send the first frame.
+        let updates = send_fourway_msg1(&mut supplicant, |_| {}).1;
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+
+        // Timeout several times.
+        for _ in 1..MAX_KEY_FRAME_RETRIES {
+            let mut update_sink = vec![];
+            supplicant
+                .on_eapol_key_frame_timeout(&mut update_sink)
+                .expect("Failed to send key frame timeout");
+            let msg2_retry = test_util::expect_eapol_resp(&update_sink[..]);
+            assert_eq!(msg2, msg2_retry);
+        }
+
+        // Failure on the last retry.
+        let mut update_sink = vec![];
+        assert_variant!(
+            supplicant.on_eapol_key_frame_timeout(&mut update_sink),
+            Err(Error::TooManyKeyFrameRetries)
+        );
     }
 
     // TODO(hahnr): Add additional tests:

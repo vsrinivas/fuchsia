@@ -99,34 +99,6 @@ impl EstablishingRsna {
         cancel(&mut self.rsna_timeout);
         Err(EstablishRsnaFailureReason::OverallTimeout)
     }
-
-    fn handle_key_frame_exchange_timeout(
-        mut self,
-        timeout: event::KeyFrameExchangeTimeout,
-        event_id: EventId,
-        context: &mut Context,
-    ) -> Result<Self, EstablishRsnaFailureReason> {
-        if triggered(&self.resp_timeout, event_id) {
-            if timeout.attempt < event::KEY_FRAME_EXCHANGE_MAX_ATTEMPTS {
-                warn!("timeout waiting for key frame for attempt {}; retrying", timeout.attempt);
-                send_eapol_frame(
-                    context,
-                    timeout.bssid,
-                    timeout.sta_addr,
-                    timeout.frame,
-                    Some(timeout.attempt + 1),
-                )
-                .map(|id| self.resp_timeout.replace(id));
-                Ok(self)
-            } else {
-                error!("timeout waiting for key frame for last attempt; deauth");
-                cancel(&mut self.resp_timeout);
-                Err(EstablishRsnaFailureReason::KeyFrameExchangeTimeout)
-            }
-        } else {
-            Ok(self)
-        }
-    }
 }
 
 impl LinkUp {
@@ -292,15 +264,19 @@ impl LinkState {
                     }
                 }
                 Event::KeyFrameExchangeTimeout(timeout) => {
-                    let (transition, state) = state.release_data();
+                    let (transition, mut state) = state.release_data();
                     context.info.report_key_exchange_timeout();
-                    match state.handle_key_frame_exchange_timeout(timeout, event_id, context) {
-                        Ok(still_establishing_rsna) => {
+                    match process_eapol_key_frame_timeout(context, timeout, &mut state.rsna) {
+                        RsnaStatus::Failed(failure_reason) => Err(failure_reason),
+                        RsnaStatus::Unchanged => Ok(transition.to(state).into()),
+                        RsnaStatus::Progressed { new_resp_timeout } => {
+                            let still_establishing_rsna =
+                                state.on_rsna_progressed(new_resp_timeout);
                             Ok(transition.to(still_establishing_rsna).into())
                         }
-                        Err(failure) => {
-                            state_change_msg.set_msg("key frame rx timeout".to_string());
-                            Err(failure)
+                        _ => {
+                            error!("Unexpected RsnaStatus after key frame exchange timeout");
+                            Err(EstablishRsnaFailureReason::InternalError)
                         }
                     }
                 }
@@ -392,23 +368,17 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
 }
 
 /// Sends an eapol frame, and optionally schedules a timeout for the response.
-/// If schedule_timeout_attempt.is_some(), we should expect our peer to send us
-/// an eapol frame in response to this one. In this case we schedule a new
-/// timeout with the given attempt number and return the corresponding event id.
+/// If schedule_timeout is true, we should expect our peer to send us an eapol
+/// frame in response to this one, and schedule a timeout as well.
 fn send_eapol_frame(
     context: &mut Context,
     bssid: [u8; 6],
     sta_addr: [u8; 6],
     frame: eapol::KeyFrameBuf,
-    schedule_timeout_attempt: Option<u32>,
+    schedule_timeout: bool,
 ) -> Option<EventId> {
-    let resp_timeout_id = if let Some(attempt) = schedule_timeout_attempt {
-        Some(context.timer.schedule(event::KeyFrameExchangeTimeout {
-            bssid,
-            sta_addr,
-            frame: frame.clone(),
-            attempt,
-        }))
+    let resp_timeout_id = if schedule_timeout {
+        Some(context.timer.schedule(event::KeyFrameExchangeTimeout { bssid, sta_addr }))
     } else {
         None
     };
@@ -441,6 +411,28 @@ fn process_eapol_conf(
     }
     context.info.report_supplicant_updates(&update_sink);
     process_eapol_updates(context, eapol_conf.dst_addr, update_sink)
+}
+
+fn process_eapol_key_frame_timeout(
+    context: &mut Context,
+    timeout: event::KeyFrameExchangeTimeout,
+    rsna: &mut Rsna,
+) -> RsnaStatus {
+    let mut update_sink = rsna::UpdateSink::default();
+    match rsna.supplicant.on_eapol_key_frame_timeout(&mut update_sink) {
+        Err(e) => {
+            error!("error handling EAPOL key frame timeout: {}", e);
+            context.info.report_supplicant_error(anyhow::anyhow!(e));
+            return RsnaStatus::Failed(EstablishRsnaFailureReason::KeyFrameExchangeTimeout);
+        }
+        Ok(_) => {
+            if update_sink.is_empty() {
+                return RsnaStatus::Unchanged;
+            }
+        }
+    }
+    context.info.report_supplicant_updates(&update_sink);
+    process_eapol_updates(context, timeout.bssid, update_sink)
 }
 
 fn process_eapol_ind(
@@ -499,12 +491,8 @@ fn process_eapol_updates(
             // ESS Security Association requests to send an EAPOL frame.
             // Forward EAPOL frame to MLME.
             SecAssocUpdate::TxEapolKeyFrame { frame, expect_response } => {
-                let schedule_timeout_attempt = if expect_response { Some(1) } else { None };
-                if let Some(timeout) =
-                    send_eapol_frame(context, bssid, sta_addr, frame, schedule_timeout_attempt)
-                {
-                    new_resp_timeout.replace(timeout);
-                }
+                new_resp_timeout =
+                    send_eapol_frame(context, bssid, sta_addr, frame, expect_response)
             }
             // ESS Security Association derived a new key.
             // Configure key in MLME.
@@ -527,7 +515,7 @@ fn process_eapol_updates(
                     // ESS Security Association was successfully established. Link is now up.
                     SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
                     SecAssocStatus::WrongPassword => {
-                        return RsnaStatus::Failed(EstablishRsnaFailureReason::InternalError)
+                        return RsnaStatus::Failed(EstablishRsnaFailureReason::InternalError);
                     }
                     _ => (),
                 }

@@ -178,6 +178,7 @@ fn mock_supplicant(auth_cfg: auth::Config) -> (MockSupplicant, MockSupplicantCon
     let started = Arc::new(AtomicBool::new(false));
     let start_failure = Arc::new(Mutex::new(None));
     let on_eapol_frame_sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
+    let on_eapol_key_frame_timeout = Arc::new(Mutex::new(Ok(UpdateSink::default())));
     let on_sae_handshake_ind_sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
     let on_sae_frame_rx_sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
     let on_sae_timeout_sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
@@ -186,6 +187,7 @@ fn mock_supplicant(auth_cfg: auth::Config) -> (MockSupplicant, MockSupplicantCon
         started: started.clone(),
         start_failure: start_failure.clone(),
         on_eapol_frame: on_eapol_frame_sink.clone(),
+        on_eapol_key_frame_timeout: on_eapol_key_frame_timeout.clone(),
         on_eapol_frame_cb: on_eapol_frame_cb.clone(),
         on_sae_handshake_ind: on_sae_handshake_ind_sink.clone(),
         on_sae_frame_rx: on_sae_frame_rx_sink.clone(),
@@ -196,6 +198,7 @@ fn mock_supplicant(auth_cfg: auth::Config) -> (MockSupplicant, MockSupplicantCon
         started,
         start_failure,
         mock_on_eapol_frame: on_eapol_frame_sink,
+        mock_on_eapol_key_frame_timeout: on_eapol_key_frame_timeout,
         mock_on_sae_handshake_ind: on_sae_handshake_ind_sink,
         mock_on_sae_frame_rx: on_sae_frame_rx_sink,
         mock_on_sae_timeout: on_sae_timeout_sink,
@@ -231,6 +234,7 @@ pub struct MockSupplicant {
     start_failure: Arc<Mutex<Option<anyhow::Error>>>,
     on_eapol_frame: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_eapol_frame_cb: Arc<Mutex<Option<Box<Cb>>>>,
+    on_eapol_key_frame_timeout: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_sae_handshake_ind: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_sae_frame_rx: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_sae_timeout: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
@@ -286,6 +290,10 @@ impl Supplicant for MockSupplicant {
         Ok(())
     }
 
+    fn on_eapol_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        populate_update_sink(update_sink, &self.on_eapol_key_frame_timeout)
+    }
+
     fn on_pmk_available(
         &mut self,
         _update_sink: &mut UpdateSink,
@@ -330,6 +338,7 @@ pub struct MockSupplicantController {
     started: Arc<AtomicBool>,
     start_failure: Arc<Mutex<Option<anyhow::Error>>>,
     mock_on_eapol_frame: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
+    mock_on_eapol_key_frame_timeout: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     mock_on_sae_handshake_ind: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     mock_on_sae_frame_rx: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     mock_on_sae_timeout: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
@@ -347,6 +356,14 @@ impl MockSupplicantController {
 
     pub fn set_on_eapol_frame_updates(&self, updates: UpdateSink) {
         *self.mock_on_eapol_frame.lock().unwrap() = Ok(updates);
+    }
+
+    pub fn set_on_eapol_key_frame_timeout_updates(&self, updates: UpdateSink) {
+        *self.mock_on_eapol_key_frame_timeout.lock().unwrap() = Ok(updates);
+    }
+
+    pub fn set_on_eapol_key_frame_timeout_failure(&self, error: anyhow::Error) {
+        *self.mock_on_eapol_key_frame_timeout.lock().unwrap() = Err(error);
     }
 
     pub fn set_on_sae_handshake_ind_updates(&self, updates: UpdateSink) {
