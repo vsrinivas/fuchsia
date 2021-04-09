@@ -19,6 +19,7 @@ test_list = [
   "archivist_benchmarks_test",
   "audio_mixer_profiler_test",
   "dart_inspect_benchmarks_test",
+  "diagnostics_benchmarks_test",
   "fidlc_microbenchmarks_test",
   "garnet_input_latency_benchmarks_test",
   "kernel_boot_stats_test",
@@ -174,6 +175,7 @@ group("package_deps") {
   public_deps = [
     "//src/connectivity/network/tests/benchmarks",
     "//src/diagnostics/archivist/bench",
+    "//src/diagnostics/lib/selectors/bench",
     "//src/lib/diagnostics/inspect/rust:benchmarks",
     "//src/media/audio/audio_core/mixer/tools:audio_mixer_profiler",
     "//src/tests/benchmarks:kernel-boot-benchmarks",

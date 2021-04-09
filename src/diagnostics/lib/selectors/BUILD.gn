@@ -34,5 +34,8 @@ fuchsia_unittest_package("selectors-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":selectors-test" ]
+  deps = [
+    ":selectors-test",
+    "bench",
+  ]
 }
