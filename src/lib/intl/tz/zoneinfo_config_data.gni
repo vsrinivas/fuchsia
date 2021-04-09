@@ -1,0 +1,118 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Provides the IANA time zone database files to the given package.
+#
+# The files will be made available in the namespace of the target component(s)
+# namespace `/config/data/tzdata/zoneinfo/tzif2`.
+# Users of cctz should set the TZDIR environment variable to this path.
+#
+# There will also be a file at `/config/data/tzdata/revision.txt` containing the
+# time zone database revision ID, e.g. `2019c`.
+#
+# Options:
+# - `for_pkg` (required)
+#   [string] The name of the package to which time zone files will be supplied
+#
+# - `tzif_version` (optional)
+#   [string] The version number of the TZif format.
+#   Currently supported: { `"2"` }
+#   Default: `"2"`
+#
+# - `include_revision_file` (optional)
+#   [boolean] If false, `/config/data/tzdata/revision.txt` will be omitted.
+#   Useful in case there's also an `icu_tzdata_config_data` target with the same
+#   `for_pkg`.
+#   Default: `true`
+#
+# Example:
+#
+# ```
+# zone_info_config_data("zoneinfo-for-cctz-tests") {
+#   for_pkg = "cctz-tests"
+# }
+# ```
+#
+template("zoneinfo_config_data") {
+  tzif_version = "2"
+  if (defined(invoker.tzif_version)) {
+    tzif_version = invoker.tzif_version
+  }
+  assert(tzif_version == "2", "Unsupported TZif version")
+
+  if (!defined(invoker.include_revision_file)) {
+    invoker.include_revision_file = true
+  }
+
+  version_name = "tzif${tzif_version}"
+
+  sub_targets = []
+
+  directory_list =
+      read_file("//prebuilt/third_party/zoneinfo/${version_name}_files.json",
+                "json")
+
+  # config_data() does not allow generating multiple output directories, so
+  # we create one config_data target per directory, e.g.
+  # ```
+  # config_data("_zoneinfo_config_data_for_my_pkg_dir_Antarctica") {
+  #   ...
+  #   outputs = [ "tzdata/zoneinfo/tzif2/Antarctica/{{source_file_part}}" ]
+  # }
+  # ```
+  foreach(entry, directory_list) {
+    directory = entry.directory
+    target_suffix = string_replace(directory, "/", "_")
+    target_label = "_${target_name}_dir_${target_suffix}"
+    sub_targets += [ ":${target_label}" ]
+
+    config_data(target_label) {
+      forward_variables_from(invoker,
+                             [
+                               "for_pkg",
+                               "testonly",
+                             ])
+
+      source_path = "//prebuilt/third_party/zoneinfo/${version_name}"
+      if (directory != "") {
+        source_path = "${source_path}/${directory}"
+      }
+      sources = []
+      foreach(file_name, entry.file_names) {
+        sources += [ "${source_path}/${file_name}" ]
+      }
+
+      output_path = "tzdata/zoneinfo/${version_name}"
+      if (directory != "") {
+        output_path = "${output_path}/${directory}"
+      }
+      outputs = [ "${output_path}/{{source_file_part}}" ]
+    }
+  }  # /foreach
+
+  if (invoker.include_revision_file) {
+    revision_target_label = "_${target_name}_revision_txt"
+    sub_targets += [ ":${revision_target_label}" ]
+    config_data(revision_target_label) {
+      forward_variables_from(invoker,
+                             [
+                               "for_pkg",
+                               "testonly",
+                             ])
+      sources = [ "//prebuilt/third_party/zoneinfo/version.txt" ]
+      outputs = [ "tzdata/revision.txt" ]
+    }
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = sub_targets
+  }
+}
