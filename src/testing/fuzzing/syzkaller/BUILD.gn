@@ -105,6 +105,7 @@ if (is_host) {
     name = "github.com/google/syzkaller/..."
     source_dir = syzkaller_dir
     allow_globbing = true
+    deps = [ "//third_party/golibs:golang.org/x/sys" ]
   }
 
   syz_ldflags = [
