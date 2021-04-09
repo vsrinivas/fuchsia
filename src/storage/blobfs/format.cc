@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <iterator>
+#include <optional>
 #include <utility>
 
 #include <fbl/ref_ptr.h>
@@ -24,92 +25,133 @@ namespace {
 
 using ::block_client::BlockDevice;
 
-// Attempts to format the device as an FVM-based filesystem.
-//
-// If |device| does not speak FVM protocols, returns ZX_OK.
-// If the volume cannot be modified (either removing old slices, or extending
-// the volume to contain new slices), an error from the FVM is returned.
-zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
+std::optional<fuchsia_hardware_block_volume_VolumeInfo> TryGetVolumeInfo(
+    const BlockDevice& device) {
   fuchsia_hardware_block_volume_VolumeInfo fvm_info = {};
-  zx_status_t status = device->VolumeQuery(&fvm_info);
+  zx_status_t status = device.VolumeQuery(&fvm_info);
   if (status != ZX_OK) {
-    // If the device does not speak the FVM protocol, that's acceptable.
-    return ZX_OK;
+    return std::nullopt;
   }
+  return fvm_info;
+}
 
-  superblock->slice_size = fvm_info.slice_size;
-  superblock->flags |= kBlobFlagFVM;
+// Generates a superblock that will cover the entire device described by |block_info|.
+zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& block_info,
+                                        const FilesystemOptions& options) {
+  uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
+  Superblock superblock;
+  InitializeSuperblock(blocks, kBlobfsDefaultInodeCount, options, &superblock);
 
-  if (superblock->slice_size % kBlobfsBlockSize) {
+  zx_status_t status = CheckSuperblock(&superblock, blocks);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Check superblock failed: " << status;
+    return zx::error(status);
+  }
+  return zx::ok(superblock);
+}
+
+// Generates a FVM-aware superblock with the minimum number of slices reserved for each metadata
+// region.
+zx::status<Superblock> FormatSuperblockFVM(BlockDevice* device,
+                                           const fuchsia_hardware_block_volume_VolumeInfo& fvm_info,
+                                           const FilesystemOptions& options) {
+  // Initialize the superblock with no blocks and no nodes. This'll set many of the fields (mostly
+  // block_counts) into invalid states, but we'll correct these later after we've allocated slices
+  // for the various metadata regions.
+  Superblock superblock;
+  InitializeSuperblock(/*block_count=*/0, /*inode_count=*/0, options, &superblock);
+
+  superblock.slice_size = fvm_info.slice_size;
+  superblock.flags |= kBlobFlagFVM;
+
+  if (superblock.slice_size % kBlobfsBlockSize) {
     FX_LOGS(ERROR) << "mkfs: Slice size not multiple of blobfs block";
-    return ZX_ERR_IO_INVALID;
+    return zx::error(ZX_ERR_IO_INVALID);
   }
 
-  status = fvm::ResetAllSlices(device);
+  zx_status_t status = fvm::ResetAllSlices(device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to reset slices";
-    return status;
+    return zx::error(status);
   }
 
-  const size_t blocks_per_slice = superblock->slice_size / kBlobfsBlockSize;
+  const size_t blocks_per_slice = superblock.slice_size / kBlobfsBlockSize;
   // Converts blocks to slices, rounding up to the nearest slice size.
   auto BlocksToSlices = [blocks_per_slice](uint64_t blocks) {
     return fbl::round_up(blocks, blocks_per_slice) / blocks_per_slice;
   };
+
   uint64_t data_blocks = fbl::round_up(kMinimumDataBlocks, blocks_per_slice);
 
+  // Allocate the minimum number of blocks for a minimal bitmap.
   uint64_t offset = kFVMBlockMapStart / blocks_per_slice;
   uint64_t length = BlocksToSlices(BlocksRequiredForBits(data_blocks));
-  superblock->abm_slices = static_cast<uint32_t>(length);
-  status = device->VolumeExtend(offset, superblock->abm_slices);
+  superblock.abm_slices = static_cast<uint32_t>(length);
+  status = device->VolumeExtend(offset, superblock.abm_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate block map";
-    return status;
+    return zx::error(status);
   }
 
+  // Allocate the minimum number of node blocks in FVM.
   offset = kFVMNodeMapStart / blocks_per_slice;
-  superblock->ino_slices = 1;
-  status = device->VolumeExtend(offset, superblock->ino_slices);
+  length = BlocksToSlices(BlocksRequiredForInode(kBlobfsDefaultInodeCount));
+  superblock.ino_slices = length;
+  status = device->VolumeExtend(offset, superblock.ino_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate node map";
-    return status;
+    return zx::error(status);
   }
 
   // Allocate the minimum number of journal blocks in FVM.
   offset = kFVMJournalStart / blocks_per_slice;
-  length = fbl::round_up(kDefaultJournalBlocks, blocks_per_slice) / blocks_per_slice;
-  superblock->journal_slices = static_cast<uint32_t>(length);
-  status = device->VolumeExtend(offset, superblock->journal_slices);
+  length = BlocksToSlices(kDefaultJournalBlocks);
+  superblock.journal_slices = static_cast<uint32_t>(length);
+  status = device->VolumeExtend(offset, superblock.journal_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate journal blocks";
-    return status;
+    return zx::error(status);
   }
 
   // Allocate the minimum number of data blocks in the FVM.
   offset = kFVMDataStart / blocks_per_slice;
-  length = fbl::round_up(kMinimumDataBlocks, blocks_per_slice) / blocks_per_slice;
-  superblock->dat_slices = static_cast<uint32_t>(length);
-  status = device->VolumeExtend(offset, superblock->dat_slices);
+  length = BlocksToSlices(kMinimumDataBlocks);
+  superblock.dat_slices = static_cast<uint32_t>(length);
+  status = device->VolumeExtend(offset, superblock.dat_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate data blocks";
-    return status;
+    return zx::error(status);
   }
 
-  superblock->inode_count =
-      static_cast<uint32_t>(superblock->ino_slices * superblock->slice_size / kBlobfsInodeSize);
+  superblock.inode_count =
+      static_cast<uint32_t>(superblock.ino_slices * superblock.slice_size / kBlobfsInodeSize);
+  superblock.data_block_count =
+      static_cast<uint32_t>(superblock.dat_slices * superblock.slice_size / kBlobfsBlockSize);
+  superblock.journal_block_count =
+      static_cast<uint32_t>(superblock.journal_slices * superblock.slice_size / kBlobfsBlockSize);
 
-  superblock->data_block_count =
-      static_cast<uint32_t>(superblock->dat_slices * superblock->slice_size / kBlobfsBlockSize);
-  superblock->journal_block_count =
-      static_cast<uint32_t>(superblock->journal_slices * superblock->slice_size / kBlobfsBlockSize);
-  return ZX_OK;
+  // Now that we've allocated some slices, re-query FVM for the number of blocks assigned to the
+  // partition. We'll use this as a sanity check in CheckSuperblock.
+  fuchsia_hardware_block_BlockInfo block_info = {};
+  status = device->BlockGetInfo(&block_info);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot acquire block info: " << status;
+    return zx::error(status);
+  }
+  uint64_t blocks = block_info.block_count * block_info.block_size / kBlobfsBlockSize;
+
+  status = CheckSuperblock(&superblock, blocks);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Check superblock failed: " << status;
+    return zx::error(status);
+  }
+  return zx::ok(superblock);
 }
 
 // Take the contents of the filesystem, generated in-memory, and transfer
 // them to the underlying device.
 zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superblock,
-                                  const RawBitmap& block_bitmap,
-                                  const fuchsia_hardware_block_BlockInfo& block_info) {
+                                  const RawBitmap& block_bitmap, uint64_t block_size) {
   uint64_t blockmap_blocks = BlockMapBlocks(superblock);
   uint64_t nodemap_blocks = NodeMapBlocks(superblock);
 
@@ -178,7 +220,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
     return status;
   }
 
-  auto FsToDeviceBlocks = [disk_block = block_info.block_size](uint64_t block) {
+  auto FsToDeviceBlocks = [disk_block = block_size](uint64_t block) {
     return block * (kBlobfsBlockSize / disk_block);
   };
 
@@ -232,37 +274,35 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
   fuchsia_hardware_block_BlockInfo block_info = {};
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot acquire block info: " << status;
+    FX_LOGS(ERROR) << "Cannot acquire block info: " << status;
     return status;
   }
 
   if (block_info.flags & BLOCK_FLAG_READONLY) {
-    FX_LOGS(ERROR) << "cannot format read-only device";
+    FX_LOGS(ERROR) << "Cannot format read-only device";
     return ZX_ERR_ACCESS_DENIED;
   }
-  if (block_info.block_size == 0 || block_info.block_count == 0) {
+  if (block_info.block_size == 0) {
+    FX_LOGS(ERROR) << "Device has zero-sized blocks";
     return ZX_ERR_NO_SPACE;
   }
   if (kBlobfsBlockSize % block_info.block_size != 0) {
+    FX_LOGS(ERROR) << "Device block size " << block_info.block_size << " invalid";
     return ZX_ERR_IO_INVALID;
   }
 
-  uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
-  Superblock superblock;
-  InitializeSuperblock(blocks, options, &superblock);
-
-  status = TryFormattingFVM(device, &superblock);
-  if (status != ZX_OK) {
-    return status;
+  zx::status<Superblock> superblock_or;
+  if (auto maybe_volume_info = TryGetVolumeInfo(*device); maybe_volume_info.has_value()) {
+    superblock_or = FormatSuperblockFVM(device, maybe_volume_info.value(), options);
+  } else {
+    superblock_or = FormatSuperblock(block_info, options);
   }
-
-  status = CheckSuperblock(&superblock, blocks);
-  if (status != ZX_OK) {
-    return status;
+  if (superblock_or.is_error()) {
+    return superblock_or.status_value();
   }
+  const Superblock& superblock = superblock_or.value();
 
   uint64_t blockmap_blocks = BlockMapBlocks(superblock);
-
   RawBitmap block_bitmap;
   if (block_bitmap.Reset(blockmap_blocks * kBlobfsBlockBits)) {
     FX_LOGS(ERROR) << "Couldn't allocate block map";
@@ -276,7 +316,7 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
   // Reserve first |kStartBlockMinimum| data blocks
   block_bitmap.Set(0, kStartBlockMinimum);
 
-  status = WriteFilesystemToDisk(device, superblock, block_bitmap, block_info);
+  status = WriteFilesystemToDisk(device, superblock, block_bitmap, block_info.block_size);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to write to disk: " << status;
     return status;

@@ -82,7 +82,13 @@ zx_status_t BlobfsFormat::ComputeSlices(uint64_t inode_count, uint64_t data_bloc
           fvm_info_.dat_slices);
 
   zx_status_t status;
-  if ((status = CheckSuperblock(&fvm_info_, blocks_, /*quiet=*/false)) != ZX_OK) {
+  // Explicitly override the |max| number of blocks in CheckSuperblock. We already verified the
+  // input image in BlobfsFormat::BlobfsFormat, so all we need to check is that the slice sizes we
+  // computed above match up with the block sizes stored in the superblock. |blocks_| stores the
+  // number of blocks in the input image, which is necessarily <= the number of blocks in the
+  // resultant FVM image, so we can't use |blocks_| here.
+  if ((status = CheckSuperblock(&fvm_info_, std::numeric_limits<uint64_t>::max(),
+                                /*quiet=*/false)) != ZX_OK) {
     fprintf(stderr, "Check info failed\n");
     return status;
   }

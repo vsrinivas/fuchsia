@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <ostream>
+
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <fbl/algorithm.h>
@@ -66,11 +68,13 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count);
 // |available|: An additional number of blocks available which may be used by the journal.
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
 
-// Creates a superblock, formatted for |block_count| disk blocks, on a non-FVM volume.
+// Creates a superblock, formatted for |block_count| disk blocks and |inode_count| inodes, on a
+// non-FVM volume.
 // This method should also be invoked to create FVM-based superblocks, but it is the responsibility
 // of the caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all
 // FVM-specific fields.
-void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options, Superblock* info);
+void InitializeSuperblock(uint64_t block_count, uint64_t inode_count,
+                          const FilesystemOptions& options, Superblock* info);
 
 // Get a pointer to the nth block of the bitmap.
 inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
@@ -90,6 +94,8 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 void FormatBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 void FormatInactiveBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 void FormatBlobMerkleVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+
+std::ostream& operator<<(std::ostream& stream, const Superblock& info);
 
 }  // namespace blobfs
 

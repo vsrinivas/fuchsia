@@ -54,7 +54,7 @@ std::unique_ptr<Blobfs> CreateBlobfs(uint64_t block_count, FilesystemOptions opt
     ADD_FAILURE() << "Failed to resize the file for " << block_count << " blocks";
     return nullptr;
   }
-  if (Mkfs(fs_file.fd(), block_count, options) == -1) {
+  if (Mkfs(fs_file.fd(), block_count, kBlobfsDefaultInodeCount, options) == -1) {
     ADD_FAILURE() << "Mkfs failed";
     return nullptr;
   }
@@ -136,17 +136,27 @@ Inode AddCompressedBlob(uint64_t data_size, Blobfs& blobfs) {
 
 TEST(BlobfsHostFormatTest, FormatDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 10000, FilesystemOptions{}), 0);
+  EXPECT_EQ(Mkfs(file.fd(), 10000, kBlobfsDefaultInodeCount, FilesystemOptions{}), 0);
+}
+
+TEST(BlobfsHostFormatTest, FormatDeviceWithExtraInodes) {
+  File file(tmpfile());
+  EXPECT_EQ(Mkfs(file.fd(), 10000, kBlobfsDefaultInodeCount + 1, FilesystemOptions{}), 0);
 }
 
 TEST(BlobfsHostFormatTest, FormatZeroBlockDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 0, FilesystemOptions{}), -1);
+  EXPECT_EQ(Mkfs(file.fd(), 0, kBlobfsDefaultInodeCount, FilesystemOptions{}), -1);
 }
 
 TEST(BlobfsHostFormatTest, FormatTooSmallDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 1, FilesystemOptions{}), -1);
+  EXPECT_EQ(Mkfs(file.fd(), 1, kBlobfsDefaultInodeCount, FilesystemOptions{}), -1);
+}
+
+TEST(BlobfsHostFormatTest, FormatTooFewInodes) {
+  File file(tmpfile());
+  EXPECT_EQ(Mkfs(file.fd(), 10000, kBlobfsDefaultInodeCount / 2, FilesystemOptions{}), -1);
 }
 
 // This test verifies that formatting actually writes zero-filled
@@ -154,7 +164,7 @@ TEST(BlobfsHostFormatTest, FormatTooSmallDevice) {
 TEST(BlobfsHostFormatTest, JournalFormattedAsEmpty) {
   File file(tmpfile());
   constexpr uint64_t kBlockCount = 10000;
-  EXPECT_EQ(Mkfs(file.fd(), kBlockCount, FilesystemOptions{}), 0);
+  EXPECT_EQ(Mkfs(file.fd(), kBlockCount, kBlobfsDefaultInodeCount, FilesystemOptions{}), 0);
 
   char block[kBlobfsBlockSize] = {};
   ASSERT_EQ(ReadBlock(file.fd(), 0, block), ZX_OK);
@@ -177,7 +187,7 @@ TEST(BlobfsHostFormatTest, JournalFormattedAsEmpty) {
 // Verify that we compress small files.
 TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
   File fs_file(tmpfile());
-  EXPECT_EQ(Mkfs(fs_file.fd(), 10000, FilesystemOptions{}), 0);
+  EXPECT_EQ(Mkfs(fs_file.fd(), 10000, kBlobfsDefaultInodeCount, FilesystemOptions{}), 0);
 
   constexpr size_t all_zero_size = 12 * 1024;
   File blob_file(tmpfile());

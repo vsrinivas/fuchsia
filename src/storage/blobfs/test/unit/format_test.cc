@@ -106,7 +106,7 @@ uint64_t MinimumFilesystemSlices(uint64_t kSliceSize) {
   };
 
   const uint64_t kSuperBlockSlices = BlocksToSlices(1);
-  const uint64_t kInodeSlices = 1;
+  const uint64_t kInodeSlices = BlocksToSlices(kBlobfsDefaultInodeCount / kBlobfsInodesPerBlock);
   const uint64_t kJournalSlices = BlocksToSlices(kDefaultJournalBlocks);
   const uint64_t kDataSlices = BlocksToSlices(kMinimumDataBlocks);
   const uint64_t kBlockMapSlices = BlocksToSlices(BlocksRequiredForBits(kMinimumDataBlocks));
@@ -118,8 +118,7 @@ TEST(FormatFilesystemTest, FormatFVMSmallestDevice) {
   const uint32_t kBlockSize = 512;
   const uint64_t kSliceSize = kBlobfsBlockSize * 8;
   const uint64_t kSliceCount = MinimumFilesystemSlices(kSliceSize);
-  const uint64_t kDiskBlockRatio = kBlobfsBlockSize / kBlockSize;
-  const uint64_t kBlockCount = kDiskBlockRatio * MinimumFilesystemBlocks();
+  const uint64_t kBlockCount = kSliceCount * kSliceSize / kBlockSize;
 
   // Smallest possible device.
   {
@@ -273,7 +272,7 @@ TEST(FormatFilesystemTest, CreateBlobfsFailureWithLessBlocks) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
   device->SetBlockCount(kBlockCount - 1);
-  ASSERT_EQ(ZX_ERR_BAD_STATE, CheckMountability(std::move(device)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
 }
 
 // After formatting a filesystem with block size valid block count N, mounting
@@ -333,7 +332,7 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultInodeCount) {
 }
 
 TEST(FormatFilesystemTest, FormatFvmDeviceDefaultJournalBlocks) {
-  const uint64_t kBlockCount = MinimumFilesystemBlocks();
+  const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = kBlobfsBlockSize;
   const uint64_t kSliceSize = kBlobfsBlockSize * 2;
   const uint64_t kSliceCount = 1028;

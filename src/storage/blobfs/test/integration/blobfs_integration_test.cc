@@ -42,6 +42,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
@@ -435,9 +436,13 @@ fs_test::TestFilesystemOptions MinimumFvmDiskSizeOptions() {
       fbl::round_up(kMinimumDataBlocks, blocks_per_slice) / blocks_per_slice;
   uint64_t required_journal_slices =
       fbl::round_up(kDefaultJournalBlocks, blocks_per_slice) / blocks_per_slice;
+  uint64_t required_inode_slices =
+      fbl::round_up(BlocksRequiredForInode(kBlobfsDefaultInodeCount), blocks_per_slice) /
+      blocks_per_slice;
 
-  // Require an additional 1 slice each for super, inode, and block bitmaps.
-  uint64_t blobfs_slices = required_journal_slices + required_data_slices + 3;
+  // Require an additional 1 slice each for super and block bitmaps.
+  uint64_t blobfs_slices =
+      required_journal_slices + required_inode_slices + required_data_slices + 2;
   fvm::Header header =
       fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, blobfs_slices, options.fvm_slice_size);
   options.device_block_count = header.fvm_partition_size / options.device_block_size;
@@ -481,7 +486,8 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   const uint64_t slice_size = fs.options().fvm_slice_size;
   EXPECT_GE(info.total_bytes(), slice_size);
   EXPECT_EQ(info.total_bytes() % slice_size, 0ul);
-  EXPECT_EQ(info.total_nodes(), slice_size / kBlobfsInodeSize);
+  EXPECT_GE(info.total_nodes(), kBlobfsDefaultInodeCount);
+  EXPECT_EQ((info.total_nodes() * sizeof(Inode)) % slice_size, 0ul);
   EXPECT_EQ(info.used_nodes(), expected_nodes);
 }
 
@@ -1227,14 +1233,16 @@ TEST_F(BlobfsWithFvmTest, ResizePartition) {
   ASSERT_NO_FATAL_FAILURE(GetSliceRange(*this, query, &slices));
   ASSERT_EQ(slices.size(), 2ul);
   EXPECT_TRUE(slices[0].allocated);
-  EXPECT_EQ(slices[0].count, 1ul);
+  EXPECT_EQ(slices[0].count, 20ul);
   EXPECT_TRUE(slices[1].allocated);
   EXPECT_EQ(slices[1].count, 1ul);
   EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
-  size_t required = fs().options().fvm_slice_size / kBlobfsInodeSize + 2;
-  for (size_t i = 0; i < required; i++) {
-    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), kBlobfsInodeSize);
+  size_t required_nodes = (20 * fs().options().fvm_slice_size) / kBlobfsInodeSize + 2;
+  for (size_t i = 0; i < required_nodes; i++) {
+    std::unique_ptr<BlobInfo> info =
+        GenerateBlob([&](void* data, size_t len) { ::memcpy(data, &i, std::min(sizeof(i), len)); },
+                     fs().mount_path(), sizeof(i));
 
     fbl::unique_fd fd;
     ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
@@ -1248,7 +1256,7 @@ TEST_F(BlobfsWithFvmTest, ResizePartition) {
   ASSERT_NO_FATAL_FAILURE(GetSliceRange(*this, query, &slices));
   ASSERT_EQ(slices.size(), 2ul);
   EXPECT_TRUE(slices[0].allocated);
-  EXPECT_GT(slices[0].count, 1ul);
+  EXPECT_GT(slices[0].count, 20ul);
   EXPECT_TRUE(slices[1].allocated);
   EXPECT_GT(slices[1].count, 1ul);
 }
@@ -1270,7 +1278,7 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
 
   // Shrink slice so FVM will differ from Blobfs.
   uint64_t offset = BlobfsBlockToFvmSlice(fs(), kFVMNodeMapStart);
-  ASSERT_NO_FATAL_FAILURE(FvmShrink(fs().DevicePath().value(), offset, 1));
+  ASSERT_NO_FATAL_FAILURE(FvmShrink(fs().DevicePath().value(), offset + 19, 1));
 
   fbl::unique_fd fd(open(fs().DevicePath().value().c_str(), O_RDWR));
   ASSERT_TRUE(fd);
@@ -1280,8 +1288,8 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
                   launch_stdio_async),
             ZX_OK);
 
-  // Grow slice count to twice what it should be.
-  ASSERT_NO_FATAL_FAILURE(FvmExtend(fs().DevicePath().value(), offset, 2));
+  // Grow slice count with one extra slice.
+  ASSERT_NO_FATAL_FAILURE(FvmExtend(fs().DevicePath().value(), offset + 19, 2));
 
   EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
@@ -1292,7 +1300,7 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
   ASSERT_NO_FATAL_FAILURE(GetSliceRange(*this, query, &slices));
   ASSERT_EQ(slices.size(), 1ul);
   EXPECT_TRUE(slices[0].allocated);
-  EXPECT_EQ(slices[0].count, 1ul);
+  EXPECT_EQ(slices[0].count, 20ul);
 }
 
 TEST_P(BlobfsIntegrationTest, FailedWrite) {

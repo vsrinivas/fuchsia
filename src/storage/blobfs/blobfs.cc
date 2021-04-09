@@ -101,12 +101,7 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
     return ZX_ERR_IO;
   }
 
-  // Perform superblock validations which should succeed prior to journal replay.
-  const uint64_t total_blocks = TotalBlocks(*superblock);
-  if (blocks < total_blocks) {
-    return ZX_ERR_BAD_STATE;
-  }
-  return CheckSuperblock(superblock, total_blocks, /*quiet=*/true);
+  return CheckSuperblock(superblock, blocks, /*quiet=*/false);
 }
 
 }  // namespace

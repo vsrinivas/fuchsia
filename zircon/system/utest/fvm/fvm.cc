@@ -1811,6 +1811,8 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   ASSERT_TRUE(vp_fd);
   fuchsia_hardware_block_volume_VsliceRange
       ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+  fuchsia_hardware_block_volume_VsliceRange
+      initial_ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
   zx_status_t status;
   size_t actual_ranges_count;
 
@@ -1830,11 +1832,12 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
 
     for (unsigned i = 0; i < actual_ranges_count; i++) {
       ASSERT_TRUE(ranges[i].allocated);
-      ASSERT_EQ(ranges[i].count, 1);
+      ASSERT_GT(ranges[i].count, 0);
+      initial_ranges[i] = ranges[i];
     }
 
     // Manually shrink slices so FVM will differ from the partition.
-    uint64_t offset = query_request.vslice_start[0];
+    uint64_t offset = query_request.vslice_start[0] + ranges[0].count - 1;
     uint64_t length = 1;
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), offset, length,
                                                          &status),
@@ -1885,8 +1888,11 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
     ASSERT_EQ(ranges[0].count, 1);
 
     // Now extend all extents by some number of additional slices.
+    fuchsia_hardware_block_volume_VsliceRange
+        ranges_before_extend[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
     for (unsigned i = 0; i < query_request.count; i++) {
-      uint64_t offset = query_request.vslice_start[i] + 1;
+      ranges_before_extend[i] = ranges[i];
+      uint64_t offset = query_request.vslice_start[i] + ranges[i].count;
       uint64_t length = query_request.count - i;
       ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
                                                            &status),
@@ -1903,7 +1909,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
     ASSERT_EQ(query_request.count, actual_ranges_count);
     for (unsigned i = 0; i < query_request.count; i++) {
       ASSERT_TRUE(ranges[i].allocated);
-      ASSERT_EQ(ranges[i].count, 1 + query_request.count - i);
+      ASSERT_EQ(ranges[i].count, ranges_before_extend[i].count + query_request.count - i);
     }
   }
 
@@ -1928,7 +1934,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
 
   for (unsigned i = 0; i < query_request.count; i++) {
     ASSERT_TRUE(ranges[i].allocated);
-    ASSERT_EQ(ranges[i].count, 1);
+    ASSERT_EQ(ranges[i].count, initial_ranges[i].count);
   }
 }
 

@@ -62,7 +62,8 @@ class QueryServiceTest : public BlobfsWithFvmTest {
     EXPECT_GE(info.used_bytes(), expected_bytes);
     EXPECT_LE(info.used_bytes(), info.total_bytes());
 
-    EXPECT_EQ(info.total_nodes(), slice_size / kBlobfsInodeSize);
+    EXPECT_GE(info.total_nodes(), kBlobfsDefaultInodeCount);
+    EXPECT_EQ((info.total_nodes() * sizeof(Inode)) % slice_size, 0ul);
     EXPECT_EQ(info.used_nodes(), expected_nodes);
 
     // Should be able to query for the koid of the |fs_id| event.

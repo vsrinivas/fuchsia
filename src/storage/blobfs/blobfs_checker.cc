@@ -215,7 +215,8 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, boo
       // the FVM to report a slice size smaller than what is reported by Blobfs. In this
       // case, automatically fail without trying to resolve the situation, as it is
       // possible that Blobfs structures are allocated in the slices that have been lost.
-      FX_LOGS(ERROR) << "Mismatched slice count";
+      FX_LOGS(ERROR) << "Mismatched slice count (superblock reports " << blobfs_count
+                     << ", fvm has " << fvm_count << "). " << *info;
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 

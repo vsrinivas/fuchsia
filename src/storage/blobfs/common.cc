@@ -29,24 +29,6 @@
 namespace blobfs {
 namespace {
 
-// Dumps the content of superblock.
-std::ostream& operator<<(std::ostream& stream, const Superblock& info) {
-  return stream << "\ninfo.magic0: " << info.magic0 << "\ninfo.magic1: " << info.magic1
-                << "\ninfo.major_version: " << info.major_version << "\ninfo.flags: " << info.flags
-                << "\ninfo.block_size: " << info.block_size
-                << "\ninfo.data_block_count: " << info.data_block_count
-                << "\ninfo.journal_block_count: " << info.journal_block_count
-                << "\ninfo.inode_count: " << info.inode_count
-                << "\ninfo.alloc_block_count: " << info.alloc_block_count
-                << "\ninfo.alloc_inode_count: " << info.alloc_inode_count
-                << "\ninfo.slice_size: " << info.slice_size
-                << "\ninfo.abm_slices: " << info.abm_slices
-                << "\ninfo.ino_slices: " << info.ino_slices
-                << "\ninfo.dat_slices: " << info.dat_slices
-                << "\ninfo.journal_slices: " << info.journal_slices
-                << "\ninfo.oldest_minor_version: " << info.oldest_minor_version;
-}
-
 uint32_t GetBlobfsMajorVersionFromOptions(const FilesystemOptions& options) {
   if (options.blob_layout_format == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
     return kBlobfsCompactMerkleTreeVersion;
@@ -70,6 +52,23 @@ bool CheckFilesystemAndDriverCompatibility(uint32_t major_version) {
 
 }  // namespace
 
+std::ostream& operator<<(std::ostream& stream, const Superblock& info) {
+  return stream << "\ninfo.magic0: " << info.magic0 << "\ninfo.magic1: " << info.magic1
+                << "\ninfo.major_version: " << info.major_version << "\ninfo.flags: " << info.flags
+                << "\ninfo.block_size: " << info.block_size
+                << "\ninfo.data_block_count: " << info.data_block_count
+                << "\ninfo.journal_block_count: " << info.journal_block_count
+                << "\ninfo.inode_count: " << info.inode_count
+                << "\ninfo.alloc_block_count: " << info.alloc_block_count
+                << "\ninfo.alloc_inode_count: " << info.alloc_inode_count
+                << "\ninfo.slice_size: " << info.slice_size
+                << "\ninfo.abm_slices: " << info.abm_slices
+                << "\ninfo.ino_slices: " << info.ino_slices
+                << "\ninfo.dat_slices: " << info.dat_slices
+                << "\ninfo.journal_slices: " << info.journal_slices
+                << "\ninfo.oldest_minor_version: " << info.oldest_minor_version;
+}
+
 // Validate the metadata for the superblock, given a maximum number of
 // available blocks.
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
@@ -92,6 +91,12 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
   if (info->data_block_count < kMinimumDataBlocks) {
     if (!quiet)
       FX_LOGS(ERROR) << "Not enough space for minimum data partition";
+    return ZX_ERR_NO_SPACE;
+  }
+
+  if (info->inode_count < kBlobfsDefaultInodeCount) {
+    if (!quiet)
+      FX_LOGS(ERROR) << "Not enough inodes (have " << info->inode_count << ")";
     return ZX_ERR_NO_SPACE;
   }
 
@@ -132,13 +137,12 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
     return ZX_ERR_NO_SPACE;
   }
 
-  if ((info->flags & kBlobFlagFVM) == 0) {
-    if (TotalBlocks(*info) > max) {
-      if (!quiet)
-        FX_LOGS(ERROR) << "too large for device" << *info;
-      return ZX_ERR_INVALID_ARGS;
-    }
-  } else {
+  if (TotalBlocks(*info) > max) {
+    if (!quiet)
+      FX_LOGS(ERROR) << "Too large for device (" << max << " blocks): " << *info;
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (info->flags & kBlobFlagFVM) {
     const size_t blocks_per_slice = info->slice_size / info->block_size;
 
     // Ensure that we have enough room in the first slice for the backup superblock, too.
@@ -214,18 +218,16 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count) {
 
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available) { return current + available; }
 
-void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options,
-                          Superblock* info) {
-  uint64_t inodes = kBlobfsDefaultInodeCount;
+void InitializeSuperblock(uint64_t block_count, uint64_t inode_count,
+                          const FilesystemOptions& options, Superblock* info) {
   memset(info, 0x00, sizeof(*info));
   info->magic0 = kBlobfsMagic0;
   info->magic1 = kBlobfsMagic1;
   info->major_version = GetBlobfsMajorVersionFromOptions(options);
   info->flags = kBlobFlagClean;
   info->block_size = kBlobfsBlockSize;
-  // TODO(planders): Consider modifying the inode count if we are low on space.
-  //                 It doesn't make sense to have fewer data blocks than inodes.
-  info->inode_count = inodes;
+  // Round up |inode_count| to use a block-aligned amount.
+  info->inode_count = BlocksRequiredForInode(inode_count) * kBlobfsInodesPerBlock;
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
   info->oldest_minor_version = options.oldest_minor_version;

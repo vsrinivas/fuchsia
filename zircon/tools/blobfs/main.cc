@@ -244,9 +244,11 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
     data_blocks_ += blob_layout->TotalBlockCount();
   }
 
-  blobfs::Superblock info;
-  info.inode_count = blobfs::kBlobfsDefaultInodeCount;
+  required_inodes_ = std::max(blobfs::kBlobfsDefaultInodeCount, uint64_t{merkle_list_.size()});
 
+  blobfs::Superblock info;
+  // Initialize enough of |info| to be able to compute the number of bytes the image will occupy.
+  info.inode_count = required_inodes_;
   info.data_block_count = data_blocks_;
   info.journal_block_count = blobfs::kDefaultJournalBlocks;
   *out = blobfs::TotalBlocks(info) * blobfs::kBlobfsBlockSize;
@@ -260,7 +262,8 @@ zx_status_t BlobfsCreator::Mkfs() {
     return ZX_ERR_IO;
   }
 
-  int r = blobfs::Mkfs(fd_.get(), block_count, {.blob_layout_format = blob_layout_format_});
+  int r = blobfs::Mkfs(fd_.get(), block_count, required_inodes_,
+                       {.blob_layout_format = blob_layout_format_});
 
   if (r >= 0 && !blob_list_.is_empty()) {
     zx_status_t status;

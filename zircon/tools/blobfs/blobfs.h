@@ -61,6 +61,9 @@ class BlobfsCreator : public FsCreator {
 
   // The format blobfs should use to store blobs.
   blobfs::BlobLayoutFormat blob_layout_format_ = blobfs::BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+
+  // The number of inodes required in the resultant blobfs image.
+  uint64_t required_inodes_ = 0;
 };
 
 #endif  // ZIRCON_TOOLS_BLOBFS_BLOBFS_H_

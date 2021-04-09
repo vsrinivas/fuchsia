@@ -154,7 +154,6 @@ TEST_F(BlobfsDiskTest, FailsOnUncleanDismount) {
 }
 
 TEST_F(BlobfsDiskTest, SucceedsIfFirstNodeMatches) {
-  superblock_.inode_count = blobfs::kBlobfsInodesPerBlock;
   ASSERT_NO_FAILURES(WriteSuperblock());
 
   BlobCorruptOptions options;
@@ -186,7 +185,6 @@ TEST_F(BlobfsDiskTest, SucceedsIfFirstNodeMatches) {
 }
 
 TEST_F(BlobfsDiskTest, SucceedsIfLastNodeMatches) {
-  superblock_.inode_count = blobfs::kBlobfsInodesPerBlock;
   ASSERT_NO_FAILURES(WriteSuperblock());
 
   BlobCorruptOptions options;
