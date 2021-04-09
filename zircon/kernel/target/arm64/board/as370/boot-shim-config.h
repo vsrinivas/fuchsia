@@ -82,10 +82,6 @@ static void add_cpu_topology(zbi_header_t* zbi) {
 static void append_board_boot_item(zbi_header_t* bootdata) {
   add_cpu_topology(bootdata);
 
-  // add memory configuration
-  append_boot_item(bootdata, ZBI_TYPE_MEM_CONFIG, 0, &mem_config,
-                   sizeof(zbi_mem_range_t) * countof(mem_config));
-
   // add kernel drivers
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_DW8250_UART, &uart_driver,
                    sizeof(uart_driver));

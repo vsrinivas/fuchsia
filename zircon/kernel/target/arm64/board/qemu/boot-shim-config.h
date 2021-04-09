@@ -117,10 +117,6 @@ static void set_top_of_ram(uint64_t top) {
 static void append_board_boot_item(zbi_header_t* bootdata) {
   add_cpu_topology(bootdata);
 
-  // add memory configuration
-  append_boot_item(bootdata, ZBI_TYPE_MEM_CONFIG, 0, &mem_config,
-                   sizeof(zbi_mem_range_t) * countof(mem_config));
-
   // add some "nvram" for storing the crashlog
   const uint64_t crashlog_length = 0x10000;
   const zbi_nvram_t crashlog = {
