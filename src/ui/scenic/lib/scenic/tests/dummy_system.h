@@ -25,7 +25,11 @@ class DummySystem : public System {
 
   scheduling::SessionUpdater::UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-      uint64_t frame_trace_id) override {
+      uint64_t frame_trace_id,
+      fit::function<void(scheduling::SessionId)> destroy_session) override {
+    for (auto session_id : update_sessions_return_value_.sessions_with_failed_updates) {
+      destroy_session(session_id);
+    }
     return update_sessions_return_value_;
   }
 

@@ -40,10 +40,7 @@ class GfxSystem final : public System, public scenic_impl::TakeScreenshotDelegat
   // |scenic_impl::System|
   scheduling::SessionUpdater::UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-      uint64_t trace_id) override;
-
-  // For tests.
-  SessionManager* session_manager() { return &session_manager_; }
+      uint64_t trace_id, fit::function<void(scheduling::SessionId)> destroy_session) override;
 
   static escher::EscherUniquePtr CreateEscher(sys::ComponentContext* app_context);
 
@@ -60,6 +57,7 @@ class GfxSystem final : public System, public scenic_impl::TakeScreenshotDelegat
   Sysmem* const sysmem_;
   Engine* const engine_;
   SessionManager session_manager_;
+  ViewTreeUpdater view_tree_updater_;
   const std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
 };
 

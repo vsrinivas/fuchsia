@@ -126,7 +126,7 @@ class HitTestTest : public gtest::TestLoopFixture {
   }
 
   CustomSession CreateSession(SessionId id) {
-    return CustomSession(id, engine_->session_context(), engine_->view_tree_updater());
+    return CustomSession(id, engine_->session_context(), view_tree_updater_);
   }
 
   // Creates a session ID 0 with a compositor, layer stack, layer, scene, camera, and renderer.
@@ -170,6 +170,7 @@ class HitTestTest : public gtest::TestLoopFixture {
  private:
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<Engine> engine_;
+  ViewTreeUpdater view_tree_updater_;
 
   float layer_width_, layer_height_;
 };

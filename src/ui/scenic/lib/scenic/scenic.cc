@@ -58,10 +58,11 @@ scheduling::SessionUpdater::UpdateResults Scenic::UpdateSessions(
     uint64_t trace_id) {
   scheduling::SessionUpdater::UpdateResults results;
   for (auto& [type_id, system] : systems_) {
-    auto temp_result = system->UpdateSessions(sessions_to_update, trace_id);
-    for (auto session_id : temp_result.sessions_with_failed_updates) {
-      CloseSession(session_id);
-    }
+    auto temp_result = system->UpdateSessions(
+        sessions_to_update, trace_id,
+        // Have to destroy the session *inside* GfxSystem to make sure the resulting ViewTree
+        // updates are added before we commit updates to the ViewTree.
+        /*destroy_session*/ [this](scheduling::SessionId session_id) { CloseSession(session_id); });
     results.sessions_with_failed_updates.insert(temp_result.sessions_with_failed_updates.begin(),
                                                 temp_result.sessions_with_failed_updates.end());
   }

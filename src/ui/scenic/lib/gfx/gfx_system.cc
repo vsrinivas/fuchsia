@@ -224,7 +224,7 @@ void GfxSystem::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallba
 
 scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-    uint64_t frame_trace_id) {
+    uint64_t frame_trace_id, fit::function<void(scheduling::SessionId)> destroy_session) {
   scheduling::SessionUpdater::UpdateResults update_results;
   CommandContext command_context{
       .sysmem = sysmem_,
@@ -234,7 +234,7 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
             renderer->WarmPipelineCache({framebuffer_format});
           },
       .scene_graph = engine_->scene_graph(),
-      .view_tree_updater = &engine_->view_tree_updater(),
+      .view_tree_updater = &view_tree_updater_,
       .image_pipe_updater = image_pipe_updater_};
 
   // Update scene graph and stage ViewTree updates of Annotation Views first.
@@ -247,7 +247,7 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
 
   // If annotation manager has annotation view holder creation requests, try
   // fulfilling them by adding the annotation ViewHolders to the SceneGraph.
-  engine_->annotation_manager()->FulfillCreateRequests(engine_->view_tree_updater());
+  engine_->annotation_manager()->FulfillCreateRequests(view_tree_updater_);
 
   // Apply scheduled updates to each session, and process the changes to the local session scene
   // graph.
@@ -257,11 +257,12 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
       bool success = session->ApplyScheduledUpdates(&command_context, present_id);
       if (!success) {
         update_results.sessions_with_failed_updates.insert(session_id);
+        destroy_session(session_id);
       }
     }
   }
 
-  ViewTreeUpdates updates = engine_->view_tree_updater().FinishAndExtractViewTreeUpdates();
+  ViewTreeUpdates updates = view_tree_updater_.FinishAndExtractViewTreeUpdates();
 
   // Run through compositors, find the active Scene, stage it as the view tree root.
   {

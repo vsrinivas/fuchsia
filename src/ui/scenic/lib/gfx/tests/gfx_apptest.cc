@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/async/default.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -317,6 +320,56 @@ TEST_F(GfxSystemTest, SafePresenter_OnFramePresentedRace) {
 
   EXPECT_EQ(1U, scenic()->num_sessions());
   EXPECT_EQ(count, expected_count);
+}
+
+// Check that the gfx::ViewTree is kept in sync on Session destruction.
+TEST_F(GfxSystemTest, CreateAndDestroySessionWithView) {
+  fuchsia::ui::scenic::SessionPtr session;
+  scenic()->CreateSession(session.NewRequest(), nullptr);
+
+  auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+  const zx_koid_t view_ref_koid = utils::ExtractKoid(view_ref);
+  {  // Create a minimal scene.
+    constexpr uint32_t kScene = 1, kViewHolder = 2, kView = 3;
+    auto [v, vh] = scenic::ViewTokenPair::New();
+    std::vector<fuchsia::ui::scenic::Command> commands;
+    commands.push_back(scenic::NewCommand(scenic::NewCreateSceneCmd(kScene)));
+    commands.push_back(scenic::NewCommand(
+        scenic::NewCreateViewHolderCmd(kViewHolder, std::move(vh), "view_holder")));
+    commands.push_back(scenic::NewCommand(scenic::NewAddChildCmd(kScene, kViewHolder)));
+    commands.push_back(scenic::NewCommand(scenic::NewCreateViewCmd(
+        kView, std::move(v), std::move(control_ref), std::move(view_ref), "view")));
+    session->Enqueue(std::move(commands));
+
+    session->Present2(utils::CreatePresent2Args(0, {}, {}, 0), [](auto) {});
+    session.events().OnFramePresented = [this](auto) { QuitLoop(); };
+    RunLoopFor(zx::sec(1));
+  }
+
+  // View is now part of the ViewTree.
+  EXPECT_EQ(1U, scenic()->num_sessions());
+  const auto& view_tree = engine()->scene_graph()->view_tree();
+  EXPECT_TRUE(view_tree.IsTracked(view_ref_koid));
+
+  {  // Send an invalid command which should cause session destruction.
+    constexpr uint32_t kUnknownResourceId = 12456;
+    std::vector<fuchsia::ui::scenic::Command> commands;
+    commands.push_back(scenic::NewCommand(scenic::NewReleaseResourceCmd(kUnknownResourceId)));
+    session->Enqueue(std::move(commands));
+
+    session->Present2(utils::CreatePresent2Args(0, {}, {}, 0), [](auto) {});
+    bool error = false;
+    session.set_error_handler([this, &error](auto) {
+      error = true;
+      QuitLoop();
+    });
+    RunLoopFor(zx::sec(1));
+    EXPECT_TRUE(error);
+  }
+
+  // View should no longer be part of the ViewTree.
+  EXPECT_EQ(0U, scenic()->num_sessions());
+  EXPECT_FALSE(view_tree.IsTracked(view_ref_koid));
 }
 
 }  // namespace test
