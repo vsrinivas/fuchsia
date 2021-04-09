@@ -9,7 +9,9 @@ pub mod config;
 pub mod environment;
 pub mod error;
 pub mod policy;
+pub mod rights;
 pub mod router;
+pub mod walk_state;
 
 use {
     crate::{

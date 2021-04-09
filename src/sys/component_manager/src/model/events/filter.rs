@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::walk_state::WalkStateUnit, ::routing::error::EventsRoutingError,
-    cm_rust::DictionaryValue, maplit::hashmap, std::collections::HashMap,
+    ::routing::{error::EventsRoutingError, walk_state::WalkStateUnit},
+    cm_rust::DictionaryValue,
+    maplit::hashmap,
+    std::collections::HashMap,
 };
 
 type OptionFilterMap = Option<HashMap<String, DictionaryValue>>;

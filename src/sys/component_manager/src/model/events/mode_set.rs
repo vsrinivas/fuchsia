@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::walk_state::WalkStateUnit, ::routing::error::EventsRoutingError,
+    ::routing::{error::EventsRoutingError, walk_state::WalkStateUnit},
     cm_rust::EventMode,
 };
 
