@@ -3750,20 +3750,6 @@ Whether libraries under //vendor should be linted.
 
 From //build/fidl/fidl_library.gni:13
 
-### verify_system_package_entries
-Whether to check and enforce that contributions to the system image package
-are coming from the proper board and product file GN arguments
-(respectively board_system_image_deps and product_system_image_deps), as
-well as dev_system_image_deps.
-
-If this argument is set to false, the verification step can still be
-manually performed with:
- ninja out/default obj/build/images/system/verify_system_package_entries.success.stamp
-
-**Current value (from the default):** `false`
-
-From //build/images/system/BUILD.gn:14
-
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
 
