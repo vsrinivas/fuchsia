@@ -50,7 +50,7 @@ constexpr int64_t kDestPosRollbackTolerance = 29;
 // If source position error becomes greater than this, we stop trying to smoothly synchronize and
 // instead 'snap' to the expected pos (sometimes referred to as "jam sync"). This will surface as a
 // discontinuity (if jumping backward) or a dropout (if jumping forward), for this source stream.
-constexpr zx::duration kMaxErrorThresholdDuration = zx::usec(500);
+constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(1);
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock)
@@ -633,6 +633,7 @@ void MixStage::JamSyncPositions(AudioClock& source_clock, AudioClock& dest_clock
                                 int64_t dest_frame, zx::time mono_now_from_dest) {
   auto prev_running_dest_frame = info.next_dest_frame;
   auto prev_running_source_frame = info.next_source_frame;
+  double prev_source_pos_error = static_cast<double>(info.source_pos_error.get());
   auto initial_position_was_set = info.initial_position_is_set;
 
   info.ResetPositions(dest_frame, bookkeeping);
@@ -659,23 +660,23 @@ void MixStage::JamSyncPositions(AudioClock& source_clock, AudioClock& dest_clock
     std::string source_logging = source_stream.str();
 
     if (!initial_position_was_set) {
-      FX_LOGS(DEBUG) << common_logging;
       FX_LOGS(DEBUG) << "Setting initial positions: " << dest_logging << source_logging;
+      FX_LOGS(DEBUG) << common_logging;
     } else if (prev_running_dest_frame != dest_frame) {
-      FX_LOGS(WARNING) << common_logging;
       FX_LOGS(WARNING) << "Dest position discontinuity: " << dest_frame - prev_running_dest_frame
                        << " frames; " << dest_logging << " (expect " << prev_running_dest_frame
-                       << ")" << source_logging << " (was " << prev_running_source_frame.raw_value()
-                       << ")";
-    } else {
+                       << ")" << source_logging << " (was " << ffl::String::DecRational
+                       << prev_running_source_frame << ")";
       FX_LOGS(WARNING) << common_logging;
+    } else {
       FX_LOGS(WARNING) << "Stream out-of-sync by "
-                       << (static_cast<double>(info.source_pos_error.get()) / ZX_USEC(1))
-                       << " us (limit "
-                       << (static_cast<double>(kMaxErrorThresholdDuration.get()) / ZX_USEC(1))
+                       << static_cast<float>(prev_source_pos_error / ZX_USEC(1)) << " us (limit "
+                       << static_cast<float>(static_cast<float>(kMaxErrorThresholdDuration.get()) /
+                                             ZX_USEC(1))
                        << " us) at dest " << mono_now_from_dest.get() << "; " << dest_logging
-                       << source_logging << " (expect " << prev_running_source_frame.raw_value()
-                       << ")";
+                       << source_logging << " (expect " << ffl::String::DecRational
+                       << prev_running_source_frame << ")";
+      FX_LOGS(WARNING) << common_logging;
     }
   }
 }

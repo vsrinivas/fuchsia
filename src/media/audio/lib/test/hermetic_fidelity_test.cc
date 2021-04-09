@@ -226,7 +226,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
     // Show results in tabular forms, for easy copy into hermetic_fidelity_results.cc.
     const auto& chan_level_results_db =
         level_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
-    printf("\n\tFull-spectrum Frequency Response - %s - output channel %zu",
+    printf("\n\tFull-spectrum Frequency Response - %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       printf("%s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
@@ -236,7 +236,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
 
     const auto& chan_sinad_results_db =
         sinad_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
-    printf("\n\tSignal-to-Noise and Distortion -   %s - output channel %zu",
+    printf("\n\tSignal-to-Noise and Distortion -   %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       printf("%s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),

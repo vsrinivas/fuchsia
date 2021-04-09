@@ -60,18 +60,18 @@ class AudioClockTest : public testing::Test {
   }
 
   void ValidateSyncResetSource(AudioClock& source_clock, AudioClock& dest_clock) {
-    SCOPED_TRACE("SyncMode::ResetSourceClock, Source " + ClockSummary(source_clock) + ", Dest " +
-                 ClockSummary(dest_clock));
-    EXPECT_EQ(AudioClock::SyncMode::ResetSourceClock,
+    SCOPED_TRACE("SyncMode::RevertSourceToMonotonic, Source " + ClockSummary(source_clock) +
+                 ", Dest " + ClockSummary(dest_clock));
+    EXPECT_EQ(AudioClock::SyncMode::RevertSourceToMonotonic,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
 
     ExpectZeroMicroSrc(source_clock, dest_clock);
   }
 
   void ValidateSyncResetDest(AudioClock& source_clock, AudioClock& dest_clock) {
-    SCOPED_TRACE("SyncMode::ResetDestClock, Source " + ClockSummary(source_clock) + ", Dest " +
-                 ClockSummary(dest_clock));
-    EXPECT_EQ(AudioClock::SyncMode::ResetDestClock,
+    SCOPED_TRACE("SyncMode::RevertDestToMonotonic, Source " + ClockSummary(source_clock) +
+                 ", Dest " + ClockSummary(dest_clock));
+    EXPECT_EQ(AudioClock::SyncMode::RevertDestToMonotonic,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
 
     ExpectZeroMicroSrc(source_clock, dest_clock);
@@ -105,6 +105,8 @@ class AudioClockTest : public testing::Test {
       ExpectNonzeroMicroSrc(source_clock, dest_clock);
     }
   }
+
+  void TestRevertToMonotonic(AudioClock source_clock, AudioClock dest_clock);
 };
 
 TEST_F(AudioClockTest, EqualsOperator) {
@@ -211,8 +213,9 @@ TEST_F(AudioClockTest, SyncModeNone) {
   ValidateSyncNone(device_adjustable, device_adjustable_same_domain);
 }
 
-// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::ResetSourceClock
-TEST_F(AudioClockTest, SyncModeResetSourceClock) {
+// Validate AudioClock::SyncModeForClocks() combinations leading to
+// SyncMode::RevertSourceToMonotonic
+TEST_F(AudioClockTest, SyncModeRevertSourceToMonotonic) {
   auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
 
   auto device_monotonic =
@@ -222,8 +225,9 @@ TEST_F(AudioClockTest, SyncModeResetSourceClock) {
   ValidateSyncResetSource(client_adjustable, device_monotonic);
 }
 
-// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::ResetSourceClock
-TEST_F(AudioClockTest, SyncModeResetDestClock) {
+// Validate AudioClock::SyncModeForClocks() combinations leading to
+// SyncMode::RevertSourceToMonotonic
+TEST_F(AudioClockTest, SyncModeRevertDestToMonotonic) {
   auto device_monotonic =
       AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 
@@ -302,46 +306,82 @@ TEST_F(AudioClockTest, SyncModeMicroSrc) {
   ValidateSyncMicroSrc(device_adjustable, device_adjustable_diff_domain);
 }
 
-// Validate AudioClock::SyncMode::ResetSourceClock/ResetDestClock for ClientAdjustable clocks.
-TEST_F(AudioClockTest, ResetToMonotonic) {
-  // These modes are triggered by a synchronization with a MONOTONIC device clock.
-  auto client = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
-  auto device_diff_domain =
+// Validate ClientAdjustable tuning behavior, when their counterpart clock is changed from
+// non-monotonic to monotonic. This validates both RevertSource and RevertDest modes; one of the
+// source and dest clocks is ClientAdjustable; the other is DeviceFixed monotonic.
+//
+// A very large initial error and a non-monotonic DeviceFixed counterpart leads the client clock
+// to the sync mode RevertSource|DestToMonotonic, which converges rapidly to within 10 nsec.
+void AudioClockTest::TestRevertToMonotonic(AudioClock source_clock, AudioClock dest_clock) {
+  // This is our initial device clock before switching to the provided monotonic one.
+  AudioClock device_diff_domain =
       AudioClock::DeviceFixed(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
-  auto device_monotonic =
-      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 
-  // First validate the render signal flow -- client clock as source clock
-  //
-  // The error should result in significant (upward) adjustment of client clock.
+  bool client_is_source = source_clock.is_client_clock();
+  AudioClock& client_clock = client_is_source ? source_clock : dest_clock;
+
+  AudioClock& initial_source_clock = client_is_source ? client_clock : device_diff_domain;
+  AudioClock& initial_dest_clock = client_is_source ? device_diff_domain : client_clock;
+
+  // Position errors affect tuning in opposite manner, when tuning source clock versus dest clock.
+  const auto kLargeError = zx::nsec(10000 * (client_is_source ? 1 : -1));
+  const auto kSmallError = zx::nsec(50 * (client_is_source ? 1 : -1));
+  const auto kVerySmallError = zx::nsec(5 * (client_is_source ? 1 : -1));
+
   auto now = zx::clock::get_monotonic();
-  client.ResetRateAdjustment(now);
-  AudioClock::SynchronizeClocks(client, device_diff_domain, now + zx::msec(10), zx::usec(10));
-  auto mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
+  client_clock.ResetRateAdjustment(now);
+
+  // This error should result in significant upward adjustment of the client clock.
+  now += zx::msec(10);
+  AudioClock::SynchronizeClocks(initial_source_clock, initial_dest_clock, now, kLargeError);
+  auto mono_to_client_ref = client_clock.ref_clock_to_clock_mono().Inverse();
   EXPECT_GT(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta())
       << "sub_delta " << mono_to_client_ref.subject_delta() << ", ref_delta "
       << mono_to_client_ref.reference_delta();
 
-  // Syncing now to a MONOTONIC device clock, client should reset to no rate adjustment.
-  AudioClock::SynchronizeClocks(client, device_monotonic, now + zx::msec(20), zx::usec(10));
-  mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
-  EXPECT_EQ(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta());
-
-  // Now validate in the other direction -- client is the destination clock
-  //
-  // The error should result in significant (downward) adjustment of client clock.
-  now = zx::clock::get_monotonic();
-  client.ResetRateAdjustment(now);
-  AudioClock::SynchronizeClocks(device_diff_domain, client, now + zx::msec(10), zx::usec(10));
-  mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
-  EXPECT_LT(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta())
+  // Syncing now to a MONOTONIC device clock, this error is still too large for us to fine-tune the
+  // client_clock toward perfect alignment, so PID-driven tuning continues.
+  now += zx::msec(10);
+  AudioClock::SynchronizeClocks(source_clock, dest_clock, now, kLargeError);
+  mono_to_client_ref = client_clock.ref_clock_to_clock_mono().Inverse();
+  EXPECT_GT(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta())
       << "sub_delta " << mono_to_client_ref.subject_delta() << ", ref_delta "
       << mono_to_client_ref.reference_delta();
+  // The upward clock adjustment should be MUCH MORE than just 1 ppm.
+  EXPECT_GT(mono_to_client_ref.rate().Scale(1'000'000), 1'000'001u);
 
-  // Now syncing with a MONOTONIC device clock, client should reset to no rate adjustment.
-  AudioClock::SynchronizeClocks(device_monotonic, client, now + zx::msec(20), zx::usec(10));
-  mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
+  // Once the error is small enough, client-clock-tuning transitions to fine-tuning of +/- 1 ppm.
+  now += zx::msec(10);
+  AudioClock::SynchronizeClocks(source_clock, dest_clock, now, kSmallError);
+  mono_to_client_ref = client_clock.ref_clock_to_clock_mono().Inverse();
+  EXPECT_GE(mono_to_client_ref.rate().Scale(1'000'000), 1'000'001u);
+
+  // And once error is very close to zero, client_clock should reset to no rate adjustment.
+  now += zx::msec(10);
+  AudioClock::SynchronizeClocks(source_clock, dest_clock, now, kVerySmallError);
+  mono_to_client_ref = client_clock.ref_clock_to_clock_mono().Inverse();
   EXPECT_EQ(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta());
+
+  now += zx::msec(10);
+  AudioClock::SynchronizeClocks(source_clock, dest_clock, now, zx::nsec(0) - kVerySmallError);
+  mono_to_client_ref = client_clock.ref_clock_to_clock_mono().Inverse();
+  EXPECT_EQ(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta());
+}
+
+// Validate AudioClock::SyncMode::RevertSourceToMonotonic for ClientAdjustable clocks.
+// This mode is triggered by a synchronization with a MONOTONIC device clock.
+TEST_F(AudioClockTest, RevertSourceToMonotonicAdjustments) {
+  TestRevertToMonotonic(
+      AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic()),
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain));
+}
+
+// Validate AudioClock::SyncMode::RevertDestToMonotonic for ClientAdjustable clocks.
+// This mode is triggered by a synchronization with a MONOTONIC device clock.
+TEST_F(AudioClockTest, RevertDestToMonotonicAdjustments) {
+  TestRevertToMonotonic(
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain),
+      AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic()));
 }
 
 // Death tests, grouped separately

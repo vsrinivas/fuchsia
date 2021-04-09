@@ -62,8 +62,8 @@ audio_core_api_test_component("audio-capturer-pipeline-test") {
   executable_deps = [ "//sdk/lib/media/audio/cpp" ]
 }
 
-audio_core_api_test_component("audio-clocks-pipeline-test") {
-  source = "audio_clocks_pipeline_test.cc"
+audio_core_api_test_component("audio-clock-pipeline-test") {
+  source = "audio_clock_pipeline_test.cc"
   executable_deps = [
     "//sdk/lib/media/audio/cpp",
     "//src/media/audio/audio_core/mixer",
@@ -166,7 +166,7 @@ fuchsia_test_package("audio-core-api-tests") {
 fuchsia_test_package("audio-core-api-pipeline-tests") {
   test_components = [
     ":audio-capturer-pipeline-test",
-    ":audio-clocks-pipeline-test",
+    ":audio-clock-pipeline-test",
     ":audio-policy-pipeline-test",
     ":audio-renderer-pipeline-test",
   ]

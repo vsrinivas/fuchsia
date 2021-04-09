@@ -99,9 +99,11 @@ class AudioClock {
   virtual zx::time Read() const;
 
   // We synchronize audio clocks so that positions (not just rates) align, reconciling differences
-  // using feedback controls. Given position error at monotonic_time, we tune source_pos_error to 0.
+  // using feedback controls. Given position error at monotonic_time, we tune the relationship
+  // between these clocks so as to drive source_pos_error to 0.
   //
-  // The return value is the PPM value of any micro-SRC that should subsequently be applied.
+  // The return value is the PPM value of any micro-SRC that should subsequently be applied. This
+  // must be used if neither source_clock nor dest_clock can be adjusted directly.
   static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
                                    zx::time monotonic_time, zx::duration source_pos_error);
 
@@ -128,13 +130,29 @@ class AudioClock {
  private:
   friend class AudioClockTest;
 
+  // When tuning a ClientAdjustable to a monotonic target, we use proportional clock adjustments
+  // instead of the normal PID feedback control, because once a ClientAdjustable is aligned with its
+  // monotonic target, it stays aligned (the whole clock domain drifts together, if at all).
+  //
+  // We synchronize clocks as tightly as possible, in all sync modes; the 10-nsec error threshold
+  // below is the smallest possible threshold. Clock-tuning precision is limited to integer ppms. If
+  // 10 msec elapse between clock-sync measurements, a minimum rate adjustment (+/- 1ppm) will
+  // change the position error (relative to monotonic) by 10 nsec. So once position error is less
+  // than this threshold, we "lock" the client clock to 0 ppm.
+  //
+  // Note: this approach might yield acceptable results for synchronizing software clocks to
+  // non-monotonic targets as well. Further investigation/measurement is needed.
+  static constexpr zx::duration kLockToMonotonicErrorThreshold = zx::nsec(10);
+
+  static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;
+
   enum class SyncMode {
     // If two clocks are identical or in the same clock domain, no synchronization is needed.
     None = 0,
 
-    // Immediately return an adjustable clock to monotonic rate (its sync target is now monotonic)
-    ResetSourceClock,
-    ResetDestClock,
+    // Return an adjustable clock to sync with its monotonic target, then lock to monotonic rate.
+    RevertSourceToMonotonic,
+    RevertDestToMonotonic,
 
     // We rate-adjust client clocks if they permit us, to minimize cost.
     // We also recover clocks, from devices running in non-MONOTONIC domains.
@@ -148,10 +166,9 @@ class AudioClock {
   static SyncMode SyncModeForClocks(AudioClock& source_clock, AudioClock& dest_clock);
   static std::string SyncModeToString(SyncMode mode);
 
-  static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;
-
   int32_t ClampPpm(int32_t parts_per_million);
-  void AdjustClock(int32_t rate_adjust_ppm);
+  int32_t AdjustClock(int32_t rate_adjust_ppm);
+  void LogClockAdjustments(zx::duration source_pos_error, int32_t rate_adjust_ppm);
 
   zx::clock clock_;
 
@@ -162,7 +179,7 @@ class AudioClock {
   audio::clock::PidControl feedback_control_;
 
   // State used to avoid repeated redundant zx::clock syscalls.
-  int32_t previous_adjustment_ppm_ = 0;
+  int32_t current_adjustment_ppm_ = 0;
 };
 
 }  // namespace media::audio
