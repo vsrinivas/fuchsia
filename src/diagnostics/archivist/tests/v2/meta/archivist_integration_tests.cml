@@ -14,22 +14,22 @@
         {
             protocol: "fuchsia.boot.WriteOnlyLog",
             from: "parent",
-            to: [ "#driver" ],
+            to: "#driver",
         },
         {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "#archivist",
-            to: [ "#driver" ],
+            to: "#driver",
         },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "#archivist",
-            to: [ "#driver" ],
+            to: "#driver",
         },
         {
             protocol: "fuchsia.sys2.EventSource",
             from: "parent",
-            to: [ "#archivist" ],
+            to: "#archivist",
         },
         {
             event: [
@@ -38,27 +38,27 @@
                 "stopped",
             ],
             from: "framework",
-            to: [ "#archivist" ],
+            to: "#archivist",
             modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "framework",
-            to: [ "#archivist" ],
+            to: "#archivist",
             filter: { name: "diagnostics" },
             modes: [ "async" ],
         },
         {
             event: "capability_requested",
             from: "framework",
-            to: [ "#archivist" ],
+            to: "#archivist",
             filter: { name: "fuchsia.logger.LogSink" },
         },
         {
             directory: "config-data",
             from: "parent",
             as: "config-data",
-            to: [ "#archivist" ],
+            to: "#archivist",
             subdir: "archivist",
         },
     ],

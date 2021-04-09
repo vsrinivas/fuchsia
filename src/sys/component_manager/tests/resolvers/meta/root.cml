@@ -21,7 +21,7 @@
         {
             protocol: "fidl.test.components.Trigger",
             from: "#custom_component",
-            to: [ "#integration_test" ],
+            to: "#integration_test",
         },
     ],
     expose: [

@@ -25,7 +25,7 @@
             directory: "pkgfs",
             from: "#pkgfs_reflector",
             as: "pkgfs",
-            to: [ "#thinger" ],
+            to: "#thinger",
         },
     ],
     expose: [

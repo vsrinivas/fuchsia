@@ -19,32 +19,32 @@
         {
             directory: "dev-display-controller",
             from: "parent",
-            to: [ "#scenic" ],
+            to: "#scenic",
         },
         {
             directory: "dev-goldfish-address-space",
             from: "parent",
-            to: [ "#scenic" ],
+            to: "#scenic",
         },
         {
             directory: "dev-goldfish-control",
             from: "parent",
-            to: [ "#scenic" ],
+            to: "#scenic",
         },
         {
             directory: "dev-goldfish-pipe",
             from: "parent",
-            to: [ "#scenic" ],
+            to: "#scenic",
         },
         {
             directory: "config-vulkan-icd.d",
             from: "parent",
-            to: [ "#scenic" ],
+            to: "#scenic",
         },
         {
             directory: "tmp",
             from: "parent",
-            to: [ "#scenic" ],
+            to: "#scenic",
         },
         {
             protocol: [
@@ -58,14 +58,14 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: [ "#scenic" ],
+            to: "#scenic",
         },
 
         // ############## ROOT PRESENTER ##################
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#root_presenter" ],
+            to: "#root_presenter",
         },
         {
             protocol: [
@@ -74,7 +74,7 @@
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "#scenic",
-            to: [ "#root_presenter" ],
+            to: "#root_presenter",
         },
         {
             protocol: [
@@ -89,24 +89,24 @@
                 "fuchsia.ui.activity.Tracker",
             ],
             from: "parent",
-            to: [ "#root_presenter" ],
+            to: "#root_presenter",
         },
 
         // ############### VIEW #####################
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: [ "#view" ],
+            to: "#view",
         },
         {
             protocol: [ "fuchsia.ui.scenic.Scenic" ],
             from: "#scenic",
-            to: [ "#view" ],
+            to: "#view",
         },
         {
             protocol: [ "fuchsia.ui.policy.Presenter" ],
             from: "#root_presenter",
-            to: [ "#view" ],
+            to: "#view",
         },
     ],
 }

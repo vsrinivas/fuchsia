@@ -16,7 +16,7 @@
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: [ "#components" ],
+            to: "#components",
         },
     ],
 }

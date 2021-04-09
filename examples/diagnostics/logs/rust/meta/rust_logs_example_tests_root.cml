@@ -13,7 +13,7 @@
         {
             protocol: "fake.just.for.Binding",
             from: "#logs_example",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
         {
             protocol: "fuchsia.logger.LogSink",
@@ -29,7 +29,7 @@
                 "fuchsia.logger.Log",
             ],
             from: "parent",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
     ],
     expose: [

@@ -15,12 +15,12 @@
         {
             protocol: "fuchsia.sys2.WorkScheduler",
             from: "#worker_child",
-            to: [ "#worker_sibling" ],
+            to: "#worker_sibling",
         },
         {
             protocol: "fuchsia.sys2.WorkSchedulerControl",
             from: "parent",
-            to: [ "#worker_sibling" ],
+            to: "#worker_sibling",
         },
     ],
 }

@@ -23,7 +23,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#puppets" ],
+            to: "#puppets",
         },
     ],
 }

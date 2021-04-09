@@ -29,12 +29,12 @@
                 "fuchsia.posix.socket.Provider",
             ],
             from: "parent",
-            to: [ "#coll" ],
+            to: "#coll",
         },
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: [ "#coll" ],
+            to: "#coll",
         },
     ],
 }

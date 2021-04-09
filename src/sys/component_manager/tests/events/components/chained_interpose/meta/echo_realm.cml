@@ -17,7 +17,7 @@
         {
             protocol: "fuchsia.test.echofactory.EchoFactory",
             from: "#echo_factory",
-            to: [ "#echo_client" ],
+            to: "#echo_client",
         },
     ],
 }

@@ -25,7 +25,7 @@
             directory: "pkgfs",
             from: "#fake_pkgfs",
             as: "pkgfs-delayed",
-            to: [ "#base_resolver" ],
+            to: "#base_resolver",
         },
         {
             protocol: "fuchsia.logger.LogSink",
@@ -39,7 +39,7 @@
         {
             resolver: "base_resolver",
             from: "#base_resolver",
-            to: [ "#integration_test" ],
+            to: "#integration_test",
         },
     ],
     expose: [

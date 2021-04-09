@@ -13,7 +13,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#empty_child" ],
+            to: "#empty_child",
         },
     ],
 }

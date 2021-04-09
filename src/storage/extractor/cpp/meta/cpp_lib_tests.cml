@@ -35,7 +35,7 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#isolated-devmgr" ],
+            to: "#isolated-devmgr",
         },
     ],
 }

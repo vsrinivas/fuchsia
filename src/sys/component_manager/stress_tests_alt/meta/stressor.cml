@@ -32,7 +32,7 @@
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#unreliable_echo_server",
-            to: [ "#dynamic_children_root" ],
+            to: "#dynamic_children_root",
         },
         {
             protocol: "fuchsia.logger.LogSink",

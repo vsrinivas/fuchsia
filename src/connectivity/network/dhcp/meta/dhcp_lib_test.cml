@@ -16,17 +16,17 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#stash" ],
+            to: "#stash",
         },
         {
             storage: "data",
             from: "parent",
-            to: [ "#stash" ],
+            to: "#stash",
         },
         {
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash",
-            to: [ "#test" ],
+            to: "#test",
         },
     ],
     expose: [

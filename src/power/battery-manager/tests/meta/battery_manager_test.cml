@@ -13,7 +13,7 @@
         {
             protocol: "fuchsia.power.BatteryManager",
             from: "#battery_manager",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
     ],
     expose: [

@@ -3,7 +3,7 @@
     program: {
         runner: "elf",
         binary: "bin/hello_world_rust",
-        forward_stdout_to: "log",
         forward_stderr_to: "log",
+        forward_stdout_to: "log",
     },
 }

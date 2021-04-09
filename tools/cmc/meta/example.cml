@@ -97,19 +97,19 @@
         {
             service: "fuchsia.logger.Log",
             from: "#logger",
-            to: [ "#modular" ],
+            to: "#modular",
         },
         {
             protocol: "fuchsia.logger.LegacyLog",
             from: "#logger",
             as: "fuchsia.logger.OldLog",
-            to: [ "#modular" ],
+            to: "#modular",
         },
         {
             event: "stopped",
             from: "parent",
             as: "stopped-logger",
-            to: [ "#logger" ],
+            to: "#logger",
         },
     ],
     expose: [

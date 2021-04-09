@@ -28,7 +28,7 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#isolated_devmgr" ],
+            to: "#isolated_devmgr",
         },
         {
             protocol: [
@@ -36,22 +36,22 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#pkg_cache_integration_test" ],
+            to: "#pkg_cache_integration_test",
         },
         {
             storage: "temp",
             from: "parent",
-            to: [ "#pkg_cache_integration_test" ],
+            to: "#pkg_cache_integration_test",
         },
         {
             directory: "dev",
             from: "#isolated_devmgr",
-            to: [ "#pkg_cache_integration_test" ],
+            to: "#pkg_cache_integration_test",
         },
         {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "parent",
-            to: [ "#pkg_cache_integration_test" ],
+            to: "#pkg_cache_integration_test",
         },
     ],
     expose: [

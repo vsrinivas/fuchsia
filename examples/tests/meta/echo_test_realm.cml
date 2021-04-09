@@ -18,7 +18,7 @@
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
-            to: [ "#echo_test_client" ],
+            to: "#echo_test_client",
         },
     ],
     expose: [

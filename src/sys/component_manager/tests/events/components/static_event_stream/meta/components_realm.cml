@@ -17,22 +17,22 @@
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: [ "#trigger_server" ],
+            to: "#trigger_server",
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#trigger_server",
-            to: [ "#trigger_client" ],
+            to: "#trigger_client",
         },
         {
             protocol: "fidl.test.components.Trigger",
             from: "#trigger_server",
-            to: [ "#trigger_client" ],
+            to: "#trigger_client",
         },
         {
             event: [ "capability_requested" ],
             from: "framework",
-            to: [ "#trigger_server" ],
+            to: "#trigger_server",
             filter: { name: "fidl.test.components.Trigger" },
             modes: [ "async" ],
         },

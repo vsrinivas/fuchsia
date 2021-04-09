@@ -38,7 +38,7 @@
         {
             storage: "data",
             from: "self",
-            to: [ "#coll" ],
+            to: "#coll",
         },
         {
             protocol: "fuchsia.logger.LogSink",

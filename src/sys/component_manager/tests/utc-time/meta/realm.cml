@@ -18,7 +18,7 @@
         {
             protocol: [ "fuchsia.time.Maintenance" ],
             from: "parent",
-            to: [ "#maintainer" ],
+            to: "#maintainer",
         },
         {
             protocol: [

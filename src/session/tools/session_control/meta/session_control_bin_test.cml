@@ -25,7 +25,7 @@
         {
             protocol: "fuchsia.session.Launcher",
             from: "parent",
-            to: [ "#session" ],
+            to: "#session",
         },
     ],
 }

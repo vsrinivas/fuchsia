@@ -42,18 +42,18 @@
         {
             protocol: "fuchsia.sys2.EventSource",
             from: "parent",
-            to: [ "#reporter" ],
+            to: "#reporter",
         },
         {
             protocol: "fidl.test.components.Trigger",
             from: "self",
-            to: [ "#reporter" ],
+            to: "#reporter",
         },
         {
             event: "started",
             from: "framework",
             as: "started_nested",
-            to: [ "#reporter" ],
+            to: "#reporter",
             modes: [ "async" ],
         },
     ],

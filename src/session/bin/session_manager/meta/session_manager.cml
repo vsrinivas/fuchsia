@@ -63,32 +63,32 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "parent",
-            to: [ "#session" ],
+            to: "#session",
         },
         {
             storage: "cache",
             from: "parent",
-            to: [ "#session" ],
+            to: "#session",
         },
         {
             storage: "data",
             from: "parent",
-            to: [ "#session" ],
+            to: "#session",
         },
         {
             storage: "tmp",
             from: "parent",
-            to: [ "#session" ],
+            to: "#session",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#session" ],
+            to: "#session",
         },
         {
             directory: "dev-input-report",
             from: "parent",
-            to: [ "#session" ],
+            to: "#session",
         },
     ],
     expose: [

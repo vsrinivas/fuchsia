@@ -147,17 +147,17 @@
         {
             protocol: "fuchsia.devicesettings.DeviceSettingsManager",
             from: "#device_settings",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.sys2.ComponentResolver",
             from: "parent",
-            to: [ "#universe-resolver" ],
+            to: "#universe-resolver",
         },
         {
             storage: "data",
             from: "self",
-            to: [ "#device_settings" ],
+            to: "#device_settings",
         },
         {
             protocol: [
@@ -172,12 +172,12 @@
                 "fuchsia.kernel.VmexResource",
             ],
             from: "parent",
-            to: [ "#debug_serial" ],
+            to: "#debug_serial",
         },
         {
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system-update-committer",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: [
@@ -186,7 +186,7 @@
                 "fuchsia.ui.activity.Tracker",
             ],
             from: "#activity",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: [
@@ -194,7 +194,7 @@
                 "fuchsia.power.test.BatterySimulator",
             ],
             from: "#battery_manager",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.ui.brightness.Control",
@@ -204,38 +204,38 @@
         {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
             from: "#debug_serial",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: [ "fuchsia.pkg.FontResolver" ],
             from: "#appmgr",
-            to: [ "#font_provider" ],
+            to: "#font_provider",
             dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
             from: "#system-metrics-logger",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.thermal.test.TemperatureLogger",
             from: "#temperature-logger",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.stash.Store",
             from: "#stash",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.stash.Store2",
             from: "#stash2",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash_secure",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
@@ -249,18 +249,18 @@
         {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#appmgr",
-            to: [ "#universe-resolver" ],
+            to: "#universe-resolver",
             dependency: "weak_for_migration",
         },
         {
             directory: "pkgfs",
             from: "parent",
-            to: [ "#pkg-cache" ],
+            to: "#pkg-cache",
         },
         {
             directory: "blob",
             from: "parent",
-            to: [ "#pkg-cache" ],
+            to: "#pkg-cache",
         },
         {
             protocol: [
@@ -268,13 +268,13 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "#appmgr",
-            to: [ "#pkg-cache" ],
+            to: "#pkg-cache",
             dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system-update-committer",
-            to: [ "#pkg-cache" ],
+            to: "#pkg-cache",
         },
         {
             protocol: [
@@ -282,7 +282,7 @@
                 "fuchsia.space.Manager",
             ],
             from: "#pkg-cache",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
 
         // Passing from root realm to appmgr
@@ -325,7 +325,7 @@
                 "fuchsia.virtualconsole.SessionManager",
             ],
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: [ "fuchsia.boot.WriteOnlyLog" ],
@@ -368,7 +368,7 @@
         {
             protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
             from: "parent",
-            to: [ "#detect" ],
+            to: "#detect",
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -407,17 +407,17 @@
                 "fuchsia.update.verify.BlobfsVerifier",
             ],
             from: "parent",
-            to: [ "#system-update-committer" ],
+            to: "#system-update-committer",
         },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: [ "#test_manager" ],
+            to: "#test_manager",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#test_manager" ],
+            to: "#test_manager",
         },
 
         // These capabilities are offered to test_manager for use by certain non-hermetic tests.
@@ -430,13 +430,13 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#test_manager" ],
+            to: "#test_manager",
         },
         {
             directory: "dev",
             from: "parent",
             as: "dev-display-controller",
-            to: [ "#test_manager" ],
+            to: "#test_manager",
             subdir: "class/display-controller",
         },
         {
@@ -450,7 +450,7 @@
                 "fuchsia.test.manager.Harness",
             ],
             from: "#appmgr",
-            to: [ "#remote-control" ],
+            to: "#remote-control",
             dependency: "weak_for_migration",
         },
         {
@@ -459,7 +459,7 @@
                 "fuchsia.device.NameProvider",
             ],
             from: "parent",
-            to: [ "#remote-control" ],
+            to: "#remote-control",
         },
         {
             protocol: [
@@ -467,29 +467,29 @@
                 "fuchsia.logger.LogSink",
             ],
             from: "parent",
-            to: [ "#remote-diagnostics-bridge" ],
+            to: "#remote-diagnostics-bridge",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#font_provider" ],
+            to: "#font_provider",
             subdir: "fonts",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#sampler" ],
+            to: "#sampler",
             subdir: "sampler",
         },
         {
             protocol: "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
             from: "#remote-diagnostics-bridge",
-            to: [ "#remote-control" ],
+            to: "#remote-control",
         },
         {
             protocol: "fuchsia.developer.remotecontrol.RemoteControl",
             from: "#remote-control",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.feedback.CrashReporter",
@@ -503,22 +503,22 @@
         {
             protocol: "fuchsia.feedback.CrashReportingProductRegister",
             from: "#appmgr",
-            to: [ "#detect" ],
+            to: "#detect",
         },
         {
             protocol: "fuchsia.fonts.Provider",
             from: "#font_provider",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.kernel.Stats",
             from: "parent",
-            to: [ "#system-metrics-logger" ],
+            to: "#system-metrics-logger",
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "#appmgr",
-            to: [ "#system-metrics-logger" ],
+            to: "#system-metrics-logger",
             dependency: "weak_for_migration",
         },
         {
@@ -544,50 +544,50 @@
             directory: "dev",
             from: "parent",
             as: "dev-power",
-            to: [ "#battery_manager" ],
+            to: "#battery_manager",
             subdir: "class/power",
         },
         {
             directory: "dev",
             from: "parent",
             as: "dev-temperature",
-            to: [ "#temperature-logger" ],
+            to: "#temperature-logger",
             subdir: "class/temperature",
         },
         {
             directory: "dev",
             from: "parent",
             as: "dev-thermal",
-            to: [ "#temperature-logger" ],
+            to: "#temperature-logger",
             subdir: "class/thermal",
         },
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: [ "#http-client" ],
+            to: "#http-client",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#temperature-logger" ],
+            to: "#temperature-logger",
             subdir: "temperature-logger",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#detect" ],
+            to: "#detect",
             subdir: "triage-detect",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#log-stats" ],
+            to: "#log-stats",
             subdir: "log-stats",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#system-update-committer" ],
+            to: "#system-update-committer",
             subdir: "system-update-committer",
         },
         {
@@ -596,12 +596,12 @@
                 "fuchsia.hardware.temperature.Device",
             ],
             from: "parent",
-            to: [ "#temperature-logger" ],
+            to: "#temperature-logger",
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "#appmgr",
-            to: [ "#temperature-logger" ],
+            to: "#temperature-logger",
             dependency: "weak_for_migration",
         },
         {
@@ -615,53 +615,53 @@
         {
             directory: "dev",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "durable",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "factory",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "minfs",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "pkgfs",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
             rights: [ "rx*" ],
         },
         {
             directory: "system",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "blob",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "volume",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "install",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             directory: "tmp",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
 
         // Note: this is the v2 root hub. The hub in the `expose` section below
@@ -677,34 +677,34 @@
         {
             storage: "cache",
             from: "self",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
         },
         {
             storage: "data",
             from: "self",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
         },
         {
             storage: "tmp",
             from: "self",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
         },
         {
             directory: "dev",
             from: "parent",
             as: "dev-input-report",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
             subdir: "class/input-report",
         },
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.Admin" ],
             from: "parent",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
         },
         {
             protocol: [
@@ -726,18 +726,18 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "#appmgr",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
         },
         {
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
             from: "#session-manager",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
             dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.net.http.Loader",
             from: "#http-client",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: [
@@ -745,7 +745,7 @@
                 "fuchsia.posix.socket.Provider",
             ],
             from: "#appmgr",
-            to: [ "#http-client" ],
+            to: "#http-client",
             dependency: "weak_for_migration",
         },
         {
@@ -756,18 +756,18 @@
                 "fuchsia.stash.SecureStore",
             ],
             from: "#appmgr",
-            to: [ "#dhcpd" ],
+            to: "#dhcpd",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#dhcpd" ],
+            to: "#dhcpd",
             subdir: "dhcpd",
         },
         {
             protocol: "fuchsia.net.dhcp.Server",
             from: "#dhcpd",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
             dependency: "weak_for_migration",
         },
         {
@@ -784,17 +784,17 @@
         {
             protocol: "fuchsia.feedback.LastRebootInfoProvider",
             from: "#last_reboot",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             storage: "tmp",
             from: "self",
-            to: [ "#last_reboot" ],
+            to: "#last_reboot",
         },
         {
             storage: "cache",
             from: "self",
-            to: [ "#last_reboot" ],
+            to: "#last_reboot",
         },
         {
             protocol: "fuchsia.media.sounds.Player",
@@ -872,8 +872,8 @@
             resolvers: [
                 {
                     resolver: "universe-resolver",
-                    scheme: "fuchsia-pkg",
                     from: "#universe-resolver",
+                    scheme: "fuchsia-pkg",
                 },
             ],
         },

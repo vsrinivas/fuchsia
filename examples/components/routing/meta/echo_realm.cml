@@ -19,12 +19,12 @@
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
-            to: [ "#echo_client" ],
+            to: "#echo_client",
         },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#echo_client" ],
+            to: "#echo_client",
         },
     ],
 }

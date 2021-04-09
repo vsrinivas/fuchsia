@@ -21,12 +21,12 @@
         {
             protocol: "fuchsia.process.Launcher",
             from: "parent",
-            to: [ "#decompressor" ],
+            to: "#decompressor",
         },
         {
             protocol: "fuchsia.blobfs.internal.DecompressorCreator",
             from: "#decompressor",
-            to: [ "#test" ],
+            to: "#test",
         },
     ],
     expose: [

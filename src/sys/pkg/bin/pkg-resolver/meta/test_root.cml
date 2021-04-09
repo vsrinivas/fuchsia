@@ -21,12 +21,12 @@
         {
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#netstack",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
         {
             protocol: [ "fuchsia.net.NameLookup" ],
             from: "#dns_resolver",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
         {
             protocol: [
@@ -34,17 +34,17 @@
                 "fuchsia.process.Launcher",
             ],
             from: "parent",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
         {
             storage: "temp",
             from: "parent",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
     ],
     expose: [

@@ -12,12 +12,12 @@
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "parent",
-            to: [ "#dynamic_children" ],
+            to: "#dynamic_children",
         },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#dynamic_children" ],
+            to: "#dynamic_children",
         },
     ],
     expose: [

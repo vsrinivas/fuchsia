@@ -39,12 +39,12 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#test-collection" ],
+            to: "#test-collection",
         },
         {
             protocol: "fidl.test.components.Trigger",
             from: "self",
-            to: [ "#test-collection" ],
+            to: "#test-collection",
         },
     ],
 }

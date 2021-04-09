@@ -21,7 +21,7 @@
             // Acquire the fuchsia.pkg.PackageResolver from somewhere.
             protocol: "fuchsia.pkg.PackageResolver",
             from: "parent",
-            to: [ "#universe-resolver" ],
+            to: "#universe-resolver",
         },
     ],
     environments: [

@@ -48,7 +48,7 @@
         {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "parent",
-            to: [ "#test" ],
+            to: "#test",
         },
     ],
     expose: [

@@ -19,17 +19,17 @@
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: [ "#echo_reporter" ],
+            to: "#echo_reporter",
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_reporter",
-            to: [ "#echo_client" ],
+            to: "#echo_client",
         },
         {
             protocol: "fidl.test.components.Trigger",
             from: "#echo_reporter",
-            to: [ "#echo_client" ],
+            to: "#echo_client",
         },
     ],
 }

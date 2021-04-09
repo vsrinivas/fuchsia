@@ -13,12 +13,12 @@
         {
             storage: "temp",
             from: "parent",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
         {
             protocol: "fuchsia.sys.Launcher",
             from: "#sys-launcher",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
     ],
     expose: [

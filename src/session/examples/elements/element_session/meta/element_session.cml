@@ -43,12 +43,12 @@
         {
             protocol: "fuchsia.session.examples.ElementPing",
             from: "self",
-            to: [ "#elements" ],
+            to: "#elements",
         },
         {
             protocol: "fuchsia.session.ElementManager",
             from: "self",
-            to: [ "#element_proposer" ],
+            to: "#element_proposer",
         },
     ],
     expose: [

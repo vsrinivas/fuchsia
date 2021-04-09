@@ -26,7 +26,7 @@
                 "fuchsia.posix.socket.Provider",
             ],
             from: "#netstack",
-            to: [ "#dns_resolver" ],
+            to: "#dns_resolver",
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -40,7 +40,7 @@
             storage: "temp",
             from: "parent",
             as: "cache",
-            to: [ "#netstack" ],
+            to: "#netstack",
         },
     ],
 }

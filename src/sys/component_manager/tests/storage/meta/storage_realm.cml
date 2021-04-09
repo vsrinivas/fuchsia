@@ -22,7 +22,7 @@
         {
             storage: "data",
             from: "self",
-            to: [ "#storage_user" ],
+            to: "#storage_user",
         },
         {
             protocol: "fuchsia.logger.LogSink",

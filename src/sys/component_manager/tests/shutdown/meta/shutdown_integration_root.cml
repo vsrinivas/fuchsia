@@ -18,7 +18,7 @@
                 "fuchsia.sys2.SystemController",
             ],
             from: "parent",
-            to: [ "#power_switch" ],
+            to: "#power_switch",
         },
     ],
 }

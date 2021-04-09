@@ -14,7 +14,7 @@
         {
             protocol: [ "fuchsia.appmgr.Startup" ],
             from: "#fake-appmgr",
-            to: [ "#startup" ],
+            to: "#startup",
         },
     ],
 }

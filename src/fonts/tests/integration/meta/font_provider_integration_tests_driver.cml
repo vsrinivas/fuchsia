@@ -22,7 +22,7 @@
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#coll" ],
+            to: "#coll",
         },
         {
             protocol: [
@@ -30,7 +30,7 @@
                 "fuchsia.pkg.FontResolver",
             ],
             from: "parent",
-            to: [ "#coll" ],
+            to: "#coll",
         },
     ],
 }

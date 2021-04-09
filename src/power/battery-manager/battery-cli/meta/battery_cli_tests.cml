@@ -13,7 +13,7 @@
         {
             protocol: "fuchsia.power.test.BatterySimulator",
             from: "#battery_manager",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
     ],
     expose: [

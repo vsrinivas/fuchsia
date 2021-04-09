@@ -23,7 +23,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#children" ],
+            to: "#children",
         },
     ],
     expose: [

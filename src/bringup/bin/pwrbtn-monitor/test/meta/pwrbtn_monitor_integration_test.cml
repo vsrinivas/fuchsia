@@ -32,27 +32,27 @@
         {
             directory: "input",
             from: "self",
-            to: [ "#pwrbtn-monitor" ],
+            to: "#pwrbtn-monitor",
         },
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "self",
-            to: [ "#pwrbtn-monitor" ],
+            to: "#pwrbtn-monitor",
         },
         {
             protocol: "fuchsia.test.pwrbtn.Tests",
             from: "self",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
         {
             protocol: "fuchsia.boot.WriteOnlyLog",
             from: "parent",
-            to: [ "#pwrbtn-monitor" ],
+            to: "#pwrbtn-monitor",
         },
     ],
     expose: [

@@ -30,12 +30,12 @@
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "parent",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
         {
             directory: "dev",
             from: "#isolated-devmgr",
-            to: [ "#test_driver" ],
+            to: "#test_driver",
         },
     ],
     expose: [

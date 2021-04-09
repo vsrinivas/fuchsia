@@ -20,17 +20,17 @@
         {
             protocol: "fuchsia.fakeclock.test.Example",
             from: "#example",
-            to: [ "#driver" ],
+            to: "#driver",
         },
         {
             protocol: "fuchsia.testing.FakeClockControl",
             from: "#fake_clock",
-            to: [ "#driver" ],
+            to: "#driver",
         },
         {
             protocol: "fuchsia.testing.FakeClock",
             from: "#fake_clock",
-            to: [ "#example" ],
+            to: "#example",
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],

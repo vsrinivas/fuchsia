@@ -21,7 +21,7 @@
         {
             storage: "data",
             from: "self",
-            to: [ "#use_storage" ],
+            to: "#use_storage",
         },
     ],
     expose: [

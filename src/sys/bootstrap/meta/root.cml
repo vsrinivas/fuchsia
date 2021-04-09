@@ -23,12 +23,12 @@
                 "fuchsia.sessionmanager.Startup",
             ],
             from: "#core",
-            to: [ "#startup" ],
+            to: "#startup",
         },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "#bootstrap",
-            to: [ "#startup" ],
+            to: "#startup",
         },
 
         // Capabilities routed from "parent" at the root are either provided by
@@ -75,64 +75,64 @@
                 "fuchsia.time.Maintenance",
             ],
             from: "parent",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             protocol: [ "fuchsia.sys2.SystemController" ],
             from: "parent",
-            to: [ "#bootstrap" ],
+            to: "#bootstrap",
         },
 
         // ...and the rest of these are services provided by components for each other
         {
             directory: "dev",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "durable",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "factory",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "minfs",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "pkgfs",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "config-data",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "root-ssl-certificates",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "system",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "blob",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
         {
             directory: "tmp",
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
 
         // Non-zircon services for svchost
@@ -164,7 +164,7 @@
                 "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
 
         // Non-zircon services for archivist and svchost
@@ -196,7 +196,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "#core",
-            to: [ "#bootstrap" ],
+            to: "#bootstrap",
             dependency: "weak_for_migration",
         },
 
@@ -204,7 +204,7 @@
         {
             directory: "hub",
             from: "#core",
-            to: [ "#bootstrap" ],
+            to: "#bootstrap",
             dependency: "weak_for_migration",
         },
 
@@ -212,7 +212,7 @@
         {
             directory: "hub",
             from: "framework",
-            to: [ "#core" ],
+            to: "#core",
         },
 
         // Offer events to `bootstrap` for diagnostics usage.
@@ -223,31 +223,31 @@
                 "stopped",
             ],
             from: "framework",
-            to: [ "#bootstrap" ],
+            to: "#bootstrap",
             modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "parent",
-            to: [ "#bootstrap" ],
+            to: "#bootstrap",
             filter: { name: "diagnostics" },
             modes: [ "async" ],
         },
         {
             event: "capability_requested",
             from: "framework",
-            to: [ "#bootstrap" ],
+            to: "#bootstrap",
             filter: { name: "fuchsia.logger.LogSink" },
         },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: [ "#bootstrap" ],
+            to: "#bootstrap",
         },
         {
             protocol: [ "fuchsia.sys2.ComponentResolver" ],
             from: "#bootstrap",
-            to: [ "#core" ],
+            to: "#core",
         },
     ],
     environments: [
@@ -257,8 +257,8 @@
             resolvers: [
                 {
                     resolver: "base_resolver",
-                    scheme: "fuchsia-pkg",
                     from: "#bootstrap",
+                    scheme: "fuchsia-pkg",
                 },
             ],
             __stop_timeout_ms: 60000,

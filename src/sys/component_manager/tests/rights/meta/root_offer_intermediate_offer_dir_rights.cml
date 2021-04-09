@@ -15,28 +15,28 @@
         {
             directory: "read_only",
             from: "#expose_dir_rights",
-            to: [ "#use_dir_rights" ],
+            to: "#use_dir_rights",
         },
         {
             directory: "read_write",
             from: "#expose_dir_rights",
-            to: [ "#use_dir_rights" ],
+            to: "#use_dir_rights",
         },
         {
             directory: "read_exec",
             from: "#expose_dir_rights",
-            to: [ "#use_dir_rights" ],
+            to: "#use_dir_rights",
             rights: [ "rx*" ],
         },
         {
             directory: "read_admin",
             from: "#expose_dir_rights",
-            to: [ "#use_dir_rights" ],
+            to: "#use_dir_rights",
         },
         {
             directory: "read_only_after_scoped",
             from: "#expose_dir_rights",
-            to: [ "#use_dir_rights" ],
+            to: "#use_dir_rights",
         },
     ],
     expose: [

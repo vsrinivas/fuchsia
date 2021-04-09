@@ -26,7 +26,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#logs_when_launched" ],
+            to: "#logs_when_launched",
         },
     ],
 }

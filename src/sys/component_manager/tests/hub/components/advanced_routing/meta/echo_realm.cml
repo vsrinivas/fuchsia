@@ -22,18 +22,18 @@
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
-            to: [ "#reporter" ],
+            to: "#reporter",
         },
         {
             directory: "hub",
             from: "framework",
-            to: [ "#reporter" ],
+            to: "#reporter",
         },
         {
             directory: "hub",
             from: "#echo_server",
             as: "sibling_hub",
-            to: [ "#reporter" ],
+            to: "#reporter",
         },
     ],
 }

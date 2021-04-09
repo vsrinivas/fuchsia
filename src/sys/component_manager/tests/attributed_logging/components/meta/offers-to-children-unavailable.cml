@@ -57,7 +57,7 @@
         {
             protocol: [ "fidl.test.components.Trigger" ],
             from: "#child-that-doesnt-expose",
-            to: [ "#child-for-offer-from-sibling" ],
+            to: "#child-for-offer-from-sibling",
         },
     ],
 }

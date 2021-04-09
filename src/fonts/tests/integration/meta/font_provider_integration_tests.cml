@@ -13,7 +13,7 @@
         {
             protocol: "fuchsia.pkg.FontResolver",
             from: "#font_resolver",
-            to: [ "#driver" ],
+            to: "#driver",
         },
 
         // Some components run under test get fonts from /config/data.
@@ -21,7 +21,7 @@
             directory: "config-data",
             from: "parent",
             as: "config-data",
-            to: [ "#driver" ],
+            to: "#driver",
             subdir: "fonts",
         },
         {

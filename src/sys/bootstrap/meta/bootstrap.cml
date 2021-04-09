@@ -119,7 +119,7 @@
                 "fuchsia.boot.WriteOnlyLog",
             ],
             from: "parent",
-            to: [ "#virtual_console" ],
+            to: "#virtual_console",
         },
         {
             protocol: [
@@ -181,17 +181,17 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             protocol: [ "fuchsia.power.manager.DriverManagerRegistration" ],
             from: "#power_manager",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             protocol: [
@@ -199,7 +199,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#driver_hosts" ],
+            to: "#driver_hosts",
         },
         {
             protocol: [
@@ -208,22 +208,22 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#boot-drivers" ],
+            to: "#boot-drivers",
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "parent",
-            to: [ "#pkg-drivers" ],
+            to: "#pkg-drivers",
         },
         {
             protocol: [ "fuchsia.kernel.Stats" ],
             from: "parent",
-            to: [ "#power_manager" ],
+            to: "#power_manager",
         },
         {
             protocol: "fuchsia.boot.RootResource",
             from: "parent",
-            to: [ "#console" ],
+            to: "#console",
         },
         {
             protocol: [
@@ -232,7 +232,7 @@
                 "fuchsia.process.Launcher",
             ],
             from: "parent",
-            to: [ "#fshost" ],
+            to: "#fshost",
         },
         {
             protocol: [
@@ -240,7 +240,7 @@
                 "fuchsia.pkg.rewrite.Engine",
             ],
             from: "parent",
-            to: [ "#live_usb" ],
+            to: "#live_usb",
         },
         {
             protocol: [
@@ -249,7 +249,7 @@
                 "fuchsia.process.Launcher",
             ],
             from: "parent",
-            to: [ "#miscsvc" ],
+            to: "#miscsvc",
         },
         {
             protocol: [
@@ -261,7 +261,7 @@
                 "fuchsia.virtualconsole.SessionManager",
             ],
             from: "parent",
-            to: [ "#svchost" ],
+            to: "#svchost",
         },
         {
             protocol: [
@@ -269,7 +269,7 @@
                 "fuchsia.boot.WriteOnlyLog",
             ],
             from: "parent",
-            to: [ "#device_name_provider" ],
+            to: "#device_name_provider",
         },
         {
             protocol: [ "fuchsia.boot.WriteOnlyLog" ],
@@ -298,7 +298,7 @@
         {
             protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
-            to: [ "#fshost" ],
+            to: "#fshost",
         },
         {
             protocol: [ "fuchsia.scheduler.ProfileProvider" ],
@@ -311,19 +311,19 @@
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "parent",
-            to: [ "#decompressor" ],
+            to: "#decompressor",
         },
         {
             protocol: [ "fuchsia.blobfs.internal.DecompressorCreator" ],
             from: "#decompressor",
-            to: [ "#fshost" ],
+            to: "#fshost",
         },
         {
             // TODO(fxbug.dev/34633): DEPRECATED. Do not add new dependencies on the fshost
             // loader service!
             protocol: "fuchsia.fshost.Loader",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
             dependency: "weak_for_migration",
         },
         {
@@ -361,7 +361,7 @@
         {
             protocol: [ "fuchsia.scheduler.ProfileProvider" ],
             from: "#svchost",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
 
             // This must be weak because svchost needs sysmem from driver_manager, which creates
             // a cycle. Sysmem can be pulled out of svchost to break this cycle.
@@ -382,7 +382,7 @@
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
             from: "#svchost",
-            to: [ "#virtual_console" ],
+            to: "#virtual_console",
         },
         {
             directory: "dev",
@@ -401,35 +401,35 @@
             directory: "dev",
             from: "#driver_manager",
             as: "dev-class-block",
-            to: [ "#live_usb" ],
+            to: "#live_usb",
             subdir: "class/block",
         },
         {
             directory: "dev",
             from: "#driver_manager",
             as: "dev-misc",
-            to: [ "#live_usb" ],
+            to: "#live_usb",
             subdir: "misc",
         },
         {
             directory: "dev",
             from: "#driver_manager",
             as: "input-report",
-            to: [ "#virtual_console" ],
+            to: "#virtual_console",
             subdir: "class/input-report",
         },
         {
             directory: "dev",
             from: "#driver_manager",
             as: "sysmem",
-            to: [ "#svchost" ],
+            to: "#svchost",
             subdir: "class/sysmem",
         },
         {
             directory: "dev",
             from: "#driver_manager",
             as: "display-controller",
-            to: [ "#virtual_console" ],
+            to: "#virtual_console",
             subdir: "class/display-controller",
         },
         {
@@ -508,14 +508,14 @@
         {
             directory: "volume",
             from: "#fshost",
-            to: [ "#miscsvc" ],
+            to: "#miscsvc",
         },
 
         // Offer the log services to the console
         {
             protocol: [ "fuchsia.logger.Log" ],
             from: "#archivist",
-            to: [ "#console" ],
+            to: "#console",
         },
 
         // Offer the kernel serial console to the console-launcher
@@ -523,7 +523,7 @@
             protocol: "fuchsia.hardware.pty.Device",
             from: "#console",
             as: "console",
-            to: [ "#console-launcher" ],
+            to: "#console-launcher",
         },
         {
             protocol: "fuchsia.device.NameProvider",
@@ -569,7 +569,7 @@
             // Driver_manager has to shut down before shutdown_shim.
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "#shutdown_shim",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             // TODO(fxb/65708) This is only needed for an ordered shutdown.
@@ -577,7 +577,7 @@
             // can still be seen.
             protocol: "fuchsia.hardware.pty.Device",
             from: "#console",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
@@ -603,7 +603,7 @@
         {
             protocol: [ "fuchsia.device.manager.SystemStateTransition" ],
             from: "#driver_manager",
-            to: [ "#shutdown_shim" ],
+            to: "#shutdown_shim",
 
             // TODO(fxb/65708) When this bug is complete, this can be a strong dependency.
             dependency: "weak_for_migration",
@@ -611,23 +611,23 @@
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.Admin" ],
             from: "#power_manager",
-            to: [ "#shutdown_shim" ],
+            to: "#shutdown_shim",
         },
         {
             protocol: [ "fuchsia.device.manager.Administrator" ],
             from: "#driver_manager",
-            to: [ "#fshost" ],
+            to: "#fshost",
         },
         {
             protocol: [ "fuchsia.device.manager.Administrator" ],
             from: "#driver_manager",
-            to: [ "#power_manager" ],
+            to: "#power_manager",
             dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.feedback.CrashReporter" ],
             from: "parent",
-            to: [ "#power_manager" ],
+            to: "#power_manager",
         },
         {
             protocol: [
@@ -643,7 +643,7 @@
         {
             protocol: [ "fuchsia.paver.Paver" ],
             from: "#miscsvc",
-            to: [ "#live_usb" ],
+            to: "#live_usb",
         },
         {
             protocol: "fuchsia.logger.Log",
@@ -688,14 +688,14 @@
         {
             protocol: [ "fuchsia.fshost.Admin" ],
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
             dependency: "weak_for_migration",
         },
         {
             directory: "dev",
             from: "#driver_manager",
             as: "input",
-            to: [ "#pwrbtn-monitor" ],
+            to: "#pwrbtn-monitor",
             subdir: "class/input",
         },
         {
@@ -704,12 +704,12 @@
                 "fuchsia.fshost.Registry",
             ],
             from: "#fshost",
-            to: [ "#miscsvc" ],
+            to: "#miscsvc",
         },
         {
             protocol: [ "fuchsia.fshost.BlockWatcher" ],
             from: "#fshost",
-            to: [ "#live_usb" ],
+            to: "#live_usb",
         },
 
         // -- Archivist offers below here --
@@ -722,20 +722,20 @@
                 "stopped",
             ],
             from: "parent",
-            to: [ "#archivist" ],
+            to: "#archivist",
             modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "parent",
-            to: [ "#archivist" ],
+            to: "#archivist",
             filter: { name: "diagnostics" },
             modes: [ "async" ],
         },
         {
             event: "capability_requested",
             from: "parent",
-            to: [ "#archivist" ],
+            to: "#archivist",
             filter: { name: "fuchsia.logger.LogSink" },
         },
 
@@ -747,7 +747,7 @@
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",
-            to: [ "#archivist" ],
+            to: "#archivist",
         },
 
         // Weak services from appmgr and diagnostics products.
@@ -760,7 +760,7 @@
                 "fuchsia.sys.internal.LogConnector",
             ],
             from: "parent",
-            to: [ "#archivist" ],
+            to: "#archivist",
             dependency: "weak_for_migration",
         },
 
@@ -769,7 +769,7 @@
             directory: "boot",
             from: "parent",
             as: "config-data",
-            to: [ "#archivist" ],
+            to: "#archivist",
             rights: [ "r*" ],
             subdir: "config/archivist",
         },
@@ -778,7 +778,7 @@
         {
             directory: "pkgfs-delayed",
             from: "#fshost",
-            to: [ "#base_resolver" ],
+            to: "#base_resolver",
 
             // Marking this offer as weak solves the following cycle:
             // base_resolver -> fshost -> driver_manager -> power_manager -> base_resolver.
@@ -788,7 +788,7 @@
         {
             resolver: "base_resolver",
             from: "#base_resolver",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
     ],
     expose: [
@@ -965,8 +965,8 @@
             resolvers: [
                 {
                     resolver: "base_resolver",
-                    scheme: "fuchsia-pkg",
                     from: "#base_resolver",
+                    scheme: "fuchsia-pkg",
                 },
             ],
 

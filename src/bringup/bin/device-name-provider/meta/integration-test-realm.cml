@@ -14,7 +14,7 @@
         {
             protocol: "fuchsia.device.NameProvider",
             from: "#device-name-provider",
-            to: [ "#integration-test" ],
+            to: "#integration-test",
         },
     ],
     expose: [

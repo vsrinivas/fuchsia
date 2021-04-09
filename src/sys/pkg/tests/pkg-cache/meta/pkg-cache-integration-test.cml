@@ -42,7 +42,7 @@
                 "fuchsia.sys.Environment",
             ],
             from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: "#fuchsia_component_test_collection",
         },
     ],
 }

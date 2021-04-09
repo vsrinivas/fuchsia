@@ -13,7 +13,7 @@
         {
             runner: "rust_test_runnner",
             from: "parent",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
         {
             storage: "temp",
@@ -34,7 +34,7 @@
         {
             protocol: "fuchsia.stash.SecureStore",
             from: "#secure-stash",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
     ],
     expose: [

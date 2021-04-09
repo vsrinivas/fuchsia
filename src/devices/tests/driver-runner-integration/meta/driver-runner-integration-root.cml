@@ -40,12 +40,12 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -59,7 +59,7 @@
         {
             directory: "boot",
             from: "parent",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
     ],
     environments: [

@@ -13,7 +13,7 @@
                 "fuchsia.logger.LogSink",
             ],
             from: "parent",
-            to: [ "#driver" ],
+            to: "#driver",
         },
     ],
     expose: [

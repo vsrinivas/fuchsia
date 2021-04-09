@@ -80,17 +80,17 @@
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",
-            to: [ "#tests" ],
+            to: "#tests",
         },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: [ "#debug_data" ],
+            to: "#debug_data",
         },
         {
             protocol: [ "fuchsia.test.internal.Info" ],
             from: "self",
-            to: [ "#debug_data" ],
+            to: "#debug_data",
         },
 
         // These capabilities are offered for use by certain non-hermetic tests.
@@ -102,7 +102,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#tests" ],
+            to: "#tests",
         },
         {
             protocol: "fuchsia.logger.LogSink",
@@ -130,13 +130,13 @@
         {
             event: "capability_requested",
             from: "framework",
-            to: [ "#debug_data" ],
+            to: "#debug_data",
             filter: { name: "fuchsia.debugdata.DebugData" },
         },
         {
             event: [ "stopped" ],
             from: "framework",
-            to: [ "#debug_data" ],
+            to: "#debug_data",
             modes: [ "async" ],
         },
         {
@@ -151,14 +151,14 @@
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: [ "#tests" ],
+            to: "#tests",
             rights: [ "r*" ],
         },
         {
             directory: "tmp-debug-data",
             from: "parent",
             as: "data",
-            to: [ "#debug_data" ],
+            to: "#debug_data",
             rights: [ "rw*" ],
         },
 
@@ -166,17 +166,17 @@
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#tests" ],
+            to: "#tests",
         },
         {
             storage: "temp",
             from: "self",
-            to: [ "#tests" ],
+            to: "#tests",
         },
         {
             storage: "cache",
             from: "self",
-            to: [ "#tests" ],
+            to: "#tests",
         },
 
         // temporary solution for tests that depend on having admin rights on
@@ -186,7 +186,7 @@
             directory: "memfs",
             from: "#test_tmpfs",
             as: "deprecated-tmp",
-            to: [ "#tests" ],
+            to: "#tests",
         },
 
         // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
@@ -194,7 +194,7 @@
         {
             directory: "dev-input-report",
             from: "parent",
-            to: [ "#tests" ],
+            to: "#tests",
             rights: [ "r*" ],
         },
 
@@ -202,7 +202,7 @@
         {
             directory: "dev-display-controller",
             from: "parent",
-            to: [ "#tests" ],
+            to: "#tests",
             rights: [ "rw*" ],
         },
     ],

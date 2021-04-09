@@ -13,7 +13,7 @@
         {
             protocol: "fuchsia.sys2.EventSource",
             from: "parent",
-            to: [ "#nested_realm" ],
+            to: "#nested_realm",
         },
     ],
 }

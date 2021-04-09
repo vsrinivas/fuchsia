@@ -16,7 +16,7 @@
         {
             protocol: "fuchsia.posix.socket.Provider",
             from: "#netstack-debug",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
         {
             protocol: "fuchsia.logger.LogSink",
@@ -29,7 +29,7 @@
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: [ "#test-driver" ],
+            to: "#test-driver",
         },
     ],
     expose: [
