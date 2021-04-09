@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/llcpp/fidl_test_base.h>
 #include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -23,70 +24,17 @@ namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
 constexpr char kTmpfsPath[] = "/tmp-inotify";
 
-class TestServer final : public fidl::WireInterface<fio::Directory> {
+class Server final : public fio::testing::Directory_TestBase {
  public:
-  TestServer() = default;
-
-  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void Clone(uint32_t flags, ::fidl::ServerEnd<::fuchsia_io::Node> object,
-             CloneCompleter::Sync& completer) override {
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    ADD_FAILURE("%s should not be called", name.c_str());
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetAttr(uint32_t flags, fio::wire::NodeAttributes attribute,
-               SetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
-            ::fidl::ServerEnd<::fuchsia_io::Node> object, OpenCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void AddInotifyFilter(::fidl::StringView path, fio2::wire::InotifyWatchMask filters,
-                        uint32_t watch_descriptor, ::zx::socket socket,
+  void AddInotifyFilter(fidl::StringView path, fio2::wire::InotifyWatchMask filters,
+                        uint32_t watch_descriptor, zx::socket socket,
                         AddInotifyFilterCompleter::Sync& completer) override {
     completer.Close(ZX_OK);
-  }
-
-  void Unlink(::fidl::StringView path, UnlinkCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Rewind(RewindCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void GetToken(GetTokenCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-              RenameCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-            LinkCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Watch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-             WatchCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 };
 
@@ -108,11 +56,12 @@ class InotifyAddFilter : public zxtest::Test {
     ASSERT_OK(fdio_ns_bind(namespace_, kTmpfsPath, endpoints->client.channel().release()));
   }
 
+  void TearDown() override { ASSERT_OK(fdio_ns_unbind(namespace_, kTmpfsPath)); }
+
   const fbl::unique_fd& fd() { return fd_; }
-  void TearDown() final { ASSERT_OK(fdio_ns_unbind(namespace_, kTmpfsPath)); }
 
  private:
-  TestServer server_;
+  Server server_;
   async::Loop loop_;
   fdio_ns_t* namespace_;
   fbl::unique_fd fd_;
