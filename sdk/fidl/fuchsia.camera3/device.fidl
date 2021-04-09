@@ -36,7 +36,8 @@ protocol Device {
     WatchCurrentConfiguration() -> (uint32 index);
 
     /// Sets the configuration using the provided index. Calling this method disconnects any
-    /// existing Stream clients associated with this camera.
+    /// existing Stream clients associated with this camera. An epitaph of ZX_OK
+    /// will be sent for any connected Stream clients on closing.
     SetCurrentConfiguration(uint32 index);
 
     /// Returns the camera's current mute state when it has changed from a previously returned

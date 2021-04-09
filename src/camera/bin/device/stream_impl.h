@@ -41,6 +41,9 @@ class StreamImpl {
              StreamRequestedCallback on_stream_requested, fit::closure on_no_clients);
   ~StreamImpl();
 
+  // Close all client connections with given status as epitaph.
+  void CloseAllClients(zx_status_t status);
+
   void SetMuteState(MuteState mute_state);
   fit::scope& Scope();
 

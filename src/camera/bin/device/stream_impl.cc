@@ -48,6 +48,19 @@ StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& 
 
 StreamImpl::~StreamImpl() = default;
 
+void StreamImpl::CloseAllClients(zx_status_t status) {
+  while (clients_.size() > 1) {
+    auto& [id, client] = *clients_.begin();
+    client->CloseConnection(status);
+  }
+
+  if (clients_.size() == 1) {
+    // After last client has been removed, on_no_clients_ will run and potentially delete 'this' so
+    // handle last client on it's own and don't touch 'this' after.
+    clients_.begin()->second->CloseConnection(status);
+  }
+}
+
 void StreamImpl::SetMuteState(MuteState mute_state) {
   TRACE_DURATION("camera", "StreamImpl::SetMuteState");
   mute_state_ = mute_state;

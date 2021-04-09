@@ -200,6 +200,12 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   deallocation_events_.clear();
   deallocation_promises_ = std::move(deallocation_promises);
 
+  for (auto& stream : streams_) {
+    if (stream) {
+      stream->CloseAllClients(ZX_OK);
+    }
+  }
+
   streams_.clear();
   streams_.resize(configurations_[index].streams().size());
   stream_to_pending_legacy_stream_request_params_.clear();

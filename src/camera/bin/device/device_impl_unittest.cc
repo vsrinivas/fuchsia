@@ -405,6 +405,7 @@ TEST_F(DeviceImplTest, ConfigurationSwitchingWhileAllocated) {
       });
 
   stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_OK);
     first_stream_gone = true;
     buffers.Unbind();
     vmo.reset();
@@ -658,7 +659,7 @@ TEST_F(DeviceImplTest, SetConfigurationDisconnectsStreams) {
   fuchsia::camera3::StreamPtr stream;
   bool error_received = false;
   stream.set_error_handler([&](zx_status_t status) {
-    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    EXPECT_EQ(status, ZX_OK);
     error_received = true;
   });
   device->ConnectToStream(0, stream.NewRequest());
@@ -719,7 +720,7 @@ TEST_F(DeviceImplTest, OrphanStream) {
   // Reset the error handler to expect peer-closed.
   bool stream_error_received = false;
   stream.set_error_handler([&](zx_status_t status) {
-    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    EXPECT_EQ(status, ZX_OK);
     stream_error_received = true;
   });
 
