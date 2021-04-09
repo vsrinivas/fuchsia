@@ -5,32 +5,24 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
 
 if (internal_access) {
   config_tas5805m = "audio/config/tas5805m_config.h"
 }
 
-driver_package("nelson") {
+fuchsia_system_package("nelson") {
   deps = [ ":nelson-module" ]
 
-  libraries = []
-
   if (internal_access) {
-    deps += [ ":config-tas5805-copy($shlib_toolchain)" ]
-
-    libraries += [
-      {
-        name = "$config_tas5805m"
-      },
-    ]
+    deps += [ ":config-tas5805" ]
   }
 }
 
 if (internal_access) {
-  copy("config-tas5805-copy") {
+  resource("config-tas5805") {
     sources = [ "//prebuilt/$config_tas5805m" ]
-    outputs = [ "$root_out_dir/$config_tas5805m" ]
+    outputs = [ "lib/$config_tas5805m" ]
   }
 }
 
@@ -122,7 +114,7 @@ driver_module("nelson-module") {
     "//zircon/public/lib/zx",
   ]
   if (internal_access) {
-    include_dirs = [ "$root_out_dir" ]
+    include_dirs = [ "//prebuilt" ]
     defines = [ "TAS5805M_CONFIG_PATH=\"$config_tas5805m\"" ]
   }
 }

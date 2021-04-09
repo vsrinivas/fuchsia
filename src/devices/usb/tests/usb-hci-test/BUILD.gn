@@ -4,7 +4,6 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
@@ -89,14 +88,7 @@ driver_module("driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-package("usb-hci-test-driver") {
-  __deprecated_system_image = true
-
+fuchsia_system_package("usb-hci-test-driver") {
   deps = [ ":driver" ]
-
-  drivers = [
-    {
-      name = "usb-hci-test-driver.so"
-    },
-  ]
+  allowed_in_extra_deps = true
 }
