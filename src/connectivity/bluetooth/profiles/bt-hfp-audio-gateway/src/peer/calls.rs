@@ -144,6 +144,12 @@ impl CallEntry {
             self.state = state;
         }
     }
+
+    // TODO (fxb/64550): Remove when call requests are initiated
+    #[allow(unused)]
+    pub fn is_active(&self) -> bool {
+        self.state == CallState::OngoingActive
+    }
 }
 
 /// The current state of a call.
@@ -276,7 +282,28 @@ impl Calls {
     }
 
     /// Send a request to the call manager to make the call active.
-    pub fn _request_active(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
+    /// Only one call can be active at a time. Before requesting the call at `index` be made
+    /// active, all active calls are either terminated or placed on hold depending on
+    /// `terminate_others`.
+    pub fn _request_active(
+        &mut self,
+        index: CallIdx,
+        terminate_others: bool,
+    ) -> Result<(), UnknownIndexError> {
+        let action =
+            if terminate_others { CallProxy::request_terminate } else { CallProxy::request_hold };
+
+        // Collect active_calls into a Vec to avoid double borrowing self.
+        let active_calls: Vec<_> = self
+            .current_calls
+            .calls()
+            .filter_map(|(i, call)| (i != index && call.is_active()).then(|| i))
+            .collect();
+
+        for i in active_calls {
+            // Failures are ignored.
+            let _ = self._send_call_request(i, action);
+        }
         self._send_call_request(index, |proxy| proxy.request_active())
     }
 
@@ -530,6 +557,21 @@ mod tests {
     }
 
     #[test]
+    fn call_is_active() {
+        // executor must be created before fidl endpoints can be created
+        let _exec = fasync::Executor::new().unwrap();
+        let (proxy, _) = fidl::endpoints::create_proxy::<CallMarker>().unwrap();
+
+        let mut call = CallEntry::new(proxy, "1".into(), CallState::IncomingRinging);
+
+        assert!(!call.is_active());
+        call.set_state(CallState::OngoingActive);
+        assert!(call.is_active());
+        call.set_state(CallState::Terminated);
+        assert!(!call.is_active());
+    }
+
+    #[test]
     fn call_list_insert() {
         let mut list = CallList::default();
         let i1 = list.insert(1);
@@ -653,8 +695,31 @@ mod tests {
         calls._request_hold(idx).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestHold { .. })));
 
-        calls._request_active(idx).expect("valid index");
+        // Make a second call that is active
+        let (client_end, mut call_stream_2) = fidl::endpoints::create_request_stream().unwrap();
+        let num = "2".into();
+        let _ = calls.handle_new_call(client_end, num, CallState::OngoingActive);
+
+        // Sending a RequestActive for the first call will send a RequestTerminate for the second
+        // call when `true` is passed to request_active.
+        calls._request_active(idx, true).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestActive { .. })));
+        assert_matches!(call_stream_2.next().await, Some(Ok(CallRequest::RequestTerminate { .. })));
+
+        // Place the first call back on hold, so that we can activate it again.
+        calls._request_hold(idx).expect("valid index");
+        assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestHold { .. })));
+
+        // Make a third call that is active
+        let (client_end, mut call_stream_3) = fidl::endpoints::create_request_stream().unwrap();
+        let num = "3".into();
+        let _ = calls.handle_new_call(client_end, num, CallState::OngoingActive);
+
+        // Sending a RequestActive for the first call will send a RequestHold for the third
+        // call when `false` is passed to request_active.
+        calls._request_active(idx, false).expect("valid index");
+        assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestActive { .. })));
+        assert_matches!(call_stream_3.next().await, Some(Ok(CallRequest::RequestHold { .. })));
 
         calls._request_terminate(idx).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestTerminate { .. })));
@@ -674,7 +739,7 @@ mod tests {
         let result = calls._request_hold(invalid);
         assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
 
-        let result = calls._request_active(invalid);
+        let result = calls._request_active(invalid, false);
         assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
 
         let result = calls._request_terminate(invalid);
