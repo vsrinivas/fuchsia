@@ -6,9 +6,11 @@
 #define LIB_FDIO_CPP_CALLER_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 
 #include <utility>
 
@@ -75,6 +77,29 @@ class FdioCaller {
   // ownership.
   zx::unowned_channel channel() const { return zx::unowned_channel(borrow_channel()); }
 
+  // This channel is cloned.
+  // The returned channel can outlive the FdioCaller object.
+  zx::status<zx::channel> clone_channel() const {
+    zx_handle_t handle;
+    auto status = fdio_fd_clone(fd_.get(), &handle);
+    if (status != ZX_OK) {
+      return zx::error_status(status);
+    }
+    return zx::ok(zx::channel(handle));
+  }
+
+  // This channel is taken.
+  // After this call this FdioCaller object and the channel that was passed in are invalid.
+  zx::status<zx::channel> take_channel() {
+    int fd = release().release();
+    zx_handle_t handle;
+    auto status = fdio_fd_transfer(fd, &handle);
+    if (status != ZX_OK) {
+      return zx::error_status(status);
+    }
+    return zx::ok(zx::channel(handle));
+  }
+
   // Same as borrow_channel, but wrapped as a fuchsia.io/Node client channel.
   fidl::UnownedClientEnd<fuchsia_io::Node> node() const { return borrow_as<fuchsia_io::Node>(); }
 
@@ -86,11 +111,59 @@ class FdioCaller {
     return borrow_as<fuchsia_io::Directory>();
   }
 
+  // Same as clone_channel, but wrapped as a fuchsia.io/Node client channel.
+  zx::status<fidl::ClientEnd<fuchsia_io::Node>> clone_node() const {
+    return clone_as<fuchsia_io::Node>();
+  }
+
+  // Same as clone_channel, but wrapped as a fuchsia.io/File client channel.
+  zx::status<fidl::ClientEnd<fuchsia_io::File>> clone_file() const {
+    return clone_as<fuchsia_io::File>();
+  }
+
+  // Same as clone_channel, but wrapped as a fuchsia.io/Directory client channel.
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> clone_directory() const {
+    return clone_as<fuchsia_io::Directory>();
+  }
+
+  // Same as take_channel, but wrapped as a fuchsia.io/Node client channel.
+  zx::status<fidl::ClientEnd<fuchsia_io::Node>> take_node() { return take_as<fuchsia_io::Node>(); }
+
+  // Same as take_channel, but wrapped as a fuchsia.io/File client channel.
+  zx::status<fidl::ClientEnd<fuchsia_io::File>> take_file() { return take_as<fuchsia_io::File>(); }
+
+  // Same as take_channel, but wrapped as a fuchsia.io/Directory client channel.
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> take_directory() {
+    return take_as<fuchsia_io::Directory>();
+  }
+
   // Same as borrow_channel but wrapped in a typed client channel.
   // Be careful to only use this if you know the type of the protocol being spoken.
   template <typename T>
   fidl::UnownedClientEnd<T> borrow_as() const {
     return fidl::UnownedClientEnd<T>(channel());
+  }
+
+  // Same as clone_channel but wrapped in a typed client channel.
+  // Be careful to only use this if you know the type of the protocol being spoken.
+  template <typename T>
+  zx::status<fidl::ClientEnd<T>> clone_as() const {
+    auto channel = clone_channel();
+    if (channel.is_error()) {
+      return channel.take_error();
+    }
+    return zx::ok(fidl::ClientEnd<T>(std::move(*channel)));
+  }
+
+  // Same as take_channel but wrapped in a typed client channel.
+  // Be careful to only use this if you know the type of the protocol being spoken.
+  template <typename T>
+  zx::status<fidl::ClientEnd<T>> take_as() {
+    auto channel = clone_channel();
+    if (channel.is_error()) {
+      return channel.take_error();
+    }
+    return zx::ok(fidl::ClientEnd<T>(std::move(*channel)));
   }
 
  private:

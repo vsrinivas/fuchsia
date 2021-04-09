@@ -38,6 +38,10 @@ void TryFilesystemOperations(zx::unowned_channel channel) {
   ASSERT_EQ(memcmp(read_result->data.data(), golden, strlen(golden)), 0);
 }
 
+void TryFilesystemOperations(const zx::channel& channel) {
+  TryFilesystemOperations(channel.borrow());
+}
+
 void TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
   TryFilesystemOperations(caller.channel());
 }
@@ -117,6 +121,53 @@ TEST(FdioCallTests, FdioCallerMoveConstructor) {
   ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(move_ctor_caller));
 }
 
+TEST(FdioCallTests, FdioCallerBorrow) {
+  Harness harness;
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
+  auto fd = harness.fd();
+
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  zx::unowned_channel channel = caller.channel();
+  ASSERT_TRUE(channel->is_valid());
+  ASSERT_TRUE(caller);
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(std::move(channel)));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.node().channel()));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.file().channel()));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.directory().channel()));
+}
+
+TEST(FdioCallTests, FdioCallerClone) {
+  Harness harness;
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
+  auto fd = harness.fd();
+
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  auto channel = caller.clone_channel();
+  ASSERT_OK(channel.status_value());
+  ASSERT_TRUE(channel->is_valid());
+  ASSERT_TRUE(caller);
+  ASSERT_NE(caller.channel()->get(), channel->get());
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(channel->borrow()));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.clone_node()->channel()));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.clone_file()->channel()));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.clone_directory()->channel()));
+}
+
+TEST(FdioCallTests, FdioCallerTake) {
+  Harness harness;
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
+  auto fd = harness.fd();
+
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  auto channel = caller.take_channel();
+  ASSERT_OK(channel.status_value());
+  ASSERT_TRUE(channel->is_valid());
+  ASSERT_FALSE(caller);
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(channel->borrow()));
+}
+
 TEST(FdioCallTests, UnownedFdioCaller) {
   Harness harness;
   ASSERT_NO_FATAL_FAILURES(harness.Setup());
@@ -125,6 +176,22 @@ TEST(FdioCallTests, UnownedFdioCaller) {
   ASSERT_TRUE(caller);
   ASSERT_TRUE(fd);
   ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller));
+}
+
+TEST(FdioCallTests, UnownedFdioCallerBorrow) {
+  Harness harness;
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
+  auto fd = harness.fd();
+
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  zx::unowned_channel channel = caller.channel();
+  ASSERT_TRUE(channel->is_valid());
+  ASSERT_TRUE(caller);
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(std::move(channel)));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.node().channel()));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.file().channel()));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller.directory().channel()));
 }
 
 }  // namespace
