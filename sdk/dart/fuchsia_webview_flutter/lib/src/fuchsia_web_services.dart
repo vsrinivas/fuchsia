@@ -109,7 +109,7 @@ class FuchsiaWebServices {
 
     _contextProviderProxy.create(contextParams, _contextProxy.ctrl.request());
     _contextProxy.createFrameWithParams(
-        fidl_web.CreateFrameParams(enableRemoteDebugging: true),
+        fidl_web.CreateFrameParams(enableRemoteDebugging: false),
         frame.ctrl.request());
 
     // Create token pair and pass one end to the webview and the other to child
