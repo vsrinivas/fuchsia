@@ -187,7 +187,9 @@ fn run_command_and_wait_for_clean_exit(
         .context(format!("failed to wait for process to complete"))?;
 
     let info = process.info().context("failed to get process info")?;
-    if !info.exited || info.return_code != 0 {
+    if !zx::ProcessInfoFlags::from_bits(info.flags).unwrap().contains(zx::ProcessInfoFlags::EXITED)
+        || info.return_code != 0
+    {
         return Err(format_err!("process returned non-zero exit code ({})", info.return_code));
     }
 

@@ -44,6 +44,7 @@ rustc_library("process_builder") {
     ":test-util-fidl-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/storage/pseudo-fs",
+    "//third_party/rust_crates:matches",
   ]
 
   sources = [

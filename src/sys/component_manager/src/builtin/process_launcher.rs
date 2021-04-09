@@ -376,6 +376,7 @@ mod tests {
         fuchsia_runtime::{job_default, HandleType},
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
+        matches::assert_matches,
         moniker::AbsoluteMoniker,
         std::{mem, sync::Weak},
         vfs::{
@@ -458,14 +459,14 @@ mod tests {
 
     fn check_process_running(process: &zx::Process) -> Result<(), Error> {
         let info = process.info()?;
-        assert_eq!(
+        const STARTED: u32 = zx::ProcessInfoFlags::STARTED.bits();
+        assert_matches!(
             info,
             zx::ProcessInfo {
                 return_code: 0,
-                started: true,
-                exited: false,
-                debugger_attached: false
-            }
+                start_time,
+                flags: STARTED,
+            } if start_time > 0
         );
         Ok(())
     }
@@ -474,14 +475,15 @@ mod tests {
         fasync::OnSignals::new(process, zx::Signals::PROCESS_TERMINATED).await?;
 
         let info = process.info()?;
-        assert_eq!(
+        const STARTED_AND_EXITED: u32 =
+            zx::ProcessInfoFlags::STARTED.bits() | zx::ProcessInfoFlags::EXITED.bits();
+        assert_matches!(
             info,
             zx::ProcessInfo {
                 return_code: 0,
-                started: true,
-                exited: true,
-                debugger_attached: false
-            }
+                start_time,
+                flags: STARTED_AND_EXITED,
+            } if start_time > 0
         );
         Ok(())
     }
@@ -642,15 +644,7 @@ mod tests {
 
         // Process should exist & be valid but not yet be running.
         let info = start_data.process.info()?;
-        assert_eq!(
-            info,
-            zx::ProcessInfo {
-                return_code: 0,
-                started: false,
-                exited: false,
-                debugger_attached: false
-            }
-        );
+        assert_eq!(info, zx::ProcessInfo { return_code: 0, start_time: 0, flags: 0 });
 
         // Start the process manually using the info from ProcessStartData.
         start_data

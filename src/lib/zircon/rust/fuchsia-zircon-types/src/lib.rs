@@ -919,7 +919,7 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_NONE                       = 0;
     ZX_INFO_HANDLE_VALID               = 1;
     ZX_INFO_HANDLE_BASIC               = 2;  // zx_info_handle_basic_t[1]
-    ZX_INFO_PROCESS                    = 3;  // zx_info_process_t[1]
+    ZX_INFO_PROCESS                    = info_topic(3, 1);  // zx_info_process_t[1]
     ZX_INFO_PROCESS_THREADS            = 4;  // zx_koid_t[n]
     ZX_INFO_VMAR                       = 7;  // zx_info_vmar_t[1]
     ZX_INFO_JOB_CHILDREN               = 8;  // zx_koid_t[n]
@@ -986,14 +986,19 @@ pub struct zx_info_socket_t {
     pub tx_buf_size: usize,
 }
 
+multiconst!(u32, [
+    ZX_INFO_PROCESS_FLAG_STARTED = 1 << 0;
+    ZX_INFO_PROCESS_FLAG_EXITED = 1 << 1;
+    ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED = 1 << 2;
+]);
+
 struct_decl_macro! {
     #[repr(C)]
     #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
     pub struct <zx_info_process_t> {
         pub return_code: i64,
-        pub started: bool,
-        pub exited: bool,
-        pub debugger_attached: bool,
+        pub start_time: zx_time_t,
+        pub flags: u32,
     }
 }
 

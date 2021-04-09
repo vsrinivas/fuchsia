@@ -996,6 +996,7 @@ mod tests {
         fuchsia_vfs_pseudo_fs::{
             directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
         },
+        matches::assert_matches,
         std::iter,
         std::mem,
         zerocopy::LayoutVerified,
@@ -1055,14 +1056,14 @@ mod tests {
 
     fn check_process_running(process: &zx::Process) -> Result<(), Error> {
         let info = process.info()?;
-        assert_eq!(
+        const STARTED: u32 = zx::ProcessInfoFlags::STARTED.bits();
+        assert_matches!(
             info,
             zx::ProcessInfo {
                 return_code: 0,
-                started: true,
-                exited: false,
-                debugger_attached: false
-            }
+                start_time,
+                flags: STARTED,
+            } if start_time > 0
         );
         Ok(())
     }
@@ -1071,14 +1072,15 @@ mod tests {
         fasync::OnSignals::new(process, zx::Signals::PROCESS_TERMINATED).await?;
 
         let info = process.info()?;
-        assert_eq!(
+        const STARTED_AND_EXITED: u32 =
+            zx::ProcessInfoFlags::STARTED.bits() | zx::ProcessInfoFlags::EXITED.bits();
+        assert_matches!(
             info,
             zx::ProcessInfo {
                 return_code: 0,
-                started: true,
-                exited: true,
-                debugger_attached: false
-            }
+                start_time,
+                flags: STARTED_AND_EXITED,
+            } if start_time > 0
         );
         Ok(())
     }

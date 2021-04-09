@@ -7,8 +7,17 @@
 use crate::ok;
 use crate::{object_get_info, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Task, Thread};
+use bitflags::bitflags;
+use fuchsia_zircon_sys::{self as sys, zx_time_t};
 
-use fuchsia_zircon_sys as sys;
+bitflags! {
+    #[repr(transparent)]
+    pub struct ProcessInfoFlags: u32 {
+        const STARTED = sys::ZX_INFO_PROCESS_FLAG_STARTED;
+        const EXITED = sys::ZX_INFO_PROCESS_FLAG_EXITED;
+        const DEBUGGER_ATTACHED = sys::ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED;
+    }
+}
 
 /// An object representing a Zircon process.
 ///
@@ -22,8 +31,8 @@ sys::zx_info_process_t!(ProcessInfo);
 
 impl From<sys::zx_info_process_t> for ProcessInfo {
     fn from(info: sys::zx_info_process_t) -> ProcessInfo {
-        let sys::zx_info_process_t { return_code, started, exited, debugger_attached } = info;
-        ProcessInfo { return_code, started, exited, debugger_attached }
+        let sys::zx_info_process_t { return_code, start_time, flags } = info;
+        ProcessInfo { return_code, start_time, flags }
     }
 }
 
@@ -175,16 +184,24 @@ mod tests {
     use crate::cprng_draw;
     // The unit tests are built with a different crate name, but fdio and fuchsia_runtime return a
     // "real" fuchsia_zircon::Process that we need to use.
-    use fuchsia_zircon::{sys, AsHandleRef, ProcessInfo, Signals, Task, TaskStatsInfo, Time};
+    use fuchsia_zircon::{
+        sys, AsHandleRef, ProcessInfo, ProcessInfoFlags, Signals, Task, TaskStatsInfo, Time,
+    };
+    use matches::assert_matches;
     use std::ffi::CString;
 
     #[test]
     fn info_self() {
         let process = fuchsia_runtime::process_self();
         let info = process.info().unwrap();
-        assert_eq!(
+        const STARTED: u32 = ProcessInfoFlags::STARTED.bits();
+        assert_matches!(
             info,
-            ProcessInfo { return_code: 0, started: true, exited: false, debugger_attached: false }
+            ProcessInfo {
+                return_code: 0,
+                start_time,
+                flags: STARTED,
+            } if start_time > 0
         );
     }
 
@@ -230,14 +247,15 @@ mod tests {
             .wait_handle(Signals::PROCESS_TERMINATED, Time::INFINITE)
             .expect("Wait for process termination failed");
         let info = process.info().unwrap();
-        assert_eq!(
+        const STARTED_AND_EXITED: u32 =
+            ProcessInfoFlags::STARTED.bits() | ProcessInfoFlags::EXITED.bits();
+        assert_matches!(
             info,
             ProcessInfo {
-                return_code: expected_code,
-                started: true,
-                exited: true,
-                debugger_attached: false
-            }
+                return_code,
+                start_time,
+                flags: STARTED_AND_EXITED,
+            } if return_code == expected_code && start_time > 0
         );
     }
 
@@ -255,9 +273,14 @@ mod tests {
         .expect("Failed to spawn process");
 
         let info = process.info().unwrap();
-        assert_eq!(
+        const STARTED: u32 = ProcessInfoFlags::STARTED.bits();
+        assert_matches!(
             info,
-            ProcessInfo { return_code: 0, started: true, exited: false, debugger_attached: false }
+            ProcessInfo {
+                return_code: 0,
+                start_time,
+                flags: STARTED,
+             } if start_time > 0
         );
 
         process.kill().expect("Failed to kill process");
@@ -266,14 +289,15 @@ mod tests {
             .expect("Wait for process termination failed");
 
         let info = process.info().unwrap();
-        assert_eq!(
+        const STARTED_AND_EXITED: u32 =
+            ProcessInfoFlags::STARTED.bits() | ProcessInfoFlags::EXITED.bits();
+        assert_matches!(
             info,
             ProcessInfo {
                 return_code: sys::ZX_TASK_RETCODE_SYSCALL_KILL,
-                started: true,
-                exited: true,
-                debugger_attached: false
-            }
+                start_time,
+                flags: STARTED_AND_EXITED,
+            } if start_time > 0
         );
     }
 }
