@@ -75,11 +75,14 @@ fit::result<Partition, std::string> ProcessPartition(const PartitionParams& para
                                                      const FvmOptions& fvm_options) {
   Partition partition;
 
-  auto volume_reader_or = FdReader::Create(params.source_image_path);
-  if (volume_reader_or.is_error()) {
-    return volume_reader_or.take_error_result();
+  std::unique_ptr<Reader> volume_reader;
+  if (params.format != PartitionImageFormat::kEmptyPartition) {
+    auto volume_reader_or = FdReader::Create(params.source_image_path);
+    if (volume_reader_or.is_error()) {
+      return volume_reader_or.take_error_result();
+    }
+    volume_reader = std::make_unique<FdReader>(volume_reader_or.take_value());
   }
-  std::unique_ptr<Reader> volume_reader = std::make_unique<FdReader>(volume_reader_or.take_value());
 
   switch (params.format) {
     case PartitionImageFormat::kBlobfs: {
@@ -323,7 +326,6 @@ fit::result<void, std::string> Create(const CreateParams& params) {
         }
         compressor = std::make_unique<Lz4Compressor>(compressor_or.take_value());
       }
-
       if (auto result = FvmSparseWriteImage(descriptor, writer.get(), compressor.get());
           result.is_error()) {
         return result.take_error_result();

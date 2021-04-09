@@ -8,6 +8,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/adapter/commands.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/options.h"
@@ -28,7 +29,7 @@ TEST(ArgumentTest, CommandFromStringIsOk) {
 }
 
 TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
-  std::array<std::string_view, 41> kArgs = {
+  std::array<std::string_view, 43> kArgs = {
       "--blob",
       "path",
       "--minimum-inodes",
@@ -70,6 +71,8 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
       "11K",
       "--maximum-bytes",
       "131313",
+      "--reserve-slices",
+      "5",
   };
   FvmOptions options;
   options.slice_size = 8192;
@@ -78,7 +81,7 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
   ASSERT_TRUE(params_or.is_ok()) << params_or.error();
   std::vector<PartitionParams> params = params_or.take_value();
 
-  ASSERT_EQ(params.size(), 6u);
+  ASSERT_EQ(params.size(), 7u);
 
   auto blob_params = params[0];
   EXPECT_EQ(blob_params.label, "");
@@ -138,6 +141,15 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
   EXPECT_TRUE(memcmp(empty_minfs_params.type_guid->data(), kDataGuid, kGuidLength) == 0);
   EXPECT_FALSE(empty_minfs_params.encrypted);
   EXPECT_EQ(empty_minfs_params.options.max_bytes.value(), options.slice_size + 1);
+
+  auto snapshot_partition_params = params[6];
+  EXPECT_EQ(snapshot_partition_params.label, "internal");
+  EXPECT_EQ(snapshot_partition_params.source_image_path, "");
+  EXPECT_EQ(snapshot_partition_params.format, PartitionImageFormat::kEmptyPartition);
+  EXPECT_TRUE(memcmp(snapshot_partition_params.type_guid->data(),
+                     fvm::kSnapshotMetadataTypeGuid.data(), kGuidLength) == 0);
+  EXPECT_FALSE(snapshot_partition_params.encrypted);
+  EXPECT_EQ(snapshot_partition_params.options.max_bytes.value(), 5 * options.slice_size);
 }
 
 TEST(ArgumentTest, CreateParamsFromArgsIsOk) {

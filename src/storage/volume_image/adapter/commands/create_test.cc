@@ -256,6 +256,14 @@ TEST(CreateCommandTest, CreateNonCompressedFvmSpareImageIsOk) {
   params.format = FvmImageFormat::kSparseImage;
   params.fvm_options.compression.schema = CompressionSchema::kNone;
 
+  // Add an empty partition.
+  PartitionParams empty_partition;
+  empty_partition.format = PartitionImageFormat::kEmptyPartition;
+  empty_partition.label = "my-empty-partition";
+  empty_partition.encrypted = false;
+  empty_partition.options.max_bytes = 1;
+  params.partitions.push_back(empty_partition);
+
   for (auto& partition_param : params.partitions) {
     if (partition_param.format == PartitionImageFormat::kBlobfs) {
       partition_param.encrypted = false;
@@ -289,9 +297,15 @@ TEST(CreateCommandTest, CreateNonCompressedFvmSpareImageIsOk) {
       checked_count++;
       continue;
     }
+
+    if (partition.volume().name == "my-empty-partition") {
+      ASSERT_EQ(partition.volume().encryption, EncryptionType::kNone);
+      checked_count++;
+      continue;
+    }
   }
 
-  EXPECT_EQ(checked_count, 2);
+  EXPECT_EQ(checked_count, 3);
 }
 
 TEST(CreateCommandTest, CreateNonCompressedFvmSpareImageWithNonEncryptedPartitionsIsOk) {

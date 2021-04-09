@@ -55,6 +55,7 @@ TEST(EmptyPartitionTest, AllocatesSlicesToStoreMaxBytes) {
   EXPECT_EQ(mapping.target, 0u);
   EXPECT_EQ(mapping.count, 0u);
   EXPECT_EQ(mapping.size, partition_options.max_bytes.value());
+  EXPECT_EQ(mapping.options.at(EnumAsString(AddressMapOption::kFill)), 0u);
   EXPECT_TRUE(memcmp(partition.volume().instance.data(), fvm::kPlaceHolderInstanceGuid.data(),
                      fvm::kPlaceHolderInstanceGuid.size()) == 0);
 }

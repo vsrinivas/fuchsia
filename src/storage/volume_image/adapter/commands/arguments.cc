@@ -10,6 +10,7 @@
 #include <system_error>
 #include <utility>
 
+#include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/adapter/commands.h"
 #include "src/storage/volume_image/options.h"
 
@@ -191,6 +192,25 @@ fit::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArgu
 
     partitions.push_back(empty_minfs_partition);
   }
+
+  // One off reserved partition.
+  std::optional<uint64_t> reserved_slices;
+  if (auto result = GetSizeArgumentValue(arguments, "--reserve-slices", reserved_slices);
+      result.is_error()) {
+    return result.take_error_result();
+  }
+
+  if (reserved_slices.has_value()) {
+    PartitionParams empty_metadata_partition;
+    empty_metadata_partition.format = PartitionImageFormat::kEmptyPartition;
+    empty_metadata_partition.label = "internal";
+    empty_metadata_partition.type_guid = fvm::kSnapshotMetadataTypeGuid;
+    empty_metadata_partition.encrypted = false;
+    empty_metadata_partition.options.max_bytes = reserved_slices.value() * options.slice_size;
+
+    partitions.push_back(empty_metadata_partition);
+  }
+
   return fit::ok(partitions);
 }
 

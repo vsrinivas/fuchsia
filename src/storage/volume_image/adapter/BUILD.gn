@@ -180,6 +180,8 @@ compiled_action("test-fvm-sparse-image-gen") {
     "10M",
     "--maximum-bytes",
     "218103808",
+    "--reserve-slices",
+    "4",
   ]
 
   deps = [

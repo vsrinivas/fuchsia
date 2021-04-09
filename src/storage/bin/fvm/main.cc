@@ -846,22 +846,14 @@ int main(int argc, char** argv) {
       }
     }
   } else if (!strcmp(command, "sparse")) {
-    if (offset) {
-      fprintf(stderr, "Invalid sparse flags\n");
+    auto create_params_or = storage::volume_image::CreateParams::FromArguments(arguments);
+    if (create_params_or.is_error()) {
+      std::cout << create_params_or.error() << std::endl;
       return -1;
     }
 
-    std::unique_ptr<SparseContainer> sparseContainer;
-    if (SparseContainer::CreateNew(path, slice_size, flags, max_disk_size, &sparseContainer) !=
-        ZX_OK) {
-      return -1;
-    }
-
-    if (add_partitions(sparseContainer.get(), argc - i, argv + i) < 0) {
-      return -1;
-    }
-
-    if (sparseContainer->Commit() != ZX_OK) {
+    if (auto result = storage::volume_image::Create(create_params_or.value()); result.is_error()) {
+      std::cout << result.error() << std::endl;
       return -1;
     }
   } else if (!strcmp(command, "verify")) {

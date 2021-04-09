@@ -8,6 +8,7 @@
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/address_descriptor.h"
+#include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/partition.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/volume_descriptor.h"
@@ -46,6 +47,7 @@ fit::result<Partition, std::string> CreateEmptyFvmPartition(
   mapping.target = 0;
   mapping.count = 0;
   mapping.size = descriptor.size;
+  mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
 
   AddressDescriptor address;
   address.mappings.push_back(mapping);

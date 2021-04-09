@@ -257,12 +257,38 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
       continue;
     }
 
+    if (partition.volume().name == "internal") {
+      // Check that allocated slices are equal to the slice count for max bytes.
+      std::unique_ptr<block_client::RemoteBlockDevice> block_device;
+      zx::channel channel;
+      ASSERT_EQ(fdio_get_service_handle(partition_fd.release(), channel.reset_and_get_address()),
+                ZX_OK);
+      ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
+      std::array<uint64_t, 2> slice_start = {0, 4};
+      using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
+      std::array<VsliceRange, fuchsia_hardware_block_volume::wire::MAX_SLICE_REQUESTS>
+
+          ranges = {};
+      uint64_t range_count;
+
+      ASSERT_EQ(block_device->VolumeQuerySlices(slice_start.data(), slice_start.size(),
+                                                reinterpret_cast<VsliceRange*>(ranges.data()),
+                                                &range_count),
+                ZX_OK);
+      ASSERT_EQ(range_count, 2u);
+      EXPECT_TRUE(ranges[0].allocated);
+      EXPECT_EQ(ranges[0].count, 4u);
+      EXPECT_FALSE(ranges[1].allocated);
+      EXPECT_EQ(ranges[1].count, fvm::kMaxVSlices - 4);
+      continue;
+    }
+
     auto fsck_options = default_fsck_options;
     fsck_options.always_modify = false;
     fsck_options.never_modify = true;
     fsck_options.verbose = true;
     fsck_options.force = true;
-    ASSERT_EQ(fsck(partition_path.data(),
+    EXPECT_EQ(fsck(partition_path.data(),
                    partition.volume().name == "blobfs" ? DISK_FORMAT_BLOBFS : DISK_FORMAT_MINFS,
                    &fsck_options, &launch_stdio_sync),
               ZX_OK);
