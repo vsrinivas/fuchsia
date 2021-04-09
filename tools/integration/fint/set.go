@@ -22,6 +22,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
+var (
+	// Path to a file within the checkout which, if its timestamp is updated,
+	// will cause the build system to rebuild all nonhermetic build actions.
+	rebuildNonHermeticActionsPath = []string{"build", "tracer", "force_nonhermetic_rebuild"}
+)
+
 // Set runs `gn gen` given a static and context spec. It's intended to be
 // consumed as a library function.
 func Set(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Context) (*fintpb.SetArtifacts, error) {
@@ -48,6 +54,17 @@ func runSteps(
 	if contextSpec.BuildDir == "" {
 		return nil, fmt.Errorf("build_dir must be set")
 	}
+
+	if contextSpec.Incremental {
+		// If we're building incrementally, we need to rebuild all nonhermetic
+		// actions. This is done by touching a particular source file in the
+		// tree.
+		path := filepath.Join(append([]string{contextSpec.CheckoutDir}, rebuildNonHermeticActionsPath...)...)
+		if err := runner.Run(ctx, []string{"touch", filepath.Join(path)}, os.Stdout, os.Stderr); err != nil {
+			return nil, err
+		}
+	}
+
 	genArgs, err := genArgs(staticSpec, contextSpec)
 	if err != nil {
 		return nil, err
