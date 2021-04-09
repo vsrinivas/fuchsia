@@ -13,6 +13,8 @@ ffmpeg_prebuilt_variants = [
   "asan-ubsan",
   "lto",
   "profile",
+  "coverage",
+  "coverage-rust",
   "coverage-sdk",
   "thinlto",
   "ubsan",
