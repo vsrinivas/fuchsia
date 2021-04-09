@@ -1987,13 +1987,8 @@ void H264MultiDecoder::HandlePicDataDone() {
   OutputReadyFrames();
 
   state_ = DecoderState::kWaitingForInputOrOutput;
-  // In this path we StopDecoding() before potentially saving the input context.  This is different
-  // than other paths which save the state while !is_hw_active_ && is_decoder_started_, then
-  // StopDecoding().  IDK if saving before StopDecoding() in this path would work.
-  //
-  // TODO(fxbug.dev/13483): Check if flipping the order here helps with the decode output flake that
-  // looks like a loop filter issue (see use_h264_multi_decoder_flake_repro_test).
-  owner_->core()->StopDecoding();
+  // No need for owner_->core()->StopDecoding() here, as the forced swap-out below will call
+  // StopDecoding().
   is_decoder_started_ = false;
 
   slice_data_map_.clear();
