@@ -165,7 +165,7 @@ pub(in crate::directory) enum BaseDirectoryRequest {
         #[allow(unused)]
         socket: fidl::Socket,
         #[allow(unused)]
-        control_handle: DirectoryControlHandle,
+        responder: fidl_fuchsia_io::DirectoryAddInotifyFilterResponder,
     },
     ReadDirents {
         max_bytes: u64,
@@ -244,8 +244,8 @@ impl From<DirectoryRequest> for DirectoryRequestType {
                 filters,
                 watch_descriptor,
                 socket,
-                control_handle,
-            } => Base(AddInotifyFilter { path, filters, watch_descriptor, socket, control_handle }),
+                responder,
+            } => Base(AddInotifyFilter { path, filters, watch_descriptor, socket, responder }),
             DirectoryRequest::Unlink { path, responder } => Derived(Unlink { path, responder }),
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 Base(ReadDirents { max_bytes, responder })

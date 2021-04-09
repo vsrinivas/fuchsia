@@ -72,8 +72,22 @@ zx_status_t inotify_close(zxio_t* io) {
 
 zx_status_t inotify_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                           zxio_flags_t flags, size_t* out_actual) {
-  // TODO manalib to be implemented in a followup.
-  return ZX_ERR_NOT_SUPPORTED;
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  size_t total = fdio_iovec_get_capacity(vector, vector_count);
+
+  std::vector<uint8_t> buf(total);
+
+  size_t actual;
+  zx_status_t status = zxio_to_inotify(io)->client.read(flags, buf.data(), total, &actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fdio_iovec_copy_to(buf.data(), actual, vector, vector_count, out_actual);
+  return ZX_OK;
 }
 
 constexpr zxio_ops_t inotify_ops = []() {

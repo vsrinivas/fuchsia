@@ -508,7 +508,7 @@ protocol Directory {
     ///   inotify instance on inotify init.
     ///
     AddInotifyFilter(fuchsia.io2.Path path, fuchsia.io2.InotifyWatchMask filters,
-                     uint32 watch_descriptor, zx.handle:SOCKET socket);
+                     uint32 watch_descriptor, zx.handle:SOCKET socket) -> ();
 
     /// Detaches an object from this directory object.
     ///

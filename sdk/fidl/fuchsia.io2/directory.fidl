@@ -70,7 +70,7 @@ protocol Directory {
     ///   what is allowed.
     /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
     AddInotifyFilter(Path path, InotifyWatchMask filters, uint32 watch_descriptor,
-                     zx.handle:SOCKET socket);
+                     zx.handle:SOCKET socket) -> ();
 
     /// Removes a child node from the this directory's list of entries.
     ///
