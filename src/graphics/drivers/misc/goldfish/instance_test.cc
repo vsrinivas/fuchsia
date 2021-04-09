@@ -16,6 +16,8 @@
 #include <tuple>
 
 #include <zxtest/zxtest.h>
+
+#include "lib/fidl/llcpp/wire_messaging.h"
 namespace goldfish {
 
 class FakeInstance : public Instance {
@@ -77,7 +79,7 @@ class InstanceDeviceTest : public zxtest::Test {
 
   fake_ddk::Bind ddk_;
   std::unique_ptr<FakeInstance> dut_;
-  fuchsia_hardware_goldfish::PipeDevice::SyncClient fidl_client_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::PipeDevice> fidl_client_;
   async::Loop loop_;
 
  private:
