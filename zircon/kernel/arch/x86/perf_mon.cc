@@ -420,7 +420,7 @@ static void x86_perfmon_init_lbr(uint32_t lbr_stack_size) {
 }
 
 static void x86_perfmon_init_once(uint level) {
-  if (arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
+  if (!arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
     return;
   }
 
