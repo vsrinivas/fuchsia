@@ -1093,3 +1093,16 @@
   reviewers: ['eieio@google.com', 'maniscalco@google.com', 'adanis@google.com']
   submitted: '2021-03-09'
   reviewed: '2021-04-06'
+
+- name: 'RFC-0085'
+  title: 'Reducing the zx_status_t space'
+  short_description: 'Reduce the range of valid zx_status_t values, allowing the type to be more easily embedded in other types.'
+  authors: ['dgreenaway@google.com', 'kulakowski@google.com']
+  file: '0085_reducing_zx_status_t_space.md'
+  area: ['Zircon', 'System']
+  issue: ['74211', '74212']
+  gerrit_change_id: ['436685']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'maniscalco@google.com', 'pascallouis@google.com']
+  submitted: '2020-10-09'
+  reviewed: '2021-04-08'
