@@ -617,15 +617,19 @@ pub fn convert_property_selector_to_regex(selector: &StringSelector) -> Result<S
 /// NOTE: All strings must be sanitized before being evaluated by
 ///       selectors in regex form.
 pub fn sanitize_string_for_selectors(node: &str) -> String {
-    let mut sanitized_string = String::new();
+    if node.is_empty() {
+        return String::new();
+    }
 
-    let mut node_iter = node.char_indices();
-    while let Some((_, node_char)) = node_iter.next() {
+    // Preallocate enough space to store the original string.
+    let mut sanitized_string = String::with_capacity(node.len());
+
+    node.chars().for_each(|node_char| {
         if is_special_character(node_char) {
             sanitized_string.push(ESCAPE_CHARACTER);
         }
         sanitized_string.push(node_char);
-    }
+    });
 
     sanitized_string
 }
