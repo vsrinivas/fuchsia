@@ -40,21 +40,26 @@ template("generate_symbols") {
 
   action(target_name) {
     deps = [ invoker.library_label ]
-    inputs = [ invoker.library_path ]
+    inputs = [
+      invoker.library_path,
+      "//build/images/elfinfo.py",
+    ]
     outputs = [ invoker.output ]
 
-    hermetic_deps = false
     script = "generate_debug.sh"
+    depfile = "${invoker.output}.d"
 
     args = [
       "--build-id-dir",
-      rebase_path("$root_build_dir/.build-id"),
+      rebase_path("$root_build_dir/.build-id", root_build_dir),
       "--build-id-script",
-      rebase_path("//build/images/elfinfo.py"),
+      rebase_path("//build/images/elfinfo.py", root_build_dir),
       "--binary",
-      rebase_path(invoker.library_path),
+      rebase_path(invoker.library_path, root_build_dir),
       "--output",
-      rebase_path(invoker.output),
+      rebase_path(invoker.output, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
   }
 }

@@ -14,19 +14,23 @@ set -e
 while [ $# != 0 ]; do
   case "$1" in
     --output)
-      OUTPUT="$2"
+      readonly OUTPUT="$2"
       shift
       ;;
     --build-id-script)
-      BUILD_ID_SCRIPT="$2"
+      readonly BUILD_ID_SCRIPT="$2"
       shift
       ;;
     --build-id-dir)
-      BUILD_ID_DIR="$2"
+      readonly BUILD_ID_DIR="$2"
       shift
       ;;
     --binary)
-      BINARY="$2"
+      readonly BINARY="$2"
+      shift
+      ;;
+    --depfile)
+      readonly DEPFILE="$2"
       shift
       ;;
     *)
@@ -36,9 +40,11 @@ while [ $# != 0 ]; do
   shift
 done
 
-BUILD_ID=$("${BUILD_ID_SCRIPT}" --build-id "${BINARY}")
+readonly BUILD_ID=$("${BUILD_ID_SCRIPT}" --build-id "${BINARY}")
 
-BUILD_ID_DIR_1=$(printf "${BUILD_ID}" | head -c 2)
-BUILD_ID_DIR_2=$(printf "${BUILD_ID}" | tail -c +3)
+readonly BUILD_ID_DIR_1=$(printf "${BUILD_ID}" | head -c 2)
+readonly BUILD_ID_DIR_2=$(printf "${BUILD_ID}" | tail -c +3)
+readonly DEBUG_FILE="${BUILD_ID_DIR}/${BUILD_ID_DIR_1}/${BUILD_ID_DIR_2}.debug"
 
-/bin/cp "${BUILD_ID_DIR}"/"${BUILD_ID_DIR_1}"/"${BUILD_ID_DIR_2}".debug "${OUTPUT}"
+/bin/cp "${DEBUG_FILE}" "${OUTPUT}"
+echo "${OUTPUT}: ${DEBUG_FILE}" > "${DEPFILE}"
