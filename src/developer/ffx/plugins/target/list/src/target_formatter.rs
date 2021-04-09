@@ -4,7 +4,6 @@
 
 use {
     anyhow::{anyhow, Error, Result},
-    chrono::Duration,
     ffx_daemon::target::TargetAddr,
     ffx_daemon_core::net::IsLocalAddr,
     ffx_list_args::Format,
@@ -21,7 +20,6 @@ const SERIAL: &'static str = "SERIAL";
 const TYPE: &'static str = "TYPE";
 const STATE: &'static str = "STATE";
 const ADDRS: &'static str = "ADDRS/IP";
-const AGE: &'static str = "AGE";
 const RCS: &'static str = "RCS";
 
 const PADDING_SPACES: usize = 4;
@@ -250,13 +248,11 @@ make_structs_and_support_functions!(
     target_type,
     target_state,
     addresses,
-    age,
 );
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StringifyError {
     MissingAddresses,
-    MissingAge,
     MissingRcsState,
     MissingTargetType,
     MissingTargetState,
@@ -283,13 +279,6 @@ impl StringifiedTarget {
                 .collect::<Vec<_>>()
                 .join(", ")
         )
-    }
-
-    fn from_age(a: u64) -> String {
-        // TODO(awdavies): There's probably a better formatter out there.
-        let duration = Duration::milliseconds(a as i64);
-        let seconds = (duration - Duration::minutes(duration.num_minutes())).num_seconds();
-        format!("{}m{}s", duration.num_minutes(), seconds)
     }
 
     fn from_rcs_state(r: bridge::RemoteControlState) -> String {
@@ -335,7 +324,6 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
             addresses: StringifiedTarget::from_addresses(
                 target.addresses.ok_or(StringifyError::MissingAddresses)?,
             ),
-            age: StringifiedTarget::from_age(target.age_ms.ok_or(StringifyError::MissingAge)?),
             rcs_state: StringifiedTarget::from_rcs_state(
                 target.rcs_state.ok_or(StringifyError::MissingRcsState)?,
             ),
@@ -360,9 +348,6 @@ impl TryFrom<bridge::Target> for JsonTarget {
                 .drain(..)
                 .map(|a| StringifiedTarget::from_target_addr_info(a))
                 .collect::<Vec<_>>()),
-            age: json!(StringifiedTarget::from_age(
-                target.age_ms.ok_or(StringifyError::MissingAge)?
-            )),
             rcs_state: json!(StringifiedTarget::from_rcs_state(
                 target.rcs_state.ok_or(StringifyError::MissingRcsState)?,
             )),
@@ -401,7 +386,6 @@ impl TryFrom<Vec<bridge::Target>> for TabularTargetFormatter {
             nodename: NAME.to_string(),
             serial: SERIAL.to_string(),
             addresses: ADDRS.to_string(),
-            age: AGE.to_string(),
             rcs_state: RCS.to_string(),
             target_type: TYPE.to_string(),
             target_state: STATE.to_string(),
@@ -440,7 +424,6 @@ mod test {
                     scope_id: 186,
                 }),
             ]),
-            age_ms: Some(62345), // 1m2s
             rcs_state: Some(bridge::RemoteControlState::Unknown),
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
@@ -453,8 +436,8 @@ mod test {
         let formatter = TabularTargetFormatter::try_from(Vec::<bridge::Target>::new()).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 1);
-        assert_eq!(lines[0].len(), 57); // Just some manual math.
-        assert_eq!(&lines[0], "NAME    SERIAL    TYPE    STATE    ADDRS/IP    AGE    RCS");
+        assert_eq!(lines[0].len(), 50); // Just some manual math.
+        assert_eq!(&lines[0], "NAME    SERIAL    TYPE    STATE    ADDRS/IP    RCS");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -469,7 +452,6 @@ mod test {
                     }),
                     scope_id: 137,
                 })]),
-                age_ms: Some(120345), // 2m3s
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
@@ -482,22 +464,22 @@ mod test {
 
         // TODO(awdavies): This can probably function better via golden files.
         assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           AGE     RCS");
+                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
         assert_eq!(
             &lines[1],
-            "fooberdoober*   <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
+            "fooberdoober*   <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
         );
-        assert_eq!(&lines[2], "lorberding      <unknown>    Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
+        assert_eq!(&lines[2], "lorberding      <unknown>    Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
 
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 3);
         assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           AGE     RCS");
+                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
         assert_eq!(
             &lines[1],
-            "fooberdoober    <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
+            "fooberdoober    <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
         );
-        assert_eq!(&lines[2], "lorberding      <unknown>    Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
+        assert_eq!(&lines[2], "lorberding      <unknown>    Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -512,7 +494,6 @@ mod test {
                     }),
                     scope_id: 137,
                 })]),
-                age_ms: Some(120345), // 2m3s
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
@@ -526,22 +507,22 @@ mod test {
 
         // TODO(awdavies): This can probably function better via golden files.
         assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           AGE     RCS");
+                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
         assert_eq!(
             &lines[1],
-            "fooberdoober*   <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
+            "fooberdoober*   <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
         );
-        assert_eq!(&lines[2], "<unknown>       cereal       Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
+        assert_eq!(&lines[2], "<unknown>       cereal       Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
 
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 3);
         assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           AGE     RCS");
+                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
         assert_eq!(
             &lines[1],
-            "fooberdoober    <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
+            "fooberdoober    <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
         );
-        assert_eq!(&lines[2], "<unknown>       cereal       Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
+        assert_eq!(&lines[2], "<unknown>       cereal       Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -556,7 +537,6 @@ mod test {
                     }),
                     scope_id: 137,
                 })]),
-                age_ms: Some(120345), // 2m3s
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
@@ -596,13 +576,6 @@ mod test {
         let mut t = make_valid_target();
         t.rcs_state = None;
         assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingRcsState));
-    }
-
-    #[test]
-    fn test_stringified_target_missing_age() {
-        let mut t = make_valid_target();
-        t.age_ms = None;
-        assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingAge));
     }
 
     #[test]
@@ -653,8 +626,8 @@ mod test {
         let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           AGE     RCS");
-        assert_eq!(&lines[1], "fooberdoober    <unknown>    default.board    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N");
+                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           RCS");
+        assert_eq!(&lines[1], "fooberdoober    <unknown>    default.board    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N");
     }
 
     #[test]
@@ -666,8 +639,8 @@ mod test {
         let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           AGE     RCS");
-        assert_eq!(&lines[1], "fooberdoober    <unknown>    <unknown>.x64    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N");
+                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           RCS");
+        assert_eq!(&lines[1], "fooberdoober    <unknown>    <unknown>.x64    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N");
     }
 
     #[test]
@@ -679,8 +652,8 @@ mod test {
         let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           AGE     RCS");
-        assert_eq!(&lines[1], "fooberdoober    <unknown>    foo.<unknown>    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N");
+                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           RCS");
+        assert_eq!(&lines[1], "fooberdoober    <unknown>    foo.<unknown>    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N");
     }
 
     #[test]

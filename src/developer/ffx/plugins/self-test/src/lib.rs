@@ -104,7 +104,7 @@ async fn test_target_list() -> Result<()> {
 
     ensure!(lines.len() >= 2, format!("expected more than one line of output, got:\n{:?}", lines));
 
-    let headers = vec!["NAME", "SERIAL", "TYPE", "STATE", "ADDRS/IP", "AGE", "RCS"];
+    let headers = vec!["NAME", "SERIAL", "TYPE", "STATE", "ADDRS/IP", "RCS"];
     let headerline = &lines[0];
     for (got, want) in headerline.split_whitespace().zip(headers) {
         ensure!(got == want, format!("assertion failed:\nLEFT: {:?}\nRIGHT: {:?}", got, want));
