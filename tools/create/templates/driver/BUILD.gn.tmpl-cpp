@@ -4,7 +4,6 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
@@ -29,6 +28,7 @@ bind_rules("bind") {
 }
 
 driver_module("driver") {
+  output_name = "{{PROJECT_NAME}}"
   sources = [ "{{snake_case PROJECT_NAME}}.cc" ]
   deps = [
     ":bind",
@@ -40,15 +40,12 @@ driver_module("driver") {
   ]
 }
 
-driver_package("pkg") {
+fuchsia_system_package("pkg") {
   package_name = "{{PROJECT_NAME}}"
   deps = [ ":driver" ]
-  drivers = [
-    {
-      name = "driver.so"
-      dest = "{{PROJECT_NAME}}.so"
-    },
-  ]
+
+  # Remove the line below when this package is only used by the system image.
+  allowed_in_extra_deps = true
 }
 
 test("unit-tests") {
