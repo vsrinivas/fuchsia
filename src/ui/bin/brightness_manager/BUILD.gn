@@ -47,23 +47,29 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("brightness_manager_cmx") {
+fuchsia_component("brightness_manager_cm") {
   component_name = "brightness_manager"
-  manifest = "meta/brightness_manager.cmx"
+  manifest = "meta/brightness_manager.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("brightness_manager") {
-  deps = [ ":brightness_manager_cmx" ]
+  deps = [ ":brightness_manager_cm" ]
 }
 
-fuchsia_component("brightness_manager_bin_test") {
+fuchsia_component("brightness_manager_test_driver") {
   testonly = true
-  component_name = "brightness_manager_test"
-  manifest = "meta/brightness_manager_test.cmx"
+  manifest = "meta/brightness_manager_test_driver.cml"
   deps = [ ":bin_test" ]
 }
 
+fuchsia_component("brightness_manager_test") {
+  testonly = true
+  component_name = "brightness_manager_test"
+  manifest = "meta/brightness_manager_test.cml"
+}
+
 fuchsia_test_package("brightness_manager_tests") {
-  test_components = [ ":brightness_manager_bin_test" ]
+  test_components = [ ":brightness_manager_test" ]
+  deps = [ ":brightness_manager_test_driver" ]
 }

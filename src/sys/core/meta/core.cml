@@ -37,6 +37,11 @@
             url: "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cm",
         },
         {
+            name: "brightness_manager",
+            url: "fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm",
+            environment: "#universe-resolver-env",
+        },
+        {
             name: "detect",
             url: "fuchsia-pkg://fuchsia.com/triage-detect#meta/triage-detect.cm",
         },
@@ -189,6 +194,11 @@
                 "fuchsia.power.test.BatterySimulator",
             ],
             from: "#battery_manager",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: "fuchsia.ui.brightness.Control",
+            from: "#brightness_manager",
             to: [ "#appmgr" ],
         },
         {
@@ -367,6 +377,7 @@
                 "#activity",
                 "#appmgr",
                 "#battery_manager",
+                "#brightness_manager",
                 "#debug_serial",
                 "#detect",
                 "#device_settings",
@@ -509,6 +520,25 @@
             from: "#appmgr",
             to: [ "#system-metrics-logger" ],
             dependency: "weak_for_migration",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#brightness_manager" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-backlight",
+            to: [ "#brightness_manager" ],
+            subdir: "class/backlight",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input",
+            to: [ "#brightness_manager" ],
+            subdir: "class/input",
         },
         {
             directory: "dev",
