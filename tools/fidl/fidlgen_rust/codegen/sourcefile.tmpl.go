@@ -37,6 +37,7 @@ use {
 		fidl_table,
 		fidl_xunion,
 		wrap_handle_metadata,
+		encoding::{Encodable as _, Decodable as _},
 		client::{
 			QueryResponseFut,
 			decode_transaction_body_fut,

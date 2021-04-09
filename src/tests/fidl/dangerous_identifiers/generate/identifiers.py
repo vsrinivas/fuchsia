@@ -76,6 +76,7 @@ IDENTIFIERS = [
     Identifier('covariant'),
     Identifier('crate', RUST_KEYWORD),
     Identifier('decltype'),
+    Identifier('decodable'),
     Identifier(
         'decoder'
     ),  # TODO(fxbug.dev/8081) [Deny(uses=['union.names'], styles=['lower'])]),
@@ -88,6 +89,7 @@ IDENTIFIERS = [
     Identifier('dynamic'),
     Identifier('dynamic_cast'),
     Identifier('else', RUST_KEYWORD),
+    Identifier('encodable'),
     Identifier('encoder'),
     Identifier('ensure_values_instantiated'),
     Identifier('enum', RUST_KEYWORD),
