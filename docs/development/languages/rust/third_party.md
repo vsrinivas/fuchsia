@@ -173,6 +173,38 @@ UNIC crates have distinct advantages over other crates:
   [ICU](http://site.icu-project.org/) for Rust. If the project succeeds, our
   dependencies on unrelated Unicode crates should be reduced over time.
 
+## OWNERS files
+
+We maintain OWNERS files for all of our third-party Rust crates to indicate who is responsible for
+their reviews and updates. These files are generated from a combination of build graph metadata and
+and an explicit override file.
+
+### Running the tool
+
+The tool discovers which build targets depend on a given crate, which means it needs the metadata
+from the completion of a maximal "kitchen sink" build:
+
+1. include `//bundles/buildbot:core` and `//bundles:kitchen_sink` in your build
+2. run `fx build`
+3. run `fx update-rust-3p-owners`
+
+### Adding overrides
+
+Some crates have more users than can be relied upon to maintain the crate in good stead (see
+[Bystander effect]). Others implement behavior specific to a domain like security and we would
+prefer for a specific team to be responsible for reviews of the code.
+
+In these cases, add an entry to `//third_party/rust_crates/owners.toml` with the path(s) to other
+OWNERS files to reference, then re-run the tool. This will replace the reverse-dependency metadata
+ownership with the overridden paths.
+
+[Bystander effect]: https://en.wikipedia.org/wiki/Bystander_effect
+
+### Update frequency
+
+A member of the Rust on Fuchsia team is currently responsible for running the tool on a regular
+cadence. See https://fxbug.dev/73348 to track the process of automating updates to OWNERS files.
+
 ## Troubleshooting
 ### Broken Config
 After running `fx update-rustc-third-party`, if you encounter an error like this:

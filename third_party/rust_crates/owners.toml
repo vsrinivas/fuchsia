@@ -1,0 +1,8 @@
+# This file controls the output of `fx update-rust-3p-owners` when generating OWNERS files for our
+# external Rust crates. For each crate here, the listed paths will be added to the generated file
+# as `include`s. For more information, see the update process' documentation.[0]
+#
+# [0]: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files.
+
+log = ["src/diagnostics/OWNERS"]
+tracing = ["src/diagnostics/OWNERS"]

@@ -12,7 +12,7 @@ if (current_os == "fuchsia") {
 
 rust_library("anyhow-v1_0_27") {
   crate_name = "anyhow"
-  crate_root = "//tools/cargo-gnaw/tests/platform_deps/vendor/anyhow/src/lib.rs"
+  crate_root = "//platform_deps/vendor/anyhow/src/lib.rs"
   output_name = "anyhow-d49cfcf8c47646f2"
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:libunwind" ]

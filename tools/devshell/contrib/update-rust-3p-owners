@@ -1,0 +1,40 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Source tree
+### updates OWNERS files for Rust third_party dependencies
+
+## usage: fx update-rust-3p-owners
+## Updates third_party/rust_crates/vendor/*/OWNERS based on the contents of
+## third_party/rust_crates/Cargo.toml
+##
+## See https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party.md
+## for more details.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+OWNERS_TOOL_TARGET="host-tools/auto_owners"
+OWNERS_TOOL_BIN="${FUCHSIA_BUILD_DIR}/${OWNERS_TOOL_TARGET}"
+
+fx-command-run build ${OWNERS_TOOL_TARGET} || ( \
+  fx-error "Failed to build rust owners tool."; \
+  exit 1
+)
+
+if [ "$1" != "--no-vendor-and-gn-update" ]; then
+  fx-command-run update-rustc-third-party || ( \
+    fx-error "Failed to run 3p update script."; \
+    exit 1
+  )
+fi
+
+(cd $FUCHSIA_DIR; $OWNERS_TOOL_BIN \
+  --overrides $FUCHSIA_DIR/third_party/rust_crates/owners.toml \
+  --metadata $FUCHSIA_BUILD_DIR/rustlang/3p-crates-metadata.json \
+  --out-dir $FUCHSIA_BUILD_DIR \
+  --gn-bin $PREBUILT_GN)

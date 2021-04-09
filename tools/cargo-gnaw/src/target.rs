@@ -146,6 +146,26 @@ impl<'a> GnTarget<'a> {
         add_version_suffix(&prefix, &self.version)
     }
 
+    pub fn package_root(&self, project_root: &Path) -> PathBuf {
+        let mut package_root = self.crate_root;
+
+        while !package_root.join("Cargo.toml").exists() {
+            package_root = package_root
+                .parent()
+                .expect("searching up from the crate root we must find a cargo.toml");
+        }
+
+        let package_root =
+            package_root.strip_prefix(project_root).expect("all crates are under FUCHSIA_DIR");
+        assert_ne!(
+            package_root.as_os_str(),
+            "third_party/rust_crates",
+            "must find a cargo.toml before the root one"
+        );
+
+        package_root.to_owned()
+    }
+
     pub fn gn_target_type(&self) -> String {
         match self.target_type {
             GnRustType::Library => String::from("rust_library"),

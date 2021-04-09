@@ -55,18 +55,32 @@ else
   )
 fi
 
+export VENDOR_DIR=$FUCHSIA_DIR/third_party/rust_crates/vendor
+export OWNERS_TMP=$(mktemp -d)
+
+# preserve OWNERS files
+(cd $VENDOR_DIR;
+  find . -name OWNERS -exec cp --parents {} $OWNERS_TMP \;)
+
+# this deletes OWNERS and LICENSE files
 (cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo vendor \
   --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
   $FUCHSIA_DIR/third_party/rust_crates/vendor \
   -q)
 
+# restore OWNERS files
+cp -r $OWNERS_TMP/* $VENDOR_DIR/
+
+# restore LICENSE* files
 $FUCHSIA_DIR/scripts/rust/check_rust_licenses.py \
   --directory $FUCHSIA_DIR/third_party/rust_crates/vendor
 
+# regenerate BUILD.gn
 (cd $FUCHSIA_DIR; $GNAW_BIN \
    --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
    --project-root $FUCHSIA_DIR \
    --cargo $CARGO \
-  -o $FUCHSIA_DIR/third_party/rust_crates/BUILD.gn \
+  --output $FUCHSIA_DIR/third_party/rust_crates/BUILD.gn \
+  --emit-metadata $FUCHSIA_BUILD_DIR/rustlang/3p-crates-metadata.json \
   --gn-bin $PREBUILT_GN \
   --skip-root)

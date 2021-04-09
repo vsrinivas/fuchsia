@@ -10,7 +10,7 @@ group("simple_deps") {
 
 rust_library("anyhow-v1_0_27") {
   crate_name = "anyhow"
-  crate_root = "//tools/cargo-gnaw/tests/simple_deps/vendor/anyhow/src/lib.rs"
+  crate_root = "//simple_deps/vendor/anyhow/src/lib.rs"
   output_name = "anyhow-d49cfcf8c47646f2"
   configs += [ "//build/config:some_config" ]
 
@@ -31,7 +31,7 @@ rust_library("anyhow-v1_0_27") {
 
 rust_library("simple_deps-v0_1_0") {
   crate_name = "simple_deps"
-  crate_root = "//tools/cargo-gnaw/tests/simple_deps/src/lib.rs"
+  crate_root = "//simple_deps/src/lib.rs"
   output_name = "simple_deps-176a6857401f170f"
 
   deps = []

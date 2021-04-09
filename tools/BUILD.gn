@@ -8,6 +8,7 @@ group("tools") {
   public_deps = [
     ":build_infra",
     ":test_infra",
+    "//tools/auto_owners($host_toolchain)",
     "//tools/bindc:host($host_toolchain)",
     "//tools/blackout:all",
     "//tools/bootserver_old:host($host_toolchain)",
@@ -125,6 +126,7 @@ group("tests_no_e2e") {
 
   deps = [
     "//tools/artifactory:tests",
+    "//tools/auto_owners:tests($host_toolchain)",
     "//tools/bindc:tests",
     "//tools/blackout:tests",
     "//tools/blobstats:tests",

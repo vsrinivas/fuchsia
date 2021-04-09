@@ -1,0 +1,112 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+if (is_host) {
+  crate_deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:rayon",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:toml",
+    "//third_party/rust_crates:walkdir",
+    "//tools/cargo-gnaw:cargo-gnaw-lib",
+  ]
+
+  rustc_binary("auto_owners_bin") {
+    output_name = "auto_owners"
+    with_unit_tests = false
+    deps = crate_deps
+    sources = [ "src/main.rs" ]
+  }
+
+  rustc_test("auto_owners_test") {
+    source_root = "src/main.rs"
+    sources = [ "src/main.rs" ]
+
+    deps = crate_deps + [
+             "//third_party/rust_crates:once_cell",
+             "//third_party/rust_crates:pretty_assertions",
+             "//third_party/rust_crates:serial_test",
+           ]
+
+    non_rust_deps = [
+      ":auto_owners_gn",
+      ":auto_owners_test_data",
+    ]
+  }
+
+  test_output_dir = "$root_out_dir/test_data/tools/auto_owners"
+
+  host_test_data("auto_owners_test_data") {
+    sources = [
+      "tests/common/.gn",
+      "tests/common/build/BUILD.gn",
+      "tests/common/build/BUILDCONFIG.gn",
+      "tests/common/build/toolchain/BUILD.gn",
+      "tests/empty/BUILD.gn",
+      "tests/empty/foo/BUILD.gn",
+      "tests/missing/BUILD.gn",
+      "tests/pass/BUILD.gn",
+      "tests/pass/foo/BUILD.gn",
+    ]
+    outputs = [ "$test_output_dir/{{source_target_relative}}" ]
+  }
+
+  # we need to copy the GN binary from the builder into the test output directory so we can
+  # run it on a different bot than does the builds
+  # TODO(fxbug.dev/74196) extract this, cargo-gnaw's, potentially others to a file in //build
+  template("_copy_tool") {
+    action(target_name) {
+      hermetic_deps = false
+      source = "//prebuilt/third_party/${invoker.tool}/${host_platform}"
+      target = "${invoker.out_dir}/${invoker.tool}"
+      inputs = [ "$source/.versions/${invoker.tool}.cipd_version" ]
+      script = "//build/copy_tree.py"
+      stamp = "${target}.stamp"
+      args = [
+        rebase_path(source, root_build_dir),
+        rebase_path(target, root_build_dir),
+        rebase_path(stamp, root_build_dir),
+      ]
+
+      # In theory we could use the version file as our output, but that causes
+      # a problem: ninja will attempt to mkdir $target, and if $target exists
+      # but is not a directory, the build will fail. So we use a stamp file in
+      # the parent directory instead.
+      outputs = [ stamp ]
+
+      metadata = {
+        test_runtime_deps = [ target ]
+      }
+    }
+  }
+
+  _copy_tool("auto_owners_gn") {
+    tool = "gn"
+    out_dir = "$test_output_dir/runfiles"
+  }
+}
+
+install_host_tools("install_auto_owners") {
+  deps = [ ":auto_owners_bin" ]
+  outputs = [ "auto_owners" ]
+}
+
+group("auto_owners") {
+  deps = [
+    ":auto_owners_bin($host_toolchain)",
+    ":install_auto_owners",
+  ]
+}
+
+# run with `fx test host_x64/auto_owners_test`
+group("tests") {
+  testonly = true
+  deps = [ ":auto_owners_test($host_toolchain)" ]
+}

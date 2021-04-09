@@ -14,7 +14,7 @@ use {
     std::{
         fs::File,
         io::{self, Read, Write},
-        path::PathBuf,
+        path::{Path, PathBuf},
         process::Command,
     },
 };
@@ -32,22 +32,32 @@ struct Opt {
     /// cargo manifest path
     #[argh(option)]
     manifest_path: PathBuf,
+
     /// root of GN project
     #[argh(option)]
     project_root: PathBuf,
+
     /// cargo binary to use (for vendored toolchains)
     #[argh(option)]
     cargo: Option<PathBuf>,
+
     /// already generated configs from cargo build scripts
     #[argh(option, short = 'p')]
     cargo_configs: Option<PathBuf>,
+
     /// location of GN file
     #[argh(option, short = 'o')]
-    output: Option<PathBuf>,
+    output: PathBuf,
+
+    /// location of JSON file with crate metadata
+    #[argh(option)]
+    emit_metadata: Option<PathBuf>,
+
     /// location of GN binary to use for formating.
     /// If no path is provided, no format will be run.
     #[argh(option)]
     gn_bin: Option<PathBuf>,
+
     /// don't generate a target for the root crate
     #[argh(switch)]
     skip_root: bool,
@@ -126,6 +136,26 @@ struct BuildMetadata {
     gn: Option<GnBuildMetadata>,
 }
 
+/// Used for identifying 3p owners via reverse dependencies. Ties together several pieces of
+/// metadata needed to associate a GN target with an OWNERS file and vice versa.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, PartialOrd, Ord, Serialize)]
+pub struct CrateOutputMetadata {
+    /// Name of the crate as specified in Cargo.toml.
+    pub name: String,
+
+    /// Version of the crate, used for disambiguating between duplicated transitive deps.
+    pub version: String,
+
+    /// Full GN target for depending on the crate.
+    pub versioned_target: String,
+
+    /// Shorthand GN target for depending on the crate without a version.
+    pub top_level_target: Option<String>,
+
+    /// Filesystem path to the directory containing `Cargo.toml`.
+    pub path: PathBuf,
+}
+
 // Use BTreeMap so that iteration over platforms is stable.
 type CombinedTargetCfg<'a> = BTreeMap<Option<&'a Platform>, &'a TargetCfg>;
 
@@ -149,16 +179,26 @@ define_combined_cfg!(BinaryCfg);
 
 pub fn generate_from_manifest<W: io::Write>(
     mut output: &mut W,
+    output_path: &Path,
+    metadata_path: Option<PathBuf>,
     manifest_path: PathBuf,
     project_root: PathBuf,
     cargo: Option<PathBuf>,
     skip_root: bool,
 ) -> Result<(), Error> {
+    let path_from_root_to_generated = output_path
+        .parent()
+        .unwrap()
+        .strip_prefix(&project_root)
+        .expect("--project-root must be a parent of --output");
+    let mut emitted_metadata: Vec<CrateOutputMetadata> = Vec::new();
+    let mut top_level_metadata: HashSet<String> = HashSet::new();
+
     // generate cargo metadata
     let mut cmd = cargo_metadata::MetadataCommand::new();
     let parent_dir = manifest_path
         .parent()
-        .with_context(|| format!("while parsing parent path: {:?}", &manifest_path))?;
+        .with_context(|| format!("while parsing parent path: {}", manifest_path.display()))?;
     cmd.current_dir(parent_dir);
     cmd.manifest_path(&manifest_path);
     if let Some(ref cargo_path) = cargo {
@@ -170,13 +210,15 @@ pub fn generate_from_manifest<W: io::Write>(
     })?;
 
     // read out custom gn commands from the toml file
-    let mut file = File::open(&manifest_path)?;
+    let mut file = File::open(&manifest_path)
+        .with_context(|| format!("opening {}", manifest_path.display()))?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)
-        .with_context(|| format!("while reading manifest: {:?}", &manifest_path))?;
-    let metadata_configs: BuildMetadata = toml::from_str(&contents)?;
+        .with_context(|| format!("while reading manifest: {}", manifest_path.display()))?;
+    let metadata_configs: BuildMetadata =
+        toml::from_str(&contents).context("parsing manifest toml")?;
 
-    gn::write_header(&mut output, &manifest_path)?;
+    gn::write_header(&mut output, &manifest_path).context("writing header")?;
 
     // Construct a build graph of all the targets for GN
     let mut build_graph = GnBuildGraph::new(&metadata);
@@ -190,17 +232,22 @@ pub fn generate_from_manifest<W: io::Write>(
                     .find(|node| node.id == *top_level_id)
                     .expect("top level node not in node graph");
                 for dep in &top_level_node.deps {
-                    build_graph.add_cargo_package(dep.pkg.clone())?;
+                    build_graph
+                        .add_cargo_package(dep.pkg.clone())
+                        .context("adding cargo package")?;
                     for kinds in dep.dep_kinds.iter() {
                         if kinds.kind == DependencyKind::Normal {
                             let platform = kinds.target.as_ref().map(|t| format!("{}", t));
-                            gn::write_top_level_rule(&mut output, platform, &metadata[&dep.pkg])
+                            let package = &metadata[&dep.pkg];
+                            top_level_metadata.insert(package.name.to_owned());
+                            gn::write_top_level_rule(&mut output, platform, package)
                                 .with_context(|| {
                                     format!(
                                         "while writing top level rule for package: {}",
                                         &dep.pkg
                                     )
-                                })?;
+                                })
+                                .context("writing top level rule")?;
                         }
                     }
                 }
@@ -208,7 +255,10 @@ pub fn generate_from_manifest<W: io::Write>(
                 build_graph
                     .add_cargo_package(top_level_id.clone())
                     .with_context(|| "could not add cargo package")?;
-                gn::write_top_level_rule(&mut output, None, &metadata[&top_level_id])?;
+                let package = &metadata[&top_level_id];
+                top_level_metadata.insert(package.name.to_owned());
+                gn::write_top_level_rule(&mut output, None, package)
+                    .with_context(|| "writing top level rule")?;
             }
         }
         None => anyhow::bail!("Failed to resolve a build graph for the package tree"),
@@ -298,7 +348,23 @@ pub fn generate_from_manifest<W: io::Write>(
                 );
             }
 
-            gn::write_binary_top_level_rule(&mut output, None, bin_name, target)?;
+            emitted_metadata.push(CrateOutputMetadata {
+                name: bin_name.to_string(),
+                version: target.version(),
+                versioned_target: format!(
+                    "//{}:{}",
+                    path_from_root_to_generated.display(),
+                    target.gn_target_name()
+                ),
+                top_level_target: Some(format!(
+                    "//{}:{}",
+                    path_from_root_to_generated.display(),
+                    bin_name
+                )),
+                path: target.package_root(&project_root),
+            });
+            gn::write_binary_top_level_rule(&mut output, None, bin_name, target)
+                .context("writing binary top level rule")?;
         }
     }
 
@@ -340,6 +406,25 @@ pub fn generate_from_manifest<W: io::Write>(
             }
         }
 
+        let package_root = target.package_root(&project_root);
+        let top_level_target = if top_level_metadata.contains(target.pkg_name) {
+            Some(format!("//{}:{}", path_from_root_to_generated.display(), target.pkg_name))
+        } else {
+            None
+        };
+
+        emitted_metadata.push(CrateOutputMetadata {
+            name: target.name(),
+            version: target.version(),
+            versioned_target: format!(
+                "//{}:{}",
+                path_from_root_to_generated.display(),
+                target.gn_target_name()
+            ),
+            top_level_target,
+            path: package_root.to_owned(),
+        });
+
         let _ = gn::write_rule(
             &mut output,
             &target,
@@ -347,8 +432,18 @@ pub fn generate_from_manifest<W: io::Write>(
             global_config,
             target_cfg,
             binary_name,
-        )?;
+        )
+        .context("writing rule")?;
     }
+
+    if let Some(metadata_path) = metadata_path {
+        eprintln!("Emitting external crate metadata: {}", metadata_path.display());
+        emitted_metadata.sort();
+        let metadata_json = serde_json::to_string_pretty(&emitted_metadata)
+            .context("serializing metadata to json")?;
+        std::fs::write(metadata_path, &metadata_json).context("writing metadata file")?;
+    }
+
     Ok(())
 }
 
@@ -369,40 +464,30 @@ pub fn run(args: &[impl AsRef<str>]) -> Result<(), Error> {
     // redirect to stdout if no GN output file specified
     // Stores data in a buffer in-case to prevent creating bad BUILD.gn
     let mut gn_output_buffer = vec![];
-    {
-        let mut output: Box<dyn io::Write> = if opt.output.is_some() {
-            Box::new(&mut gn_output_buffer)
-        } else {
-            Box::new(io::stdout())
-        };
-
-        generate_from_manifest(
-            &mut output,
-            opt.manifest_path,
-            opt.project_root,
-            opt.cargo,
-            opt.skip_root,
-        )?;
-    }
+    generate_from_manifest(
+        &mut gn_output_buffer,
+        &opt.output,
+        opt.emit_metadata,
+        opt.manifest_path,
+        opt.project_root,
+        opt.cargo,
+        opt.skip_root,
+    )
+    .context("generating manifest")?;
 
     // Write the file buffer to an actual file
-    if let Some(ref path) = opt.output {
-        let mut fout = File::create(path)?;
-        fout.write_all(&gn_output_buffer)?;
-    }
+    File::create(&opt.output)
+        .context("creating output file")?
+        .write_all(&gn_output_buffer)
+        .context("writing output contents")?;
 
-    // Format the GN file
-    if opt.output.is_none() && opt.gn_bin.is_some() {
-        anyhow::bail!("Cannot format GN output to stdout");
-    }
     if let Some(gn_bin) = opt.gn_bin {
-        let output = opt.output.expect("output");
-        eprintln!("Formatting output file: {}", &output.to_string_lossy());
+        eprintln!("Formatting output file: {}", opt.output.display());
         Command::new(&gn_bin)
             .arg("format")
-            .arg(output)
+            .arg(opt.output)
             .output()
-            .with_context(|| format!("failed to run GN format command: {:?}", &gn_bin))?;
+            .with_context(|| format!("failed to run GN format command: {}", gn_bin.display()))?;
     }
 
     Ok(())

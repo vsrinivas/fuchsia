@@ -10,7 +10,7 @@ group("simple") {
 
 rust_library("simple-v1_0_25") {
   crate_name = "simple"
-  crate_root = "//tools/cargo-gnaw/tests/simple/src/lib.rs"
+  crate_root = "//simple/src/lib.rs"
   output_name = "simple-3b5ec47e038ac967"
 
   deps = []

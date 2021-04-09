@@ -9,7 +9,7 @@ use {
     anyhow::Context,
     // Without this, the test diffs are impractical to debug.
     pretty_assertions::assert_eq,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
     tempfile,
 };
 
@@ -163,10 +163,15 @@ fn build_file_generation_test() {
     ];
 
     for test in tests {
-        let manifest_path: PathBuf =
-            std::fs::canonicalize(test.manifest_path.iter().collect::<PathBuf>()).unwrap();
-        let output = tempfile::NamedTempFile::new().expect("could not open a tempfile");
+        let test_dir = tempfile::TempDir::new().unwrap();
+        let mut manifest_path: PathBuf = test_dir.path().to_owned();
+        manifest_path.extend(&test.manifest_path);
+        let output = test_dir.path().join("BUILD.gn");
 
+        // we need the emitted file to be under the same path as the gn targets it references
+        copy_contents(&paths.test_base_dir, test_dir.path());
+
+        let project_root = test_dir.path().to_str().unwrap().to_owned();
         // Note: argh does not support "--flag=value" or "--bool-flag false".
         let mut args: Vec<&str> = vec![
             // args[0] is not used in arg parsing, so this can be any string.
@@ -174,9 +179,9 @@ fn build_file_generation_test() {
             "--manifest-path",
             manifest_path.to_str().unwrap(),
             "--project-root",
-            paths.test_data_dir.to_str().unwrap(),
+            &project_root,
             "--output",
-            output.path().to_str().unwrap(),
+            output.to_str().unwrap(),
             "--gn-bin",
             paths.gn_binary_path.to_str().unwrap(),
             "--cargo",
@@ -188,8 +193,8 @@ fn build_file_generation_test() {
         gnaw_lib::run(&args)
             .with_context(|| format!("\n\targs were: {:?}\n\ttest was: {:?}", &args, &test))
             .expect("gnaw_lib::run should succeed");
-        let output = std::fs::read_to_string(output.path())
-            .with_context(|| format!("while reading tempfile: {:?}", output.path()))
+        let output = std::fs::read_to_string(&output)
+            .with_context(|| format!("while reading tempfile: {}", output.display()))
             .expect("tempfile read success");
 
         let expected_path: PathBuf = test.golden_expected_filename.iter().collect();
@@ -200,4 +205,20 @@ fn build_file_generation_test() {
             .expect("expected file read success");
         assert_eq!(expected, output, "left: expected; right: actual: {:?}", &test);
     }
+}
+
+fn copy_contents(original_test_dir: &Path, test_dir_path: &Path) {
+    // copy the contents of original test dir to test_dir
+    for entry in walkdir::WalkDir::new(&original_test_dir) {
+        let entry = entry.expect("walking original test directory to copy files to /tmp");
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let to_copy = entry.path();
+        let destination = test_dir_path.join(to_copy.strip_prefix(&original_test_dir).unwrap());
+        std::fs::create_dir_all(destination.parent().unwrap())
+            .expect("making parent of file to copy");
+        std::fs::copy(to_copy, destination).expect("copying file");
+    }
+    println!("done copying files");
 }
