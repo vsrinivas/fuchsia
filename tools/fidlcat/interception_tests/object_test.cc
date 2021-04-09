@@ -960,6 +960,41 @@ OBJECT_GET_INFO_PROCESS_DISPLAY_TEST(
     "      debugger_attached: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
     "    }\n");
 
+#define OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST_CONTENT(result, expected)                  \
+  zx_info_process_v2_t buffer;                                                             \
+  buffer.return_code = -1;                                                                 \
+  buffer.start_time = ZX_TIME_INFINITE;                                                    \
+  buffer.flags = ZX_INFO_PROCESS_FLAG_STARTED | ZX_INFO_PROCESS_FLAG_EXITED;               \
+  auto value =                                                                             \
+      ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_V2,                        \
+                      reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+
+#define OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                          \
+    OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                    \
+  TEST_F(InterceptionWorkflowTestArm, name) {                          \
+    OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST(
+    ZxObjectGetInfoProcessV2, ZX_OK,
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_info("
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS_V2\x1B[0m, "
+    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m24\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "    info: \x1B[32mzx_info_process_v2_t\x1B[0m = {\n"
+    "      return_code: \x1B[32mint64\x1B[0m = \x1B[34m-1\x1B[0m\n"
+    "      start_time: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m\n"
+    "      flags: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m\n"
+    "    }\n");
+
 #define OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST_CONTENT(result, expected)      \
   constexpr zx_koid_t kThread1 = 1111;                                              \
   constexpr zx_koid_t kThread2 = 2222;                                              \
