@@ -67,7 +67,7 @@ Only export things you really need, and that you intend to reuse. Keep in mind
 that exporting in a follow up change is relatively easy so prefer to not export
 until necessary. This keeps the documentation cleaner.
 
-If your type will be used by reflection, e.g. within templates of automatic
+If your type will be used by reflection, e.g. within templates or automatic
 diffing à la [go-cmp], you can have an unexported identifier with exported
 fields. Again, prefer unexported fields except in the situation where you are
 forced to do otherwise.
