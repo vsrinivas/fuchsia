@@ -35,6 +35,19 @@ use {
     },
 };
 
+// Macro wrapper for logging simple events (occurrence, integer, histogram, string)
+// and log a warning when the status is not Ok
+macro_rules! log_cobalt_1dot1 {
+    ($cobalt_proxy:expr, $method_name:ident, $metric_id:expr, $value:expr, $event_codes:expr $(,)?) => {{
+        let status = $cobalt_proxy.$method_name($metric_id, $value, $event_codes).await;
+        match status {
+            Ok(fidl_fuchsia_metrics::Status::Ok) => (),
+            Ok(s) => warn!("Failed logging metric: {}, status: {:?}", $metric_id, s),
+            Err(e) => warn!("Failed logging metric: {}, error: {}", $metric_id, e),
+        }
+    }};
+}
+
 type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
 /// How often to request RSSI stats and dispatcher packet counts from MLME.
@@ -290,8 +303,9 @@ pub fn log_scan_stats(
     );
 }
 
-pub fn log_connect_stats(
+pub async fn log_connect_stats(
     sender: &mut CobaltSender,
+    cobalt_1dot1_proxy: &mut fidl_fuchsia_metrics::MetricEventLoggerProxy,
     inspect_tree: Arc<inspect::WlanstackTree>,
     connect_stats: &ConnectStats,
 ) {
@@ -301,7 +315,7 @@ pub fn log_connect_stats(
     }
 
     log_connect_attempts_stats(sender, connect_stats);
-    log_connect_result_stats(sender, connect_stats);
+    log_connect_result_stats(sender, cobalt_1dot1_proxy, connect_stats).await;
     log_time_to_connect_stats(sender, connect_stats);
     let reconnect_info = log_connection_gap_time_stats(sender, connect_stats);
 
@@ -364,7 +378,11 @@ fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &Connect
     );
 }
 
-fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
+async fn log_connect_result_stats(
+    sender: &mut CobaltSender,
+    cobalt_1dot1_proxy: &mut fidl_fuchsia_metrics::MetricEventLoggerProxy,
+    connect_stats: &ConnectStats,
+) {
     let oui = connect_stats
         .candidate_network
         .as_ref()
@@ -388,6 +406,13 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
             oui.clone(),
             0,
             1,
+        );
+        log_cobalt_1dot1!(
+            cobalt_1dot1_proxy,
+            log_string,
+            metrics::CONNECTION_FAILURE_MIGRATED_METRIC_ID,
+            oui.as_deref().unwrap_or(""),
+            &[fail_at_dim as u32, timeout_dim as u32, credential_rejected_dim as u32],
         );
 
         if let ConnectFailure::SelectNetworkFailure(select_network_failure) = failure {
@@ -439,6 +464,19 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
         oui.clone(),
         0,
         1,
+    );
+    log_cobalt_1dot1!(
+        cobalt_1dot1_proxy,
+        log_string,
+        metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+        &oui,
+        &[
+            result_dim as u32,
+            is_multi_bss_dim as u32,
+            protection_dim as u32,
+            channel_band_dim as u32,
+            snr_dim as u32,
+        ],
     );
 
     if let ConnectResult::Failed(failure) = &connect_stats.result {
@@ -658,8 +696,9 @@ pub fn log_connection_ping(sender: &mut CobaltSender, info: &ConnectionPingInfo)
     }
 }
 
-pub fn log_disconnect(
+pub async fn log_disconnect(
     sender: &mut CobaltSender,
+    cobalt_1dot1_proxy: &mut fidl_fuchsia_metrics::MetricEventLoggerProxy,
     inspect_tree: Arc<inspect::WlanstackTree>,
     info: &DisconnectInfo,
 ) {
@@ -758,6 +797,19 @@ pub fn log_disconnect(
         0,
         1,
     );
+    log_cobalt_1dot1!(
+        cobalt_1dot1_proxy,
+        log_string,
+        metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID,
+        &info.bssid.to_oui_uppercase(""),
+        &[
+            connected_time_dim as u32,
+            disconnect_source_dim as u32,
+            snr_dim as u32,
+            recent_channel_switch_dim as u32,
+            channel_band_dim as u32,
+        ],
+    );
 }
 
 #[cfg(test)]
@@ -769,7 +821,7 @@ mod tests {
             mlme_query_proxy::MlmeQueryProxy,
             stats_scheduler::{self, StatsRequest},
         },
-        fidl::endpoints::create_proxy,
+        fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
@@ -781,6 +833,7 @@ mod tests {
         maplit::hashset,
         pin_utils::pin_mut,
         std::collections::HashSet,
+        std::task::Poll,
         wlan_common::{
             assert_variant,
             bss::Protection as BssProtection,
@@ -896,9 +949,22 @@ mod tests {
 
     #[test]
     fn test_log_connect_stats_success() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
-        log_connect_stats(&mut cobalt_sender, inspect_tree.clone(), &fake_connect_stats());
+        let connect_stats = fake_connect_stats();
+        let fut = log_connect_stats(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &connect_stats,
+        );
+        pin_mut!(fut);
+        let cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         let mut expected_metrics = hashset! {
             metrics::CONNECTION_ATTEMPTS_METRIC_ID,
@@ -923,17 +989,34 @@ mod tests {
             expected_metrics.remove(&event.metric_id);
         }
         assert!(expected_metrics.is_empty(), "some metrics not logged: {:?}", expected_metrics);
+
+        let expected_cobalt_1dot1_metrics = hashset! {
+            metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+        };
+        assert_eq!(
+            cobalt_1dot1_events.into_iter().map(|e| e.0).collect::<HashSet<_>>(),
+            expected_cobalt_1dot1_metrics
+        );
     }
 
     #[test]
     fn test_log_connect_stats_success_old_code_path_with_join_scan() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
-        log_connect_stats(
+        let connect_stats = fake_connect_stats_old_code_path_with_join_scan();
+        let fut = log_connect_stats(
             &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
             inspect_tree.clone(),
-            &fake_connect_stats_old_code_path_with_join_scan(),
+            &connect_stats,
         );
+        pin_mut!(fut);
+        let cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         let mut expected_metrics = hashset! {
             metrics::CONNECTION_ATTEMPTS_METRIC_ID,
@@ -968,6 +1051,14 @@ mod tests {
             expected_metrics.remove(&event.metric_id);
         }
         assert!(expected_metrics.is_empty(), "some metrics not logged: {:?}", expected_metrics);
+
+        let expected_cobalt_1dot1_metrics = hashset! {
+            metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+        };
+        assert_eq!(
+            cobalt_1dot1_events.into_iter().map(|e| e.0).collect::<HashSet<_>>(),
+            expected_cobalt_1dot1_metrics
+        );
     }
 
     #[test]
@@ -992,12 +1083,21 @@ mod tests {
             metrics::SCAN_RESULT_METRIC_ID,
             metrics::SCAN_FAILURE_METRIC_ID,
         };
+        let cobalt_1dot1_expected_metrics_subset = hashset! {
+            metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+            metrics::CONNECTION_FAILURE_MIGRATED_METRIC_ID,
+        };
         // These metrics are only logged when connection attempt succeeded.
         let unexpected_metrics = hashset! {
             metrics::CONNECTION_ATTEMPTS_METRIC_ID,
             metrics::CONNECTION_SUCCESS_WITH_ATTEMPTS_BREAKDOWN_METRIC_ID,
         };
-        test_metric_subset(&connect_stats, expected_metrics_subset, unexpected_metrics);
+        test_metric_subset(
+            &connect_stats,
+            expected_metrics_subset,
+            cobalt_1dot1_expected_metrics_subset,
+            unexpected_metrics,
+        );
     }
 
     #[test]
@@ -1011,7 +1111,16 @@ mod tests {
             metrics::CONNECTION_FAILURE_METRIC_ID,
             metrics::NETWORK_SELECTION_FAILURE_METRIC_ID,
         };
-        test_metric_subset(&connect_stats, expected_metrics_subset, hashset! {});
+        let cobalt_1dot1_expected_metrics_subset = hashset! {
+            metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+            metrics::CONNECTION_FAILURE_MIGRATED_METRIC_ID,
+        };
+        test_metric_subset(
+            &connect_stats,
+            expected_metrics_subset,
+            cobalt_1dot1_expected_metrics_subset,
+            hashset! {},
+        );
     }
 
     #[test]
@@ -1028,7 +1137,16 @@ mod tests {
             metrics::CONNECTION_FAILURE_METRIC_ID,
             metrics::AUTHENTICATION_FAILURE_METRIC_ID,
         };
-        test_metric_subset(&connect_stats, expected_metrics_subset, hashset! {});
+        let cobalt_1dot1_expected_metrics_subset = hashset! {
+            metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+            metrics::CONNECTION_FAILURE_MIGRATED_METRIC_ID,
+        };
+        test_metric_subset(
+            &connect_stats,
+            expected_metrics_subset,
+            cobalt_1dot1_expected_metrics_subset,
+            hashset! {},
+        );
     }
 
     #[test]
@@ -1046,7 +1164,16 @@ mod tests {
             metrics::CONNECTION_FAILURE_METRIC_ID,
             metrics::ASSOCIATION_FAILURE_METRIC_ID,
         };
-        test_metric_subset(&connect_stats, expected_metrics_subset, hashset! {});
+        let cobalt_1dot1_expected_metrics_subset = hashset! {
+            metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+            metrics::CONNECTION_FAILURE_MIGRATED_METRIC_ID,
+        };
+        test_metric_subset(
+            &connect_stats,
+            expected_metrics_subset,
+            cobalt_1dot1_expected_metrics_subset,
+            hashset! {},
+        );
     }
 
     #[test]
@@ -1064,7 +1191,16 @@ mod tests {
             metrics::CONNECTION_FAILURE_METRIC_ID,
             metrics::ESTABLISH_RSNA_FAILURE_METRIC_ID,
         };
-        test_metric_subset(&connect_stats, expected_metrics_subset, hashset! {});
+        let cobalt_1dot1_expected_metrics_subset = hashset! {
+            metrics::CONNECTION_RESULT_MIGRATED_METRIC_ID,
+            metrics::CONNECTION_FAILURE_MIGRATED_METRIC_ID,
+        };
+        test_metric_subset(
+            &connect_stats,
+            expected_metrics_subset,
+            cobalt_1dot1_expected_metrics_subset,
+            hashset! {},
+        );
     }
 
     #[test]
@@ -1118,7 +1254,11 @@ mod tests {
 
     #[test]
     fn test_log_disconnect_initiated_from_user() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::User(
@@ -1126,7 +1266,15 @@ mod tests {
             ),
             ..fake_disconnect_info()
         };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+        let fut = log_disconnect(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &disconnect_info,
+        );
+        pin_mut!(fut);
+        let cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_METRIC_ID);
@@ -1141,11 +1289,32 @@ mod tests {
                 metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
             ]);
         });
+
+        assert_eq!(cobalt_1dot1_events.len(), 1);
+        assert_eq!(
+            cobalt_1dot1_events[0].0,
+            metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID
+        );
+        assert_eq!(
+            cobalt_1dot1_events[0].1,
+            vec![
+                metrics::DisconnectCountBreakdownMetricDimensionConnectedTime::LessThanOneMinute
+                    as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionDisconnectSource::User as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionSnr::From1To10 as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionRecentChannelSwitch::No as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
+            ]
+        );
     }
 
     #[test]
     fn test_log_disconnect_initiated_from_ap() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::Ap(DisconnectCause {
@@ -1154,7 +1323,15 @@ mod tests {
             }),
             ..fake_disconnect_info()
         };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+        let fut = log_disconnect(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &disconnect_info,
+        );
+        pin_mut!(fut);
+        let cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_METRIC_ID);
@@ -1169,11 +1346,32 @@ mod tests {
                 metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
             ]);
         });
+
+        assert_eq!(cobalt_1dot1_events.len(), 1);
+        assert_eq!(
+            cobalt_1dot1_events[0].0,
+            metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID
+        );
+        assert_eq!(
+            cobalt_1dot1_events[0].1,
+            vec![
+                metrics::DisconnectCountBreakdownMetricDimensionConnectedTime::LessThanOneMinute
+                    as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionDisconnectSource::Ap as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionSnr::From1To10 as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionRecentChannelSwitch::No as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
+            ]
+        );
     }
 
     #[test]
     fn test_log_disconnect_initiated_from_mlme() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::Mlme(DisconnectCause {
@@ -1182,7 +1380,15 @@ mod tests {
             }),
             ..fake_disconnect_info()
         };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+        let fut = log_disconnect(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &disconnect_info,
+        );
+        pin_mut!(fut);
+        let cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event.metric_id, metrics::LOST_CONNECTION_COUNT_METRIC_ID);
@@ -1200,15 +1406,45 @@ mod tests {
                 metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
             ]);
         });
+
+        assert_eq!(cobalt_1dot1_events.len(), 1);
+        assert_eq!(
+            cobalt_1dot1_events[0].0,
+            metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID
+        );
+        assert_eq!(
+            cobalt_1dot1_events[0].1,
+            vec![
+                metrics::DisconnectCountBreakdownMetricDimensionConnectedTime::LessThanOneMinute
+                    as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionDisconnectSource::Mlme as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionSnr::From1To10 as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionRecentChannelSwitch::No as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
+            ]
+        );
     }
 
     #[test]
     fn test_inspect_log_connect_stats() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
 
         let connect_stats = fake_connect_stats();
-        log_connect_stats(&mut cobalt_sender, inspect_tree.clone(), &connect_stats);
+        let fut = log_connect_stats(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &connect_stats,
+        );
+        pin_mut!(fut);
+        // This is to execute and complete the Future
+        let _cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         assert_inspect_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
@@ -1228,7 +1464,11 @@ mod tests {
 
     #[test]
     fn test_inspect_log_disconnect_stats_disconnect_source_user() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
 
         let disconnect_source =
@@ -1245,7 +1485,16 @@ mod tests {
             disconnect_source,
             time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
         };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+        let fut = log_disconnect(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &disconnect_info,
+        );
+        pin_mut!(fut);
+        // This is to execute and complete the Future
+        let _cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         assert_inspect_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
@@ -1282,7 +1531,11 @@ mod tests {
     }
     #[test]
     fn test_inspect_log_disconnect_stats_disconnect_source_ap() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
 
         let disconnect_source = DisconnectSource::Ap(DisconnectCause {
@@ -1301,7 +1554,16 @@ mod tests {
             disconnect_source,
             time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
         };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+        let fut = log_disconnect(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &disconnect_info,
+        );
+        pin_mut!(fut);
+        // This is to execute and complete the Future
+        let _cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         assert_inspect_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
@@ -1333,7 +1595,11 @@ mod tests {
 
     #[test]
     fn test_inspect_log_disconnect_stats_disconnect_source_mlme() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
 
         let disconnect_source = DisconnectSource::Mlme(DisconnectCause {
@@ -1352,7 +1618,16 @@ mod tests {
             disconnect_source,
             time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
         };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+        let fut = log_disconnect(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &disconnect_info,
+        );
+        pin_mut!(fut);
+        // This is to execute and complete the Future
+        let _cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         assert_inspect_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
@@ -1486,11 +1761,24 @@ mod tests {
     fn test_metric_subset(
         connect_stats: &ConnectStats,
         mut expected_metrics_subset: HashSet<u32>,
+        expected_cobalt_1dot1_metrics: HashSet<u32>,
         unexpected_metrics: HashSet<u32>,
     ) {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy and stream");
         let inspect_tree = fake_inspect_tree();
-        log_connect_stats(&mut cobalt_sender, inspect_tree.clone(), connect_stats);
+        let fut = log_connect_stats(
+            &mut cobalt_sender,
+            &mut cobalt_1dot1_proxy,
+            inspect_tree.clone(),
+            &connect_stats,
+        );
+        pin_mut!(fut);
+        let cobalt_1dot1_events =
+            drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
         while let Ok(Some(event)) = cobalt_receiver.try_next() {
             assert!(
@@ -1506,6 +1794,11 @@ mod tests {
             expected_metrics_subset.is_empty(),
             "some metrics not logged: {:?}",
             expected_metrics_subset
+        );
+
+        assert_eq!(
+            cobalt_1dot1_events.into_iter().map(|e| e.0).collect::<HashSet<_>>(),
+            expected_cobalt_1dot1_metrics
         );
     }
 
@@ -1749,5 +2042,81 @@ mod tests {
     fn fake_inspect_tree() -> Arc<inspect::WlanstackTree> {
         let inspector = Inspector::new();
         Arc::new(inspect::WlanstackTree::new(inspector))
+    }
+
+    // Continually execute the future and respond to any incoming Cobalt request with Ok.
+    // Save the metric ID and event codes of each metric request into a vector and return it.
+    fn drain_cobalt_events(
+        exec: &mut fasync::Executor,
+        fut: &mut (impl Future + Unpin),
+        event_stream: &mut fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
+    ) -> Vec<(u32, Vec<u32>)> {
+        let mut metrics = vec![];
+        while let Poll::Pending = exec.run_until_stalled(fut) {
+            while let Poll::Ready(Some(Ok(req))) = exec.run_until_stalled(&mut event_stream.next())
+            {
+                metrics.push((req.metric_id(), req.event_codes().to_vec()));
+                req.respond(fidl_fuchsia_metrics::Status::Ok);
+            }
+        }
+        metrics
+    }
+
+    pub trait CobaltExt {
+        fn metric_id(&self) -> u32;
+        fn event_codes(&self) -> &[u32];
+        fn respond(self, status: fidl_fuchsia_metrics::Status);
+    }
+
+    impl CobaltExt for fidl_fuchsia_metrics::MetricEventLoggerRequest {
+        fn metric_id(&self) -> u32 {
+            match self {
+                Self::LogOccurrence { metric_id, .. } => *metric_id,
+                Self::LogInteger { metric_id, .. } => *metric_id,
+                Self::LogIntegerHistogram { metric_id, .. } => *metric_id,
+                Self::LogString { metric_id, .. } => *metric_id,
+                Self::LogMetricEvents { events, .. } => {
+                    assert_eq!(
+                        events.len(),
+                        1,
+                        "metric_id() can only be called when there's one event"
+                    );
+                    events[0].metric_id
+                }
+                Self::LogCustomEvent { metric_id, .. } => *metric_id,
+            }
+        }
+
+        fn event_codes(&self) -> &[u32] {
+            match self {
+                Self::LogOccurrence { event_codes, .. } => &event_codes[..],
+                Self::LogInteger { event_codes, .. } => &event_codes[..],
+                Self::LogIntegerHistogram { event_codes, .. } => &event_codes[..],
+                Self::LogString { event_codes, .. } => &event_codes[..],
+                Self::LogMetricEvents { events, .. } => {
+                    assert_eq!(
+                        events.len(),
+                        1,
+                        "event_codes() can only be called when there's one event"
+                    );
+                    &events[0].event_codes[..]
+                }
+                Self::LogCustomEvent { .. } => {
+                    panic!("LogCustomEvent has no event codes");
+                }
+            }
+        }
+
+        fn respond(self, status: fidl_fuchsia_metrics::Status) {
+            let result = match self {
+                Self::LogOccurrence { responder, .. } => responder.send(status),
+                Self::LogInteger { responder, .. } => responder.send(status),
+                Self::LogIntegerHistogram { responder, .. } => responder.send(status),
+                Self::LogString { responder, .. } => responder.send(status),
+                Self::LogMetricEvents { responder, .. } => responder.send(status),
+                Self::LogCustomEvent { responder, .. } => responder.send(status),
+            };
+            assert!(result.is_ok());
+        }
     }
 }

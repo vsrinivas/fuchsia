@@ -51,6 +51,7 @@ pub async fn serve_device_requests(
     mut req_stream: fidl_svc::DeviceServiceRequestStream,
     inspect_tree: Arc<inspect::WlanstackTree>,
     cobalt_sender: CobaltSender,
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
 ) -> Result<(), anyhow::Error> {
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         // Note that errors from responder.send() are propagated intentionally.
@@ -98,6 +99,7 @@ pub async fn serve_device_requests(
                             inspect_tree.clone(),
                             iface_tree_holder,
                             cobalt_sender.clone(),
+                            cobalt_1dot1_proxy.clone(),
                             device_info,
                         )?;
 
@@ -1138,6 +1140,11 @@ mod tests {
         let (cobalt_sender, _cobalt_receiver) = mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(cobalt_sender);
 
+        // Create a Cobalt 1.1 FIDL proxy
+        let (cobalt_1dot1_proxy, _) =
+            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy");
+
         // Create an inspector, but don't serve.
         let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
 
@@ -1154,6 +1161,7 @@ mod tests {
             req_stream,
             inspect_tree,
             cobalt_sender,
+            cobalt_1dot1_proxy,
         );
 
         let mut fut = Box::pin(fut);

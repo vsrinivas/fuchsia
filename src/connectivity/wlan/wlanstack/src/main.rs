@@ -20,7 +20,7 @@ mod telemetry;
 mod watchable_map;
 mod watcher_service;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use argh::FromArgs;
 use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
@@ -29,7 +29,7 @@ use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
 use futures::future::try_join5;
 use futures::prelude::*;
-use log::info;
+use log::{error, info};
 use std::sync::Arc;
 use wlan_sme;
 
@@ -92,6 +92,24 @@ async fn main() -> Result<(), Error> {
         device::serve_phys::<wlan_dev::RealDeviceEnv>(phys.clone(), inspect_tree.clone())
             .right_future()
     };
+    let cobalt_1dot1_svc = fuchsia_component::client::connect_to_service::<
+        fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
+    >()
+    .context("failed to connect to metrics service")?;
+    let (cobalt_1dot1_proxy, cobalt_1dot1_server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+            .context("failed to create MetricEventLoggerMarker endponts")?;
+    let project_spec = fidl_fuchsia_metrics::ProjectSpec {
+        customer_id: None, // defaults to fuchsia
+        project_id: Some(wlan_metrics_registry::PROJECT_ID),
+        ..fidl_fuchsia_metrics::ProjectSpec::EMPTY
+    };
+    if let Err(e) =
+        cobalt_1dot1_svc.create_metric_event_logger(project_spec, cobalt_1dot1_server).await
+    {
+        error!("create_metric_event_logger failure: {}", e);
+    }
+
     let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
         .serve(ConnectionType::project_id(wlan_metrics_registry::PROJECT_ID));
     let telemetry_server = telemetry::report_telemetry_periodically(
@@ -101,8 +119,16 @@ async fn main() -> Result<(), Error> {
     );
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
-    let serve_fidl_fut =
-        serve_fidl(cfg, fs, phys, ifaces, watcher_service, inspect_tree, cobalt_sender);
+    let serve_fidl_fut = serve_fidl(
+        cfg,
+        fs,
+        phys,
+        ifaces,
+        watcher_service,
+        inspect_tree,
+        cobalt_sender,
+        cobalt_1dot1_proxy,
+    );
 
     let ((), (), (), (), ()) = try_join5(
         serve_fidl_fut,
@@ -128,6 +154,7 @@ async fn serve_fidl(
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
     inspect_tree: Arc<inspect::WlanstackTree>,
     cobalt_sender: CobaltSender,
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
 ) -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let iface_counter = Arc::new(service::IfaceCounter::new());
@@ -137,6 +164,7 @@ async fn serve_fidl(
         let ifaces = ifaces.clone();
         let watcher_service = watcher_service.clone();
         let cobalt_sender = cobalt_sender.clone();
+        let cobalt_1dot1_proxy = cobalt_1dot1_proxy.clone();
         let cfg = cfg.clone();
         let inspect_tree = inspect_tree.clone();
         let iface_counter = iface_counter.clone();
@@ -152,6 +180,7 @@ async fn serve_fidl(
                         stream,
                         inspect_tree,
                         cobalt_sender,
+                        cobalt_1dot1_proxy,
                     )
                     .unwrap_or_else(|e| println!("{:?}", e))
                     .await

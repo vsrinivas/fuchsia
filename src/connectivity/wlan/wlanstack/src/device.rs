@@ -135,6 +135,7 @@ pub fn create_and_serve_sme(
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     cobalt_sender: CobaltSender,
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     device_info: DeviceInfo,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let event_stream = mlme_proxy.take_event_stream();
@@ -147,6 +148,7 @@ pub fn create_and_serve_sme(
         &device_info,
         stats_reqs,
         cobalt_sender,
+        cobalt_1dot1_proxy,
         inspect_tree.clone(),
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
@@ -195,6 +197,7 @@ fn create_sme<S>(
     device_info: &DeviceInfo,
     stats_requests: S,
     cobalt_sender: CobaltSender,
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
@@ -215,6 +218,7 @@ where
                 receiver,
                 stats_requests,
                 cobalt_sender,
+                cobalt_1dot1_proxy,
                 inspect_tree,
                 iface_tree_holder,
                 hasher,
@@ -281,6 +285,9 @@ mod tests {
         let iface_tree_holder = inspect_tree.create_iface_child(1);
         let (sender, _receiver) = mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);
+        let (cobalt_1dot1_proxy, _) =
+            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy");
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -294,6 +301,7 @@ mod tests {
             inspect_tree.clone(),
             iface_tree_holder,
             cobalt_sender,
+            cobalt_1dot1_proxy,
             fake_device_info(),
         )
         .expect("failed to create SME");
@@ -362,6 +370,9 @@ mod tests {
         let iface_tree_holder = inspect_tree.create_iface_child(1);
         let (sender, _receiver) = mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);
+        let (cobalt_1dot1_proxy, _) =
+            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy");
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -375,6 +386,7 @@ mod tests {
             inspect_tree.clone(),
             iface_tree_holder,
             cobalt_sender,
+            cobalt_1dot1_proxy,
             fake_device_info(),
         )
         .expect("failed to create SME");

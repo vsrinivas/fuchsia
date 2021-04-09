@@ -37,6 +37,7 @@ pub async fn serve<S>(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,
     cobalt_sender: CobaltSender,
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
@@ -61,7 +62,14 @@ where
         stats_requests,
         time_stream,
     );
-    let sme_fidl = serve_fidl(sme, new_fidl_clients, info_stream, cobalt_sender, inspect_tree);
+    let sme_fidl = serve_fidl(
+        sme,
+        new_fidl_clients,
+        info_stream,
+        cobalt_sender,
+        cobalt_1dot1_proxy,
+        inspect_tree,
+    );
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
     Ok(select! {
@@ -75,6 +83,7 @@ async fn serve_fidl(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     info_stream: InfoStream,
     mut cobalt_sender: CobaltSender,
+    mut cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     inspect_tree: Arc<inspect::WlanstackTree>,
 ) -> Result<Void, anyhow::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
@@ -83,7 +92,7 @@ async fn serve_fidl(
     loop {
         select! {
             info_event = info_stream.next() => match info_event {
-                Some(e) => handle_info_event(e, &mut cobalt_sender, inspect_tree.clone()),
+                Some(e) => handle_info_event(e, &mut cobalt_sender, &mut cobalt_1dot1_proxy, inspect_tree.clone()).await,
                 None => return Err(format_err!("Info Event stream unexpectedly ended")),
             },
             new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
@@ -195,9 +204,10 @@ async fn wmm_status(
     responder.send(&mut wmm_status)
 }
 
-fn handle_info_event(
+async fn handle_info_event(
     e: InfoEvent,
     cobalt_sender: &mut CobaltSender,
+    cobalt_1dot1_proxy: &mut fidl_fuchsia_metrics::MetricEventLoggerProxy,
     inspect_tree: Arc<inspect::WlanstackTree>,
 ) {
     match e {
@@ -206,11 +216,17 @@ fn handle_info_event(
             telemetry::log_scan_stats(cobalt_sender, inspect_tree, &scan_stats, is_join_scan);
         }
         InfoEvent::ConnectStats(connect_stats) => {
-            telemetry::log_connect_stats(cobalt_sender, inspect_tree, &connect_stats)
+            telemetry::log_connect_stats(
+                cobalt_sender,
+                cobalt_1dot1_proxy,
+                inspect_tree,
+                &connect_stats,
+            )
+            .await
         }
         InfoEvent::ConnectionPing(info) => telemetry::log_connection_ping(cobalt_sender, &info),
         InfoEvent::DisconnectInfo(info) => {
-            telemetry::log_disconnect(cobalt_sender, inspect_tree, &info)
+            telemetry::log_disconnect(cobalt_sender, cobalt_1dot1_proxy, inspect_tree, &info).await
         }
     }
 }
