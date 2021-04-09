@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 33>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 34>
     fidl_test_protocols_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderImpl<
             ::fidl_test_protocols::wire::
@@ -19,6 +19,8 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 33>
                 WithErrorSyntax_ErrorAsPrimitive_Response>,
         ::fidl::fuzzing::DecoderEncoderImpl<
             ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>,
+        ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+            ::fidl_test_protocols::DiscoverableProtocol::Method>>,
         ::fidl::fuzzing::DecoderEncoderImpl<
             ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>>,
         ::fidl::fuzzing::DecoderEncoderImpl<

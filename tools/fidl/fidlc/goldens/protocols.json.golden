@@ -1197,6 +1197,46 @@
           "is_composed": false
         }
       ]
+    },
+    {
+      "name": "fidl.test.protocols/DiscoverableProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 60,
+        "column": 10,
+        "length": 20
+      },
+      "maybe_attributes": [
+        {
+          "name": "Discoverable",
+          "value": ""
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 16177161678225767,
+          "name": "Method",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 61,
+            "column": 5,
+            "length": 6
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "has_response": false,
+          "is_composed": false
+        }
+      ]
     }
   ],
   "service_declarations": [],
@@ -2350,6 +2390,7 @@
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
+    "fidl.test.protocols/DiscoverableProtocol",
     "fidl.test.protocols/Transitional",
     "fidl.test.protocols/ChannelProtocol",
     "fidl.test.protocols/WithAndWithoutRequestResponse",
@@ -2365,6 +2406,7 @@
     "fidl.test.protocols/WithErrorSyntax": "interface",
     "fidl.test.protocols/ChannelProtocol": "interface",
     "fidl.test.protocols/Transitional": "interface",
+    "fidl.test.protocols/DiscoverableProtocol": "interface",
     "fidl.test.protocols/SomeLongAnonymousPrefix0": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix1": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix2": "struct",
@@ -2398,6 +2440,7 @@
     "fidl.test.protocols/SomeLongAnonymousPrefix27": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix28": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix29": "struct",
+    "fidl.test.protocols/SomeLongAnonymousPrefix30": "struct",
     "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result": "union"

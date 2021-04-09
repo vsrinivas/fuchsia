@@ -2596,3 +2596,130 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
     }
   }
 }
+
+// method: ()
+const int _kDiscoverableProtocol_Method_Ordinal = 0x39790af74e0167;
+const $fidl.MethodType _kDiscoverableProtocol_Method_Type = $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"DiscoverableProtocol.Method",
+  requestInlineSize: 0,
+  responseInlineSize: 0,
+);
+
+abstract class DiscoverableProtocol extends $fidl.Service {
+  static const String $serviceName = "fidl.test.protocols.DiscoverableProtocol";
+  @override
+  $fidl.ServiceData? get $serviceData => DiscoverableProtocolData();
+  $async.Future<void> method();
+}
+
+// TODO: Remove ServiceData for non-service
+class DiscoverableProtocolData
+    implements $fidl.ServiceData<DiscoverableProtocol> {
+  const DiscoverableProtocolData();
+
+  @override
+  String getName() {
+    return DiscoverableProtocol.$serviceName;
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return DiscoverableProtocolBinding();
+  }
+}
+
+class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
+    implements DiscoverableProtocol {
+  DiscoverableProtocolProxy()
+      : super($fidl.AsyncProxyController<DiscoverableProtocol>(
+            $serviceName: "fidl.test.protocols.DiscoverableProtocol",
+            $interfaceName: r'DiscoverableProtocol')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  $fidl.ServiceData get $serviceData => DiscoverableProtocolData();
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        ctrl.close();
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        ctrl.close();
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> method() async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(_kDiscoverableProtocol_Method_Ordinal, 0);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class DiscoverableProtocolBinding
+    extends $fidl.AsyncBinding<DiscoverableProtocol> {
+  DiscoverableProtocolBinding() : super(r"DiscoverableProtocol");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kDiscoverableProtocol_Method_Ordinal:
+        final String _name = _kDiscoverableProtocol_Method_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kDiscoverableProtocol_Method_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>($message,
+                  _kDiscoverableProtocol_Method_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.method();
+          });
+        } catch (_e) {
+          close();
+          print('Exception handling method call $_name: $_e');
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for DiscoverableProtocolBinding');
+    }
+  }
+}

@@ -121,6 +121,20 @@
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
+## DiscoverableProtocol {#DiscoverableProtocol}
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/protocols.test.fidl;l=60)*
+
+
+### Method {#fidl.test.protocols/DiscoverableProtocol.Method}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    </table>
+
+
+
 ## Transitional {#Transitional}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/protocols.test.fidl;l=48)*
 

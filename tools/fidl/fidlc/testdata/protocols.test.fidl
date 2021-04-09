@@ -55,3 +55,9 @@ protocol Transitional {
     [Transitional]
     -> Event(int64 x);
 };
+
+[Discoverable]
+protocol DiscoverableProtocol {
+    Method();
+};
+

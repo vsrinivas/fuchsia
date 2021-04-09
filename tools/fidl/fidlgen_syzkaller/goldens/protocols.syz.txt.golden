@@ -329,3 +329,18 @@ zx_channel_call$fidl_test_protocols_TransitionalRequest(handle zx_chan_fidl_test
 zx_channel_write$fidl_test_protocols_TransitionalOneWay(handle zx_chan_fidl_test_protocols_Transitional_client, options const[0], bytes ptr[in, fidl_test_protocols_TransitionalOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_TransitionalOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_read$fidl_test_protocols_TransitionalEvent(handle zx_chan_fidl_test_protocols_Transitional_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, fidl_test_protocols_TransitionalEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
+
+fidl_test_protocols_DiscoverableProtocolMethodRequest {
+       hdr fidl_message_header[16177161678225767]
+} [packed]
+fidl_test_protocols_DiscoverableProtocolMethodRequestHandles {
+       void void
+} [packed]
+
+resource zx_chan_fidl_test_protocols_DiscoverableProtocol_client[zx_chan]
+resource zx_chan_fidl_test_protocols_DiscoverableProtocol_server[zx_chan]
+
+zx_channel_create$fidl_test_protocols_DiscoverableProtocol(options const[0], out0 ptr[out, zx_chan_fidl_test_protocols_DiscoverableProtocol_client], out1 ptr[out, zx_chan_fidl_test_protocols_DiscoverableProtocol_server])
+fdio_service_connect$fidl_test_protocols_DiscoverableProtocol(path ptr[in, string["/svc/fidl.test.protocols.DiscoverableProtocol"]], handle zx_chan_fidl_test_protocols_DiscoverableProtocol_server)
+zx_channel_write$fidl_test_protocols_DiscoverableProtocolMethod(handle zx_chan_fidl_test_protocols_DiscoverableProtocol_client, options const[0], bytes ptr[in, fidl_test_protocols_DiscoverableProtocolMethodRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_DiscoverableProtocolMethodRequestHandles], num_handles bytesize[handles])
+

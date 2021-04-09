@@ -16,6 +16,9 @@ extern const struct FidlCodedXUnion fidl_test_protocols_WithErrorSyntax_ErrorAsE
 extern const struct FidlCodedXUnion fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable;
 
 
+extern const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
+const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocols/DiscoverableProtocolMethodRequest"};
+
 extern const struct FidlCodedStruct fidl_test_protocols_TransitionalRequestRequestTable;
 const struct FidlCodedStruct fidl_test_protocols_TransitionalRequestRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.protocols/TransitionalRequestRequest"};
 

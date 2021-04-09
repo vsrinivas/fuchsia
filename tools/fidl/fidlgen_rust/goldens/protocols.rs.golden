@@ -3997,3 +3997,345 @@ impl TransitionalRequestResponder {
         })
     }
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct DiscoverableProtocolMarker;
+
+impl fidl::endpoints::ServiceMarker for DiscoverableProtocolMarker {
+    type Proxy = DiscoverableProtocolProxy;
+    type RequestStream = DiscoverableProtocolRequestStream;
+    const DEBUG_NAME: &'static str = "fidl.test.protocols.DiscoverableProtocol";
+}
+impl fidl::endpoints::DiscoverableService for DiscoverableProtocolMarker {}
+
+pub trait DiscoverableProtocolProxyInterface: Send + Sync {
+    fn r#method(&self) -> Result<(), fidl::Error>;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct DiscoverableProtocolSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl DiscoverableProtocolSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let service_name =
+            <DiscoverableProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+    pub fn r#method(&mut self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x39790af74e0167)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscoverableProtocolProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for DiscoverableProtocolProxy {
+    type Service = DiscoverableProtocolMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl DiscoverableProtocolProxy {
+    /// Create a new Proxy for DiscoverableProtocol
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let service_name =
+            <DiscoverableProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the DiscoverableProtocol protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> DiscoverableProtocolEventStream {
+        DiscoverableProtocolEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn r#method(&self) -> Result<(), fidl::Error> {
+        DiscoverableProtocolProxyInterface::r#method(self)
+    }
+}
+
+impl DiscoverableProtocolProxyInterface for DiscoverableProtocolProxy {
+    fn r#method(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x39790af74e0167)
+    }
+}
+
+pub struct DiscoverableProtocolEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for DiscoverableProtocolEventStream {}
+
+impl futures::stream::FusedStream for DiscoverableProtocolEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for DiscoverableProtocolEventStream {
+    type Item = Result<DiscoverableProtocolEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name:
+                    <DiscoverableProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
+}
+
+#[derive(Debug)]
+pub enum DiscoverableProtocolEvent {}
+
+impl DiscoverableProtocolEvent {}
+
+/// A type which can be used to send responses and events into a borrowed channel.
+///
+/// Note: this should only be used when the channel must be temporarily
+/// borrowed. For a typical sending of events, use the send_ methods
+/// on the ControlHandle types, which can be acquired through a
+/// RequestStream or Responder type.
+#[deprecated(note = "Use DiscoverableProtocolRequestStream / Responder instead")]
+pub struct DiscoverableProtocolServerSender<'a> {
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a fidl::Channel,
+}
+
+impl<'a> DiscoverableProtocolServerSender<'a> {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
+        Self { channel }
+    }
+}
+
+/// A Stream of incoming requests for DiscoverableProtocol
+pub struct DiscoverableProtocolRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for DiscoverableProtocolRequestStream {}
+
+impl futures::stream::FusedStream for DiscoverableProtocolRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for DiscoverableProtocolRequestStream {
+    type Service = DiscoverableProtocolMarker;
+
+    /// Consume a channel to make a DiscoverableProtocolRequestStream
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    /// ControlHandle for the remote connection
+    type ControlHandle = DiscoverableProtocolControlHandle;
+
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        DiscoverableProtocolControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for DiscoverableProtocolRequestStream {
+    type Item = Result<DiscoverableProtocolRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled DiscoverableProtocolRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x39790af74e0167 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/DiscoverableProtocolMethodRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle =
+                        DiscoverableProtocolControlHandle { inner: this.inner.clone() };
+
+                    Ok(DiscoverableProtocolRequest::Method { control_handle })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name:
+                        <DiscoverableProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use DiscoverableProtocolRequest instead")]
+pub enum DiscoverableProtocolRequestMessage {
+    Method {},
+}
+
+impl DiscoverableProtocolRequestMessage {
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::HandleInfo],
+    ) -> Result<DiscoverableProtocolRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match header.ordinal() {
+            0x39790af74e0167 => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/DiscoverableProtocolMethodRequest");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+
+                Ok(DiscoverableProtocolRequestMessage::Method {})
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name:
+                    <DiscoverableProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+#[derive(Debug)]
+pub enum DiscoverableProtocolRequest {
+    Method { control_handle: DiscoverableProtocolControlHandle },
+}
+
+impl DiscoverableProtocolRequest {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_method(self) -> Option<(DiscoverableProtocolControlHandle)> {
+        if let DiscoverableProtocolRequest::Method { control_handle } = self {
+            Some((control_handle))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            DiscoverableProtocolRequest::Method { .. } => "method",
+        }
+    }
+}
+
+pub struct DiscoverableProtocolEncoder;
+
+impl DiscoverableProtocolEncoder {
+    pub fn encode_method_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x39790af74e0167);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/DiscoverableProtocolMethodRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscoverableProtocolControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl DiscoverableProtocolControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}

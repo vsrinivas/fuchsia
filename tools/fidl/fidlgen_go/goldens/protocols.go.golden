@@ -973,3 +973,53 @@ func (p *TransitionalEventProxy) Event(x int64) error {
 	}
 	return ((*_bindings.ChannelProxy)(p)).Send(TransitionalEventOrdinal, event_)
 }
+
+const (
+	DiscoverableProtocolMethodOrdinal uint64 = 0x39790af74e0167
+)
+
+type DiscoverableProtocolWithCtxInterface _bindings.ChannelProxy
+
+func (p *DiscoverableProtocolWithCtxInterface) Method(ctx_ _bindings.Context) error {
+	var req_ _bindings.Message
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(DiscoverableProtocolMethodOrdinal, req_)
+	return err_
+}
+
+type DiscoverableProtocolWithCtx interface {
+	Method(ctx_ _bindings.Context) error
+}
+
+type DiscoverableProtocolWithCtxTransitionalBase struct{}
+
+type DiscoverableProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewDiscoverableProtocolWithCtxInterfaceRequest() (DiscoverableProtocolWithCtxInterfaceRequest, *DiscoverableProtocolWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return DiscoverableProtocolWithCtxInterfaceRequest(req), (*DiscoverableProtocolWithCtxInterface)(cli), err
+}
+
+// Implements ServiceRequest.
+func (_ DiscoverableProtocolWithCtxInterfaceRequest) Name() string {
+	return "fidl.test.protocols.DiscoverableProtocol"
+}
+func (c DiscoverableProtocolWithCtxInterfaceRequest) ToChannel() _zx.Channel {
+	return c.Channel
+}
+
+const DiscoverableProtocolName = "fidl.test.protocols.DiscoverableProtocol"
+
+type DiscoverableProtocolWithCtxStub struct {
+	Impl DiscoverableProtocolWithCtx
+}
+
+func (s_ *DiscoverableProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case DiscoverableProtocolMethodOrdinal:
+		err_ := s_.Impl.Method(args_.Ctx)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type DiscoverableProtocolEventProxy _bindings.ChannelProxy

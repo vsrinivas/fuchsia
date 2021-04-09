@@ -6,6 +6,23 @@
 namespace fidl_test_protocols {
 namespace testing {
 
+class DiscoverableProtocol_TestBase
+    : public ::fidl::WireInterface<
+          ::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  virtual ~DiscoverableProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>;
+  virtual void Method(
+      ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>::
+          MethodCompleter::Sync& completer) override {
+    NotImplemented_("Method", completer);
+  }
+};
+
 class Transitional_TestBase
     : public ::fidl::WireInterface<::fidl_test_protocols::Transitional> {
  public:

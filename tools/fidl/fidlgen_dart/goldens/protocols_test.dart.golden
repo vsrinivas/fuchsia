@@ -181,3 +181,13 @@ class Transitional$TestBase extends Transitional {
         StackTrace.current));
   }
 }
+
+class DiscoverableProtocol$TestBase extends DiscoverableProtocol {
+  @override
+  $async.Future<void> method() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'method not implemented on DiscoverableProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+}
