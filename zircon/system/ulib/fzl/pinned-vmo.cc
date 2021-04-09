@@ -27,7 +27,8 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t opti
 
 zx_status_t PinnedVmo::PinRange(uint64_t offset, uint64_t len, const zx::vmo& vmo,
                                 const zx::bti& bti, uint32_t options) {
-  if ((len & (PAGE_SIZE - 1)) || (offset & (PAGE_SIZE - 1)) || len == 0) {
+  const size_t kPageSize = zx_system_get_page_size();
+  if ((len & (kPageSize - 1)) || (offset & (kPageSize - 1)) || len == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -36,6 +37,7 @@ zx_status_t PinnedVmo::PinRange(uint64_t offset, uint64_t len, const zx::vmo& vm
 
 zx_status_t PinnedVmo::PinInternal(uint64_t offset, uint64_t len, const zx::vmo& vmo,
                                    const zx::bti& bti, uint32_t options) {
+  const size_t kPageSize = zx_system_get_page_size();
   zx_status_t res;
 
   // If we are holding a pinned memory token, then we are already holding a
@@ -54,11 +56,11 @@ zx_status_t PinnedVmo::PinInternal(uint64_t offset, uint64_t len, const zx::vmo&
   }
 
   // Allocate storage for the results.
-  ZX_DEBUG_ASSERT((len > 0) && !(len & (PAGE_SIZE - 1)));
-  ZX_DEBUG_ASSERT((len / PAGE_SIZE) < std::numeric_limits<uint32_t>::max());
-  ZX_DEBUG_ASSERT(!(offset & (PAGE_SIZE - 1)));
+  ZX_DEBUG_ASSERT((len > 0) && !(len & (kPageSize - 1)));
+  ZX_DEBUG_ASSERT((len / kPageSize) < std::numeric_limits<uint32_t>::max());
+  ZX_DEBUG_ASSERT(!(offset & (kPageSize - 1)));
   fbl::AllocChecker ac;
-  uint32_t page_count = static_cast<uint32_t>(len / PAGE_SIZE);
+  uint32_t page_count = static_cast<uint32_t>(len / kPageSize);
   if (options & ZX_BTI_CONTIGUOUS) {
     page_count = 1;
   }
@@ -84,7 +86,7 @@ zx_status_t PinnedVmo::PinInternal(uint64_t offset, uint64_t len, const zx::vmo&
   zx_paddr_t last = addrs[0];
   region_count_ = 1;
   for (uint32_t i = 1; i < page_count; ++i) {
-    if (addrs[i] != (last + PAGE_SIZE)) {
+    if (addrs[i] != (last + kPageSize)) {
       ++region_count_;
     }
     last = addrs[i];
@@ -99,19 +101,19 @@ zx_status_t PinnedVmo::PinInternal(uint64_t offset, uint64_t len, const zx::vmo&
   // Finally, go ahead and merge any adjacent pages to compute our set of
   // regions and we should be good to go;
   regions_[0].phys_addr = addrs[0];
-  regions_[0].size = PAGE_SIZE;
+  regions_[0].size = kPageSize;
   for (uint32_t i = 1, j = 0; i < page_count; ++i) {
     ZX_DEBUG_ASSERT(j < region_count_);
 
     if ((regions_[j].phys_addr + regions_[j].size) == addrs[i]) {
       // Merge!
-      regions_[j].size += PAGE_SIZE;
+      regions_[j].size += kPageSize;
     } else {
       // New Region!
       ++j;
       ZX_DEBUG_ASSERT(j < region_count_);
       regions_[j].phys_addr = addrs[i];
-      regions_[j].size = PAGE_SIZE;
+      regions_[j].size = kPageSize;
     }
   }
 

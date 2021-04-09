@@ -318,7 +318,7 @@ TEST(VmoMapperVmarManagerTests, vmo_mapper_move_test) {
 
     // Create and map a page in mapper 1, make sure we can probe it.
     zx_status_t res;
-    res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS, sub_vmar);
+    res = mapper1.CreateAndMap(zx_system_get_page_size(), ACCESS_FLAGS, sub_vmar);
     addr = mapper1.start();
     size = mapper1.size();
 
@@ -350,7 +350,7 @@ TEST(VmoMapperVmarManagerTests, vmo_mapper_move_test) {
     ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
 
     // Map a new region into mapper1, make sure it is OK.
-    res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS, sub_vmar);
+    res = mapper1.CreateAndMap(zx_system_get_page_size(), ACCESS_FLAGS, sub_vmar);
     void* second_addr = mapper1.start();
     size_t second_size = mapper1.size();
 
@@ -376,7 +376,7 @@ TEST(VmoMapperVmarManagerTests, vmo_mapper_move_test) {
   // Finally, now that we have left the scope, the original mapping that we
   // have been moving around should be gone by now.
   ASSERT_NOT_NULL(addr);
-  ASSERT_EQ(size, ZX_PAGE_SIZE);
+  ASSERT_EQ(size, zx_system_get_page_size());
   ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(addr, size, 0));
 }
 
