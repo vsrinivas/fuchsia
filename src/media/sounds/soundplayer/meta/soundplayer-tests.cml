@@ -1,0 +1,12 @@
+{
+    include: [
+        // Enable system logging
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+
+        // gtest runner
+        "src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/soundplayer-tests",
+    },
+}

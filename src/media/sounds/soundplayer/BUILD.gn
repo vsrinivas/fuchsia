@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
+import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
 fuchsia_package_with_single_component("soundplayer") {
-  manifest = "meta/soundplayer.cmx"
+  manifest = "meta/soundplayer.cml"
   deps = [ ":bin" ]
 }
 
@@ -61,10 +61,10 @@ source_set("source") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-config_data("configs") {
-  for_pkg = "sysmgr"
-  outputs = [ "soundplayer.config" ]
-  sources = [ "service.config" ]
+# Obsolete now that we use CFv2. This target is referenced from out-of-tree,
+# so the placeholder remains.
+group("configs") {
+  deps = []
 }
 
 group("tests") {
@@ -107,14 +107,18 @@ resource("wav_file") {
   outputs = [ "data/sfx.wav" ]
 }
 
-fuchsia_unittest_package("soundplayer-tests") {
+fuchsia_component("soundplayer-tests-driver") {
+  testonly = true
+
+  manifest = "meta/soundplayer-tests.cml"
+
   deps = [
     ":ogg_file",
     ":soundplayer-tests-bin",
     ":wav_file",
   ]
+}
 
-  test_specs = {
-    environments = basic_envs
-  }
+fuchsia_test_package("soundplayer-tests") {
+  test_components = [ ":soundplayer-tests-driver" ]
 }

@@ -107,6 +107,11 @@
             name: "dhcpd",
             url: "fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cm",
         },
+        {
+            name: "soundplayer",
+            url: "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cm",
+            environment: "#universe-resolver-env",
+        },
     ],
     capabilities: [
         {
@@ -760,6 +765,17 @@
             storage: "cache",
             from: "self",
             to: [ "#last_reboot" ],
+        },
+        {
+            protocol: "fuchsia.media.sounds.Player",
+            from: "#soundplayer",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [ "fuchsia.media.Audio" ],
+            from: "#appmgr",
+            to: [ "#soundplayer" ],
+            dependency: "weak_for_migration",
         },
     ],
     expose: [

@@ -1,0 +1,26 @@
+{
+    include: [
+        // Enable system logging
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/soundplayer",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.media.sounds.Player" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.media.Audio" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.media.sounds.Player",
+            from: "self",
+        },
+    ],
+}

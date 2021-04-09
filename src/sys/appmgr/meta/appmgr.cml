@@ -42,6 +42,7 @@
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
+                "fuchsia.media.Audio",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.NameLookup",
                 "fuchsia.net.neighbor.Controller",
@@ -418,6 +419,12 @@
                 "fuchsia.process.Launcher",
             ],
         },
+
+        // From soundplayer
+        {
+            protocol: "fuchsia.media.sounds.Player",
+            path: "/svc_for_sys/fuchsia.media.sounds.Player",
+        },
     ],
     expose: [
         {
@@ -432,6 +439,7 @@
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
+                "fuchsia.media.Audio",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.NameLookup",
                 "fuchsia.net.neighbor.Controller",

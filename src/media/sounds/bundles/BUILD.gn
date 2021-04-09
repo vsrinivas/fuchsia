@@ -19,5 +19,5 @@ group("examples") {
 
 group("config") {
   testonly = true
-  public_deps = [ "//src/media/sounds/soundplayer:configs" ]
+  public_deps = []
 }
