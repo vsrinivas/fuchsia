@@ -66,6 +66,19 @@ annotations:
 ```rust
 let _useless_rand: u8 = rand::thread_rng().gen();
 ```
+
+When assigning structs, prefer explicit drops to implicitly discarding members
+using the rest pattern:
+```rust
+// Bad:
+let FooStruct { foo_field_1, .. } = foo_instance;
+
+// Good:
+let FooStruct { foo_field_1, foo_field_2: _ } = foo_instance;
+```
+This way, when struct fields are changed, added, or removed, explicit
+acknowledgement will be required at the site of use.
+
 Apply the same rules to unused closure parameters.
 
 
