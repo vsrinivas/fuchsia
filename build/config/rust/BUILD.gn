@@ -146,8 +146,6 @@ config("allow_unused_results") {
     "//src/connectivity/network/dhcpv6/*",
     "//src/connectivity/network/http-client/*",
     "//src/connectivity/network/lib/*",
-    "//src/connectivity/network/net-cli/*",
-    "//src/connectivity/network/netcfg/*",
     "//src/connectivity/network/netdump/*",
     "//src/connectivity/network/netstack/*",
     "//src/connectivity/network/netstack3/*",

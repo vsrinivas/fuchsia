@@ -22,7 +22,7 @@ use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as
 use glob::glob;
 use log::{info, Level, Log, Metadata, Record, SetLoggerError};
 use netfilter::FidlReturn as FilterFidlReturn;
-use prettytable::{cell, format, row, Table};
+use prettytable::{cell, format, row, Row, Table};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 use std::str::FromStr;
@@ -64,6 +64,10 @@ static LOGGER: Logger = Logger;
 
 fn logger_init() -> Result<(), SetLoggerError> {
     log::set_logger(&LOGGER).map(|()| log::set_max_level(LOG_LEVEL.to_level_filter()))
+}
+
+fn add_row(t: &mut Table, row: Row) {
+    let _: &mut Row = t.add_row(row);
 }
 
 #[fasync::run_singlethreaded]
@@ -120,7 +124,7 @@ async fn tabulate_interfaces_info(interfaces: Vec<InterfaceInfo>) -> Result<Stri
 
     for (i, info) in interfaces.into_iter().enumerate() {
         if i > 0 {
-            t.add_row(row![]);
+            let () = add_row(&mut t, row![]);
         }
 
         let pretty::InterfaceInfo {
@@ -139,22 +143,25 @@ async fn tabulate_interfaces_info(interfaces: Vec<InterfaceInfo>) -> Result<Stri
                 },
         } = info.into();
 
-        t.add_row(row!["nicid", id]);
-        t.add_row(row!["name", name]);
-        t.add_row(row!["topopath", topopath]);
-        t.add_row(row!["filepath", filepath]);
+        let () = add_row(&mut t, row!["nicid", id]);
+        let () = add_row(&mut t, row!["name", name]);
+        let () = add_row(&mut t, row!["topopath", topopath]);
+        let () = add_row(&mut t, row!["filepath", filepath]);
 
-        if let Some(mac) = mac {
-            t.add_row(row!["mac", mac]);
+        let () = if let Some(mac) = mac {
+            add_row(&mut t, row!["mac", mac])
         } else {
-            t.add_row(row!["mac", "-"]);
-        }
+            add_row(&mut t, row!["mac", "-"])
+        };
 
-        t.add_row(row!["mtu", mtu]);
-        t.add_row(row!["features", format!("{:?}", features)]);
-        t.add_row(row!["status", format!("{} | {}", administrative_status, physical_status)]);
+        let () = add_row(&mut t, row!["mtu", mtu]);
+        let () = add_row(&mut t, row!["features", format!("{:?}", features)]);
+        let () = add_row(
+            &mut t,
+            row!["status", format!("{} | {}", administrative_status, physical_status)],
+        );
         for addr in addresses {
-            t.add_row(row!["addr", addr]);
+            let () = add_row(&mut t, row!["addr", addr]);
         }
     }
     Ok(t.to_string())
@@ -316,16 +323,13 @@ async fn do_route(cmd: opts::RouteEnum, netstack: NetstackProxy) -> Result<(), E
                     None => "-".to_string(),
                     Some(g) => format!("{}", g),
                 };
-                t.add_row(row![
-                    route.destination,
-                    route.netmask,
-                    gateway_str,
-                    route.nicid,
-                    route.metric
-                ]);
+                let () = add_row(
+                    &mut t,
+                    row![route.destination, route.netmask, gateway_str, route.nicid, route.metric],
+                );
             }
 
-            t.printstd();
+            let _lines_printed: usize = t.printstd();
             println!();
         }
         RouteEnum::Add(route) => {
@@ -500,7 +504,7 @@ async fn do_stat(cmd: opts::StatEnum) -> Result<(), Error> {
                 t.set_format(format::FormatBuilder::new().padding(2, 2).build());
                 t.set_titles(row!["Packet Count", "Classification"]);
                 let () = visit_inspect_object(&mut t, "", &object);
-                t.printstd();
+                let _lines_printed: usize = t.printstd();
             }
         }
     }
@@ -565,7 +569,7 @@ fn visit_inspect_object(
             | UintArray(_, _)
             | StringList(_, _) => continue,
         };
-        t.add_row(row![r->value, format!("{}{}", prefix, key)]);
+        let () = add_row(t, row![r->value, format!("{}{}", prefix, key)]);
     }
     for child in children {
         let prefix = format!("{}{}/", prefix, child.name);
