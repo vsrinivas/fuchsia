@@ -64,6 +64,7 @@ typedef enum {
   NODE_NONE,
   NODE_CHOSEN,
   NODE_MEMORY,
+  NODE_RESERVED,
   NODE_CPU,
   NODE_INTC,
 } node_t;
@@ -73,6 +74,8 @@ typedef struct {
   uintptr_t initrd_start;
   size_t memory_base;
   size_t memory_size;
+  size_t reserved_base;
+  size_t reserved_size;
   char* cmdline;
   size_t cmdline_length;
   uint32_t cpu_count;
@@ -91,6 +94,8 @@ static int node_callback(int depth, const char* name, void* cookie) {
     ctx->node = NODE_CHOSEN;
   } else if (!strcmp(name, "memory") || !strncmp(name, "memory@", 7)) {
     ctx->node = NODE_MEMORY;
+  } else if (!strcmp(name, "mmod_pmp0") || !strncmp(name, "mmode_pmp0@", 11)) {
+    ctx->node = NODE_RESERVED;
   } else if (!strncmp(name, "cpu@", 4)) {
     ctx->node = NODE_CPU;
     ctx->cpu_count++;
@@ -140,6 +145,18 @@ static int prop_callback(const char* name, uint8_t* data, uint32_t size, void* c
         ctx->memory_size = (most << 32) | least;
       }
       break;
+    case NODE_RESERVED:
+      if (!strcmp(name, "reg") && size == 16) {
+        // reserved size is big endian uint64_t at offset 0
+        uint64_t most = dt_rd32(data + 0);
+        uint64_t least = dt_rd32(data + 4);
+        ctx->reserved_base = (most << 32) | least;
+        // reserved size is big endian uint64_t at offset 8
+        most = dt_rd32(data + 8);
+        least = dt_rd32(data + 12);
+        ctx->reserved_size = (most << 32) | least;
+      }
+      break;
     default:;
   }
 
@@ -156,6 +173,8 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
   ctx->initrd_start = 0;
   ctx->memory_base = 0;
   ctx->memory_size = 0;
+  ctx->reserved_base = 0;
+  ctx->reserved_size = 0;
   ctx->cmdline = NULL;
   ctx->cpu_count = 0;
 
@@ -192,6 +211,20 @@ static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ct
     append_boot_item(zbi, ZBI_TYPE_MEM_CONFIG, 0, &mem_range, sizeof(mem_range));
   } else {
     uart_puts("RAM size not found in device tree\n");
+  }
+
+  if (ctx->reserved_size) {
+    zbi_mem_range_t mem_range;
+    mem_range.paddr = ctx->reserved_base;
+    mem_range.length = ctx->reserved_size;
+    mem_range.type = ZBI_MEM_RANGE_RESERVED;
+
+    uart_puts("Reserving range: ");
+    uart_print_hex(ctx->reserved_base);
+    uart_puts(" ");
+    uart_print_hex(ctx->reserved_size);
+    uart_puts("\n");
+    append_boot_item(zbi, ZBI_TYPE_MEM_CONFIG, 0, &mem_range, sizeof(mem_range));
   }
 
   // append kernel command line
