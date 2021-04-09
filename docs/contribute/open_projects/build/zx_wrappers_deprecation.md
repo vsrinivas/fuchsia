@@ -29,7 +29,7 @@ documented.
 
 General experience in working with `BUILD.gn` files is recommended but not
 entirely necessary.
-Please consult the [GN reference][gn-reference]i{:.external} guide.
+Please consult the [GN reference][gn-reference]{:.external} guide.
 
 ## How to help
 
