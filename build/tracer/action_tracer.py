@@ -823,6 +823,7 @@ def main():
         os.path.join(src_root, ".git"),
         os.path.join(src_root, "integration", ".git"),
         os.path.join(src_root, "third_party", "mesa", ".git"),
+        os.path.join(src_root, "third_party", "glslang", ".git"),
         # Allow actions to read .fx-build-dir to figure out the current build
         # directory.
         os.path.join(src_root, ".fx-build-dir"),
