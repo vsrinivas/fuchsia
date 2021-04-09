@@ -37,6 +37,11 @@ PressureObserver::PressureObserver(bool watch_for_changes, PressureNotifier* not
   }
 }
 
+PressureObserver::~PressureObserver() {
+  loop_.Quit();
+  loop_.JoinThreads();
+}
+
 // Called from the constructor to set up waiting on kernel memory pressure events.
 zx_status_t PressureObserver::InitMemPressureEvents() {
   zx::channel local, remote;
@@ -98,7 +103,7 @@ void PressureObserver::WatchForChanges() {
 
 void PressureObserver::WaitOnLevelChange() {
   // Wait on all events the first time around.
-  size_t num_wait_items = (level_ == Level::kNumLevels) ? Level::kNumLevels : Level::kNumLevels - 1;
+  size_t num_wait_items = level_initialized_ ? Level::kNumLevels - 1 : Level::kNumLevels;
 
   zx_status_t status = zx_object_wait_many(wait_items_.data(), num_wait_items, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
@@ -130,6 +135,15 @@ void PressureObserver::OnLevelChanged(zx_handle_t handle) {
 
   FX_LOGS(INFO) << "Memory pressure level changed from " << kLevelNames[old_level] << " to "
                 << kLevelNames[level_];
+
+  if (unlikely(!level_initialized_)) {
+    // Record that the level has been initialized if this is the first time. Before this, the
+    // |PressureNotifier| will advertise the pressure level as Normal when watchers register. This
+    // is fine because once the level is initialized, we will send out another pressure signal if
+    // required (i.e. if the pressure level is not Normal). See comment near |level_| in class
+    // definition.
+    level_initialized_ = true;
+  }
 
   if (notifier_ != nullptr) {
     // Notify the |PressureNotifier| that the level has changed. |PressureNotifier::Notify()| is a

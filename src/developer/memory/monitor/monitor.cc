@@ -220,6 +220,9 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                                                           send_critical_pressure_crash_reports,
                                                           component_context_.get(), dispatcher);
 
+  memory_debugger_ =
+      std::make_unique<MemoryDebugger>(component_context_.get(), pressure_notifier_.get());
+
   SampleAndPost();
 }
 

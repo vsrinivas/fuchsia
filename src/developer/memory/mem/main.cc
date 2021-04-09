@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/memory/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -54,7 +55,54 @@ std::vector<BucketMatch> GetBucketMatchesFromConfig() {
   return *matches;
 }
 
+void SignalMemoryPressure(fuchsia::memorypressure::Level level) {
+  fuchsia::memory::DebuggerSyncPtr memdebug;
+  auto context = sys::ComponentContext::Create();
+
+  if (!std::filesystem::exists("/hub/c/memory_monitor.cmx")) {
+    FX_LOGS(ERROR) << "No memory_monitor component found.";
+    return;
+  }
+
+  // Taking the first path in the component directory is sufficient here because there's only a
+  // single instance of memory_monitor on a running system.
+  std::string component_instance_path =
+      std::filesystem::directory_iterator("/hub/c/memory_monitor.cmx")->path();
+
+  std::string service_path =
+      component_instance_path + "/out/debug/" + fuchsia::memory::Debugger::Name_;
+
+  zx_status_t status =
+      fdio_service_connect(service_path.c_str(), memdebug.NewRequest().TakeChannel().release());
+
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not connect to " << fuchsia::memory::Debugger::Name_;
+    return;
+  }
+
+  memdebug->SignalMemoryPressure(level);
+}
+
 int Mem(const fxl::CommandLine& command_line) {
+  if (command_line.HasOption("signal")) {
+    std::string level_value;
+    FX_CHECK(command_line.GetOptionValue("signal", &level_value));
+
+    fuchsia::memorypressure::Level level;
+    if (level_value == "NORMAL") {
+      level = fuchsia::memorypressure::Level::NORMAL;
+    } else if (level_value == "WARNING") {
+      level = fuchsia::memorypressure::Level::WARNING;
+    } else if (level_value == "CRITICAL") {
+      level = fuchsia::memorypressure::Level::CRITICAL;
+    } else {
+      std::cerr << "Invalid value for --signal: " << level_value;
+      return EXIT_FAILURE;
+    }
+    SignalMemoryPressure(level);
+    return EXIT_SUCCESS;
+  }
+
   CaptureState capture_state;
   auto s = Capture::GetCaptureState(&capture_state);
   Printer printer(std::cout);
@@ -160,13 +208,18 @@ int main(int argc, const char** argv) {
                  "  T: Total bytes\n"
                  "     S and T are inclusive of P\n\n"
                  " Options:\n"
-                 " [default] Human readable representation of process and vmo groups\n"
-                 " --trace   Enable tracing support\n"
-                 " --print   Machine readable representation of proccess and vmos\n"
-                 " --output  CSV of process memory\n"
-                 "           --repeat=N Runs forever, outputing every N seconds\n"
-                 "           --pid=N    Output vmo groups of process pid instead\n"
-                 " --digest  Prints a bucketized digest of memory usage\n";
+                 " [default]  Human readable representation of process and vmo groups\n"
+                 " --trace    Enable tracing support\n"
+                 " --print    Machine readable representation of proccess and vmos\n"
+                 " --output   CSV of process memory\n"
+                 "            --repeat=N Runs forever, outputing every N seconds\n"
+                 "            --pid=N    Output vmo groups of process pid instead\n"
+                 " --digest   Prints a bucketized digest of memory usage\n"
+                 " --signal=L Signal userspace clients with memory pressure level L\n"
+                 "            where L can be CRITICAL, WARNING or NORMAL. Clients can\n"
+                 "            use this command to test their response to memory pressure.\n"
+                 "            Does not affect the real memory pressure level on the system,\n"
+                 "            or trigger any kernel memory reclamation tasks.\n";
     return EXIT_SUCCESS;
   }
 

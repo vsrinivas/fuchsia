@@ -8,6 +8,8 @@ import("//third_party/cobalt/metrics_registry.gni")
 
 source_set("lib") {
   sources = [
+    "debugger.cc",
+    "debugger.h",
     "high_water.cc",
     "high_water.h",
     "metrics.cc",

@@ -34,14 +34,17 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   // fuchsia::memorypressure::Provider interface
   void RegisterWatcher(fidl::InterfaceHandle<fuchsia::memorypressure::Watcher> watcher) override;
 
+  // Notify watchers of a pressure level change.
   void Notify();
+
+  // Notify watchers with a simulated memory pressure |level|. For diagnostic use by MemoryDebugger.
+  void DebugNotify(fuchsia::memorypressure::Level level) const;
 
  private:
   void PostLevelChange();
   void ReleaseWatcher(fuchsia::memorypressure::Watcher* watcher);
   void OnLevelChangedCallback(WatcherState* watcher);
   void NotifyWatcher(WatcherState* watcher, Level level);
-  fuchsia::memorypressure::Level ConvertLevel(Level level) const;
 
   bool CanGenerateNewCrashReports();
   void FileCrashReport();

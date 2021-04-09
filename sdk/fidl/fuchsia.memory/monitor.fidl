@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.memory;
 
+using fuchsia.memorypressure;
+
 /// Interface used to register for memory notifications.
 [Discoverable]
 protocol Monitor {
@@ -46,4 +48,14 @@ struct Stats {
 /// A watcher for memory changes
 protocol Watcher {
     OnChange(Stats stats);
+};
+
+/// Interface used to debug the singleton memory_monitor instance.
+[Discoverable]
+protocol Debugger {
+    /// Signals registered watchers of the fuchsia.memorypressure service with
+    /// the specified memory pressure level. Intended for debugging only. Does
+    /// not affect the real memory pressure level on the system, or trigger any
+    /// kernel memory reclamation tasks.
+    SignalMemoryPressure(fuchsia.memorypressure.Level level);
 };

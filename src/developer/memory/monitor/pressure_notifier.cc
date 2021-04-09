@@ -6,8 +6,39 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/status.h>
 
 namespace monitor {
+
+namespace {
+
+// Convert monitor::Level to the Level type signalled by the fuchsia.memorypressure service.
+zx::status<fuchsia::memorypressure::Level> ConvertToMemoryPressureServiceLevel(Level level) {
+  switch (level) {
+    case Level::kCritical:
+      return zx::ok(fuchsia::memorypressure::Level::CRITICAL);
+    case Level::kWarning:
+      return zx::ok(fuchsia::memorypressure::Level::WARNING);
+    case Level::kNormal:
+      return zx::ok(fuchsia::memorypressure::Level::NORMAL);
+    default:
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+}
+
+// Convert from the Level type signalled by the fuchsia.memorypressure service to monitor::Level.
+Level ConvertFromMemoryPressureServiceLevel(fuchsia::memorypressure::Level level) {
+  switch (level) {
+    case fuchsia::memorypressure::Level::CRITICAL:
+      return Level::kCritical;
+    case fuchsia::memorypressure::Level::WARNING:
+      return Level::kWarning;
+    case fuchsia::memorypressure::Level::NORMAL:
+      return Level::kNormal;
+  }
+}
+
+}  // namespace
 
 // |dispatcher| is the dispatcher associated with memory_monitor's main thread.
 // The fuchsia::memorypressure::Provider service which the |PressureNotifier| class implements runs
@@ -55,6 +86,14 @@ void PressureNotifier::PostLevelChange() {
   }
 }
 
+void PressureNotifier::DebugNotify(fuchsia::memorypressure::Level level) const {
+  FX_LOGS(INFO) << "Simulating memory pressure level "
+                << kLevelNames[ConvertFromMemoryPressureServiceLevel(level)];
+  for (auto& watcher : watchers_) {
+    watcher->proxy->OnLevelChanged(level, []() {});
+  }
+}
+
 void PressureNotifier::NotifyWatcher(WatcherState* watcher, Level level) {
   // We should already have set |pending_callback| when the notification (call to NotifyWatcher())
   // was posted, to prevent removing |WatcherState| from |watchers_| in the error handler.
@@ -68,7 +107,9 @@ void PressureNotifier::NotifyWatcher(WatcherState* watcher, Level level) {
   ZX_DEBUG_ASSERT(!watcher->needs_free);
 
   watcher->level_sent = level;
-  watcher->proxy->OnLevelChanged(ConvertLevel(level),
+  auto level_or_error = ConvertToMemoryPressureServiceLevel(level);
+  ZX_DEBUG_ASSERT(level_or_error.is_ok());
+  watcher->proxy->OnLevelChanged(level_or_error.value(),
                                  [watcher, this]() { OnLevelChangedCallback(watcher); });
 }
 
@@ -136,18 +177,6 @@ void PressureNotifier::ReleaseWatcher(fuchsia::memorypressure::Watcher* watcher)
     (*watcher_to_free)->needs_free = true;
   } else {
     watchers_.erase(watcher_to_free);
-  }
-}
-
-fuchsia::memorypressure::Level PressureNotifier::ConvertLevel(Level level) const {
-  switch (level) {
-    case Level::kCritical:
-      return fuchsia::memorypressure::Level::CRITICAL;
-    case Level::kWarning:
-      return fuchsia::memorypressure::Level::WARNING;
-    case Level::kNormal:
-    default:
-      return fuchsia::memorypressure::Level::NORMAL;
   }
 }
 

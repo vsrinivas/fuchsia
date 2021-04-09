@@ -19,6 +19,7 @@
 #include "lib/sys/inspect/cpp/component.h"
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/digest.h"
+#include "src/developer/memory/monitor/debugger.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/metrics.h"
 #include "src/developer/memory/monitor/pressure_notifier.h"
@@ -82,6 +83,7 @@ class Monitor : public fuchsia::memory::Monitor {
   sys::ComponentInspector inspector_;
   std::unique_ptr<Metrics> metrics_;
   std::unique_ptr<PressureNotifier> pressure_notifier_;
+  std::unique_ptr<MemoryDebugger> memory_debugger_;
   fuchsia::hardware::ram::metrics::DevicePtr ram_device_;
   uint64_t pending_bandwidth_measurements_ = 0;
 

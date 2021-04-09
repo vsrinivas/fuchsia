@@ -9,6 +9,7 @@ executable("bin") {
   output_name = "mem"
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.memory",
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/metrics",
     "//src/lib/fxl",
