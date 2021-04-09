@@ -48,6 +48,11 @@
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.Loader",
                 "fuchsia.kernel.RootJob",
+
+                // This is only used when the kernel commandline flag devmgr.enable-ephemeral
+                // is set, which enables loading drivers ephemerally. This is intended for
+                // eng builds only.
+                "fuchsia.pkg.PackageResolver",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
