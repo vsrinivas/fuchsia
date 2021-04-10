@@ -58,6 +58,11 @@ fuchsia_unittest_component("weave-config-manager-test") {
   deps = [ ":weave_config_manager_unittests" ]
 }
 
+fuchsia_unittest_component("weave-inspector-test") {
+  manifest = rebase_path("meta/weave_inspector_unittests.cmx")
+  deps = [ ":weave_inspector_unittests" ]
+}
+
 test("ble_manager_unittests") {
   output_name = "ble_manager_unittests"
   sources = [ "ble_manager_unittests.cpp" ]
@@ -115,6 +120,15 @@ test("weave_config_manager_unittests") {
   ]
 }
 
+test("weave_inspector_unittests") {
+  output_name = "weave_inspector_unittests"
+  sources = [ "weave_inspector_unittests.cpp" ]
+  deps = [
+    ":common_test_deps",
+    "//sdk/lib/inspect/testing/cpp",
+  ]
+}
+
 resource("weavestack-adaptation-resources") {
   sources = [
     "../../weavestack/data/default_environment_schema.json",
@@ -161,6 +175,7 @@ fuchsia_test_package("weavestack-adaptation-unittests") {
     ":thread-stack-manager-test",
     ":warm-platform-support-test",
     ":weave-config-manager-test",
+    ":weave-inspector-test",
   ]
   test_specs = {
     log_settings = {

@@ -12,6 +12,10 @@
 
 namespace nl::Weave {
 
+namespace testing {
+class WeaveInspectorTest;
+}  // namespace testing
+
 // This class defines the structure of the Inspect hierarchy for Weave. Components
 // of WeaveStack can invoke the WeaveInspector to log events pertaining to status
 // and tunnel state changes. For example:
@@ -129,6 +133,8 @@ class WeaveInspector final {
   // This will add a new entry with all current status to weave_status node.
   void NotifyTunnelStateChange(const WeaveStatus_TunnelState& new_state,
                                const WeaveStatus_TunnelType& tunnel_type, bool is_restricted);
+
+  friend class testing::WeaveInspectorTest;
 
  private:
   WeaveInspector();
