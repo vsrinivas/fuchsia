@@ -210,16 +210,14 @@ template("_fidl_banjo_cpp") {
 
     public = [ cpp_mock_file ]
 
-    deps = [
-      ":$cpp_mock_fidlgen_target_name",
-      ":$cpp_target_name",
-    ]
+    deps = [ ":$cpp_mock_fidlgen_target_name" ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
 
     public_deps = [
+      ":$cpp_target_name",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/mock-function",
       "//zircon/system/ulib/zxtest",
