@@ -30,5 +30,5 @@ toc:
   path: /docs/development/debugger/symbols.md
 - title: "Working with exceptions"
   path: /docs/development/debugger/exceptions.md
-- title: "eveloping and debugging the debugger"
+- title: "Developing and debugging the debugger"
   path: /docs/development/debugger/developing.md
