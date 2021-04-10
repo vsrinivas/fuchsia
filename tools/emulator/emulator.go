@@ -632,7 +632,7 @@ func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) er
 			return nil
 		}
 		if strings.Contains(line, notSeen) {
-			return fmt.Errorf("found in output: %q", msg)
+			return fmt.Errorf("found in output: %q", notSeen)
 		}
 	}
 }
