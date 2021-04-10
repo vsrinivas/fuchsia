@@ -12,12 +12,11 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 
 #include <tuple>
 
 #include <zxtest/zxtest.h>
-
-#include "lib/fidl/llcpp/wire_messaging.h"
 namespace goldfish {
 
 class FakeInstance : public Instance {
