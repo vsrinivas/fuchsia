@@ -2,18 +2,5 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dist/resource.gni")
-
-# Entry point for all general purpose GN templates for building and testing
-# Fuchsia components.
-# See: https://fuchsia.dev/fuchsia-src/development/components/build
-import("fuchsia_component.gni")
-import("fuchsia_package.gni")
-import("fuchsia_package_with_single_component.gni")
-import("fuchsia_shell_package.gni")
-import("fuchsia_system_package.gni")
-import("fuchsia_test.gni")
-import("fuchsia_test_component.gni")
-import("fuchsia_test_package.gni")
-import("fuchsia_unittest_component.gni")
-import("fuchsia_unittest_package.gni")
+# TODO: delete this file and move all imports to the path below.
+import("//build/components/components.gni")
