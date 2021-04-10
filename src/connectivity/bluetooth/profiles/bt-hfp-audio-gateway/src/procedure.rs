@@ -20,6 +20,9 @@ use crate::{
     },
 };
 
+/// Defines the implementation of the Answer Procedure.
+pub mod answer;
+
 /// Defines the implementation of the DTMF Procedure.
 pub mod dtmf;
 
@@ -59,6 +62,7 @@ pub mod phone_status;
 /// Defines the implementation of the Volume Level Synchronization Procedure.
 pub mod volume_synchronization;
 
+use answer::AnswerProcedure;
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
@@ -160,6 +164,8 @@ pub enum ProcedureMarker {
     Indicators,
     /// The Ring procedure as defined in HFP v1.8 Section 4.13
     Ring,
+    /// The Answer procedure as defined in HFP v1.8 Section 4.13
+    Answer,
 }
 
 impl ProcedureMarker {
@@ -183,6 +189,7 @@ impl ProcedureMarker {
             Self::QueryCurrentCalls => Box::new(QueryCurrentCallsProcedure::new()),
             Self::Indicators => Box::new(IndicatorsActivationProcedure::new()),
             Self::Ring => Box::new(RingProcedure::new()),
+            Self::Answer => Box::new(AnswerProcedure::new()),
         }
     }
 
@@ -209,6 +216,7 @@ impl ProcedureMarker {
             at::Command::Cnum { .. } => Ok(Self::SubscriberNumberInformation),
             at::Command::Vgs { .. } | at::Command::Vgm { .. } => Ok(Self::VolumeSynchronization),
             at::Command::Vts { .. } => Ok(Self::Dtmf),
+            at::Command::Answer { .. } => Ok(Self::Answer),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -234,6 +242,8 @@ pub enum InformationRequest {
     MicrophoneVolumeSynchronization { level: Gain, response: Box<dyn FnOnce() -> AgUpdate> },
 
     QueryCurrentCalls { response: Box<dyn FnOnce(Vec<Call>) -> AgUpdate> },
+
+    Answer { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
 }
 
 impl From<&InformationRequest> for ProcedureMarker {
@@ -249,6 +259,7 @@ impl From<&InformationRequest> for ProcedureMarker {
                 Self::VolumeSynchronization
             }
             QueryCurrentCalls { .. } => Self::QueryCurrentCalls,
+            Answer { .. } => Self::Answer,
         }
     }
 }
@@ -274,6 +285,7 @@ impl fmt::Debug for InformationRequest {
                 s = format!("MicrophoneVolumeSynchronization({:?})", level);
                 &s
             }
+            Self::Answer { .. } => "Answer",
         }
         .to_string();
         write!(f, "{}", output)

@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        error::CallError,
         procedure::dtmf::DtmfCode,
         protocol::indicators::{CallIndicators, CallIndicatorsUpdates},
     },
@@ -12,7 +13,7 @@ use {
         stream::{StreamItem, StreamMap, StreamWithEpitaph, Tagged, WithEpitaph, WithTag},
     },
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_bluetooth_hfp::{CallMarker, CallProxy, CallState, PeerHandlerProxy},
+    fidl_fuchsia_bluetooth_hfp::{CallMarker, CallProxy, PeerHandlerProxy},
     fuchsia_async as fasync,
     futures::stream::{FusedStream, Stream, StreamExt},
     log::{debug, info, warn},
@@ -22,7 +23,7 @@ use {
     },
 };
 
-pub use number::Number;
+pub use {fidl_fuchsia_bluetooth_hfp::CallState, number::Number};
 
 // Enclose `Number` in a submodule to keep the private items from leaking into the `calls` module.
 mod number {
@@ -72,10 +73,6 @@ mod number {
 /// The index associated with a call, that is guaranteed to be unique for the lifetime of the call,
 /// but will be recycled after the call is released.
 pub type CallIdx = usize;
-
-/// A request was made using an unknown call index.
-#[derive(Debug, PartialEq)]
-pub struct UnknownIndexError(CallIdx);
 
 /// The direction of call initiation.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -261,12 +258,13 @@ impl Calls {
 
     /// Run `f`, passing the CallProxy associated with the given `number` into `f` and removing
     /// the CallProxy from the map if an error is returned by running `f`.
-    fn _send_call_request(
+    fn send_call_request(
         &mut self,
         index: CallIdx,
         f: impl FnOnce(&CallProxy) -> Result<(), fidl::Error>,
-    ) -> Result<(), UnknownIndexError> {
-        let result = f(&self.current_calls.get(index).ok_or(UnknownIndexError(index))?.proxy);
+    ) -> Result<(), CallError> {
+        let result =
+            f(&self.current_calls.get(index).ok_or(CallError::UnknownIndexError(index))?.proxy);
         if let Err(e) = result {
             if !e.is_closed() {
                 warn!("Error making request on Call channel for call {:?}: {}", index, e);
@@ -277,19 +275,19 @@ impl Calls {
     }
 
     /// Send a request to the call manager to place the call on hold.
-    pub fn _request_hold(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
-        self._send_call_request(index, |proxy| proxy.request_hold())
+    pub fn _request_hold(&mut self, index: CallIdx) -> Result<(), CallError> {
+        self.send_call_request(index, |proxy| proxy.request_hold())
     }
 
     /// Send a request to the call manager to make the call active.
     /// Only one call can be active at a time. Before requesting the call at `index` be made
     /// active, all active calls are either terminated or placed on hold depending on
     /// `terminate_others`.
-    pub fn _request_active(
+    pub fn request_active(
         &mut self,
         index: CallIdx,
         terminate_others: bool,
-    ) -> Result<(), UnknownIndexError> {
+    ) -> Result<(), CallError> {
         let action =
             if terminate_others { CallProxy::request_terminate } else { CallProxy::request_hold };
 
@@ -302,20 +300,20 @@ impl Calls {
 
         for i in active_calls {
             // Failures are ignored.
-            let _ = self._send_call_request(i, action);
+            let _ = self.send_call_request(i, action);
         }
-        self._send_call_request(index, |proxy| proxy.request_active())
+        self.send_call_request(index, |proxy| proxy.request_active())
     }
 
     /// Send a request to the call manager to terminate the call.
-    pub fn _request_terminate(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
-        self._send_call_request(index, |proxy| proxy.request_terminate())
+    pub fn _request_terminate(&mut self, index: CallIdx) -> Result<(), CallError> {
+        self.send_call_request(index, |proxy| proxy.request_terminate())
     }
 
     /// Send a request to the call manager to transfer the audio of the call from the
     /// headset to the fuchsia device.
-    pub fn _request_transfer_audio(&mut self, index: CallIdx) -> Result<(), UnknownIndexError> {
-        self._send_call_request(index, |proxy| proxy.request_transfer_audio())
+    pub fn _request_transfer_audio(&mut self, index: CallIdx) -> Result<(), CallError> {
+        self.send_call_request(index, |proxy| proxy.request_transfer_audio())
     }
 
     /// Send a dtmf code to the call manager for active call,
@@ -351,6 +349,14 @@ impl Calls {
     pub fn ringing(&self) -> Option<Call> {
         self.oldest_by_state(CallState::IncomingRinging)
             .map(|(idx, call)| Call::new(idx, call.number.clone(), call.state, call.direction))
+    }
+
+    /// Answer the call that has been in the IncomingRinging state the longest.
+    /// Returns an Error if there are no calls in the IncomingRinging state.
+    pub fn answer(&mut self) -> Result<(), CallError> {
+        let state = CallState::IncomingRinging;
+        let idx = self.oldest_by_state(state).ok_or(CallError::None(state))?.0;
+        self.request_active(idx, true)
     }
 
     /// Returns true if the state of any calls requires ringing.
@@ -715,7 +721,7 @@ mod tests {
 
         // Sending a RequestActive for the first call will send a RequestTerminate for the second
         // call when `true` is passed to request_active.
-        calls._request_active(idx, true).expect("valid index");
+        calls.request_active(idx, true).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestActive { .. })));
         assert_matches!(call_stream_2.next().await, Some(Ok(CallRequest::RequestTerminate { .. })));
 
@@ -730,7 +736,7 @@ mod tests {
 
         // Sending a RequestActive for the first call will send a RequestHold for the third
         // call when `false` is passed to request_active.
-        calls._request_active(idx, false).expect("valid index");
+        calls.request_active(idx, false).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestActive { .. })));
         assert_matches!(call_stream_3.next().await, Some(Ok(CallRequest::RequestHold { .. })));
 
@@ -750,16 +756,16 @@ mod tests {
 
         let invalid = 2;
         let result = calls._request_hold(invalid);
-        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
+        assert_eq!(result, Err(CallError::UnknownIndexError(invalid.clone())));
 
-        let result = calls._request_active(invalid, false);
-        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
+        let result = calls.request_active(invalid, false);
+        assert_eq!(result, Err(CallError::UnknownIndexError(invalid.clone())));
 
         let result = calls._request_terminate(invalid);
-        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
+        assert_eq!(result, Err(CallError::UnknownIndexError(invalid.clone())));
 
         let result = calls._request_transfer_audio(invalid);
-        assert_eq!(result, Err(UnknownIndexError(invalid.clone())));
+        assert_eq!(result, Err(CallError::UnknownIndexError(invalid.clone())));
     }
 
     #[fasync::run_until_stalled(test)]

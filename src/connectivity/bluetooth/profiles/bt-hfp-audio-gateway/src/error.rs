@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::peer::calls::{CallIdx, CallState};
 use {std::error::Error as StdError, thiserror::Error};
 
 /// Errors that occur during the operation of the HFP Bluetooth Profile component.
@@ -59,4 +60,13 @@ impl Error {
     pub fn system<E: StdError + 'static>(message: impl Into<String>, e: E) -> Self {
         Self::System { message: message.into(), source: Box::new(e) }
     }
+}
+
+/// A request was made using an unknown call.
+#[derive(Debug, PartialEq, Clone, Copy, Error)]
+pub enum CallError {
+    #[error("Unknown call index {}", .0)]
+    UnknownIndexError(CallIdx),
+    #[error("No call in state {:?}", .0)]
+    None(CallState),
 }

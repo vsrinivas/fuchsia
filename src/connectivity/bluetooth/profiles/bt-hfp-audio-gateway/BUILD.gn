@@ -52,6 +52,7 @@ rustc_binary("bin") {
     "src/peer/service_level_connection.rs",
     "src/peer/task.rs",
     "src/procedure.rs",
+    "src/procedure/answer.rs",
     "src/procedure/call_line_ident_notifications.rs",
     "src/procedure/call_waiting_notifications.rs",
     "src/procedure/dtmf.rs",
