@@ -36,13 +36,5 @@ bool ViewHitAccumulator::EndLayer() {
   return true;
 }
 
-void TopHitAccumulator::Add(const ViewHit& hit) {
-  if (!hit_ || hit.distance < hit_->distance) {
-    hit_ = hit;
-  }
-}
-
-bool TopHitAccumulator::EndLayer() { return !hit_; }
-
 }  // namespace gfx
 }  // namespace scenic_impl

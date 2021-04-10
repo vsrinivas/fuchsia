@@ -123,7 +123,7 @@ void InputSystemTest::SetUpTestView(scenic::View* view) {
   scenic::Session* const session = view->session();
 
   scenic::ShapeNode shape(session);
-  shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
+  shape.SetTranslation(2.5f, 2.5f, 0);  // Center the shape within the View.
   view->AddChild(shape);
 
   scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.

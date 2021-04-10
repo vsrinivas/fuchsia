@@ -76,23 +76,6 @@ class ViewHitAccumulator : public HitAccumulator<ViewHit> {
   std::map</*view_ref_koid*/ zx_koid_t, ViewHit> views_;
 };
 
-// Accumulates one hit overall, on the top view by depth. Hits are in the coordinate space of the
-// view.
-class TopHitAccumulator : public HitAccumulator<ViewHit> {
- public:
-  const std::optional<ViewHit>& hit() const { return hit_; }
-
-  // |HitAccumulator<ViewHit>|
-  void Add(const ViewHit& hit) override;
-
-  // |HitAccumulator<ViewHit>|
-  // This implementation continues only until a hit is found.
-  bool EndLayer() override;
-
- private:
-  std::optional<ViewHit> hit_;
-};
-
 }  // namespace gfx
 }  // namespace scenic_impl
 

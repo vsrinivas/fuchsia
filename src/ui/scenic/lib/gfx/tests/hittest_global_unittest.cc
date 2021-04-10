@@ -669,6 +669,7 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShape2Id));
   }
 
+  // Middle of the rectangles (depth check).
   {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{4, 4.5f};
@@ -679,6 +680,36 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
   {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{12, 4.5f};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
+    EXPECT_FALSE(accumulator.hits().empty());
+  }
+
+  // Edges.
+  {
+    TestHitAccumulator<ViewHit> accumulator;
+    const glm::vec2 world_space_point{16, 9};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
+    EXPECT_FALSE(accumulator.hits().empty());
+  }
+  {
+    TestHitAccumulator<ViewHit> accumulator;
+    const glm::vec2 world_space_point{0, 9};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
+    EXPECT_FALSE(accumulator.hits().empty());
+  }
+  {
+    TestHitAccumulator<ViewHit> accumulator;
+    const glm::vec2 world_space_point{16, 9};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
+    EXPECT_FALSE(accumulator.hits().empty());
+  }
+  {
+    TestHitAccumulator<ViewHit> accumulator;
+    const glm::vec2 world_space_point{16, 0};
     const escher::ray4 ray = CreateZRay(world_space_point);
     HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     EXPECT_FALSE(accumulator.hits().empty());

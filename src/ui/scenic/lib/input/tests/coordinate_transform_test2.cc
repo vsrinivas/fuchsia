@@ -355,6 +355,96 @@ TEST_F(CoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyViewportTransfor
   }
 }
 
+// In this test the context and the target have identical coordinate systems except for a 90 degree
+// rotation. Check that all corners still generate hits. This confirms that small floating point
+// errors don't cause misses.
+//
+// Scene pre-transformation
+// 1,2,3,4 denote the corners of the target view:
+//   X ->
+// Y 1 O O O O 2
+// | O O O O O O
+// v O O O O O O
+//   O O O O O O
+//   O O O O O O
+//   4 O O O O 3
+//
+// Post-rotation
+//   X ->
+// Y 4 O O O O 1
+// | O O O O O O
+// v O O O O O O
+//   O O O O O O
+//   O O O O O O
+//   3 O O O O 2
+TEST_F(CoordinateTransformTest2, InjectedInput_OnRotatedChild_ShouldHitEdges) {
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two ViewHolders, one a child of the other.
+  auto [root_session, root_resources] = CreateScene();
+  scenic::ViewHolder holder_1(root_session.session(), std::move(vh1), "holder_1");
+  {
+    holder_1.SetViewProperties(k5x5x1);
+    root_resources.scene.AddChild(holder_1);
+    RequestToPresent(root_session.session());
+  }
+
+  SessionWrapper client_1 = CreateClient("view_1", std::move(v1));
+  scenic::ViewHolder holder_2(client_1.session(), std::move(vh2), "holder_2");
+  {
+    holder_2.SetViewProperties(k5x5x1);
+    client_1.view()->AddChild(holder_2);
+    // Rotate 90 degrees counter clockwise around Z-axis (Z-axis points into screen, so appears as
+    // clockwise rotation).
+    holder_2.SetAnchor(2.5f, 2.5f, 0);
+    const auto rotation_quaternion = glm::angleAxis(glm::pi<float>() / 2.f, glm::vec3(0, 0, 1));
+    holder_2.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
+                         rotation_quaternion.w);
+    RequestToPresent(client_1.session());
+  }
+
+  SessionWrapper client_2 = CreateClient("view_2", std::move(v2));
+
+  // Scene is now set up, send in the input. One interaction for each corner.
+  {
+    RegisterInjector(client_1.view_ref(), client_2.view_ref(),
+                     fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+    Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+  }
+
+  {  // Target should receive all events rotated 90 degrees.
+    const std::vector<fuchsia::ui::input::InputEvent>& events = client_2.events();
+    ASSERT_EQ(events.size(), 17u);
+
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0.0, 5.0));
+    EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 0.0, 5.0));
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::UP, 0.0, 5.0));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::REMOVE, 0.0, 5.0));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::ADD, 5.0, 5.0));
+    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::DOWN, 5.0, 5.0));
+    EXPECT_TRUE(PointerMatches(events[7].pointer(), 1u, PointerEventPhase::UP, 5.0, 5.0));
+    EXPECT_TRUE(PointerMatches(events[8].pointer(), 1u, PointerEventPhase::REMOVE, 5.0, 5.0));
+    EXPECT_TRUE(PointerMatches(events[9].pointer(), 1u, PointerEventPhase::ADD, 5.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[10].pointer(), 1u, PointerEventPhase::DOWN, 5.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[11].pointer(), 1u, PointerEventPhase::UP, 5.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[12].pointer(), 1u, PointerEventPhase::REMOVE, 5.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[13].pointer(), 1u, PointerEventPhase::ADD, 0.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[14].pointer(), 1u, PointerEventPhase::DOWN, 0.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[15].pointer(), 1u, PointerEventPhase::UP, 0.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[16].pointer(), 1u, PointerEventPhase::REMOVE, 0.0, 0.0));
+  }
+}
+
 // In this test we set up the context and the target. We apply clip space transform to the camera
 // and then inject pointer events to confirm that the coordinates received by the listener are
 // not impacted by the clip space transform.

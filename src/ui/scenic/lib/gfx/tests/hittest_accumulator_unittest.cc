@@ -57,26 +57,6 @@ TEST(ViewHitAccumulatorTest, SortedHitsPerLayer) {
   EXPECT_THAT(accumulator.hits(), testing::Pointwise(ViewIdEq(), {2u, 1u, 3u, 3u, 1u, 2u}));
 }
 
-TEST(TopHitAccumulatorTest, Empty) {
-  TopHitAccumulator accumulator;
-  EXPECT_TRUE(accumulator.EndLayer()) << "Hit testing should continue until a hit is found.";
-  EXPECT_FALSE(accumulator.hit());
-}
-
-TEST(TopHitAccumulatorTest, LayersStopAfterHit) {
-  TopHitAccumulator accumulator;
-  accumulator.Add({});
-  EXPECT_FALSE(accumulator.EndLayer());
-}
-
-TEST(TopHitAccumulatorTest, TopHit) {
-  TopHitAccumulator accumulator;
-  accumulator.Add({.distance = 2});
-  accumulator.Add({.distance = 1});
-  accumulator.Add({.distance = 3});
-  EXPECT_THAT(accumulator.hit(), Optional(Field(&ViewHit::distance, 1)));
-}
-
 }  // namespace
 }  // namespace test
 }  // namespace gfx

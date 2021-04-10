@@ -13,6 +13,9 @@
 
 namespace escher {
 
+// fxbug.dev(40161): Inflate the box by epsilon in every direction to ensure edges are hit.
+constexpr float kIntersectionEpsilon = 1e-3f;
+
 // Returns whether a ray intersects an axis-aligned bounding box. Upon return,
 // |out_interval| returns the interval containing the ray's entry and exit distances
 // through the box. These values are only valid if a hit took place.

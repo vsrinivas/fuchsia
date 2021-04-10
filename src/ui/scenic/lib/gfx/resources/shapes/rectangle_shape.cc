@@ -18,7 +18,9 @@ RectangleShape::RectangleShape(Session* session, SessionId session_id, ResourceI
 
 bool RectangleShape::ContainsPoint(const escher::vec2& point) const {
   const escher::vec2 pt = point + escher::vec2(0.5f * width_, 0.5f * height_);
-  return pt.x >= 0.f && pt.y >= 0.f && pt.x <= width_ && pt.y <= height_;
+  constexpr float kEpsilon = 1e-3f;
+  return pt.x >= -kEpsilon && pt.y >= -kEpsilon && pt.x <= width_ + kEpsilon &&
+         pt.y <= height_ + kEpsilon;
 }
 
 }  // namespace gfx
