@@ -6,6 +6,7 @@
         kernel_utc: "INSPECT:timekeeper.cmx:root/current:kernel_utc",
         primary_source_status: "INSPECT:timekeeper.cmx:root/primary_time_source:status",
         primary_estimate_0_counter: "INSPECT:timekeeper.cmx:root/primary_track/estimate_0:counter",
+        primary_filter_state_0_counter: "INSPECT:timekeeper.cmx:root/primary_track/filter_state_0:counter",
         rtc_initialization: "INSPECT:timekeeper.cmx:root/real_time_clock:initialization",
         rtc_write_failure_count: "INSPECT:timekeeper.cmx:root/real_time_clock:write_failures",
         last_update_mono: "INSPECT:timekeeper.cmx:root/primary_track/last_update:retrieval_monotonic",
@@ -14,9 +15,10 @@
     eval: {
         primary_source_initializing: "Or(primary_source_status == \"Launched\", primary_source_status == \"Initializing\")",
         primary_source_unhealthy: "And(primary_source_status != \"Launched\", primary_source_status != \"Ok\", primary_source_status != \"Initializing\")",
-        primary_estimate_ok: "primary_estimate_0_counter > 0",
+        primary_filter_ok: "Option(primary_filter_state_0_counter, primary_estimate_0_counter) > 0",
         clock_started: "current_utc > backstop",
-        clock_difference: "current_utc - kernel_utc",
+        // On devices that no longer report kernel UTC report a difference of 0.
+        clock_difference: "current_utc - Option(kernel_utc, current_utc)",
         rtc_present: "And(rtc_initialization != \"NoDevices\", rtc_initialization != \"InvalidBeforeBackstop\")",
         rtc_read_ok: "rtc_initialization == \"Succeeded\"",
 
@@ -37,7 +39,7 @@
         },
         rtc_time_only: {
             type: "Warning",
-            trigger: "And(clock_started, Not(primary_estimate_ok))",
+            trigger: "And(clock_started, Not(primary_filter_ok))",
             print: "Time is available from RTC but not network, network may have never been connected",
         },
         started_but_source_unhealthy: {
@@ -88,6 +90,21 @@
                 current_utc: 123456789,
                 network_available_monotonic: 4444444,
                 primary_source_status: "Ok",
+                primary_filter_state_0_counter: 1,
+            },
+        },
+        status_ok_old_filter_state_name: {
+            yes: [],
+            no: [
+                "not_started_source_unhealthy",
+                "started_but_source_unhealthy",
+                "rtc_time_only",
+            ],
+            values: {
+                backstop: 33333,
+                current_utc: 123456789,
+                network_available_monotonic: 4444444,
+                primary_source_status: "Ok",
                 primary_estimate_0_counter: 1,
             },
         },
@@ -104,7 +121,7 @@
                 backstop: 33333,
                 current_utc: 33333,
                 primary_source_status: "Initializing",
-                primary_estimate_0_counter: 0,
+                primary_filter_state_0_counter: 0,
             },
         },
         no_time_source_problem: {
@@ -119,7 +136,7 @@
                 backstop: 33333,
                 current_utc: 33333,
                 primary_source_status: "Network",
-                primary_estimate_0_counter: 0,
+                primary_filter_state_0_counter: 0,
             },
         },
         rtc_time_only: {
@@ -134,7 +151,7 @@
                 backstop: 33333,
                 current_utc: 12345789,
                 primary_source_status: "Ok",
-                primary_estimate_0_counter: 0,
+                primary_filter_state_0_counter: 0,
             },
         },
         clocks_consistent: {
@@ -168,6 +185,16 @@
                 backstop: 3333,
                 current_utc: 9000000000,
                 kernel_utc: 6000000000,
+            },
+        },
+        kernel_clock_missing: {
+            yes: [],
+            no: [
+                "clock_inconsistency",
+            ],
+            values: {
+                backstop: 3333,
+                current_utc: 4000000000,
             },
         },
         rtc_ok: {
