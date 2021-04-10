@@ -23,6 +23,8 @@
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "weave_inspector.h"
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
@@ -34,6 +36,7 @@ using namespace ::nl::Weave::Profiles::WeaveTunnel;
 
 using fuchsia::hardware::network::DeviceClass;
 using Internal::ServiceTunnelAgent;
+using nl::Weave::WeaveInspector;
 
 using ThreadMode = ConnectivityManager::ThreadMode;
 
@@ -63,20 +66,26 @@ void ConnectivityManagerDelegateImpl::HandleServiceTunnelNotification(
   bool new_tunnel_state = false;
   bool prev_tunnel_state = GetFlag(delegate->flags_, kFlag_ServiceTunnelUp);
   bool is_restricted = false;
-
+  auto& inspector = WeaveInspector::GetWeaveInspector();
   switch (reason) {
     case WeaveTunnelConnectionMgr::kStatus_TunDown:
       new_tunnel_state = false;
       FX_LOGS(INFO) << "Service tunnel down.";
+      inspector.NotifyTunnelStateChange(WeaveInspector::kTunnelState_NoTunnel,
+                                        WeaveInspector::kTunnelType_None, is_restricted);
       break;
     case WeaveTunnelConnectionMgr::kStatus_TunPrimaryConnError:
       new_tunnel_state = false;
       FX_LOGS(ERROR) << "Service tunnel connection error: " << ::nl::ErrorStr(err);
+      inspector.NotifyTunnelStateChange(WeaveInspector::kTunnelState_NoTunnel,
+                                        WeaveInspector::kTunnelType_None, is_restricted);
       break;
     case WeaveTunnelConnectionMgr::kStatus_TunPrimaryUp:
       new_tunnel_state = true;
       is_restricted = (err == WEAVE_ERROR_TUNNEL_ROUTING_RESTRICTED);
       FX_LOGS(INFO) << "Service tunnel established, restricted: " << is_restricted;
+      inspector.NotifyTunnelStateChange(WeaveInspector::kTunnelState_PrimaryTunMode,
+                                        WeaveInspector::kTunnelType_Primary, is_restricted);
       break;
     default:
       break;
