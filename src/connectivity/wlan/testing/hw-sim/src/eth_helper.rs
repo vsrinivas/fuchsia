@@ -5,11 +5,19 @@
 use {
     fdio,
     files_async::readdir,
-    fuchsia_async, fuchsia_zircon as zx,
-    futures::{poll, StreamExt},
+    fuchsia_async::{
+        self,
+        futures::{
+            poll,
+            task::{Context, Poll},
+            Future, StreamExt,
+        },
+    },
+    fuchsia_zircon as zx,
     isolated_devmgr::IsolatedDeviceEnv,
     log::info,
-    std::path::Path,
+    pin_utils::pin_mut,
+    std::{path::Path, pin::Pin},
     wlan_common::{
         appendable::Appendable, big_endian::BigEndianU16, buffer_reader::BufferReader, mac,
     },
@@ -74,15 +82,48 @@ pub fn write_fake_eth_frame<B: Appendable>(da: [u8; 6], sa: [u8; 6], payload: &[
     buf.append_bytes(payload).expect("buffer too small for ethernet payload");
 }
 
+pub struct CompleteEthClientTxFut<'a> {
+    eth_client: &'a mut ethernet::Client,
+}
+impl Future for CompleteEthClientTxFut<'_> {
+    type Output = Result<(), zx::Status>;
+    /// Poll the Tx queue until all pending frames are moved into the
+    /// Tx queue and sent.
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let mut latest_queue_tx_poll = self.eth_client.poll_queue_tx(cx)?;
+
+        // Loop until a pending payload is queued.
+        while latest_queue_tx_poll.is_pending() {
+            latest_queue_tx_poll = self.eth_client.poll_queue_tx(cx)?;
+        }
+
+        // Loop until the queued payload is sent.
+        while latest_queue_tx_poll.is_ready() {
+            while self.eth_client.poll_complete_tx(cx)?.is_ready() {}
+            latest_queue_tx_poll = self.eth_client.poll_queue_tx(cx)?;
+        }
+
+        Poll::Ready(Ok(()))
+    }
+}
+
+/// Block until all pending frames in the Tx queue are sent. Since this function
+/// adds only one payload to the queue, and it holds a mutable reference to
+/// `eth_client` so no others can add payloads to the queue, it should not
+/// block forever.
 pub async fn send_fake_eth_frame(
     da: [u8; 6],
     sa: [u8; 6],
     payload: &[u8],
-    eth: &mut ethernet::Client,
+    eth_client: &mut ethernet::Client,
 ) {
     let mut buf = Vec::<u8>::new();
     write_fake_eth_frame(da, sa, payload, &mut buf);
-    eth.send(&buf);
+    eth_client.send(&buf);
+    // Wait for the frame to be queued and sent
+    let complete_eth_client_tx_fut = CompleteEthClientTxFut { eth_client };
+    pin_mut!(complete_eth_client_tx_fut);
+    complete_eth_client_tx_fut.await.expect("Ethernet transmission failed");
 }
 
 /// Block until the first ethernet frame is received from the ethernet client.
