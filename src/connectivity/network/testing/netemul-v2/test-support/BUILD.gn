@@ -27,6 +27,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
   ]
   sources = [ "src/main.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("counter") {

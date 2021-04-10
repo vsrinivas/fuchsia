@@ -34,6 +34,7 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
   sources = [ "src/main.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("netemul-sandbox-component") {
