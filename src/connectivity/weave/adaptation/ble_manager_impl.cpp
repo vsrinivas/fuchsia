@@ -9,6 +9,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "weave_inspector.h"
+
 #if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE
 
 #define MAX_CHARACTERISTIC_UUID_SIZE 40
@@ -22,6 +24,8 @@ namespace DeviceLayer {
 namespace Internal {
 
 namespace {
+
+using nl::Weave::WeaveInspector;
 
 /// UUID of weave service obtained from SIG, in canonical 8-4-4-4-12 string format.
 constexpr char kServiceUuid[] = "0000FEAF-0000-1000-8000-00805F9B34FB";
@@ -161,6 +165,7 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
     // Ignore null weave device event.
     return;
   }
+  auto& inspector = WeaveInspector::GetWeaveInspector();
   switch (event->Type) {
     case DeviceEventType::kWoBLESubscribe:
       connection_state = static_cast<WoBLEConState*>(event->WoBLESubscribe.ConId);
@@ -176,7 +181,7 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
       WeaveDeviceEvent connection_established_event;
       connection_established_event.Type = DeviceEventType::kWoBLEConnectionEstablished;
       PlatformMgr().PostEvent(&connection_established_event);
-
+      inspector.NotifySetupStateChange(WeaveInspector::kSetupState_BLEConnected);
       break;
 
     case DeviceEventType::kWoBLEUnsubscribe:
@@ -188,6 +193,7 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
       instance->HandleUnsubscribeReceived(
           event->WoBLEUnsubscribe.ConId, &WEAVE_BLE_SVC_ID,
           &kWeaveBleChars[WeaveBleChar::kWeaveBleCharIndicate].weave_uuid);
+      inspector.NotifySetupStateChange(WeaveInspector::kSetupState_Initialized);
       break;
     case DeviceEventType::kWoBLEWriteReceived:
       connection_state = static_cast<WoBLEConState*>(event->WoBLEWriteReceived.ConId);
