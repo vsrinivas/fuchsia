@@ -47,6 +47,10 @@ class NL_DLL_EXPORT GenericPlatformManagerImpl_Fuchsia
   static void EventLoopTaskMain(void* arg);
   std::mutex mEventLoopLock;
 
+  static void HandleSessionSuccess(WeaveSecurityManager* sm, WeaveConnection* con, void* req_state,
+                                   uint16_t session_key_id, uint64_t peer_node_id,
+                                   uint8_t enc_type);
+
  public:
   System::Layer& GetSystemLayer();
   nl::Inet::InetLayer& GetInetLayer();

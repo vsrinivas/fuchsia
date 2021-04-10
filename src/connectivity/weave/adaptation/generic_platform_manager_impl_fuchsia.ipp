@@ -18,10 +18,15 @@
 #include <lib/syslog/cpp/macros.h>
 #include <Warm/Warm.h>
 
+#include "weave_inspector.h"
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 namespace Internal {
+namespace {
+using nl::Weave::WeaveInspector;
+}
 
 template<class ImplClass>
 WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
@@ -97,7 +102,7 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
-    SecurityMgr.OnSessionEstablished = GenericPlatformManagerImpl<ImplClass>::HandleSessionEstablished;
+    SecurityMgr.OnSessionEstablished = HandleSessionSuccess;
     err = InitCASEAuthDelegate();
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "PlatformCASEAuthDelegate init failed: " << ErrorStr(err);
@@ -200,7 +205,30 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    // Create WeaveINspectore and record initialization status
+    WeaveInspector::GetWeaveInspector().NotifyInit();
+
     return WEAVE_NO_ERROR;
+}
+
+
+template <class ImplClass>
+void GenericPlatformManagerImpl_Fuchsia<ImplClass>::HandleSessionSuccess(
+    WeaveSecurityManager* sm, WeaveConnection* con, void* req_state, uint16_t session_key_id,
+    uint64_t peer_node_id, uint8_t enc_type) {
+  GenericPlatformManagerImpl<ImplClass>::HandleSessionEstablished(
+      sm, con, req_state, session_key_id, peer_node_id, enc_type);
+  WeaveSessionKey* session_key;
+  FabricState.GetSessionKey(session_key_id, peer_node_id, session_key);
+  WeaveAuthMode auth_mode =
+      (session_key != NULL) ? session_key->AuthMode : (WeaveAuthMode)kWeaveAuthMode_NotSpecified;
+  auto& inspector = WeaveInspector::GetWeaveInspector();
+  if (auth_mode & kWeaveAuthMode_PASE_PairingCode) {
+    inspector.NotifySetupStateChange(WeaveInspector::kSetupState_PASESessionEstablished);
+  }
+  if (auth_mode & kWeaveAuthMode_CASE_Device) {
+    inspector.NotifySetupStateChange(WeaveInspector::kSetupState_CASESessionEstablished);
+  }
 }
 
 template<class ImplClass>
