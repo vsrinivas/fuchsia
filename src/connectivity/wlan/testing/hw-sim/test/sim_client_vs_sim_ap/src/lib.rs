@@ -285,13 +285,17 @@ async fn verify_ethernet_in_both_directions(
     pin_mut!(peer_behind_ap_fut);
 
     let client_with_timeout = client_helper.run_until_complete_or_timeout(
-        5.seconds(),
+        // TODO(fxbug.dev/73821): This time should be reduced to 5 seconds
+        // once Policy no longer mistakenly schedules unneeded scans.
+        60.seconds(),
         "client trying to exchange data with a peer behind AP",
         packet_forwarder(&ap_proxy, "frame client -> ap"),
         client_fut,
     );
     let peer_behind_ap_with_timeout = ap_helper.run_until_complete_or_timeout(
-        5.seconds(),
+        // TODO(fxbug.dev/73821): This time should be reduced to 5 seconds
+        // once Policy no longer mistakenly schedules unneeded scans.
+        60.seconds(),
         "AP forwarding data between client and its peer",
         packet_forwarder(&client_proxy, "frame ap ->  client"),
         peer_behind_ap_fut,
