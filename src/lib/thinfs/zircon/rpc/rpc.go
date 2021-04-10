@@ -255,6 +255,10 @@ func (d *directoryWrapper) Unlink(_ fidl.Context, path string) (int32, error) {
 	return int32(errorToZx(d.dir.Unlink(path))), nil
 }
 
+func (d *directoryWrapper) Unlink2(_ fidl.Context, path string) (io.DirectoryUnlink2Result, error) {
+	return io.DirectoryUnlink2ResultWithErr(int32(errorToZx(d.dir.Unlink(path)))), nil
+}
+
 const direntSize = int(unsafe.Offsetof(syscall.Dirent{}.Name))
 
 func (d *directoryWrapper) ReadDirents(_ fidl.Context, maxOut uint64) (int32, []byte, error) {

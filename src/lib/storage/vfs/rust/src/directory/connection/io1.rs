@@ -25,9 +25,9 @@ use {
         DirectoryNodeGetFlagsResponder, DirectoryNodeSetFlagsResponder, DirectoryObject,
         DirectoryReadDirentsResponder, DirectoryRenameResponder, DirectoryRequest,
         DirectoryRequestStream, DirectoryRewindResponder, DirectorySetAttrResponder,
-        DirectorySyncResponder, DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes,
-        NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_WRITABLE,
+        DirectorySyncResponder, DirectoryUnlink2Responder, DirectoryUnlinkResponder,
+        DirectoryWatchResponder, NodeAttributes, NodeInfo, NodeMarker, INO_UNKNOWN,
+        MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -193,6 +193,10 @@ pub(in crate::directory) enum DerivedDirectoryRequest {
         path: String,
         responder: DirectoryUnlinkResponder,
     },
+    Unlink2 {
+        path: String,
+        responder: DirectoryUnlink2Responder,
+    },
     GetToken {
         responder: DirectoryGetTokenResponder,
     },
@@ -247,6 +251,7 @@ impl From<DirectoryRequest> for DirectoryRequestType {
                 responder,
             } => Base(AddInotifyFilter { path, filters, watch_descriptor, socket, responder }),
             DirectoryRequest::Unlink { path, responder } => Derived(Unlink { path, responder }),
+            DirectoryRequest::Unlink2 { path, responder } => Derived(Unlink2 { path, responder }),
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 Base(ReadDirents { max_bytes, responder })
             }

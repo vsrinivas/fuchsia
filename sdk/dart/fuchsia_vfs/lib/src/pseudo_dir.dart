@@ -507,6 +507,11 @@ class _DirConnection extends Directory {
   }
 
   @override
+  Future<int> unlink2(String path) async {
+    return ZX.ERR_NOT_SUPPORTED;
+  }
+
+  @override
   Future<int> watch(int mask, int options, Channel watcher) async {
     return ZX.ERR_NOT_SUPPORTED;
   }

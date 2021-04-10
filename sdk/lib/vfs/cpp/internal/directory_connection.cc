@@ -63,6 +63,10 @@ void DirectoryConnection::Unlink(::std::string path, UnlinkCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
+void DirectoryConnection::Unlink2(::std::string path, Unlink2Callback callback) {
+  callback(fuchsia::io::Directory_Unlink2_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+}
+
 void DirectoryConnection::ReadDirents(uint64_t max_bytes, ReadDirentsCallback callback) {
   uint64_t new_offset = 0, out_bytes = 0;
   std::vector<uint8_t> vec(max_bytes);

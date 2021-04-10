@@ -133,6 +133,9 @@ impl ImmutableConnection {
             DerivedDirectoryRequest::Unlink { path: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
+            DerivedDirectoryRequest::Unlink2 { path: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
             DerivedDirectoryRequest::GetToken { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }

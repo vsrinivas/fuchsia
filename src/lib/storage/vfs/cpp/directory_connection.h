@@ -50,6 +50,7 @@ class DirectoryConnection final : public Connection,
   void Open(uint32_t flags, uint32_t mode, fidl::StringView path,
             fidl::ServerEnd<fuchsia_io::Node> object, OpenCompleter::Sync& completer) final;
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) final;
+  void Unlink2(fidl::StringView path, Unlink2Completer::Sync& completer) final;
   void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) final;
   void Rewind(RewindCompleter::Sync& completer) final;
   void GetToken(GetTokenCompleter::Sync& completer) final;

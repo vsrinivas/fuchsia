@@ -562,6 +562,9 @@ async fn serve_failing_blobfs(
             DirectoryAdminRequest::Unlink { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing unlink")?
             }
+            DirectoryAdminRequest::Unlink2 { responder, .. } => {
+                responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing unlink2")?
+            }
             DirectoryAdminRequest::ReadDirents { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw(), &[]).context("failing readdirents")?
             }

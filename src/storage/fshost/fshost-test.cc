@@ -233,6 +233,7 @@ class MockDirectoryAdminOpener : public fidl::WireInterface<fio::DirectoryAdmin>
 
   // fuchsia.io/Directory:
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
+  void Unlink2(fidl::StringView path, Unlink2Completer::Sync& completer) override {}
   void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) override {}
   void Rewind(RewindCompleter::Sync& completer) override {}
   void GetToken(GetTokenCompleter::Sync& completer) override {}

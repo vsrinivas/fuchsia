@@ -197,6 +197,25 @@ void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync& c
   completer.Reply(status);
 }
 
+void DirectoryConnection::Unlink2(fidl::StringView path, Unlink2Completer::Sync& completer) {
+  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink2] our options: ", options(), ", path: ", path.data());
+
+  if (options().flags.node_reference) {
+    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    return;
+  }
+  if (!options().rights.write) {
+    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    return;
+  }
+  zx_status_t status = vfs()->Unlink(vnode(), std::string_view(path.data(), path.size()));
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
 void DirectoryConnection::ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryReadDirents] our options: ", options());
 

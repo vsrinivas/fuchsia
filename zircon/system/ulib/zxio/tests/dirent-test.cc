@@ -67,6 +67,10 @@ class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void Unlink2(::fidl::StringView path, Unlink2Completer::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
   void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override {
     auto buffer_start = reinterpret_cast<uint8_t*>(buffer_);
     size_t actual = 0;

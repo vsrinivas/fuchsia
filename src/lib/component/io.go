@@ -258,6 +258,10 @@ func (dirState *directoryState) Unlink(_ fidl.Context, path string) (int32, erro
 	return int32(zx.ErrNotSupported), nil
 }
 
+func (dirState *directoryState) Unlink2(_ fidl.Context, path string) (fidlio.DirectoryUnlink2Result, error) {
+	return fidlio.DirectoryUnlink2ResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (dirState *directoryState) ReadDirents(ctx fidl.Context, maxOut uint64) (int32, []uint8, error) {
 	if !dirState.reading {
 		writeFn := func(name string, node Node) {

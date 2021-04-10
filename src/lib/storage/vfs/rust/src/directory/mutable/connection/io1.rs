@@ -165,6 +165,12 @@ impl MutableConnection {
             DerivedDirectoryRequest::Unlink { path, responder } => {
                 self.handle_unlink(path, |status| responder.send(status.into_raw())).await?;
             }
+            DerivedDirectoryRequest::Unlink2 { path, responder } => {
+                self.handle_unlink(path, |status| {
+                    responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
+                })
+                .await?;
+            }
             DerivedDirectoryRequest::GetToken { responder } => {
                 self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
             }

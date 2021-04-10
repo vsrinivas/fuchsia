@@ -540,6 +540,36 @@ protocol Directory {
     /// `ZX_ERR_BAD_HANDLE`.
     Unlink(string:MAX_PATH path) -> (zx.status s);
 
+    /// Removes a child node from the this directory's list of entries.
+    ///
+    /// Note: this does not guarantee that the underlying object is destroyed.
+    /// Although the link will be removed from the containing directory,
+    /// objects with multiple references (such as files which are still open)
+    /// will not actually be destroyed until all references are closed.
+    ///
+    /// + `path` identifies the node to be detached.
+    ///   If `path` contains multiple segments, then the directory is traversed,
+    ///   one segment at a time, relative to the directory represented by this
+    ///   connection.
+    ///
+    /// * error `ZX_ERR_ACCESS_DENIED` if the connection does not have
+    ///   [`Rights.WRITE_BYTES`].
+    /// * error `ZX_ERR_NOT_SUPPORTED` if the underlying filesystem does not
+    ///   support writing.
+    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
+    /// * error `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    /// * error `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point,
+    ///   containing a remote channel.
+    ///
+    /// Other errors may be returned for filesystem-specific reasons.
+    ///
+    /// This method requires the following rights:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.MODIFY_DIRECTORY`]
+    [Selector = "fuchsia.io/Directory.Unlink"]
+    Unlink2(fuchsia.io2.Path path) -> () error zx.status;
+
     /// Reads a collection of variably sized dirents into a buffer.
     /// The number of dirents in a directory may be very large: akin to
     /// calling read multiple times on a file, directories have a seek
