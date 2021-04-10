@@ -62,7 +62,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.input2",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",

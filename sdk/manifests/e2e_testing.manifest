@@ -2,7 +2,6 @@ sdk://dart/sl4f
 sdk://docs/metadata_schemas
 sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.ui.input
-sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.views
 sdk://fidl/zx

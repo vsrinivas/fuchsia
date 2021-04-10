@@ -353,7 +353,6 @@ mod tests {
                     touch: None,
                     keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {
                         input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
-                            keys: None,
                             keys3: None,
                             ..fidl_fuchsia_input_report::KeyboardInputDescriptor::EMPTY
                         }),
