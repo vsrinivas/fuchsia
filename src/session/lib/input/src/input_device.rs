@@ -477,6 +477,7 @@ mod tests {
                         touch: None,
                         keyboard: Some(fidl_input_report::KeyboardDescriptor {
                             input: Some(fidl_input_report::KeyboardInputDescriptor {
+                                keys: None,
                                 keys3: None,
                                 ..fidl_input_report::KeyboardInputDescriptor::EMPTY
                             }),
@@ -554,6 +555,7 @@ mod tests {
                         }),
                         keyboard: Some(fidl_input_report::KeyboardDescriptor {
                             input: Some(fidl_input_report::KeyboardInputDescriptor {
+                                keys: None,
                                 keys3: None,
                                 ..fidl_input_report::KeyboardInputDescriptor::EMPTY
                             }),

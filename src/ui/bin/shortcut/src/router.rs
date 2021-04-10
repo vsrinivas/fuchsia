@@ -111,6 +111,10 @@ impl Router {
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await.context("error running manager server")? {
             match req {
+                ui_shortcut::ManagerRequest::HandleKeyEvent { .. } => {
+                    // TODO(fxb/47689): Remove.
+                    fx_log_err!("HandleKeyEvent deprecated!");
+                }
                 // Handle input3 key events for input3 shortcuts.
                 ui_shortcut::ManagerRequest::HandleKey3Event { event, responder } => {
                     let was_handled = {

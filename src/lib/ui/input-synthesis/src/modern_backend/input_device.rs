@@ -187,6 +187,8 @@ impl InputDevice {
         self.reports.push(InputReport {
             event_time: Some(i64::try_from(time).context("converting time to i64")?),
             keyboard: Some(KeyboardInputReport {
+                // TODO(fxbug.dev/71566): `keyboard.rs` requires `Some`-thing.
+                pressed_keys: Some(vec![]),
                 pressed_keys3: Some(transform(&report)?),
                 ..KeyboardInputReport::EMPTY
             }),
@@ -396,6 +398,7 @@ mod tests {
                         DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
                     ),
                     keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
                         pressed_keys3: Some(vec![Key::A, Key::B]),
                         ..KeyboardInputReport::EMPTY
                     }),
@@ -420,6 +423,7 @@ mod tests {
                         DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
                     ),
                     keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
                         pressed_keys3: Some(vec![Key::A]),
                         ..KeyboardInputReport::EMPTY
                     }),
@@ -443,6 +447,7 @@ mod tests {
                         DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
                     ),
                     keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
                         pressed_keys3: Some(vec![]),
                         ..KeyboardInputReport::EMPTY
                     }),
@@ -489,6 +494,7 @@ mod tests {
                         DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
                     ),
                     keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
                         pressed_keys3: Some(vec![Key::A, Key::B]),
                         ..KeyboardInputReport::EMPTY
                     }),

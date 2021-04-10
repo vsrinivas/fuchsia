@@ -4,6 +4,7 @@
 
 library fuchsia.input.report;
 
+using fuchsia.ui.input2;
 using fuchsia.input;
 
 /// Hardcoded max sizes for keyboard vectors. These sizes should be increased
@@ -15,8 +16,9 @@ const uint32 KEYBOARD_MAX_PRESSED_KEYS = 256;
 /// Describes the format of the input report that will be sent from the keyboard
 /// to the device.
 table KeyboardInputDescriptor {
-    // Was used for input2 keys.
-    1: reserved;
+    /// The list of keys that this keyboard contains.
+    /// Deprecated: in process of migration to input3.
+    1: vector<fuchsia.ui.input2.Key>:KEYBOARD_MAX_NUM_KEYS keys;
 
     /// The list of keys that this keyboard contains.
     2: vector<fuchsia.input.Key>:KEYBOARD_MAX_NUM_KEYS keys3;
@@ -36,8 +38,9 @@ table KeyboardDescriptor {
 
 /// A single report created by a keyboard device.
 table KeyboardInputReport {
-    // Was used for input2 pressed_keys.
-    1: reserved;
+    /// The list of keys that are currently pressed down.
+    /// Deprecated: in process of migration to input3.
+    1: vector<fuchsia.ui.input2.Key>:KEYBOARD_MAX_PRESSED_KEYS pressed_keys;
 
     /// The list of keys that are currently pressed down.
     2: vector<fuchsia.input.Key>:KEYBOARD_MAX_PRESSED_KEYS pressed_keys3;

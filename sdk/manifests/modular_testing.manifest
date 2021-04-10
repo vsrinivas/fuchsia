@@ -9,6 +9,7 @@ sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.ui.input
+sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.lifecycle
 sdk://fidl/fuchsia.ui.policy

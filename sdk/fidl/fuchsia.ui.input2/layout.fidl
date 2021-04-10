@@ -1,0 +1,103 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input2;
+
+const uint64 MAX_ENTRIES_PER_MAP = 1024;
+const uint64 MAX_MAPS_PER_LAYOUT = 64;
+
+/// Input method editors should implement this protocol to populate
+/// `KeyEvent.symbol` field based on current key layout.
+[Discoverable]
+protocol KeyboardLayoutState {
+    /// Get current key layout. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    Watch() -> (KeyboardLayout layout);
+};
+
+/// Collection of key maps.
+///
+/// A physical key is first converted to key using `key_map`.
+/// The key is then used to populate `symbol` using `symbol_map`.
+/// Maps in `KeySymbolMap` should be searched for the key mapping in the order
+/// they are included.
+/// First key mapping found in an applicable map should be used.
+/// Only maps with matching modifiers should be used.
+/// See `KeySymbolMap` for modifiers matching criteria and examples.
+table KeyboardLayout {
+    1: PhysicalKeyMap key_map;
+
+    2: vector<SemanticKeyMap>:MAX_MAPS_PER_LAYOUT semantic_key_map;
+};
+
+/// Key map describes a conversion of a physical key to a key.
+/// Physical keys not included here are translated directly into keys.
+table PhysicalKeyMap {
+    /// Collection of keys that should be explicitly mapped.
+    1: vector<PhysicalKeyMapEntry>:MAX_ENTRIES_PER_MAP entries;
+};
+
+/// A mapping of a physical key to a key.
+struct PhysicalKeyMapEntry {
+    /// Physical key that's being mapped.
+    PhysicalKey physical_key;
+
+    /// A key to which the physical key is mapped to.
+    Key key;
+};
+
+/// Key map describes a conversion of a key to symbol representation.
+///
+/// The map should be validated using key event modifier states.
+/// Map is applied if every modifier in the 'modifiers' list is active,
+/// and all other active modifiers are members of the 'optional_modifiers' list.
+/// If a modifier is enabled and not listed in neither `modifiers` nor
+/// `optional_modifiers`, the map should be ignored.
+///
+/// Example:
+///   Keyboard has NumLock and CapsLock enabled, and user presses Shift + Key.A
+///
+///   Map1:
+///     modifiers: "CapsLock"
+///     optional_modifiers: "NumLock"
+///   Map2:
+///     modifiers: "Shift",
+///     optional_modifiers: "NumLock", "CapsLock", "ScrollLock"
+///   Map3:
+///     modifiers: None
+///     optional_modifiers: "Shift", "CapsLock"
+///
+/// Map1 should be ignored, since "Shift" is pressed but is not included in
+/// `modifiers` or `optional_modifiers`.
+///
+/// Map2 should be searched, since required "Shift" is enabled, and all other
+/// enabled modifiers are included in `optional_modifiers`.
+///
+/// Map3 should be ignored, since "NumLock" is enabled but not included in
+/// `modifiers` or `optional_modifiers`.
+table SemanticKeyMap {
+    /// Combination of modifiers required for this map to be applied.
+    /// E.g. if CAPS_LOCK bit is set for this map, the map will be
+    /// applied if the Caps Lock state is ON.
+    /// Otherwise this map will be ignored if Caps Lock is off.
+    1: Modifiers modifiers;
+
+    /// Combination of modifiers that may be enabled for this map to be applied.
+    /// E.g. if CAPS_LOCK bit is set for this map, the map will be
+    /// applied if Caps Lock state is ON.
+    /// Also it may be applied if Caps Lock is off.
+    2: Modifiers optional_modifiers;
+
+    /// Collection of key to semantic meaning mappings.
+    3: vector<SemanticKeyMapEntry>:MAX_ENTRIES_PER_MAP entries;
+};
+
+/// A mapping of a key to the semantic meaning.
+struct SemanticKeyMapEntry {
+    /// Key that's being mapped.
+    Key key;
+
+    /// Semantic key corresponding to the key.
+    SemanticKey semantic_key;
+};
