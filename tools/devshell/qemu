@@ -58,6 +58,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.s
 build_flag=true
 ZBI_IMAGE=
 PKG_TARGET=
+run_zircon_args=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help)
@@ -76,8 +77,12 @@ while [[ $# -gt 0 ]]; do
       shift
       ZBI_IMAGE="$1"
       ;;
-    *)
+    --)
+      # Stop processing args if we hit a "--" argument.
       break
+      ;;
+    *)
+      run_zircon_args+=("$1")
   esac
   shift
 done
@@ -142,7 +147,7 @@ if [[ -n "${fvm_source}" ]]; then
 fi
 
 if [[ -z "${PKG_TARGET}" ]]; then
-  "${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${args[@]}" "$@"
+  "${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${run_zircon_args[@]}" "${args[@]}" "$@"
 else
   # Create symlinks to all of the various components in a temp directory, so
   # that our tar file is just a archive of individual files with no paths.
