@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
 func TestStackOfBoundsTag(t *testing.T) {
@@ -68,7 +68,7 @@ func TestBindingsPackageDependency(t *testing.T) {
 		},
 	}
 	for _, ex := range cases {
-		root := Compile(fidl_testing.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
+		root := Compile(fidlgentest.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
 
 		hasBindingsPackage := false
 		for _, lib := range root.Libraries {

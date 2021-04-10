@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
-	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
 func TestDerivesToString(t *testing.T) {
@@ -509,7 +509,7 @@ func TestDerivesCalculation(t *testing.T) {
 		},
 	}
 	for _, ex := range cases {
-		root := Compile(fidl_testing.EndToEndTest{T: t}.Single(`library example; ` + ex.fidl))
+		root := Compile(fidlgentest.EndToEndTest{T: t}.Single(`library example; ` + ex.fidl))
 		actual := root.Structs[0].Derives.String()
 		if ex.expected != actual {
 			t.Errorf("%s: expected %s, found %s", ex.fidl, ex.expected, actual)

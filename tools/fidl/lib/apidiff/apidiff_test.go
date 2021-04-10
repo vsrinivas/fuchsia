@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
-	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize"
 )
 
@@ -1126,7 +1126,7 @@ api_diff:
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := fidl_testing.EndToEndTest{T: t}
+			c := fidlgentest.EndToEndTest{T: t}
 			brd := strings.NewReader(
 				summarizeOne(t, c.Single(test.before)))
 			ard := strings.NewReader(

@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
-	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
 var (
@@ -1488,7 +1488,7 @@ func runWriteTests(t *testing.T, tests []summaryTestCase, writeFn func(fidlgen.R
 	t.Helper()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := fidl_testing.EndToEndTest{T: t}
+			c := fidlgentest.EndToEndTest{T: t}
 			if test.dep != "" {
 				c = c.WithDependency(test.dep)
 			}
