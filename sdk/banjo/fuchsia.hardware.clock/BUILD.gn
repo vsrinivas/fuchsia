@@ -8,3 +8,12 @@ banjo("fuchsia.hardware.clock") {
   sources = [ "clock.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
+
+group("fuchsia.hardware.clock_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.clock" ]
+}
+
+group("fuchsia.hardware.clock_banjo_cpp_mock") {
+  testonly = true
+  public_deps = [ ":fuchsia.hardware.clock_mock" ]
+}

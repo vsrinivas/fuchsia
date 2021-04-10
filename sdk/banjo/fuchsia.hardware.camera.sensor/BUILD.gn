@@ -11,3 +11,12 @@ banjo("fuchsia.hardware.camera.sensor") {
     "//sdk/banjo/zx",
   ]
 }
+
+group("fuchsia.hardware.camera.sensor_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.camera.sensor" ]
+}
+
+group("fuchsia.hardware.camera.sensor_banjo_cpp_mock") {
+  testonly = true
+  public_deps = [ ":fuchsia.hardware.camera.sensor_mock" ]
+}

@@ -8,3 +8,12 @@ banjo("fuchsia.hardware.gpio") {
   sources = [ "gpio.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
+
+group("fuchsia.hardware.gpio_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.gpio" ]
+}
+
+group("fuchsia.hardware.gpio_banjo_cpp_mock") {
+  testonly = true
+  public_deps = [ ":fuchsia.hardware.gpio_mock" ]
+}

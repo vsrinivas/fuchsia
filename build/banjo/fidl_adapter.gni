@@ -232,8 +232,8 @@ template("fidl_adapter") {
     ##############################################################################
     # C++ backend
 
-    cpp_target_name = "${original_target_name}_banjo_cpp"
-    cpp_mock_target_name = "${original_target_name}_banjo_cpp_mock"
+    cpp_target_name = "${original_target_name}_banjo_cpp_2"
+    cpp_mock_target_name = "${original_target_name}_banjo_cpp_mock_2"
     cpp_public_fidlgen_target_name = "$cpp_target_name.public.gen"
     cpp_private_fidlgen_target_name = "$cpp_target_name.private.gen"
     cpp_mock_fidlgen_target_name = "$cpp_target_name.mock.gen"
@@ -389,7 +389,7 @@ template("fidl_adapter") {
           if (dep != "//sdk/banjo/zx") {
             _name = get_label_info(dep, "name")
             _dir = get_label_info(dep, "dir")
-            public_deps += [ "$_dir:${_name}_banjo_cpp" ]
+            public_deps += [ "$_dir:${_name}_banjo_cpp_2" ]
           }
         }
       }
@@ -417,7 +417,7 @@ template("fidl_adapter") {
           if (dep != "//sdk/banjo/zx") {
             _name = get_label_info(dep, "name")
             _dir = get_label_info(dep, "dir")
-            public_deps += [ "$_dir:${_name}_banjo_cpp_mock" ]
+            public_deps += [ "$_dir:${_name}_banjo_cpp_mock_2" ]
           }
         }
       }

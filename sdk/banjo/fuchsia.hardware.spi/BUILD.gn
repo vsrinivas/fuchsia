@@ -8,3 +8,7 @@ banjo("fuchsia.hardware.spi") {
   sources = [ "spi.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
+
+group("fuchsia.hardware.spi_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.spi" ]
+}

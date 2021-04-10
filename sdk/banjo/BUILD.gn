@@ -186,13 +186,13 @@ group("translated") {
     deps += [
       "$library:${library}.fidl($fidl_toolchain)",
       "$library:${library}_banjo_c",
-      "$library:${library}_banjo_cpp",
+      "$library:${library}_banjo_cpp_2",
     ]
   }
   foreach(library, _rust_translated_deps) {
     deps += [ "$library:${library}_banjo_rust" ]
   }
   foreach(library, _cpp_mock_translated_deps) {
-    deps += [ "$library:${library}_banjo_cpp_mock" ]
+    deps += [ "$library:${library}_banjo_cpp_mock_2" ]
   }
 }

@@ -8,3 +8,7 @@ banjo("fuchsia.hardware.platform.device") {
   sources = [ "platform-device.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
+
+group("fuchsia.hardware.platform.device_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.platform.device" ]
+}

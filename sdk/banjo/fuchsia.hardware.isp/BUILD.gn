@@ -13,3 +13,7 @@ banjo("fuchsia.hardware.isp") {
     "//sdk/banjo/zx",
   ]
 }
+
+group("fuchsia.hardware.isp_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.isp" ]
+}

@@ -8,3 +8,7 @@ banjo("fuchsia.hardware.sysmem") {
   sources = [ "sysmem.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
+
+group("fuchsia.hardware.sysmem_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.sysmem" ]
+}

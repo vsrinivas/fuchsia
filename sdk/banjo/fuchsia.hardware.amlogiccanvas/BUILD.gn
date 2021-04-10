@@ -8,3 +8,7 @@ banjo("fuchsia.hardware.amlogiccanvas") {
   sources = [ "amlogic-canvas.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
+
+group("fuchsia.hardware.amlogiccanvas_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.amlogiccanvas" ]
+}

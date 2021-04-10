@@ -11,3 +11,7 @@ banjo("fuchsia.hardware.mipicsi") {
     "//sdk/banjo/zx",
   ]
 }
+
+group("fuchsia.hardware.mipicsi_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.mipicsi" ]
+}

@@ -7,3 +7,7 @@ import("//build/banjo/banjo.gni")
 banjo("fuchsia.hardware.camerahwaccel") {
   sources = [ "camerahwaccel.banjo" ]
 }
+
+group("fuchsia.hardware.camerahwaccel_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.camerahwaccel" ]
+}
