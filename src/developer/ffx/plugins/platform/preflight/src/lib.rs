@@ -4,11 +4,12 @@
 
 use {
     anyhow::{anyhow, Result},
-    check::{PreflightCheck, PreflightCheckResult},
+    check::{summarize_results, PreflightCheck, PreflightCheckResult, RunSummary},
     config::*,
     ffx_core::{ffx_bail, ffx_plugin},
     ffx_preflight_args::PreflightCommand,
     regex::Regex,
+    serde_json,
     std::fmt,
     std::io::{stdout, Write},
     termion::color,
@@ -19,6 +20,7 @@ mod analytics;
 mod check;
 mod command_runner;
 mod config;
+mod json;
 
 // Unicode characters.
 static CHECK_MARK: &str = "\u{2713}";
@@ -61,7 +63,7 @@ fn get_operating_system_macos(
 }
 
 #[ffx_plugin()]
-pub async fn preflight_cmd(_cmd: PreflightCommand) -> Result<()> {
+pub async fn preflight_cmd(cmd: PreflightCommand) -> Result<()> {
     let config = PreflightConfig { system: get_operating_system()? };
     let checks: Vec<Box<dyn PreflightCheck>> = vec![
         Box::new(check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
@@ -69,62 +71,66 @@ pub async fn preflight_cmd(_cmd: PreflightCommand) -> Result<()> {
         Box::new(check::emu_networking::EmuNetworking::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
     ];
 
-    run_preflight_checks(&mut stdout(), &checks, &config).await
+    let results = run_preflight_checks(&checks, &config).await?;
+    if cmd.json {
+        println!("{}", serde_json::to_string(&json::results_to_json(&results)?)?);
+    } else {
+        report_result_analytics(&results).await?;
+        write_preflight_results(&mut stdout(), &results)?;
+    }
+
+    Ok(())
 }
 
-async fn run_preflight_checks<W: Write>(
-    writer: &mut W,
+async fn run_preflight_checks(
     checks: &Vec<Box<dyn PreflightCheck>>,
     config: &PreflightConfig,
+) -> Result<Vec<check::PreflightCheckResult>> {
+    let mut results = vec![];
+    for check in checks {
+        results.push(check.run(&config).await?);
+    }
+    Ok(results)
+}
+
+async fn report_result_analytics(results: &Vec<PreflightCheckResult>) -> Result<()> {
+    let summary = summarize_results(results);
+    let action = match summary {
+        RunSummary::Success => analytics::ANALYTICS_ACTION_SUCCESS,
+        RunSummary::Warning => analytics::ANALYTICS_ACTION_WARNING,
+        RunSummary::RecoverableFailure => analytics::ANALYTICS_ACTION_FAILURE_RECOVERABLE,
+        RunSummary::Failure => analytics::ANALYTICS_ACTION_FAILURE,
+    };
+    analytics::report_preflight_analytics(action).await;
+    Ok(())
+}
+
+fn write_preflight_results<W: Write>(
+    writer: &mut W,
+    results: &Vec<PreflightCheckResult>,
 ) -> Result<()> {
     writeln!(writer, "{}", RUNNING_CHECKS_PREAMBLE)?;
     writeln!(writer)?;
-    // Run the checks, and keep track of failures.
-    let mut failures = vec![];
-    let mut has_warnings = false;
-    for check in checks {
-        let result = check.run(&config).await?;
+    for result in results.iter() {
         writeln!(writer, "{}", result)?;
-        if matches!(&result, PreflightCheckResult::Warning(..)) {
-            has_warnings = true;
-        }
-        if matches!(result, PreflightCheckResult::Failure(..)) {
-            failures.push(result);
-        }
     }
 
-    if !failures.is_empty() {
-        // Collect the failures that are recoverable. If all failures are recoverable,
-        // tell the user to try again after resolving them.
-        let recoverable_failures: Vec<&PreflightCheckResult> = failures
-            .iter()
-            .take_while(|f| match *f {
-                PreflightCheckResult::Failure(_, message) => match message {
-                    Some(_) => true,
-                    None => false,
-                },
-                _ => false,
-            })
-            .collect();
-        if recoverable_failures.len() == failures.len() {
-            analytics::report_preflight_analytics(analytics::ANALYTICS_ACTION_FAILURE_RECOVERABLE)
-                .await;
+    let summary = summarize_results(results);
+
+    match summary {
+        RunSummary::Success => {
+            writeln!(writer, "{}", EVERYTING_CHECKS_OUT)?;
+        }
+        RunSummary::Warning => {
+            writeln!(writer, "{}", EVERYTING_CHECKS_OUT_WITH_WARNINGS)?;
+        }
+        RunSummary::RecoverableFailure => {
             ffx_bail!("{}", SOME_CHECKS_FAILED_RECOVERABLE);
-        } else {
-            analytics::report_preflight_analytics(analytics::ANALYTICS_ACTION_FAILURE).await;
+        }
+        RunSummary::Failure => {
             ffx_bail!("{}", SOME_CHECKS_FAILED_FATAL);
         }
-    } else if has_warnings {
-        writeln!(writer, "{}", EVERYTING_CHECKS_OUT_WITH_WARNINGS)?;
-    } else {
-        writeln!(writer, "{}", EVERYTING_CHECKS_OUT)?;
-    }
-    analytics::report_preflight_analytics(if has_warnings {
-        analytics::ANALYTICS_ACTION_WARNING
-    } else {
-        analytics::ANALYTICS_ACTION_SUCCESS
-    })
-    .await;
+    };
     Ok(())
 }
 
@@ -220,7 +226,8 @@ mod test {
         let config = PreflightConfig { system: OperatingSystem::Linux };
         let checks: Vec<Box<dyn PreflightCheck>> = vec![Box::new(SuccessCheck {})];
         let mut buf = Vec::new();
-        let result = run_preflight_checks(&mut buf, &checks, &config).await;
+        let results = run_preflight_checks(&checks, &config).await?;
+        let result = write_preflight_results(&mut buf, &results);
         let output = String::from_utf8(buf)?;
         // Check for the various output strings.
         assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE));
@@ -258,7 +265,8 @@ mod test {
             Box::new(FailRecoverableCheck {}),
         ];
         let mut buf = Vec::new();
-        let result = run_preflight_checks(&mut buf, &checks, &config).await;
+        let results = run_preflight_checks(&checks, &config).await?;
+        let result = write_preflight_results(&mut buf, &results);
         let output = String::from_utf8(buf)?;
         // Check for the various output strings.
         assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), "{:?}", output);
@@ -278,7 +286,7 @@ mod test {
                 );
                 Ok(())
             }
-            Ok(()) => unreachable!(),
+            Ok(_) => unreachable!(),
         }
     }
 
@@ -291,7 +299,8 @@ mod test {
             Box::new(FailRecoverableCheck {}),
         ];
         let mut buf = Vec::new();
-        let result = run_preflight_checks(&mut buf, &checks, &config).await;
+        let results = run_preflight_checks(&checks, &config).await?;
+        let result = write_preflight_results(&mut buf, &results);
         let output = String::from_utf8(buf)?;
         // Check for the various output strings.
         assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), "{:?}", output);
@@ -312,7 +321,7 @@ mod test {
                 );
                 Ok(())
             }
-            Ok(()) => unreachable!(),
+            Ok(_) => unreachable!(),
         }
     }
 }

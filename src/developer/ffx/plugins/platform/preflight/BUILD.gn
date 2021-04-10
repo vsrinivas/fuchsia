@@ -14,6 +14,8 @@ ffx_plugin("ffx_preflight") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:termion",
     "//third_party/rust_crates:textwrap",
     "//third_party/rust_crates:thiserror",
@@ -28,6 +30,7 @@ ffx_plugin("ffx_preflight") {
     "src/check/femu_graphics.rs",
     "src/command_runner.rs",
     "src/config.rs",
+    "src/json.rs",
     "src/lib.rs",
   ]
 }

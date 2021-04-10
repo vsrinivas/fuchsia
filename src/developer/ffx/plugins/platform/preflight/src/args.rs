@@ -11,4 +11,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
     name = "preflight",
     description = "Evaluate suitability for building and running Fuchsia"
 )]
-pub struct PreflightCommand {}
+pub struct PreflightCommand {
+    #[argh(switch)]
+    /// outputs json instead of human-readable text.
+    pub json: bool,
+}
