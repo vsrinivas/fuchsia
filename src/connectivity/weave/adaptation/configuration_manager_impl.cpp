@@ -129,6 +129,33 @@ WEAVE_ERROR ConfigurationManagerImpl::GetFailSafeArmed(bool& fail_safe_armed) {
   return delegate_->GetFailSafeArmed(fail_safe_armed);
 }
 
+WEAVE_ERROR ConfigurationManagerImpl::_SetFailSafeArmed(bool fail_safe_armed) {
+  return delegate_->SetFailSafeArmed(fail_safe_armed);
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_StoreFabricId(uint64_t fabric_id) {
+  return delegate_->StoreFabricId(fabric_id);
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_StoreServiceProvisioningData(uint64_t service_id,
+                                                                    const uint8_t* service_config,
+                                                                    size_t service_config_len,
+                                                                    const char* account_id,
+                                                                    size_t account_id_len) {
+  return delegate_->StoreServiceProvisioningData(service_id, service_config, service_config_len,
+                                                 account_id, account_id_len);
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_StoreServiceConfig(const uint8_t* service_config,
+                                                          size_t service_config_len) {
+  return delegate_->StoreServiceConfig(service_config, service_config_len);
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_StorePairedAccountId(const char* account_id,
+                                                            size_t account_id_len) {
+  return delegate_->StorePairedAccountId(account_id, account_id_len);
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

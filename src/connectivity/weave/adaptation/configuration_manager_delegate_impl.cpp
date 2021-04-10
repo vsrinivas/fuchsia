@@ -24,6 +24,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "weave_inspector.h"
 
 namespace nl {
 namespace Weave {
@@ -31,6 +32,7 @@ namespace DeviceLayer {
 
 namespace {
 
+using nl::Weave::WeaveInspector;
 using ::nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
 using ::nl::Weave::DeviceLayer::Internal::GenericConfigurationManagerImpl;
 using ::nl::Weave::DeviceLayer::Internal::WeaveConfigManager;
@@ -502,6 +504,83 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetThreadJoinableDuration(uint32_t
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetFailSafeArmed(bool& fail_safe_armed) {
   return static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
       ->_GetFailSafeArmed(fail_safe_armed);
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::SetFailSafeArmed(bool fail_safe_armed) {
+  WEAVE_ERROR err = static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+                        ->_SetFailSafeArmed(fail_safe_armed);
+  std::string inspect_reason = WeaveInspector::kFailSafeReason_Nominal;
+  std::string inspect_status = fail_safe_armed ? WeaveInspector::kFailSafeState_Armed
+                                               : WeaveInspector::kFailSafeState_Disarmed;
+  if (err != WEAVE_NO_ERROR) {
+    inspect_reason = fail_safe_armed ? WeaveInspector::kFailSafeReason_FailsafeArmFailed
+                                     : WeaveInspector::kFailSafeReason_FailsafeDisarmFailed;
+    inspect_status = fail_safe_armed ? WeaveInspector::kFailSafeState_Disarmed
+                                     : WeaveInspector::kFailSafeState_Armed;
+  }
+
+  auto& inspector = WeaveInspector::GetWeaveInspector();
+  inspector.NotifyFailSafeStateChange(inspect_status, inspect_reason);
+
+  return err;
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::StoreFabricId(uint64_t fabric_id) {
+  WEAVE_ERROR err = static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+                        ->_StoreFabricId(fabric_id);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  auto& inspector = WeaveInspector::GetWeaveInspector();
+  if (fabric_id != kFabricIdNotSpecified) {
+    inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_FabricCreatedOrJoined);
+    return err;
+  }
+  inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_LeftFabric);
+  return err;
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::StoreServiceProvisioningData(
+    uint64_t service_id, const uint8_t* service_config, size_t service_config_len,
+    const char* account_id, size_t account_id_len) {
+  WEAVE_ERROR err =
+      static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+          ->_StoreServiceProvisioningData(service_id, service_config, service_config_len,
+                                          account_id, account_id_len);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  auto& inspector = WeaveInspector::GetWeaveInspector();
+  inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_RegisterServicePending);
+  return err;
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::StoreServiceConfig(const uint8_t* service_config,
+                                                                 size_t service_config_len) {
+  WEAVE_ERROR err = static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+                        ->_StoreServiceConfig(service_config, service_config_len);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  auto& inspector = WeaveInspector::GetWeaveInspector();
+  inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_ServiceConfigUpdated);
+  return err;
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::StorePairedAccountId(const char* account_id,
+                                                                   size_t account_id_len) {
+  WEAVE_ERROR err = static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+                        ->_StorePairedAccountId(account_id, account_id_len);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  auto& inspector = WeaveInspector::GetWeaveInspector();
+  inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_RegisterServiceCompleted);
+  return err;
 }
 
 }  // namespace DeviceLayer

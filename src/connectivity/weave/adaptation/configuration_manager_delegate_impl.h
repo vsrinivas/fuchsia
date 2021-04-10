@@ -55,6 +55,13 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   zx_status_t GetAppletPathList(std::vector<std::string>& out) override;
   WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) override;
   WEAVE_ERROR GetFailSafeArmed(bool& fail_safe_armed) override;
+  WEAVE_ERROR SetFailSafeArmed(bool fail_safe_armed) override;
+  WEAVE_ERROR StoreFabricId(uint64_t fabric_id) override;
+  WEAVE_ERROR StoreServiceProvisioningData(uint64_t service_id, const uint8_t* service_config,
+                                           size_t service_config_len, const char* account_id,
+                                           size_t account_id_len) override;
+  WEAVE_ERROR StoreServiceConfig(const uint8_t* service_config, size_t service_config_len) override;
+  WEAVE_ERROR StorePairedAccountId(const char* account_id, size_t account_id_len) override;
 
  protected:
   // Read up to |buf_size| bytes from the file |path| in the factory partition

@@ -157,6 +157,26 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     // Gets the fail safe armed state of the device.
     virtual WEAVE_ERROR GetFailSafeArmed(bool& fail_safe_armed) = 0;
 
+    // Sets the fail safe armed state of the device.
+    virtual WEAVE_ERROR SetFailSafeArmed(bool fail_safe_armed) = 0;
+
+    // Sets the weave fabric ID the device.
+    virtual WEAVE_ERROR StoreFabricId(uint64_t fabric_id) = 0;
+
+    // Store service provisioning data.
+    virtual WEAVE_ERROR StoreServiceProvisioningData(uint64_t service_id,
+                                                     const uint8_t* service_config,
+                                                     size_t service_config_len,
+                                                     const char* account_id,
+                                                     size_t account_id_len) = 0;
+
+    // Store service config.
+    virtual WEAVE_ERROR StoreServiceConfig(const uint8_t* service_config,
+                                           size_t service_config_len) = 0;
+
+    // Store paired account ID.
+    virtual WEAVE_ERROR StorePairedAccountId(const char* accountId, size_t accountIdLen) = 0;
+
    protected:
     ConfigurationManagerImpl* impl_;
   };
@@ -214,6 +234,13 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
   WEAVE_ERROR _GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len);
+  WEAVE_ERROR _SetFailSafeArmed(bool val);
+  WEAVE_ERROR _StoreFabricId(uint64_t fabric_id);
+  WEAVE_ERROR _StoreServiceProvisioningData(uint64_t service_id, const uint8_t* service_config,
+                                            size_t service_config_len, const char* account_id,
+                                            size_t account_id_len);
+  WEAVE_ERROR _StoreServiceConfig(const uint8_t* service_config, size_t service_config_len);
+  WEAVE_ERROR _StorePairedAccountId(const char* account_id, size_t account_id_len);
   bool _IsFullyProvisioned();
   bool _IsPairedToAccount();
   bool _IsMemberOfFabric();
