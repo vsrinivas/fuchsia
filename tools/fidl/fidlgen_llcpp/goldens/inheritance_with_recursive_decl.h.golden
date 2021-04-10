@@ -54,26 +54,6 @@ class Parent final {
   class First final {
     First() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>|,
-  // avoiding setting up a client.
-  using Call = ::fidl::internal::WireCaller<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>;
-
-  using SyncClient =
-      fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>*
-          impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl
@@ -493,26 +473,6 @@ class Child final {
   class Second final {
     Second() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>|,
-  // avoiding setting up a client.
-  using Call = ::fidl::internal::WireCaller<
-      ::fidl_test_inheritancewithrecursivedecl::Child>;
-
-  using SyncClient =
-      fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>*
-          impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl

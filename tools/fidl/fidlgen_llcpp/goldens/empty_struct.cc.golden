@@ -434,14 +434,6 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_emptystruct::EmptyProtocol::Dispatch(
-    ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_emptystruct::EmptyProtocol>::Dispatch(impl, msg, txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {

@@ -147,26 +147,6 @@ class OnlyLibfuzzerAndDeps final {
   class LibfuzzerNeedsNonemptyProtocol final {
     LibfuzzerNeedsNonemptyProtocol() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>|,
-  // avoiding setting up a client.
-  using Call = ::fidl::internal::WireCaller<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-
-  using SyncClient =
-      fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
-          impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist
@@ -764,25 +744,6 @@ class OnlyCppAndDeps final {
   OnlyCppAndDeps() = delete;
 
  public:
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>|, avoiding
-  // setting up a client.
-  using Call = ::fidl::internal::WireCaller<
-      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-
-  using SyncClient =
-      fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist

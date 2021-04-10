@@ -210,17 +210,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult
-fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::Dispatch(
-    ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
-        impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(impl, msg,
-                                                                    txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
@@ -303,14 +292,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
-}
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_bindingsdenylist::OnlyCppAndDeps::Dispatch(
-    ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(impl, msg, txn);
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::

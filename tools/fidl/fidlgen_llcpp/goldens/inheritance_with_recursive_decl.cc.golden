@@ -144,16 +144,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_inheritancewithrecursivedecl::Parent::Dispatch(
-    ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>*
-        impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(impl, msg,
-                                                                  txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
@@ -420,16 +410,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
-}
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_inheritancewithrecursivedecl::Child::Dispatch(
-    ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>*
-        impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(impl, msg,
-                                                                 txn);
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::

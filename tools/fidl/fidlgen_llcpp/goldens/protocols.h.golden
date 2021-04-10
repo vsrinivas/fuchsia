@@ -909,25 +909,6 @@ class DiscoverableProtocol final {
   class Method final {
     Method() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>|, avoiding
-  // setting up a client.
-  using Call =
-      ::fidl::internal::WireCaller<::fidl_test_protocols::DiscoverableProtocol>;
-
-  using SyncClient =
-      fidl::WireSyncClient<::fidl_test_protocols::DiscoverableProtocol>;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
@@ -1261,23 +1242,6 @@ class Transitional final {
   class Event final {
     Event() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_protocols::Transitional>|, avoiding setting up
-  // a client.
-  using Call =
-      ::fidl::internal::WireCaller<::fidl_test_protocols::Transitional>;
-
-  using SyncClient = fidl::WireSyncClient<::fidl_test_protocols::Transitional>;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_protocols::Transitional>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
@@ -2257,25 +2221,6 @@ class ChannelProtocol final {
   class MutateSocket final {
     MutateSocket() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol>|, avoiding setting
-  // up a client.
-  using Call =
-      ::fidl::internal::WireCaller<::fidl_test_protocols::ChannelProtocol>;
-
-  using SyncClient =
-      fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol>;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
@@ -4273,26 +4218,6 @@ class WithAndWithoutRequestResponse final {
   class OnWithResponse final {
     OnWithResponse() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>|,
-  // avoiding setting up a client.
-  using Call = ::fidl::internal::WireCaller<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-
-  using SyncClient = fidl::WireSyncClient<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-
-  using Interface = ::fidl::WireInterface<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
@@ -7186,25 +7111,6 @@ class WithErrorSyntax final {
   class ErrorAsEnum final {
     ErrorAsEnum() = delete;
   };
-#ifdef __Fuchsia__
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax>|, avoiding setting
-  // up a client.
-  using Call =
-      ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>;
-
-  using SyncClient =
-      fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax>;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>;
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-#endif  // __Fuchsia__
 };
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols

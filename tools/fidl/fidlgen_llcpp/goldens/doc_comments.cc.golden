@@ -197,14 +197,6 @@ fidl::internal::WireDispatcher<::fidl_test_doccomments::Interface>::Dispatch(
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_doccomments::Interface::Dispatch(
-    ::fidl::WireInterface<::fidl_test_doccomments::Interface>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_doccomments::Interface>::Dispatch(impl, msg, txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_doccomments::Interface>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {

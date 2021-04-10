@@ -113,14 +113,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_protocols::DiscoverableProtocol::Dispatch(
-    ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::DiscoverableProtocol>::Dispatch(impl, msg, txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
@@ -544,14 +536,6 @@ fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>::Dispatch(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
-}
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_protocols::Transitional::Dispatch(
-    ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::Transitional>::Dispatch(impl, msg, txn);
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
@@ -1432,14 +1416,6 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
-}
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_protocols::ChannelProtocol::Dispatch(
-    ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::ChannelProtocol>::Dispatch(impl, msg, txn);
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
@@ -2802,17 +2778,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult
-fidl_test_protocols::WithAndWithoutRequestResponse::Dispatch(
-    ::fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>*
-        impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>::Dispatch(impl, msg,
-                                                                      txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
@@ -3639,14 +3604,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
-}
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_protocols::WithErrorSyntax::Dispatch(
-    ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::WithErrorSyntax>::Dispatch(impl, msg, txn);
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(

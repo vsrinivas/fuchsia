@@ -65,11 +65,6 @@ struct {{ .WireDispatcher }} final {
   {{- end }}
 }
 
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult {{ .NoLeading }}::Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return {{ .WireDispatcher }}::Dispatch(impl, msg, txn);
-}
-
 {{- EnsureNamespace "" }}
 ::fidl::DispatchResult {{ .WireInterface.NoLeading }}::dispatch_message(fidl_incoming_msg_t* msg,
                                                          ::fidl::Transaction* txn) {

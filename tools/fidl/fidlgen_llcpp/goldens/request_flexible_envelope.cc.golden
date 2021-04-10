@@ -513,14 +513,6 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_requestflexibleenvelope::Protocol::Dispatch(
-    ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_requestflexibleenvelope::Protocol>::Dispatch(impl, msg, txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {

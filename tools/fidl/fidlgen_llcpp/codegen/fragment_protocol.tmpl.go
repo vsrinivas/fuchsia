@@ -63,21 +63,6 @@ class {{ .Name }} final {
       {{ .Marker.Self }}() = delete;
     };
   {{- end }}
-
-{{- IfdefFuchsia -}}
-  // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
-  // avoiding setting up a client.
-  using Call = {{ .WireCaller }};
-
-  using SyncClient = fidl::WireSyncClient<{{ . }}>;
-
-  using Interface = {{ .WireInterface }};
-
-  // TODO(ianloic): Remove this when all users have migrated.
-  static ::fidl::DispatchResult Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-
-{{- EndifFuchsia -}}
 };
 
 {{- template "ProtocolDispatcherDeclaration" . }}

@@ -248,18 +248,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult
-fidl_test_foreigntypeinresponseusedthroughcompose::Top::Dispatch(
-    ::fidl::WireInterface<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::Dispatch(impl,
-                                                                          msg,
-                                                                          txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {

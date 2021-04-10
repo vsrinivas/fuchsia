@@ -231,14 +231,6 @@ fidl::internal::WireDispatcher<::fidl_test_nullable::SimpleProtocol>::Dispatch(
   }
   return dispatch_result;
 }
-
-// TODO(ianloic): Remove this when all users have migrated.
-::fidl::DispatchResult fidl_test_nullable::SimpleProtocol::Dispatch(
-    ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_nullable::SimpleProtocol>::Dispatch(impl, msg, txn);
-}
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
