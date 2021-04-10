@@ -14,6 +14,7 @@
 // clang-format on
 
 #include "thread_stack_manager_delegate_impl.h"
+#include "weave_inspector.h"
 
 namespace nl {
 namespace Weave {
@@ -37,6 +38,7 @@ using fuchsia::net::Ipv4Address;
 using fuchsia::net::Ipv6Address;
 using fuchsia::net::routes::State_Resolve_Result;
 
+using nl::Weave::WeaveInspector;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::Internal::DeviceNetworkInfo;
 using nl::Weave::Profiles::NetworkProvisioning::kNetworkType_Thread;
@@ -429,7 +431,12 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
   ProvisioningParams params{.identity = std::move(identity), .credential = std::move(credential)};
 
   // Provision the thread device.
-  return device_->ProvisionNetwork(std::move(params));
+  WEAVE_ERROR err = device_->ProvisionNetwork(std::move(params));
+  if (err == WEAVE_NO_ERROR) {
+    auto& inspector = WeaveInspector::GetWeaveInspector();
+    inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_ThreadNetworkCreatedOrJoined);
+  }
+  return err;
 }
 
 void ThreadStackManagerDelegateImpl::ClearThreadProvision() {
