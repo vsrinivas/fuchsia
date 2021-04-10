@@ -35,6 +35,9 @@ pub mod call_line_ident_notifications;
 /// Defines the implementation of the Report Extended Audio Gateway Error Code Results Procedure.
 pub mod extended_errors;
 
+/// Defines the implementation of the Hang Up Procedure.
+pub mod hang_up;
+
 /// Defines the implementation of the SLC Initialization Procedure.
 pub mod slc_initialization;
 
@@ -67,6 +70,7 @@ use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
 use extended_errors::ExtendedErrorsProcedure;
+use hang_up::HangUpProcedure;
 use indicators_activation::IndicatorsActivationProcedure;
 use nrec::NrecProcedure;
 use phone_status::PhoneStatusProcedure;
@@ -166,6 +170,8 @@ pub enum ProcedureMarker {
     Ring,
     /// The Answer procedure as defined in HFP v1.8 Section 4.13
     Answer,
+    /// The Hang Up procedure as defined in HFP v1.8 Sections 4.14 - 4.15
+    HangUp,
 }
 
 impl ProcedureMarker {
@@ -190,6 +196,7 @@ impl ProcedureMarker {
             Self::Indicators => Box::new(IndicatorsActivationProcedure::new()),
             Self::Ring => Box::new(RingProcedure::new()),
             Self::Answer => Box::new(AnswerProcedure::new()),
+            Self::HangUp => Box::new(HangUpProcedure::new()),
         }
     }
 
@@ -217,6 +224,7 @@ impl ProcedureMarker {
             at::Command::Vgs { .. } | at::Command::Vgm { .. } => Ok(Self::VolumeSynchronization),
             at::Command::Vts { .. } => Ok(Self::Dtmf),
             at::Command::Answer { .. } => Ok(Self::Answer),
+            at::Command::Chup { .. } => Ok(Self::HangUp),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -244,6 +252,8 @@ pub enum InformationRequest {
     QueryCurrentCalls { response: Box<dyn FnOnce(Vec<Call>) -> AgUpdate> },
 
     Answer { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+
+    HangUp { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
 }
 
 impl From<&InformationRequest> for ProcedureMarker {
@@ -260,6 +270,7 @@ impl From<&InformationRequest> for ProcedureMarker {
             }
             QueryCurrentCalls { .. } => Self::QueryCurrentCalls,
             Answer { .. } => Self::Answer,
+            HangUp { .. } => Self::HangUp,
         }
     }
 }
@@ -286,6 +297,7 @@ impl fmt::Debug for InformationRequest {
                 &s
             }
             Self::Answer { .. } => "Answer",
+            Self::HangUp { .. } => "HangUp",
         }
         .to_string();
         write!(f, "{}", output)

@@ -167,3 +167,7 @@ command { AT+BIA=indrep: List<String> }
 # Answer
 # HFP 1.8 4.34.2
 command Answer { ATA }
+
+# Hang Up
+# HFP 1.8 4.34.2
+command { AT+CHUP }

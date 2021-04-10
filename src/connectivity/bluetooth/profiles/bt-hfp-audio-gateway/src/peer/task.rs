@@ -263,6 +263,12 @@ impl PeerTask {
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
+            InformationRequest::HangUp { response } => {
+                let result = self.calls.hang_up().map_err(|e| {
+                    warn!("Unexpected Hang Up from Hands Free: {}", e);
+                });
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
         };
     }
 

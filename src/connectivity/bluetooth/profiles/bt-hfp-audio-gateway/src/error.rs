@@ -63,10 +63,10 @@ impl Error {
 }
 
 /// A request was made using an unknown call.
-#[derive(Debug, PartialEq, Clone, Copy, Error)]
+#[derive(Debug, PartialEq, Clone, Error)]
 pub enum CallError {
     #[error("Unknown call index {}", .0)]
     UnknownIndexError(CallIdx),
-    #[error("No call in state {:?}", .0)]
-    None(CallState),
+    #[error("No call in states {:?}", .0)]
+    None(Vec<CallState>),
 }

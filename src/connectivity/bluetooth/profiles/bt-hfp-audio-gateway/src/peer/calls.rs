@@ -306,7 +306,7 @@ impl Calls {
     }
 
     /// Send a request to the call manager to terminate the call.
-    pub fn _request_terminate(&mut self, index: CallIdx) -> Result<(), CallError> {
+    pub fn request_terminate(&mut self, index: CallIdx) -> Result<(), CallError> {
         self.send_call_request(index, |proxy| proxy.request_terminate())
     }
 
@@ -355,8 +355,34 @@ impl Calls {
     /// Returns an Error if there are no calls in the IncomingRinging state.
     pub fn answer(&mut self) -> Result<(), CallError> {
         let state = CallState::IncomingRinging;
-        let idx = self.oldest_by_state(state).ok_or(CallError::None(state))?.0;
+        let idx = self.oldest_by_state(state).ok_or(CallError::None(vec![state]))?.0;
         self.request_active(idx, true)
+    }
+
+    /// Terminate a call.
+    ///
+    /// The AT+CHUP command does not specify a particular call to be terminated. When there are
+    /// multiple calls that could be terminated, the Audio Gateway must make a determination as to
+    /// which call to terminate. This prioritization is based on the perceived urgency of a call in
+    /// a given state.
+    ///
+    /// Terminate a single call based on the following policy:
+    ///
+    ///   * The oldest Incoming Ringing call is terminated.
+    ///   * If there are no Incoming Ringing calls, the oldest Ongoing Active call is terminated.
+    ///   * If there are no Ongoing Active calls, the oldest Ongoing Held call is terminated.
+    ///   * If there are no calls in any of the previously specified states, return an Error.
+    // If it becomes desirable for this policy to be configurable, it should be pulled out into the
+    // component's configuration data.
+    pub fn hang_up(&mut self) -> Result<(), CallError> {
+        use CallState::*;
+        let idx = self
+            .oldest_by_state(IncomingRinging)
+            .or_else(|| self.oldest_by_state(OngoingActive))
+            .or_else(|| self.oldest_by_state(OngoingHeld))
+            .ok_or(CallError::None(vec![IncomingRinging, OngoingActive, OngoingHeld]))?
+            .0;
+        self.request_terminate(idx)
     }
 
     /// Returns true if the state of any calls requires ringing.
@@ -740,7 +766,7 @@ mod tests {
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestActive { .. })));
         assert_matches!(call_stream_3.next().await, Some(Ok(CallRequest::RequestHold { .. })));
 
-        calls._request_terminate(idx).expect("valid index");
+        calls.request_terminate(idx).expect("valid index");
         assert_matches!(call_stream.next().await, Some(Ok(CallRequest::RequestTerminate { .. })));
 
         calls._request_transfer_audio(idx).expect("valid index");
@@ -761,7 +787,7 @@ mod tests {
         let result = calls.request_active(invalid, false);
         assert_eq!(result, Err(CallError::UnknownIndexError(invalid.clone())));
 
-        let result = calls._request_terminate(invalid);
+        let result = calls.request_terminate(invalid);
         assert_eq!(result, Err(CallError::UnknownIndexError(invalid.clone())));
 
         let result = calls._request_transfer_audio(invalid);
