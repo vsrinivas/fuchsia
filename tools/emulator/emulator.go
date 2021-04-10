@@ -625,6 +625,7 @@ func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) er
 	for {
 		line, err := i.stdout.ReadString('\n')
 		if err != nil {
+			i.printStderr()
 			return fmt.Errorf("failed to find: %q: %w", msg, err)
 		}
 		fmt.Print(line)
@@ -682,6 +683,7 @@ func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
 
 // printStderr prints all the lines from the instance's stderr stream.
 func (i *Instance) printStderr() {
+	fmt.Printf("printing stderr...\n")
 	for {
 		stderr, err := i.stderr.ReadString('\n')
 		if err != nil {
