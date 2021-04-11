@@ -349,7 +349,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // In the new pager, these members are in the PagedVmo base class.
-  const zx::vmo& vmo() const FS_TA_REQUIRES(mutex_) { return data_mapping_.vmo(); }
+  zx::vmo vmo_ FS_TA_GUARDED(mutex_);
+  const zx::vmo& vmo() const FS_TA_REQUIRES(mutex_) { return vmo_; }
+  void FreeVmo() FS_TA_REQUIRES(mutex_) { vmo_.reset(); }
 #endif
 
   // VMO mappings for the blob's merkle tree and data.
@@ -361,7 +363,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // For small blobs, merkle_mapping_ may be absent, since small blobs may not have any stored
   // merkle tree.
   fzl::OwnedVmoMapper merkle_mapping_ FS_TA_GUARDED(mutex_);
-  fzl::OwnedVmoMapper data_mapping_ FS_TA_GUARDED(mutex_);
+  // TODO(fxbug.dev/74061) Don't keep this data mapping around. We seldom need the data actually
+  // mapped and can lighten the resource usage of blobfs by deleting the mapping when unnecessary.
+  fzl::VmoMapper data_mapping_ FS_TA_GUARDED(mutex_);  // Vmo is owned separately (see vmo()).
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // In the new pager the PagedVnode base class provides this function. Defining an identical

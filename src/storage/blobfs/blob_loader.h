@@ -33,7 +33,9 @@ namespace blobfs {
 class BlobLoader {
  public:
   struct LoadResult {
-    fzl::OwnedVmoMapper data;
+    zx::vmo data_vmo;
+    fzl::VmoMapper data_mapper;
+
     fzl::OwnedVmoMapper merkle;
   };
 
@@ -103,25 +105,28 @@ class BlobLoader {
                                    const BlobLayout& blob_layout, const BlobVerifier& verifier,
                                    std::unique_ptr<SeekableDecompressor>* decompressor_out);
   zx_status_t LoadMerkle(uint32_t node_index, const BlobLayout& blob_layout,
-                         const fzl::OwnedVmoMapper& vmo) const;
-  zx_status_t LoadData(uint32_t node_index, const BlobLayout& blob_layout,
-                       const fzl::OwnedVmoMapper& vmo) const;
+                         const fzl::OwnedVmoMapper& mapper) const;
+  zx_status_t LoadData(uint32_t node_index, const BlobLayout& blob_layout, zx::vmo& vmo,
+                       fzl::VmoMapper& mapper) const;
   zx_status_t LoadAndDecompressData(uint32_t node_index, const Inode& inode,
-                                    const BlobLayout& blob_layout,
-                                    const fzl::OwnedVmoMapper& vmo) const;
+                                    const BlobLayout& blob_layout, zx::vmo& vmo,
+                                    void* mapped_data) const;
 
   // Verifies that |merkle_root| is the root hash of the null blob.
   zx_status_t VerifyNullBlob(Digest merkle_root, const BlobCorruptionNotifier* notifier);
 
   // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
   // into |vmo|.
+  //
+  // The vmo will be written to (the const indicates the zx::vmo object won't change, but the
+  // referenced data will be).
   zx::status<uint64_t> LoadBlocks(uint32_t node_index, uint32_t block_offset, uint32_t block_count,
-                                  const fzl::OwnedVmoMapper& vmo) const;
+                                  const zx::vmo& vmo) const;
 
   // If part of the Merkle tree is located within the data blocks then this function zeros out the
   // Merkle tree within those blocks.
   // |vmo| should contain the raw data stored which might be compressed or uncompressed.
-  void ZeroMerkleTreeWithinDataVmo(const fzl::OwnedVmoMapper& vmo,
+  void ZeroMerkleTreeWithinDataVmo(void* mapped_data, size_t mapped_data_size,
                                    const BlobLayout& blob_layout) const;
 
   // Returns the block size used by blobfs.

@@ -37,7 +37,9 @@ zx::status<> PagedVnode::EnsureCreateVmo(uint64_t size) {
 }
 
 void PagedVnode::FreeVmo() {
-  ZX_DEBUG_ASSERT(vmo_info_.vmo.is_valid());
+  if (!vmo_info_.vmo.is_valid())
+    return;
+
   if (paged_vfs())
     paged_vfs()->UnregisterPagedVmo(vmo_info_.id);
 

@@ -232,8 +232,8 @@ TEST_P(BlobLoaderTest, NullBlob) {
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
   ASSERT_TRUE(result.is_ok());
 
-  EXPECT_FALSE(result->data.vmo().is_valid());
-  EXPECT_EQ(result->data.size(), 0ul);
+  EXPECT_FALSE(result->data_vmo.is_valid());
+  EXPECT_EQ(result->data_mapper.size(), 0ul);
 
   EXPECT_FALSE(result->merkle.vmo().is_valid());
   EXPECT_EQ(result->merkle.size(), 0ul);
@@ -249,9 +249,9 @@ TEST_P(BlobLoaderTest, SmallBlob) {
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
   ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(result->data.vmo().is_valid());
-  ASSERT_GE(result->data.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data_vmo.is_valid());
+  ASSERT_GE(result->data_mapper.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
 
   EXPECT_FALSE(result->merkle.vmo().is_valid());
   EXPECT_EQ(result->merkle.size(), 0ul);
@@ -285,9 +285,9 @@ TEST_P(BlobLoaderTest, LargeBlob) {
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
   ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(result->data.vmo().is_valid());
-  ASSERT_GE(result->data.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data_vmo.is_valid());
+  ASSERT_GE(result->data_mapper.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
 
   CheckMerkleTreeContents(result->merkle, *info);
 }
@@ -301,9 +301,9 @@ TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
   ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(result->data.vmo().is_valid());
-  ASSERT_GE(result->data.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data_vmo.is_valid());
+  ASSERT_GE(result->data_mapper.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
 
   CheckMerkleTreeContents(result->merkle, *info);
 }
@@ -349,9 +349,9 @@ TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
   ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(result->data.vmo().is_valid());
-  ASSERT_GE(result->data.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data_vmo.is_valid());
+  ASSERT_GE(result->data_mapper.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
 
   CheckMerkleTreeContents(result->merkle, *info);
 }

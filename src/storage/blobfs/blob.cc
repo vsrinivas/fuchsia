@@ -544,7 +544,8 @@ zx_status_t Blob::Commit() {
 
   // Discard things we don't need any more.  This has to be after the Flush call above to ensure
   // all data has been copied from these buffers.
-  data_mapping_.Reset();
+  data_mapping_.Unmap();
+  FreeVmo();
   write_info_->compressor.reset();
 
   // Wrap all pending writes with a strong reference to this Blob, so that it stays
@@ -865,19 +866,16 @@ zx_status_t Blob::LoadVmosFromDisk() {
   syncing_state_ = SyncingState::kDone;  // Nothing to sync when blob was loaded from the device.
 
   if (load_result.is_ok()) {
-    data_mapping_ = std::move(load_result->data);
+    data_mapping_ = std::move(load_result->data_mapper);
     merkle_mapping_ = std::move(load_result->merkle);
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
+    vmo_ = std::move(load_result->data_vmo);
     page_watcher_ = std::move(created_page_watcher);  // No-op for new pager.
 #endif
 
     SetVmoName();
   } else {
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-    // VMO creation could have succeeded but the load failed for other reasons.
-    if (vmo())
-      FreeVmo();
-#endif
+    FreeVmo();
   }
 
   return load_result.status_value();
@@ -900,7 +898,8 @@ zx_status_t Blob::PrepareDataVmoForWriting() {
 #else
 
   uint64_t block_aligned_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
-  if (zx_status_t status = data_mapping_.CreateAndMap(block_aligned_size, nullptr);
+  if (zx_status_t status = data_mapping_.CreateAndMap(
+          block_aligned_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo_);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to map data vmo: " << zx_status_get_string(status);
     return status;
@@ -971,14 +970,15 @@ void Blob::ActivateLowMemory() {
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
   ZX_ASSERT(!has_clones());
 
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-  if (vmo())
-    FreeVmo();
-#else
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
+  // This must happen before freeing the vmo for the PageWatcher's pager synchronization code in
+  // its destructor to work.
   page_watcher_.reset();
 #endif
 
-  data_mapping_.Reset();
+  FreeVmo();
+
+  data_mapping_.Unmap();
   merkle_mapping_.Reset();
 }
 
