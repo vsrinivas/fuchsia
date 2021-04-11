@@ -42,46 +42,37 @@ if (current_toolchain == default_toolchain) {
 }
 
 if (is_fuchsia) {
-  resource("product-data") {
-    sources = [ build_info_files.product ]
-    outputs = [ "data/product" ]
-  }
-
-  resource("board-data") {
-    sources = [ build_info_files.board ]
-    outputs = [ "data/board" ]
-  }
-
-  resource("version-data") {
-    sources = [ build_info_files.version ]
-    outputs = [ "data/version" ]
-  }
-
-  resource("snapshot-data") {
-    sources = [ build_info_files.jiri_snapshot ]
-    outputs = [ "data/snapshot" ]
-  }
-
-  resource("latest-commit-date-data") {
-    sources = [ build_info_files.latest_commit_date ]
-    outputs = [ "data/latest-commit-date" ]
-  }
-
-  resource("minimum-utc-stamp-data") {
-    sources = [ build_info_files.minimum_utc_stamp ]
-    outputs = [ "data/minimum-utc-stamp" ]
+  resource_group("build-info-resources") {
+    files = [
+      {
+        source = build_info_files.product
+        dest = "data/product"
+      },
+      {
+        source = build_info_files.board
+        dest = "data/board"
+      },
+      {
+        source = build_info_files.version
+        dest = "data/version"
+      },
+      {
+        source = build_info_files.jiri_snapshot
+        dest = "data/snapshot"
+      },
+      {
+        source = build_info_files.latest_commit_date
+        dest = "data/latest-commit-date"
+      },
+      {
+        source = build_info_files.minimum_utc_stamp
+        dest = "data/minimum-utc-stamp"
+      },
+    ]
   }
 
   fuchsia_package("build-info") {
-    deps = [
-      ":board-data",
-      ":latest-commit-date",
-      ":latest-commit-date-data",
-      ":minimum-utc-stamp-data",
-      ":product-data",
-      ":snapshot-data",
-      ":version-data",
-    ]
+    deps = [ ":build-info-resources" ]
   }
 
   resource("bootfs") {

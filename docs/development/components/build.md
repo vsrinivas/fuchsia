@@ -833,7 +833,8 @@ target that produces an executable ensures that the executable is included in
 the package.
 
 Sometimes there is the need to include additional files. Below we demonstrate
-the use of the [`resource.gni`](/build/dist/resource.gni) template.
+the use of two [`resource.gni`](/build/dist/resource.gni) templates,
+`resource()` and `resource_group()`.
 
 ### Example: fonts
 
@@ -889,7 +890,9 @@ a known good result (or a "golden file").
 {# Disable variable substition to avoid {{ being interpreted by the template engine #}
 {% verbatim %}
 
-```
+```gn
+import("//src/sys/build/components.gni")
+
 fuchsia_component("minifier_component") {
   ...
 }
@@ -931,6 +934,44 @@ However, it is a better practice to put dependencies on the targets that need
 them. This way we could reuse the same test component target in a different
 test package, for instance to test against a different minifier component, and
 the test component would work the same.
+
+### Example: using `resource_group()`
+
+In the examples above all the paths conformed to a certain structure such that
+we could specify a single output pattern for multiple files and even leverage
+[GN source expansion placeholders][source-expansion-placeholders]. In this next
+example we are required to rename different files to different destination
+paths for packaging.
+
+```gn
+import("//src/sys/build/components.gni")
+
+resource_group("favorite_recipes") {
+  files = [
+    {
+      source = "//recipes/spaghetti_bolognese.txt"
+      dest = "data/pasta/spaghetti_bolognese.txt"
+    },
+    {
+      source = "//recipes/creamy_carbonara.txt"
+      dest = "data/pasta/carbonara.txt"
+    },
+    {
+      source = "//recipes/creme_brulee.txt"
+      dest = "data/dessert/creme_brulee.txt"
+    },
+    ...
+  ]
+}
+```
+
+Our sources are all in a single directory, but are to be packaged in different
+directories, some even under different names. To express this same relationship
+we might need as many `resource()` targets as we have files. Situations like
+this call for the use of `resource_group()` instead, as shown above.
+
+The underlying behavior of `resource()` and `resource_group()` is identical.
+You are free to choose whichever one you prefer.
 
 ## Component manifest includes {#component-manifest-includes}
 

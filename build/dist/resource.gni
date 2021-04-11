@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Declare a data file to be accessible at runtime on the target device.
+# Declare data files to be accessible at runtime on the target device.
 #
 # A resource() target looks just like a copy() target but $outputs are
 # relative target paths.  Using $data_deps to this resource() target in
@@ -46,10 +46,12 @@
 #     Type: list(file)
 #
 # See copy() for other parameters.
-#
 template("resource") {
+  if (invoker.sources != []) {
+    _label = get_label_info(":$target_name", "label_with_toolchain")
+  }
+
   group(target_name) {
-    original_target_name = target_name
     forward_variables_from(invoker,
                            "*",
                            [
@@ -84,11 +86,95 @@ template("resource") {
             {
               source = rebase_path(source, root_build_dir)
               destination = target
-              label = get_label_info(":$original_target_name",
-                                     "label_with_toolchain")
+              label = _label
             },
           ]
         }
+      }
+    }
+  }
+}
+
+# Declare data files to be accessible at runtime on the target device.
+#
+# Similar to resource() but with a different interface that allows grouping
+# multiple files into a single target when their packaged paths don't follow
+# a common pattern.
+#
+# Parameters
+#
+#   data_deps
+#     Optional: Additional dependencies for the runtime image.  These are
+#     included in the image if this target is, but are not related to the
+#     $sources list.
+#     Type: list(label)
+#
+#   deps
+#     Optional: Targets that produce $sources.  Any files listed in
+#     $sources that are produced by the build should be produced by a
+#     target listed here.  This is the only thing that guarantees those
+#     files will have been built by the time the image is being packed.
+#     Targets reached only via this $deps list will *not* contribute their
+#     own contents to the image directly.  For that, list them in $data_deps.
+#     Targets listed here are used only to produce the $sources files.
+#     Type: list(label)
+#
+#   files
+#     Required: List of scopes containing `source` and `dest` paths.
+#     `source` paths are local file paths.
+#     `dest` paths are packaged paths.
+#     For instance:
+#     files = [
+#       {
+#         source = "//path/to/file.txt"
+#         dest = "data/first.txt"
+#       },
+#       {
+#         source = "//path/to/other_file.txt",
+#         dest = "data/second.txt"
+#       },
+#     ]
+#     Type: list(scope)
+#
+#   testonly, visibility
+template("resource_group") {
+  if (invoker.files != []) {
+    _label = get_label_info(":$target_name", "label_with_toolchain")
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    metadata = {
+      # Used by the distribution_manifest() template.
+      distribution_entries_barrier = []
+      distribution_entries = []
+
+      # Used by the zbi() template.
+      zbi_input_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # Stop *_manifest() and zbi_test() from picking up files or
+      # zbi_input() items from the deps, but let them reach the data_deps.
+      if (defined(data_deps)) {
+        distribution_entries_barrier += data_deps
+        zbi_input_barrier += data_deps
+      }
+
+      foreach(file, invoker.files) {
+        distribution_entries += [
+          {
+            source = rebase_path(file.source, root_build_dir)
+            destination = file.dest
+            label = _label
+          },
+        ]
       }
     }
   }
