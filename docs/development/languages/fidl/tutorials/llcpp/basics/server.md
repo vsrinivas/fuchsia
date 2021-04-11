@@ -187,7 +187,7 @@ This complete process is described in further detail in the
 ### Initialize the event loop
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,34" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,30" %}
 ```
 
 The event loop is used to asynchronously listen for incoming connections and
