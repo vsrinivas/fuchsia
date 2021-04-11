@@ -778,6 +778,11 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
 
 zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
   TRACE_DURATION("blobfs", "Blobfs::ReadInternal", "len", len, "off", off);
+
+  // TODO(fxbug.dev/74088) allow multiple reads at a time as long as the blob is completely
+  // loaded. This may involve moving the lock to LoadVmosFromDisk and auditing the inode_ and vmo_
+  // usage in the code below to see if we can guarantee it won't change out from under us outside
+  // the lock.
   std::lock_guard lock(mutex_);
 
   if (state() != BlobState::kReadable) {
@@ -1086,10 +1091,16 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
 
 zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kGetAttr);
+
+  // SizeData() expects to be called outside the lock.
+  auto content_size = SizeData();
+
+  std::lock_guard lock(mutex_);
+
   *a = fs::VnodeAttributes();
   a->mode = V_TYPE_FILE | V_IRUSR;
-  a->inode = Ino();
-  a->content_size = SizeData();
+  a->inode = map_index_;
+  a->content_size = content_size;
   a->storage_size = inode_.block_count * kBlobfsBlockSize;
   a->link_count = 1;
   a->creation_time = 0;

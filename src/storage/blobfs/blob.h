@@ -397,7 +397,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // - blob_size
   // - block_count
   // To save space, we could avoid holding onto the entire inode.
-  Inode inode_ = {};
+  Inode inode_ FS_TA_GUARDED(mutex_) = {};
 
   // Data used exclusively during writeback.
   struct WriteInfo;
