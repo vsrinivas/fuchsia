@@ -278,6 +278,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // If paging is disabled, the entire data VMO is loaded in and verified.
   //
   // Idempotent.
+  zx_status_t LoadPagedVmosFromDisk() FS_TA_REQUIRES(mutex_);
+  zx_status_t LoadUnpagedVmosFromDisk() FS_TA_REQUIRES(mutex_);
   zx_status_t LoadVmosFromDisk() FS_TA_REQUIRES(mutex_);
 
   // Initializes the data VMO for writing.  Idempotent.

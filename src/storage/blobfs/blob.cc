@@ -808,77 +808,122 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
   return status;
 }
 
-zx_status_t Blob::LoadVmosFromDisk() {
-  if (IsDataLoaded()) {
-    return ZX_OK;
-  }
-
-  zx::status<BlobLoader::LoadResult> load_result;
-  std::unique_ptr<pager::PageWatcher> created_page_watcher;  // Used only for old pager.
-  if (IsPagerBacked()) {
-    // If there is an overriden cache policy for pager-backed blobs, apply it now.
-    // Otherwise the system-wide default will be used.
-    std::optional<CachePolicy> cache_policy = blobfs_->pager_backed_cache_policy();
-    if (cache_policy) {
-      set_overridden_cache_policy(*cache_policy);
-    }
-
-    // Create the callback supplied to the loader to create the appropriate VMO.
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
-    // In the new pager, the VMO is created by the PagedVmo.
-    auto create_vmo = [this](BlobLayout::ByteCountType aligned_size,
-                             pager::UserPagerInfo info) -> zx::status<zx::vmo> {
-      if (auto status = EnsureCreateVmo(aligned_size); status.is_error())
-        return status.take_error();
 
-      // TODO(fxbug.dev/51111) this creates a duplicate handle to the data VMO for the
-      // loader to use since it expects to take ownership of the object. When we don't need the
-      // old code path, this should be refactored to avoid this handle duplication.
-      zx::vmo result;
-      if (zx_status_t status = vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &result); status != ZX_OK)
-        return zx::error(status);
+// New pager implementation.
+zx_status_t Blob::LoadPagedVmosFromDisk() {
+  ZX_ASSERT(!IsDataLoaded());
 
-      pager_info_ = std::move(info);
-      return zx::ok(std::move(result));
-    };
-#else
-    // In the old pager, a PageWatcher needs to be created and that object creates the VMO.
-    auto create_vmo = [this, &created_page_watcher](
-                          BlobLayout::ByteCountType aligned_size,
-                          pager::UserPagerInfo info) -> zx::status<zx::vmo> {
-      created_page_watcher =
-          std::make_unique<pager::PageWatcher>(blobfs_->pager(), std::move(info));
-
-      zx::vmo data_vmo;
-      if (zx_status_t status = created_page_watcher->CreatePagedVmo(aligned_size, &data_vmo);
-          status != ZX_OK) {
-        return zx::error(status);
-      }
-      return zx::ok(std::move(data_vmo));
-    };
-#endif
-    load_result = blobfs_->loader().LoadBlobPaged(map_index_, std::move(create_vmo),
-                                                  &blobfs_->blob_corruption_notifier());
-  } else {
-    load_result = blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
+  // If there is an overriden cache policy for pager-backed blobs, apply it now. Otherwise the
+  // system-wide default will be used.
+  std::optional<CachePolicy> cache_policy = blobfs_->pager_backed_cache_policy();
+  if (cache_policy) {
+    set_overridden_cache_policy(*cache_policy);
   }
 
-  syncing_state_ = SyncingState::kDone;  // Nothing to sync when blob was loaded from the device.
+  // Create the callback supplied to the loader to create the appropriate VMO. In the new pager, the
+  // VMO is created by the PagedVmo.
+  auto create_vmo = [this](BlobLayout::ByteCountType aligned_size,
+                           pager::UserPagerInfo info) -> zx::status<zx::vmo> {
+    if (auto status = EnsureCreateVmo(aligned_size); status.is_error())
+      return status.take_error();
 
+    // TODO(fxbug.dev/51111) this creates a duplicate handle to the data VMO for the loader to use
+    // since it expects to take ownership of the object. This is incorrect. Duplicating a vmo
+    // registered with the paging system causes unusual problems.
+    zx::vmo result;
+    if (zx_status_t status = vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &result); status != ZX_OK)
+      return zx::error(status);
+
+    pager_info_ = std::move(info);
+    return zx::ok(std::move(result));
+  };
+  zx::status<BlobLoader::LoadResult> load_result = blobfs_->loader().LoadBlobPaged(
+      map_index_, std::move(create_vmo), &blobfs_->blob_corruption_notifier());
   if (load_result.is_ok()) {
     data_mapping_ = std::move(load_result->data_mapper);
     merkle_mapping_ = std::move(load_result->merkle);
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
-    vmo_ = std::move(load_result->data_vmo);
-    page_watcher_ = std::move(created_page_watcher);  // No-op for new pager.
-#endif
-
-    SetVmoName();
   } else {
+    // On failure, we need to free the vmo which was created on this object for the loader to use.
     FreeVmo();
   }
 
   return load_result.status_value();
+}
+
+#else
+
+// Old pager.
+zx_status_t Blob::LoadPagedVmosFromDisk() {
+  ZX_ASSERT(!IsDataLoaded());
+
+  // If there is an overriden cache policy for pager-backed blobs, apply it now. Otherwise the
+  // system-wide default will be used.
+  std::optional<CachePolicy> cache_policy = blobfs_->pager_backed_cache_policy();
+  if (cache_policy) {
+    set_overridden_cache_policy(*cache_policy);
+  }
+
+  // Create the callback supplied to the loader to create the appropriate VMO. In the old pager, a
+  // PageWatcher needs to be created and that object creates the VMO.
+  std::unique_ptr<pager::PageWatcher> created_page_watcher;
+  auto create_vmo = [this, &created_page_watcher](
+                        BlobLayout::ByteCountType aligned_size,
+                        pager::UserPagerInfo info) -> zx::status<zx::vmo> {
+    created_page_watcher = std::make_unique<pager::PageWatcher>(blobfs_->pager(), std::move(info));
+
+    zx::vmo data_vmo;
+    if (zx_status_t status = created_page_watcher->CreatePagedVmo(aligned_size, &data_vmo);
+        status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(std::move(data_vmo));
+  };
+
+  zx::status<BlobLoader::LoadResult> load_result = blobfs_->loader().LoadBlobPaged(
+      map_index_, std::move(create_vmo), &blobfs_->blob_corruption_notifier());
+  if (load_result.is_ok()) {
+    data_mapping_ = std::move(load_result->data_mapper);
+    merkle_mapping_ = std::move(load_result->merkle);
+    vmo_ = std::move(load_result->data_vmo);
+    page_watcher_ = std::move(created_page_watcher);
+  }
+
+  return load_result.status_value();
+}
+
+#endif
+
+zx_status_t Blob::LoadUnpagedVmosFromDisk() {
+  ZX_ASSERT(!IsDataLoaded());
+
+  zx::status<BlobLoader::LoadResult> load_result =
+      blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
+  if (load_result.is_ok()) {
+    data_mapping_ = std::move(load_result->data_mapper);
+    merkle_mapping_ = std::move(load_result->merkle);
+    vmo_ = std::move(load_result->data_vmo);
+  }
+
+  return load_result.status_value();
+}
+
+zx_status_t Blob::LoadVmosFromDisk() {
+  if (IsDataLoaded())
+    return ZX_OK;
+
+  zx_status_t status;
+  if (IsPagerBacked()) {
+    status = LoadPagedVmosFromDisk();
+  } else {
+    status = LoadUnpagedVmosFromDisk();
+  }
+
+  if (status == ZX_OK)
+    SetVmoName();
+
+  syncing_state_ = SyncingState::kDone;
+  return status;
 }
 
 zx_status_t Blob::PrepareDataVmoForWriting() {
