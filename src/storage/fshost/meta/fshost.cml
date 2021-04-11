@@ -73,6 +73,11 @@
             path: "/delayed/fs/pkgfs/packages/root_ssl_certificates/0/data",
         },
         {
+            directory: "build-info",
+            rights: [ "r*" ],
+            path: "/delayed/fs/pkgfs/packages/build-info/0/data",
+        },
+        {
             directory: "system",
             rights: [ "rx*" ],
             path: "/fs/system",
@@ -199,6 +204,10 @@
         },
         {
             directory: "root-ssl-certificates",
+            from: "self",
+        },
+        {
+            directory: "build-info",
             from: "self",
         },
         {
