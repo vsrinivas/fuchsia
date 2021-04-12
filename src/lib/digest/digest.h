@@ -97,6 +97,9 @@ class Digest final {
   bool operator==(const uint8_t (&rhs)[kSha256Length]) const { return Equals(rhs, kSha256Length); }
   bool operator!=(const uint8_t (&rhs)[kSha256Length]) const { return !Equals(rhs, kSha256Length); }
 
+  // Allow a digest to be used in a map.
+  bool operator<(const Digest& rhs) const { return memcmp(bytes_, rhs.bytes_, kSha256Length) < 0; }
+
  private:
   // Opaque crypto implementation context.
   struct Context;

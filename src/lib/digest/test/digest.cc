@@ -111,6 +111,24 @@ TEST(DigestTest, Equality) {
   EXPECT_FALSE(actual != expected) << "Doesn't not equal expected";
 }
 
+TEST(DigestTest, Less) {
+  Digest null_digest;
+  EXPECT_FALSE(null_digest < null_digest);
+
+  uint8_t one[kSha256Length];
+  memset(one, 0, kSha256Length);
+  one[kSha256Length - 1] = 1;
+  Digest digest_one(one);
+
+  uint8_t two[kSha256Length];
+  memset(two, 0, kSha256Length);
+  two[kSha256Length - 1] = 2;
+  Digest digest_two(two);
+
+  EXPECT_TRUE(digest_one < digest_two);
+  EXPECT_FALSE(digest_two < digest_one);
+}
+
 TEST(DigestTest, CopyTo) {
   Digest actual;
   uint8_t buf[kSha256Length * 2];
