@@ -44,6 +44,8 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
 
   void CreateNewBreakpoint(zxdb::Thread* thread, zxdb::BreakpointSettings& settings);
 
+  uint64_t GetTimestamp();
+
  private:
   InterceptionWorkflow* workflow_;
   std::unordered_set<uint64_t> exit_breakpoints_;
@@ -59,7 +61,8 @@ class InterceptingProcessObserver : public zxdb::ProcessObserver {
   explicit InterceptingProcessObserver(InterceptionWorkflow* workflow) : workflow_(workflow) {}
 
   void DidCreateProcess(zxdb::Process* process, bool autoattached, uint64_t timestamp) override;
-  void WillDestroyProcess(zxdb::Process* process, DestroyReason reason, int exit_code) override;
+  void WillDestroyProcess(zxdb::Process* process, DestroyReason reason, int exit_code,
+                          uint64_t timestamp) override;
   void OnSymbolLoadFailure(zxdb::Process* process, const zxdb::Err& err) override;
 
  private:
@@ -134,7 +137,7 @@ class InterceptionWorkflow {
 
   // Called when a monitored process is detached/dead. This function can
   // called several times with the same koid.
-  void ProcessDetached(zx_koid_t koid);
+  void ProcessDetached(zx_koid_t koid, uint64_t timestamp);
 
   // Detach from one target.  session() keeps track of details about the Target
   // object; this just reduces the number of targets to which we are attached by
@@ -152,10 +155,10 @@ class InterceptionWorkflow {
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |process|. If the process is secondary and no main process is already monitored,
   // postpone the breakpoints' setting.
-  void SetBreakpoints(zxdb::Process* process);
+  void SetBreakpoints(zxdb::Process* process, uint64_t timestamp);
 
   // Actually set the breakpoints.
-  void DoSetBreakpoints(zxdb::Process* process);
+  void DoSetBreakpoints(zxdb::Process* process, uint64_t timestamp);
 
   // Starts running the loop.  Returns when loop is (asynchronously) terminated.
   static void Go();

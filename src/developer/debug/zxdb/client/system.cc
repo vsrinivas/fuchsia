@@ -909,7 +909,8 @@ void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids
     if (found)
       continue;
 
-    AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err) {
+    AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err,
+                                               uint64_t timestamp) {
       if (err.has_error()) {
         FX_LOGS(ERROR) << "Could not attach to process " << matched_pid << ": " << err.msg();
         return;
@@ -918,14 +919,14 @@ void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids
   }
 }
 
-void System::AttachToProcess(uint64_t pid, Target::Callback callback) {
+void System::AttachToProcess(uint64_t pid, Target::CallbackWithTimestamp callback) {
   // Don't allow attaching to a process more than once.
   if (Process* process = ProcessFromKoid(pid)) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback),
                     weak_target = process->GetTarget()->GetWeakPtr(), pid]() mutable {
           callback(weak_target,
-                   Err("Process " + std::to_string(pid) + " is already being debugged."));
+                   Err("Process " + std::to_string(pid) + " is already being debugged."), 0);
         });
     return;
   }

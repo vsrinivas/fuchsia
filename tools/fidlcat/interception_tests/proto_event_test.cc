@@ -129,8 +129,8 @@ TEST_F(ProtoEventTest, InvokedAndOutputEvent) {
   ASSERT_EQ(
       result,
       "\n"
-      "0.000000 my_process.cmx 1234:5678 zx_channel_create(options: uint32 = 0)\n"
-      "0.010000   -> ZX_OK (out0: handle = Channel:0000abcd, out1: handle = Channel:0000beef)\n");
+      "0.010000 my_process.cmx 1234:5678 zx_channel_create(options: uint32 = 0)\n"
+      "0.020000   -> ZX_OK (out0: handle = Channel:0000abcd, out1: handle = Channel:0000beef)\n");
 }
 
 TEST_F(ProtoEventTest, Exception) {

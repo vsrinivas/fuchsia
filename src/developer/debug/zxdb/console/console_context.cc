@@ -692,7 +692,8 @@ void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new
   Console::get()->Output(out);
 }
 
-void ConsoleContext::WillDestroyProcess(Process* process, DestroyReason reason, int exit_code) {
+void ConsoleContext::WillDestroyProcess(Process* process, DestroyReason reason, int exit_code,
+                                        uint64_t timestamp) {
   TargetRecord* record = GetTargetRecord(process->GetTarget());
   if (!record) {
     FX_NOTREACHED();

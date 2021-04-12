@@ -163,7 +163,7 @@ class System : public ClientObject,
 
   // Searches through for an open slot (Target without an attached process) or creates another one
   // if none is found. Calls attach on that target, passing |callback| into it.
-  void AttachToProcess(uint64_t pid, Target::Callback callback);
+  void AttachToProcess(uint64_t pid, Target::CallbackWithTimestamp callback);
 
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);

@@ -1853,10 +1853,10 @@ class SyscallDecoderDispatcher {
   // This will only start the decoding. The display will be done when all the
   // needed information will be gathered.
   void DecodeSyscall(InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
-                     Syscall* syscall);
+                     Syscall* syscall, uint64_t timestamp);
 
   // Decode an exception received by a thread.
-  void DecodeException(InterceptionWorkflow* workflow, zxdb::Thread* thread);
+  void DecodeException(InterceptionWorkflow* workflow, zxdb::Thread* thread, uint64_t timestamp);
 
   virtual fidl_codec::MessageDecoderDispatcher* MessageDecoderDispatcher() { return nullptr; }
 
@@ -1866,7 +1866,8 @@ class SyscallDecoderDispatcher {
   // Create the object which will decode the syscall.
   virtual std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
                                                         zxdb::Thread* thread,
-                                                        const Syscall* syscall) = 0;
+                                                        const Syscall* syscall,
+                                                        uint64_t timestamp) = 0;
 
   // Delete a decoder created by DecodeSyscall. Called when the syscall is
   // fully decoded and displayed or the syscalls had an error.
@@ -1874,7 +1875,8 @@ class SyscallDecoderDispatcher {
 
   // Create the object which will decode the exception.
   virtual std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                          zxdb::Thread* thread) = 0;
+                                                          zxdb::Thread* thread,
+                                                          uint64_t timestamp) = 0;
 
   // Delete a decoder created by DecodeException. Called when the exception is fully decoded and
   // displayed or the exception had an error.
@@ -2080,11 +2082,12 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   }
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread,
-                                                const Syscall* syscall) override;
+                                                zxdb::Thread* thread, const Syscall* syscall,
+                                                uint64_t timestamp) override;
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread) override;
+                                                  zxdb::Thread* thread,
+                                                  uint64_t timestamp) override;
 
   double GetTime(int64_t timestamp);
 
@@ -2125,7 +2128,6 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   // True if we always display the binary dump of the messages.
   const bool dump_messages_;
   uint32_t next_invoked_event_id_ = 0;
-  int64_t timestamp_base_ = 0;
 };
 
 class SyscallCompareDispatcher : public SyscallDisplayDispatcher {
@@ -2137,8 +2139,8 @@ class SyscallCompareDispatcher : public SyscallDisplayDispatcher {
         comparator_(comparator) {}
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread,
-                                                const Syscall* syscall) override;
+                                                zxdb::Thread* thread, const Syscall* syscall,
+                                                uint64_t timestamp) override;
 
  private:
   std::shared_ptr<Comparator> comparator_;

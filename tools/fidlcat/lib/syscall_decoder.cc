@@ -315,7 +315,7 @@ void SyscallDecoder::DecodeInputs() {
   if (syscall_->fidl_codec_values_ready()) {
     // We are able to create values from the syscall => create the values.
     //
-    invoked_event_ = std::make_shared<InvokedEvent>(timestamp_, fidlcat_thread_, syscall_);
+    invoked_event_ = std::make_shared<InvokedEvent>(timestamp(), fidlcat_thread_, syscall_);
     auto inline_member = syscall_->input_inline_members().begin();
     auto outline_member = syscall_->input_outline_members().begin();
     for (const auto& input : syscall_->inputs()) {
@@ -347,7 +347,7 @@ void SyscallDecoder::DecodeInputs() {
   // Eventually calls the code before displaying the input (which may invalidate
   // the display).
   if ((syscall_->inputs_decoded_action() == nullptr) ||
-      (dispatcher_->*(syscall_->inputs_decoded_action()))(timestamp_, this)) {
+      (dispatcher_->*(syscall_->inputs_decoded_action()))(timestamp(), this)) {
     if (invoked_event_ != nullptr) {
       // If we have been able to generate an invoked event, directly call the dispatcher.
       dispatcher_->AddInvokedEvent(invoked_event_);
@@ -414,20 +414,7 @@ void SyscallDecoder::DecodeOutputs() {
     return;
   }
   if (syscall_->fidl_codec_values_ready()) {
-    // We are able to create values from the syscall => create the values.
-    //
-    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-    // print the syscall.
-    int64_t timestamp = 0;
-    // In debug mode, timestamp_ is always 0.
-    if (timestamp_ != 0) {
-      struct timeval tv;
-      if (gettimeofday(&tv, nullptr) == 0) {
-        timestamp =
-            static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
-      }
-    }
-    output_event_ = std::make_shared<OutputEvent>(timestamp, fidlcat_thread_, syscall_,
+    output_event_ = std::make_shared<OutputEvent>(timestamp(), fidlcat_thread_, syscall_,
                                                   syscall_return_value_, invoked_event_);
     auto inline_member = syscall_->output_inline_members().begin();
     auto outline_member = syscall_->output_outline_members().begin();
@@ -545,28 +532,17 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
       // previous displayed lines.
       os_ << "\n";
     }
-    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-    // print the syscall.
-    int64_t timestamp = 0;
-    // In debug mode, timestamp_ is always 0.
-    if (decoder->timestamp() != 0) {
-      struct timeval tv;
-      if (gettimeofday(&tv, nullptr) == 0) {
-        timestamp =
-            static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
-      }
-    }
     std::string line_header;
     const fidl_codec::Colors& colors = dispatcher_->colors();
     if (dispatcher_->with_process_info() || (dispatcher_->last_displayed_syscall() != this)) {
-      line_header = colors.green + std::to_string(dispatcher_->GetTime(timestamp)) + colors.reset +
-                    ' ' + decoder->fidlcat_thread()->process()->name() + ' ' + colors.red +
-                    std::to_string(decoder->fidlcat_thread()->process()->koid()) + colors.reset +
-                    ':' + colors.red + std::to_string(decoder->fidlcat_thread()->koid()) +
-                    colors.reset + ' ';
+      line_header = colors.green + std::to_string(dispatcher_->GetTime(decoder->timestamp())) +
+                    colors.reset + ' ' + decoder->fidlcat_thread()->process()->name() + ' ' +
+                    colors.red + std::to_string(decoder->fidlcat_thread()->process()->koid()) +
+                    colors.reset + ':' + colors.red +
+                    std::to_string(decoder->fidlcat_thread()->koid()) + colors.reset + ' ';
     } else {
-      line_header =
-          colors.green + std::to_string(dispatcher_->GetTime(timestamp)) + colors.reset + ' ';
+      line_header = colors.green + std::to_string(dispatcher_->GetTime(decoder->timestamp())) +
+                    colors.reset + ' ';
     }
     FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process(), os_, line_header);
     // Displays the returned value.

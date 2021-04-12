@@ -176,7 +176,7 @@ void BreakpointImpl::DidCreateProcess(Process* process, bool autoattached, uint6
 }
 
 void BreakpointImpl::WillDestroyProcess(Process* process, ProcessObserver::DestroyReason,
-                                        int exit_code) {
+                                        int exit_code, uint64_t timestamp) {
   auto found = procs_.find(process);
   if (found == procs_.end())
     return;

@@ -451,8 +451,8 @@ void Session::OpenMinidump(const std::string& path, fit::callback<void(const Err
     return;
   }
 
-  system().GetTargets()[0]->Attach(minidump->ProcessID(),
-                                   [](fxl::WeakPtr<Target> target, const Err&) {});
+  system().GetTargets()[0]->Attach(
+      minidump->ProcessID(), [](fxl::WeakPtr<Target> target, const Err&, uint64_t timestamp) {});
 
   remote_api_->Hello(debug_ipc::HelloRequest(),
                      [callback = std::move(callback), weak_this = GetWeakPtr()](
@@ -584,6 +584,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
   StopInfo info;
   info.exception_type = notify.type;
   info.exception_record = notify.exception;
+  info.timestamp = notify.timestamp;
 
   if (!notify.hit_breakpoints.empty()) {
     // Update breakpoints' hit counts and stats. This is done before any notifications are sent so
@@ -709,7 +710,7 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vect
 
       Process* process = system_.ProcessFromKoid(notify.process_koid);
       if (process)
-        process->GetTarget()->OnProcessExiting(notify.return_code);
+        process->GetTarget()->OnProcessExiting(notify.return_code, notify.timestamp);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {

@@ -14,6 +14,7 @@ class Breakpoint;
 
 // Information on a thread stop notification.
 struct StopInfo {
+  uint64_t timestamp = 0;
   debug_ipc::ExceptionType exception_type = debug_ipc::ExceptionType::kNone;
 
   debug_ipc::ExceptionRecord exception_record;

@@ -12,9 +12,14 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 32;
+constexpr uint32_t kProtocolVersion = 33;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
+
+// This is so that it's obvious if the timestamp wasn't properly set (that number should be at
+// least 30,000 years) but it's not the max so that if things add to it then time keeps moving
+// forward.
+const uint64_t kTimestampDefault = 0x0fefffffffffffff;
 
 #pragma pack(push, 8)
 
@@ -136,6 +141,7 @@ struct LaunchRequest {
   std::vector<std::string> argv;
 };
 struct LaunchReply {
+  uint64_t timestamp = kTimestampDefault;
   // The client needs to react differently depending on whether we started a
   // process or a component.
   InferiorType inferior_type;
@@ -156,6 +162,7 @@ struct KillRequest {
   uint64_t process_koid = 0;
 };
 struct KillReply {
+  uint64_t timestamp = kTimestampDefault;
   zx_status_t status = 0;
 };
 
@@ -170,6 +177,7 @@ struct AttachRequest {
 };
 
 struct AttachReply {
+  uint64_t timestamp = kTimestampDefault;
   uint64_t koid = 0;
   zx_status_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
   std::string name;
@@ -180,6 +188,7 @@ struct DetachRequest {
   uint64_t koid = 0;
 };
 struct DetachReply {
+  uint64_t timestamp = kTimestampDefault;
   zx_status_t status = 0;
 };
 
@@ -409,15 +418,10 @@ struct ConfigAgentReply {
 
 // Notifications ---------------------------------------------------------------
 
-// This is so that it's obvious if the timestamp wasn't properly set (that number should be at
-// least 30,000 years) but it's not the max so that if things add to it then time keeps moving
-// forward.
-const uint64_t TIMESTAMP_DEFAULT = 0x0fffffffffffffff;
-
 // Notify that a new process was created in debugged job.
 
 struct NotifyProcessStarting {
-  uint64_t timestamp = TIMESTAMP_DEFAULT;
+  uint64_t timestamp = kTimestampDefault;
   enum class Type : uint32_t {
     kNormal,  // Normal process startup.
     kLimbo,   // Process entered the limbo. See debug_agent/limbo_provider.h.
@@ -441,20 +445,20 @@ struct NotifyProcessStarting {
 // Data for process destroyed messages (process created messages are in
 // response to launch commands so is just the reply to that message).
 struct NotifyProcessExiting {
-  uint64_t timestamp = TIMESTAMP_DEFAULT;
+  uint64_t timestamp = kTimestampDefault;
   uint64_t process_koid = 0;
   int64_t return_code = 0;
 };
 
 // Data for thread created and destroyed messages.
 struct NotifyThread {
-  uint64_t timestamp = TIMESTAMP_DEFAULT;
+  uint64_t timestamp = kTimestampDefault;
   ThreadRecord record;
 };
 
 // Data passed for exceptions.
 struct NotifyException {
-  uint64_t timestamp = TIMESTAMP_DEFAULT;
+  uint64_t timestamp = kTimestampDefault;
   // Holds the state and a minimal stack (up to 2 frames) of the thread at the
   // moment of notification.
   ThreadRecord thread;
@@ -481,7 +485,7 @@ struct NotifyException {
 // Indicates the loaded modules may have changed. The entire list of current
 // modules is sent every time.
 struct NotifyModules {
-  uint64_t timestamp = TIMESTAMP_DEFAULT;
+  uint64_t timestamp = kTimestampDefault;
   uint64_t process_koid = 0;
   std::vector<Module> modules;
 
@@ -492,7 +496,7 @@ struct NotifyModules {
 };
 
 struct NotifyIO {
-  uint64_t timestamp = TIMESTAMP_DEFAULT;
+  uint64_t timestamp = kTimestampDefault;
   static constexpr size_t kMaxDataSize = 64 * 1024;  // 64k.
 
   enum class Type : uint32_t {

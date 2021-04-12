@@ -162,12 +162,12 @@ Err RunVerbRun(ConsoleContext* context, const Command& cmd, CommandCallback call
       target->SetArgs(cmd.args());
     }
 
-    target->Launch(
-        [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err) mutable {
-          // The ConsoleContext displays messages for new processes, so don't display messages when
-          // successfully starting.
-          ProcessCommandCallback(target, false, err, std::move(callback));
-        });
+    target->Launch([callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err,
+                                                    uint64_t timestamp) mutable {
+      // The ConsoleContext displays messages for new processes, so don't display messages when
+      // successfully starting.
+      ProcessCommandCallback(target, false, err, std::move(callback));
+    });
   } else {
     LaunchComponent(cmd);
   }

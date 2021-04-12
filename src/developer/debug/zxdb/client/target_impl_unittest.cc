@@ -123,7 +123,7 @@ TEST_F(TargetImplTest, LaunchNoConnection) {
 
   Err out_err;
   target->SetArgs(std::vector<std::string>({"foo_test", "--arg"}));
-  target->Launch([&out_err](fxl::WeakPtr<Target> target, const Err& err) {
+  target->Launch([&out_err](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) {
     out_err = err;
     MessageLoop::Current()->QuitNow();
   });
@@ -155,7 +155,7 @@ TEST_F(TargetImplTest, LaunchKill) {
 
   Err out_err;
   target->SetArgs(std::vector<std::string>({"foo_test", "--arg"}));
-  target->Launch([&out_err](fxl::WeakPtr<Target> target, const Err& err) {
+  target->Launch([&out_err](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) {
     out_err = err;
     MessageLoop::Current()->QuitNow();
   });
@@ -165,10 +165,11 @@ TEST_F(TargetImplTest, LaunchKill) {
 
   // Try to launch another one in the pending state.
   Err second_launch_err;
-  target->Launch([&second_launch_err](fxl::WeakPtr<Target> target, const Err& err) {
-    second_launch_err = err;
-    MessageLoop::Current()->QuitNow();
-  });
+  target->Launch(
+      [&second_launch_err](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) {
+        second_launch_err = err;
+        MessageLoop::Current()->QuitNow();
+      });
 
   // We should have two tasks posted the first pending attach and the second pending launch (that we
   // expect to fail). They will both quit so the loop need to be run twice.
@@ -185,7 +186,7 @@ TEST_F(TargetImplTest, LaunchKill) {
   EXPECT_TRUE(second_launch_err.has_error());
 
   // Should not be able to launch another one. It should error out before trying to send IPC.
-  target->Launch([&out_err](fxl::WeakPtr<Target> target, const Err& err) {
+  target->Launch([&out_err](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) {
     out_err = err;
     MessageLoop::Current()->QuitNow();
   });
@@ -194,7 +195,7 @@ TEST_F(TargetImplTest, LaunchKill) {
   EXPECT_TRUE(out_err.has_error());
 
   // Should not be able to attach.
-  target->Attach(1234, [&out_err](fxl::WeakPtr<Target> target, const Err& err) {
+  target->Attach(1234, [&out_err](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) {
     out_err = err;
     MessageLoop::Current()->QuitNow();
   });
@@ -225,20 +226,22 @@ TEST_F(TargetImplTest, AttachDetach) {
   sink().set_attach_err(Err());
 
   Err out_err;
-  target->Attach(kKoid, [&out_err](fxl::WeakPtr<Target> target, const Err& err) {
-    out_err = err;
-    MessageLoop::Current()->QuitNow();
-  });
+  target->Attach(kKoid,
+                 [&out_err](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) {
+                   out_err = err;
+                   MessageLoop::Current()->QuitNow();
+                 });
 
   // Should be in the process of launching.
   EXPECT_EQ(Target::State::kAttaching, target->GetState());
 
   // Try to launch another one in the pending state.
   Err second_launch_err;
-  target->Launch([&second_launch_err](fxl::WeakPtr<Target> target, const Err& err) {
-    second_launch_err = err;
-    MessageLoop::Current()->QuitNow();
-  });
+  target->Launch(
+      [&second_launch_err](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) {
+        second_launch_err = err;
+        MessageLoop::Current()->QuitNow();
+      });
 
   // We should have two tasks posted the first pending attach and the second pending launch (that we
   // expect to fail). They will both quit so the loop need to be run twice.
@@ -281,8 +284,8 @@ TEST_F(TargetImplTest, AttachToAlreadyAttached) {
   TargetImpl* target = target_impls[0];
 
   Err out_err("NOT CALLED");
-  target->Attach(kProcessKoid,
-                 [&out_err](fxl::WeakPtr<Target> target, const Err& err) { out_err = err; });
+  target->Attach(kProcessKoid, [&out_err](fxl::WeakPtr<Target> target, const Err& err,
+                                          uint64_t timestamp) { out_err = err; });
 
   loop().RunUntilNoTasks();
 

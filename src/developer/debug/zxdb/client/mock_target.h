@@ -27,11 +27,11 @@ class MockTarget : public Target {
   const TargetSymbols* GetSymbols() const override { return symbols_; }
   const std::vector<std::string>& GetArgs() const override { return args_; }
   void SetArgs(std::vector<std::string> args) override { args_ = args; }
-  void Launch(Callback callback) override;
+  void Launch(CallbackWithTimestamp callback) override;
   void Kill(Callback callback) override;
-  void Attach(uint64_t koid, Callback callback) override;
+  void Attach(uint64_t koid, CallbackWithTimestamp callback) override;
   void Detach(Callback callback) override;
-  void OnProcessExiting(int return_code) override;
+  void OnProcessExiting(int return_code, uint64_t timestamp) override;
 
  private:
   State state_ = kNone;

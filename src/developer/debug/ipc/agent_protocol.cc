@@ -182,6 +182,7 @@ bool ReadRequest(MessageReader* reader, LaunchRequest* request, uint32_t* transa
 
 void WriteReply(const LaunchReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
+  writer->WriteUint64(reply.timestamp);
   writer->WriteUint32(static_cast<uint32_t>(reply.inferior_type));
   writer->WriteUint32(reply.status);
   writer->WriteUint64(reply.process_id);
@@ -201,6 +202,7 @@ bool ReadRequest(MessageReader* reader, KillRequest* request, uint32_t* transact
 
 void WriteReply(const KillReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kKill, transaction_id);
+  writer->WriteUint64(reply.timestamp);
   writer->WriteUint32(reply.status);
 }
 
@@ -222,6 +224,7 @@ bool ReadRequest(MessageReader* reader, AttachRequest* request, uint32_t* transa
 
 void WriteReply(const AttachReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
+  writer->WriteUint64(reply.timestamp);
   writer->WriteUint64(reply.koid);
   writer->WriteUint32(reply.status);
   writer->WriteString(reply.name);
@@ -245,6 +248,7 @@ bool ReadRequest(MessageReader* reader, DetachRequest* request, uint32_t* transa
 
 void WriteReply(const DetachReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kDetach, transaction_id);
+  writer->WriteUint64(reply.timestamp);
   writer->WriteUint32(reply.status);
 }
 

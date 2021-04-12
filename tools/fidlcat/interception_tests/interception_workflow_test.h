@@ -594,14 +594,15 @@ class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
       : SyscallDecoderDispatcher(decode_options), controller_(controller) {}
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread,
-                                                const Syscall* syscall) override {
+                                                zxdb::Thread* thread, const Syscall* syscall,
+                                                uint64_t timestamp) override {
     return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
                                             std::make_unique<SyscallCheck>(controller_), 0);
   }
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread) override {
+                                                  zxdb::Thread* thread,
+                                                  uint64_t timestamp) override {
     return nullptr;
   }
 
@@ -635,14 +636,15 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
   ProcessController* controller() const { return controller_; }
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread,
-                                                const Syscall* syscall) override {
+                                                zxdb::Thread* thread, const Syscall* syscall,
+                                                uint64_t timestamp) override {
     return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
                                             std::make_unique<SyscallDisplay>(this, os()), 0);
   }
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread) override {
+                                                  zxdb::Thread* thread,
+                                                  uint64_t timestamp) override {
     return std::make_unique<ExceptionDecoder>(workflow, this, thread,
                                               std::make_unique<ExceptionDisplay>(this, os()), 0);
   }

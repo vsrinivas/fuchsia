@@ -55,8 +55,9 @@ void ExceptionDecoder::Display() {
 void ExceptionDecoder::Destroy() {
   InterceptionWorkflow* workflow = workflow_;
   uint64_t process_id = process_id_;
+  uint64_t timestamp = timestamp_;
   dispatcher_->DeleteDecoder(this);
-  workflow->ProcessDetached(process_id);
+  workflow->ProcessDetached(process_id, timestamp);
 }
 
 void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {

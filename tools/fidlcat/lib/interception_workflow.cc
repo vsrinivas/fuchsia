@@ -31,7 +31,7 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
     FX_CHECK(info.hit_breakpoints.empty());
     if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
       threads_in_error_.emplace(thread->GetKoid());
-      workflow_->syscall_decoder_dispatcher()->DecodeException(workflow_, thread);
+      workflow_->syscall_decoder_dispatcher()->DecodeException(workflow_, thread, info.timestamp);
     }
     return;
   }
@@ -88,7 +88,7 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
         thread->Continue(false);
         return;
       }
-      workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall);
+      workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall, info.timestamp);
       return;
     }
   }
@@ -140,13 +140,13 @@ void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::Thread* thread,
 void InterceptingProcessObserver::DidCreateProcess(zxdb::Process* process, bool autoattached,
                                                    uint64_t timestamp) {
   workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
-  workflow_->SetBreakpoints(process);
+  workflow_->SetBreakpoints(process, timestamp);
 }
 
 void InterceptingProcessObserver::WillDestroyProcess(zxdb::Process* process,
                                                      ProcessObserver::DestroyReason reason,
-                                                     int exit_code) {
-  workflow_->ProcessDetached(process->GetKoid());
+                                                     int exit_code, uint64_t timestamp) {
+  workflow_->ProcessDetached(process->GetKoid(), timestamp);
 }
 
 void InterceptingProcessObserver::OnSymbolLoadFailure(zxdb::Process* process,
@@ -329,28 +329,21 @@ void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
     }
 
     // The debugger is not yet attached to the process.  Attach to it.
-    target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target> /*target*/,
-                                                              const zxdb::Err& err) {
-      if (!err.ok()) {
-        // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-        // print the syscall.
-        struct timeval tv;
-        int64_t timestamp = 0;
-        if (gettimeofday(&tv, nullptr) == 0) {
-          timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000 +
-                      static_cast<int64_t>(tv.tv_usec) * 1000;
-        }
-        Process* process = syscall_decoder_dispatcher()->SearchProcess(process_koid);
-        if (process == nullptr) {
-          process = syscall_decoder_dispatcher()->CreateProcess("", process_koid, nullptr);
-        }
-        syscall_decoder_dispatcher()->AddProcessMonitoredEvent(
-            std::make_shared<ProcessMonitoredEvent>(timestamp, process, err.msg()));
-        return;
-      }
+    target->Attach(
+        process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target> /*target*/,
+                                                   const zxdb::Err& err, uint64_t timestamp) {
+          if (!err.ok()) {
+            Process* process = syscall_decoder_dispatcher()->SearchProcess(process_koid);
+            if (process == nullptr) {
+              process = syscall_decoder_dispatcher()->CreateProcess("", process_koid, nullptr);
+            }
+            syscall_decoder_dispatcher()->AddProcessMonitoredEvent(
+                std::make_shared<ProcessMonitoredEvent>(timestamp, process, err.msg()));
+            return;
+          }
 
-      SetBreakpoints(target->GetProcess());
-    });
+          SetBreakpoints(target->GetProcess(), timestamp);
+        });
   }
 }
 
@@ -398,19 +391,11 @@ void InterceptionWorkflow::AttachToJobs(const debug_ipc::ProcessTreeRecord& reco
   }
 }
 
-void InterceptionWorkflow::ProcessDetached(zx_koid_t koid) {
+void InterceptionWorkflow::ProcessDetached(zx_koid_t koid, uint64_t timestamp) {
   if (configured_processes_.find(koid) == configured_processes_.end()) {
     return;
   }
   configured_processes_.erase(koid);
-  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-  // print the syscall.
-  struct timeval tv;
-  int64_t timestamp = 0;
-  if (gettimeofday(&tv, nullptr) == 0) {
-    timestamp =
-        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
-  }
   Process* process = syscall_decoder_dispatcher()->SearchProcess(koid);
   if (process == nullptr) {
     FX_LOGS(ERROR) << "Can't find process with koid=" << koid;
@@ -468,16 +453,8 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
       cmd.append(param);
       cmd.append(" ");
     }
-    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-    // print the syscall.
-    struct timeval tv;
-    int64_t timestamp = 0;
-    if (gettimeofday(&tv, nullptr) == 0) {
-      timestamp =
-          static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
-    }
-    syscall_decoder_dispatcher()->AddProcessLaunchedEvent(
-        std::make_shared<ProcessLaunchedEvent>(timestamp, cmd, err.ok() ? "" : err.msg()));
+    syscall_decoder_dispatcher()->AddProcessLaunchedEvent(std::make_shared<ProcessLaunchedEvent>(
+        debug_ipc::kTimestampDefault, cmd, err.ok() ? "" : err.msg()));
   };
 
   if (command[0] == "run") {
@@ -496,23 +473,23 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
           }
           target->session()->ExpectComponent(reply.component_id);
           if (target->GetProcess() != nullptr) {
-            SetBreakpoints(target->GetProcess());
+            SetBreakpoints(target->GetProcess(), reply.timestamp);
           }
         });
     return;
   }
 
   target->SetArgs(command);
-  target->Launch(
-      [this, on_err = std::move(on_err)](fxl::WeakPtr<zxdb::Target> target, const zxdb::Err& err) {
-        on_err(err);
-        if (target->GetProcess() != nullptr) {
-          SetBreakpoints(target->GetProcess());
-        }
-      });
+  target->Launch([this, on_err = std::move(on_err)](fxl::WeakPtr<zxdb::Target> target,
+                                                    const zxdb::Err& err, uint64_t timestamp) {
+    on_err(err);
+    if (target->GetProcess() != nullptr) {
+      SetBreakpoints(target->GetProcess(), debug_ipc::kTimestampDefault);
+    }
+  });
 }
 
-void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
+void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process, uint64_t timestamp) {
   if (configured_processes_.find(process->GetKoid()) != configured_processes_.end()) {
     return;
   }
@@ -534,7 +511,7 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
       for (const auto& configured_process : configured_processes_) {
         auto tmp = configured_process.second.process.get();
         if (tmp != nullptr) {
-          DoSetBreakpoints(tmp);
+          DoSetBreakpoints(tmp, timestamp);
         }
       }
     }
@@ -544,19 +521,11 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
       std::pair(process->GetKoid(), ConfiguredProcess(process->GetWeakPtr(), main_process)));
 
   if (decode_events_) {
-    DoSetBreakpoints(process);
+    DoSetBreakpoints(process, timestamp);
   }
 }
 
-void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process) {
-  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-  // print the syscall.
-  struct timeval tv;
-  int64_t timestamp = 0;
-  if (gettimeofday(&tv, nullptr) == 0) {
-    timestamp =
-        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
-  }
+void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process, uint64_t timestamp) {
   Process* process = syscall_decoder_dispatcher()->SearchProcess(zxdb_process->GetKoid());
   if (process == nullptr) {
     process = syscall_decoder_dispatcher()->CreateProcess(

@@ -213,6 +213,9 @@ bool ReadReply(MessageReader* reader, LaunchReply* reply, uint32_t* transaction_
     return false;
   *transaction_id = header.transaction_id;
 
+  if (!reader->ReadUint64(&reply->timestamp))
+    return false;
+
   uint32_t inferior_type;
   if (!reader->ReadUint32(&inferior_type) ||
       inferior_type >= static_cast<uint32_t>(InferiorType::kLast)) {
@@ -244,6 +247,8 @@ bool ReadReply(MessageReader* reader, KillReply* reply, uint32_t* transaction_id
     return false;
   *transaction_id = header.transaction_id;
 
+  if (!reader->ReadUint64(&reply->timestamp))
+    return false;
   if (!reader->ReadInt32(&reply->status))
     return false;
   return true;
@@ -263,6 +268,8 @@ bool ReadReply(MessageReader* reader, AttachReply* reply, uint32_t* transaction_
     return false;
   *transaction_id = header.transaction_id;
 
+  if (!reader->ReadUint64(&reply->timestamp))
+    return false;
   if (!reader->ReadUint64(&reply->koid))
     return false;
   if (!reader->ReadInt32(&reply->status))
@@ -286,6 +293,8 @@ bool ReadReply(MessageReader* reader, DetachReply* reply, uint32_t* transaction_
     return false;
   *transaction_id = header.transaction_id;
 
+  if (!reader->ReadUint64(&reply->timestamp))
+    return false;
   if (!reader->ReadInt32(&reply->status))
     return false;
   return true;

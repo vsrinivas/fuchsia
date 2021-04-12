@@ -175,7 +175,8 @@ class ConsoleContext : public ProcessObserver,
   // ProcessObserver implementation:
   void DidCreateProcess(Process* process, bool autoattached_to_new_process,
                         uint64_t timestamp) override;
-  void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code) override;
+  void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code,
+                          uint64_t timestamp) override;
   void OnSymbolLoadFailure(Process* process, const Err& err) override;
 
   // ThreadObserver implementation:

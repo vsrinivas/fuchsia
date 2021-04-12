@@ -25,6 +25,8 @@ constexpr int kFrame3Column = 2;
 constexpr int kFrame2Sp = 0x126790;
 constexpr int kFrame3Sp = 0x346712;
 
+constexpr uint64_t kTestTimestampDefault = 0x74657374l;  // hexadecimal for "test" in ascii
+
 static std::vector<debug_ipc::RegisterID> aarch64_regs = {
     debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
     debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
@@ -239,6 +241,7 @@ void InterceptionWorkflowTest::SimulateSyscall(std::unique_ptr<SystemCallTest> s
 // Fill a NotifyException object with all the information we need to simulate a breakpoint.
 std::vector<std::unique_ptr<zxdb::Frame>> InterceptionWorkflowTest::FillBreakpoint(
     debug_ipc::NotifyException* notification, uint64_t process_koid, uint64_t thread_koid) {
+  notification->timestamp = 0;
   notification->type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notification->thread.process_koid = process_koid;
   notification->thread.thread_koid = thread_koid;
@@ -292,6 +295,7 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
                                                        uint64_t thread_koid) {
   // Trigger next breakpoint, when the syscall has completed.
   debug_ipc::NotifyException notification;
+  notification.timestamp = 0;
   notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
@@ -337,6 +341,7 @@ void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t 
                                                 debug_ipc::ExceptionType type) {
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
+  notification.timestamp = 0;
   notification.type = type;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
@@ -400,7 +405,7 @@ void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller
   for (const auto& syscall : dispatcher->syscalls()) {
     if (syscall.second->name() == syscall_name) {
       dispatcher->DecodeSyscall(&controller->workflow().thread_observer(), threads_[tid],
-                                syscall.second.get());
+                                syscall.second.get(), kTestTimestampDefault);
       break;
     }
   }

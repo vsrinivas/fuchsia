@@ -191,10 +191,12 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
       break;
   }
 
+  reply->timestamp = zx::clock::get_monotonic().get();
   reply->status = ZX_ERR_INVALID_ARGS;
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
+  reply->timestamp = zx::clock::get_monotonic().get();
   // See first if the process is in limbo.
   LimboProvider& limbo = system_interface_->GetLimboProvider();
   if (limbo.Valid() && limbo.IsProcessInLimbo(request.process_koid)) {
@@ -223,6 +225,7 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillRe
 }
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) {
+  reply->timestamp = zx::clock::get_monotonic().get();
   switch (request.type) {
     case debug_ipc::TaskType::kJob: {
       auto debug_job = GetDebuggedJob(request.koid);
@@ -619,6 +622,7 @@ void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, zx_status
   reply.status = status;
   reply.koid = process_koid;
   reply.name = process_name;
+  reply.timestamp = zx::clock::get_monotonic().get();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteReply(reply, transaction_id, &writer);
@@ -673,6 +677,7 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     reply.name = job->GetName();
     reply.koid = job->GetKoid();
     reply.status = AddDebuggedJob(std::move(job));
+    reply.timestamp = zx::clock::get_monotonic().get();
   } else {
     DEBUG_LOG(Agent) << "Failed to attach to job.";
   }

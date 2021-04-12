@@ -62,6 +62,8 @@ bool SerializeDeserializeNotification(const NotificationType& in, NotificationTy
 
 }  // namespace
 
+constexpr uint64_t kTestTimestampDefault = 0x74657374l;  // hexadecimal for "test" in ascii
+
 // ConfigAgent -------------------------------------------------------------------------------------
 
 TEST(Protocol, ConfigAgentRequest) {
@@ -234,6 +236,7 @@ TEST(Protocol, LaunchReply) {
   initial.process_id = 0x1234;
   initial.component_id = 0x5678;
   initial.process_name = "winword.exe";
+  initial.timestamp = kTestTimestampDefault;
 
   LaunchReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -242,6 +245,7 @@ TEST(Protocol, LaunchReply) {
   EXPECT_EQ(initial.process_id, second.process_id);
   EXPECT_EQ(initial.component_id, second.component_id);
   EXPECT_EQ(initial.process_name, second.process_name);
+  EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 
 // Kill --------------------------------------------------------------------------------------------
@@ -257,10 +261,12 @@ TEST(Protocol, KillRequest) {
 
 TEST(Protocol, KillReply) {
   KillReply initial;
+  initial.timestamp = kTestTimestampDefault;
   initial.status = 67;
 
   KillReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.status, second.status);
 }
 
@@ -280,11 +286,13 @@ TEST(Protocol, AttachRequest) {
 TEST(Protocol, AttachReply) {
   AttachReply initial;
   initial.koid = 2312;
+  initial.timestamp = kTestTimestampDefault;
   initial.status = 67;
   initial.name = "virtual console";
 
   AttachReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.name, second.name);
 }
@@ -304,10 +312,12 @@ TEST(Protocol, DetachRequest) {
 
 TEST(Protocol, DetachReply) {
   DetachReply initial;
+  initial.timestamp = kTestTimestampDefault;
   initial.status = 67;
 
   DetachReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.status, second.status);
 }
 
@@ -913,7 +923,7 @@ TEST(Protocol, NotifyThread) {
   initial.record.name = "Wolfgang";
   initial.record.state = ThreadRecord::State::kDying;
   initial.record.stack_amount = ThreadRecord::StackAmount::kNone;
-  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
+  initial.timestamp = kTestTimestampDefault;
 
   MessageWriter writer;
   WriteNotifyThread(MsgHeader::Type::kNotifyThreadStarting, initial, &writer);
@@ -938,7 +948,7 @@ TEST(Protocol, NotifyException) {
   initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
   initial.thread.frames.emplace_back(0x7647342634, 0x9861238251);
   initial.type = ExceptionType::kHardwareBreakpoint;
-  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
+  initial.timestamp = kTestTimestampDefault;
 
   initial.exception.arch.x64.vector = 22;
   initial.exception.arch.x64.err_code = 5;
@@ -1003,7 +1013,7 @@ TEST(Protocol, NotifyModules) {
   initial.modules[1].base = 0x43567;
   initial.stopped_thread_koids.push_back(34);
   initial.stopped_thread_koids.push_back(96);
-  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
+  initial.timestamp = kTestTimestampDefault;
 
   NotifyModules second;
   ASSERT_TRUE(
@@ -1025,7 +1035,7 @@ TEST(Protocol, NotifyProcessStarting) {
   initial.koid = 10;
   initial.component_id = 2;
   initial.name = "some_process";
-  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
+  initial.timestamp = kTestTimestampDefault;
 
   NotifyProcessStarting second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessStarting,
@@ -1042,7 +1052,7 @@ TEST(Protocol, NotifyProcessExiting) {
   NotifyProcessExiting initial;
   initial.process_koid = 10;
   initial.return_code = 3;
-  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
+  initial.timestamp = kTestTimestampDefault;
 
   NotifyProcessExiting second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessExiting,
@@ -1059,7 +1069,7 @@ TEST(Protocol, NotifyIO) {
   initial.type = NotifyIO::Type::kStderr;
   initial.data = "Some data";
   initial.more_data_available = true;
-  initial.timestamp = 0x74657374l;  // hexadecimal for "test" in ascii
+  initial.timestamp = kTestTimestampDefault;
 
   NotifyIO second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyIO, &ReadNotifyIO));

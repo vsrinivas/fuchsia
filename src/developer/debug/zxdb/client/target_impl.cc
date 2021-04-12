@@ -70,13 +70,14 @@ void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& proce
   state_ = State::kStarting;
   uint64_t cur_mock_timestamp = mock_timestamp_;
   mock_timestamp_ += 1000;
-  OnLaunchOrAttachReply(Callback(), Err(), koid, 0, process_name, cur_mock_timestamp);
+  OnLaunchOrAttachReply(CallbackWithTimestamp(), Err(), koid, 0, process_name, cur_mock_timestamp);
 }
 
 void TargetImpl::ImplicitlyDetach() {
   if (GetProcess()) {
-    OnKillOrDetachReply(ProcessObserver::DestroyReason::kDetach, Err(), 0,
-                        [](fxl::WeakPtr<Target>, const Err&) {});
+    OnKillOrDetachReply(
+        ProcessObserver::DestroyReason::kDetach, Err(), 0, [](fxl::WeakPtr<Target>, const Err&) {},
+        0);
   }
 }
 
@@ -90,7 +91,7 @@ const std::vector<std::string>& TargetImpl::GetArgs() const { return args_; }
 
 void TargetImpl::SetArgs(std::vector<std::string> args) { args_ = std::move(args); }
 
-void TargetImpl::Launch(Callback callback) {
+void TargetImpl::Launch(CallbackWithTimestamp callback) {
   Err err;
   if (state_ != State::kNone)
     err = Err("Can't launch, program is already running or starting.");
@@ -101,7 +102,7 @@ void TargetImpl::Launch(Callback callback) {
     // Avoid reentering caller to dispatch the error.
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), err, weak_ptr = GetWeakPtr()]() mutable {
-          callback(std::move(weak_ptr), err);
+          callback(std::move(weak_ptr), err, 0);
         });
     return;
   }
@@ -111,14 +112,12 @@ void TargetImpl::Launch(Callback callback) {
   debug_ipc::LaunchRequest request;
   request.inferior_type = debug_ipc::InferiorType::kBinary;
   request.argv = args_;
-  uint64_t cur_mock_timestamp = mock_timestamp_;
-  mock_timestamp_ += 1000;
   session()->remote_api()->Launch(
-      request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr(),
-                cur_mock_timestamp](const Err& err, debug_ipc::LaunchReply reply) mutable {
+      request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::LaunchReply reply) mutable {
         TargetImpl::OnLaunchOrAttachReplyThunk(weak_target, std::move(callback), err,
                                                reply.process_id, reply.status, reply.process_name,
-                                               cur_mock_timestamp);
+                                               reply.timestamp);
       });
 }
 
@@ -138,7 +137,7 @@ void TargetImpl::Kill(Callback callback) {
                    const Err& err, debug_ipc::KillReply reply) mutable {
         if (weak_target) {
           weak_target->OnKillOrDetachReply(ProcessObserver::DestroyReason::kKill, err, reply.status,
-                                           std::move(callback));
+                                           std::move(callback), reply.timestamp);
         } else {
           // The reply that the process was launched came after the local objects were destroyed.
           // We're still OK to dispatch either way.
@@ -147,13 +146,14 @@ void TargetImpl::Kill(Callback callback) {
       });
 }
 
-void TargetImpl::Attach(uint64_t koid, Callback callback) {
+void TargetImpl::Attach(uint64_t koid, CallbackWithTimestamp callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback = std::move(callback),
-                                                            weak_ptr = GetWeakPtr()]() mutable {
-      callback(std::move(weak_ptr), Err("Can't attach, program is already running or starting."));
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
+          callback(std::move(weak_ptr),
+                   Err("Can't attach, program is already running or starting."), 0);
+        });
     return;
   }
 
@@ -161,13 +161,12 @@ void TargetImpl::Attach(uint64_t koid, Callback callback) {
 
   debug_ipc::AttachRequest request;
   request.koid = koid;
-  uint64_t cur_mock_timestamp = mock_timestamp_;
-  mock_timestamp_ += 1000;
   session()->remote_api()->Attach(
-      request, [koid, callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr(),
-                cur_mock_timestamp](const Err& err, debug_ipc::AttachReply reply) mutable {
+      request,
+      [koid, callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
+          const Err& err, debug_ipc::AttachReply reply) mutable {
         OnLaunchOrAttachReplyThunk(std::move(weak_target), std::move(callback), err, koid,
-                                   reply.status, reply.name, cur_mock_timestamp);
+                                   reply.status, reply.name, reply.timestamp);
       });
 }
 
@@ -187,7 +186,7 @@ void TargetImpl::Detach(Callback callback) {
                    const Err& err, debug_ipc::DetachReply reply) mutable {
         if (weak_target) {
           weak_target->OnKillOrDetachReply(ProcessObserver::DestroyReason::kDetach, err,
-                                           reply.status, std::move(callback));
+                                           reply.status, std::move(callback), reply.timestamp);
         } else {
           // The reply that the process was launched came after the local objects were destroyed.
           // We're still OK to dispatch either way.
@@ -196,20 +195,21 @@ void TargetImpl::Detach(Callback callback) {
       });
 }
 
-void TargetImpl::OnProcessExiting(int return_code) {
+void TargetImpl::OnProcessExiting(int return_code, uint64_t timestamp) {
   FX_DCHECK(state_ == State::kRunning);
   state_ = State::kNone;
 
   for (auto& observer : session()->process_observers())
-    observer.WillDestroyProcess(process_.get(), ProcessObserver::DestroyReason::kExit, return_code);
+    observer.WillDestroyProcess(process_.get(), ProcessObserver::DestroyReason::kExit, return_code,
+                                timestamp);
 
   process_.reset();
 }
 
 // static
-void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Callback callback,
-                                            const Err& err, uint64_t koid,
-                                            debug_ipc::zx_status_t status,
+void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
+                                            CallbackWithTimestamp callback, const Err& err,
+                                            uint64_t koid, debug_ipc::zx_status_t status,
                                             const std::string& process_name, uint64_t timestamp) {
   if (target) {
     target->OnLaunchOrAttachReply(std::move(callback), err, koid, status, process_name, timestamp);
@@ -217,18 +217,20 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Cal
     // The reply that the process was launched came after the local objects were destroyed.
     if (err.has_error()) {
       // Process not launched, forward the error.
-      callback(target, err);
+      callback(target, err, timestamp);
     } else {
       // TODO(brettw) handle this more gracefully. Maybe kill the remote
       // process?
-      callback(target, Err("Warning: process launch race, extra process is "
-                           "likely running."));
+      callback(target,
+               Err("Warning: process launch race, extra process is "
+                   "likely running."),
+               timestamp);
     }
   }
 }
 
-void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
-                                       debug_ipc::zx_status_t status,
+void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err& err,
+                                       uint64_t koid, debug_ipc::zx_status_t status,
                                        const std::string& process_name, uint64_t timestamp) {
   FX_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
   FX_DCHECK(!process_.get());  // Shouldn't have a process.
@@ -240,7 +242,7 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64
     issue_err = err;
   } else if (status != 0) {
     state_ = State::kNone;
-    return HandleAttachStatus(std::move(callback), koid, status, process_name);
+    return HandleAttachStatus(std::move(callback), koid, status, process_name, timestamp);
   } else {
     Process::StartType start_type =
         state_ == State::kAttaching ? Process::StartType::kAttach : Process::StartType::kLaunch;
@@ -249,7 +251,7 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64
   }
 
   if (callback)
-    callback(GetWeakPtr(), issue_err);
+    callback(GetWeakPtr(), issue_err, timestamp);
 
   if (state_ == State::kRunning) {
     for (auto& observer : session()->process_observers())
@@ -257,8 +259,9 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64
   }
 }
 
-void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc::zx_status_t status,
-                                    const std::string& process_name) {
+void TargetImpl::HandleAttachStatus(CallbackWithTimestamp callback, uint64_t koid,
+                                    debug_ipc::zx_status_t status, const std::string& process_name,
+                                    uint64_t timestamp) {
   Err err;
   if (status == debug_ipc::kZxErrIO) {
     err = Err("Error launching: Binary not found [%s]", debug_ipc::ZxStatusToString(status));
@@ -266,8 +269,8 @@ void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc:
     // Already bound can mean two things. In the first case, it could be a mistake where the user
     // is trying to attach to the same process twice.
     if (system_->ProcessFromKoid(koid)) {
-      callback(GetWeakPtr(),
-               Err("Process " + std::to_string(koid) + " is already being debugged."));
+      callback(GetWeakPtr(), Err("Process " + std::to_string(koid) + " is already being debugged."),
+               timestamp);
       return;
     }
 
@@ -279,21 +282,21 @@ void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc:
 
     DEBUG_LOG(Session) << "Re-attaching to process " << process_name << " (" << koid << ").";
     session()->remote_api()->ProcessStatus(
-        request, [target = GetWeakPtr(), callback = std::move(callback), process_name](
+        request, [target = GetWeakPtr(), callback = std::move(callback), process_name, timestamp](
                      const Err& err, debug_ipc::ProcessStatusReply reply) mutable {
           if (!target)
             return;
 
           if (err.has_error())
-            return callback(target, err);
+            return callback(target, err, timestamp);
 
           if (reply.status != debug_ipc::kZxOk) {
             Err error("Could not attach to process %s: %s", process_name.c_str(),
                       debug_ipc::ZxStatusToString(reply.status));
-            return callback(target, err);
+            return callback(target, err, timestamp);
           }
 
-          return callback(target, Err());
+          return callback(target, Err(), timestamp);
         });
     return;
   } else {
@@ -301,11 +304,11 @@ void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc:
         fxl::StringPrintf("Error launching, status = %s.", debug_ipc::ZxStatusToString(status)));
   }
 
-  callback(GetWeakPtr(), err);
+  callback(GetWeakPtr(), err, timestamp);
 }
 
 void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
-                                     int32_t status, Callback callback) {
+                                     int32_t status, Callback callback, uint64_t timestamp) {
   FX_DCHECK(process_.get());  // Should have a process.
 
   Err issue_err;  // Error to send in callback.
@@ -326,7 +329,7 @@ void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, cons
     // Keep the process alive for the observer call, but remove it from the target as per the
     // observer specification.
     for (auto& observer : session()->process_observers())
-      observer.WillDestroyProcess(process_.get(), reason, 0);
+      observer.WillDestroyProcess(process_.get(), reason, 0, timestamp);
 
     process_.reset();
   }

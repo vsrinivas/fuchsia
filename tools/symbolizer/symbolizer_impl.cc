@@ -136,7 +136,7 @@ void SymbolizerImpl::Reset() {
     //
     // We should be able to use target_->GetSymbols(). However, it returns a const pointer.
     target_->GetProcess()->GetSymbols()->target_symbols()->RemoveAllModules();
-    target_->OnProcessExiting(0);
+    target_->OnProcessExiting(/*return_code=*/0, /*timestamp=*/0);
   }
 
   // Support for dumpfile

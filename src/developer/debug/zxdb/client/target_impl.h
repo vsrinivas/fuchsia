@@ -57,29 +57,30 @@ class TargetImpl : public Target {
   const TargetSymbols* GetSymbols() const override;
   const std::vector<std::string>& GetArgs() const override;
   void SetArgs(std::vector<std::string> args) override;
-  void Launch(Callback callback) override;
+  void Launch(CallbackWithTimestamp callback) override;
   void Kill(Callback callback) override;
-  void Attach(uint64_t koid, Callback callback) override;
+  void Attach(uint64_t koid, CallbackWithTimestamp callback) override;
   void Detach(Callback callback) override;
-  void OnProcessExiting(int return_code) override;
+  void OnProcessExiting(int return_code, uint64_t timestamp) override;
 
  private:
-  static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Callback callback,
-                                         const Err& err, uint64_t koid,
-                                         debug_ipc::zx_status_t status,
+  static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
+                                         CallbackWithTimestamp callback, const Err& err,
+                                         uint64_t koid, debug_ipc::zx_status_t status,
                                          const std::string& process_name, uint64_t timestamp);
-  void OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
+  void OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err& err, uint64_t koid,
                              debug_ipc::zx_status_t status, const std::string& process_name,
                              uint64_t timestamp);
 
   // Different status returned by the agent can mean different things.
   // ZX_ERR_IO = Process doesn't exist.
   // ZX_ERR_ALREADY_BOUND = The agent is already bound.
-  void HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc::zx_status_t status,
-                          const std::string& process_name);
+  void HandleAttachStatus(CallbackWithTimestamp callback, uint64_t koid,
+                          debug_ipc::zx_status_t status, const std::string& process_name,
+                          uint64_t timestamp);
 
   void OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
-                           debug_ipc::zx_status_t status, Callback callback);
+                           debug_ipc::zx_status_t status, Callback callback, uint64_t timestamp);
 
   // Actual creation that unified common behaviour.
   std::unique_ptr<ProcessImpl> CreateProcessImpl(uint64_t koid, const std::string& name,

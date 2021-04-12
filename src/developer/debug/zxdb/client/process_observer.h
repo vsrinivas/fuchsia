@@ -29,7 +29,8 @@ class ProcessObserver {
   // Target but the Target will report |state == kNone|.
   //
   // The exit code will only have meaning when reason == kExit, otherwise it will be 0.
-  virtual void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code) {}
+  virtual void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code,
+                                  uint64_t timestamp) {}
 
   // Notification that a module with symbols is ready to use.
   //

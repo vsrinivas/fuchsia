@@ -43,6 +43,8 @@ class Target : public ClientObject {
   // Note that the callback will be issued in all cases which may be after the target is destroyed.
   // In this case the weak pointer will be null.
   using Callback = fit::callback<void(fxl::WeakPtr<Target> target, const Err&)>;
+  using CallbackWithTimestamp =
+      fit::callback<void(fxl::WeakPtr<Target> target, const Err&, uint64_t timestamp)>;
 
   enum State {
     // There is no process currently running. From here, it can only transition to starting.
@@ -80,7 +82,7 @@ class Target : public ClientObject {
 
   // Launches the program. The program must be in a kStopped state and the program name configured
   // via SetArgs().
-  virtual void Launch(Callback callback) = 0;
+  virtual void Launch(CallbackWithTimestamp callback) = 0;
 
   // Kills the process with the given koid. The callback will be executed when the kill is complete
   // (or fails).
@@ -88,14 +90,14 @@ class Target : public ClientObject {
 
   // Attaches to the process with the given koid. The callback will be executed when the attach is
   // complete (or fails).
-  virtual void Attach(uint64_t koid, Callback callback) = 0;
+  virtual void Attach(uint64_t koid, CallbackWithTimestamp callback) = 0;
 
   // Detaches from the process with the given koid. The callback will be executed when the detach is
   // complete (or fails).
   virtual void Detach(Callback callback) = 0;
 
   // Notification from the agent that a process has exited.
-  virtual void OnProcessExiting(int return_code) = 0;
+  virtual void OnProcessExiting(int return_code, uint64_t timestamp) = 0;
 
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();

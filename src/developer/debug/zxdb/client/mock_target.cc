@@ -13,14 +13,14 @@ void MockTarget::SetRunningProcess(Process* process) {
   process_ = process;
 }
 
-void MockTarget::Launch(Callback callback) { FX_NOTREACHED(); }
+void MockTarget::Launch(CallbackWithTimestamp callback) { FX_NOTREACHED(); }
 
 void MockTarget::Kill(Callback callback) { FX_NOTREACHED(); }
 
-void MockTarget::Attach(uint64_t koid, Callback callback) { FX_NOTREACHED(); }
+void MockTarget::Attach(uint64_t koid, CallbackWithTimestamp callback) { FX_NOTREACHED(); }
 
 void MockTarget::Detach(Callback callback) { FX_NOTREACHED(); }
 
-void MockTarget::OnProcessExiting(int return_code) { FX_NOTREACHED(); }
+void MockTarget::OnProcessExiting(int return_code, uint64_t timestamp) { FX_NOTREACHED(); }
 
 }  // namespace zxdb

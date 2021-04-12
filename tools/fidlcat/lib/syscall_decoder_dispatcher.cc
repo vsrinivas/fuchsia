@@ -18,6 +18,7 @@
 #include "src/lib/fidl_codec/semantic.h"
 #include "tools/fidlcat/lib/code_generator/test_generator.h"
 #include "tools/fidlcat/lib/inference.h"
+#include "tools/fidlcat/lib/interception_workflow.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 #include "tools/fidlcat/lib/top.h"
 #include "tools/fidlcat/proto/session.pb.h"
@@ -453,7 +454,8 @@ HandleInfo* SyscallDecoderDispatcher::CreateHandleInfo(Thread* thread, uint32_t 
 }
 
 void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_observer,
-                                             zxdb::Thread* thread, Syscall* syscall) {
+                                             zxdb::Thread* thread, Syscall* syscall,
+                                             uint64_t timestamp) {
   uint64_t thread_id = thread->GetKoid();
   auto current = syscall_decoders_.find(thread_id);
   if (current != syscall_decoders_.end()) {
@@ -461,14 +463,14 @@ void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_
                    << ':' << thread_id << ": Internal error: already decoding the thread";
     return;
   }
-  auto decoder = CreateDecoder(thread_observer, thread, syscall);
+  auto decoder = CreateDecoder(thread_observer, thread, syscall, timestamp);
   auto tmp = decoder.get();
   syscall_decoders_[thread_id] = std::move(decoder);
   tmp->Decode();
 }
 
-void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
-                                               zxdb::Thread* thread) {
+void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow, zxdb::Thread* thread,
+                                               uint64_t timestamp) {
   uint64_t thread_id = thread->GetKoid();
   auto current = exception_decoders_.find(thread_id);
   if (current != exception_decoders_.end()) {
@@ -477,7 +479,7 @@ void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
                    << ": Internal error: already decoding an exception for the thread";
     return;
   }
-  auto decoder = CreateDecoder(workflow, thread);
+  auto decoder = CreateDecoder(workflow, thread, timestamp);
   auto tmp = decoder.get();
   exception_decoders_[thread_id] = std::move(decoder);
   tmp->Decode();
@@ -610,39 +612,20 @@ void SyscallDecoderDispatcher::ComputeTypes() {
 }
 
 std::unique_ptr<SyscallDecoder> SyscallDisplayDispatcher::CreateDecoder(
-    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall) {
-  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-  // print the syscall.
-  struct timeval tv;
-  int64_t timestamp = 0;
-  if (gettimeofday(&tv, nullptr) == 0) {
-    timestamp =
-        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
-  }
+    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall,
+    uint64_t timestamp) {
   return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
                                           std::make_unique<SyscallDisplay>(this, os_), timestamp);
 }
 
 std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
-    InterceptionWorkflow* workflow, zxdb::Thread* thread) {
-  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-  // print the syscall.
-  struct timeval tv;
-  int64_t timestamp = 0;
-  if (gettimeofday(&tv, nullptr) == 0) {
-    timestamp =
-        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
-  }
+    InterceptionWorkflow* workflow, zxdb::Thread* thread, uint64_t timestamp) {
   return std::make_unique<ExceptionDecoder>(
       workflow, this, thread, std::make_unique<ExceptionDisplay>(this, os_), timestamp);
 }
 
 double SyscallDisplayDispatcher::GetTime(int64_t timestamp) {
-  if (timestamp_base_ == 0) {
-    timestamp_base_ = timestamp;
-  }
-  int64_t delta = (timestamp - timestamp_base_) / 1000;
-  return static_cast<double>(delta) / 1000000;
+  return static_cast<double>(timestamp) / 1000000000;
 }
 
 void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
@@ -913,10 +896,11 @@ void SyscallDisplayDispatcher::SessionEnded() {
 }
 
 std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(
-    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall) {
+    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall,
+    uint64_t timestamp) {
   return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
                                           std::make_unique<SyscallCompare>(this, comparator_, os_),
-                                          0);
+                                          timestamp);
 }
 
 void SyscallDisplayDispatcher::GenerateTests(const std::string& output_directory) {
