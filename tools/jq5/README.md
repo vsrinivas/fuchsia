@@ -8,6 +8,13 @@ of large-scale changes of `.cml` files.
 
 The tool also has support for stdin. For example, one might use it by calling `cat <my_file> | fx jq5 <my_filter>`. They may also simply call `fx jq5 <my_filter>` and type the json5 object in manually. Unfortunately, unlike `jq`, `jq5` does not parse while receiving input, so errors will only be realized after stdin is closed.
 
+## Examples
+
+Listed below are changes that were authored using this tool.
+Please feel free to contribute to this list.
+
+* [513020: [cml] Change arrays of 1 in .offer.[n].to to singletons.](https://fuchsia-review.googlesource.com/c/fuchsia/+/513020)
+
 ## The Problem:
 `jq` offers rich features for manipulating the structure of JSON files, but unfortunately does not support the json5 format. In some cases it may be acceptable to translate the json5 objects in question to JSON before feeding them to `jq`. Such an approach would preserve all the actual data, but any comments would be lost.
 
