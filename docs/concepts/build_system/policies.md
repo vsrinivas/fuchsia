@@ -81,6 +81,103 @@ Scripts that specifically require Bash should begin with the following:
 #!/bin/bash
 ```
 
+## Migrations
+
+The build system can assist in performing migrations for such things as
+compiler features, new tools, or proliferation of various best practices.
+A legacy undesired behavior can often be expressed in terms of a dependency
+on a `config()` that applies this behavior. The use of a legacy tool or
+template to be replaced can be captured by a dependency on a `group()`
+target.
+
+### Commit to a plan
+
+Efforts to improve code health are always welcome, but you should have a clear
+plan to finish what you started before you begin. A half-done migration that's
+run out of momentum could be worse than no migration at all.
+
+### Establish a regression stop
+
+Assume that the codebase doubles every 8 months, and work as early as you can
+to prevent new instances of the legacy behavior from being introduced. By
+establishing a regression stop, you are "passively" cleaning up the codebase as
+governed by its doubling rate, i.e. every doubling period you will have
+passively cleaned up half of the codebase.
+
+Ensure that allowlists are guarded by `OWNERS` files, and that POCs for the
+migration are listed as owners.
+
+### Document migration / cleanup steps
+
+Publish a clear document explaining the nature of the migration, how to
+participate, and how to perform related maintenance work. This allows your
+migration effort to scale, and keeps any individual from becoming a roadblock to
+ongoing migration efforts such as when they're overwhelmed with support requests
+or otherwise unavailable to attend to questions.
+
+Review [C++ implicit conversions][wconversion-project] as a positive example.
+
+### Simplify and automate allowlist maintenance
+
+Allowlists are easy to express as `visibility` lists for GN targets. This opens
+the door to automated analysis, and makes changes that violate the allowlist
+fail their builds quickly.
+
+When allowlisting targets to use the legacy behavior that you're migrating away
+from, make it easy for owners of those targets to make simple refactors such as
+renaming individual targets within their directories by allowlisting base
+directories, not individual targets.
+
+Document the steps to regenerate and trim any allowlist, such that they can be
+conducted by anyone.
+
+See the example below:
+
+```gn
+group("foo_allowlist") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of targets that use the deprecated "foo" tool.
+  # As of April 2021 we no longer use "foo". Users should migrate to the new
+  # "bar" tool as described in this guide:
+  # https://fuchsia.dev/...
+  #
+  # To regenerate:
+  # fx gn refs $(fx get-build-dir) //path/to:foo_allowlist | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
+  #
+  # To trim:
+  # scripts/gn/trim_visibility.py --target="//path/to:foo_allowlist"
+  visibility = [
+    "//src/project1/*",
+    "//src/project2/*",
+    ...
+  ]
+}
+```
+
+Then elsewhere, automatically add a dependency on the allowlisted target.
+
+```gn
+# Invoke the legacy foo tool.
+# For new usage, please consider using the new bar tool instead!
+# See:
+# https://fuchsia.dev/...
+# ...
+template("foo") {
+  action(target_name) {
+    ...
+    deps += [ "//build/foo:foo_allowlist" ]
+  }
+}
+```
+
 [bash-style]: https://google.github.io/styleguide/shellguide.html
 [python-style]: https://google.github.io/styleguide/pyguide.html
 [shellcheck]: https://www.shellcheck.net/
+[wconversion-project]: /docs/contribute/open_projects/cpp/wconversion.md
