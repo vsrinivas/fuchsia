@@ -310,76 +310,78 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     return EAI_SYSTEM;
   }
 
-  using fnet::wire::LookupIpOptions;
-
-  LookupIpOptions options;
+  fidl::FidlAllocator allocator;
+  fnet::wire::LookupIpOptions2 options(allocator);
+  // TODO(https://fxbug.dev/64876): Use address sorting from the DNS service.
   switch (family) {
     case AF_UNSPEC:
-      options = LookupIpOptions::V4_ADDRS | LookupIpOptions::V6_ADDRS;
+      options.set_ipv4_lookup(allocator, true);
+      options.set_ipv6_lookup(allocator, true);
       break;
     case AF_INET:
-      options = LookupIpOptions::V4_ADDRS;
+      options.set_ipv4_lookup(allocator, true);
       break;
     case AF_INET6:
-      options = LookupIpOptions::V6_ADDRS;
+      options.set_ipv6_lookup(allocator, true);
       break;
     default:
       return EAI_FAMILY;
   }
 
   // Explicitly allocating message buffers to avoid heap allocation.
-  fidl::Buffer<fidl::WireRequest<fnet::NameLookup::LookupIp>> request_buffer;
-  fidl::Buffer<fidl::WireResponse<fnet::NameLookup::LookupIp>> response_buffer;
-  auto result = name_lookup->LookupIp(request_buffer.view(), fidl::StringView::FromExternal(name),
-                                      options, response_buffer.view());
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    errno = fdio_status_to_errno(status);
+  fidl::Buffer<fidl::WireRequest<fnet::NameLookup::LookupIp2>> request_buffer;
+  fidl::Buffer<fidl::WireResponse<fnet::NameLookup::LookupIp2>> response_buffer;
+  const fidl::WireUnownedResult fidl_result = name_lookup->LookupIp2(
+      request_buffer.view(), fidl::StringView::FromExternal(name), options, response_buffer.view());
+  if (!fidl_result.ok()) {
+    errno = fdio_status_to_errno(fidl_result.status());
     return EAI_SYSTEM;
   }
-  fnet::wire::NameLookup_LookupIp_Result& lookup_ip_result = result.Unwrap()->result;
-  if (lookup_ip_result.is_err()) {
-    switch (lookup_ip_result.err()) {
-      case fnet::wire::LookupError::NOT_FOUND:
-        return EAI_NONAME;
-      case fnet::wire::LookupError::TRANSIENT:
-        return EAI_AGAIN;
-      case fnet::wire::LookupError::INVALID_ARGS:
-        return EAI_FAIL;
-      case fnet::wire::LookupError::INTERNAL_ERROR:  // fallthrough
-      default:
-        errno = EIO;
-        return EAI_SYSTEM;
+  const fnet::wire::NameLookup_LookupIp2_Result& wire_result = fidl_result.value().result;
+  switch (wire_result.which()) {
+    case fnet::wire::NameLookup_LookupIp2_Result::Tag::kResponse: {
+      int count = 0;
+      const fnet::wire::LookupResult& result = wire_result.response().result;
+      if (result.has_addresses()) {
+        for (const fnet::wire::IpAddress& addr : result.addresses()) {
+          switch (addr.which()) {
+            case fnet::wire::IpAddress::Tag::kIpv4: {
+              buf[count].family = AF_INET;
+              buf[count].scopeid = 0;
+              const auto& octets = addr.ipv4().addr;
+              std::copy(octets.begin(), octets.end(), buf[count].addr);
+              buf[count].sortkey = 0;
+              count++;
+            } break;
+            case fnet::wire::IpAddress::Tag::kIpv6: {
+              buf[count].family = AF_INET6;
+              // TODO(https://fxbug.dev/21415): Figure out a way to expose scope ID for IPv6
+              // addresses.
+              buf[count].scopeid = 0;
+              const auto& octets = addr.ipv6().addr;
+              std::copy(octets.begin(), octets.end(), buf[count].addr);
+              buf[count].sortkey = 0;
+              count++;
+            } break;
+          }
+        }
+      }
+
+      return count;
     }
+    case fnet::wire::NameLookup_LookupIp2_Result::Tag::kErr:
+      switch (wire_result.err()) {
+        case fnet::wire::LookupError::NOT_FOUND:
+          return EAI_NONAME;
+        case fnet::wire::LookupError::TRANSIENT:
+          return EAI_AGAIN;
+        case fnet::wire::LookupError::INVALID_ARGS:
+          return EAI_FAIL;
+        case fnet::wire::LookupError::INTERNAL_ERROR:
+          errno = EIO;
+          return EAI_SYSTEM;
+      }
   }
-
-  const auto& response = lookup_ip_result.response().addr;
-  int count = 0;
-
-  if (options & LookupIpOptions::V4_ADDRS) {
-    for (uint64_t i = 0; i < response.ipv4_addrs.count() && count < MAXADDRS; i++) {
-      buf[count].family = AF_INET;
-      buf[count].scopeid = 0;
-      auto addr = response.ipv4_addrs.at(i).addr;
-      memcpy(buf[count].addr, addr.data(), addr.size());
-      buf[count].sortkey = 0;
-      count++;
-    }
-  }
-  if (options & LookupIpOptions::V6_ADDRS) {
-    for (uint64_t i = 0; i < response.ipv6_addrs.count() && count < MAXADDRS; i++) {
-      buf[count].family = AF_INET6;
-      buf[count].scopeid = 0;  // TODO(fxbug.dev/21415): Figure out a way to expose scope ID
-      auto addr = response.ipv6_addrs.at(i).addr;
-      memcpy(buf[count].addr, addr.data(), addr.size());
-      buf[count].sortkey = 0;
-      count++;
-    }
-  }
-
-  // TODO(fxbug.dev/21414) support CNAME
-
-  return count;
 }
 __EXPORT
 int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
