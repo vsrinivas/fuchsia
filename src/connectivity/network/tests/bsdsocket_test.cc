@@ -329,8 +329,8 @@ TEST_P(SocketOptsTest, TtlDefault) {
   socklen_t get_sz = sizeof(get);
   constexpr int kDefaultTTL = 64;
   EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get, &get_sz), 0) << strerror(errno);
-  EXPECT_EQ(get, kDefaultTTL);
   EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, kDefaultTTL);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
@@ -1336,8 +1336,8 @@ TEST(LocalhostTest, AcceptAfterReset) {
   int err;
   socklen_t optlen = sizeof(err);
   ASSERT_EQ(getsockopt(conn.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-  ASSERT_EQ(err, ECONNRESET) << strerror(errno);
   ASSERT_EQ(optlen, sizeof(err));
+  ASSERT_EQ(err, ECONNRESET) << strerror(err);
 }
 
 TEST(LocalhostTest, ConnectAFMismatchINET) {
@@ -2138,8 +2138,8 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
     int err;
     socklen_t optlen = sizeof(err);
     ASSERT_EQ(getsockopt(connfd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    ASSERT_EQ(err, 0);
     ASSERT_EQ(optlen, sizeof(err));
+    ASSERT_EQ(err, 0) << strerror(err);
   }
 
   fbl::unique_fd clientfd;
@@ -2205,8 +2205,8 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
     int err;
     socklen_t optlen = sizeof(err);
     ASSERT_EQ(getsockopt(connfd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    ASSERT_EQ(err, 0);
     ASSERT_EQ(optlen, sizeof(err));
+    ASSERT_EQ(err, 0) << strerror(err);
 
     char buf[sizeof(msg) + 1] = {};
     ASSERT_EQ(read(connfd.get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
@@ -3053,8 +3053,8 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
     int err;
     socklen_t optlen = sizeof(err);
     ASSERT_EQ(getsockopt(connfd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    ASSERT_EQ(err, ECONNREFUSED);
     ASSERT_EQ(optlen, sizeof(err));
+    ASSERT_EQ(err, ECONNREFUSED) << strerror(err);
   }
 
   EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
@@ -4324,6 +4324,7 @@ TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
   int opt;
   socklen_t optlen = sizeof(opt);
   EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_PROTOCOL, &opt, &optlen), 0) << strerror(errno);
+  EXPECT_EQ(optlen, sizeof(opt));
   EXPECT_EQ(opt, protocol);
 }
 
