@@ -1,0 +1,114 @@
+{
+  "project_id": 2322225253,
+  "poll_rate_sec": 60,
+  "metrics": [
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/le:outgoing_connection_requests",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        1
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/le:pair_requests",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        2
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/le:start_advertising_events",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        7
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/le:stop_advertising_events",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        8
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/le:start_discovery_events",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        9
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/bredr:open_l2cap_channel_requests",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        0
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/bredr:outgoing_connection_requests",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        1
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/bredr:pair_requests",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        2
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/bredr:request_discoverable_events",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        3
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/bredr:request_discovery_events",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        4
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/bredr:set_connectable_true_events",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        5
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/bredr:set_connectable_false_events",
+      "metric_id": 9,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        6
+      ]
+    }
+  ]
+}

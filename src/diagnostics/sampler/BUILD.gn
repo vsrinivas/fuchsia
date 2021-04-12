@@ -74,6 +74,7 @@ fuchsia_unittest_package("sampler-tests") {
 lapis_configuration("production_lapis") {
   configs = [
     "config/archivist.json",
+    "config/bthost.json",
     "config/ftl.json",
     "config/fvm.json",
     "config/sysmem.json",
