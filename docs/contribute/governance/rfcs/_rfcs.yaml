@@ -1106,3 +1106,16 @@
   reviewers: ['cpu@google.com', 'maniscalco@google.com', 'pascallouis@google.com']
   submitted: '2020-10-09'
   reviewed: '2021-04-08'
+
+- name: 'RFC-0086'
+  title: 'Updates to RFC-0050: FIDL Attributes Syntax'
+  short_description: 'Specifies a new syntax for attributes in the FIDL language.'
+  authors: ['azaslavsky@google.com']
+  file: '0086_rfc_0050_attributes.md'
+  area: ['FIDL']
+  issue: ['68792']
+  gerrit_change_id: ['499278']
+  status: 'Accepted'
+  reviewers: ['jsankey@google.com', 'pascallouis@google.com']
+  submitted: '2020-03-09'
+  reviewed: '2020-04-07'
